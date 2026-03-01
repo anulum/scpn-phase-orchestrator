@@ -37,7 +37,7 @@ class SupervisorPolicy:
     ) -> list[ControlAction]:
         proposed = self._regime_manager.evaluate(upde_state, boundary_state)
         regime = self._regime_manager.transition(
-            self._regime_manager._current, proposed
+            self._regime_manager.current_regime, proposed
         )
 
         if regime == Regime.NOMINAL:

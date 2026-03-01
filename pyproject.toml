@@ -76,12 +76,18 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+xfail_strict = true
+filterwarnings = ["error::DeprecationWarning"]
+markers = [
+    "integration: end-to-end integration tests",
+    "contract: boundary-contract verification tests",
+]
 
 [tool.coverage.run]
 source = ["scpn_phase_orchestrator"]
 
 [tool.coverage.report]
-fail_under = 60
+fail_under = 75
 
 [tool.bandit]
 exclude_dirs = ["tests"]

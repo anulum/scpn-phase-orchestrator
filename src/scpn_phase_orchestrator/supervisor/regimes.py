@@ -39,6 +39,10 @@ class RegimeManager:
         self._step_counter = 0
         self._last_transition_step = -cooldown_steps  # allow immediate first transition
 
+    @property
+    def current_regime(self) -> Regime:
+        return self._current
+
     def evaluate(self, upde_state: UPDEState, boundary_state: BoundaryState) -> Regime:
         """Determine regime from R values and boundary violations."""
         if boundary_state.hard_violations:

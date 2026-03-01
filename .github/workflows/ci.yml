@@ -46,7 +46,41 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
-      - run: pytest tests/ -v --tb=short --cov=scpn_phase_orchestrator --cov-report=term-missing
+      - run: >
+          pytest tests/ -v --tb=short
+          --cov=scpn_phase_orchestrator
+          --cov-report=term-missing
+          ${{ matrix.python-version == '3.12' && '--cov-report=xml:coverage-python.xml' || '' }}
+      - name: Upload coverage XML
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage-python.xml
+
+  coverage-guard:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-xml
+      - run: python tools/coverage_guard.py --coverage-xml coverage-python.xml
+
+  module-linkage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: python tools/check_test_module_linkage.py
 
   security:
     runs-on: ubuntu-latest
@@ -71,7 +105,7 @@ jobs:
       - run: cargo test
 
   ci-gate:
-    needs: [lint, typecheck, test, security, rust-check]
+    needs: [lint, typecheck, test, security, rust-check, coverage-guard, module-linkage]
     runs-on: ubuntu-latest
     steps:
       - run: echo "All checks passed"
