@@ -1,5 +1,11 @@
 # Memory Imprint Model
 
+> **Provenance:** The imprint model is original to SCPN Phase Orchestrator.
+> The exponential forgetting form is standard in memory/learning models
+> (cf. Ebbinghaus 1885), but the specific application to coupling-matrix
+> modulation is novel. Parameters (`decay_rate`, `saturation`) require
+> domain-specific calibration — see [ASSUMPTIONS.md](../ASSUMPTIONS.md).
+
 ## Purpose
 
 Track cumulative exposure history per oscillator. The imprint vector `M_k` modulates coupling and phase lag, encoding long-term adaptation.
@@ -58,3 +64,7 @@ imprint_model:
 ## When to Use
 
 Enable the imprint model when the system has history-dependent coupling -- habituation, sensitisation, learning, or drift adaptation. Omit when coupling is time-invariant.
+
+## References
+
+All constants in this module are original to SPO. See [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Imprint Model for provenance of `decay_rate` and `saturation` defaults.

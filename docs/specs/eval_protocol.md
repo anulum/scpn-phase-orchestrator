@@ -48,3 +48,11 @@ Run eval on all domainpacks in the `domainpacks/` directory:
 - `queuewaves` -- R_bad suppression scenario
 - `geometry_walk` -- symbolic channel test
 - `bio_stub` -- multi-channel, multi-layer stress test
+
+## Provenance of Evaluation Thresholds
+
+All metric targets in this protocol (R_good > 0.8, R_bad < 0.3, convergence
+at 0.7, 100-step default) are empirical engineering judgements calibrated on
+the bundled domainpacks. They are not derived from analytical results.
+See [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Evaluation Protocol for the full
+constant registry.

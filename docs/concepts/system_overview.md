@@ -74,3 +74,9 @@ A new domain requires writing a binding spec and (optionally) custom extractors.
 ## Audit and Replay
 
 Every step writes a JSONL record (timestamp, regime, layer states, actions). Deterministic replay from audit logs verifies reproducibility.
+
+## References
+
+- **[kuramoto1975]** Y. Kuramoto (1975). Self-entrainment of a population of coupled non-linear oscillators. *Lecture Notes in Physics* 39, 420–422.
+- **[acebron2005]** J. A. Acebrón et al. (2005). The Kuramoto model: a simple paradigm for synchronization phenomena. *Rev. Mod. Phys.* 77, 137–185.
+- **[sakaguchi1986]** H. Sakaguchi & Y. Kuramoto (1986). A soluble active rotater model showing phase transitions via mutual entertainment. *Prog. Theor. Phys.* 76, 576–581.

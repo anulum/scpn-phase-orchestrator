@@ -21,9 +21,8 @@ class IntegrationConfig:
 def check_stability(dt: float, max_omega: float, max_coupling: float) -> bool:
     """CFL-like stability bound for explicit Kuramoto integration.
 
-    The derivative magnitude is bounded by max_omega + N * max_coupling.
-    For euler, we require dt * max_deriv < pi to avoid phase jumps
-    exceeding half a cycle per step.
+    Analogous to Courant–Friedrichs–Lewy (1928); see docs/specs/upde_numerics.md.
+    dt * max_deriv < pi ensures phase change stays below half-cycle per step.
     """
     max_deriv = max_omega + max_coupling
     if max_deriv == 0.0:

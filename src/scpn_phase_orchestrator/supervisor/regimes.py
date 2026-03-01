@@ -19,9 +19,8 @@ try:
 except ImportError:
     _HAS_RUST = False
 
-# Thresholds for regime classification
-_R_CRITICAL = 0.3
-_R_DEGRADED = 0.6
+_R_CRITICAL = 0.3  # Acebrón et al. 2005 §2.3 — incoherence boundary
+_R_DEGRADED = 0.6  # Acebrón et al. 2005 §2.3 — partial sync threshold
 
 
 class Regime(Enum):

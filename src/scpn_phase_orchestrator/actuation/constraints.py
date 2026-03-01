@@ -13,7 +13,10 @@ from scpn_phase_orchestrator.actuation.mapper import ControlAction
 
 
 class ActionProjector:
-    """Clip control actions to value bounds and rate limits."""
+    """Clip control actions to value bounds and rate limits.
+
+    Rate limits and value bounds are empirical — see docs/ASSUMPTIONS.md § Rate Limits.
+    """
 
     def __init__(
         self,

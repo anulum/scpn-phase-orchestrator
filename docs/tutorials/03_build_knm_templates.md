@@ -74,3 +74,8 @@ Iterate on coupling values until these criteria are met.
 - **Too strong coupling:** R_good saturates at 1.0 instantly, but R_bad also goes to 1.0. Reduce base_strength.
 - **Too weak coupling:** R_good stays near 0. Increase base_strength or reduce decay_alpha.
 - **Asymmetric override without re-symmetrisation:** Violates the Knm contract. Always enforce `K = (K + K.T) / 2`.
+
+## References
+
+- **[acebron2005]** J. A. Acebrón et al. (2005). The Kuramoto model: a simple paradigm for synchronization phenomena. *Rev. Mod. Phys.* 77, 137–185. — Coupling strength ranges and their effect on synchronisation.
+- **[lachaux1999]** J.-P. Lachaux et al. (1999). Measuring phase synchrony in brain signals. *Human Brain Mapping* 8, 194–208. — PLV as coupling-strength proxy (Step 3).

@@ -69,3 +69,8 @@ The `ActuationMapper` resolves scope to specific actuator commands. The `ActionP
 | Psi | [0, 2*pi) | no limit |
 
 Ranges and rate limits are domain-specific, configured in the binding spec `actuators` section.
+
+## References
+
+- **[sakaguchi1986]** H. Sakaguchi & Y. Kuramoto (1986). A soluble active rotater model showing phase transitions via mutual entertainment. *Prog. Theor. Phys.* 76, 576–581. — Phase-lag (alpha) coupling model.
+- **[dorfler2014]** F. Dörfler & F. Bullo (2014). Synchronization in complex networks of phase oscillators: a survey. *Automatica* 50, 1539–1564. — Coupling strength (K) and synchronisation conditions.

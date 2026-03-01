@@ -12,7 +12,7 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
-# Default adjustment magnitudes
+# Empirical — see docs/ASSUMPTIONS.md § Supervisor Policy
 _K_BUMP = 0.05
 _ZETA_BUMP = 0.1
 _K_REDUCE = -0.03

@@ -32,6 +32,11 @@ Domain-agnostic Kuramoto phase-dynamics engine for synchronising coupled-cycle s
 - [02 -- Oscillator Hunt Sheet](tutorials/02_oscillator_hunt_sheet.md)
 - [03 -- Build Knm Templates](tutorials/03_build_knm_templates.md)
 
+### Reference
+
+- [Assumptions & Empirical Constants](ASSUMPTIONS.md) -- provenance of every threshold
+- [references.bib](references.bib) -- BibTeX bibliography
+
 ## License
 
 GNU AGPL v3. Commercial licensing available.
