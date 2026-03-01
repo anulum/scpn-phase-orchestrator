@@ -26,7 +26,8 @@ class SymmetryConstraint(GeometryConstraint):
 
 class NonNegativeConstraint(GeometryConstraint):
     def project(self, knm: NDArray) -> NDArray:
-        return np.maximum(knm, 0.0)
+        result: NDArray = np.maximum(knm, 0.0)
+        return result
 
 
 def project_knm(knm: NDArray, constraints: list[GeometryConstraint]) -> NDArray:
