@@ -13,6 +13,13 @@ from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
+try:
+    from spo_kernel import physical_extract as _rust_physical_extract
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 TWO_PI = 2.0 * np.pi
 
 
@@ -24,14 +31,21 @@ class PhysicalExtractor(PhaseExtractor):
 
     def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
         analytic = hilbert(signal)
-        inst_phase = np.angle(analytic) % TWO_PI
-        inst_amp = np.abs(analytic)
-        inst_freq = np.gradient(np.unwrap(np.angle(analytic))) * sample_rate / TWO_PI
 
-        theta = float(inst_phase[-1])
-        omega = float(np.median(inst_freq)) * TWO_PI  # rad/s
-        amplitude = float(np.mean(inst_amp))
-        quality = self._snr_estimate(signal, analytic)
+        if _HAS_RUST:
+            theta, omega, amplitude, quality = _rust_physical_extract(
+                np.real(analytic).tolist(), np.imag(analytic).tolist(), sample_rate
+            )
+        else:
+            inst_phase = np.angle(analytic) % TWO_PI
+            inst_amp = np.abs(analytic)
+            unwrapped = np.unwrap(np.angle(analytic))
+            inst_freq = np.gradient(unwrapped) * sample_rate / TWO_PI
+
+            theta = float(inst_phase[-1])
+            omega = float(np.median(inst_freq)) * TWO_PI  # rad/s
+            amplitude = float(np.mean(inst_amp))
+            quality = self._snr_estimate(signal, analytic)
 
         return [
             PhaseState(
