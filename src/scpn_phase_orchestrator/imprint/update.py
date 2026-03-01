@@ -39,8 +39,10 @@ class ImprintModel:
 
     def modulate_coupling(self, knm: NDArray, imprint: ImprintState) -> NDArray:
         """Scale Knm rows by (1 + m_k)."""
-        return knm * (1.0 + imprint.m_k)[:, np.newaxis]
+        result: NDArray = knm * (1.0 + imprint.m_k)[:, np.newaxis]
+        return result
 
     def modulate_lag(self, alpha: NDArray, imprint: ImprintState) -> NDArray:
         """Shift phase lags by imprint magnitude per oscillator."""
-        return alpha + imprint.m_k[:, np.newaxis]
+        result: NDArray = alpha + imprint.m_k[:, np.newaxis]
+        return result

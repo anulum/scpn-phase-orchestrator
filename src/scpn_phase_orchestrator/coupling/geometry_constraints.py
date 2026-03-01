@@ -20,7 +20,8 @@ class GeometryConstraint(ABC):
 
 class SymmetryConstraint(GeometryConstraint):
     def project(self, knm: NDArray) -> NDArray:
-        return 0.5 * (knm + knm.T)
+        result: NDArray = 0.5 * (knm + knm.T)
+        return result
 
 
 class NonNegativeConstraint(GeometryConstraint):

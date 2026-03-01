@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 
@@ -28,4 +29,4 @@ def check_stability(dt: float, max_omega: float, max_coupling: float) -> bool:
     if max_deriv == 0.0:
         return True
     # pi threshold: phase change per step must stay below half-cycle
-    return dt * max_deriv < 3.14159265358979
+    return dt * max_deriv < math.pi

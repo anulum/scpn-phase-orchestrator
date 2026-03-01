@@ -93,8 +93,8 @@ def run(binding_spec: str, steps: int) -> None:
 @click.option("--output", default=None, type=click.Path(), help="Output file")
 def replay(log_path: str, output: str | None) -> None:
     """Replay an audit log and print summary."""
-    re = ReplayEngine(log_path)
-    entries = re.load()
+    replay_engine = ReplayEngine(log_path)
+    entries = replay_engine.load()
     step_entries = [e for e in entries if "step" in e]
     event_entries = [e for e in entries if "event" in e]
     click.echo(f"Steps logged: {len(step_entries)}")
@@ -128,7 +128,7 @@ def scaffold(domain_name: str) -> None:
             f"# Binding spec for {domain_name}\n"
             f"name: {domain_name}\n"
             "version: '0.1'\n"
-            "safety_tier: advisory\n"
+            "safety_tier: research\n"
             "sample_period_s: 0.01\n"
             "control_period_s: 0.1\n"
             "layers: []\n"

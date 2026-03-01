@@ -27,9 +27,8 @@ pyo3 = { version = "0.24", features = ["extension-module"] }
 criterion = { version = "0.5" }
 
 [workspace.lints.clippy]
-needless_range_loop = "allow"
 field_reassign_with_default = "allow"
-unwrap_used = "warn"
+unwrap_used = "deny"
 
 [workspace.lints.rust]
 unreachable_pub = "warn"

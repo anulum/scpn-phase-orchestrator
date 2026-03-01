@@ -26,7 +26,9 @@ class PhaseQualityScorer:
         return float(np.average(qualities, weights=weights))
 
     # Thresholds: see docs/ASSUMPTIONS.md § Quality Gating
-    def detect_collapse(self, phase_states: list[PhaseState], threshold=0.1) -> bool:
+    def detect_collapse(
+        self, phase_states: list[PhaseState], threshold: float = 0.1
+    ) -> bool:
         """True if quality is below threshold for the majority of states."""
         if not phase_states:
             return True
@@ -34,7 +36,7 @@ class PhaseQualityScorer:
         return below > len(phase_states) / 2
 
     def downweight_mask(
-        self, phase_states: list[PhaseState], min_quality=0.3
+        self, phase_states: list[PhaseState], min_quality: float = 0.3
     ) -> NDArray:
         """Weight array in [0,1], zeros below min_quality."""
         if not phase_states:

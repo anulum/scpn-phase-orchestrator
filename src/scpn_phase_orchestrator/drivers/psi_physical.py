@@ -23,7 +23,8 @@ class PhysicalDriver:
         self._amplitude = amplitude
 
     def compute(self, t: float) -> float:
-        return self._amplitude * np.sin(TWO_PI * self._frequency * t)
+        return float(self._amplitude * np.sin(TWO_PI * self._frequency * t))
 
     def compute_batch(self, t_array: NDArray) -> NDArray:
-        return self._amplitude * np.sin(TWO_PI * self._frequency * t_array)
+        result: NDArray = self._amplitude * np.sin(TWO_PI * self._frequency * t_array)
+        return result

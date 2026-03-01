@@ -27,14 +27,14 @@ class CoherenceMonitor:
         self._bad = bad_layers
 
     def compute_r_good(self, upde_state: UPDEState) -> float:
-        return self._mean_r(upde_state, self._good)
+        return float(self._mean_r(upde_state, self._good))
 
     def compute_r_bad(self, upde_state: UPDEState) -> float:
-        return self._mean_r(upde_state, self._bad)
+        return float(self._mean_r(upde_state, self._bad))
 
     # PLV lock threshold: Lachaux et al. 1999; see docs/ASSUMPTIONS.md § Quality Gating
     def detect_phase_lock(
-        self, upde_state: UPDEState, threshold=0.9
+        self, upde_state: UPDEState, threshold: float = 0.9
     ) -> list[tuple[int, int]]:
         """Return pairs of layer indices whose PLV exceeds threshold."""
         n = len(upde_state.layers)
@@ -47,7 +47,7 @@ class CoherenceMonitor:
                     locked.append((i, j))
         return locked
 
-    def _mean_r(self, upde_state, indices):
+    def _mean_r(self, upde_state: UPDEState, indices: list[int]) -> float:
         vals = [upde_state.layers[i].R for i in indices if i < len(upde_state.layers)]
         if not vals:
             return 0.0

@@ -31,7 +31,7 @@ class Regime(Enum):
 
 
 class RegimeManager:
-    def __init__(self, hysteresis=0.05, cooldown_steps=10):
+    def __init__(self, hysteresis: float = 0.05, cooldown_steps: int = 10) -> None:
         self._hysteresis = hysteresis
         self._cooldown_steps = cooldown_steps
         self._current = Regime.NOMINAL
@@ -74,7 +74,7 @@ class RegimeManager:
         self._current = proposed
         return proposed
 
-    def _mean_r(self, upde_state):
+    def _mean_r(self, upde_state: UPDEState) -> float:
         if not upde_state.layers:
             return 0.0
         return sum(s.R for s in upde_state.layers) / len(upde_state.layers)
