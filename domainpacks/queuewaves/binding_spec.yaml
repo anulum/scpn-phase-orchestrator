@@ -1,0 +1,74 @@
+name: queuewaves
+version: "0.1"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: micro
+    index: 0
+    oscillator_ids: [queue_a, queue_b, retry_burst]
+  - name: meso
+    index: 1
+    oscillator_ids: [latency_p99]
+  - name: macro
+    index: 2
+    oscillator_ids: [error_rate, throughput]
+
+oscillator_families:
+  queue_depth:
+    channel: P
+    extractor_type: physical
+    config: {}
+  event_stream:
+    channel: I
+    extractor_type: informational
+    config: {}
+
+coupling:
+  base_strength: 0.50
+  decay_alpha: 0.25
+  templates:
+    storm_decoupled: storm_decoupled
+
+drivers:
+  physical:
+    zeta: 0.0
+    psi: 0.0
+  informational:
+    zeta: 0.0
+  symbolic: {}
+
+objectives:
+  good_layers: [2]
+  bad_layers: [0]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  - name: queue_overflow
+    variable: queue_depth
+    lower: null
+    upper: 10000
+    severity: hard
+  - name: latency_warning
+    variable: p99_latency_ms
+    lower: null
+    upper: 500
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: lag_micro
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: damping
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+
+policy: policy.yaml

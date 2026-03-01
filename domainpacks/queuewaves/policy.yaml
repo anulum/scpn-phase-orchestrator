@@ -1,0 +1,26 @@
+rules:
+  - name: suppress_retry_storm
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: alpha
+      scope: layer_0
+      value: 0.3
+      ttl_s: 5.0
+
+  - name: restore_coordination
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 2
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.1
+      ttl_s: 10.0

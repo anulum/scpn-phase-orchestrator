@@ -1,0 +1,58 @@
+# ──────────────────────────────────────────────────────────────────────
+# SCPN Phase Orchestrator — Domainpack request template
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+# ──────────────────────────────────────────────────────────────────────
+
+name: Domainpack Request
+description: Request a new domain binding
+labels: [domainpack]
+body:
+  - type: textarea
+    id: domain-description
+    attributes:
+      label: Domain Description
+      description: What system or process does this domainpack target?
+    validations:
+      required: true
+
+  - type: textarea
+    id: oscillator-candidates
+    attributes:
+      label: Oscillator Candidates
+      description: What oscillates? Classify each as P (physical), I (informational), or S (symbolic).
+      placeholder: |
+        - voltage: P
+        - heartbeat: P
+        - market cycle: I
+    validations:
+      required: true
+
+  - type: textarea
+    id: hierarchy-sketch
+    attributes:
+      label: Hierarchy Sketch
+      description: Proposed layer structure mapping domain quantities to SCPN layers.
+      placeholder: |
+        L1: raw signal
+        L2: extracted rhythm
+        L3: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-sources
+    attributes:
+      label: Data Sources
+      description: What telemetry or signals are available?
+    validations:
+      required: false
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior Art
+      description: Existing control or analysis approaches for this domain.
+    validations:
+      required: false

@@ -1,0 +1,85 @@
+name: bio_stub
+version: "0.1"
+safety_tier: research
+sample_period_s: 0.001
+control_period_s: 0.01
+
+layers:
+  - name: cellular
+    index: 0
+    oscillator_ids: [cell_ca, cell_membrane, cell_metabolic, cell_mitotic]
+  - name: tissue
+    index: 1
+    oscillator_ids: [tissue_ecm, tissue_vasculature, tissue_immune, tissue_neural]
+  - name: organ
+    index: 2
+    oscillator_ids: [organ_cardiac, organ_respiratory, organ_hepatic, organ_renal]
+  - name: systemic
+    index: 3
+    oscillator_ids: [sys_circadian, sys_hormonal, sys_autonomic, sys_immune_global]
+
+oscillator_families:
+  bioelectric:
+    channel: P
+    extractor_type: physical
+    config: {}
+  spike_train:
+    channel: I
+    extractor_type: informational
+    config: {}
+  state_machine:
+    channel: S
+    extractor_type: symbolic
+    config:
+      n_states: 8
+
+coupling:
+  base_strength: 0.45
+  decay_alpha: 0.3
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.1
+    psi: 0.0
+  informational:
+    zeta: 0.05
+  symbolic:
+    zeta: 0.02
+
+objectives:
+  good_layers: [1, 2, 3]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: cardiac_rate_high
+    variable: heart_rate_bpm
+    lower: null
+    upper: 180
+    severity: hard
+  - name: cardiac_rate_low
+    variable: heart_rate_bpm
+    lower: 40
+    upper: null
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: entrainment
+    knob: zeta
+    scope: global
+    limits: [0.0, 1.0]
+  - name: reference_phase
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.2832]
+
+imprint_model:
+  decay_rate: 0.01
+  saturation: 2.0
+  modulates: ["K", "alpha"]

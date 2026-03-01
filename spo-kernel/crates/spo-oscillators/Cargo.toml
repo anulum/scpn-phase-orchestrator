@@ -1,0 +1,14 @@
+[package]
+name = "spo-oscillators"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "SCPN Phase Orchestrator — symbolic, informational, and quality phase extraction"
+
+[dependencies]
+spo-types = { path = "../spo-types" }
+
+[lints]
+workspace = true

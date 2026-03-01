@@ -1,0 +1,55 @@
+# ──────────────────────────────────────────────────────────────────────
+# SCPN Phase Orchestrator — Documentation Site Configuration
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+# ──────────────────────────────────────────────────────────────────────
+
+site_name: SCPN Phase Orchestrator
+site_url: https://anulum.github.io/scpn-phase-orchestrator
+repo_url: https://github.com/anulum/scpn-phase-orchestrator
+repo_name: anulum/scpn-phase-orchestrator
+
+theme:
+  name: material
+  palette:
+    primary: deep purple
+    accent: amber
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Concepts:
+      - System Overview: concepts/system_overview.md
+      - "Oscillators & PIS": concepts/oscillators_PIS.md
+      - "Knobs: K, alpha, zeta, Psi": concepts/knobs_K_alpha_zeta_Psi.md
+      - Memory Imprint: concepts/memory_imprint.md
+  - Specs:
+      - Binding Spec Schema: specs/binding_spec.schema.json
+      - Phase Contract: specs/phase_contract.md
+      - UPDE Numerics: specs/upde_numerics.md
+      - Lock Metrics: specs/lock_metrics.md
+      - Knm Semantics: specs/knm_semantics.md
+      - Regime Manager: specs/regime_manager.md
+      - Boundary Contract: specs/boundary_contract.md
+      - Action Compose: specs/action_compose.md
+      - Eval Protocol: specs/eval_protocol.md
+      - Plugin API: specs/plugin_api.md
+      - Policy DSL: specs/policy_dsl.md
+      - Audit Trace: specs/audit_trace.md
+  - Tutorials:
+      - New Domain Checklist: tutorials/01_new_domain_checklist.md
+      - Oscillator Hunt Sheet: tutorials/02_oscillator_hunt_sheet.md
+      - Build Knm Templates: tutorials/03_build_knm_templates.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
