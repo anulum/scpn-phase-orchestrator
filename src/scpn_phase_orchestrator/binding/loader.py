@@ -11,6 +11,10 @@ import json
 from pathlib import Path
 
 from scpn_phase_orchestrator.binding.types import (
+    VALID_CHANNELS,
+    VALID_KNOBS,
+    VALID_SAFETY_TIERS,
+    VALID_SEVERITIES,
     ActuatorMapping,
     BindingSpec,
     BoundaryDef,
@@ -22,11 +26,6 @@ from scpn_phase_orchestrator.binding.types import (
     ObjectivePartition,
     OscillatorFamily,
 )
-
-_VALID_CHANNELS = {"P", "I", "S"}
-_VALID_SEVERITIES = {"soft", "hard"}
-_VALID_KNOBS = {"K", "alpha", "zeta", "Psi"}
-_VALID_SAFETY_TIERS = {"research", "clinical", "consumer"}
 
 
 def load_binding_spec(path: str | Path) -> BindingSpec:
@@ -141,7 +140,7 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     """Return list of validation errors (empty = valid)."""
     errors: list[str] = []
 
-    if spec.safety_tier not in _VALID_SAFETY_TIERS:
+    if spec.safety_tier not in VALID_SAFETY_TIERS:
         errors.append(f"Unknown safety_tier {spec.safety_tier!r}")
 
     if spec.sample_period_s <= 0:
@@ -154,15 +153,15 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
         errors.append("control_period_s must be >= sample_period_s")
 
     for fam_name, fam in spec.oscillator_families.items():
-        if fam.channel not in _VALID_CHANNELS:
+        if fam.channel not in VALID_CHANNELS:
             errors.append(f"Family {fam_name!r}: invalid channel {fam.channel!r}")
 
     for bd in spec.boundaries:
-        if bd.severity not in _VALID_SEVERITIES:
+        if bd.severity not in VALID_SEVERITIES:
             errors.append(f"Boundary {bd.name!r}: invalid severity {bd.severity!r}")
 
     for act in spec.actuators:
-        if act.knob not in _VALID_KNOBS:
+        if act.knob not in VALID_KNOBS:
             errors.append(f"Actuator {act.name!r}: unknown knob {act.knob!r}")
         if len(act.limits) != 2 or act.limits[0] > act.limits[1]:
             errors.append(

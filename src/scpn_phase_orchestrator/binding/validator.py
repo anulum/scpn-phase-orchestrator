@@ -7,12 +7,13 @@
 
 from __future__ import annotations
 
-from scpn_phase_orchestrator.binding.types import BindingSpec
-
-_VALID_CHANNELS = {"P", "I", "S"}
-_VALID_SEVERITIES = {"soft", "hard"}
-_VALID_KNOBS = {"K", "alpha", "zeta", "Psi"}
-_VALID_SAFETY_TIERS = {"research", "clinical", "consumer"}
+from scpn_phase_orchestrator.binding.types import (
+    VALID_CHANNELS,
+    VALID_KNOBS,
+    VALID_SAFETY_TIERS,
+    VALID_SEVERITIES,
+    BindingSpec,
+)
 
 
 def validate_binding_spec(spec: BindingSpec) -> list[str]:
@@ -26,10 +27,9 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     if len(parts) != 3 or not all(p.isdigit() for p in parts):
         errors.append(f"version must be major.minor.patch, got {spec.version!r}")
 
-    if spec.safety_tier not in _VALID_SAFETY_TIERS:
+    if spec.safety_tier not in VALID_SAFETY_TIERS:
         errors.append(
-            f"safety_tier must be one of {_VALID_SAFETY_TIERS}, "
-            f"got {spec.safety_tier!r}"
+            f"safety_tier must be one of {VALID_SAFETY_TIERS}, got {spec.safety_tier!r}"
         )
 
     if spec.sample_period_s <= 0:
@@ -41,10 +41,10 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     layer_indices = {lay.index for lay in spec.layers}
 
     for family_name, fam in spec.oscillator_families.items():
-        if fam.channel not in _VALID_CHANNELS:
+        if fam.channel not in VALID_CHANNELS:
             errors.append(
                 f"oscillator_family {family_name!r}: channel must be one of "
-                f"{_VALID_CHANNELS}, got {fam.channel!r}"
+                f"{VALID_CHANNELS}, got {fam.channel!r}"
             )
 
     for ref in spec.objectives.good_layers + spec.objectives.bad_layers:
@@ -52,17 +52,17 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             errors.append(f"objectives reference layer index {ref} not in layers")
 
     for bdef in spec.boundaries:
-        if bdef.severity not in _VALID_SEVERITIES:
+        if bdef.severity not in VALID_SEVERITIES:
             errors.append(
                 f"boundary {bdef.name!r}: severity must be one of "
-                f"{_VALID_SEVERITIES}, got {bdef.severity!r}"
+                f"{VALID_SEVERITIES}, got {bdef.severity!r}"
             )
 
     for act in spec.actuators:
-        if act.knob not in _VALID_KNOBS:
+        if act.knob not in VALID_KNOBS:
             errors.append(
                 f"actuator {act.name!r}: knob must be one of "
-                f"{_VALID_KNOBS}, got {act.knob!r}"
+                f"{VALID_KNOBS}, got {act.knob!r}"
             )
 
     return errors

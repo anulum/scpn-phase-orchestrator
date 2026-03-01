@@ -1,0 +1,17 @@
+{
+  "global_min_line_rate": 75.0,
+  "domain_min_line_rate": {
+    "coupling": 85.0,
+    "oscillators": 85.0,
+    "upde": 80.0,
+    "monitor": 80.0,
+    "supervisor": 75.0,
+    "binding": 80.0,
+    "audit": 70.0,
+    "imprint": 80.0,
+    "actuation": 75.0,
+    "drivers": 60.0,
+    "adapters": 50.0,
+    "reporting": 50.0
+  }
+}
