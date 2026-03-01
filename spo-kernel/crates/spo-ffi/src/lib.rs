@@ -5,6 +5,10 @@
 //! Python-callable wrappers around the spo-kernel Rust crates.
 //!
 //! Install: `cd spo-kernel && maturin develop --release -m crates/spo-ffi/Cargo.toml`
+//!
+//! Note: `#![deny(unsafe_code)]` is omitted because PyO3 macros generate
+//! unsafe blocks internally. We forbid undocumented unsafe instead.
+#![forbid(clippy::undocumented_unsafe_blocks)]
 
 use std::collections::HashMap;
 
@@ -28,6 +32,9 @@ use spo_supervisor::{
 use spo_types::{
     ControlAction, CouplingConfig, IntegrationConfig, Knob, LayerState, Method, Regime, UPDEState,
 };
+
+/// (name, variable, lower_bound, upper_bound, severity)
+type BoundaryDefTuple = Vec<(String, String, Option<f64>, Option<f64>, String)>;
 
 // ─── PyUPDEStepper ──────────────────────────────────────────────────
 
@@ -217,11 +224,10 @@ impl PyBoundaryObserver {
     }
 
     /// Observe boundary violations. Returns dict with violations, soft_violations, hard_violations.
-    #[allow(clippy::type_complexity)]
     fn observe<'py>(
         &self,
         py: Python<'py>,
-        defs: Vec<(String, String, Option<f64>, Option<f64>, String)>,
+        defs: BoundaryDefTuple,
         values: HashMap<String, f64>,
     ) -> PyResult<Bound<'py, PyDict>> {
         let boundary_defs: Vec<BoundaryDef> = defs

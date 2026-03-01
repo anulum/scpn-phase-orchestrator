@@ -28,6 +28,8 @@ impl Default for IntegrationConfig {
 }
 
 impl IntegrationConfig {
+    /// # Errors
+    /// Returns `InvalidConfig` if dt is non-positive/non-finite or n_substeps is 0.
     pub fn validate(&self) -> SpoResult<()> {
         if self.dt <= 0.0 || !self.dt.is_finite() {
             return Err(SpoError::InvalidConfig(format!(
@@ -58,6 +60,8 @@ impl Default for CouplingConfig {
 }
 
 impl CouplingConfig {
+    /// # Errors
+    /// Returns `InvalidConfig` if base_strength is non-finite or decay_alpha is negative/non-finite.
     pub fn validate(&self) -> SpoResult<()> {
         if !self.base_strength.is_finite() {
             return Err(SpoError::InvalidConfig(format!(

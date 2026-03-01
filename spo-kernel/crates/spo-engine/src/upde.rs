@@ -21,6 +21,8 @@ pub struct UPDEStepper {
 }
 
 impl UPDEStepper {
+    /// # Errors
+    /// Returns `InvalidDimension` if n is 0, or propagates config validation errors.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -42,6 +44,9 @@ impl UPDEStepper {
     /// Advance phases in-place by one timestep.
     ///
     /// `knm` is row-major N×N, `alpha` is row-major N×N phase lags.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` on length mismatch or `IntegrationDiverged` on NaN/Inf input.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -85,6 +90,9 @@ impl UPDEStepper {
     }
 
     /// Run multiple steps, returning the final phases.
+    ///
+    /// # Errors
+    /// Propagates errors from `step()`.
     #[allow(clippy::too_many_arguments)]
     pub fn run(
         &mut self,
