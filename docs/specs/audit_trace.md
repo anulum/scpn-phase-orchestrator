@@ -62,3 +62,7 @@ Given the same binding spec and initial seed, replaying the sequence of actions 
 - Logs are never truncated during a run.
 - `AuditLogger.close()` flushes and closes the file handle.
 - Log rotation is the caller's responsibility.
+
+## References
+
+Deterministic replay requirements are specified in [eval_protocol.md](eval_protocol.md) § Deterministic Replay. The `stability` field corresponds to the Kuramoto order parameter R — see [lock_metrics.md](lock_metrics.md).

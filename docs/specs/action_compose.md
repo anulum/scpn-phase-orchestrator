@@ -78,3 +78,7 @@ SupervisorPolicy.decide()
     → list[dict] (actuator commands)
     → Domain-specific execution
 ```
+
+## References
+
+Rate limits and value bounds are empirical — see [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Rate Limits. Knob definitions follow the Sakaguchi–Kuramoto model documented in [knobs_K_alpha_zeta_Psi.md](../concepts/knobs_K_alpha_zeta_Psi.md).

@@ -32,6 +32,7 @@ class CoherenceMonitor:
     def compute_r_bad(self, upde_state: UPDEState) -> float:
         return self._mean_r(upde_state, self._bad)
 
+    # PLV lock threshold: Lachaux et al. 1999; see docs/ASSUMPTIONS.md § Quality Gating
     def detect_phase_lock(
         self, upde_state: UPDEState, threshold=0.9
     ) -> list[tuple[int, int]]:
