@@ -15,6 +15,9 @@ pub struct CouplingBuilder;
 
 impl CouplingBuilder {
     /// Build exponential-decay coupling matrix (row-major N×N).
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` if n is 0, or propagates config validation errors.
     pub fn build(n: usize, config: &CouplingConfig) -> SpoResult<CouplingState> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));

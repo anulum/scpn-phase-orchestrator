@@ -9,7 +9,6 @@ const R_DEGRADED: f64 = 0.6;
 
 pub struct RegimeManager {
     pub current: Regime,
-    #[allow(dead_code)]
     hysteresis: f64,
     cooldown_steps: u64,
     step_counter: u64,
@@ -32,15 +31,33 @@ impl RegimeManager {
             return Regime::Critical;
         }
         let avg_r = upde_state.mean_r();
+
+        // Downward transitions use bare thresholds
         if avg_r < R_CRITICAL {
             return Regime::Critical;
         }
+
+        // Upward transitions: require threshold + hysteresis to prevent oscillation.
+        // From Critical/Recovery: need R >= R_CRITICAL + h to leave Critical zone,
+        // but we already passed R >= R_CRITICAL above, so check the band boundary.
+        let is_recovering = matches!(self.current, Regime::Critical | Regime::Recovery);
+
         if avg_r < R_DEGRADED {
+            if is_recovering {
+                return Regime::Recovery;
+            }
             return Regime::Degraded;
         }
-        if self.current == Regime::Critical {
+
+        // avg_r >= R_DEGRADED — candidate is Nominal
+        // Hysteresis band: stay in Degraded until R exceeds R_DEGRADED + hysteresis
+        if self.current == Regime::Degraded && avg_r < R_DEGRADED + self.hysteresis {
+            return Regime::Degraded;
+        }
+        if is_recovering && avg_r < R_DEGRADED + self.hysteresis {
             return Regime::Recovery;
         }
+
         Regime::Nominal
     }
 
@@ -122,11 +139,21 @@ mod tests {
     }
 
     #[test]
-    fn recovery_from_critical() {
+    fn recovery_from_critical_in_degraded_band() {
         let mut rm = RegimeManager::default();
         rm.current = Regime::Critical;
-        let regime = rm.evaluate(&make_state(0.8), &empty_boundary());
+        // R=0.5 is in [R_CRITICAL, R_DEGRADED) — transitions to Recovery
+        let regime = rm.evaluate(&make_state(0.5), &empty_boundary());
         assert_eq!(regime, Regime::Recovery);
+    }
+
+    #[test]
+    fn critical_to_nominal_when_r_high() {
+        let mut rm = RegimeManager::default();
+        rm.current = Regime::Critical;
+        // R=0.8 exceeds R_DEGRADED + hysteresis — goes straight to Nominal
+        let regime = rm.evaluate(&make_state(0.8), &empty_boundary());
+        assert_eq!(regime, Regime::Nominal);
     }
 
     #[test]
@@ -165,5 +192,39 @@ mod tests {
         };
         let regime = rm.evaluate(&state, &empty_boundary());
         assert_eq!(regime, Regime::Critical);
+    }
+
+    #[test]
+    fn hysteresis_prevents_premature_upgrade() {
+        // hysteresis=0.05, so Degraded→Nominal requires R >= 0.65 (not just 0.60)
+        let mut rm = RegimeManager::new(0.05, 10);
+        rm.current = Regime::Degraded;
+
+        // R=0.62: within hysteresis band, stays Degraded
+        let regime = rm.evaluate(&make_state(0.62), &empty_boundary());
+        assert_eq!(regime, Regime::Degraded);
+
+        // R=0.66: above band, promotes to Nominal
+        let regime = rm.evaluate(&make_state(0.66), &empty_boundary());
+        assert_eq!(regime, Regime::Nominal);
+    }
+
+    #[test]
+    fn hysteresis_recovery_path() {
+        let mut rm = RegimeManager::new(0.05, 10);
+        rm.current = Regime::Critical;
+
+        // R=0.5: above R_CRITICAL, in Recovery
+        let regime = rm.evaluate(&make_state(0.5), &empty_boundary());
+        assert_eq!(regime, Regime::Recovery);
+
+        // R=0.62: in hysteresis band above R_DEGRADED, still Recovery
+        rm.current = Regime::Recovery;
+        let regime = rm.evaluate(&make_state(0.62), &empty_boundary());
+        assert_eq!(regime, Regime::Recovery);
+
+        // R=0.66: above band, promotes to Nominal
+        let regime = rm.evaluate(&make_state(0.66), &empty_boundary());
+        assert_eq!(regime, Regime::Nominal);
     }
 }

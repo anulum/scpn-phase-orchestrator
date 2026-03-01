@@ -74,8 +74,8 @@ def test_recovery_after_critical():
     # First: drive into CRITICAL
     state_crit = _make_upde([0.1, 0.15])
     policy.decide(state_crit, BoundaryState())
-    # Now: R above CRITICAL but below NOMINAL while current=CRITICAL → RECOVERY
-    state_rec = _make_upde([0.7, 0.75])
+    # R in [R_CRITICAL, R_DEGRADED) while current=CRITICAL → RECOVERY
+    state_rec = _make_upde([0.45, 0.50])
     actions = policy.decide(state_rec, BoundaryState())
     assert len(actions) == 1
     assert actions[0].knob == "K"

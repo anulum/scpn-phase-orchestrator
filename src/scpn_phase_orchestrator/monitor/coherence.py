@@ -7,16 +7,13 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
-try:
-    from spo_kernel import PyCoherenceMonitor as _RustCoherenceMonitor  # noqa: F401
-
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
 
 
 class CoherenceMonitor:

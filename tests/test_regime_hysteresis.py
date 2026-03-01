@@ -85,9 +85,19 @@ def test_always_escalate_to_critical():
 def test_recovery_when_current_is_critical():
     mgr = RegimeManager(cooldown_steps=0)
     mgr._current = Regime.CRITICAL
-    state = _make_state([0.7, 0.75])
+    # R in [R_CRITICAL, R_DEGRADED) → Recovery
+    state = _make_state([0.45, 0.50])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.RECOVERY
+
+
+def test_critical_to_nominal_when_r_exceeds_band():
+    mgr = RegimeManager(cooldown_steps=0)
+    mgr._current = Regime.CRITICAL
+    # R well above R_DEGRADED + hysteresis → Nominal
+    state = _make_state([0.7, 0.75])
+    regime = mgr.evaluate(state, _clean_boundary())
+    assert regime == Regime.NOMINAL
 
 
 def test_mean_r_empty_layers():

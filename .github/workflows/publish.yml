@@ -17,8 +17,21 @@ permissions:
   contents: read
 
 jobs:
+  preflight:
+    name: Pre-publish CI gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check src/ tests/
+      - run: pytest tests/ -x --tb=short
+
   build:
     name: Build distribution
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,9 +39,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install build tools
-        run: python -m pip install --upgrade pip build
+        run: python -m pip install --upgrade pip build twine
       - name: Build sdist and wheel
         run: python -m build
+      - name: Verify distribution
+        run: twine check dist/*
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

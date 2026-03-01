@@ -7,17 +7,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 from enum import Enum
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
-try:
-    from spo_kernel import PyRegimeManager as _RustRegimeManager  # noqa: F401
-
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
 
 _R_CRITICAL = 0.3  # Acebrón et al. 2005 §2.3 — incoherence boundary
 _R_DEGRADED = 0.6  # Acebrón et al. 2005 §2.3 — partial sync threshold
@@ -51,10 +47,20 @@ class RegimeManager:
 
         if avg_r < _R_CRITICAL:
             return Regime.CRITICAL
+
+        is_recovering = self._current in (Regime.CRITICAL, Regime.RECOVERY)
+
         if avg_r < _R_DEGRADED:
+            if is_recovering:
+                return Regime.RECOVERY
             return Regime.DEGRADED
-        if self._current == Regime.CRITICAL:
+
+        # avg_r >= _R_DEGRADED — candidate Nominal; apply hysteresis band
+        if self._current == Regime.DEGRADED and avg_r < _R_DEGRADED + self._hysteresis:
+            return Regime.DEGRADED
+        if is_recovering and avg_r < _R_DEGRADED + self._hysteresis:
             return Regime.RECOVERY
+
         return Regime.NOMINAL
 
     def transition(self, current: Regime, proposed: Regime) -> Regime:

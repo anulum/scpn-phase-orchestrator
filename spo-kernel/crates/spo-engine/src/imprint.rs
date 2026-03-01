@@ -12,6 +12,8 @@ pub struct ImprintModel {
 }
 
 impl ImprintModel {
+    /// # Errors
+    /// Returns `InvalidConfig` if decay_rate is negative or saturation is non-positive.
     pub fn new(n: usize, decay_rate: f64, saturation: f64) -> SpoResult<Self> {
         if decay_rate < 0.0 {
             return Err(SpoError::InvalidConfig(format!(
