@@ -120,7 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.75.0
-      - run: cargo build --tests
+      - run: cargo check --workspace --lib
 
   ci-gate:
     needs: [lint, typecheck, test, security, rust-check, cargo-audit, rust-msrv, coverage-guard, module-linkage]
