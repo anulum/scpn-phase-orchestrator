@@ -7,16 +7,25 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 def _defs():
     return [
         BoundaryDef(
-            name="R_floor", variable="R",
-            lower=0.2, upper=None, severity="soft",
+            name="R_floor",
+            variable="R",
+            lower=0.2,
+            upper=None,
+            severity="soft",
         ),
         BoundaryDef(
-            name="T_cap", variable="T",
-            lower=None, upper=100.0, severity="hard",
+            name="T_cap",
+            variable="T",
+            lower=None,
+            upper=100.0,
+            severity="hard",
         ),
         BoundaryDef(
-            name="P_band", variable="P",
-            lower=1.0, upper=10.0, severity="soft",
+            name="P_band",
+            variable="P",
+            lower=1.0,
+            upper=10.0,
+            severity="soft",
         ),
     ]
 
