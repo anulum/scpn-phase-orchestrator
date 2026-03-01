@@ -35,7 +35,7 @@ pub fn event_phase(timestamps: &[f64]) -> (f64, f64, f64) {
 
     // Median instantaneous frequency → angular velocity
     let mut sorted_freq = inst_freq.clone();
-    sorted_freq.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    sorted_freq.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let omega_median = if sorted_freq.len() % 2 == 0 {
         let mid = sorted_freq.len() / 2;
         (sorted_freq[mid - 1] + sorted_freq[mid]) / 2.0
@@ -120,5 +120,14 @@ mod tests {
         let timestamps: Vec<f64> = (0..10).map(|i| i as f64).collect();
         let (_, omega, _) = event_phase(&timestamps);
         assert!(omega > 0.0, "omega should be positive for regular events");
+    }
+
+    #[test]
+    fn nan_in_timestamps_no_panic() {
+        let timestamps = vec![0.0, 1.0, f64::NAN, 3.0, 4.0];
+        let (theta, omega, quality) = event_phase(&timestamps);
+        assert!(theta.is_finite() || theta == 0.0);
+        assert!(omega.is_finite() || omega == 0.0);
+        assert!(quality.is_finite() || quality == 0.0);
     }
 }
