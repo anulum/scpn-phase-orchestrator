@@ -17,10 +17,11 @@ from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 def _make_upde(r_values):
     layers = [LayerState(R=r, psi=0.0) for r in r_values]
+    n = len(r_values)
     return UPDEState(
         layers=layers,
-        cross_layer_alignment=np.eye(len(r_values)),
-        stability_proxy=float(np.mean(r_values)),
+        cross_layer_alignment=np.eye(n) if n else np.empty((0, 0)),
+        stability_proxy=float(np.mean(r_values)) if r_values else 0.0,
         regime_id="nominal",
     )
 
@@ -62,6 +63,30 @@ def test_critical_via_hard_violation():
     policy = SupervisorPolicy(mgr)
     state = _make_upde([0.9, 0.85])
     boundary = BoundaryState(violations=["x"], hard_violations=["x"])
+    actions = policy.decide(state, boundary)
+    knobs = [a.knob for a in actions]
+    assert "zeta" in knobs
+
+
+def test_recovery_after_critical():
+    mgr = RegimeManager(cooldown_steps=0)
+    policy = SupervisorPolicy(mgr)
+    # First: drive into CRITICAL
+    state_crit = _make_upde([0.1, 0.15])
+    policy.decide(state_crit, BoundaryState())
+    # Now: R above CRITICAL but below NOMINAL while current=CRITICAL → RECOVERY
+    state_rec = _make_upde([0.7, 0.75])
+    actions = policy.decide(state_rec, BoundaryState())
+    assert len(actions) == 1
+    assert actions[0].knob == "K"
+    assert "recovery" in actions[0].justification
+
+
+def test_critical_with_empty_layers():
+    mgr = RegimeManager(cooldown_steps=0)
+    policy = SupervisorPolicy(mgr)
+    state = _make_upde([])
+    boundary = BoundaryState()
     actions = policy.decide(state, boundary)
     knobs = [a.knob for a in actions]
     assert "zeta" in knobs

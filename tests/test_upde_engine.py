@@ -92,3 +92,18 @@ def test_phase_wrapping():
 def test_invalid_method_raises():
     with pytest.raises(ValueError, match="Unknown method"):
         UPDEEngine(n_oscillators=4, dt=0.01, method="adams")
+
+
+def test_external_drive_zeta_nonzero():
+    n = 4
+    dt = 0.01
+    phases = np.zeros(n)
+    omegas = np.zeros(n)
+    knm = np.zeros((n, n))
+    alpha = np.zeros((n, n))
+
+    engine = UPDEEngine(n_oscillators=n, dt=dt)
+    # With zeta=1.0 and psi=pi, derivative = zeta*sin(pi - 0) = 0 at theta=0
+    # Use psi=pi/2 so sin(pi/2 - 0) = 1.0 → phases advance
+    new_phases = engine.step(phases, omegas, knm, zeta=1.0, psi=np.pi / 2, alpha=alpha)
+    assert np.all(new_phases > 0.0)

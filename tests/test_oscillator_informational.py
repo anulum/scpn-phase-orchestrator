@@ -58,3 +58,24 @@ def test_channel_is_informational():
     states = extractor.extract(timestamps, sample_rate=0.0)
     assert states[0].channel == "I"
     assert states[0].node_id == "info_x"
+
+
+def test_all_zero_intervals_returns_zero_quality():
+    timestamps = np.array([1.0, 1.0, 1.0])
+    extractor = InformationalExtractor()
+    states = extractor.extract(timestamps, sample_rate=0.0)
+    assert states[0].quality == 0.0
+    assert states[0].omega == 0.0
+
+
+def test_quality_score_empty():
+    extractor = InformationalExtractor()
+    assert extractor.quality_score([]) == 0.0
+
+
+def test_quality_score_nonempty():
+    timestamps = np.arange(0.0, 1.0, 0.1)
+    extractor = InformationalExtractor()
+    states = extractor.extract(timestamps, sample_rate=0.0)
+    score = extractor.quality_score(states)
+    assert 0.0 < score <= 1.0

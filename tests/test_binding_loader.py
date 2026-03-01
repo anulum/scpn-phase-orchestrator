@@ -69,3 +69,55 @@ def test_unsupported_extension(tmp_path):
     p.write_text("{}", encoding="utf-8")
     with pytest.raises(ValueError, match="Unsupported file extension"):
         load_binding_spec(p)
+
+
+def test_load_with_imprint_model(tmp_path):
+    data = {**_SPEC_DATA, "imprint_model": {"decay_rate": 0.1, "saturation": 0.9}}
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    spec = load_binding_spec(p)
+    assert spec.imprint_model is not None
+    assert spec.imprint_model.decay_rate == 0.1
+    assert spec.imprint_model.saturation == 0.9
+    assert spec.imprint_model.modulates == []
+
+
+def test_load_with_geometry_prior(tmp_path):
+    geo = {"constraint_type": "spherical", "params": {"radius": 1.0}}
+    data = {**_SPEC_DATA, "geometry_prior": geo}
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    spec = load_binding_spec(p)
+    assert spec.geometry_prior is not None
+    assert spec.geometry_prior.constraint_type == "spherical"
+    assert spec.geometry_prior.params == {"radius": 1.0}
+
+
+def test_loader_validate_control_period_and_channels(tmp_path):
+    from scpn_phase_orchestrator.binding.loader import validate_binding_spec
+
+    data = {
+        **_SPEC_DATA,
+        "control_period_s": -1.0,
+        "oscillator_families": {
+            "bad": {"channel": "X", "extractor_type": "hilbert", "config": {}},
+        },
+        "boundaries": [
+            {
+                "name": "b", "variable": "R",
+                "lower": 0.0, "upper": 1.0, "severity": "extreme",
+            },
+        ],
+        "actuators": [
+            {"name": "a", "knob": "bogus", "scope": "global", "limits": [1.0, 0.0]},
+        ],
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    spec = load_binding_spec(p)
+    errors = validate_binding_spec(spec)
+    assert any("control_period_s" in e for e in errors)
+    assert any("channel" in e for e in errors)
+    assert any("severity" in e for e in errors)
+    assert any("knob" in e for e in errors)
+    assert any("limits" in e for e in errors)

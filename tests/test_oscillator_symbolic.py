@@ -65,3 +65,15 @@ def test_n_states_below_two_raises():
 def test_invalid_mode_raises():
     with pytest.raises(ValueError, match="mode must be"):
         SymbolicExtractor(n_states=4, mode="invalid")
+
+
+def test_quality_score_empty():
+    extractor = SymbolicExtractor(n_states=4)
+    assert extractor.quality_score([]) == 0.0
+
+
+def test_quality_score_nonempty():
+    extractor = SymbolicExtractor(n_states=4)
+    states = extractor.extract(np.array([0, 1, 2, 3]), sample_rate=1.0)
+    score = extractor.quality_score(states)
+    assert 0.0 < score <= 1.0

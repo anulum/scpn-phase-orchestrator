@@ -87,7 +87,7 @@ markers = [
 source = ["scpn_phase_orchestrator"]
 
 [tool.coverage.report]
-fail_under = 75
+fail_under = 90
 
 [tool.bandit]
 exclude_dirs = ["tests"]

@@ -52,6 +52,12 @@ def test_bridge_import_omega_non_positive_raises():
         bridge.import_omega(np.array([1.0, -0.5]))
 
 
+def test_bridge_import_omega_2d_raises():
+    bridge = SCPNControlBridge({})
+    with pytest.raises(ValueError, match="1-D"):
+        bridge.import_omega(np.array([[1.0, 2.0], [3.0, 4.0]]))
+
+
 def test_bridge_export_state():
     bridge = SCPNControlBridge({})
     sig = LockSignature(source_layer=0, target_layer=1, plv=0.95, mean_lag=0.01)

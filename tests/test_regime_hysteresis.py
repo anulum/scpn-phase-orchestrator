@@ -80,3 +80,18 @@ def test_always_escalate_to_critical():
     # But CRITICAL always overrides cooldown
     result = mgr.transition(Regime.DEGRADED, Regime.CRITICAL)
     assert result == Regime.CRITICAL
+
+
+def test_recovery_when_current_is_critical():
+    mgr = RegimeManager(cooldown_steps=0)
+    mgr._current = Regime.CRITICAL
+    state = _make_state([0.7, 0.75])
+    regime = mgr.evaluate(state, _clean_boundary())
+    assert regime == Regime.RECOVERY
+
+
+def test_mean_r_empty_layers():
+    mgr = RegimeManager(cooldown_steps=0)
+    state = _make_state([])
+    regime = mgr.evaluate(state, _clean_boundary())
+    assert regime == Regime.CRITICAL
