@@ -144,8 +144,7 @@ mod tests {
 
     #[test]
     fn extract_mismatched_lengths() {
-        let (theta, omega, amp, quality) =
-            extract_from_analytic(&[1.0, 2.0], &[1.0], 1000.0);
+        let (theta, omega, amp, quality) = extract_from_analytic(&[1.0, 2.0], &[1.0], 1000.0);
         assert_eq!(theta, 0.0);
         assert_eq!(omega, 0.0);
         assert_eq!(amp, 0.0);
