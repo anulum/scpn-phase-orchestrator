@@ -104,8 +104,11 @@ def test_loader_validate_control_period_and_channels(tmp_path):
         },
         "boundaries": [
             {
-                "name": "b", "variable": "R",
-                "lower": 0.0, "upper": 1.0, "severity": "extreme",
+                "name": "b",
+                "variable": "R",
+                "lower": 0.0,
+                "upper": 1.0,
+                "severity": "extreme",
             },
         ],
         "actuators": [
