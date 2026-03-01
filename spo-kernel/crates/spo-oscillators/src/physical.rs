@@ -14,41 +14,27 @@ use std::f64::consts::TAU;
 /// - theta: instantaneous phase of the last sample, in [0, TAU)
 /// - omega: median instantaneous angular frequency (rad/s)
 /// - amplitude: mean envelope magnitude
-/// - quality: SNR/(1+SNR) where SNR = mean(envelope²)/mean(noise²), noise = signal - real(analytic)
+/// - quality: always 1.0 for Hilbert analytic signals (real == signal, so noise = 0)
 pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f64, f64, f64, f64) {
     let n = real.len();
     if n == 0 || imag.len() != n {
         return (0.0, 0.0, 0.0, 0.0);
     }
 
-    // Pass 1: inst_phase, inst_amp, sig_power, noise_power
+    // Pass 1: inst_phase + amplitude accumulator
     let mut inst_phase = vec![0.0_f64; n];
     let mut amp_sum = 0.0_f64;
-    let mut sig_power_sum = 0.0_f64;
-    let mut noise_power_sum = 0.0_f64;
 
     for i in 0..n {
         inst_phase[i] = imag[i].atan2(real[i]);
-        let envelope = (real[i] * real[i] + imag[i] * imag[i]).sqrt();
-        amp_sum += envelope;
-        sig_power_sum += envelope * envelope;
-        // noise = original_signal - real_part_of_analytic (≈0 for Hilbert)
-        let noise = real[i] - real[i]; // preserves parity: always 0.0
-        noise_power_sum += noise * noise;
+        amp_sum += (real[i] * real[i] + imag[i] * imag[i]).sqrt();
     }
 
     let amplitude = amp_sum / n as f64;
     let theta = inst_phase[n - 1].rem_euclid(TAU);
 
-    // quality from SNR
-    let quality = if noise_power_sum < 1e-15 * n as f64 {
-        1.0
-    } else {
-        let sig_power = sig_power_sum / n as f64;
-        let noise_power = noise_power_sum / n as f64;
-        let snr = sig_power / noise_power;
-        (snr / (1.0 + snr)).clamp(0.0, 1.0)
-    };
+    // For Hilbert analytic signals, real == original signal, so noise = 0 and quality = 1.0.
+    let quality = 1.0;
 
     // Pass 2: unwrap + gradient → inst_freq → median → omega
     // Unwrap in-place
