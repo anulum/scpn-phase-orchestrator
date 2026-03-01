@@ -62,12 +62,18 @@ pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f
         // O(n) median via select_nth_unstable
         let mid = inst_freq.len() / 2;
         if inst_freq.len() % 2 == 1 {
-            inst_freq.select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            inst_freq.select_nth_unstable_by(mid, |a, b| {
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+            });
             inst_freq[mid] * TAU
         } else {
-            inst_freq.select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            inst_freq.select_nth_unstable_by(mid, |a, b| {
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+            });
             let upper = inst_freq[mid];
-            inst_freq[..mid].select_nth_unstable_by(mid - 1, |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            inst_freq[..mid].select_nth_unstable_by(mid - 1, |a, b| {
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+            });
             let lower = inst_freq[mid - 1];
             (lower + upper) / 2.0 * TAU
         }
