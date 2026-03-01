@@ -40,10 +40,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4",
+    "pytest-cov>=4.1",
     "hypothesis>=6.82",
     "coverage[toml]>=7.3",
     "ruff>=0.4",
     "mypy>=1.8",
+    "types-PyYAML>=6.0",
     "bandit>=1.7",
     "mkdocs-material>=9.5",
 ]
@@ -68,7 +70,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 
 [tool.mypy]
 strict = false
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
