@@ -49,3 +49,8 @@ Used by the supervisor to detect unwanted cross-layer locking (R_bad objective).
 | R_good minimum | > 0.3 | above CRITICAL |
 | R_bad ceiling | < 0.3 | acceptable |
 | PLV lock | > 0.9 | phase-locked pair |
+
+## References
+
+- **[kuramoto1975]** Y. Kuramoto (1975). Self-entrainment of a population of coupled non-linear oscillators. *Lecture Notes in Physics* 39, 420–422. — Order parameter R definition.
+- **[lachaux1999]** J.-P. Lachaux et al. (1999). Measuring phase synchrony in brain signals. *Human Brain Mapping* 8, 194–208. — PLV definition and significance thresholds.

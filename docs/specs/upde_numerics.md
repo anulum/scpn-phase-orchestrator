@@ -63,3 +63,9 @@ All operations use `out=` parameter to avoid allocation during stepping. For RK4
 - `sin(theta_j - theta_i)` handles wrap-around implicitly: `sin(5.9 - 0.1) = sin(5.8) ≈ sin(-0.48)`.
 - Double precision (float64) throughout. No single-precision paths.
 - Order parameter `R = |mean(exp(i*theta))|` computed via complex arithmetic, not via trigonometric identities.
+
+## References
+
+- **[kuramoto1975]** Y. Kuramoto (1975). Self-entrainment of a population of coupled non-linear oscillators. *Lecture Notes in Physics* 39, 420–422. — UPDE equation origin.
+- **[hairer1993]** E. Hairer, S. P. Nørsett & G. Wanner (1993). *Solving Ordinary Differential Equations I*. 2nd ed., Springer. — Euler and RK4 integrator theory.
+- **[courant1928]** R. Courant, K. Friedrichs & H. Lewy (1928). Über die partiellen Differenzengleichungen der mathematischen Physik. *Math. Annalen* 100, 32–74. — CFL stability condition.

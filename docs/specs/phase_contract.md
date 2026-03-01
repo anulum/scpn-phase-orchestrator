@@ -27,3 +27,8 @@ Every oscillator produces a `PhaseState` with the following fields:
 ## Phase Wrapping
 
 The UPDE engine wraps output phases via `% TWO_PI` after every integration step. Phase differences use the standard `sin(theta_j - theta_i)` form, which handles wrapping implicitly.
+
+## References
+
+- **[gabor1946]** D. Gabor (1946). Theory of communication. *J. IEE* 93, 429–457. — Analytic signal underlying P-channel phase extraction.
+- **[pikovsky2001]** A. Pikovsky, M. Rosenblum & J. Kurths (2001). *Synchronization: A Universal Concept in Nonlinear Sciences*. Cambridge UP. — Instantaneous phase and frequency conventions.

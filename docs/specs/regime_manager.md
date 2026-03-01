@@ -59,3 +59,8 @@ regime   = transition(current, proposed)
 | DEGRADED | Boost global K |
 | CRITICAL | Increase zeta, reduce K on worst layer |
 | RECOVERY | Gradual K restore |
+
+## References
+
+- **[acebron2005]** J. A. Acebrón et al. (2005). The Kuramoto model: a simple paradigm for synchronization phenomena. *Rev. Mod. Phys.* 77, 137–185. — Incoherence / partial-sync boundaries motivating R thresholds.
+- **[dorfler2014]** F. Dörfler & F. Bullo (2014). Synchronization in complex networks of phase oscillators: a survey. *Automatica* 50, 1539–1564. — Finite-N synchronisation conditions and hysteresis.

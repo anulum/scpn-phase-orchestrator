@@ -44,6 +44,8 @@ nav:
       - New Domain Checklist: tutorials/01_new_domain_checklist.md
       - Oscillator Hunt Sheet: tutorials/02_oscillator_hunt_sheet.md
       - Build Knm Templates: tutorials/03_build_knm_templates.md
+  - Reference:
+      - Assumptions & Constants: ASSUMPTIONS.md
 
 plugins:
   - search

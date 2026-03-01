@@ -64,3 +64,9 @@ All channels output `PhaseState` with the same fields. The UPDE engine does not 
 ## Quality Gating
 
 Extracted phases with `quality < min_quality` (default 0.3) are down-weighted by `PhaseQualityScorer.downweight_mask()`. Collapsed oscillators (quality < 0.1 for majority of states) trigger `detect_collapse()`.
+
+## References
+
+- **[gabor1946]** D. Gabor (1946). Theory of communication. *J. IEE* 93, 429–457. — Analytic signal and instantaneous phase (P channel).
+- **[pikovsky2001]** A. Pikovsky, M. Rosenblum & J. Kurths (2001). *Synchronization: A Universal Concept in Nonlinear Sciences*. Cambridge UP. — Phase extraction from time series, quality metrics.
+- **[lachaux1999]** J.-P. Lachaux et al. (1999). Measuring phase synchrony in brain signals. *Human Brain Mapping* 8, 194–208. — PLV definition used in quality gating.
