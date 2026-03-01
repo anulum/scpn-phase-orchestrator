@@ -43,6 +43,8 @@ Used by the supervisor to detect unwanted cross-layer locking (R_bad objective).
 
 ## Thresholds
 
+See [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Quality Gating and § Regime Thresholds for provenance.
+
 | Metric | Threshold | Meaning |
 |--------|-----------|---------|
 | R_good target | > 0.6 | NOMINAL regime |

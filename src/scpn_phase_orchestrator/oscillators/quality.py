@@ -25,6 +25,7 @@ class PhaseQualityScorer:
         weights = np.maximum(amplitudes, 1e-12)
         return float(np.average(qualities, weights=weights))
 
+    # Thresholds: see docs/ASSUMPTIONS.md § Quality Gating
     def detect_collapse(self, phase_states: list[PhaseState], threshold=0.1) -> bool:
         """True if quality is below threshold for the majority of states."""
         if not phase_states:

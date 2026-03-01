@@ -83,3 +83,7 @@ class MyDriver:
 ## Registration
 
 All custom classes are resolved at binding-spec load time via Python's `importlib`. The module must be importable from the Python path. No global registry -- resolution is per-spec.
+
+## References
+
+Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

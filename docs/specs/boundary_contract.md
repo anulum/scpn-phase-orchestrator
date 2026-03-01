@@ -58,3 +58,7 @@ state = observer.observe({"queue_depth": 12000, "p99_latency_ms": 300})
 `RegimeManager.evaluate()` checks `boundary_state.hard_violations` first. Any hard violation forces CRITICAL regardless of R values.
 
 Soft warnings do not directly trigger regime changes but are logged in the audit trace for post-hoc analysis.
+
+## References
+
+Regime escalation logic is defined in [regime_manager.md](regime_manager.md). Boundary severity levels are configured per-domain in the binding spec — see [binding_spec.schema.json](binding_spec.schema.json).

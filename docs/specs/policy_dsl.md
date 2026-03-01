@@ -66,3 +66,7 @@ policy: policy.yaml
 ```
 
 Resolved relative to the binding spec directory.
+
+## References
+
+Planned for v0.2 — see [ROADMAP.md](../../ROADMAP.md). The current hardcoded policy is documented in [regime_manager.md](regime_manager.md) § Supervisor Integration. Threshold values used in example rules are empirical — see [ASSUMPTIONS.md](../ASSUMPTIONS.md).

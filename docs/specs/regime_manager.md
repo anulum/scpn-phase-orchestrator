@@ -22,6 +22,8 @@
 
 ## Thresholds
 
+See [ASSUMPTIONS.md](../ASSUMPTIONS.md) § Regime Thresholds for provenance.
+
 ```python
 _R_CRITICAL = 0.3
 _R_DEGRADED = 0.6
