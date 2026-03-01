@@ -18,7 +18,7 @@ use spo_engine::{
     order_params,
     upde::UPDEStepper,
 };
-use spo_oscillators::{informational, quality::PhaseQualityScorer, symbolic};
+use spo_oscillators::{informational, physical, quality::PhaseQualityScorer, symbolic};
 use spo_supervisor::{
     boundaries::{BoundaryDef, BoundaryObserver, Severity},
     coherence::CoherenceMonitor,
@@ -377,6 +377,11 @@ fn event_phase(timestamps: Vec<f64>) -> (f64, f64, f64) {
     informational::event_phase(&timestamps)
 }
 
+#[pyfunction]
+fn physical_extract(real: Vec<f64>, imag: Vec<f64>, sample_rate: f64) -> (f64, f64, f64, f64) {
+    physical::extract_from_analytic(&real, &imag, sample_rate)
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
 fn make_upde_state(layer_rs: &[f64]) -> UPDEState {
@@ -445,5 +450,6 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(plv, m)?)?;
     m.add_function(wrap_pyfunction!(ring_phase, m)?)?;
     m.add_function(wrap_pyfunction!(event_phase, m)?)?;
+    m.add_function(wrap_pyfunction!(physical_extract, m)?)?;
     Ok(())
 }

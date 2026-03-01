@@ -78,3 +78,36 @@ def test_snr_estimate_returns_one_for_real_signal():
     signal = np.sin(TWO_PI * 5.0 * np.arange(0, 0.5, 0.001))
     quality = PhysicalExtractor._snr_estimate(signal, hilbert(signal))
     assert quality == 1.0
+
+
+def test_rust_python_parity():
+    """Rust and Python paths produce identical results within float tolerance."""
+    try:
+        from spo_kernel import physical_extract
+    except ImportError:
+        import pytest
+
+        pytest.skip("spo_kernel not built")
+
+    from scipy.signal import hilbert
+
+    fs = 1000.0
+    t = np.arange(0, 0.5, 1.0 / fs)
+    signal = np.sin(TWO_PI * 10.0 * t)
+    analytic = hilbert(signal)
+
+    r_theta, r_omega, r_amp, r_quality = physical_extract(
+        np.real(analytic).tolist(), np.imag(analytic).tolist(), fs
+    )
+
+    inst_phase = np.angle(analytic) % TWO_PI
+    inst_amp = np.abs(analytic)
+    inst_freq = np.gradient(np.unwrap(np.angle(analytic))) * fs / TWO_PI
+    p_theta = float(inst_phase[-1])
+    p_omega = float(np.median(inst_freq)) * TWO_PI
+    p_amp = float(np.mean(inst_amp))
+
+    np.testing.assert_allclose(r_theta, p_theta, atol=1e-10)
+    np.testing.assert_allclose(r_omega, p_omega, rtol=0.01)
+    np.testing.assert_allclose(r_amp, p_amp, rtol=1e-6)
+    assert r_quality > 0.5
