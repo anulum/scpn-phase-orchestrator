@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -104,8 +104,26 @@ jobs:
       - run: cargo clippy -- -D warnings
       - run: cargo test
 
+  cargo-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install cargo-audit --locked
+      - run: cd spo-kernel && cargo audit
+
+  rust-msrv:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spo-kernel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.75.0
+      - run: cargo check
+      - run: cargo test
+
   ci-gate:
-    needs: [lint, typecheck, test, security, rust-check, coverage-guard, module-linkage]
+    needs: [lint, typecheck, test, security, rust-check, cargo-audit, rust-msrv, coverage-guard, module-linkage]
     runs-on: ubuntu-latest
     steps:
       - run: echo "All checks passed"

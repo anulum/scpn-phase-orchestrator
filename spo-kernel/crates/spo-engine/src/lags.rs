@@ -79,4 +79,14 @@ mod tests {
         // Half speed → double lag
         assert!((lm1.alpha[1] - 2.0 * lm2.alpha[1]).abs() < 1e-12);
     }
+
+    #[test]
+    fn nan_distance_no_panic() {
+        let n = 2;
+        let distances = vec![0.0, f64::NAN, f64::NAN, 0.0];
+        let lm = LagModel::estimate_from_distances(&distances, n, 1.0);
+        // NaN propagates into alpha — verify no panic and alpha has NaN
+        assert!(lm.alpha[1].is_nan());
+        assert!(lm.alpha[2].is_nan());
+    }
 }
