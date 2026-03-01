@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import click
@@ -22,13 +23,13 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 
 @click.group()
-def main():
+def main() -> None:
     """SCPN Phase Orchestrator CLI."""
 
 
 @main.command()
 @click.argument("binding_spec", type=click.Path(exists=True))
-def validate(binding_spec):
+def validate(binding_spec: str) -> None:
     """Validate a binding specification file."""
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
@@ -42,7 +43,7 @@ def validate(binding_spec):
 @main.command()
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.option("--steps", default=100, type=int, help="Simulation steps")
-def run(binding_spec, steps):
+def run(binding_spec: str, steps: int) -> None:
     """Run simulation from a binding spec."""
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
@@ -90,7 +91,7 @@ def run(binding_spec, steps):
 @main.command()
 @click.argument("log_path", type=click.Path(exists=True))
 @click.option("--output", default=None, type=click.Path(), help="Output file")
-def replay(log_path, output):
+def replay(log_path: str, output: str | None) -> None:
     """Replay an audit log and print summary."""
     re = ReplayEngine(log_path)
     entries = re.load()
@@ -106,15 +107,19 @@ def replay(log_path, output):
 
 @main.command()
 @click.argument("log_path", type=click.Path(exists=True))
-def report(log_path):
+def report(log_path: str) -> None:
     """Generate coherence report from audit log."""
     click.echo("Report generation planned for v0.3")
 
 
 @main.command()
 @click.argument("domain_name")
-def scaffold(domain_name):
+def scaffold(domain_name: str) -> None:
     """Create a domainpack directory structure with template files."""
+    if not re.match(r"^[a-zA-Z0-9_-]+$", domain_name):
+        raise click.BadParameter(
+            f"domain_name must match [a-zA-Z0-9_-]+, got {domain_name!r}"
+        )
     base = Path(f"domainpacks/{domain_name}")
     base.mkdir(parents=True, exist_ok=True)
     spec_file = base / "binding_spec.yaml"

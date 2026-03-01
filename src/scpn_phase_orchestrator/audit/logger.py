@@ -20,9 +20,11 @@ class AuditLogger:
 
     def __init__(self, path: str | Path):
         self._path = Path(path)
-        self._fh = open(self._path, "a", encoding="utf-8")  # noqa: SIM115
+        self._fh = self._path.open("a", encoding="utf-8")
 
-    def log_step(self, step: int, upde_state: UPDEState, actions: list[ControlAction]):
+    def log_step(
+        self, step: int, upde_state: UPDEState, actions: list[ControlAction]
+    ) -> None:
         record = {
             "ts": time.time(),
             "step": step,
@@ -42,10 +44,21 @@ class AuditLogger:
         }
         self._fh.write(json.dumps(record) + "\n")
 
-    def log_event(self, event_type: str, data: dict):
+    def log_event(self, event_type: str, data: dict) -> None:
         record = {"ts": time.time(), "event": event_type, **data}
         self._fh.write(json.dumps(record) + "\n")
 
-    def close(self):
+    def close(self) -> None:
         self._fh.flush()
         self._fh.close()
+
+    def __enter__(self) -> AuditLogger:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        self.close()

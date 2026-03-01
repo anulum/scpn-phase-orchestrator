@@ -128,4 +128,20 @@ mod tests {
         im.reset();
         assert!(im.m.iter().all(|&v| v == 0.0));
     }
+
+    #[test]
+    fn modulate_lag_shifts_rows() {
+        let mut im = ImprintModel::new(2, 0.0, 10.0).unwrap();
+        im.m[0] = 0.3;
+        im.m[1] = 0.0;
+        // 2×2 alpha, row-major
+        let mut alpha = vec![0.0, 1.0, -1.0, 0.0];
+        im.modulate_lag(&mut alpha);
+        // Row 0 shifted by m[0]=0.3
+        assert!((alpha[0] - 0.3).abs() < 1e-12);
+        assert!((alpha[1] - 1.3).abs() < 1e-12);
+        // Row 1 unshifted (m[1]=0.0)
+        assert!((alpha[2] - (-1.0)).abs() < 1e-12);
+        assert!((alpha[3] - 0.0).abs() < 1e-12);
+    }
 }

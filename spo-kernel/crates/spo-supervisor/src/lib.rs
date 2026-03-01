@@ -1,3 +1,4 @@
+#![deny(unsafe_code)]
 // SCPN Phase Orchestrator — Supervisor
 // (C) 1998-2026 Miroslav Sotek. All rights reserved.
 

@@ -67,18 +67,12 @@ impl SupervisorPolicy {
 }
 
 fn worst_layer(upde_state: &UPDEState) -> Option<usize> {
-    if upde_state.layers.is_empty() {
-        return None;
-    }
-    Some(
-        upde_state
-            .layers
-            .iter()
-            .enumerate()
-            .min_by(|(_, a), (_, b)| a.r.partial_cmp(&b.r).unwrap())
-            .unwrap()
-            .0,
-    )
+    upde_state
+        .layers
+        .iter()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| a.r.partial_cmp(&b.r).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(i, _)| i)
 }
 
 #[cfg(test)]
@@ -155,5 +149,24 @@ mod tests {
         if !actions.is_empty() {
             assert_eq!(actions[0].knob, Knob::K);
         }
+    }
+
+    #[test]
+    fn nan_layer_r_no_panic() {
+        let state = UPDEState {
+            layers: vec![
+                LayerState { r: 0.5, psi: 0.0 },
+                LayerState {
+                    r: f64::NAN,
+                    psi: 0.0,
+                },
+                LayerState { r: 0.2, psi: 0.0 },
+            ],
+            cross_layer_alignment: vec![],
+            stability_proxy: 0.0,
+            regime: Regime::Nominal,
+        };
+        let result = worst_layer(&state);
+        assert!(result.is_some());
     }
 }
