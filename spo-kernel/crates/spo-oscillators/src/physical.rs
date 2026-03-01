@@ -62,12 +62,12 @@ pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f
         // O(n) median via select_nth_unstable
         let mid = inst_freq.len() / 2;
         if inst_freq.len() % 2 == 1 {
-            inst_freq.select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap());
+            inst_freq.select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             inst_freq[mid] * TAU
         } else {
-            inst_freq.select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap());
+            inst_freq.select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             let upper = inst_freq[mid];
-            inst_freq[..mid].select_nth_unstable_by(mid - 1, |a, b| a.partial_cmp(b).unwrap());
+            inst_freq[..mid].select_nth_unstable_by(mid - 1, |a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             let lower = inst_freq[mid - 1];
             (lower + upper) / 2.0 * TAU
         }
@@ -135,5 +135,13 @@ mod tests {
         assert_eq!(omega, 0.0);
         assert_eq!(amp, 0.0);
         assert_eq!(quality, 0.0);
+    }
+
+    #[test]
+    fn nan_in_signal_no_panic() {
+        let real = vec![1.0, f64::NAN, 0.5, -0.5];
+        let imag = vec![0.0, 0.5, f64::NAN, 0.5];
+        let (_theta, _omega, _amp, _quality) = extract_from_analytic(&real, &imag, 1000.0);
+        // Must not panic; output may be NaN but that is acceptable
     }
 }
