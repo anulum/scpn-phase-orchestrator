@@ -64,3 +64,17 @@ def test_quality_score_aggregation():
     score = extractor.quality_score(states)
     assert 0.0 <= score <= 1.0
     assert score == states[0].quality
+
+
+def test_quality_score_empty():
+    extractor = PhysicalExtractor()
+    assert extractor.quality_score([]) == 0.0
+
+
+def test_snr_estimate_returns_one_for_real_signal():
+    """Hilbert real part equals input, so noise ≈ 0 and quality = 1.0."""
+    from scipy.signal import hilbert
+
+    signal = np.sin(TWO_PI * 5.0 * np.arange(0, 0.5, 0.001))
+    quality = PhysicalExtractor._snr_estimate(signal, hilbert(signal))
+    assert quality == 1.0

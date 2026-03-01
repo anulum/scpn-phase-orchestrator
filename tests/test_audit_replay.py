@@ -81,3 +81,29 @@ def test_verify_determinism_skips_entries_without_phases(log_file):
     engine = UPDEEngine(2, dt=0.01)
     re = ReplayEngine(log_file)
     assert re.verify_determinism(engine, re.load()) is True
+
+
+def test_verify_determinism_returns_false_on_r_mismatch(tmp_path):
+    n = 4
+    engine = UPDEEngine(n, dt=0.01)
+    rng = np.random.default_rng(1)
+    phases = rng.uniform(0, 2 * np.pi, n)
+    omegas = np.ones(n)
+    knm = 0.3 * np.ones((n, n))
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    entry = {
+        "phases": phases.tolist(),
+        "omegas": omegas.tolist(),
+        "knm": knm.tolist(),
+        "alpha": alpha.tolist(),
+        "zeta": 0.0,
+        "psi_drive": 0.0,
+        "layers": [{"R": 0.0001}],
+    }
+    log = tmp_path / "bad.jsonl"
+    log.write_text(json.dumps(entry) + "\n", encoding="utf-8")
+
+    re = ReplayEngine(log)
+    assert re.verify_determinism(engine, re.load()) is False

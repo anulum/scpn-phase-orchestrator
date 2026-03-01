@@ -75,3 +75,18 @@ def test_bad_boundary_severity(sample_binding_spec):
     bad = replace(sample_binding_spec, boundaries=bad_bounds)
     errors = validate_binding_spec(bad)
     assert any("severity" in e for e in errors)
+
+
+def test_empty_layers_error(sample_binding_spec):
+    bad = replace(sample_binding_spec, layers=[])
+    errors = validate_binding_spec(bad)
+    assert any("at least one layer" in e for e in errors)
+
+
+def test_objective_references_missing_layer(sample_binding_spec):
+    from scpn_phase_orchestrator.binding.types import ObjectivePartition
+
+    bad_obj = ObjectivePartition(good_layers=[0, 99], bad_layers=[])
+    bad = replace(sample_binding_spec, objectives=bad_obj)
+    errors = validate_binding_spec(bad)
+    assert any("layer index 99" in e for e in errors)
