@@ -1,0 +1,56 @@
+# SCPN Phase Orchestrator
+# Copyright concepts (c) 1996-2026 Miroslav Sotek. All rights reserved.
+# Copyright code (c) 2026 Miroslav Sotek. All rights reserved.
+# ORCID: https://orcid.org/0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+
+from __future__ import annotations
+
+import numpy as np
+
+from scpn_phase_orchestrator.coupling.geometry_constraints import (
+    NonNegativeConstraint,
+    SymmetryConstraint,
+    project_knm,
+)
+
+
+def test_symmetry_constraint():
+    asymmetric = np.array([[0.0, 0.3], [0.7, 0.0]])
+    sym = SymmetryConstraint().project(asymmetric)
+    np.testing.assert_allclose(sym, sym.T, atol=1e-14)
+    np.testing.assert_allclose(sym[0, 1], 0.5, atol=1e-14)
+
+
+def test_non_negative_constraint():
+    m = np.array([[0.0, -0.5, 0.3], [0.2, 0.0, -0.1], [-0.3, 0.4, 0.0]])
+    clipped = NonNegativeConstraint().project(m)
+    assert np.all(clipped >= 0.0)
+    assert clipped[0, 1] == 0.0
+    assert clipped[0, 2] == 0.3
+
+
+def test_project_knm_preserves_both():
+    rng = np.random.default_rng(42)
+    raw = rng.uniform(-1.0, 1.0, size=(6, 6))
+    np.fill_diagonal(raw, 0.0)
+    constraints = [SymmetryConstraint(), NonNegativeConstraint()]
+    result = project_knm(raw, constraints)
+    np.testing.assert_allclose(result, result.T, atol=1e-14)
+    assert np.all(result >= 0.0)
+
+
+def test_diagonal_preserved_after_projection():
+    m = np.zeros((4, 4))
+    m[0, 1] = -0.2
+    m[1, 0] = 0.5
+    constraints = [SymmetryConstraint(), NonNegativeConstraint()]
+    result = project_knm(m, constraints)
+    np.testing.assert_allclose(np.diag(result), 0.0, atol=1e-15)
+
+
+def test_already_valid_unchanged():
+    m = np.array([[0.0, 0.5, 0.2], [0.5, 0.0, 0.3], [0.2, 0.3, 0.0]])
+    result = project_knm(m, [SymmetryConstraint(), NonNegativeConstraint()])
+    np.testing.assert_allclose(result, m, atol=1e-14)

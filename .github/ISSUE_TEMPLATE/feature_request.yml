@@ -1,0 +1,42 @@
+# ──────────────────────────────────────────────────────────────────────
+# SCPN Phase Orchestrator — Feature request template
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+# ──────────────────────────────────────────────────────────────────────
+
+name: Feature Request
+description: Suggest a feature
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: What problem does this feature solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other approaches you considered.
+    validations:
+      required: false
+
+  - type: textarea
+    id: domain
+    attributes:
+      label: Domain Context
+      description: Which domain or domainpack is this related to?
+    validations:
+      required: false

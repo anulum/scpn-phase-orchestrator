@@ -1,0 +1,12 @@
+# ──────────────────────────────────────────────────────────────────────
+# SCPN Phase Orchestrator — Issue template configuration
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+# ──────────────────────────────────────────────────────────────────────
+
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/anulum/scpn-phase-orchestrator/blob/main/SECURITY.md
+    about: Report security vulnerabilities via SECURITY.md

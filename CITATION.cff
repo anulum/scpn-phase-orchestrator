@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: SCPN Phase Orchestrator
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Sotek
+    given-names: Miroslav
+    orcid: "https://orcid.org/0009-0009-3560-0851"
+    email: protoscience@anulum.li
+version: 0.1.0
+date-released: "2026-03-01"
+license: AGPL-3.0-or-later
+url: "https://github.com/anulum/scpn-phase-orchestrator"
+repository-code: "https://github.com/anulum/scpn-phase-orchestrator"
+keywords:
+  - kuramoto
+  - phase-dynamics
+  - coherence-control
+  - UPDE
+  - synchrony

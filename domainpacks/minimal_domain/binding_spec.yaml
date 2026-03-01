@@ -1,0 +1,45 @@
+name: minimal_domain
+version: "0.1"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: lower
+    index: 0
+    oscillator_ids: [osc_0, osc_1]
+  - name: upper
+    index: 1
+    oscillator_ids: [osc_2, osc_3]
+
+oscillator_families:
+  base:
+    channel: P
+    extractor_type: physical
+    config: {}
+
+coupling:
+  base_strength: 0.45
+  decay_alpha: 0.3
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.0
+    psi: 0.0
+  informational: {}
+  symbolic: {}
+
+objectives:
+  good_layers: [0, 1]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries: []
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]

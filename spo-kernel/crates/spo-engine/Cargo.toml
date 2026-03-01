@@ -1,0 +1,22 @@
+[package]
+name = "spo-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "SCPN Phase Orchestrator — UPDE integrator, coupling, order parameters"
+
+[dependencies]
+spo-types = { path = "../spo-types" }
+serde = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "upde_bench"
+harness = false
+
+[lints]
+workspace = true

@@ -1,0 +1,88 @@
+# SCPN Phase Orchestrator
+# Copyright concepts (c) 1996-2026 Miroslav Sotek. All rights reserved.
+# Copyright code (c) 2026 Miroslav Sotek. All rights reserved.
+# ORCID: https://orcid.org/0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+
+from __future__ import annotations
+
+import numpy as np
+from numpy.typing import NDArray
+
+from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+
+TWO_PI = 2.0 * np.pi
+
+
+class InformationalExtractor(PhaseExtractor):
+    """Extracts phase from event timestamps (spike trains, discrete events).
+
+    Converts inter-event intervals to instantaneous frequency,
+    then derives phase via cumulative integral of frequency.
+    """
+
+    def __init__(self, node_id: str = "info_0"):
+        self._node_id = node_id
+
+    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+        """Args:
+        signal: 1-D array of event timestamps in seconds (sorted ascending).
+        sample_rate: not used for timestamps but kept for interface consistency.
+        """
+        if len(signal) < 2:
+            return [
+                PhaseState(
+                    theta=0.0,
+                    omega=0.0,
+                    amplitude=0.0,
+                    quality=0.0,
+                    channel="I",
+                    node_id=self._node_id,
+                )
+            ]
+
+        intervals = np.diff(signal)
+        intervals = intervals[intervals > 0]
+        if len(intervals) == 0:
+            return [
+                PhaseState(
+                    theta=0.0,
+                    omega=0.0,
+                    amplitude=0.0,
+                    quality=0.0,
+                    channel="I",
+                    node_id=self._node_id,
+                )
+            ]
+
+        inst_freq = 1.0 / intervals  # Hz
+        omega_median = float(np.median(inst_freq)) * TWO_PI  # rad/s
+
+        # Phase via cumulative integral of instantaneous frequency
+        cumulative_phase = np.cumsum(TWO_PI * inst_freq * intervals)
+        theta = float(cumulative_phase[-1] % TWO_PI)
+
+        # Quality: inverse coefficient of variation of intervals (regularity)
+        cv = (
+            float(np.std(intervals) / np.mean(intervals))
+            if np.mean(intervals) > 0
+            else 1.0
+        )
+        quality = float(np.clip(1.0 / (1.0 + cv), 0.0, 1.0))
+
+        return [
+            PhaseState(
+                theta=theta,
+                omega=omega_median,
+                amplitude=float(np.mean(inst_freq)),
+                quality=quality,
+                channel="I",
+                node_id=self._node_id,
+            )
+        ]
+
+    def quality_score(self, phase_states: list[PhaseState]) -> float:
+        if not phase_states:
+            return 0.0
+        return float(np.mean([ps.quality for ps in phase_states]))

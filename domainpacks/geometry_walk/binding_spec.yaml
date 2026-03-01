@@ -1,0 +1,47 @@
+name: geometry_walk
+version: "0.1"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: local
+    index: 0
+    oscillator_ids: [walk_0, walk_1, walk_2, walk_3]
+  - name: global
+    index: 1
+    oscillator_ids: [walk_4, walk_5, walk_6, walk_7]
+
+oscillator_families:
+  graph_walker:
+    channel: S
+    extractor_type: symbolic
+    config:
+      n_states: 16
+      mode: graph
+
+coupling:
+  base_strength: 0.40
+  decay_alpha: 0.2
+  templates: {}
+
+drivers:
+  physical: {}
+  informational: {}
+  symbolic:
+    zeta: 0.05
+    psi: 0.0
+
+objectives:
+  good_layers: [0, 1]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries: []
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 2.0]

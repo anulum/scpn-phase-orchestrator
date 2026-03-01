@@ -1,0 +1,22 @@
+[package]
+name = "spo-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "SCPN Phase Orchestrator — PyO3 Python bindings"
+
+[lib]
+name = "spo_kernel"
+crate-type = ["cdylib"]
+
+[dependencies]
+spo-types = { path = "../spo-types" }
+spo-engine = { path = "../spo-engine" }
+spo-oscillators = { path = "../spo-oscillators" }
+spo-supervisor = { path = "../spo-supervisor" }
+pyo3 = { workspace = true }
+
+[lints]
+workspace = true

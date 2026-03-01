@@ -1,0 +1,85 @@
+# ──────────────────────────────────────────────────────────────────────
+# SCPN Phase Orchestrator — Build Configuration
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+# ──────────────────────────────────────────────────────────────────────
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scpn-phase-orchestrator"
+version = "0.1.0"
+description = "Domain-agnostic coherence control compiler built on SCPN's Kuramoto/UPDE framework"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [
+    { name = "Miroslav Sotek", email = "protoscience@anulum.li" },
+]
+keywords = ["kuramoto", "phase-dynamics", "coherence-control", "UPDE", "synchrony"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "pyyaml>=6.0",
+    "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "hypothesis>=6.82",
+    "coverage[toml]>=7.3",
+    "ruff>=0.4",
+    "mypy>=1.8",
+    "bandit>=1.7",
+    "mkdocs-material>=9.5",
+]
+
+[project.scripts]
+spo = "scpn_phase_orchestrator.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/anulum/scpn-phase-orchestrator"
+Repository = "https://github.com/anulum/scpn-phase-orchestrator"
+Issues = "https://github.com/anulum/scpn-phase-orchestrator/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["scpn_phase_orchestrator"]
+
+[tool.coverage.report]
+fail_under = 60
+
+[tool.bandit]
+exclude_dirs = ["tests"]

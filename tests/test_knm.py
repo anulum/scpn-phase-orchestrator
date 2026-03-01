@@ -1,0 +1,69 @@
+# SCPN Phase Orchestrator
+# Copyright concepts (c) 1996-2026 Miroslav Sotek. All rights reserved.
+# Copyright code (c) 2026 Miroslav Sotek. All rights reserved.
+# ORCID: https://orcid.org/0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+
+
+def test_symmetric():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=8, base_strength=0.5, decay_alpha=0.3)
+    np.testing.assert_allclose(cs.knm, cs.knm.T, atol=1e-14)
+
+
+def test_zero_diagonal():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=6, base_strength=1.0, decay_alpha=0.1)
+    np.testing.assert_allclose(np.diag(cs.knm), 0.0, atol=1e-15)
+
+
+def test_coupling_decays_with_distance():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=8, base_strength=0.5, decay_alpha=0.3)
+    # K(0,1) > K(0,3) > K(0,7)
+    assert cs.knm[0, 1] > cs.knm[0, 3]
+    assert cs.knm[0, 3] > cs.knm[0, 7]
+
+
+def test_non_negative():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=10, base_strength=0.5, decay_alpha=0.5)
+    assert np.all(cs.knm >= 0.0)
+
+
+def test_default_template_name():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=4, base_strength=0.1, decay_alpha=0.1)
+    assert cs.active_template == "default"
+
+
+def test_switch_template():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=4, base_strength=0.1, decay_alpha=0.1)
+    alt_knm = np.eye(4) * 0.0 + 0.1
+    np.fill_diagonal(alt_knm, 0.0)
+    templates = {"alt": alt_knm}
+    cs2 = builder.switch_template(cs, "alt", templates)
+    assert cs2.active_template == "alt"
+    np.testing.assert_allclose(cs2.knm, alt_knm)
+
+
+def test_switch_to_missing_template_raises():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=4, base_strength=0.1, decay_alpha=0.1)
+    with pytest.raises(KeyError, match="notfound"):
+        builder.switch_template(cs, "notfound", {})
+
+
+def test_alpha_initialized_to_zero():
+    builder = CouplingBuilder()
+    cs = builder.build(n_layers=5, base_strength=0.3, decay_alpha=0.2)
+    np.testing.assert_allclose(cs.alpha, 0.0)
