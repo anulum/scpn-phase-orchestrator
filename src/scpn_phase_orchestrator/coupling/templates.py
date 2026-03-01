@@ -21,14 +21,19 @@ class KnmTemplate:
 
 
 class KnmTemplateSet:
-    def __init__(self):
+    def __init__(self) -> None:
         self._templates: dict[str, KnmTemplate] = {}
 
     def add(self, template: KnmTemplate) -> None:
         self._templates[template.name] = template
 
     def get(self, name: str) -> KnmTemplate:
-        return self._templates[name]
+        try:
+            return self._templates[name]
+        except KeyError:
+            available = ", ".join(sorted(self._templates)) or "(none)"
+            msg = f"Unknown template {name!r}; available: {available}"
+            raise KeyError(msg) from None
 
     def list_names(self) -> list[str]:
         return list(self._templates.keys())

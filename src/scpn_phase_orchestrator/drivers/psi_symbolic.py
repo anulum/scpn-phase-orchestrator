@@ -24,4 +24,5 @@ class SymbolicDriver:
         return float(self._sequence[step % self._n])
 
     def compute_batch(self, steps: NDArray) -> NDArray:
-        return self._sequence[steps.astype(int) % self._n]
+        result: NDArray = self._sequence[steps.astype(int) % self._n]
+        return result

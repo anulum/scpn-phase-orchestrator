@@ -27,6 +27,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -48,6 +49,7 @@ dev = [
     "types-PyYAML>=6.0",
     "bandit>=1.7",
     "mkdocs-material>=9.5",
+    "pre-commit>=3.5",
 ]
 
 [project.scripts]
@@ -66,12 +68,18 @@ line-length = 88
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
+ignore = ["S101", "N802", "N806"]
 
 [tool.mypy]
 strict = false
-warn_return_any = false
+warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

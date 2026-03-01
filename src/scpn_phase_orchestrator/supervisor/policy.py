@@ -88,7 +88,7 @@ class SupervisorPolicy:
             )
         ]
 
-    def _worst_layer(self, upde_state):
+    def _worst_layer(self, upde_state: UPDEState) -> int | None:
         if not upde_state.layers:
             return None
         return min(range(len(upde_state.layers)), key=lambda i: upde_state.layers[i].R)

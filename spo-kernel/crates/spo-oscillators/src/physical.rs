@@ -15,6 +15,7 @@ use std::f64::consts::TAU;
 /// - omega: median instantaneous angular frequency (rad/s)
 /// - amplitude: mean envelope magnitude
 /// - quality: always 1.0 for Hilbert analytic signals (real == signal, so noise = 0)
+#[allow(clippy::needless_range_loop)]
 pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f64, f64, f64, f64) {
     let n = real.len();
     if n == 0 || imag.len() != n {

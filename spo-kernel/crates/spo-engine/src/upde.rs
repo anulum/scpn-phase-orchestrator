@@ -106,6 +106,7 @@ impl UPDEStepper {
         self.n
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn euler_step(
         &mut self,
         phases: &mut [f64],
@@ -131,6 +132,7 @@ impl UPDEStepper {
         }
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn rk4_step(
         &mut self,
         phases: &mut [f64],
@@ -200,7 +202,7 @@ impl UPDEStepper {
 }
 
 /// dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) + ζ sin(Ψ - θ_i)
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
 fn compute_derivative(
     n: usize,
     theta: &[f64],

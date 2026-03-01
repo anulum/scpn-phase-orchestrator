@@ -74,7 +74,7 @@ class SymbolicExtractor(PhaseExtractor):
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))
 
-    def _transition_quality(self, indices, i):
+    def _transition_quality(self, indices: NDArray, i: int) -> float:
         """Quality based on transition regularity: penalise repeated or large jumps."""
         if i == 0 or len(indices) < 2:
             return 0.5

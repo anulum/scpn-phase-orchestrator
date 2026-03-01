@@ -27,7 +27,8 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
     R = |mean(exp(i * theta))|, psi_mean = arg(mean(exp(i * theta))).
     """
     if _HAS_RUST:
-        return _rust_order_param(phases.ravel().tolist())
+        r, psi = _rust_order_param(phases.ravel().tolist())
+        return float(r), float(psi)
     z = np.mean(np.exp(1j * phases))
     return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
@@ -38,7 +39,7 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
     PLV = |mean(exp(i * (phi_a - phi_b)))| over samples.
     """
     if _HAS_RUST:
-        return _rust_plv(phases_a.ravel().tolist(), phases_b.ravel().tolist())
+        return float(_rust_plv(phases_a.ravel().tolist(), phases_b.ravel().tolist()))
     return float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b)))))
 
 

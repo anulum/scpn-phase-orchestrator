@@ -17,5 +17,5 @@ class PetriNetAdapter:
         - returns the active Regime after firing
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         raise NotImplementedError("Petri net FSM planned for v0.4 (see ROADMAP.md)")

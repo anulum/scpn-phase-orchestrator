@@ -106,7 +106,8 @@ class UPDEEngine:
         alpha: NDArray,
     ) -> NDArray:
         dtheta = self._derivative(phases, omegas, knm, zeta, psi, alpha)
-        return (phases + self._dt * dtheta) % TWO_PI
+        result: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        return result
 
     def _rk4_step(
         self,
@@ -126,4 +127,6 @@ class UPDEEngine:
             phases + 0.5 * dt * k2, omegas, knm, zeta, psi, alpha
         ).copy()
         k4 = self._derivative(phases + dt * k3, omegas, knm, zeta, psi, alpha)
-        return (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+        weighted = k1 + 2.0 * k2 + 2.0 * k3 + k4
+        result: NDArray = (phases + (dt / 6.0) * weighted) % TWO_PI
+        return result

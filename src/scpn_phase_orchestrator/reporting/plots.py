@@ -14,11 +14,11 @@ class CoherencePlot:
     def __init__(self, log_data: list[dict]):
         self._data = log_data
 
-    def plot_r_timeline(self, output_path: str):
+    def plot_r_timeline(self, output_path: str) -> None:
         raise NotImplementedError("Plotting planned for v0.3, see ROADMAP.md")
 
-    def plot_regime_timeline(self, output_path: str):
+    def plot_regime_timeline(self, output_path: str) -> None:
         raise NotImplementedError("Plotting planned for v0.3, see ROADMAP.md")
 
-    def plot_action_audit(self, output_path: str):
+    def plot_action_audit(self, output_path: str) -> None:
         raise NotImplementedError("Plotting planned for v0.3, see ROADMAP.md")

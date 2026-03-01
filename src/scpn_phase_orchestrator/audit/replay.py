@@ -24,7 +24,7 @@ class ReplayEngine:
 
     def load(self) -> list[dict]:
         entries = []
-        with open(self._log_path, encoding="utf-8") as fh:
+        with self._log_path.open(encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
                 if line:
