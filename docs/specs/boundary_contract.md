@@ -42,7 +42,7 @@ Fields:
 ```python
 state = observer.observe({"queue_depth": 12000, "p99_latency_ms": 300})
 # state.hard_violations = ["queue_depth_limit: queue_depth=1.2e+04 outside [None, 10000]"]
-# state.soft_warnings = []
+# state.soft_violations = []
 ```
 
 ## BoundaryState
@@ -50,7 +50,7 @@ state = observer.observe({"queue_depth": 12000, "p99_latency_ms": 300})
 | Field | Type | Content |
 |-------|------|---------|
 | `violations` | list[str] | All violated boundaries (soft + hard) |
-| `soft_warnings` | list[str] | Soft-severity violations only |
+| `soft_violations` | list[str] | Soft-severity violations only |
 | `hard_violations` | list[str] | Hard-severity violations only |
 
 ## Integration with RegimeManager

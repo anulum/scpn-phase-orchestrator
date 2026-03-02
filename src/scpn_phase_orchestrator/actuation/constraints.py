@@ -11,6 +11,8 @@ from dataclasses import replace
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 
+__all__ = ["ActionProjector"]
+
 
 class ActionProjector:
     """Clip control actions to value bounds and rate limits.

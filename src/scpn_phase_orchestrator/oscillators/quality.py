@@ -12,6 +12,8 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.oscillators.base import PhaseState
 
+__all__ = ["PhaseQualityScorer"]
+
 
 class PhaseQualityScorer:
     """Aggregate quality scoring and collapse detection for phase state arrays."""

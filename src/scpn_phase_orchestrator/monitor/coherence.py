@@ -11,6 +11,8 @@ import numpy as np
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
+__all__ = ["CoherenceMonitor"]
+
 
 class CoherenceMonitor:
     """Track coherence partitioned into good vs bad layer subsets."""

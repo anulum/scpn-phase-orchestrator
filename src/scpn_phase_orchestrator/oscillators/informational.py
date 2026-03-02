@@ -10,9 +10,10 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
-TWO_PI = 2.0 * np.pi
+__all__ = ["InformationalExtractor"]
 
 
 class InformationalExtractor(PhaseExtractor):
@@ -59,9 +60,10 @@ class InformationalExtractor(PhaseExtractor):
         inst_freq = 1.0 / intervals  # Hz
         omega_median = float(np.median(inst_freq)) * TWO_PI  # rad/s
 
-        # Phase via cumulative integral of instantaneous frequency
-        cumulative_phase = np.cumsum(TWO_PI * inst_freq * intervals)
-        theta = float(cumulative_phase[-1] % TWO_PI)
+        total_time = float(signal[-1] - signal[0])
+        omega_median_hz = float(np.median(inst_freq))
+        cumulative_phase = TWO_PI * omega_median_hz * total_time
+        theta = float(cumulative_phase % TWO_PI)
 
         # Quality: inverse coefficient of variation of intervals (regularity)
         cv = (

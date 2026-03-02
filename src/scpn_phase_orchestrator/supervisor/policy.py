@@ -12,6 +12,8 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
+__all__ = ["SupervisorPolicy"]
+
 # Empirical — see docs/ASSUMPTIONS.md § Supervisor Policy
 _K_BUMP = 0.05
 _ZETA_BUMP = 0.1
@@ -36,9 +38,7 @@ class SupervisorPolicy:
         self, upde_state: UPDEState, boundary_state: BoundaryState
     ) -> list[ControlAction]:
         proposed = self._regime_manager.evaluate(upde_state, boundary_state)
-        regime = self._regime_manager.transition(
-            self._regime_manager.current_regime, proposed
-        )
+        regime = self._regime_manager.transition(proposed)
 
         if regime == Regime.NOMINAL:
             return []

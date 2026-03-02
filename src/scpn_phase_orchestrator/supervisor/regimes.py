@@ -12,6 +12,8 @@ from enum import Enum
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
+__all__ = ["Regime", "RegimeManager"]
+
 _R_CRITICAL = 0.3  # Acebrón et al. 2005 §2.3 — incoherence boundary
 _R_DEGRADED = 0.6  # Acebrón et al. 2005 §2.3 — partial sync threshold
 
@@ -60,18 +62,18 @@ class RegimeManager:
 
         return Regime.NOMINAL
 
-    def transition(self, current: Regime, proposed: Regime) -> Regime:
+    def transition(self, proposed: Regime) -> Regime:
         """Apply hysteresis and cooldown to proposed transition."""
         self._step_counter += 1
 
-        if proposed == current:
-            return current
+        if proposed == self._current:
+            return self._current
 
         in_cooldown = (
             self._step_counter - self._last_transition_step
         ) < self._cooldown_steps
         if in_cooldown and proposed != Regime.CRITICAL:
-            return current
+            return self._current
 
         self._last_transition_step = self._step_counter
         self._current = proposed

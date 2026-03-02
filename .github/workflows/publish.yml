@@ -25,9 +25,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
       - run: pip install -e ".[dev]"
       - run: ruff check src/ tests/
       - run: pytest tests/ -x --tb=short
+      - run: python tools/check_version_sync.py
+      - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
+        working-directory: spo-kernel
+      - run: cargo test --workspace --exclude spo-ffi
+        working-directory: spo-kernel
 
   build:
     name: Build distribution

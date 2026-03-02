@@ -12,6 +12,8 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.imprint.state import ImprintState
 
+__all__ = ["ImprintModel"]
+
 
 class ImprintModel:
     """Exponential exposure accumulation with decay and saturation.
@@ -43,6 +45,7 @@ class ImprintModel:
         return result
 
     def modulate_lag(self, alpha: NDArray, imprint: ImprintState) -> NDArray:
-        """Shift phase lags by imprint magnitude per oscillator."""
-        result: NDArray = alpha + imprint.m_k[:, np.newaxis]
+        """Shift phase lags by antisymmetric imprint offset."""
+        offset = imprint.m_k[:, np.newaxis] - imprint.m_k[np.newaxis, :]
+        result: NDArray = alpha + offset
         return result

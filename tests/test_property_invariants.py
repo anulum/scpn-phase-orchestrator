@@ -242,7 +242,7 @@ def test_regime_no_nominal_to_critical_skip(r_seq: list[float]) -> None:
         )
         boundary = BoundaryState()
         proposed = mgr.evaluate(state, boundary)
-        regime = mgr.transition(prev, proposed)
+        regime = mgr.transition(proposed)
         if prev == Regime.NOMINAL and regime == Regime.CRITICAL:
             # Only legitimate if R < 0.3
             assert r_val < 0.3 + 1e-12, f"NOMINAL→CRITICAL at R={r_val}"

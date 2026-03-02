@@ -34,6 +34,13 @@ impl LagModel {
                 "speed must be positive and finite".into(),
             ));
         }
+        for &d in distances {
+            if !d.is_finite() {
+                return Err(SpoError::IntegrationDiverged(
+                    "distances contain NaN/Inf".into(),
+                ));
+            }
+        }
         let mut alpha = vec![0.0; n * n];
         for i in 0..n {
             for j in (i + 1)..n {
@@ -113,12 +120,17 @@ mod tests {
     }
 
     #[test]
-    fn nan_distance_no_panic() {
+    fn nan_distance_rejected() {
         let n = 2;
         let distances = vec![0.0, f64::NAN, f64::NAN, 0.0];
-        let lm = LagModel::estimate_from_distances(&distances, n, 1.0).unwrap();
-        assert!(lm.alpha[1].is_nan());
-        assert!(lm.alpha[2].is_nan());
+        assert!(LagModel::estimate_from_distances(&distances, n, 1.0).is_err());
+    }
+
+    #[test]
+    fn inf_distance_rejected() {
+        let n = 2;
+        let distances = vec![0.0, f64::INFINITY, f64::INFINITY, 0.0];
+        assert!(LagModel::estimate_from_distances(&distances, n, 1.0).is_err());
     }
 
     #[test]

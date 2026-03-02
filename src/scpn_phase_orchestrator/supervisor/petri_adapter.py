@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+__all__ = ["PetriNetAdapter"]
+
 
 class PetriNetAdapter:
     """Adapter for Petri net regime FSM integration.

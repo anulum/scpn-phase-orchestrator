@@ -10,9 +10,10 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
-TWO_PI = 2.0 * np.pi
+__all__ = ["SymbolicExtractor"]
 
 
 class SymbolicExtractor(PhaseExtractor):

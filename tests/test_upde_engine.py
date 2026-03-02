@@ -103,7 +103,22 @@ def test_external_drive_zeta_nonzero():
     alpha = np.zeros((n, n))
 
     engine = UPDEEngine(n_oscillators=n, dt=dt)
-    # With zeta=1.0 and psi=pi, derivative = zeta*sin(pi - 0) = 0 at theta=0
-    # Use psi=pi/2 so sin(pi/2 - 0) = 1.0 → phases advance
     new_phases = engine.step(phases, omegas, knm, zeta=1.0, psi=np.pi / 2, alpha=alpha)
     assert np.all(new_phases > 0.0)
+
+
+def test_step_shape_mismatch_raises():
+    engine = UPDEEngine(n_oscillators=4, dt=0.01)
+    ok_phases = np.zeros(4)
+    ok_omegas = np.ones(4)
+    ok_knm = np.zeros((4, 4))
+    ok_alpha = np.zeros((4, 4))
+
+    with pytest.raises(ValueError, match="phases.shape"):
+        engine.step(np.zeros(3), ok_omegas, ok_knm, 0.0, 0.0, ok_alpha)
+    with pytest.raises(ValueError, match="omegas.shape"):
+        engine.step(ok_phases, np.ones(5), ok_knm, 0.0, 0.0, ok_alpha)
+    with pytest.raises(ValueError, match="knm.shape"):
+        engine.step(ok_phases, ok_omegas, np.zeros((3, 3)), 0.0, 0.0, ok_alpha)
+    with pytest.raises(ValueError, match="alpha.shape"):
+        engine.step(ok_phases, ok_omegas, ok_knm, 0.0, 0.0, np.zeros((5, 5)))

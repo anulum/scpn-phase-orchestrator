@@ -44,13 +44,12 @@ pub fn event_phase(timestamps: &[f64]) -> (f64, f64, f64) {
         sorted_freq[sorted_freq.len() / 2]
     } * TAU;
 
-    // Cumulative phase
-    let cumulative: f64 = inst_freq
-        .iter()
-        .zip(intervals.iter())
-        .map(|(&f, &dt)| TAU * f * dt)
-        .sum();
-    let theta = cumulative % TAU;
+    // Cumulative phase via median frequency × total elapsed time
+    let total_time: f64 =
+        timestamps.last().copied().unwrap_or(0.0) - timestamps.first().copied().unwrap_or(0.0);
+    let omega_hz = omega_median / TAU;
+    let cumulative = TAU * omega_hz * total_time;
+    let theta = cumulative.rem_euclid(TAU);
 
     // Quality: inverse CV of intervals
     let mean_interval = intervals.iter().sum::<f64>() / intervals.len() as f64;

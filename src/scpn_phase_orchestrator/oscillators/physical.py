@@ -7,17 +7,15 @@
 
 from __future__ import annotations
 
-import importlib.util
-
 import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
+from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
+from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
-_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
-
-TWO_PI = 2.0 * np.pi
+__all__ = ["PhysicalExtractor"]
 
 
 class PhysicalExtractor(PhaseExtractor):

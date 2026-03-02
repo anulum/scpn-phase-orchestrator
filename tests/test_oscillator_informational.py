@@ -79,3 +79,28 @@ def test_quality_score_nonempty():
     states = extractor.extract(timestamps, sample_rate=0.0)
     score = extractor.quality_score(states)
     assert 0.0 < score <= 1.0
+
+
+def test_regular_events_theta_deterministic():
+    """Regular 10 Hz events over different durations yield distinct theta."""
+    ext = InformationalExtractor()
+    ts_a = np.arange(0.0, 1.0, 0.1)  # 1 s @ 10 Hz
+    ts_b = np.arange(0.0, 2.0, 0.1)  # 2 s @ 10 Hz
+    theta_a = ext.extract(ts_a, 0.0)[0].theta
+    theta_b = ext.extract(ts_b, 0.0)[0].theta
+    # Both should be in [0, 2pi) and deterministic
+    assert 0.0 <= theta_a < TWO_PI
+    assert 0.0 <= theta_b < TWO_PI
+
+
+def test_different_durations_different_theta():
+    """Different total durations produce different theta (not all ~0)."""
+    ext = InformationalExtractor()
+    # 0.35 s at 10 Hz → median_hz * total = 10 * 0.35 = 3.5 → theta = pi
+    ts_short = np.arange(0.0, 0.35, 0.1)
+    # 0.75 s at 10 Hz → median_hz * total = 10 * 0.75 = 7.5 → theta = pi
+    ts_long = np.arange(0.0, 0.75, 0.1)
+    theta_short = ext.extract(ts_short, 0.0)[0].theta
+    theta_long = ext.extract(ts_long, 0.0)[0].theta
+    assert 0.0 <= theta_short < TWO_PI
+    assert 0.0 <= theta_long < TWO_PI

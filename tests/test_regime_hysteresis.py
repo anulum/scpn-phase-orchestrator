@@ -65,20 +65,16 @@ def test_critical_when_r_very_low():
 
 def test_cooldown_prevents_rapid_transition():
     mgr = RegimeManager(cooldown_steps=5)
-    # First transition: NOMINAL -> DEGRADED (allowed)
-    result1 = mgr.transition(Regime.NOMINAL, Regime.DEGRADED)
+    result1 = mgr.transition(Regime.DEGRADED)
     assert result1 == Regime.DEGRADED
-    # Immediate second: DEGRADED -> NOMINAL (blocked by cooldown)
-    result2 = mgr.transition(Regime.DEGRADED, Regime.NOMINAL)
+    result2 = mgr.transition(Regime.NOMINAL)
     assert result2 == Regime.DEGRADED
 
 
 def test_always_escalate_to_critical():
     mgr = RegimeManager(cooldown_steps=100)
-    # First transition uses up the cooldown
-    mgr.transition(Regime.NOMINAL, Regime.DEGRADED)
-    # But CRITICAL always overrides cooldown
-    result = mgr.transition(Regime.DEGRADED, Regime.CRITICAL)
+    mgr.transition(Regime.DEGRADED)
+    result = mgr.transition(Regime.CRITICAL)
     assert result == Regime.CRITICAL
 
 

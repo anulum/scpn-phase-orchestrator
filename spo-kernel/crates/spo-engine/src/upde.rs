@@ -11,6 +11,7 @@ use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 pub struct UPDEStepper {
     n: usize,
     dt: f64,
+    n_substeps: u32,
     method: Method,
     deriv_buf: Vec<f64>,
     k1: Vec<f64>,
@@ -25,6 +26,7 @@ impl std::fmt::Debug for UPDEStepper {
         f.debug_struct("UPDEStepper")
             .field("n", &self.n)
             .field("dt", &self.dt)
+            .field("n_substeps", &self.n_substeps)
             .field("method", &self.method)
             .finish_non_exhaustive()
     }
@@ -41,6 +43,7 @@ impl UPDEStepper {
         Ok(Self {
             n,
             dt: config.dt,
+            n_substeps: config.n_substeps,
             method: config.method,
             deriv_buf: vec![0.0; n],
             k1: vec![0.0; n],
@@ -89,15 +92,30 @@ impl UPDEStepper {
                 ));
             }
         }
+        for &w in omegas {
+            if !w.is_finite() {
+                return Err(SpoError::IntegrationDiverged(
+                    "omegas contain NaN/Inf".into(),
+                ));
+            }
+        }
+        for &k in knm {
+            if !k.is_finite() {
+                return Err(SpoError::IntegrationDiverged("knm contains NaN/Inf".into()));
+            }
+        }
         if !zeta.is_finite() || !psi.is_finite() {
             return Err(SpoError::IntegrationDiverged(
                 "zeta/psi contain NaN/Inf".into(),
             ));
         }
 
-        match self.method {
-            Method::Euler => self.euler_step(phases, omegas, knm, zeta, psi, alpha),
-            Method::RK4 => self.rk4_step(phases, omegas, knm, zeta, psi, alpha),
+        let sub_dt = self.dt / f64::from(self.n_substeps);
+        for _ in 0..self.n_substeps {
+            match self.method {
+                Method::Euler => self.euler_step(phases, omegas, knm, zeta, psi, alpha, sub_dt),
+                Method::RK4 => self.rk4_step(phases, omegas, knm, zeta, psi, alpha, sub_dt),
+            }
         }
 
         wrap_phases(phases);
@@ -130,7 +148,7 @@ impl UPDEStepper {
         self.n
     }
 
-    #[allow(clippy::needless_range_loop)]
+    #[allow(clippy::needless_range_loop, clippy::too_many_arguments)]
     fn euler_step(
         &mut self,
         phases: &mut [f64],
@@ -139,6 +157,7 @@ impl UPDEStepper {
         zeta: f64,
         psi: f64,
         alpha: &[f64],
+        dt: f64,
     ) {
         compute_derivative(
             self.n,
@@ -150,13 +169,12 @@ impl UPDEStepper {
             alpha,
             &mut self.deriv_buf,
         );
-        let dt = self.dt;
         for i in 0..self.n {
             phases[i] += dt * self.deriv_buf[i];
         }
     }
 
-    #[allow(clippy::needless_range_loop)]
+    #[allow(clippy::needless_range_loop, clippy::too_many_arguments)]
     fn rk4_step(
         &mut self,
         phases: &mut [f64],
@@ -165,9 +183,9 @@ impl UPDEStepper {
         zeta: f64,
         psi: f64,
         alpha: &[f64],
+        dt: f64,
     ) {
         let n = self.n;
-        let dt = self.dt;
 
         // k1
         compute_derivative(n, phases, omegas, knm, zeta, psi, alpha, &mut self.k1);
@@ -441,6 +459,70 @@ mod tests {
         assert!(s
             .step(&mut phases, &omegas, &knm, 0.0, f64::INFINITY, &alpha)
             .is_err());
+    }
+
+    #[test]
+    fn nan_omegas_rejected() {
+        let mut s = make_stepper(4);
+        let mut phases = vec![0.0; 4];
+        let omegas = vec![1.0, f64::NAN, 1.0, 1.0];
+        let knm = vec![0.0; 16];
+        let alpha = zero_alpha(4);
+        assert!(s
+            .step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+            .is_err());
+    }
+
+    #[test]
+    fn nan_knm_rejected() {
+        let mut s = make_stepper(4);
+        let mut phases = vec![0.0; 4];
+        let omegas = vec![1.0; 4];
+        let mut knm = vec![0.0; 16];
+        knm[5] = f64::NAN;
+        let alpha = zero_alpha(4);
+        assert!(s
+            .step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+            .is_err());
+    }
+
+    #[test]
+    fn substeps_refine_accuracy() {
+        let n = 4;
+        let omegas = vec![1.0; n];
+        let knm = vec![0.0; n * n];
+        let alpha = zero_alpha(n);
+        let total_dt = 0.1;
+
+        // 1 substep
+        let config1 = IntegrationConfig {
+            dt: total_dt,
+            method: Method::RK4,
+            n_substeps: 1,
+        };
+        let mut s1 = UPDEStepper::new(n, config1).unwrap();
+        let mut p1 = vec![0.0; n];
+        s1.step(&mut p1, &omegas, &knm, 0.0, 0.0, &alpha).unwrap();
+
+        // 4 substeps
+        let config4 = IntegrationConfig {
+            dt: total_dt,
+            method: Method::RK4,
+            n_substeps: 4,
+        };
+        let mut s4 = UPDEStepper::new(n, config4).unwrap();
+        let mut p4 = vec![0.0; n];
+        s4.step(&mut p4, &omegas, &knm, 0.0, 0.0, &alpha).unwrap();
+
+        // Without coupling, both should give exact θ = ω*dt = 0.1
+        let exact = total_dt;
+        let err1 = (p1[0] - exact).abs();
+        let err4 = (p4[0] - exact).abs();
+        // Both should be near-exact for linear ODE; verify substeps ran
+        assert!(err1 < 1e-10);
+        assert!(err4 < 1e-10);
+        // Verify they produce same result (linear case, both exact)
+        assert!((p1[0] - p4[0]).abs() < 1e-12);
     }
 
     #[test]

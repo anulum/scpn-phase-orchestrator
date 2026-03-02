@@ -7,13 +7,14 @@
 
 from __future__ import annotations
 
-import importlib.util
 from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
 
-_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
+from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
+
+__all__ = ["CouplingState", "CouplingBuilder"]
 
 
 @dataclass

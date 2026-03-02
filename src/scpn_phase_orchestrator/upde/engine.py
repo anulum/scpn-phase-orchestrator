@@ -7,14 +7,13 @@
 
 from __future__ import annotations
 
-import importlib.util
-
 import numpy as np
 from numpy.typing import NDArray
 
-_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
+from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
+from scpn_phase_orchestrator._compat import TWO_PI
 
-TWO_PI = 2.0 * np.pi
+__all__ = ["UPDEEngine"]
 
 
 class UPDEEngine:
@@ -54,6 +53,15 @@ class UPDEEngine:
         """Advance phases by one timestep, return new phases in [0, 2*pi)."""
         if not (np.isfinite(zeta) and np.isfinite(psi)):
             raise ValueError("zeta and psi must be finite")
+        n = self._n
+        if phases.shape != (n,):
+            raise ValueError(f"phases.shape={phases.shape}, expected ({n},)")
+        if omegas.shape != (n,):
+            raise ValueError(f"omegas.shape={omegas.shape}, expected ({n},)")
+        if knm.shape != (n, n):
+            raise ValueError(f"knm.shape={knm.shape}, expected ({n}, {n})")
+        if alpha.shape != (n, n):
+            raise ValueError(f"alpha.shape={alpha.shape}, expected ({n}, {n})")
         if self._rust is not None:
             result = self._rust.step(
                 phases.ravel().tolist(),

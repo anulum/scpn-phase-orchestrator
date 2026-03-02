@@ -8,7 +8,7 @@
 - Coupling matrix builder with decay and cross-hierarchy boosts
 - Supervisor with order-parameter thresholds
 - Actuation mapper for domain-agnostic output binding
-- 4 domainpacks: audio, neuro, fusion, generic
+- 4 domainpacks: minimal_domain, queuewaves, geometry_walk, bio_stub
 - PhaseExtractor base class for signal intake
 
 ## v0.2

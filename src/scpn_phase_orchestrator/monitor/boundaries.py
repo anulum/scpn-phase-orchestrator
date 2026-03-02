@@ -11,11 +11,13 @@ from dataclasses import dataclass, field
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
 
+__all__ = ["BoundaryState", "BoundaryObserver"]
+
 
 @dataclass
 class BoundaryState:
     violations: list[str] = field(default_factory=list)
-    soft_warnings: list[str] = field(default_factory=list)
+    soft_violations: list[str] = field(default_factory=list)
     hard_violations: list[str] = field(default_factory=list)
 
 
@@ -47,7 +49,7 @@ class BoundaryObserver:
             )
             state.violations.append(msg)
             if bdef.severity == "soft":
-                state.soft_warnings.append(msg)
+                state.soft_violations.append(msg)
             else:
                 state.hard_violations.append(msg)
 
