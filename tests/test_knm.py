@@ -7,10 +7,12 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 
 
 def test_symmetric():
@@ -67,3 +69,9 @@ def test_alpha_initialized_to_zero():
     builder = CouplingBuilder()
     cs = builder.build(n_layers=5, base_strength=0.3, decay_alpha=0.2)
     np.testing.assert_allclose(cs.alpha, 0.0)
+
+
+def test_coupling_state_frozen():
+    cs = CouplingState(knm=np.eye(3), alpha=np.zeros((3, 3)), active_template="default")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        cs.active_template = "other"

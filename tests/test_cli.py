@@ -132,3 +132,40 @@ def test_scaffold_idempotent(runner, tmp_path, monkeypatch):
     runner.invoke(main, ["scaffold", "test_domain"])
     result = runner.invoke(main, ["scaffold", "test_domain"])
     assert result.exit_code == 0
+
+
+def test_run_applies_k_actions(runner, tmp_path):
+    """Run with boundaries that trigger DEGRADED → supervisor emits K action."""
+    spec = {
+        "name": "k-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.1,
+        "layers": [
+            {"name": "L1", "index": 0, "oscillator_ids": ["o0", "o1"]},
+            {"name": "L2", "index": 1, "oscillator_ids": ["o2", "o3"]},
+        ],
+        "oscillator_families": {
+            "phys": {"channel": "P", "extractor_type": "hilbert", "config": {}},
+        },
+        "coupling": {"base_strength": 0.45, "decay_alpha": 0.3, "templates": {}},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": [1]},
+        "boundaries": [
+            {
+                "name": "R_low",
+                "variable": "R",
+                "lower": 0.8,
+                "upper": None,
+                "severity": "hard",
+            },
+        ],
+        "actuators": [],
+    }
+    path = tmp_path / "k_spec.yaml"
+    path.write_text(yaml.dump(spec), encoding="utf-8")
+    result = runner.invoke(main, ["run", str(path), "--steps", "20"])
+    assert result.exit_code == 0
+    assert "R_good" in result.output
+    assert "regime=" in result.output

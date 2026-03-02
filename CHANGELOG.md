@@ -9,22 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **[P0]** Rust `ImprintModel.modulate_lag` added row-wise `m[i]` offset; now uses `m[i] - m[j]` preserving antisymmetry
+- **[P0]** CLI `run` silently dropped `K` and `Psi` supervisor actions; now applies coupling scaling and target phase
+- **[P0]** CLI `stability_proxy` used only first layer R; now uses mean R across all layers
+- **[P1]** Rust `PhysicalExtractor` quality hardcoded to 1.0; now computes envelope coefficient-of-variation
+- **[P1]** `compute_plv` silently truncated mismatched arrays; now raises `ValueError` / `SpoError::InvalidDimension`
+
+### Changed
+
+- FFI `PyUPDEStepper` accepts `n_substeps` parameter
+- FFI `PyCoherenceMonitor` exposes `detect_phase_lock` with full CLA matrix
+- `ImprintState` and `CouplingState` are frozen dataclasses
+- CI: PRs to `develop` branch trigger CI; FFI test job runs full test suite
+- Previous sprints 1–9 entries moved to [0.1.1] section below
+
+## [0.1.1] - 2026-03-02
+
+### Fixed
+
 - **[P0]** `verify_determinism` compared global R against mean-of-layer-R (different quantities); now compares against `stability_proxy`
 - **[P0]** `UPDEEngine.step()` accepted shape-mismatched arrays silently; now validates all input shapes
 - **[P0]** Rust `UPDEStepper` validated `n_substeps` but ignored it (always 1); now loops `n_substeps` iterations at `sub_dt = dt / n_substeps`
 - **[P0]** Rust `LagModel` propagated NaN distances into alpha matrix; now rejects NaN/Inf distances with `IntegrationDiverged`
 - **[P0]** `RegimeManager.transition()` took redundant `current` param that could diverge from `self._current`; removed for Python↔Rust parity
-- **[P1]** `InformationalExtractor` theta always cancelled to ~0 (`2π * f * dt` where `f = 1/dt`); use median freq × total time
-- **[P1]** `ImprintModel.modulate_lag` added row-wise offset destroying antisymmetry; use `m[i] - m[j]` (antisymmetric)
+- **[P0]** Merge duplicate `validate_binding_spec` — canonical version now in `validator.py` with all checks merged
+- **[P1]** `InformationalExtractor` theta always cancelled to ~0; use median freq × total time
+- **[P1]** Python `ImprintModel.modulate_lag` added row-wise offset; use `m[i] - m[j]` (antisymmetric)
 - **[P1]** CLI scaffold generated `version: '0.1'` (fails validator); now `'0.1.0'`
 - **[P1]** CLI `run` did not compute `cross_layer_alignment`; now uses `compute_plv` between layer pairs
 - **[P1]** CLI zeta had no TTL expiry; now decrements TTL counter and resets to 0 on expiry
 - **[P1]** Rust UPDE stepper did not check omegas/knm for NaN/Inf; now rejects with `IntegrationDiverged`
-- **[P0]** Merge duplicate `validate_binding_spec` — `loader.py` and `validator.py` had divergent implementations; canonical version now in `validator.py` with all checks merged
-- **[P1]** `PhysicalExtractor._snr_estimate` always returned ~1.0 due to `Re(hilbert(x)) == x` identity; replaced with envelope coefficient-of-variation metric
-- **[P1]** `UPDEEngine.compute_order_parameter` reimplemented inline, bypassing Rust-accelerated `order_params`; now delegates to canonical implementation
-- **[P1]** `AuditLogger` file writes never flushed; crash could lose audit records; switched to line-buffered I/O
-- **[P1]** CLI `run` command ignored spec drivers, boundaries, and actuators; hardcoded `omegas=1` and `zeta=0`; rewritten to wire supervisor, boundary observer, and spec-derived frequencies
+- **[P1]** `PhysicalExtractor._snr_estimate` always returned ~1.0; replaced with envelope-CV metric
+- **[P1]** `UPDEEngine.compute_order_parameter` reimplemented inline; now delegates to canonical implementation
+- **[P1]** `AuditLogger` file writes never flushed; switched to line-buffered I/O
+- **[P1]** CLI `run` command ignored spec drivers, boundaries, and actuators; rewritten to wire supervisor
 
 ### Changed
 
@@ -39,44 +57,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI import path uses canonical `from scpn_phase_orchestrator.binding import validate_binding_spec`
 - `oscillators/__init__.py` exports `PhysicalExtractor`, `InformationalExtractor`, `SymbolicExtractor`, `PhaseQualityScorer`
 - `adapters/__init__.py` exports `SCPNControlBridge`
-- Rust: `Debug` impl for `UPDEStepper` (manual, omits scratch buffers), `#[derive(Debug)]` for `ImprintModel`, `LagModel`
-- Rust: `///` doc comments on `UPDEStepper`, `ImprintModel`, `CouplingState`, `LagModel`, `RegimeManager`, `CoherenceMonitor`
+- Rust: `Debug` impl for `UPDEStepper`, `#[derive(Debug)]` for `ImprintModel`, `LagModel`
+- Rust: doc comments on all public types
+- Migrate remaining probe-imports to `importlib.util.find_spec` with lazy imports
+- Remove dead `_HAS_RUST` assignments from regimes.py, coherence.py
+- Add `#[must_use]` to all pure public Rust functions
+- Add crate-level `//!` doc comments to all crates
+- Refactor physical.rs Pass 1 to `iter_mut().zip()` iterators
+- Make `LockSignature`, `LayerState`, `UPDEState` frozen dataclasses
+- CI: add pip + cargo caching, replace manual `cargo-audit` install with `rustsec/audit-check` action
+- Add `Documentation` and `Changelog` URLs to `project.urls` (PyPI sidebar)
 
 ### Added
 
-- `src/scpn_phase_orchestrator/_compat.py` — shared `TWO_PI`, `HAS_RUST` constants (single source of truth)
-- `src/scpn_phase_orchestrator/py.typed` — PEP 561 marker for downstream type checkers
-- `tools/check_version_sync.py` — asserts pyproject.toml, CITATION.cff, Cargo.toml versions match
+- `src/scpn_phase_orchestrator/_compat.py` — shared `TWO_PI`, `HAS_RUST` constants
+- `src/scpn_phase_orchestrator/py.typed` — PEP 561 marker
+- `tools/check_version_sync.py` — version sync check across pyproject.toml, CITATION.cff, Cargo.toml
 - `.dockerignore` — excludes .git, target, caches, site
 - CI lint job runs `check_version_sync.py`
 - Publish preflight runs Rust clippy + tests
 - PyPI and docs badges in README
 - `repository` field in Cargo workspace metadata
-- 4 new validator tests: `control_period_s` positive/ordering, actuator limits ordering, empty objectives
-- 5 new hypothesis property tests: phase wrapping, R unit interval, `project_knm` symmetry, imprint saturation bound, regime FSM skip guard
-- 4 new `test_coupling_lags` tests: negative lag direction, large lag, constant signal, alpha diagonal
-- 4 new `test_coupling_templates` tests: duplicate overwrite, empty set, frozen dataclass, error message content
-- 2 new `test_oscillator_physical` tests: clean sinusoid quality, clean-vs-noisy discrimination
-
-## [0.1.1] - 2026-03-02
-
-### Changed
-
-- Migrate remaining `try/except ImportError` probe-imports to `importlib.util.find_spec` with lazy imports (engine, order_params, physical, knm)
-- Remove dead `_HAS_RUST` assignments and unused imports from regimes.py, coherence.py
-- Add `#[must_use]` to all pure public Rust functions; enable `must_use_candidate = "warn"` workspace lint
-- Add crate-level `//!` doc comments to spo-types, spo-engine, spo-oscillators, spo-supervisor
-- Refactor physical.rs Pass 1 from index loop to `iter_mut().zip()` iterators
-- Make `LockSignature`, `LayerState`, `UPDEState` frozen dataclasses
-
-### Fixed
-
-- 5 hardening sprints of bug fixes, CI correctness, supply chain security, and lint cleanup since v0.1.0
-
-### Changed
-
-- CI: add pip + cargo caching, replace manual `cargo-audit` install with `rustsec/audit-check` action
-- Add `Documentation` and `Changelog` URLs to `project.urls` (PyPI sidebar)
+- 4 new validator tests, 5 hypothesis property tests, 4 coupling lags tests, 4 coupling templates tests, 2 physical extractor tests
 
 ## [0.1.0] - 2026-03-01
 

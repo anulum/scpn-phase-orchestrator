@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.imprint.state import ImprintState
 
@@ -37,3 +38,11 @@ def test_default_attribution_empty():
 def test_m_k_dtype():
     state = ImprintState(m_k=np.array([1, 2, 3], dtype=np.float64), last_update=0.0)
     assert state.m_k.dtype == np.float64
+
+
+def test_imprint_state_frozen():
+    state = ImprintState(m_k=np.zeros(4), last_update=0.0)
+    import dataclasses
+
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        state.last_update = 1.0

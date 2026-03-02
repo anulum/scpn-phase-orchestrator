@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 __all__ = ["ImprintState"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ImprintState:
     m_k: NDArray
     last_update: float

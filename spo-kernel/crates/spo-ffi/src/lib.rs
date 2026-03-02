@@ -53,8 +53,8 @@ struct PyUPDEStepper {
 #[pymethods]
 impl PyUPDEStepper {
     #[new]
-    #[pyo3(signature = (n, dt = 0.01, method = "euler"))]
-    fn new(n: usize, dt: f64, method: &str) -> PyResult<Self> {
+    #[pyo3(signature = (n, dt = 0.01, method = "euler", n_substeps = 1))]
+    fn new(n: usize, dt: f64, method: &str, n_substeps: u32) -> PyResult<Self> {
         let m = match method {
             "euler" => Method::Euler,
             "rk4" => Method::RK4,
@@ -63,7 +63,7 @@ impl PyUPDEStepper {
         let config = IntegrationConfig {
             dt,
             method: m,
-            n_substeps: 1,
+            n_substeps,
         };
         let inner = UPDEStepper::new(n, config).map_err(spo_err)?;
         Ok(Self { inner })
@@ -213,6 +213,21 @@ impl PyCoherenceMonitor {
     fn compute_r_bad(&self, layer_rs: Vec<f64>) -> f64 {
         let state = make_upde_state(&layer_rs);
         self.inner.compute_r_bad(&state)
+    }
+
+    /// Detect phase-locked layer pairs from cross-layer alignment matrix.
+    ///
+    /// `psi_values`: per-layer mean phase (same length as `layer_rs`).
+    /// `cross_layer_alignment`: flattened n×n PLV matrix.
+    fn detect_phase_lock(
+        &self,
+        layer_rs: Vec<f64>,
+        psi_values: Vec<f64>,
+        cross_layer_alignment: Vec<f64>,
+        threshold: f64,
+    ) -> Vec<(usize, usize)> {
+        let state = make_upde_state_full(&layer_rs, &psi_values, &cross_layer_alignment);
+        self.inner.detect_phase_lock(&state, threshold)
     }
 }
 
@@ -452,8 +467,8 @@ fn order_parameter(phases: Vec<f64>) -> (f64, f64) {
 }
 
 #[pyfunction]
-fn plv(phases_a: Vec<f64>, phases_b: Vec<f64>) -> f64 {
-    order_params::compute_plv(&phases_a, &phases_b)
+fn plv(phases_a: Vec<f64>, phases_b: Vec<f64>) -> PyResult<f64> {
+    order_params::compute_plv(&phases_a, &phases_b).map_err(spo_err)
 }
 
 #[pyfunction]
@@ -489,13 +504,27 @@ fn layer_coherence(phases: Vec<f64>, indices: Vec<usize>) -> f64 {
 // ─── Helpers ────────────────────────────────────────────────────────
 
 fn make_upde_state(layer_rs: &[f64]) -> UPDEState {
+    make_upde_state_full(layer_rs, &[], &[])
+}
+
+fn make_upde_state_full(layer_rs: &[f64], psi_values: &[f64], cla: &[f64]) -> UPDEState {
+    let layers: Vec<LayerState> = layer_rs
+        .iter()
+        .enumerate()
+        .map(|(i, &r)| LayerState {
+            r,
+            psi: psi_values.get(i).copied().unwrap_or(0.0),
+        })
+        .collect();
+    let stability_proxy = if layers.is_empty() {
+        0.0
+    } else {
+        layers.iter().map(|l| l.r).sum::<f64>() / layers.len() as f64
+    };
     UPDEState {
-        layers: layer_rs
-            .iter()
-            .map(|&r| LayerState { r, psi: 0.0 })
-            .collect(),
-        cross_layer_alignment: vec![],
-        stability_proxy: 0.0,
+        layers,
+        cross_layer_alignment: cla.to_vec(),
+        stability_proxy,
         regime: Regime::Nominal,
     }
 }
@@ -587,6 +616,15 @@ mod tests {
     fn make_upde_state_r_values() {
         let s = make_upde_state(&[0.1, 0.9]);
         assert!((s.mean_r() - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn make_upde_state_full_psi_and_cla() {
+        let s = make_upde_state_full(&[0.5, 0.8], &[1.0, 2.0], &[0.0, 0.9, 0.9, 0.0]);
+        assert!((s.layers[0].psi - 1.0).abs() < 1e-12);
+        assert!((s.layers[1].psi - 2.0).abs() < 1e-12);
+        assert_eq!(s.cross_layer_alignment.len(), 4);
+        assert!((s.stability_proxy - 0.65).abs() < 1e-12);
     }
 
     #[test]
