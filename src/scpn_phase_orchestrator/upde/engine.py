@@ -7,15 +7,12 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 from numpy.typing import NDArray
 
-try:
-    from spo_kernel import PyUPDEStepper as _RustStepper
-
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
 
 TWO_PI = 2.0 * np.pi
 
@@ -35,9 +32,11 @@ class UPDEEngine:
             raise ValueError(f"Unknown method {method!r}, expected 'euler' or 'rk4'")
         self._method = method
 
-        self._rust: _RustStepper | None = None
+        self._rust = None
         if _HAS_RUST:
-            self._rust = _RustStepper(n_oscillators, dt, method)
+            from spo_kernel import PyUPDEStepper
+
+            self._rust = PyUPDEStepper(n_oscillators, dt, method)
 
         self._phase_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)
         self._sin_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)

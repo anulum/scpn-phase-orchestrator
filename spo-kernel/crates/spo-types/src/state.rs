@@ -36,6 +36,7 @@ pub struct UPDEState {
 }
 
 impl UPDEState {
+    #[must_use]
     pub fn mean_r(&self) -> f64 {
         if self.layers.is_empty() {
             return 0.0;

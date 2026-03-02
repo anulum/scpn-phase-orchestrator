@@ -5,6 +5,7 @@
 use std::f64::consts::TAU;
 
 /// Ring-phase: θ = 2π·s/N, mapping state index to unit circle.
+#[must_use]
 pub fn ring_phase(state_index: usize, n_states: usize) -> f64 {
     if n_states == 0 {
         return 0.0;
@@ -13,6 +14,7 @@ pub fn ring_phase(state_index: usize, n_states: usize) -> f64 {
 }
 
 /// Graph-walk phase: normalise sequential position to [0, 2π).
+#[must_use]
 pub fn graph_walk_phase(position: usize, walk_length: usize) -> f64 {
     if walk_length == 0 {
         return 0.0;
@@ -22,6 +24,7 @@ pub fn graph_walk_phase(position: usize, walk_length: usize) -> f64 {
 
 /// Transition quality for symbolic sequences.
 /// step=0 → stalled (0.2), step=1 → ideal (1.0), larger → penalised.
+#[must_use]
 pub fn transition_quality(step_size: usize, n_states: usize) -> f64 {
     if step_size == 0 {
         return 0.2;

@@ -8,6 +8,7 @@ use std::f64::consts::TAU;
 /// Kuramoto global order parameter: (R, psi_mean).
 ///
 /// R = |mean(exp(i*theta))|, psi_mean = arg(mean(exp(i*theta))) mod 2π.
+#[must_use]
 pub fn compute_order_parameter(phases: &[f64]) -> (f64, f64) {
     let n = phases.len() as f64;
     if n < 1.0 {
@@ -28,6 +29,7 @@ pub fn compute_order_parameter(phases: &[f64]) -> (f64, f64) {
 /// Phase-locking value between two equal-length phase arrays.
 ///
 /// PLV = |mean(exp(i*(φ_a - φ_b)))| over samples.
+#[must_use]
 pub fn compute_plv(phases_a: &[f64], phases_b: &[f64]) -> f64 {
     let n = phases_a.len().min(phases_b.len()) as f64;
     if n < 1.0 {
@@ -49,6 +51,7 @@ pub fn compute_plv(phases_a: &[f64], phases_b: &[f64]) -> f64 {
 }
 
 /// Order parameter R for oscillators selected by mask indices.
+#[must_use]
 pub fn compute_layer_coherence(phases: &[f64], indices: &[usize]) -> f64 {
     let valid: Vec<f64> = indices
         .iter()

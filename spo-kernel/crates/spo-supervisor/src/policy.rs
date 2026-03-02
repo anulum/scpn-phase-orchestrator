@@ -15,6 +15,7 @@ pub struct SupervisorPolicy {
 }
 
 impl SupervisorPolicy {
+    #[must_use]
     pub fn new(manager: RegimeManager) -> Self {
         Self { manager }
     }

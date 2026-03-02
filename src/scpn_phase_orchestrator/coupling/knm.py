@@ -7,17 +7,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
 
-try:
-    from spo_kernel import PyCouplingBuilder as _RustCouplingBuilder
-
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
 
 
 @dataclass
@@ -35,7 +31,9 @@ class CouplingBuilder:
     ) -> CouplingState:
         """K_ij = base_strength * exp(-decay_alpha * |i - j|), zero diagonal."""
         if _HAS_RUST:
-            d = _RustCouplingBuilder().build(n_layers, base_strength, decay_alpha)
+            from spo_kernel import PyCouplingBuilder
+
+            d = PyCouplingBuilder().build(n_layers, base_strength, decay_alpha)
             n = d["n"]
             knm = np.asarray(d["knm"], dtype=np.float64).reshape(n, n)
             alpha = np.asarray(d["alpha"], dtype=np.float64).reshape(n, n)

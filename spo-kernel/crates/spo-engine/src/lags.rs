@@ -14,6 +14,7 @@ impl LagModel {
     /// Build α matrix from pairwise distances (row-major N×N) and propagation speed.
     ///
     /// α_ij = 2π * distances_ij / speed, antisymmetric: α_ji = -α_ij.
+    #[must_use]
     pub fn estimate_from_distances(distances: &[f64], n: usize, speed: f64) -> Self {
         let mut alpha = vec![0.0; n * n];
         if speed <= 0.0 || !speed.is_finite() {
@@ -30,6 +31,7 @@ impl LagModel {
     }
 
     /// Zero lag model.
+    #[must_use]
     pub fn zeros(n: usize) -> Self {
         Self {
             alpha: vec![0.0; n * n],

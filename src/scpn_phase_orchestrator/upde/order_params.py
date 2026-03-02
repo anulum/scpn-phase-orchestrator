@@ -7,16 +7,12 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 from numpy.typing import NDArray
 
-try:
-    from spo_kernel import order_parameter as _rust_order_param
-    from spo_kernel import plv as _rust_plv
-
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
 
 TWO_PI = 2.0 * np.pi
 
@@ -27,6 +23,8 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
     R = |mean(exp(i * theta))|, psi_mean = arg(mean(exp(i * theta))).
     """
     if _HAS_RUST:
+        from spo_kernel import order_parameter as _rust_order_param
+
         r, psi = _rust_order_param(phases.ravel().tolist())
         return float(r), float(psi)
     z = np.mean(np.exp(1j * phases))
@@ -39,6 +37,8 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
     PLV = |mean(exp(i * (phi_a - phi_b)))| over samples.
     """
     if _HAS_RUST:
+        from spo_kernel import plv as _rust_plv
+
         return float(_rust_plv(phases_a.ravel().tolist(), phases_b.ravel().tolist()))
     return float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b)))))
 

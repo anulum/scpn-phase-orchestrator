@@ -1,5 +1,5 @@
 #![deny(unsafe_code)]
-// SCPN Phase Orchestrator — Supervisor
+//! Regime FSM, boundary monitoring, coherence tracking, policy.
 // (C) 1998-2026 Miroslav Sotek. All rights reserved.
 
 pub mod boundaries;

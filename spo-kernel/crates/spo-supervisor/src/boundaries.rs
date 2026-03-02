@@ -29,6 +29,7 @@ pub struct BoundaryState {
 pub struct BoundaryObserver;
 
 impl BoundaryObserver {
+    #[must_use]
     pub fn observe(defs: &[BoundaryDef], values: &HashMap<String, f64>) -> BoundaryState {
         let mut state = BoundaryState::default();
 

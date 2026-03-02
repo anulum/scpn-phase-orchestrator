@@ -7,18 +7,15 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
-try:
-    from spo_kernel import physical_extract as _rust_physical_extract
-
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
 
 TWO_PI = 2.0 * np.pi
 
@@ -33,7 +30,9 @@ class PhysicalExtractor(PhaseExtractor):
         analytic = hilbert(signal)
 
         if _HAS_RUST:
-            theta, omega, amplitude, quality = _rust_physical_extract(
+            from spo_kernel import physical_extract
+
+            theta, omega, amplitude, quality = physical_extract(
                 np.real(analytic).tolist(), np.imag(analytic).tolist(), sample_rate
             )
         else:

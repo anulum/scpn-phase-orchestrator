@@ -15,7 +15,8 @@ use std::f64::consts::TAU;
 /// - omega: median instantaneous angular frequency (rad/s)
 /// - amplitude: mean envelope magnitude
 /// - quality: always 1.0 for Hilbert analytic signals (real == signal, so noise = 0)
-#[allow(clippy::needless_range_loop)]
+#[must_use]
+#[allow(clippy::needless_range_loop)] // Pass 2 unwrap mutates inst_phase[i] from inst_phase[i-1]
 pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f64, f64, f64, f64) {
     let n = real.len();
     if n == 0 || imag.len() != n {
@@ -26,9 +27,9 @@ pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f
     let mut inst_phase = vec![0.0_f64; n];
     let mut amp_sum = 0.0_f64;
 
-    for i in 0..n {
-        inst_phase[i] = imag[i].atan2(real[i]);
-        amp_sum += (real[i] * real[i] + imag[i] * imag[i]).sqrt();
+    for (ip, (&r, &im)) in inst_phase.iter_mut().zip(real.iter().zip(imag.iter())) {
+        *ip = im.atan2(r);
+        amp_sum += (r * r + im * im).sqrt();
     }
 
     let amplitude = amp_sum / n as f64;

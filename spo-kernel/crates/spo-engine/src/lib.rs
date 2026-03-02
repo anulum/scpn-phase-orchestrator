@@ -1,5 +1,5 @@
 #![deny(unsafe_code)]
-// SCPN Phase Orchestrator — Engine
+//! UPDE integration, coupling, order parameters, lags, imprint.
 // (C) 1998-2026 Miroslav Sotek. All rights reserved.
 
 pub mod coupling;

@@ -7,13 +7,10 @@
 
 from __future__ import annotations
 
-import importlib.util
 from enum import Enum
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.upde.metrics import UPDEState
-
-_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
 
 _R_CRITICAL = 0.3  # Acebrón et al. 2005 §2.3 — incoherence boundary
 _R_DEGRADED = 0.6  # Acebrón et al. 2005 §2.3 — partial sync threshold
