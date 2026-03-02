@@ -66,6 +66,9 @@ Changelog = "https://github.com/anulum/scpn-phase-orchestrator/blob/main/CHANGEL
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+scpn_phase_orchestrator = ["py.typed"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"

@@ -10,7 +10,9 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-TWO_PI = 2.0 * np.pi
+from scpn_phase_orchestrator._compat import TWO_PI
+
+__all__ = ["PhysicalDriver"]
 
 
 class PhysicalDriver:

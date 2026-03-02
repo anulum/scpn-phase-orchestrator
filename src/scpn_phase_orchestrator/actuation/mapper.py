@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 from scpn_phase_orchestrator.binding.types import VALID_KNOBS, ActuatorMapping
 
+__all__ = ["ControlAction", "ActuationMapper"]
+
 
 @dataclass
 class ControlAction:

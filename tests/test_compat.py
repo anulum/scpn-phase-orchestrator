@@ -7,14 +7,14 @@
 
 from __future__ import annotations
 
-__all__ = ["OTelAdapter"]
+import math
+
+from scpn_phase_orchestrator._compat import HAS_RUST, TWO_PI
 
 
-class OTelAdapter:
-    """Extract phase-relevant events from OpenTelemetry span data."""
+def test_two_pi_value():
+    assert abs(TWO_PI - 2.0 * math.pi) < 1e-15
 
-    def __init__(self, service_name: str):
-        self._service_name = service_name
 
-    def extract_events(self, span_data: list[dict]) -> list[float]:
-        raise NotImplementedError("OTel adapter planned for v0.3, see ROADMAP.md")
+def test_has_rust_is_bool():
+    assert isinstance(HAS_RUST, bool)

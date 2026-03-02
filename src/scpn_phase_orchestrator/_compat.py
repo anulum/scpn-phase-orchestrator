@@ -7,14 +7,11 @@
 
 from __future__ import annotations
 
-__all__ = ["OTelAdapter"]
+import importlib.util
 
+import numpy as np
 
-class OTelAdapter:
-    """Extract phase-relevant events from OpenTelemetry span data."""
+__all__ = ["TWO_PI", "HAS_RUST"]
 
-    def __init__(self, service_name: str):
-        self._service_name = service_name
-
-    def extract_events(self, span_data: list[dict]) -> list[float]:
-        raise NotImplementedError("OTel adapter planned for v0.3, see ROADMAP.md")
+TWO_PI = 2.0 * np.pi
+HAS_RUST = importlib.util.find_spec("spo_kernel") is not None

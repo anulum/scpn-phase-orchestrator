@@ -14,6 +14,8 @@ from pathlib import Path
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
+__all__ = ["AuditLogger"]
+
 
 class AuditLogger:
     """Append-only JSONL audit log for UPDE simulation steps."""

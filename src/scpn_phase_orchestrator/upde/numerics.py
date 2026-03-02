@@ -10,6 +10,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+__all__ = ["IntegrationConfig", "check_stability"]
+
 
 @dataclass(frozen=True)
 class IntegrationConfig:

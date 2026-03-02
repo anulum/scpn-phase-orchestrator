@@ -15,6 +15,8 @@ from scpn_phase_orchestrator.binding.types import (
     BindingSpec,
 )
 
+__all__ = ["validate_binding_spec"]
+
 
 def validate_binding_spec(spec: BindingSpec) -> list[str]:
     """Validate a BindingSpec. Returns list of error strings; empty means valid."""

@@ -25,6 +25,7 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
+      - run: python tools/check_version_sync.py
 
   typecheck:
     runs-on: ubuntu-latest

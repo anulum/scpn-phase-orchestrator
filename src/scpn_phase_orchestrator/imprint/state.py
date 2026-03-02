@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 
 from numpy.typing import NDArray
 
+__all__ = ["ImprintState"]
+
 
 @dataclass
 class ImprintState:

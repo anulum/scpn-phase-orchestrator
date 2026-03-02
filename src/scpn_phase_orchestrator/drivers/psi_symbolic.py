@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+__all__ = ["SymbolicDriver"]
+
 
 class SymbolicDriver:
     """Deterministic phase sequence driver for symbolic/semiotic channels."""

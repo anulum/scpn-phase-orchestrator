@@ -7,14 +7,13 @@
 
 from __future__ import annotations
 
-import importlib.util
-
 import numpy as np
 from numpy.typing import NDArray
 
-_HAS_RUST = importlib.util.find_spec("spo_kernel") is not None
+from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
+from scpn_phase_orchestrator._compat import TWO_PI
 
-TWO_PI = 2.0 * np.pi
+__all__ = ["compute_order_parameter", "compute_plv", "compute_layer_coherence"]
 
 
 def compute_order_parameter(phases: NDArray) -> tuple[float, float]:

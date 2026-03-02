@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+*.egg-info
+spo-kernel/target
+site/
+.mypy_cache
+.ruff_cache
+.pytest_cache
+htmlcov
+coverage*.xml
+dist/
+build/
+*.whl

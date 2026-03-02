@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from numpy.typing import NDArray
 
+__all__ = ["PrometheusAdapter"]
+
 
 class PrometheusAdapter:
     """Fetch time-series metrics from a Prometheus endpoint."""

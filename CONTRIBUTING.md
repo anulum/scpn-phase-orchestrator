@@ -38,10 +38,10 @@ Each channel maps one oscillator observable to one actuation output.
 
 ## Adding Extractors
 
-Subclass `PhaseExtractor` in `src/scpn_phase_orchestrator/extractors/`:
+Subclass `PhaseExtractor` in `src/scpn_phase_orchestrator/oscillators/`:
 
 ```python
-from scpn_phase_orchestrator.extractors.base import PhaseExtractor
+from scpn_phase_orchestrator.oscillators.base import PhaseExtractor
 
 class MyExtractor(PhaseExtractor):
     def extract(self, raw_signal: np.ndarray) -> np.ndarray:

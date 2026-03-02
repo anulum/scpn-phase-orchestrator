@@ -15,6 +15,8 @@ import numpy as np
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
+__all__ = ["ReplayEngine"]
+
 
 class ReplayEngine:
     """Replay and verify determinism of JSONL audit logs."""
@@ -64,9 +66,7 @@ class ReplayEngine:
             new_phases = engine.step(phases, omegas, knm, zeta, psi_drive, alpha)
             r_actual, _ = engine.compute_order_parameter(new_phases)
 
-            logged_layers = entry.get("layers", [])
-            if logged_layers:
-                r_logged = np.mean([ld["R"] for ld in logged_layers])
-                if abs(r_actual - r_logged) > 1e-6:
-                    return False
+            r_logged = entry.get("stability_proxy")
+            if r_logged is not None and abs(r_actual - r_logged) > 1e-6:
+                return False
         return True

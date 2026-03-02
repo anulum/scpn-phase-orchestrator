@@ -11,6 +11,8 @@ from dataclasses import dataclass
 
 from numpy.typing import NDArray
 
+__all__ = ["KnmTemplate", "KnmTemplateSet"]
+
 
 @dataclass(frozen=True)
 class KnmTemplate:

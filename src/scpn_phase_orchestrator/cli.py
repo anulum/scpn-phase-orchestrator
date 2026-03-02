@@ -21,7 +21,10 @@ from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+from scpn_phase_orchestrator.upde.order_params import (
+    compute_order_parameter,
+    compute_plv,
+)
 
 
 @click.group()
@@ -82,7 +85,12 @@ def run(binding_spec: str, steps: int) -> None:
         osc_idx += n_layer
 
     zeta = 0.0
+    zeta_ttl = 0
     for _ in range(steps):
+        if zeta_ttl > 0:
+            zeta_ttl -= 1
+            if zeta_ttl == 0:
+                zeta = 0.0
         phases = engine.step(phases, omegas, coupling.knm, zeta, 0.0, coupling.alpha)
 
         # Build UPDEState for supervisor
@@ -95,9 +103,20 @@ def run(binding_spec: str, steps: int) -> None:
                 r, psi = 0.0, 0.0
             layer_states.append(LayerState(R=r, psi=psi))
 
+        n_layers = len(spec.layers)
+        cla = np.zeros((n_layers, n_layers))
+        for li in range(n_layers):
+            for lj in range(li + 1, n_layers):
+                ids_i = layer_osc_ranges[spec.layers[li].index]
+                ids_j = layer_osc_ranges[spec.layers[lj].index]
+                if ids_i and ids_j:
+                    plv = compute_plv(phases[ids_i], phases[ids_j])
+                    cla[li, lj] = plv
+                    cla[lj, li] = plv
+
         upde_state = UPDEState(
             layers=layer_states,
-            cross_layer_alignment=np.zeros((len(spec.layers), len(spec.layers))),
+            cross_layer_alignment=cla,
             stability_proxy=layer_states[0].R if layer_states else 0.0,
             regime_id=regime_manager.current_regime.value,
         )
@@ -107,6 +126,7 @@ def run(binding_spec: str, steps: int) -> None:
         for act in actions:
             if act.knob == "zeta":
                 zeta = min(zeta + act.value, 0.5)
+                zeta_ttl = int(act.ttl_s / spec.sample_period_s)
 
     # Final coherence
     good_phases = [
@@ -166,7 +186,7 @@ def scaffold(domain_name: str) -> None:
         spec_file.write_text(
             f"# Binding spec for {domain_name}\n"
             f"name: {domain_name}\n"
-            "version: '0.1'\n"
+            "version: '0.1.0'\n"
             "safety_tier: research\n"
             "sample_period_s: 0.01\n"
             "control_period_s: 0.1\n"

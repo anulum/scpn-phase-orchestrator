@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+__all__ = ["CoherencePlot"]
+
 
 class CoherencePlot:
     """Audit log visualisation (matplotlib-based, planned for v0.3)."""

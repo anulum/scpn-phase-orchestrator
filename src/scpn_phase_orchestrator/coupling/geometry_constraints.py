@@ -12,6 +12,13 @@ from abc import ABC, abstractmethod
 import numpy as np
 from numpy.typing import NDArray
 
+__all__ = [
+    "GeometryConstraint",
+    "SymmetryConstraint",
+    "NonNegativeConstraint",
+    "project_knm",
+]
+
 
 class GeometryConstraint(ABC):
     @abstractmethod

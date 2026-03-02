@@ -23,6 +23,8 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
 )
 
+__all__ = ["load_binding_spec"]
+
 
 def load_binding_spec(path: str | Path) -> BindingSpec:
     """Load a BindingSpec from a YAML or JSON file."""

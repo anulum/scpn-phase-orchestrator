@@ -34,7 +34,7 @@ def test_lower_bound_soft_violation():
     obs = BoundaryObserver(_defs())
     state = obs.observe({"R": 0.1, "T": 50.0, "P": 5.0})
     assert len(state.violations) == 1
-    assert len(state.soft_warnings) == 1
+    assert len(state.soft_violations) == 1
     assert state.hard_violations == []
 
 
@@ -43,7 +43,7 @@ def test_upper_bound_hard_violation():
     state = obs.observe({"R": 0.5, "T": 200.0, "P": 5.0})
     assert len(state.violations) == 1
     assert len(state.hard_violations) == 1
-    assert state.soft_warnings == []
+    assert state.soft_violations == []
 
 
 def test_missing_variable_skipped():
@@ -56,5 +56,5 @@ def test_no_violation():
     obs = BoundaryObserver(_defs())
     state = obs.observe({"R": 0.5, "T": 50.0, "P": 5.0})
     assert state.violations == []
-    assert state.soft_warnings == []
+    assert state.soft_violations == []
     assert state.hard_violations == []

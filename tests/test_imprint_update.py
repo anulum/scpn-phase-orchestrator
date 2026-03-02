@@ -61,9 +61,25 @@ def test_modulate_lag_shifts_alpha():
     alpha = np.zeros((3, 3))
     imprint = _state([0.1, 0.2, 0.3])
     result = model.modulate_lag(alpha, imprint)
-    np.testing.assert_allclose(result[0, :], 0.1, atol=1e-12)
-    np.testing.assert_allclose(result[1, :], 0.2, atol=1e-12)
-    np.testing.assert_allclose(result[2, :], 0.3, atol=1e-12)
+    # Antisymmetric: result[i,j] = m_k[i] - m_k[j]
+    np.testing.assert_allclose(result[0, 1], -0.1, atol=1e-12)
+    np.testing.assert_allclose(result[1, 0], 0.1, atol=1e-12)
+    np.testing.assert_allclose(result[0, 2], -0.2, atol=1e-12)
+
+
+def test_modulate_lag_preserves_antisymmetry():
+    model = ImprintModel(decay_rate=0.1, saturation=5.0)
+    n = 4
+    # Start with antisymmetric alpha
+    alpha = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i + 1, n):
+            alpha[i, j] = 0.5 * (i - j)
+            alpha[j, i] = -alpha[i, j]
+    imprint = _state([0.1, 0.3, 0.0, 0.2])
+    result = model.modulate_lag(alpha, imprint)
+    # result + result^T should be zero (antisymmetry preserved)
+    np.testing.assert_allclose(result + result.T, 0.0, atol=1e-12)
 
 
 def test_last_update_advances():

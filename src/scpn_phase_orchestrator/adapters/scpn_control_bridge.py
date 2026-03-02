@@ -13,6 +13,8 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
+__all__ = ["SCPNControlBridge"]
+
 
 class SCPNControlBridge:
     """Adapter between scpn-control telemetry and phase-orchestrator types."""
