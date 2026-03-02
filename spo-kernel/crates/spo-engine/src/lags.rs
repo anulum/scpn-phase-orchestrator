@@ -7,6 +7,7 @@ use std::f64::consts::TAU;
 
 use spo_types::{SpoError, SpoResult};
 
+#[derive(Clone)]
 pub struct LagModel {
     pub alpha: Vec<f64>,
     pub n: usize,
@@ -27,10 +28,12 @@ impl LagModel {
                 distances.len()
             )));
         }
-        let mut alpha = vec![0.0; n * n];
         if speed <= 0.0 || !speed.is_finite() {
-            return Ok(Self { alpha, n });
+            return Err(SpoError::IntegrationDiverged(
+                "speed must be positive and finite".into(),
+            ));
         }
+        let mut alpha = vec![0.0; n * n];
         for i in 0..n {
             for j in (i + 1)..n {
                 let lag = TAU * distances[i * n + j] / speed;
@@ -78,9 +81,23 @@ mod tests {
     }
 
     #[test]
-    fn zero_speed_gives_zeros() {
-        let lm = LagModel::estimate_from_distances(&[0.0, 1.0, 1.0, 0.0], 2, 0.0).unwrap();
-        assert!(lm.alpha.iter().all(|&v| v == 0.0));
+    fn zero_speed_rejected() {
+        assert!(LagModel::estimate_from_distances(&[0.0, 1.0, 1.0, 0.0], 2, 0.0).is_err());
+    }
+
+    #[test]
+    fn negative_speed_rejected() {
+        assert!(LagModel::estimate_from_distances(&[0.0, 1.0, 1.0, 0.0], 2, -1.0).is_err());
+    }
+
+    #[test]
+    fn nan_speed_rejected() {
+        assert!(LagModel::estimate_from_distances(&[0.0, 1.0, 1.0, 0.0], 2, f64::NAN).is_err());
+    }
+
+    #[test]
+    fn inf_speed_rejected() {
+        assert!(LagModel::estimate_from_distances(&[0.0, 1.0, 1.0, 0.0], 2, f64::INFINITY).is_err());
     }
 
     #[test]

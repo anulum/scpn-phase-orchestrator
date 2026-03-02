@@ -72,6 +72,7 @@ fn worst_layer(upde_state: &UPDEState) -> Option<usize> {
         .layers
         .iter()
         .enumerate()
+        .filter(|(_, l)| l.r.is_finite())
         .min_by(|(_, a), (_, b)| a.r.partial_cmp(&b.r).unwrap_or(std::cmp::Ordering::Equal))
         .map(|(i, _)| i)
 }
@@ -153,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn nan_layer_r_no_panic() {
+    fn nan_layer_r_selects_finite_min() {
         let state = UPDEState {
             layers: vec![
                 LayerState { r: 0.5, psi: 0.0 },
@@ -167,7 +168,26 @@ mod tests {
             stability_proxy: 0.0,
             regime: Regime::Nominal,
         };
-        let result = worst_layer(&state);
-        assert!(result.is_some());
+        assert_eq!(worst_layer(&state), Some(2));
+    }
+
+    #[test]
+    fn all_nan_returns_none() {
+        let state = UPDEState {
+            layers: vec![
+                LayerState {
+                    r: f64::NAN,
+                    psi: 0.0,
+                },
+                LayerState {
+                    r: f64::NAN,
+                    psi: 0.0,
+                },
+            ],
+            cross_layer_alignment: vec![],
+            stability_proxy: 0.0,
+            regime: Regime::Nominal,
+        };
+        assert_eq!(worst_layer(&state), None);
     }
 }

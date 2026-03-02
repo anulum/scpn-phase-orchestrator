@@ -481,6 +481,11 @@ fn transition_quality(step_size: usize, n_states: usize) -> f64 {
     symbolic::transition_quality(step_size, n_states)
 }
 
+#[pyfunction]
+fn layer_coherence(phases: Vec<f64>, indices: Vec<usize>) -> f64 {
+    order_params::compute_layer_coherence(&phases, &indices)
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
 fn make_upde_state(layer_rs: &[f64]) -> UPDEState {
@@ -563,6 +568,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(physical_extract, m)?)?;
     m.add_function(wrap_pyfunction!(graph_walk_phase, m)?)?;
     m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
+    m.add_function(wrap_pyfunction!(layer_coherence, m)?)?;
     Ok(())
 }
 
