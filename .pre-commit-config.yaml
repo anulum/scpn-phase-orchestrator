@@ -1,0 +1,26 @@
+# SCPN Phase Orchestrator — Pre-commit hooks
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml", "--quiet"]
+        additional_dependencies: ["bandit[toml]"]
+
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: bash -c 'cd spo-kernel && cargo fmt --check'
+        language: system
+        pass_filenames: false
+        files: \.rs$
