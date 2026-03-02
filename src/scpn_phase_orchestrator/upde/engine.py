@@ -24,15 +24,43 @@ class UPDEEngine:
                   + zeta sin(Psi - theta_i)
     """
 
-    def __init__(self, n_oscillators: int, dt: float, method: str = "euler"):
+    # Dormand-Prince RK45 Butcher tableau coefficients
+    _DP_A = np.array(
+        [
+            [0, 0, 0, 0, 0, 0],
+            [1 / 5, 0, 0, 0, 0, 0],
+            [3 / 40, 9 / 40, 0, 0, 0, 0],
+            [44 / 45, -56 / 15, 32 / 9, 0, 0, 0],
+            [19372 / 6561, -25360 / 2187, 64448 / 6561, -212 / 729, 0, 0],
+            [9017 / 3168, -355 / 33, 46732 / 5247, 49 / 176, -5103 / 18656, 0],
+        ]
+    )
+    _DP_B4 = np.array(
+        [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 2100]
+    )
+    _DP_B5 = np.array([35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84])
+    _DP_C = np.array([0, 1 / 5, 3 / 10, 4 / 5, 8 / 9, 1])
+
+    def __init__(
+        self,
+        n_oscillators: int,
+        dt: float,
+        method: str = "euler",
+        atol: float = 1e-6,
+        rtol: float = 1e-3,
+    ):
         self._n = n_oscillators
         self._dt = dt
-        if method not in ("euler", "rk4"):
-            raise ValueError(f"Unknown method {method!r}, expected 'euler' or 'rk4'")
+        if method not in ("euler", "rk4", "rk45"):
+            msg = f"Unknown method {method!r}, expected 'euler', 'rk4', or 'rk45'"
+            raise ValueError(msg)
         self._method = method
+        self._atol = atol
+        self._rtol = rtol
+        self._last_dt = dt
 
         self._rust = None
-        if _HAS_RUST:
+        if _HAS_RUST and method != "rk45":
             from spo_kernel import PyUPDEStepper
 
             self._rust = PyUPDEStepper(n_oscillators, dt, method)
@@ -40,6 +68,15 @@ class UPDEEngine:
         self._phase_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)
         self._sin_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)
         self._scratch_dtheta = np.empty(n_oscillators, dtype=np.float64)
+
+        if method == "rk45":
+            self._ks = [np.empty(n_oscillators, dtype=np.float64) for _ in range(6)]
+            self._err_buf = np.empty(n_oscillators, dtype=np.float64)
+
+    @property
+    def last_dt(self) -> float:
+        """Actual dt used on the last accepted step (relevant for rk45)."""
+        return self._last_dt
 
     def step(
         self,
@@ -74,6 +111,8 @@ class UPDEEngine:
             return np.asarray(result, dtype=np.float64)
         if self._method == "euler":
             return self._euler_step(phases, omegas, knm, zeta, psi, alpha)
+        if self._method == "rk45":
+            return self._rk45_step(phases, omegas, knm, zeta, psi, alpha)
         return self._rk4_step(phases, omegas, knm, zeta, psi, alpha)
 
     def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
@@ -140,3 +179,45 @@ class UPDEEngine:
         weighted = k1 + 2.0 * k2 + 2.0 * k3 + k4
         result: NDArray = (phases + (dt / 6.0) * weighted) % TWO_PI
         return result
+
+    def _rk45_step(
+        self,
+        phases: NDArray,
+        omegas: NDArray,
+        knm: NDArray,
+        zeta: float,
+        psi: float,
+        alpha: NDArray,
+    ) -> NDArray:
+        """Dormand-Prince RK45 with embedded error estimation and adaptive dt."""
+        dt = self._last_dt
+        A = self._DP_A
+        ks = self._ks
+        max_reject = 3
+
+        for _ in range(max_reject + 1):
+            ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
+            for i in range(1, 6):
+                stage = phases + dt * sum(A[i, j] * ks[j] for j in range(i))
+                ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
+
+            y5 = phases + dt * sum(self._DP_B5[j] * ks[j] for j in range(6))
+            y4 = phases + dt * sum(self._DP_B4[j] * ks[j] for j in range(6))
+
+            np.subtract(y5, y4, out=self._err_buf)
+            np.abs(self._err_buf, out=self._err_buf)
+            scale = self._atol + self._rtol * np.maximum(np.abs(phases), np.abs(y5))
+            err_norm = float(np.max(self._err_buf / scale))
+
+            if err_norm <= 1.0:
+                factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
+                self._last_dt = min(dt * factor, self._dt * 10.0)
+                return y5 % TWO_PI
+
+            # Reject — shrink dt and retry
+            factor = max(0.2, 0.9 * err_norm ** (-0.25))
+            dt = dt * factor
+
+        # Exhausted retries, accept current result
+        self._last_dt = dt
+        return y5 % TWO_PI

@@ -57,6 +57,17 @@ spo run domainpacks/queuewaves/binding_spec.yaml --steps 1000
 spo replay audit.jsonl --output report.json
 ```
 
+## Platform Support
+
+| Platform | Python engine | Rust FFI (optional) |
+|----------|--------------|---------------------|
+| Linux | Full | Full |
+| macOS | Full | Full |
+| Windows | Full | Experimental (requires MSVC toolchain) |
+
+The PyPI package is pure Python. Rust FFI provides optional acceleration
+and is built from source via `maturin develop`.
+
 ## Domainpacks
 
 | Pack | Domain | Purpose |
@@ -65,6 +76,7 @@ spo replay audit.jsonl --output report.json
 | `queuewaves` | Cloud/queues | Retry storm desynchronisation |
 | `geometry_walk` | Graph systems | Random-walk phase coupling |
 | `bio_stub` | Biology | SCPN-compatible oscillator template |
+| `manufacturing_spc` | Manufacturing | Statistical process control (3 layers, 9 oscillators) |
 
 ## Development
 
