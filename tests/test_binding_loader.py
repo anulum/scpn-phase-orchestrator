@@ -60,7 +60,9 @@ def test_load_yaml(tmp_path):
 
 
 def test_nonexistent_file_raises():
-    with pytest.raises((FileNotFoundError, OSError)):
+    from scpn_phase_orchestrator.binding.loader import BindingLoadError
+
+    with pytest.raises(BindingLoadError, match="cannot read"):
         load_binding_spec("/nonexistent/path/spec.json")
 
 

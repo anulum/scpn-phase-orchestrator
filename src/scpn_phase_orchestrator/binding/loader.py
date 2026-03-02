@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
@@ -26,85 +27,114 @@ from scpn_phase_orchestrator.binding.types import (
 __all__ = ["load_binding_spec"]
 
 
+class BindingLoadError(ValueError):
+    """Raised when a binding spec cannot be parsed."""
+
+
+def _require(data: dict, key: str, context: str = "") -> Any:
+    """Extract a required key from *data*, raising BindingLoadError if absent."""
+    try:
+        return data[key]
+    except KeyError:
+        loc = f" in {context}" if context else ""
+        raise BindingLoadError(f"missing required key {key!r}{loc}") from None
+
+
 def load_binding_spec(path: str | Path) -> BindingSpec:
     """Load a BindingSpec from a YAML or JSON file."""
     path = Path(path)
-    raw = path.read_text(encoding="utf-8")
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (FileNotFoundError, PermissionError) as exc:
+        raise BindingLoadError(f"cannot read {path}: {exc}") from exc
 
     if path.suffix in (".yaml", ".yml"):
         import yaml
 
-        data = yaml.safe_load(raw)
+        try:
+            data = yaml.safe_load(raw)
+        except yaml.YAMLError as exc:
+            raise BindingLoadError(f"YAML parse error in {path}: {exc}") from exc
     elif path.suffix == ".json":
-        data = json.loads(raw)
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise BindingLoadError(f"JSON parse error in {path}: {exc}") from exc
     else:
-        raise ValueError(f"Unsupported file extension: {path.suffix}")
+        raise BindingLoadError(f"Unsupported file extension: {path.suffix}")
+
+    if not isinstance(data, dict):
+        raise BindingLoadError(
+            f"expected mapping at top level, got {type(data).__name__}"
+        )
 
     layers = [
         HierarchyLayer(
-            name=lay["name"],
-            index=lay["index"],
+            name=_require(lay, "name", "layers[]"),
+            index=_require(lay, "index", "layers[]"),
             oscillator_ids=lay.get("oscillator_ids", []),
         )
-        for lay in data["layers"]
+        for lay in _require(data, "layers", "root")
     ]
 
     osc_families = {
         k: OscillatorFamily(
-            channel=v["channel"],
-            extractor_type=v["extractor_type"],
+            channel=_require(v, "channel", f"oscillator_families.{k}"),
+            extractor_type=_require(v, "extractor_type", f"oscillator_families.{k}"),
             config=v.get("config", {}),
         )
-        for k, v in data["oscillator_families"].items()
+        for k, v in _require(data, "oscillator_families", "root").items()
     }
 
+    coupling_data = _require(data, "coupling", "root")
     coupling = CouplingSpec(
-        base_strength=data["coupling"]["base_strength"],
-        decay_alpha=data["coupling"]["decay_alpha"],
-        templates=data["coupling"].get("templates", {}),
+        base_strength=_require(coupling_data, "base_strength", "coupling"),
+        decay_alpha=_require(coupling_data, "decay_alpha", "coupling"),
+        templates=coupling_data.get("templates", {}),
     )
 
+    drivers_data = _require(data, "drivers", "root")
     drivers = DriverSpec(
-        physical=data["drivers"].get("physical", {}),
-        informational=data["drivers"].get("informational", {}),
-        symbolic=data["drivers"].get("symbolic", {}),
+        physical=drivers_data.get("physical", {}),
+        informational=drivers_data.get("informational", {}),
+        symbolic=drivers_data.get("symbolic", {}),
     )
 
-    obj = data["objectives"]
+    obj = _require(data, "objectives", "root")
     objectives = ObjectivePartition(
-        good_layers=obj["good_layers"],
-        bad_layers=obj["bad_layers"],
+        good_layers=_require(obj, "good_layers", "objectives"),
+        bad_layers=_require(obj, "bad_layers", "objectives"),
         good_weight=obj.get("good_weight", 1.0),
         bad_weight=obj.get("bad_weight", 1.0),
     )
 
     boundaries = [
         BoundaryDef(
-            name=b["name"],
-            variable=b["variable"],
+            name=_require(b, "name", "boundaries[]"),
+            variable=_require(b, "variable", "boundaries[]"),
             lower=b.get("lower"),
             upper=b.get("upper"),
-            severity=b["severity"],
+            severity=_require(b, "severity", "boundaries[]"),
         )
         for b in data.get("boundaries", [])
     ]
 
     actuators = [
         ActuatorMapping(
-            name=a["name"],
-            knob=a["knob"],
-            scope=a["scope"],
-            limits=tuple(a["limits"]),
+            name=_require(a, "name", "actuators[]"),
+            knob=_require(a, "knob", "actuators[]"),
+            scope=_require(a, "scope", "actuators[]"),
+            limits=tuple(_require(a, "limits", "actuators[]")),
         )
         for a in data.get("actuators", [])
     ]
 
-    imprint_data = data.get("imprint_model")
+    imprint_data = data.get("imprint_model") or data.get("imprint")
     imprint = None
     if imprint_data:
         imprint = ImprintSpec(
-            decay_rate=imprint_data["decay_rate"],
-            saturation=imprint_data["saturation"],
+            decay_rate=_require(imprint_data, "decay_rate", "imprint_model"),
+            saturation=_require(imprint_data, "saturation", "imprint_model"),
             modulates=imprint_data.get("modulates", []),
         )
 
@@ -112,16 +142,16 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
     geometry = None
     if geo_data:
         geometry = GeometrySpec(
-            constraint_type=geo_data["constraint_type"],
+            constraint_type=_require(geo_data, "constraint_type", "geometry_prior"),
             params=geo_data.get("params", {}),
         )
 
     return BindingSpec(
-        name=data["name"],
-        version=data["version"],
-        safety_tier=data["safety_tier"],
-        sample_period_s=data["sample_period_s"],
-        control_period_s=data["control_period_s"],
+        name=_require(data, "name", "root"),
+        version=_require(data, "version", "root"),
+        safety_tier=_require(data, "safety_tier", "root"),
+        sample_period_s=_require(data, "sample_period_s", "root"),
+        control_period_s=_require(data, "control_period_s", "root"),
         layers=layers,
         oscillator_families=osc_families,
         coupling=coupling,

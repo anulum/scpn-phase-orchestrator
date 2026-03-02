@@ -48,11 +48,19 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
 
     layer_indices = {lay.index for lay in spec.layers}
 
+    valid_extractors = frozenset({
+        "hilbert", "wavelet", "zero_crossing", "event", "ring", "graph",
+    })
     for family_name, fam in spec.oscillator_families.items():
         if fam.channel not in VALID_CHANNELS:
             errors.append(
                 f"oscillator_family {family_name!r}: channel must be one of "
                 f"{VALID_CHANNELS}, got {fam.channel!r}"
+            )
+        if fam.extractor_type not in valid_extractors:
+            errors.append(
+                f"oscillator_family {family_name!r}: extractor_type must be one of "
+                f"{sorted(valid_extractors)}, got {fam.extractor_type!r}"
             )
 
     if not spec.objectives.good_layers and not spec.objectives.bad_layers:
@@ -68,7 +76,17 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
                 f"boundary {bdef.name!r}: severity must be one of "
                 f"{VALID_SEVERITIES}, got {bdef.severity!r}"
             )
+        if (
+            bdef.lower is not None
+            and bdef.upper is not None
+            and bdef.lower > bdef.upper
+        ):
+            errors.append(
+                f"boundary {bdef.name!r}: lower ({bdef.lower}) "
+                f"must be <= upper ({bdef.upper})"
+            )
 
+    valid_scopes = {"global"} | {f"layer_{lay.index}" for lay in spec.layers}
     for act in spec.actuators:
         if act.knob not in VALID_KNOBS:
             errors.append(
@@ -78,6 +96,11 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
         if len(act.limits) != 2 or act.limits[0] > act.limits[1]:
             errors.append(
                 f"actuator {act.name!r}: limits must be (lo, hi) with lo <= hi"
+            )
+        if act.scope not in valid_scopes:
+            errors.append(
+                f"actuator {act.name!r}: scope {act.scope!r} does not match any "
+                f"layer index; valid scopes: {sorted(valid_scopes)}"
             )
 
     return errors
