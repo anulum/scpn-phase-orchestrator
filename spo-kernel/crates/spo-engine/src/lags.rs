@@ -97,7 +97,9 @@ mod tests {
 
     #[test]
     fn inf_speed_rejected() {
-        assert!(LagModel::estimate_from_distances(&[0.0, 1.0, 1.0, 0.0], 2, f64::INFINITY).is_err());
+        assert!(
+            LagModel::estimate_from_distances(&[0.0, 1.0, 1.0, 0.0], 2, f64::INFINITY).is_err()
+        );
     }
 
     #[test]

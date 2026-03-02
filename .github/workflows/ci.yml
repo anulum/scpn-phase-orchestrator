@@ -126,9 +126,6 @@ jobs:
 
   ffi-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -144,10 +141,13 @@ jobs:
             spo-kernel/target
           key: cargo-ffi-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-ffi-
-      - run: pip install maturin
-      - run: maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-      - run: pip install -e ".[dev]"
-      - run: pytest tests/test_ffi_integration.py -v --tb=short
+      - run: python -m venv .venv
+      - run: |
+          . .venv/bin/activate
+          pip install maturin
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install -e ".[dev]"
+          pytest tests/test_ffi_integration.py -v --tb=short
 
   cargo-audit:
     runs-on: ubuntu-latest
