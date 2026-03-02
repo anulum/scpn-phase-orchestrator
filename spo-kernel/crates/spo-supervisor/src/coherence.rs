@@ -8,6 +8,7 @@ pub struct CoherenceMonitor {
 }
 
 impl CoherenceMonitor {
+    #[must_use]
     pub fn new(good_layers: Vec<usize>, bad_layers: Vec<usize>) -> Self {
         Self {
             good_layers,
@@ -15,10 +16,12 @@ impl CoherenceMonitor {
         }
     }
 
+    #[must_use]
     pub fn compute_r_good(&self, upde_state: &UPDEState) -> f64 {
         mean_r(upde_state, &self.good_layers)
     }
 
+    #[must_use]
     pub fn compute_r_bad(&self, upde_state: &UPDEState) -> f64 {
         mean_r(upde_state, &self.bad_layers)
     }

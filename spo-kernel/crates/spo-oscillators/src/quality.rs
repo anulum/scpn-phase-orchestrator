@@ -17,6 +17,7 @@ impl Default for PhaseQualityScorer {
 
 impl PhaseQualityScorer {
     /// Weighted average quality. `qualities` and `amplitudes` must be same length.
+    #[must_use]
     pub fn score(&self, qualities: &[f64], amplitudes: &[f64]) -> f64 {
         if qualities.is_empty() {
             return 0.0;
@@ -33,6 +34,7 @@ impl PhaseQualityScorer {
     }
 
     /// True if quality is below threshold for the majority of states.
+    #[must_use]
     pub fn is_collapsed(&self, qualities: &[f64]) -> bool {
         if qualities.is_empty() {
             return true;
@@ -45,6 +47,7 @@ impl PhaseQualityScorer {
     }
 
     /// Weight array: qualities above min_quality pass through, others zeroed.
+    #[must_use]
     pub fn downweight_mask(&self, qualities: &[f64]) -> Vec<f64> {
         qualities
             .iter()

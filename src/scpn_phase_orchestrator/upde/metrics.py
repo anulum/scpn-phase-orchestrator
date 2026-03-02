@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from numpy.typing import NDArray
 
 
-@dataclass
+@dataclass(frozen=True)
 class LockSignature:
     source_layer: int
     target_layer: int
@@ -20,14 +20,14 @@ class LockSignature:
     mean_lag: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class LayerState:
     R: float
     psi: float
     lock_signatures: dict[str, LockSignature] = field(default_factory=dict)
 
 
-@dataclass
+@dataclass(frozen=True)
 class UPDEState:
     layers: list[LayerState]
     cross_layer_alignment: NDArray

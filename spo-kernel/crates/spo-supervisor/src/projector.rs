@@ -12,6 +12,7 @@ pub struct ActionProjector {
 }
 
 impl ActionProjector {
+    #[must_use]
     pub fn new(rate_limits: HashMap<Knob, f64>, value_bounds: HashMap<Knob, (f64, f64)>) -> Self {
         Self {
             rate_limits,
@@ -19,6 +20,7 @@ impl ActionProjector {
         }
     }
 
+    #[must_use]
     pub fn project(&self, action: &ControlAction, previous_value: f64) -> ControlAction {
         let (lo, hi) = self
             .value_bounds
@@ -45,6 +47,7 @@ impl ActionProjector {
         }
     }
 
+    #[must_use]
     pub fn project_batch(
         &self,
         actions: &[ControlAction],

@@ -110,6 +110,7 @@ impl UPDEStepper {
         Ok(())
     }
 
+    #[must_use]
     pub fn n(&self) -> usize {
         self.n
     }

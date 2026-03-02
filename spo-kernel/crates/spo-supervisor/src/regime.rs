@@ -16,6 +16,7 @@ pub struct RegimeManager {
 }
 
 impl RegimeManager {
+    #[must_use]
     pub fn new(hysteresis: f64, cooldown_steps: u64) -> Self {
         Self {
             current: Regime::Nominal,
@@ -26,6 +27,7 @@ impl RegimeManager {
         }
     }
 
+    #[must_use]
     pub fn evaluate(&self, upde_state: &UPDEState, boundary: &BoundaryState) -> Regime {
         if !boundary.hard_violations.is_empty() {
             return Regime::Critical;
@@ -79,6 +81,7 @@ impl RegimeManager {
         proposed
     }
 
+    #[must_use]
     pub fn step_counter(&self) -> u64 {
         self.step_counter
     }

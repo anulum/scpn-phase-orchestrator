@@ -1,5 +1,5 @@
 #![deny(unsafe_code)]
-// SCPN Phase Orchestrator — Oscillators
+//! Phase extraction: physical (Hilbert), informational (event timing), symbolic (state-space).
 // (C) 1998-2026 Miroslav Sotek. All rights reserved.
 
 pub mod informational;

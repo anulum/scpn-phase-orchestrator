@@ -10,6 +10,7 @@ use std::f64::consts::TAU;
 /// - theta is the final cumulative phase mod 2π
 /// - omega_median is the median instantaneous angular velocity
 /// - quality is 1/(1+CV) where CV is the coefficient of variation of intervals
+#[must_use]
 pub fn event_phase(timestamps: &[f64]) -> (f64, f64, f64) {
     if timestamps.len() < 2 {
         return (0.0, 0.0, 0.0);

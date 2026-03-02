@@ -1,5 +1,5 @@
 #![deny(unsafe_code)]
-// SCPN Phase Orchestrator — Shared Types
+//! Shared types: state, actions, errors, configuration.
 // (C) 1998-2026 Miroslav Sotek. All rights reserved.
 
 pub mod action;

@@ -30,6 +30,7 @@ criterion = { version = "0.5" }
 unwrap_used = "deny"
 missing_errors_doc = "warn"
 missing_panics_doc = "warn"
+must_use_candidate = "warn"
 
 [workspace.lints.rust]
 unreachable_pub = "warn"
