@@ -17,7 +17,7 @@ from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 __all__ = ["CouplingState", "CouplingBuilder"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class CouplingState:
     knm: NDArray
     alpha: NDArray

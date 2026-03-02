@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.upde.order_params import (
     compute_layer_coherence,
@@ -63,3 +64,10 @@ def test_layer_coherence_empty_mask():
     phases = np.array([1.0, 2.0, 3.0])
     mask = np.zeros(3, dtype=bool)
     assert compute_layer_coherence(phases, mask) == 0.0
+
+
+def test_plv_length_mismatch_raises():
+    a = np.array([1.0, 2.0, 3.0])
+    b = np.array([1.0, 2.0])
+    with pytest.raises(ValueError, match="equal-length"):
+        compute_plv(a, b)

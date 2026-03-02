@@ -34,7 +34,14 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
     """Phase-locking value between two phase time series.
 
     PLV = |mean(exp(i * (phi_a - phi_b)))| over samples.
+
+    Raises:
+        ValueError: If arrays have different lengths.
     """
+    if phases_a.size != phases_b.size:
+        raise ValueError(
+            f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
+        )
     if _HAS_RUST:
         from spo_kernel import plv as _rust_plv
 

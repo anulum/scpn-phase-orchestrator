@@ -15,7 +15,7 @@ import numpy as np
 
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
-from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
@@ -86,14 +86,16 @@ def run(binding_spec: str, steps: int) -> None:
 
     zeta = 0.0
     zeta_ttl = 0
+    psi_target = 0.0
     for _ in range(steps):
         if zeta_ttl > 0:
             zeta_ttl -= 1
             if zeta_ttl == 0:
                 zeta = 0.0
-        phases = engine.step(phases, omegas, coupling.knm, zeta, 0.0, coupling.alpha)
+        phases = engine.step(
+            phases, omegas, coupling.knm, zeta, psi_target, coupling.alpha
+        )
 
-        # Build UPDEState for supervisor
         layer_states = []
         for layer in spec.layers:
             osc_ids = layer_osc_ranges[layer.index]
@@ -110,14 +112,17 @@ def run(binding_spec: str, steps: int) -> None:
                 ids_i = layer_osc_ranges[spec.layers[li].index]
                 ids_j = layer_osc_ranges[spec.layers[lj].index]
                 if ids_i and ids_j:
-                    plv = compute_plv(phases[ids_i], phases[ids_j])
+                    pi, pj = phases[ids_i], phases[ids_j]
+                    min_len = min(len(pi), len(pj))
+                    plv = compute_plv(pi[:min_len], pj[:min_len])
                     cla[li, lj] = plv
                     cla[lj, li] = plv
 
+        mean_r = float(np.mean([ls.R for ls in layer_states])) if layer_states else 0.0
         upde_state = UPDEState(
             layers=layer_states,
             cross_layer_alignment=cla,
-            stability_proxy=layer_states[0].R if layer_states else 0.0,
+            stability_proxy=mean_r,
             regime_id=regime_manager.current_regime.value,
         )
         boundary_state = boundary_observer.observe({"R": upde_state.stability_proxy})
@@ -127,6 +132,25 @@ def run(binding_spec: str, steps: int) -> None:
             if act.knob == "zeta":
                 zeta = min(zeta + act.value, 0.5)
                 zeta_ttl = int(act.ttl_s / spec.sample_period_s)
+            elif act.knob == "K":
+                if act.scope == "global":
+                    coupling = CouplingState(
+                        knm=coupling.knm * (1.0 + act.value),
+                        alpha=coupling.alpha,
+                        active_template=coupling.active_template,
+                    )
+                elif act.scope.startswith("layer_"):
+                    idx = int(act.scope.split("_", 1)[1])
+                    new_knm = coupling.knm.copy()
+                    new_knm[idx, :] *= 1.0 + act.value
+                    new_knm[:, idx] *= 1.0 + act.value
+                    coupling = CouplingState(
+                        knm=new_knm,
+                        alpha=coupling.alpha,
+                        active_template=coupling.active_template,
+                    )
+            elif act.knob == "Psi":
+                psi_target = act.value
 
     # Final coherence
     good_phases = [

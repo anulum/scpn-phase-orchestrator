@@ -79,7 +79,7 @@ impl ImprintModel {
         }
         for i in 0..n {
             for j in 0..n {
-                alpha[i * n + j] += self.m[i];
+                alpha[i * n + j] += self.m[i] - self.m[j];
             }
         }
         Ok(())
@@ -165,12 +165,34 @@ mod tests {
         let mut im = ImprintModel::new(2, 0.0, 10.0).unwrap();
         im.m[0] = 0.3;
         im.m[1] = 0.0;
+        // alpha[i,j] += m[i] - m[j]
+        // [0,0]: 0.0 + (0.3 - 0.3) = 0.0
+        // [0,1]: 1.0 + (0.3 - 0.0) = 1.3
+        // [1,0]: -1.0 + (0.0 - 0.3) = -1.3
+        // [1,1]: 0.0 + (0.0 - 0.0) = 0.0
         let mut alpha = vec![0.0, 1.0, -1.0, 0.0];
         im.modulate_lag(&mut alpha).unwrap();
-        assert!((alpha[0] - 0.3).abs() < 1e-12);
+        assert!((alpha[0] - 0.0).abs() < 1e-12);
         assert!((alpha[1] - 1.3).abs() < 1e-12);
-        assert!((alpha[2] - (-1.0)).abs() < 1e-12);
+        assert!((alpha[2] - (-1.3)).abs() < 1e-12);
         assert!((alpha[3] - 0.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn modulate_lag_antisymmetric() {
+        let mut im = ImprintModel::new(3, 0.0, 10.0).unwrap();
+        im.m[0] = 0.5;
+        im.m[1] = 0.2;
+        im.m[2] = 0.8;
+        let n = 3;
+        let mut alpha = vec![0.0; n * n];
+        im.modulate_lag(&mut alpha).unwrap();
+        for i in 0..n {
+            for j in 0..n {
+                let sum = alpha[i * n + j] + alpha[j * n + i];
+                assert!(sum.abs() < 1e-12, "alpha[{i},{j}] + alpha[{j},{i}] = {sum}");
+            }
+        }
     }
 
     #[test]

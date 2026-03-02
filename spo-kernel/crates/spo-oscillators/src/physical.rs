@@ -35,8 +35,22 @@ pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f
     let amplitude = amp_sum / n as f64;
     let theta = inst_phase[n - 1].rem_euclid(TAU);
 
-    // For Hilbert analytic signals, real == original signal, so noise = 0 and quality = 1.0.
-    let quality = 1.0;
+    // Quality = 1 - CV(envelope). Low CV → stable envelope → high quality.
+    let quality = if amplitude < 1e-15 {
+        0.0
+    } else {
+        let amp_var: f64 = real
+            .iter()
+            .zip(imag.iter())
+            .map(|(&r, &im)| {
+                let env = (r * r + im * im).sqrt();
+                (env - amplitude).powi(2)
+            })
+            .sum::<f64>()
+            / n as f64;
+        let cv = amp_var.sqrt() / amplitude;
+        (1.0 - cv).clamp(0.0, 1.0)
+    };
 
     // Pass 2: unwrap + gradient → inst_freq → median → omega
     // Unwrap in-place
@@ -111,7 +125,25 @@ mod tests {
             (omega - expected_omega).abs() / expected_omega < 0.05,
             "omega={omega}, expected ~{expected_omega}"
         );
-        assert!(quality > 0.5, "quality={quality}");
+        assert!(quality > 0.9, "quality={quality}");
+    }
+
+    #[test]
+    fn noisy_signal_lower_quality() {
+        let n = 500;
+        let sr = 1000.0;
+        let mut real = vec![0.0; n];
+        let mut imag = vec![0.0; n];
+        for i in 0..n {
+            let t = i as f64 / sr;
+            let phase = TAU * 10.0 * t;
+            // Amplitude-modulate to create envelope variation
+            let am = 1.0 + 0.8 * (TAU * 2.0 * t).sin();
+            real[i] = am * phase.cos();
+            imag[i] = am * phase.sin();
+        }
+        let (_, _, _, quality) = extract_from_analytic(&real, &imag, sr);
+        assert!(quality < 0.9, "AM signal quality={quality} should be < 0.9");
     }
 
     #[test]

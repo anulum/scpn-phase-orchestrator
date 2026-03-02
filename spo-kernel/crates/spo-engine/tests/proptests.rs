@@ -30,14 +30,14 @@ proptest! {
         a in phases_vec(20),
         b in phases_vec(20),
     ) {
-        let plv = compute_plv(&a, &b);
+        let plv = compute_plv(&a, &b).unwrap();
         prop_assert!(plv >= 0.0, "PLV={plv} < 0");
         prop_assert!(plv <= 1.0 + 1e-12, "PLV={plv} > 1");
     }
 
     #[test]
     fn plv_identical_is_one(phases in phases_vec(10)) {
-        let plv = compute_plv(&phases, &phases);
+        let plv = compute_plv(&phases, &phases).unwrap();
         prop_assert!((plv - 1.0).abs() < 1e-9, "PLV={plv} != 1 for identical");
     }
 

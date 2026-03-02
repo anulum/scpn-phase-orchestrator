@@ -93,6 +93,16 @@ class TestPyUPDEStepper:
                 [0.0] * 16,
             )
 
+    def test_substeps_accepted(self):
+        s = spo.PyUPDEStepper(4, dt=0.01, method="rk4", n_substeps=4)
+        assert s.n == 4
+        phases = [0.0] * 4
+        omegas = [1.0] * 4
+        knm = [0.0] * 16
+        alpha = [0.0] * 16
+        result = s.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        assert len(result) == 4
+
     def test_dimension_mismatch(self):
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
@@ -152,6 +162,17 @@ class TestPyCoherenceMonitor:
         r_bad = cm.compute_r_bad([0.9, 0.8, 0.1, 0.2])
         assert r_good > r_bad
 
+    def test_detect_phase_lock(self):
+        cm = spo.PyCoherenceMonitor([0, 1], [2])
+        rs = [0.9, 0.8, 0.3]
+        psi = [0.0, 0.1, 1.5]
+        # 3x3 CLA: (0,1)=0.95, (0,2)=0.5, (1,2)=0.92
+        cla = [0.0, 0.95, 0.50, 0.95, 0.0, 0.92, 0.50, 0.92, 0.0]
+        locked = cm.detect_phase_lock(rs, psi, cla, 0.9)
+        assert (0, 1) in locked
+        assert (1, 2) in locked
+        assert (0, 2) not in locked
+
 
 # ─── PyBoundaryObserver ──────────────────────────────────────────
 
@@ -189,8 +210,12 @@ class TestPyImprintModel:
     def test_modulate_lag(self):
         im = spo.PyImprintModel(2, 0.0, 10.0)
         im.update([0.3, 0.0], 1.0)
+        # alpha[i,j] += m[i] - m[j]: [0,0]=0+(0.3-0.3)=0, [0,1]=1+(0.3-0)=1.3
         alpha = im.modulate_lag([0.0, 1.0, -1.0, 0.0])
-        assert abs(alpha[0] - 0.3) < 1e-12
+        assert abs(alpha[0] - 0.0) < 1e-12
+        assert abs(alpha[1] - 1.3) < 1e-12
+        assert abs(alpha[2] - (-1.3)) < 1e-12
+        assert abs(alpha[3] - 0.0) < 1e-12
 
     def test_modulate_coupling_dimension_error(self):
         im = spo.PyImprintModel(2, 0.0, 10.0)

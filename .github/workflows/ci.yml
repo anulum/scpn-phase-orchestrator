@@ -11,7 +11,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   lint:
@@ -148,7 +148,7 @@ jobs:
           pip install maturin
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install -e ".[dev]"
-          pytest tests/test_ffi_integration.py -v --tb=short
+          pytest tests/ -v --tb=short
 
   cargo-audit:
     runs-on: ubuntu-latest
