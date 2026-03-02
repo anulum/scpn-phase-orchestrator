@@ -1,5 +1,5 @@
 name: bio_stub
-version: "0.1"
+version: "0.1.0"
 safety_tier: research
 sample_period_s: 0.001
 control_period_s: 0.01
