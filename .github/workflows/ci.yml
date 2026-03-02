@@ -119,19 +119,21 @@ jobs:
           key: cargo-${{ runner.os }}-stable-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-${{ runner.os }}-stable-
       - run: cargo fmt --check
-        if: runner.os == 'Linux'
       - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
       - run: cargo doc --no-deps --workspace --exclude spo-ffi
-        if: runner.os == 'Linux'
       - run: cargo test --workspace --exclude spo-ffi
 
   ffi-test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: pip
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/cache@v4
@@ -140,10 +142,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             spo-kernel/target
-          key: cargo-ffi-${{ hashFiles('spo-kernel/Cargo.lock') }}
-          restore-keys: cargo-ffi-
-      - run: python -m venv .venv
+          key: cargo-ffi-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-ffi-${{ runner.os }}-
       - run: |
+          python -m venv .venv
           . .venv/bin/activate
           pip install maturin
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml

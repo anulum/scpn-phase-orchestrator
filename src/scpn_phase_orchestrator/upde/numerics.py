@@ -19,6 +19,8 @@ class IntegrationConfig:
     substeps: int = 1
     method: str = "euler"
     max_dt: float = 0.01
+    atol: float = 1e-6
+    rtol: float = 1e-3
 
 
 def check_stability(dt: float, max_omega: float, max_coupling: float) -> bool:
