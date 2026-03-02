@@ -103,4 +103,16 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
                 f"layer index; valid scopes: {sorted(valid_scopes)}"
             )
 
+    if spec.imprint_model is not None:
+        if spec.imprint_model.decay_rate < 0.0:
+            errors.append(
+                f"imprint_model.decay_rate must be >= 0, "
+                f"got {spec.imprint_model.decay_rate}"
+            )
+        if spec.imprint_model.saturation <= 0.0:
+            errors.append(
+                f"imprint_model.saturation must be > 0, "
+                f"got {spec.imprint_model.saturation}"
+            )
+
     return errors

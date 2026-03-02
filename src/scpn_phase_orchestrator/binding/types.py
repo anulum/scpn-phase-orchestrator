@@ -96,7 +96,7 @@ class GeometrySpec:
 VALID_CHANNELS = frozenset({"P", "I", "S"})
 VALID_SEVERITIES = frozenset({"soft", "hard"})
 VALID_KNOBS = frozenset({"K", "alpha", "zeta", "Psi"})
-VALID_SAFETY_TIERS = frozenset({"research", "clinical", "consumer"})
+VALID_SAFETY_TIERS = frozenset({"research", "clinical", "consumer", "production"})
 
 
 @dataclass
