@@ -9,10 +9,14 @@
 
 from __future__ import annotations
 
+import argparse
+import json
+import sys
 import time
 
 import numpy as np
 
+import scpn_phase_orchestrator._compat as _compat
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -22,55 +26,96 @@ STEPS = 1000
 WARMUP = 50
 
 
-def bench_step(n_osc: int, method: str = "euler") -> dict:
-    builder = CouplingBuilder()
-    coupling = builder.build(n_osc, 0.45, 0.3)
-    engine = UPDEEngine(n_osc, dt=0.01, method=method)
+def bench_step(n_osc: int, method: str = "euler", force_python: bool = False) -> dict:
+    saved = _compat.HAS_RUST
+    if force_python:
+        _compat.HAS_RUST = False
+    try:
+        builder = CouplingBuilder()
+        coupling = builder.build(n_osc, 0.45, 0.3)
+        engine = UPDEEngine(n_osc, dt=0.01, method=method)
 
-    rng = np.random.default_rng(SEED)
-    phases = rng.uniform(0, TWO_PI, n_osc)
-    omegas = np.ones(n_osc)
+        rng = np.random.default_rng(SEED)
+        phases = rng.uniform(0, TWO_PI, n_osc)
+        omegas = np.ones(n_osc)
 
-    # Warmup
-    for _ in range(WARMUP):
-        phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
+        for _ in range(WARMUP):
+            phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
 
-    # Timed run
-    t0 = time.perf_counter()
-    for _ in range(STEPS):
-        phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
-    elapsed = time.perf_counter() - t0
+        t0 = time.perf_counter()
+        for _ in range(STEPS):
+            phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
+        elapsed = time.perf_counter() - t0
 
-    r_final, _ = engine.compute_order_parameter(phases)
+        r_final, _ = engine.compute_order_parameter(phases)
+    finally:
+        _compat.HAS_RUST = saved
 
     return {
         "n_osc": n_osc,
         "method": method,
+        "backend": "python" if force_python else ("rust" if saved else "python"),
         "steps": STEPS,
-        "total_s": elapsed,
-        "us_per_step": elapsed / STEPS * 1e6,
-        "R_final": r_final,
+        "total_s": round(elapsed, 6),
+        "us_per_step": round(elapsed / STEPS * 1e6, 1),
+        "R_final": round(float(r_final), 6),
     }
 
 
 def main():
-    sizes = [8, 16, 64, 256]
-    methods = ["euler", "rk4"]
+    parser = argparse.ArgumentParser(description="UPDEEngine benchmarks")
+    parser.add_argument("--json", action="store_true", help="Output JSON to stdout")
+    args = parser.parse_args()
 
-    print(f"{'N':>6s} {'Method':>8s} {'Steps':>6s} {'Total(s)':>10s} {'us/step':>10s} {'R_final':>8s}")
-    print("-" * 54)
+    sizes = [8, 16, 64, 256, 1024]
+    methods = ["euler", "rk4", "rk45"]
+    results = []
 
     for n in sizes:
         for m in methods:
-            result = bench_step(n, m)
-            print(
-                f"{result['n_osc']:6d} "
-                f"{result['method']:>8s} "
-                f"{result['steps']:6d} "
-                f"{result['total_s']:10.4f} "
-                f"{result['us_per_step']:10.1f} "
-                f"{result['R_final']:8.4f}"
-            )
+            results.append(bench_step(n, m))
+
+    # Python-vs-Rust comparison (rk45 is Python-only, skip it)
+    if _compat.HAS_RUST:
+        for n in sizes:
+            for m in ("euler", "rk4"):
+                results.append(bench_step(n, m, force_python=True))
+
+    if args.json:
+        json.dump(results, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return
+
+    cols = ["N", "Method", "Backend", "Steps", "Total(s)", "us/step", "R_final"]
+    widths = [6, 8, 8, 6, 10, 10, 8]
+    hdr = " ".join(f"{c:>{w}s}" for c, w in zip(cols, widths, strict=True))
+    print(hdr)
+    print("-" * len(hdr))
+    for r in results:
+        print(
+            f"{r['n_osc']:6d} "
+            f"{r['method']:>8s} "
+            f"{r['backend']:>8s} "
+            f"{r['steps']:6d} "
+            f"{r['total_s']:10.4f} "
+            f"{r['us_per_step']:10.1f} "
+            f"{r['R_final']:8.4f}"
+        )
+
+    if _compat.HAS_RUST:
+        print("\n--- Rust speedup ---")
+        rust_by_key = {}
+        py_by_key = {}
+        for r in results:
+            key = (r["n_osc"], r["method"])
+            if r["backend"] == "rust":
+                rust_by_key[key] = r["us_per_step"]
+            elif r["backend"] == "python":
+                py_by_key[key] = r["us_per_step"]
+        for key in sorted(rust_by_key):
+            if key in py_by_key and rust_by_key[key] > 0:
+                ratio = py_by_key[key] / rust_by_key[key]
+                print(f"  N={key[0]:4d} {key[1]:>5s}: {ratio:.1f}x")
 
 
 if __name__ == "__main__":

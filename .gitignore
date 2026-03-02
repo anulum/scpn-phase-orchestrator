@@ -24,6 +24,9 @@ venv/
 htmlcov/
 .tox/
 
+# Benchmark artifacts
+bench/*.json
+
 # MkDocs
 site/
 
