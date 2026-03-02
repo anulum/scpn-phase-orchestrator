@@ -10,4 +10,4 @@ pub mod symbolic;
 pub use informational::event_phase;
 pub use physical::extract_from_analytic;
 pub use quality::PhaseQualityScorer;
-pub use symbolic::{graph_walk_phase, ring_phase};
+pub use symbolic::{graph_walk_phase, ring_phase, transition_quality};

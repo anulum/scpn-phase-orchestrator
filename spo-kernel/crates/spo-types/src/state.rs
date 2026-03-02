@@ -11,7 +11,7 @@ pub enum Channel {
     S,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PhaseState {
     pub theta: f64,
     pub omega: f64,
@@ -21,13 +21,13 @@ pub struct PhaseState {
     pub node_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayerState {
     pub r: f64,
     pub psi: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UPDEState {
     pub layers: Vec<LayerState>,
     pub cross_layer_alignment: Vec<f64>,

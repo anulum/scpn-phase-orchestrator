@@ -10,5 +10,6 @@ pub mod upde;
 
 pub use coupling::{CouplingBuilder, CouplingState};
 pub use imprint::ImprintModel;
+pub use lags::LagModel;
 pub use order_params::{compute_layer_coherence, compute_order_parameter, compute_plv};
 pub use upde::UPDEStepper;

@@ -41,24 +41,46 @@ impl ImprintModel {
     }
 
     /// Scale Knm rows by (1 + m_k). `knm` is row-major N×N.
-    pub fn modulate_coupling(&self, knm: &mut [f64]) {
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` if `knm.len() != n * n`.
+    pub fn modulate_coupling(&self, knm: &mut [f64]) -> SpoResult<()> {
         let n = self.m.len();
+        if knm.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected {}={n}*{n}, got {}",
+                n * n,
+                knm.len()
+            )));
+        }
         for i in 0..n {
             let scale = 1.0 + self.m[i];
             for j in 0..n {
                 knm[i * n + j] *= scale;
             }
         }
+        Ok(())
     }
 
     /// Shift alpha lags by imprint magnitude per oscillator.
-    pub fn modulate_lag(&self, alpha: &mut [f64]) {
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` if `alpha.len() != n * n`.
+    pub fn modulate_lag(&self, alpha: &mut [f64]) -> SpoResult<()> {
         let n = self.m.len();
+        if alpha.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected {}={n}*{n}, got {}",
+                n * n,
+                alpha.len()
+            )));
+        }
         for i in 0..n {
             for j in 0..n {
                 alpha[i * n + j] += self.m[i];
             }
         }
+        Ok(())
     }
 
     pub fn reset(&mut self) {
@@ -116,11 +138,16 @@ mod tests {
         im.m[0] = 0.5;
         im.m[1] = 0.0;
         let mut knm = vec![0.0, 1.0, 1.0, 0.0];
-        im.modulate_coupling(&mut knm);
-        // Row 0 scaled by 1.5
+        im.modulate_coupling(&mut knm).unwrap();
         assert!((knm[1] - 1.5).abs() < 1e-12);
-        // Row 1 unscaled
         assert!((knm[2] - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn modulate_coupling_dimension_mismatch() {
+        let im = ImprintModel::new(2, 0.0, 10.0).unwrap();
+        let mut knm = vec![1.0; 3];
+        assert!(im.modulate_coupling(&mut knm).is_err());
     }
 
     #[test]
@@ -136,14 +163,18 @@ mod tests {
         let mut im = ImprintModel::new(2, 0.0, 10.0).unwrap();
         im.m[0] = 0.3;
         im.m[1] = 0.0;
-        // 2×2 alpha, row-major
         let mut alpha = vec![0.0, 1.0, -1.0, 0.0];
-        im.modulate_lag(&mut alpha);
-        // Row 0 shifted by m[0]=0.3
+        im.modulate_lag(&mut alpha).unwrap();
         assert!((alpha[0] - 0.3).abs() < 1e-12);
         assert!((alpha[1] - 1.3).abs() < 1e-12);
-        // Row 1 unshifted (m[1]=0.0)
         assert!((alpha[2] - (-1.0)).abs() < 1e-12);
         assert!((alpha[3] - 0.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn modulate_lag_dimension_mismatch() {
+        let im = ImprintModel::new(2, 0.0, 10.0).unwrap();
+        let mut alpha = vec![1.0; 5];
+        assert!(im.modulate_lag(&mut alpha).is_err());
     }
 }

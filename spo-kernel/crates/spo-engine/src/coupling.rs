@@ -40,8 +40,17 @@ impl CouplingBuilder {
 }
 
 /// Project Knm to satisfy: symmetric, non-negative, zero diagonal.
-pub fn project_knm(knm: &mut [f64], n: usize) {
-    // Symmetry: K = (K + K^T) / 2
+///
+/// # Errors
+/// Returns `InvalidDimension` if `knm.len() != n * n`.
+pub fn project_knm(knm: &mut [f64], n: usize) -> SpoResult<()> {
+    if knm.len() != n * n {
+        return Err(SpoError::InvalidDimension(format!(
+            "expected {}={n}*{n}, got {}",
+            n * n,
+            knm.len()
+        )));
+    }
     for i in 0..n {
         for j in (i + 1)..n {
             let avg = 0.5 * (knm[i * n + j] + knm[j * n + i]);
@@ -49,16 +58,15 @@ pub fn project_knm(knm: &mut [f64], n: usize) {
             knm[j * n + i] = avg;
         }
     }
-    // Non-negative
     for v in knm.iter_mut() {
         if *v < 0.0 {
             *v = 0.0;
         }
     }
-    // Zero diagonal
     for i in 0..n {
         knm[i * n + i] = 0.0;
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -120,15 +128,12 @@ mod tests {
             0.1, 0.0, 0.2, // row 1
             0.4, 0.7, 0.0, // row 2
         ];
-        project_knm(&mut knm, n);
+        project_knm(&mut knm, n).unwrap();
 
-        // Zero diagonal
         for i in 0..n {
             assert_eq!(knm[i * n + i], 0.0);
         }
-        // Non-negative
         assert!(knm.iter().all(|&v| v >= 0.0));
-        // Symmetric
         for i in 0..n {
             for j in 0..n {
                 assert!(
@@ -137,6 +142,12 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn project_dimension_mismatch() {
+        let mut knm = vec![1.0; 5];
+        assert!(project_knm(&mut knm, 3).is_err());
     }
 
     #[test]

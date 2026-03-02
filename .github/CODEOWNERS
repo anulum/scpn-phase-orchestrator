@@ -1,0 +1,6 @@
+src/scpn_phase_orchestrator/upde/       @anulum/core
+src/scpn_phase_orchestrator/supervisor/ @anulum/core
+src/scpn_phase_orchestrator/coupling/   @anulum/core
+spo-kernel/                              @anulum/core
+.github/                                 @anulum/core
+pyproject.toml                           @anulum/core
