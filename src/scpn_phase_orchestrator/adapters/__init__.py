@@ -6,3 +6,5 @@
 # License: GNU AGPL v3 | Commercial licensing available
 
 from __future__ import annotations
+
+__all__: list[str] = []

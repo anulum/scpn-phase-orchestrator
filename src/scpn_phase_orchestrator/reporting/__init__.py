@@ -6,3 +6,7 @@
 # License: GNU AGPL v3 | Commercial licensing available
 
 from __future__ import annotations
+
+from scpn_phase_orchestrator.reporting.plots import CoherencePlot
+
+__all__ = ["CoherencePlot"]

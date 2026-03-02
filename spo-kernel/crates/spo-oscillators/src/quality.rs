@@ -1,6 +1,7 @@
 // SCPN Phase Orchestrator — Phase Quality Scorer
 
 /// Aggregate quality scoring and collapse detection.
+#[derive(Clone, Debug)]
 pub struct PhaseQualityScorer {
     pub collapse_threshold: f64,
     pub min_quality: f64,

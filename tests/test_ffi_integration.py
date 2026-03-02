@@ -277,6 +277,14 @@ class TestFreeFunctions:
     def test_transition_quality_stalled(self):
         assert spo.transition_quality(0, 10) == 0.2
 
+    def test_layer_coherence_subset(self):
+        phases = [0.5, 0.5, 3.0, 0.5]
+        r = spo.layer_coherence(phases, [0, 1, 3])
+        assert r > 0.9
+
+    def test_layer_coherence_empty(self):
+        assert spo.layer_coherence([1.0, 2.0], []) == 0.0
+
 
 # ─── PyLagModel ──────────────────────────────────────────────────
 
