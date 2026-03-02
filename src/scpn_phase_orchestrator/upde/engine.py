@@ -52,6 +52,8 @@ class UPDEEngine:
         alpha: NDArray,
     ) -> NDArray:
         """Advance phases by one timestep, return new phases in [0, 2*pi)."""
+        if not (np.isfinite(zeta) and np.isfinite(psi)):
+            raise ValueError("zeta and psi must be finite")
         if self._rust is not None:
             result = self._rust.step(
                 phases.ravel().tolist(),

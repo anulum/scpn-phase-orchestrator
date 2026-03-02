@@ -19,6 +19,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     coupling::{project_knm, CouplingBuilder},
     imprint::ImprintModel,
+    lags::LagModel,
     order_params,
     upde::UPDEStepper,
 };
@@ -26,12 +27,18 @@ use spo_oscillators::{informational, physical, quality::PhaseQualityScorer, symb
 use spo_supervisor::{
     boundaries::{BoundaryDef, BoundaryObserver, Severity},
     coherence::CoherenceMonitor,
+    policy::SupervisorPolicy,
     projector::ActionProjector,
     regime::RegimeManager,
 };
 use spo_types::{
-    ControlAction, CouplingConfig, IntegrationConfig, Knob, LayerState, Method, Regime, UPDEState,
+    ControlAction, CouplingConfig, IntegrationConfig, Knob, LayerState, Method, Regime, SpoError,
+    UPDEState,
 };
+
+fn spo_err(e: SpoError) -> PyErr {
+    PyValueError::new_err(e.to_string())
+}
 
 /// (name, variable, lower_bound, upper_bound, severity)
 type BoundaryDefTuple = Vec<(String, String, Option<f64>, Option<f64>, String)>;
@@ -58,8 +65,7 @@ impl PyUPDEStepper {
             method: m,
             n_substeps: 1,
         };
-        let inner =
-            UPDEStepper::new(n, config).map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let inner = UPDEStepper::new(n, config).map_err(spo_err)?;
         Ok(Self { inner })
     }
 
@@ -76,7 +82,7 @@ impl PyUPDEStepper {
         let mut p = phases;
         self.inner
             .step(&mut p, &omegas, &knm, zeta, psi, &alpha)
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            .map_err(spo_err)?;
         Ok(p)
     }
 
@@ -95,7 +101,7 @@ impl PyUPDEStepper {
         let mut p = phases;
         self.inner
             .run(&mut p, &omegas, &knm, zeta, psi, &alpha, n_steps)
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            .map_err(spo_err)?;
         Ok(p)
     }
 
@@ -129,8 +135,7 @@ impl PyCouplingBuilder {
             base_strength,
             decay_alpha,
         };
-        let cs =
-            CouplingBuilder::build(n, &config).map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let cs = CouplingBuilder::build(n, &config).map_err(spo_err)?;
         let dict = PyDict::new(py);
         dict.set_item("knm", cs.knm)?;
         dict.set_item("alpha", cs.alpha)?;
@@ -140,9 +145,9 @@ impl PyCouplingBuilder {
 
     /// Project Knm to enforce symmetry, non-negative, zero diagonal.
     #[staticmethod]
-    fn project(mut knm: Vec<f64>, n: usize) -> Vec<f64> {
-        project_knm(&mut knm, n);
-        knm
+    fn project(mut knm: Vec<f64>, n: usize) -> PyResult<Vec<f64>> {
+        project_knm(&mut knm, n).map_err(spo_err)?;
+        Ok(knm)
     }
 }
 
@@ -264,8 +269,7 @@ struct PyImprintModel {
 impl PyImprintModel {
     #[new]
     fn new(n: usize, decay_rate: f64, saturation: f64) -> PyResult<Self> {
-        let inner = ImprintModel::new(n, decay_rate, saturation)
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let inner = ImprintModel::new(n, decay_rate, saturation).map_err(spo_err)?;
         Ok(Self { inner })
     }
 
@@ -273,9 +277,14 @@ impl PyImprintModel {
         self.inner.update(&exposure, dt);
     }
 
-    fn modulate_coupling(&self, mut knm: Vec<f64>) -> Vec<f64> {
-        self.inner.modulate_coupling(&mut knm);
-        knm
+    fn modulate_coupling(&self, mut knm: Vec<f64>) -> PyResult<Vec<f64>> {
+        self.inner.modulate_coupling(&mut knm).map_err(spo_err)?;
+        Ok(knm)
+    }
+
+    fn modulate_lag(&self, mut alpha: Vec<f64>) -> PyResult<Vec<f64>> {
+        self.inner.modulate_lag(&mut alpha).map_err(spo_err)?;
+        Ok(alpha)
     }
 
     fn reset(&mut self) {
@@ -361,6 +370,80 @@ impl PyPhaseQualityScorer {
     }
 }
 
+// ─── PyLagModel ─────────────────────────────────────────────────────
+
+#[pyclass(name = "PyLagModel")]
+struct PyLagModel {
+    inner: LagModel,
+}
+
+#[pymethods]
+impl PyLagModel {
+    #[staticmethod]
+    fn estimate(distances: Vec<f64>, n: usize, speed: f64) -> PyResult<Self> {
+        let inner = LagModel::estimate_from_distances(&distances, n, speed).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    #[staticmethod]
+    fn zeros(n: usize) -> Self {
+        Self {
+            inner: LagModel::zeros(n),
+        }
+    }
+
+    #[getter]
+    fn alpha(&self) -> Vec<f64> {
+        self.inner.alpha.clone()
+    }
+
+    #[getter]
+    fn n(&self) -> usize {
+        self.inner.n
+    }
+}
+
+// ─── PySupervisorPolicy ─────────────────────────────────────────────
+
+#[pyclass(name = "PySupervisorPolicy")]
+struct PySupervisorPolicy {
+    inner: SupervisorPolicy,
+}
+
+#[pymethods]
+impl PySupervisorPolicy {
+    #[new]
+    #[pyo3(signature = (hysteresis = 0.05, cooldown_steps = 10))]
+    fn new(hysteresis: f64, cooldown_steps: u64) -> Self {
+        Self {
+            inner: SupervisorPolicy::new(RegimeManager::new(hysteresis, cooldown_steps)),
+        }
+    }
+
+    fn decide<'py>(
+        &mut self,
+        py: Python<'py>,
+        layer_rs: Vec<f64>,
+        hard_violations: Vec<String>,
+    ) -> PyResult<Vec<Bound<'py, PyDict>>> {
+        let state = make_upde_state(&layer_rs);
+        let boundary = make_boundary_state(hard_violations);
+        let actions = self.inner.decide(&state, &boundary);
+        actions
+            .into_iter()
+            .map(|a| {
+                let d = PyDict::new(py);
+                d.set_item("knob", knob_to_str(a.knob))?;
+                d.set_item("scope", a.scope)?;
+                d.set_item("value", a.value)?;
+                d.set_item("ttl_s", a.ttl_s)?;
+                d.set_item("justification", a.justification)?;
+                Ok(d)
+            })
+            .collect()
+    }
+}
+
 // ─── Free Functions ─────────────────────────────────────────────────
 
 #[pyfunction]
@@ -386,6 +469,16 @@ fn event_phase(timestamps: Vec<f64>) -> (f64, f64, f64) {
 #[pyfunction]
 fn physical_extract(real: Vec<f64>, imag: Vec<f64>, sample_rate: f64) -> (f64, f64, f64, f64) {
     physical::extract_from_analytic(&real, &imag, sample_rate)
+}
+
+#[pyfunction]
+fn graph_walk_phase(position: usize, walk_length: usize) -> f64 {
+    symbolic::graph_walk_phase(position, walk_length)
+}
+
+#[pyfunction]
+fn transition_quality(step_size: usize, n_states: usize) -> f64 {
+    symbolic::transition_quality(step_size, n_states)
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -430,6 +523,15 @@ fn str_to_regime(s: &str) -> PyResult<Regime> {
     }
 }
 
+fn knob_to_str(k: Knob) -> &'static str {
+    match k {
+        Knob::K => "K",
+        Knob::Alpha => "alpha",
+        Knob::Zeta => "zeta",
+        Knob::Psi => "Psi",
+    }
+}
+
 fn str_to_knob(s: &str) -> PyResult<Knob> {
     match s {
         "K" => Ok(Knob::K),
@@ -452,10 +554,75 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyImprintModel>()?;
     m.add_class::<PyActionProjector>()?;
     m.add_class::<PyPhaseQualityScorer>()?;
+    m.add_class::<PyLagModel>()?;
+    m.add_class::<PySupervisorPolicy>()?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;
     m.add_function(wrap_pyfunction!(plv, m)?)?;
     m.add_function(wrap_pyfunction!(ring_phase, m)?)?;
     m.add_function(wrap_pyfunction!(event_phase, m)?)?;
     m.add_function(wrap_pyfunction!(physical_extract, m)?)?;
+    m.add_function(wrap_pyfunction!(graph_walk_phase, m)?)?;
+    m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn make_upde_state_layer_count() {
+        let s = make_upde_state(&[0.5, 0.6, 0.7]);
+        assert_eq!(s.layers.len(), 3);
+        assert!((s.layers[0].r - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn make_upde_state_r_values() {
+        let s = make_upde_state(&[0.1, 0.9]);
+        assert!((s.mean_r() - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn make_boundary_state_hard_violations() {
+        let b = make_boundary_state(vec!["v1".into(), "v2".into()]);
+        assert_eq!(b.hard_violations.len(), 2);
+        assert!(b.soft_violations.is_empty());
+    }
+
+    #[test]
+    fn regime_to_str_roundtrip() {
+        for (regime, expected) in [
+            (Regime::Nominal, "nominal"),
+            (Regime::Degraded, "degraded"),
+            (Regime::Critical, "critical"),
+            (Regime::Recovery, "recovery"),
+        ] {
+            assert_eq!(regime_to_str(regime), expected);
+            assert_eq!(str_to_regime(expected).unwrap(), regime);
+        }
+    }
+
+    #[test]
+    fn str_to_regime_error() {
+        assert!(str_to_regime("invalid").is_err());
+    }
+
+    #[test]
+    fn knob_roundtrip() {
+        for (knob, expected) in [
+            (Knob::K, "K"),
+            (Knob::Alpha, "alpha"),
+            (Knob::Zeta, "zeta"),
+            (Knob::Psi, "Psi"),
+        ] {
+            assert_eq!(knob_to_str(knob), expected);
+            assert_eq!(str_to_knob(expected).unwrap(), knob);
+        }
+    }
+
+    #[test]
+    fn str_to_knob_error() {
+        assert!(str_to_knob("invalid").is_err());
+    }
 }

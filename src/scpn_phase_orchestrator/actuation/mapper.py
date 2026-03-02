@@ -9,9 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from scpn_phase_orchestrator.binding.types import ActuatorMapping
-
-_VALID_KNOBS = {"K", "alpha", "zeta", "Psi"}
+from scpn_phase_orchestrator.binding.types import VALID_KNOBS, ActuatorMapping
 
 
 @dataclass
@@ -49,7 +47,7 @@ class ActuationMapper:
         return commands
 
     def validate_action(self, action: ControlAction) -> bool:
-        if action.knob not in _VALID_KNOBS:
+        if action.knob not in VALID_KNOBS:
             return False
         mappings = self._by_knob.get(action.knob, [])
         for am in mappings:

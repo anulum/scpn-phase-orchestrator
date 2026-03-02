@@ -79,6 +79,11 @@ impl UPDEStepper {
                 ));
             }
         }
+        if !zeta.is_finite() || !psi.is_finite() {
+            return Err(SpoError::IntegrationDiverged(
+                "zeta/psi contain NaN/Inf".into(),
+            ));
+        }
 
         match self.method {
             Method::Euler => self.euler_step(phases, omegas, knm, zeta, psi, alpha),
@@ -402,6 +407,30 @@ mod tests {
         s.run(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha, 0)
             .unwrap();
         assert_eq!(phases, original);
+    }
+
+    #[test]
+    fn nan_zeta_rejected() {
+        let mut s = make_stepper(4);
+        let mut phases = vec![0.0; 4];
+        let omegas = vec![1.0; 4];
+        let knm = vec![0.0; 16];
+        let alpha = zero_alpha(4);
+        assert!(s
+            .step(&mut phases, &omegas, &knm, f64::NAN, 0.0, &alpha)
+            .is_err());
+    }
+
+    #[test]
+    fn inf_psi_rejected() {
+        let mut s = make_stepper(4);
+        let mut phases = vec![0.0; 4];
+        let omegas = vec![1.0; 4];
+        let knm = vec![0.0; 16];
+        let alpha = zero_alpha(4);
+        assert!(s
+            .step(&mut phases, &omegas, &knm, 0.0, f64::INFINITY, &alpha)
+            .is_err());
     }
 
     #[test]
