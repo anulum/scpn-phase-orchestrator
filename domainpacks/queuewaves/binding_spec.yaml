@@ -1,5 +1,5 @@
 name: queuewaves
-version: "0.1"
+version: "0.1.0"
 safety_tier: research
 sample_period_s: 0.01
 control_period_s: 0.1
