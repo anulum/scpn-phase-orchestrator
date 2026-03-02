@@ -7,8 +7,13 @@
 
 from __future__ import annotations
 
-from scpn_phase_orchestrator.binding.loader import load_binding_spec
+from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
-__all__ = ["BindingSpec", "load_binding_spec", "validate_binding_spec"]
+__all__ = [
+    "BindingLoadError",
+    "BindingSpec",
+    "load_binding_spec",
+    "validate_binding_spec",
+]
