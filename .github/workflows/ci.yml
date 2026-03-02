@@ -144,10 +144,13 @@ jobs:
             spo-kernel/target
           key: cargo-ffi-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-ffi-${{ runner.os }}-
-      - run: pip install maturin
-      - run: maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-      - run: pip install -e ".[dev]"
-      - run: pytest tests/ -v --tb=short
+      - run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install maturin
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install -e ".[dev]"
+          pytest tests/ -v --tb=short
 
   cargo-audit:
     runs-on: ubuntu-latest

@@ -198,11 +198,12 @@ class UPDEEngine:
         for _ in range(max_reject + 1):
             ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
             for i in range(1, 6):
-                stage = phases + dt * sum(A[i, j] * ks[j] for j in range(i))
+                stage = phases + dt * np.dot(A[i, :i], np.array(ks[:i]))
                 ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
 
-            y5 = phases + dt * sum(self._DP_B5[j] * ks[j] for j in range(6))
-            y4 = phases + dt * sum(self._DP_B4[j] * ks[j] for j in range(6))
+            ks_arr = np.array(ks)
+            y5 = phases + dt * np.dot(self._DP_B5, ks_arr)
+            y4 = phases + dt * np.dot(self._DP_B4, ks_arr)
 
             np.subtract(y5, y4, out=self._err_buf)
             np.abs(self._err_buf, out=self._err_buf)
@@ -212,7 +213,8 @@ class UPDEEngine:
             if err_norm <= 1.0:
                 factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
                 self._last_dt = min(dt * factor, self._dt * 10.0)
-                return y5 % TWO_PI
+                result: NDArray = y5 % TWO_PI
+                return result
 
             # Reject — shrink dt and retry
             factor = max(0.2, 0.9 * err_norm ** (-0.25))
@@ -220,4 +222,5 @@ class UPDEEngine:
 
         # Exhausted retries, accept current result
         self._last_dt = dt
-        return y5 % TWO_PI
+        result_fallback: NDArray = y5 % TWO_PI
+        return result_fallback
