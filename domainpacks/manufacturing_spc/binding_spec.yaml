@@ -1,0 +1,86 @@
+name: manufacturing_spc
+version: "0.1.0"
+safety_tier: consumer
+sample_period_s: 0.005
+control_period_s: 0.05
+
+layers:
+  - name: sensor
+    index: 0
+    oscillator_ids: [vibration, temperature, pressure, flow_rate]
+  - name: machine
+    index: 1
+    oscillator_ids: [oee, cycle_time, throughput]
+  - name: line
+    index: 2
+    oscillator_ids: [yield_rate, defect_class]
+
+oscillator_families:
+  physical_sensor:
+    channel: P
+    extractor_type: physical
+    config: {}
+  machine_kpi:
+    channel: I
+    extractor_type: informational
+    config: {}
+  quality_state:
+    channel: S
+    extractor_type: symbolic
+    config: {}
+
+coupling:
+  base_strength: 0.35
+  decay_alpha: 0.4
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.0
+  symbolic: {}
+
+objectives:
+  good_layers: [1, 2]
+  bad_layers: [0]
+  good_weight: 1.0
+  bad_weight: 1.2
+
+boundaries:
+  - name: temp_high
+    variable: temperature
+    lower: null
+    upper: 85.0
+    severity: hard
+  - name: pressure_low
+    variable: pressure
+    lower: 2.0
+    upper: null
+    severity: hard
+  - name: vibration_warning
+    variable: vibration
+    lower: null
+    upper: 4.5
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: lag_sensor
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: damping_global
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+
+imprint:
+  decay_rate: 0.005
+  saturation: 3.0
+
+policy: policy.yaml

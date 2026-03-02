@@ -122,3 +122,51 @@ def test_step_shape_mismatch_raises():
         engine.step(ok_phases, ok_omegas, np.zeros((3, 3)), 0.0, 0.0, ok_alpha)
     with pytest.raises(ValueError, match="alpha.shape"):
         engine.step(ok_phases, ok_omegas, ok_knm, 0.0, 0.0, np.zeros((5, 5)))
+
+
+def test_rk45_produces_valid_phases():
+    n = 8
+    rng = np.random.default_rng(42)
+    phases = rng.uniform(0, TWO_PI, size=n)
+    omegas = rng.uniform(0.5, 2.0, size=n)
+    knm = np.full((n, n), 0.3)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    engine = UPDEEngine(n_oscillators=n, dt=0.01, method="rk45")
+    for _ in range(200):
+        phases = engine.step(phases, omegas, knm, zeta=0.0, psi=0.0, alpha=alpha)
+    assert np.all(phases >= 0.0)
+    assert np.all(phases < TWO_PI)
+    assert engine.last_dt > 0.0
+
+
+def test_rk45_converges_like_rk4():
+    """RK45 adaptive stepping grows dt, so we compare synchronization behavior."""
+    n = 8
+    rng = np.random.default_rng(7)
+    phases_init = rng.uniform(0, TWO_PI, size=n)
+    omegas = np.ones(n) * 1.0
+    knm = np.full((n, n), 2.0)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    engine_rk4 = UPDEEngine(n_oscillators=n, dt=0.005, method="rk4")
+    engine_rk45 = UPDEEngine(n_oscillators=n, dt=0.005, method="rk45")
+
+    phases_rk4 = phases_init.copy()
+    phases_rk45 = phases_init.copy()
+    for _ in range(500):
+        phases_rk4 = engine_rk4.step(phases_rk4, omegas, knm, 0.0, 0.0, alpha)
+        phases_rk45 = engine_rk45.step(phases_rk45, omegas, knm, 0.0, 0.0, alpha)
+
+    R_rk4, _ = engine_rk4.compute_order_parameter(phases_rk4)
+    R_rk45, _ = engine_rk45.compute_order_parameter(phases_rk45)
+    assert R_rk4 > 0.8
+    assert R_rk45 > 0.8
+
+
+def test_rk45_accepted_in_method_list():
+    UPDEEngine(n_oscillators=4, dt=0.01, method="rk45")
+    with pytest.raises(ValueError, match="Unknown method"):
+        UPDEEngine(n_oscillators=4, dt=0.01, method="bogus")
