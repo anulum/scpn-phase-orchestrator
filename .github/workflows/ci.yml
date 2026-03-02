@@ -71,7 +71,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev]"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: coverage-xml
       - run: python tools/coverage_guard.py --coverage-xml coverage-python.xml
