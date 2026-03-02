@@ -7,7 +7,8 @@ use std::f64::consts::TAU;
 
 use spo_types::{SpoError, SpoResult};
 
-#[derive(Clone)]
+/// Phase-lag α matrix estimated from propagation distances and speed.
+#[derive(Debug, Clone)]
 pub struct LagModel {
     pub alpha: Vec<f64>,
     pub n: usize,

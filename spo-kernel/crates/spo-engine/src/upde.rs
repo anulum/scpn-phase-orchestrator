@@ -7,17 +7,27 @@
 
 use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 
+/// Kuramoto UPDE integrator with pre-allocated scratch arrays.
 pub struct UPDEStepper {
     n: usize,
     dt: f64,
     method: Method,
-    // Pre-allocated scratch buffers
     deriv_buf: Vec<f64>,
     k1: Vec<f64>,
     k2: Vec<f64>,
     k3: Vec<f64>,
     k4: Vec<f64>,
     tmp_phases: Vec<f64>,
+}
+
+impl std::fmt::Debug for UPDEStepper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UPDEStepper")
+            .field("n", &self.n)
+            .field("dt", &self.dt)
+            .field("method", &self.method)
+            .finish_non_exhaustive()
+    }
 }
 
 impl UPDEStepper {

@@ -8,5 +8,16 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
+from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
+from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 
-__all__ = ["PhaseExtractor", "PhaseState"]
+__all__ = [
+    "PhaseExtractor",
+    "PhaseState",
+    "PhysicalExtractor",
+    "InformationalExtractor",
+    "SymbolicExtractor",
+    "PhaseQualityScorer",
+]

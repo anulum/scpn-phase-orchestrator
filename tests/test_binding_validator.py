@@ -90,3 +90,33 @@ def test_objective_references_missing_layer(sample_binding_spec):
     bad = replace(sample_binding_spec, objectives=bad_obj)
     errors = validate_binding_spec(bad)
     assert any("layer index 99" in e for e in errors)
+
+
+def test_control_period_must_be_positive(sample_binding_spec):
+    bad = replace(sample_binding_spec, control_period_s=0.0)
+    errors = validate_binding_spec(bad)
+    assert any("control_period_s" in e and "> 0" in e for e in errors)
+
+
+def test_control_period_ge_sample_period(sample_binding_spec):
+    bad = replace(sample_binding_spec, sample_period_s=0.1, control_period_s=0.05)
+    errors = validate_binding_spec(bad)
+    assert any("control_period_s must be >= sample_period_s" in e for e in errors)
+
+
+def test_actuator_limits_ordering(sample_binding_spec):
+    bad_actuators = [
+        ActuatorMapping(name="inv", knob="K", scope="global", limits=(1.0, 0.0)),
+    ]
+    bad = replace(sample_binding_spec, actuators=bad_actuators)
+    errors = validate_binding_spec(bad)
+    assert any("limits" in e and "lo <= hi" in e for e in errors)
+
+
+def test_empty_objectives_error(sample_binding_spec):
+    from scpn_phase_orchestrator.binding.types import ObjectivePartition
+
+    bad_obj = ObjectivePartition(good_layers=[], bad_layers=[])
+    bad = replace(sample_binding_spec, objectives=bad_obj)
+    errors = validate_binding_spec(bad)
+    assert any("at least one good or bad layer" in e for e in errors)

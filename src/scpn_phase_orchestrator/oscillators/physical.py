@@ -65,11 +65,8 @@ class PhysicalExtractor(PhaseExtractor):
     @staticmethod
     def _snr_estimate(signal: NDArray, analytic: NDArray) -> float:
         envelope = np.abs(analytic)
-        noise = signal - np.real(analytic)
-        sig_power = np.mean(envelope**2)
-        noise_power = np.mean(noise**2)
-        if noise_power < 1e-15:
-            return 1.0
-        snr_linear = sig_power / noise_power
-        # Map SNR to [0, 1] via sigmoid-like saturation
-        return float(np.clip(snr_linear / (1.0 + snr_linear), 0.0, 1.0))
+        mean_env = np.mean(envelope)
+        if mean_env < 1e-15:
+            return 0.0
+        cv = np.std(envelope) / mean_env
+        return float(np.clip(1.0 - cv, 0.0, 1.0))

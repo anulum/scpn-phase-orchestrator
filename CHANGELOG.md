@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **[P0]** Merge duplicate `validate_binding_spec` — `loader.py` and `validator.py` had divergent implementations; canonical version now in `validator.py` with all checks merged
+- **[P1]** `PhysicalExtractor._snr_estimate` always returned ~1.0 due to `Re(hilbert(x)) == x` identity; replaced with envelope coefficient-of-variation metric
+- **[P1]** `UPDEEngine.compute_order_parameter` reimplemented inline, bypassing Rust-accelerated `order_params`; now delegates to canonical implementation
+- **[P1]** `AuditLogger` file writes never flushed; crash could lose audit records; switched to line-buffered I/O
+- **[P1]** CLI `run` command ignored spec drivers, boundaries, and actuators; hardcoded `omegas=1` and `zeta=0`; rewritten to wire supervisor, boundary observer, and spec-derived frequencies
+
+### Changed
+
+- CLI import path uses canonical `from scpn_phase_orchestrator.binding import validate_binding_spec`
+- `oscillators/__init__.py` exports `PhysicalExtractor`, `InformationalExtractor`, `SymbolicExtractor`, `PhaseQualityScorer`
+- `adapters/__init__.py` exports `SCPNControlBridge`
+- Rust: `Debug` impl for `UPDEStepper` (manual, omits scratch buffers), `#[derive(Debug)]` for `ImprintModel`, `LagModel`
+- Rust: `///` doc comments on `UPDEStepper`, `ImprintModel`, `CouplingState`, `LagModel`, `RegimeManager`, `CoherenceMonitor`
+
+### Added
+
+- 4 new validator tests: `control_period_s` positive/ordering, actuator limits ordering, empty objectives
+- 5 new hypothesis property tests: phase wrapping, R unit interval, `project_knm` symmetry, imprint saturation bound, regime FSM skip guard
+- 4 new `test_coupling_lags` tests: negative lag direction, large lag, constant signal, alpha diagonal
+- 4 new `test_coupling_templates` tests: duplicate overwrite, empty set, frozen dataclass, error message content
+- 2 new `test_oscillator_physical` tests: clean sinusoid quality, clean-vs-noisy discrimination
+
 ## [0.1.1] - 2026-03-02
 
 ### Changed

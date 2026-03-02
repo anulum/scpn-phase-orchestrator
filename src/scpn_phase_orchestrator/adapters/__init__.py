@@ -7,4 +7,6 @@
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from scpn_phase_orchestrator.adapters.scpn_control_bridge import SCPNControlBridge
+
+__all__ = ["SCPNControlBridge"]

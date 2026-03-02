@@ -2,6 +2,7 @@
 
 use spo_types::UPDEState;
 
+/// Tracks coherence (order parameter R) partitioned into good vs bad layer subsets.
 pub struct CoherenceMonitor {
     good_layers: Vec<usize>,
     bad_layers: Vec<usize>,

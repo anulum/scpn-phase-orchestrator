@@ -14,12 +14,14 @@ import click
 import numpy as np
 
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
-from scpn_phase_orchestrator.binding.loader import (
-    load_binding_spec,
-    validate_binding_spec,
-)
+from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 
 @click.group()
@@ -53,39 +55,76 @@ def run(binding_spec: str, steps: int) -> None:
         raise SystemExit(1)
 
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    if n_osc == 0:
+        click.echo("ERROR: no oscillators defined in layers", err=True)
+        raise SystemExit(1)
+
     builder = CouplingBuilder()
     coupling = builder.build(
         n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha
     )
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
+    boundary_observer = BoundaryObserver(spec.boundaries)
+    regime_manager = RegimeManager()
+    supervisor = SupervisorPolicy(regime_manager)
 
-    phases = np.random.default_rng(42).uniform(0, 2 * np.pi, n_osc)
-    omegas = np.ones(n_osc)
+    rng = np.random.default_rng(42)
+    phases = rng.uniform(0, 2 * np.pi, n_osc)
+    omegas = np.array(
+        [1.0 + 0.1 * layer.index for layer in spec.layers for _ in layer.oscillator_ids]
+    )
 
+    layer_osc_ranges: dict[int, list[int]] = {}
+    osc_idx = 0
+    for layer in spec.layers:
+        n_layer = len(layer.oscillator_ids)
+        layer_osc_ranges[layer.index] = list(range(osc_idx, osc_idx + n_layer))
+        osc_idx += n_layer
+
+    zeta = 0.0
     for _ in range(steps):
-        phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
+        phases = engine.step(phases, omegas, coupling.knm, zeta, 0.0, coupling.alpha)
 
-    good_mask = np.zeros(n_osc, dtype=bool)
-    bad_mask = np.zeros(n_osc, dtype=bool)
-    for idx in spec.objectives.good_layers:
-        if idx < n_osc:
-            good_mask[idx] = True
-    for idx in spec.objectives.bad_layers:
-        if idx < n_osc:
-            bad_mask[idx] = True
+        # Build UPDEState for supervisor
+        layer_states = []
+        for layer in spec.layers:
+            osc_ids = layer_osc_ranges[layer.index]
+            if osc_ids:
+                r, psi = compute_order_parameter(phases[osc_ids])
+            else:
+                r, psi = 0.0, 0.0
+            layer_states.append(LayerState(R=r, psi=psi))
 
-    r_good, _ = (
-        engine.compute_order_parameter(phases[good_mask])
-        if good_mask.any()
-        else (0.0, 0.0)
-    )
-    r_bad, _ = (
-        engine.compute_order_parameter(phases[bad_mask])
-        if bad_mask.any()
-        else (0.0, 0.0)
-    )
+        upde_state = UPDEState(
+            layers=layer_states,
+            cross_layer_alignment=np.zeros((len(spec.layers), len(spec.layers))),
+            stability_proxy=layer_states[0].R if layer_states else 0.0,
+            regime_id=regime_manager.current_regime.value,
+        )
+        boundary_state = boundary_observer.observe({"R": upde_state.stability_proxy})
+        actions = supervisor.decide(upde_state, boundary_state)
 
-    click.echo(f"R_good={r_good:.4f}  R_bad={r_bad:.4f}")
+        for act in actions:
+            if act.knob == "zeta":
+                zeta = min(zeta + act.value, 0.5)
+
+    # Final coherence
+    good_phases = [
+        phases[i]
+        for idx in spec.objectives.good_layers
+        for i in layer_osc_ranges.get(idx, [])
+    ]
+    bad_phases = [
+        phases[i]
+        for idx in spec.objectives.bad_layers
+        for i in layer_osc_ranges.get(idx, [])
+    ]
+
+    r_good = compute_order_parameter(np.array(good_phases))[0] if good_phases else 0.0
+    r_bad = compute_order_parameter(np.array(bad_phases))[0] if bad_phases else 0.0
+
+    regime = regime_manager.current_regime.value
+    click.echo(f"R_good={r_good:.4f}  R_bad={r_bad:.4f}  regime={regime}")
 
 
 @main.command()

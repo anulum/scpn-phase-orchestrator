@@ -7,6 +7,7 @@ use crate::boundaries::BoundaryState;
 const R_CRITICAL: f64 = 0.3;
 const R_DEGRADED: f64 = 0.6;
 
+/// Regime finite-state machine with hysteresis and cooldown transitions.
 pub struct RegimeManager {
     pub current: Regime,
     hysteresis: f64,
