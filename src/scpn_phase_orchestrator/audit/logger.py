@@ -20,7 +20,7 @@ class AuditLogger:
 
     def __init__(self, path: str | Path):
         self._path = Path(path)
-        self._fh = self._path.open("a", encoding="utf-8")
+        self._fh = self._path.open("a", encoding="utf-8", buffering=1)
 
     def log_step(
         self, step: int, upde_state: UPDEState, actions: list[ControlAction]

@@ -70,8 +70,9 @@ class UPDEEngine:
 
     def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
-        z = np.mean(np.exp(1j * phases))
-        return float(np.abs(z)), float(np.angle(z) % TWO_PI)
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        return compute_order_parameter(phases)
 
     def _derivative(
         self,

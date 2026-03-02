@@ -27,3 +27,32 @@ def test_get_missing_raises():
     ts = KnmTemplateSet()
     with pytest.raises(KeyError):
         ts.get("nope")
+
+
+def test_duplicate_name_overwrites():
+    ts = KnmTemplateSet()
+    ts.add(KnmTemplate("x", np.eye(2), np.zeros((2, 2)), "first"))
+    ts.add(KnmTemplate("x", np.ones((2, 2)), np.zeros((2, 2)), "second"))
+    assert ts.get("x").description == "second"
+    np.testing.assert_array_equal(ts.get("x").knm, np.ones((2, 2)))
+
+
+def test_empty_template_set():
+    ts = KnmTemplateSet()
+    assert ts.list_names() == []
+    with pytest.raises(KeyError):
+        ts.get("anything")
+
+
+def test_template_frozen():
+    tpl = KnmTemplate("f", np.eye(2), np.zeros((2, 2)), "frozen")
+    with pytest.raises(AttributeError):
+        tpl.name = "changed"
+
+
+def test_get_missing_error_lists_available():
+    ts = KnmTemplateSet()
+    ts.add(KnmTemplate("alpha", np.eye(2), np.zeros((2, 2)), ""))
+    ts.add(KnmTemplate("beta", np.eye(2), np.zeros((2, 2)), ""))
+    with pytest.raises(KeyError, match="alpha"):
+        ts.get("gamma")

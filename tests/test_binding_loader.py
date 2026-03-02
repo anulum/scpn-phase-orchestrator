@@ -94,7 +94,7 @@ def test_load_with_geometry_prior(tmp_path):
 
 
 def test_loader_validate_control_period_and_channels(tmp_path):
-    from scpn_phase_orchestrator.binding.loader import validate_binding_spec
+    from scpn_phase_orchestrator.binding import validate_binding_spec
 
     data = {
         **_SPEC_DATA,

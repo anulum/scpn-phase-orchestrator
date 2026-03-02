@@ -35,6 +35,12 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     if spec.sample_period_s <= 0:
         errors.append(f"sample_period_s must be > 0, got {spec.sample_period_s}")
 
+    if spec.control_period_s <= 0:
+        errors.append(f"control_period_s must be > 0, got {spec.control_period_s}")
+
+    if spec.control_period_s < spec.sample_period_s:
+        errors.append("control_period_s must be >= sample_period_s")
+
     if not spec.layers:
         errors.append("at least one layer is required")
 
@@ -46,6 +52,9 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
                 f"oscillator_family {family_name!r}: channel must be one of "
                 f"{VALID_CHANNELS}, got {fam.channel!r}"
             )
+
+    if not spec.objectives.good_layers and not spec.objectives.bad_layers:
+        errors.append("objectives must define at least one good or bad layer")
 
     for ref in spec.objectives.good_layers + spec.objectives.bad_layers:
         if ref not in layer_indices:
@@ -63,6 +72,10 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             errors.append(
                 f"actuator {act.name!r}: knob must be one of "
                 f"{VALID_KNOBS}, got {act.knob!r}"
+            )
+        if len(act.limits) != 2 or act.limits[0] > act.limits[1]:
+            errors.append(
+                f"actuator {act.name!r}: limits must be (lo, hi) with lo <= hi"
             )
 
     return errors

@@ -71,13 +71,29 @@ def test_quality_score_empty():
     assert extractor.quality_score([]) == 0.0
 
 
-def test_snr_estimate_returns_one_for_real_signal():
-    """Hilbert real part equals input, so noise ≈ 0 and quality = 1.0."""
+def test_snr_estimate_clean_sinusoid():
+    """Clean sinusoid has near-constant envelope → quality well above 0.5."""
     from scipy.signal import hilbert
 
-    signal = np.sin(TWO_PI * 5.0 * np.arange(0, 0.5, 0.001))
+    signal = np.sin(TWO_PI * 5.0 * np.arange(0, 1.0, 0.001))
     quality = PhysicalExtractor._snr_estimate(signal, hilbert(signal))
-    assert quality == 1.0
+    assert quality > 0.7
+
+
+def test_quality_discriminates_clean_vs_noisy():
+    """Pure sinusoid → quality > 0.9, sinusoid + heavy noise → quality < 0.7."""
+    from scipy.signal import hilbert
+
+    t = np.arange(0, 1.0, 0.001)
+    clean = np.sin(TWO_PI * 10.0 * t)
+    rng = np.random.default_rng(42)
+    noisy = clean + rng.normal(0, 2.0, len(t))
+
+    q_clean = PhysicalExtractor._snr_estimate(clean, hilbert(clean))
+    q_noisy = PhysicalExtractor._snr_estimate(noisy, hilbert(noisy))
+
+    assert q_clean > 0.9, f"clean quality={q_clean}"
+    assert q_noisy < 0.7, f"noisy quality={q_noisy}"
 
 
 def test_rust_python_parity():

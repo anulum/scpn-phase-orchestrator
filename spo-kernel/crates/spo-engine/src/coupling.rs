@@ -4,6 +4,7 @@
 
 use spo_types::{CouplingConfig, SpoError, SpoResult};
 
+/// Coupling matrix state: Knm (row-major N×N) plus phase-lag α matrix.
 #[derive(Debug, Clone)]
 pub struct CouplingState {
     pub knm: Vec<f64>,

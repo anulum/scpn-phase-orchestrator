@@ -5,6 +5,8 @@
 
 use spo_types::{SpoError, SpoResult};
 
+/// Exponential exposure accumulation with decay and saturation clamping.
+#[derive(Debug)]
 pub struct ImprintModel {
     pub m: Vec<f64>,
     decay_rate: f64,

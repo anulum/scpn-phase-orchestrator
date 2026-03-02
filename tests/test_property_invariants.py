@@ -11,11 +11,18 @@ from hypothesis.extra.numpy import arrays
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
 from scpn_phase_orchestrator.coupling import CouplingBuilder
+from scpn_phase_orchestrator.coupling.geometry_constraints import (
+    NonNegativeConstraint,
+    SymmetryConstraint,
+    project_knm,
+)
+from scpn_phase_orchestrator.imprint.state import ImprintState
+from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import (
     BoundaryObserver,
     BoundaryState,
 )
-from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
+from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import (
@@ -150,3 +157,93 @@ def test_upde_phase_bounding(n: int, dt: float) -> None:
     assert np.all(result >= 0.0), f"negative phase: {result.min()}"
     assert np.all(result < TWO_PI + 1e-12), f"phase >= 2pi: {result.max()}"
     assert np.all(np.isfinite(result)), "non-finite phase"
+
+
+@given(
+    phases=arrays(
+        dtype=np.float64,
+        shape=st.integers(min_value=2, max_value=50),
+        elements=_FINITE_FLOATS,
+    ),
+    dt=st.floats(min_value=1e-4, max_value=0.1, allow_nan=False),
+)
+@settings(max_examples=100)
+def test_upde_step_phases_wrapped(phases: np.ndarray, dt: float) -> None:
+    """engine.step() output phases are in [0, 2*pi) for any finite input."""
+    n = len(phases)
+    engine = UPDEEngine(n, dt)
+    omegas = np.ones(n)
+    knm = np.zeros((n, n))
+    alpha = np.zeros((n, n))
+    result = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+    assert np.all(result >= 0.0)
+    assert np.all(result < TWO_PI + 1e-12)
+
+
+@given(phases=phase_arrays)
+@settings(max_examples=200)
+def test_order_parameter_r_unit_interval(phases: np.ndarray) -> None:
+    """R in [0, 1] for any phase distribution."""
+    r, _ = compute_order_parameter(phases)
+    assert -1e-12 <= r <= 1.0 + 1e-12
+
+
+@given(
+    n=st.integers(min_value=2, max_value=20),
+    data=st.data(),
+)
+@settings(max_examples=100)
+def test_project_knm_preserves_symmetry(n: int, data: st.DataObject) -> None:
+    """project_knm enforces symmetry and non-negativity for any input."""
+    raw = data.draw(arrays(dtype=np.float64, shape=(n, n), elements=_FINITE_FLOATS))
+    constraints = [SymmetryConstraint(), NonNegativeConstraint()]
+    result = project_knm(raw, constraints)
+    np.testing.assert_allclose(result, result.T, atol=1e-12)
+    assert np.all(result >= -1e-12)
+
+
+@given(
+    n=st.integers(min_value=1, max_value=16),
+    n_updates=st.integers(min_value=1, max_value=20),
+    saturation=st.floats(min_value=0.1, max_value=10.0, allow_nan=False),
+)
+@settings(max_examples=100)
+def test_imprint_saturation_bound(n: int, n_updates: int, saturation: float) -> None:
+    """m[i] <= saturation after any sequence of updates."""
+    model = ImprintModel(decay_rate=0.0, saturation=saturation)
+    state = ImprintState(m_k=np.zeros(n), last_update=0.0)
+    for _ in range(n_updates):
+        exposure = np.ones(n) * 100.0
+        state = model.update(state, exposure, dt=1.0)
+    assert np.all(state.m_k <= saturation + 1e-12)
+    assert np.all(state.m_k >= -1e-12)
+
+
+@given(
+    r_seq=st.lists(
+        st.floats(min_value=0.0, max_value=1.0, allow_nan=False),
+        min_size=3,
+        max_size=20,
+    ),
+)
+@settings(max_examples=200)
+def test_regime_no_nominal_to_critical_skip(r_seq: list[float]) -> None:
+    """Regime FSM: NOMINAL never jumps directly to CRITICAL without DEGRADED
+    (unless R < R_CRITICAL or hard violation, which is legitimate)."""
+    mgr = RegimeManager(hysteresis=0.05, cooldown_steps=0)
+    prev = Regime.NOMINAL
+    for r_val in r_seq:
+        layers = [LayerState(R=r_val, psi=0.0)]
+        state = UPDEState(
+            layers=layers,
+            cross_layer_alignment=np.zeros((1, 1)),
+            stability_proxy=0.0,
+            regime_id=prev.value,
+        )
+        boundary = BoundaryState()
+        proposed = mgr.evaluate(state, boundary)
+        regime = mgr.transition(prev, proposed)
+        if prev == Regime.NOMINAL and regime == Regime.CRITICAL:
+            # Only legitimate if R < 0.3
+            assert r_val < 0.3 + 1e-12, f"NOMINAL→CRITICAL at R={r_val}"
+        prev = regime
