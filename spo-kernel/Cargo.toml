@@ -24,7 +24,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 pyo3 = { version = "0.24", features = ["extension-module"] }
-criterion = { version = "0.5" }
+criterion = { version = "0.8" }
 
 [workspace.lints.clippy]
 unwrap_used = "deny"
