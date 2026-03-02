@@ -119,20 +119,10 @@ jobs:
           restore-keys: cargo-${{ runner.os }}-stable-
       - run: cargo fmt --check
         if: runner.os == 'Linux'
-      - name: Clippy (all crates)
-        run: cargo clippy --workspace -- -D warnings
+      - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
+      - run: cargo doc --no-deps --workspace --exclude spo-ffi
         if: runner.os == 'Linux'
-      - name: Clippy (pure Rust only, no PyO3)
-        run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
-        if: runner.os != 'Linux'
-      - run: cargo doc --no-deps --workspace
-        if: runner.os == 'Linux'
-      - name: Test (all crates)
-        run: cargo test --workspace
-        if: runner.os == 'Linux'
-      - name: Test (pure Rust only, no PyO3)
-        run: cargo test --workspace --exclude spo-ffi
-        if: runner.os != 'Linux'
+      - run: cargo test --workspace --exclude spo-ffi
 
   ffi-test:
     runs-on: ubuntu-latest
