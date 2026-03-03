@@ -22,15 +22,21 @@ import sys
 REGRESSION_THRESHOLD_PCT = 20.0
 
 
+def _extract_results(data):
+    if isinstance(data, list):
+        return data
+    return data.get("results", data)
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         print(f"Usage: {sys.argv[0]} <baseline.json> <current.json>", file=sys.stderr)
         return 2
 
     with open(sys.argv[1]) as f:
-        baseline = json.load(f)
+        baseline = _extract_results(json.load(f))
     with open(sys.argv[2]) as f:
-        current = json.load(f)
+        current = _extract_results(json.load(f))
 
     base_map: dict[tuple[int, str, str], float] = {}
     for entry in baseline:

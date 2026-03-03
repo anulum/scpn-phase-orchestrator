@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import sys
 import time
 
 import numpy as np
+import scipy
 
 import scpn_phase_orchestrator._compat as _compat
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
@@ -82,7 +84,16 @@ def main():
                 results.append(bench_step(n, m, force_python=True))
 
     if args.json:
-        json.dump(results, sys.stdout, indent=2)
+        output = {
+            "meta": {
+                "python_version": platform.python_version(),
+                "numpy_version": np.__version__,
+                "scipy_version": scipy.__version__,
+                "platform": platform.platform(),
+            },
+            "results": results,
+        }
+        json.dump(output, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return
 

@@ -103,6 +103,7 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev,queuewaves]"
       - run: bandit -r src/ -c pyproject.toml
+      - run: pip install pip-audit && pip-audit
 
   rust-check:
     strategy:
