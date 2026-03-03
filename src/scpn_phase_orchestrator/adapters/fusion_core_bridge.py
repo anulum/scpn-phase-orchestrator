@@ -89,7 +89,7 @@ class FusionCoreBridge:
             "n_oscillators": n,
         }
 
-    def import_q_profile(self, q_profile_or_dict) -> dict:
+    def import_q_profile(self, q_profile_or_dict: object) -> dict:
         """Parse a q-profile from dict or scpn-fusion-core object.
 
         Returns normalised dict with keys: q_min, q_max, q_axis, q_edge.

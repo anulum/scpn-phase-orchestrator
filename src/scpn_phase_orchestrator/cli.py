@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
+    GeometryConstraint,
     NonNegativeConstraint,
     SymmetryConstraint,
     project_knm,
@@ -112,7 +113,7 @@ def run(binding_spec: str, steps: int, audit: str | None) -> None:
         )
         imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
 
-    geo_constraints = []
+    geo_constraints: list[GeometryConstraint] = []
     if spec.geometry_prior is not None:
         ct = spec.geometry_prior.constraint_type.lower()
         if "symmetric" in ct:
@@ -142,7 +143,7 @@ def run(binding_spec: str, steps: int, audit: str | None) -> None:
     zeta_ttl = 0
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
-    psi_driver = None
+    psi_driver: PhysicalDriver | InformationalDriver | SymbolicDriver | None = None
     if "frequency" in spec.drivers.physical:
         psi_driver = PhysicalDriver(
             frequency=spec.drivers.physical["frequency"],

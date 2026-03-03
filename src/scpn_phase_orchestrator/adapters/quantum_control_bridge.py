@@ -90,7 +90,7 @@ class QuantumControlBridge:
 
     def build_quantum_circuit(
         self, knm: NDArray, omegas: NDArray, time: float, trotter_steps: int = 10
-    ):
+    ) -> object:
         """Build a Trotterised XY-Hamiltonian circuit.
 
         Requires scpn-quantum-control.  Returns a Qiskit QuantumCircuit.
@@ -110,7 +110,7 @@ class QuantumControlBridge:
             trotter_order=self._trotter_order,
         )
 
-    def extract_phases_from_statevector(self, statevector) -> NDArray:
+    def extract_phases_from_statevector(self, statevector: object) -> NDArray:
         """Extract per-qubit phases from a Qiskit Statevector.
 
         Requires scpn-quantum-control.

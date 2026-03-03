@@ -34,7 +34,7 @@ class PlasmaControlBridge:
             raise ValueError(f"n_layers must be >= 1, got {n_layers}")
         self._n_layers = n_layers
 
-    def import_knm_spec(self, knm_spec_or_dict) -> CouplingState:
+    def import_knm_spec(self, knm_spec_or_dict: object) -> CouplingState:
         """Expand an (L, L) layer-coupling matrix to (N, N) via Kronecker replication.
 
         Accepts a dict with 'matrix' key (list of lists or ndarray) and optional
@@ -123,7 +123,7 @@ class PlasmaControlBridge:
             regime_id=regime,
         )
 
-    def import_lyapunov_verdict(self, verdict_or_dict) -> dict:
+    def import_lyapunov_verdict(self, verdict_or_dict: object) -> dict:
         """Map a Lyapunov verdict to a boundary-compatible signal dict.
 
         Accepts dict with 'score' (float in [0,1]).
