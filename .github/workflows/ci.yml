@@ -61,6 +61,11 @@ jobs:
         with:
           name: coverage-xml
           path: coverage-python.xml
+      - name: Validate notebooks
+        if: matrix.python-version == '3.12'
+        run: |
+          pip install -e ".[notebook]"
+          jupyter nbconvert --execute --to notebook notebooks/*.ipynb --ExecutePreprocessor.timeout=120
 
   coverage-guard:
     needs: [test]
