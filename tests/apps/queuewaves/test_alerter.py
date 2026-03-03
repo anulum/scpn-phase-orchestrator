@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from scpn_phase_orchestrator.apps.queuewaves.alerter import (
     WebhookAlerter,
     _format_generic,
@@ -65,3 +67,23 @@ def test_different_anomaly_types_not_deduped() -> None:
     a2 = _anomaly(type_="chronic_degradation")
     sent = alerter.send_sync([a1, a2])
     assert len(sent) == 2
+
+
+def test_async_send_no_sinks() -> None:
+    async def _run() -> None:
+        alerter = WebhookAlerter([], cooldown_seconds=300.0)
+        sent = await alerter.send([_anomaly()])
+        assert len(sent) == 1
+
+    asyncio.run(_run())
+
+
+def test_async_send_dedup_suppresses() -> None:
+    async def _run() -> None:
+        alerter = WebhookAlerter([], cooldown_seconds=300.0)
+        a = _anomaly()
+        await alerter.send([a])
+        sent = await alerter.send([a])
+        assert len(sent) == 0
+
+    asyncio.run(_run())

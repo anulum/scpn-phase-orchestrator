@@ -56,3 +56,14 @@ def test_prom_metrics(client: TestClient) -> None:
 def test_root_returns_html_or_text(client: TestClient) -> None:
     r = client.get("/")
     assert r.status_code == 200
+
+
+def test_check_503_without_data(client: TestClient) -> None:
+    r = client.post("/api/v1/check")
+    assert r.status_code == 503
+
+
+def test_state_history_empty(client: TestClient) -> None:
+    r = client.get("/api/v1/state/history?n=10")
+    assert r.status_code == 200
+    assert r.json() == []

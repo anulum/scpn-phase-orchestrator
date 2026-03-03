@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import numpy as np
 
 from scpn_phase_orchestrator.apps.queuewaves.collector import (
@@ -64,3 +66,19 @@ def test_collector_get_signal_arrays_skips_not_ready() -> None:
     )
     collector.scrape_sync({"s": (0.0, 1.0)})
     assert "s" not in collector.get_signal_arrays()
+
+
+def test_collector_client_lifecycle() -> None:
+    async def _run() -> None:
+        collector = PrometheusCollector(
+            "http://localhost:9090", {"s": "up"}, buffer_length=4
+        )
+        assert collector._client is None
+        client = await collector._get_client()
+        assert client is not None
+        same = await collector._get_client()
+        assert same is client
+        await collector.close()
+        assert collector._client is None
+
+    asyncio.run(_run())
