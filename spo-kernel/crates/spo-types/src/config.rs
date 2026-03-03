@@ -8,6 +8,7 @@ use crate::error::{SpoError, SpoResult};
 pub enum Method {
     Euler,
     RK4,
+    RK45,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +16,8 @@ pub struct IntegrationConfig {
     pub dt: f64,
     pub method: Method,
     pub n_substeps: u32,
+    pub atol: f64,
+    pub rtol: f64,
 }
 
 impl Default for IntegrationConfig {
@@ -23,13 +26,16 @@ impl Default for IntegrationConfig {
             dt: 0.01,
             method: Method::Euler,
             n_substeps: 1,
+            atol: 1e-6,
+            rtol: 1e-3,
         }
     }
 }
 
 impl IntegrationConfig {
     /// # Errors
-    /// Returns `InvalidConfig` if dt is non-positive/non-finite or n_substeps is 0.
+    /// Returns `InvalidConfig` if dt is non-positive/non-finite, n_substeps is 0,
+    /// or atol/rtol are non-positive/non-finite.
     pub fn validate(&self) -> SpoResult<()> {
         if self.dt <= 0.0 || !self.dt.is_finite() {
             return Err(SpoError::InvalidConfig(format!(
@@ -39,6 +45,18 @@ impl IntegrationConfig {
         }
         if self.n_substeps == 0 {
             return Err(SpoError::InvalidConfig("n_substeps must be >= 1".into()));
+        }
+        if self.atol <= 0.0 || !self.atol.is_finite() {
+            return Err(SpoError::InvalidConfig(format!(
+                "atol must be positive finite, got {}",
+                self.atol
+            )));
+        }
+        if self.rtol <= 0.0 || !self.rtol.is_finite() {
+            return Err(SpoError::InvalidConfig(format!(
+                "rtol must be positive finite, got {}",
+                self.rtol
+            )));
         }
         Ok(())
     }
@@ -137,9 +155,11 @@ mod tests {
 
     #[test]
     fn method_serde_roundtrip() {
-        let json = serde_json::to_string(&Method::RK4).unwrap();
-        let m: Method = serde_json::from_str(&json).unwrap();
-        assert_eq!(m, Method::RK4);
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            let json = serde_json::to_string(&method).unwrap();
+            let m: Method = serde_json::from_str(&json).unwrap();
+            assert_eq!(m, method);
+        }
     }
 
     #[test]

@@ -60,10 +60,10 @@ class UPDEEngine:
         self._last_dt = dt
 
         self._rust = None
-        if _HAS_RUST and method != "rk45":
+        if _HAS_RUST:
             from spo_kernel import PyUPDEStepper
 
-            self._rust = PyUPDEStepper(n_oscillators, dt, method)
+            self._rust = PyUPDEStepper(n_oscillators, dt, method, atol=atol, rtol=rtol)
 
         self._phase_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)
         self._sin_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)

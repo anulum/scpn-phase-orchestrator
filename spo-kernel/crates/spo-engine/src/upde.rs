@@ -7,17 +7,48 @@
 
 use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 
+/// Dormand-Prince RK45 Butcher tableau coefficients.
+mod dp {
+    pub(super) const A21: f64 = 1.0 / 5.0;
+    pub(super) const A31: f64 = 3.0 / 40.0;
+    pub(super) const A32: f64 = 9.0 / 40.0;
+    pub(super) const A41: f64 = 44.0 / 45.0;
+    pub(super) const A42: f64 = -56.0 / 15.0;
+    pub(super) const A43: f64 = 32.0 / 9.0;
+    pub(super) const A51: f64 = 19372.0 / 6561.0;
+    pub(super) const A52: f64 = -25360.0 / 2187.0;
+    pub(super) const A53: f64 = 64448.0 / 6561.0;
+    pub(super) const A54: f64 = -212.0 / 729.0;
+    pub(super) const A61: f64 = 9017.0 / 3168.0;
+    pub(super) const A62: f64 = -355.0 / 33.0;
+    pub(super) const A63: f64 = 46732.0 / 5247.0;
+    pub(super) const A64: f64 = 49.0 / 176.0;
+    pub(super) const A65: f64 = -5103.0 / 18656.0;
+
+    // 5th-order weights (solution)
+    pub(super) const B5: [f64; 6] = [35.0 / 384.0, 0.0, 500.0 / 1113.0, 125.0 / 192.0, -2187.0 / 6784.0, 11.0 / 84.0];
+
+    // 4th-order weights (error estimate)
+    pub(super) const B4: [f64; 6] = [5179.0 / 57600.0, 0.0, 7571.0 / 16695.0, 393.0 / 640.0, -92097.0 / 339200.0, 187.0 / 2100.0];
+}
+
 /// Kuramoto UPDE integrator with pre-allocated scratch arrays.
 pub struct UPDEStepper {
     n: usize,
     dt: f64,
     n_substeps: u32,
     method: Method,
+    atol: f64,
+    rtol: f64,
+    last_dt: f64,
     deriv_buf: Vec<f64>,
     k1: Vec<f64>,
     k2: Vec<f64>,
     k3: Vec<f64>,
     k4: Vec<f64>,
+    k5: Vec<f64>,
+    k6: Vec<f64>,
+    y5: Vec<f64>,
     tmp_phases: Vec<f64>,
 }
 
@@ -28,6 +59,7 @@ impl std::fmt::Debug for UPDEStepper {
             .field("dt", &self.dt)
             .field("n_substeps", &self.n_substeps)
             .field("method", &self.method)
+            .field("last_dt", &self.last_dt)
             .finish_non_exhaustive()
     }
 }
@@ -45,11 +77,17 @@ impl UPDEStepper {
             dt: config.dt,
             n_substeps: config.n_substeps,
             method: config.method,
+            atol: config.atol,
+            rtol: config.rtol,
+            last_dt: config.dt,
             deriv_buf: vec![0.0; n],
             k1: vec![0.0; n],
             k2: vec![0.0; n],
             k3: vec![0.0; n],
             k4: vec![0.0; n],
+            k5: vec![0.0; n],
+            k6: vec![0.0; n],
+            y5: vec![0.0; n],
             tmp_phases: vec![0.0; n],
         })
     }
@@ -110,11 +148,23 @@ impl UPDEStepper {
             ));
         }
 
-        let sub_dt = self.dt / f64::from(self.n_substeps);
-        for _ in 0..self.n_substeps {
-            match self.method {
-                Method::Euler => self.euler_step(phases, omegas, knm, zeta, psi, alpha, sub_dt),
-                Method::RK4 => self.rk4_step(phases, omegas, knm, zeta, psi, alpha, sub_dt),
+        match self.method {
+            Method::RK45 => {
+                self.rk45_step(phases, omegas, knm, zeta, psi, alpha);
+            }
+            _ => {
+                let sub_dt = self.dt / f64::from(self.n_substeps);
+                for _ in 0..self.n_substeps {
+                    match self.method {
+                        Method::Euler => {
+                            self.euler_step(phases, omegas, knm, zeta, psi, alpha, sub_dt);
+                        }
+                        Method::RK4 => {
+                            self.rk4_step(phases, omegas, knm, zeta, psi, alpha, sub_dt);
+                        }
+                        Method::RK45 => unreachable!(),
+                    }
+                }
             }
         }
 
@@ -146,6 +196,12 @@ impl UPDEStepper {
     #[must_use]
     pub fn n(&self) -> usize {
         self.n
+    }
+
+    /// Actual dt used on the last accepted step (relevant for RK45).
+    #[must_use]
+    pub fn last_dt(&self) -> f64 {
+        self.last_dt
     }
 
     #[allow(clippy::needless_range_loop, clippy::too_many_arguments)]
@@ -240,6 +296,116 @@ impl UPDEStepper {
         for i in 0..n {
             phases[i] += dt6 * (self.k1[i] + 2.0 * self.k2[i] + 2.0 * self.k3[i] + self.k4[i]);
         }
+    }
+
+    #[allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+    fn rk45_step(
+        &mut self,
+        phases: &mut [f64],
+        omegas: &[f64],
+        knm: &[f64],
+        zeta: f64,
+        psi: f64,
+        alpha: &[f64],
+    ) {
+        let n = self.n;
+        let max_reject = 3u32;
+        let mut dt = self.last_dt;
+
+        for _ in 0..=max_reject {
+            // k1
+            compute_derivative(n, phases, omegas, knm, zeta, psi, alpha, &mut self.k1);
+
+            // k2: phases + dt * a21 * k1
+            for i in 0..n {
+                self.tmp_phases[i] = phases[i] + dt * dp::A21 * self.k1[i];
+            }
+            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k2);
+
+            // k3: phases + dt * (a31*k1 + a32*k2)
+            for i in 0..n {
+                self.tmp_phases[i] =
+                    phases[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]);
+            }
+            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k3);
+
+            // k4: phases + dt * (a41*k1 + a42*k2 + a43*k3)
+            for i in 0..n {
+                self.tmp_phases[i] = phases[i]
+                    + dt * (dp::A41 * self.k1[i] + dp::A42 * self.k2[i] + dp::A43 * self.k3[i]);
+            }
+            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k4);
+
+            // k5: phases + dt * (a51*k1 + a52*k2 + a53*k3 + a54*k4)
+            for i in 0..n {
+                self.tmp_phases[i] = phases[i]
+                    + dt * (dp::A51 * self.k1[i]
+                        + dp::A52 * self.k2[i]
+                        + dp::A53 * self.k3[i]
+                        + dp::A54 * self.k4[i]);
+            }
+            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k5);
+
+            // k6: phases + dt * (a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5)
+            for i in 0..n {
+                self.tmp_phases[i] = phases[i]
+                    + dt * (dp::A61 * self.k1[i]
+                        + dp::A62 * self.k2[i]
+                        + dp::A63 * self.k3[i]
+                        + dp::A64 * self.k4[i]
+                        + dp::A65 * self.k5[i]);
+            }
+            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k6);
+
+            // 5th-order solution and error estimate
+            let mut err_norm: f64 = 0.0;
+            for i in 0..n {
+                let ks = [
+                    self.k1[i], self.k2[i], self.k3[i],
+                    self.k4[i], self.k5[i], self.k6[i],
+                ];
+                self.y5[i] = phases[i]
+                    + dt * (dp::B5[0] * ks[0]
+                        + dp::B5[2] * ks[2]
+                        + dp::B5[3] * ks[3]
+                        + dp::B5[4] * ks[4]
+                        + dp::B5[5] * ks[5]);
+                let y4 = phases[i]
+                    + dt * (dp::B4[0] * ks[0]
+                        + dp::B4[2] * ks[2]
+                        + dp::B4[3] * ks[3]
+                        + dp::B4[4] * ks[4]
+                        + dp::B4[5] * ks[5]);
+
+                let err_i = (self.y5[i] - y4).abs();
+                let scale = self.atol
+                    + self.rtol * phases[i].abs().max(self.y5[i].abs());
+                let ratio = err_i / scale;
+                if ratio > err_norm {
+                    err_norm = ratio;
+                }
+            }
+
+            if err_norm <= 1.0 {
+                // Accept step
+                let factor = if err_norm > 0.0 {
+                    (0.9 * err_norm.powf(-0.2)).min(5.0)
+                } else {
+                    5.0
+                };
+                self.last_dt = (dt * factor).min(self.dt * 10.0);
+                phases.copy_from_slice(&self.y5[..n]);
+                return;
+            }
+
+            // Reject — shrink dt and retry
+            let factor = (0.9 * err_norm.powf(-0.25)).max(0.2);
+            dt *= factor;
+        }
+
+        // Exhausted retries, accept current result
+        self.last_dt = dt;
+        phases.copy_from_slice(&self.y5[..n]);
     }
 }
 
@@ -362,6 +528,7 @@ mod tests {
             dt: 0.01,
             method: Method::RK4,
             n_substeps: 1,
+            ..IntegrationConfig::default()
         };
         let mut s = UPDEStepper::new(n, config).unwrap();
         let mut phases = vec![0.0; n];
@@ -499,6 +666,7 @@ mod tests {
             dt: total_dt,
             method: Method::RK4,
             n_substeps: 1,
+            ..IntegrationConfig::default()
         };
         let mut s1 = UPDEStepper::new(n, config1).unwrap();
         let mut p1 = vec![0.0; n];
@@ -509,6 +677,7 @@ mod tests {
             dt: total_dt,
             method: Method::RK4,
             n_substeps: 4,
+            ..IntegrationConfig::default()
         };
         let mut s4 = UPDEStepper::new(n, config4).unwrap();
         let mut p4 = vec![0.0; n];

@@ -53,17 +53,20 @@ struct PyUPDEStepper {
 #[pymethods]
 impl PyUPDEStepper {
     #[new]
-    #[pyo3(signature = (n, dt = 0.01, method = "euler", n_substeps = 1))]
-    fn new(n: usize, dt: f64, method: &str, n_substeps: u32) -> PyResult<Self> {
+    #[pyo3(signature = (n, dt = 0.01, method = "euler", n_substeps = 1, atol = 1e-6, rtol = 1e-3))]
+    fn new(n: usize, dt: f64, method: &str, n_substeps: u32, atol: f64, rtol: f64) -> PyResult<Self> {
         let m = match method {
             "euler" => Method::Euler,
             "rk4" => Method::RK4,
+            "rk45" => Method::RK45,
             _ => return Err(PyValueError::new_err(format!("unknown method: {method}"))),
         };
         let config = IntegrationConfig {
             dt,
             method: m,
             n_substeps,
+            atol,
+            rtol,
         };
         let inner = UPDEStepper::new(n, config).map_err(spo_err)?;
         Ok(Self { inner })
@@ -108,6 +111,11 @@ impl PyUPDEStepper {
     #[getter]
     fn n(&self) -> usize {
         self.inner.n()
+    }
+
+    #[getter]
+    fn last_dt(&self) -> f64 {
+        self.inner.last_dt()
     }
 }
 

@@ -91,6 +91,42 @@ def test_rk4_parity(spo):
     np.testing.assert_allclose(py_phases, rust_phases, atol=1e-8)
 
 
+def test_rk45_parity(spo):
+    n = 8
+    rng = np.random.default_rng(7)
+    phases = rng.uniform(0, 2 * np.pi, n)
+    omegas = np.ones(n) + rng.normal(0, 0.1, n)
+    base = 0.3
+    dist = np.abs(np.arange(n)[:, None] - np.arange(n)[None, :]).astype(float)
+    knm = base * np.exp(-0.3 * dist)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+    dt = 0.01
+
+    py_engine = UPDEEngine(n, dt=dt, method="rk45")
+    py_phases = phases.copy()
+    for _ in range(50):
+        py_phases = py_engine.step(py_phases, omegas, knm, 0.0, 0.0, alpha)
+
+    rust = spo.PyUPDEStepper(n, dt=dt, method="rk45")
+    rust_phases = phases.tolist()
+    knm_flat = knm.ravel().tolist()
+    alpha_flat = alpha.ravel().tolist()
+    om_list = omegas.tolist()
+    for _ in range(50):
+        rust_phases = rust.step(
+            rust_phases,
+            om_list,
+            knm_flat,
+            0.0,
+            0.0,
+            alpha_flat,
+        )
+    rust_phases = np.array(rust_phases)
+
+    np.testing.assert_allclose(py_phases, rust_phases, atol=1e-6)
+
+
 def test_order_parameter_parity(spo):
     phases = [0.1, 0.2, 0.15, 0.12]
     r_py, _ = compute_order_parameter(np.array(phases))

@@ -13,6 +13,7 @@ fn bench_euler_step_n64(c: &mut Criterion) {
         dt: 0.001,
         method: Method::Euler,
         n_substeps: 1,
+        ..IntegrationConfig::default()
     };
     let mut stepper = UPDEStepper::new(n, config).unwrap();
     let cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
@@ -36,6 +37,7 @@ fn bench_rk4_step_n64(c: &mut Criterion) {
         dt: 0.001,
         method: Method::RK4,
         n_substeps: 1,
+        ..IntegrationConfig::default()
     };
     let mut stepper = UPDEStepper::new(n, config).unwrap();
     let cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
@@ -70,6 +72,7 @@ fn bench_euler_1000_steps_n64(c: &mut Criterion) {
         dt: 0.001,
         method: Method::Euler,
         n_substeps: 1,
+        ..IntegrationConfig::default()
     };
     let cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
     let omegas: Vec<f64> = (0..n).map(|i| 1.0 + 0.01 * i as f64).collect();
