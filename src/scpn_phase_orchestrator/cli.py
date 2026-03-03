@@ -66,7 +66,8 @@ def validate(binding_spec: str) -> None:
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.option("--steps", default=100, type=int, help="Simulation steps")
 @click.option("--audit", default=None, type=click.Path(), help="Audit log (JSONL)")
-def run(binding_spec: str, steps: int, audit: str | None) -> None:
+@click.option("--seed", default=42, type=int, help="RNG seed")
+def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
     """Run simulation from a binding spec."""
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
@@ -121,7 +122,7 @@ def run(binding_spec: str, steps: int, audit: str | None) -> None:
         if "non_negative" in ct or "nonneg" in ct:
             geo_constraints.append(NonNegativeConstraint())
 
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(seed)
     phases = rng.uniform(0, 2 * np.pi, n_osc)
     omegas = np.array(
         [1.0 + 0.1 * layer.index for layer in spec.layers for _ in layer.oscillator_ids]
@@ -158,6 +159,12 @@ def run(binding_spec: str, steps: int, audit: str | None) -> None:
             sequence=spec.drivers.symbolic["sequence"],
         )
     audit_logger = AuditLogger(audit) if audit else None
+    if audit_logger is not None:
+        audit_logger.log_header(
+            n_oscillators=n_osc,
+            dt=spec.sample_period_s,
+            seed=seed,
+        )
     for step_idx in range(steps):
         if zeta_ttl > 0:
             zeta_ttl -= 1
@@ -179,6 +186,7 @@ def run(binding_spec: str, steps: int, audit: str | None) -> None:
         if geo_constraints:
             eff_knm = project_knm(eff_knm, geo_constraints)
 
+        input_phases = phases
         phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
 
         layer_states = []
@@ -266,7 +274,17 @@ def run(binding_spec: str, steps: int, audit: str | None) -> None:
             )
 
         if audit_logger is not None:
-            audit_logger.log_step(step_idx, upde_state, actions)
+            audit_logger.log_step(
+                step_idx,
+                upde_state,
+                actions,
+                phases=input_phases,
+                omegas=omegas,
+                knm=eff_knm,
+                alpha=eff_alpha,
+                zeta=zeta,
+                psi=psi_target,
+            )
 
     if audit_logger is not None:
         audit_logger.close()
@@ -293,18 +311,31 @@ def run(binding_spec: str, steps: int, audit: str | None) -> None:
 @main.command()
 @click.argument("log_path", type=click.Path(exists=True))
 @click.option("--output", default=None, type=click.Path(), help="Output file")
-def replay(log_path: str, output: str | None) -> None:
+@click.option("--verify", is_flag=True, help="Verify determinism via re-execution")
+def replay(log_path: str, output: str | None, verify: bool) -> None:
     """Replay an audit log and print summary."""
     replay_engine = ReplayEngine(log_path)
     entries = replay_engine.load()
-    step_entries = [e for e in entries if "step" in e]
-    event_entries = [e for e in entries if "event" in e]
-    click.echo(f"Steps logged: {len(step_entries)}")
-    click.echo(f"Events logged: {len(event_entries)}")
-    if step_entries:
-        last = step_entries[-1]
+    step_data = [e for e in entries if "step" in e]
+    event_data = [e for e in entries if "event" in e]
+    click.echo(f"Steps logged: {len(step_data)}")
+    click.echo(f"Events logged: {len(event_data)}")
+    if step_data:
+        last = step_data[-1]
         click.echo(f"Final regime: {last.get('regime', 'unknown')}")
         click.echo(f"Final stability: {last.get('stability', 0.0):.4f}")
+    if verify:
+        header = replay_engine.load_header(entries)
+        if header is None:
+            click.echo("ERROR: no header record in log", err=True)
+            raise SystemExit(1)
+        upde = replay_engine.build_engine(header)
+        passed, n = replay_engine.verify_determinism_chained(upde, entries)
+        if passed:
+            click.echo(f"Determinism verified: {n} transitions OK")
+        else:
+            click.echo(f"Determinism FAILED at transition {n}", err=True)
+            raise SystemExit(1)
 
 
 @main.command()

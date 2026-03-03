@@ -24,8 +24,37 @@ class AuditLogger:
         self._path = Path(path)
         self._fh = self._path.open("a", encoding="utf-8", buffering=1)
 
+    def log_header(
+        self,
+        *,
+        n_oscillators: int,
+        dt: float,
+        method: str = "euler",
+        seed: int | None = None,
+    ) -> None:
+        """Engine configuration record for replay reconstruction."""
+        record: dict = {
+            "header": True,
+            "n_oscillators": n_oscillators,
+            "dt": dt,
+            "method": method,
+        }
+        if seed is not None:
+            record["seed"] = seed
+        self._fh.write(json.dumps(record) + "\n")
+
     def log_step(
-        self, step: int, upde_state: UPDEState, actions: list[ControlAction]
+        self,
+        step: int,
+        upde_state: UPDEState,
+        actions: list[ControlAction],
+        *,
+        phases=None,
+        omegas=None,
+        knm=None,
+        alpha=None,
+        zeta: float = 0.0,
+        psi: float = 0.0,
     ) -> None:
         record = {
             "ts": time.time(),
@@ -44,6 +73,13 @@ class AuditLogger:
                 for a in actions
             ],
         }
+        if phases is not None:
+            record["phases"] = phases.tolist()
+            record["omegas"] = omegas.tolist()
+            record["knm"] = knm.tolist()
+            record["alpha"] = alpha.tolist()
+            record["zeta"] = zeta
+            record["psi_drive"] = psi
         self._fh.write(json.dumps(record) + "\n")
 
     def log_event(self, event_type: str, data: dict) -> None:

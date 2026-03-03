@@ -45,6 +45,56 @@ class ReplayEngine:
             regime_id=step_data.get("regime", "unknown"),
         )
 
+    def load_header(self, entries: list[dict]) -> dict | None:
+        """Extract the header record (engine config) if present."""
+        for entry in entries:
+            if entry.get("header"):
+                return entry
+        return None
+
+    def step_entries(self, entries: list[dict]) -> list[dict]:
+        """Filter to entries with full UPDE state (replayable)."""
+        return [e for e in entries if "phases" in e]
+
+    def build_engine(self, header: dict) -> UPDEEngine:
+        """Construct a UPDEEngine from a header record."""
+        return UPDEEngine(
+            n_oscillators=header["n_oscillators"],
+            dt=header["dt"],
+            method=header.get("method", "euler"),
+        )
+
+    def verify_determinism_chained(
+        self, engine: UPDEEngine, entries: list[dict], atol: float = 1e-6
+    ) -> tuple[bool, int]:
+        """Chained multi-step replay: output of step N must match input of step N+1.
+
+        Returns (passed, n_verified).
+        """
+        replayable = self.step_entries(entries)
+        if len(replayable) < 2:
+            return True, 0
+
+        verified = 0
+        for i in range(len(replayable) - 1):
+            curr = replayable[i]
+            nxt = replayable[i + 1]
+            phases = np.asarray(curr["phases"])
+            omegas = np.asarray(curr["omegas"])
+            knm_arr = np.asarray(curr["knm"])
+            alpha_arr = np.asarray(curr["alpha"])
+            zeta = curr.get("zeta", 0.0)
+            psi_drive = curr.get("psi_drive", 0.0)
+
+            computed = engine.step(phases, omegas, knm_arr, zeta, psi_drive, alpha_arr)
+            logged_next = np.asarray(nxt["phases"])
+
+            if not np.allclose(computed, logged_next, atol=atol):
+                return False, verified
+            verified += 1
+
+        return True, verified
+
     def verify_determinism(self, engine: UPDEEngine, steps: list[dict]) -> bool:
         """Re-run logged steps and compare R values.
 

@@ -13,14 +13,14 @@
 - 21 domainpacks across neuroscience, cardiology, power systems, plasma physics, manufacturing, epidemiology, traffic, quantum, biology, chemistry, robotics, telecom, and more
 - Adapter bridges: FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge
 - QueueWaves: real-time cascade failure detector with Prometheus ingestion, WebSocket streaming, HTML dashboard, webhook alerts
+- Deterministic replay from audit.jsonl with chained phase-vector verification (`spo replay --verify`)
 - spo-kernel Rust FFI: UPDE engine, coupling, imprint, order params, lags (112 tests)
-- 648 Python tests, 112 Rust tests
+- 654 Python tests, 112 Rust tests
 - PhaseExtractor base class for signal intake
 - PyPI package (trusted publisher OIDC), Zenodo DOI, GitHub Pages docs
 
 ## v0.2
 
-- Deterministic replay from audit.jsonl recorded phase trajectories
 - Extended policy DSL with compound triggers and action chains
 - OpenTelemetry trace/metric export for production observability
 

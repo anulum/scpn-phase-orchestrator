@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase-synchronization control theory docs (scope-of-competence, hardware pipeline)
 - Synchronization manifold header image
 - Queuewaves retry-storm demo notebook
+- **Deterministic replay** from audit.jsonl with chained phase-vector verification
+  - `AuditLogger.log_header()` writes engine config (n, dt, method, seed)
+  - `AuditLogger.log_step()` now records full UPDE inputs (phases, omegas, knm, alpha, zeta, psi)
+  - `ReplayEngine.verify_determinism_chained()` replays logged steps and compares output phases
+  - `ReplayEngine.build_engine()` reconstructs UPDEEngine from header record
+  - CLI `spo replay --verify` validates bit-for-bit reproducibility
+  - CLI `spo run --seed` makes initial RNG seed configurable and logged
 
 ### Fixed
 
