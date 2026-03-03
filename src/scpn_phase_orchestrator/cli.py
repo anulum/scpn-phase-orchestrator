@@ -324,7 +324,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
 
     if audit_logger is not None:
         for evt in event_bus.history:
-            audit_logger.log_event(evt.kind, evt.step, evt.detail)
+            audit_logger.log_event(evt.kind, {"step": evt.step, "detail": evt.detail})
         audit_logger.close()
 
     # Final coherence

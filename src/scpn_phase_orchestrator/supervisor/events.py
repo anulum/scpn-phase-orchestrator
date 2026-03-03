@@ -53,7 +53,7 @@ class EventBus:
     def post(self, event: RegimeEvent) -> None:
         self._history.append(event)
         for cb in self._subscribers:
-            cb(event)  # type: ignore[operator]
+            cb(event)
 
     @property
     def history(self) -> list[RegimeEvent]:

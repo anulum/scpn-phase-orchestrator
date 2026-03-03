@@ -8,8 +8,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.supervisor.events import EventBus
 
 __all__ = ["BoundaryState", "BoundaryObserver"]
 
@@ -26,10 +30,10 @@ class BoundaryObserver:
 
     def __init__(self, boundary_defs: list[BoundaryDef]):
         self._defs = boundary_defs
-        self._event_bus = None
+        self._event_bus: EventBus | None = None
         self._step = 0
 
-    def set_event_bus(self, event_bus: object, step_ref: object = None) -> None:
+    def set_event_bus(self, event_bus: EventBus) -> None:
         self._event_bus = event_bus
 
     def observe(
@@ -65,7 +69,7 @@ class BoundaryObserver:
         if state.violations and self._event_bus is not None:
             from scpn_phase_orchestrator.supervisor.events import RegimeEvent
 
-            self._event_bus.post(  # type: ignore[union-attr]
+            self._event_bus.post(
                 RegimeEvent(
                     kind="boundary_breach",
                     step=self._step,
