@@ -1,0 +1,17 @@
+[
+  {"n_osc": 8, "method": "euler", "backend": "python", "us_per_step": 50.0},
+  {"n_osc": 8, "method": "rk4", "backend": "python", "us_per_step": 200.0},
+  {"n_osc": 8, "method": "rk45", "backend": "python", "us_per_step": 300.0},
+  {"n_osc": 16, "method": "euler", "backend": "python", "us_per_step": 80.0},
+  {"n_osc": 16, "method": "rk4", "backend": "python", "us_per_step": 320.0},
+  {"n_osc": 16, "method": "rk45", "backend": "python", "us_per_step": 500.0},
+  {"n_osc": 64, "method": "euler", "backend": "python", "us_per_step": 600.0},
+  {"n_osc": 64, "method": "rk4", "backend": "python", "us_per_step": 2400.0},
+  {"n_osc": 64, "method": "rk45", "backend": "python", "us_per_step": 3800.0},
+  {"n_osc": 256, "method": "euler", "backend": "python", "us_per_step": 8000.0},
+  {"n_osc": 256, "method": "rk4", "backend": "python", "us_per_step": 32000.0},
+  {"n_osc": 256, "method": "rk45", "backend": "python", "us_per_step": 50000.0},
+  {"n_osc": 1024, "method": "euler", "backend": "python", "us_per_step": 120000.0},
+  {"n_osc": 1024, "method": "rk4", "backend": "python", "us_per_step": 480000.0},
+  {"n_osc": 1024, "method": "rk45", "backend": "python", "us_per_step": 750000.0}
+]

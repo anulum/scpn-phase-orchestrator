@@ -26,8 +26,9 @@ htmlcov/
 .ipynb_checkpoints/
 .tox/
 
-# Benchmark artifacts
+# Benchmark artifacts (keep baseline.json tracked)
 bench/*.json
+!bench/baseline.json
 
 # MkDocs
 site/

@@ -190,8 +190,24 @@ jobs:
           restore-keys: cargo-msrv-
       - run: cargo check --workspace --lib --exclude spo-ffi
 
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: python bench/run_benchmarks.py --json > bench/current.json
+      - run: python bench/compare_baseline.py bench/baseline.json bench/current.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: bench/current.json
+
   ci-gate:
-    needs: [lint, typecheck, test, security, rust-check, cargo-audit, rust-msrv, coverage-guard, module-linkage, ffi-test]
+    needs: [lint, typecheck, test, security, rust-check, cargo-audit, rust-msrv, coverage-guard, module-linkage, ffi-test, benchmark]
     runs-on: ubuntu-latest
     steps:
       - run: echo "All checks passed"
