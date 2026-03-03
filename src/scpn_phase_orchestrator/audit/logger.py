@@ -11,6 +11,9 @@ import json
 import time
 from pathlib import Path
 
+import numpy as np
+from numpy.typing import NDArray
+
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
@@ -49,10 +52,10 @@ class AuditLogger:
         upde_state: UPDEState,
         actions: list[ControlAction],
         *,
-        phases=None,
-        omegas=None,
-        knm=None,
-        alpha=None,
+        phases: NDArray[np.floating] | None = None,
+        omegas: NDArray[np.floating] | None = None,
+        knm: NDArray[np.floating] | None = None,
+        alpha: NDArray[np.floating] | None = None,
         zeta: float = 0.0,
         psi: float = 0.0,
     ) -> None:
@@ -74,6 +77,7 @@ class AuditLogger:
             ],
         }
         if phases is not None:
+            assert omegas is not None and knm is not None and alpha is not None
             record["phases"] = phases.tolist()
             record["omegas"] = omegas.tolist()
             record["knm"] = knm.tolist()
