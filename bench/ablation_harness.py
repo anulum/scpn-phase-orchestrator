@@ -39,9 +39,9 @@ def run_trial(n_osc: int, steps: int, base_k: float, zeta: float) -> list[float]
 def ablation_suite(n_osc: int = 16, steps: int = 200):
     """Run ablation variants and print results."""
     configs = {
-        "full":          {"base_k": 0.45, "zeta": 0.1},
-        "no_coupling":   {"base_k": 0.0,  "zeta": 0.1},
-        "no_driver":     {"base_k": 0.45, "zeta": 0.0},
+        "full": {"base_k": 0.45, "zeta": 0.1},
+        "no_coupling": {"base_k": 0.0, "zeta": 0.1},
+        "no_driver": {"base_k": 0.45, "zeta": 0.0},
         "no_coupling_no_driver": {"base_k": 0.0, "zeta": 0.0},
     }
 

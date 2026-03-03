@@ -51,7 +51,7 @@ def _domain_for(filename: str) -> str:
 def load_coverage(path: Path) -> CoverageSummary:
     if not path.exists():
         raise FileNotFoundError(f"Coverage XML not found: {path}")
-    root = ET.parse(path).getroot()
+    root = ET.parse(path).getroot()  # noqa: S314 — input is local CI artifact
 
     line_rate = _validate_percent(
         float(root.get("line-rate", "0.0")) * 100.0, label="line_rate"

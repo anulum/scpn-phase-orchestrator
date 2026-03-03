@@ -1,0 +1,87 @@
+name: metaphysics_demo
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: physical
+    index: 0
+    oscillator_ids: [phys_0, phys_1, phys_2]
+  - name: informational
+    index: 1
+    oscillator_ids: [info_0, info_1]
+  - name: symbolic
+    index: 2
+    oscillator_ids: [sym_0, sym_1]
+
+oscillator_families:
+  body:
+    channel: P
+    extractor_type: physical
+    config: {}
+  signal:
+    channel: I
+    extractor_type: informational
+    config: {}
+  semiotic:
+    channel: S
+    extractor_type: symbolic
+    config: {}
+
+coupling:
+  base_strength: 0.45
+  decay_alpha: 0.3
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.08
+    psi: 0.0
+  informational:
+    zeta: 0.04
+  symbolic:
+    zeta: 0.02
+
+objectives:
+  good_layers: [1, 2]
+  bad_layers: [0]
+  good_weight: 1.0
+  bad_weight: 0.8
+
+boundaries:
+  - name: coherence_floor
+    variable: R
+    lower: 0.1
+    upper: null
+    severity: soft
+  - name: symbolic_ceiling
+    variable: R_2
+    lower: null
+    upper: 0.98
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [-0.5, 0.5]
+  - name: damping_global
+    knob: zeta
+    scope: global
+    limits: [0.0, 0.5]
+  - name: target_phase
+    knob: Psi
+    scope: global
+    limits: [-3.15, 3.15]
+
+imprint_model:
+  decay_rate: 0.01
+  saturation: 2.0
+  modulates: ["K", "alpha"]
+
+geometry_prior:
+  constraint_type: symmetric_non_negative
+  params: {}
+
+policy: policy.yaml

@@ -7,6 +7,7 @@ Simulates Kuramoto oscillators transitioning from random phases to
 phase-locked coherence — the mathematical ground truth of a Phase
 Orchestrator.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,8 +39,12 @@ def generate(output: Path) -> None:
     X, Y = np.meshgrid(x, y)
     Z = np.exp(-0.05 * ((X - WIDTH * 0.7) ** 2 + (Y - HEIGHT * 0.5) ** 2))
     ax.imshow(
-        Z, extent=[0, WIDTH, 0, HEIGHT],
-        origin="lower", cmap="magma", alpha=0.1, aspect="auto",
+        Z,
+        extent=[0, WIDTH, 0, HEIGHT],
+        origin="lower",
+        cmap="magma",
+        alpha=0.1,
+        aspect="auto",
     )
 
     # Synchronized wavefronts: chaotic left → coherent right
@@ -66,16 +71,40 @@ def generate(output: Path) -> None:
         ax.plot(
             [hub[0], hub[0] + 1.2 * np.cos(angle)],
             [hub[1], hub[1] + 1.2 * np.sin(angle)],
-            color="#ffd700", alpha=0.2, lw=0.5,
+            color="#ffd700",
+            alpha=0.2,
+            lw=0.5,
         )
 
     # Title text
-    ax.text(1.0, 5.4, "SCPN-PHASE-ORCHESTRATOR", color="#ffffff",
-            fontsize=32, fontweight="bold", fontfamily="monospace", alpha=0.9)
-    ax.text(1.0, 4.9, "TEMPORAL COHERENCE & PHASE-LOCKING ENGINE", color="#ffd700",
-            fontsize=12, fontfamily="monospace", alpha=0.8)
-    ax.text(1.0, 4.5, "// MODE: KURAMOTO_SYNC_ACTIVE", color="#00ffff",
-            fontsize=10, fontfamily="monospace", alpha=0.5)
+    ax.text(
+        1.0,
+        5.4,
+        "SCPN-PHASE-ORCHESTRATOR",
+        color="#ffffff",
+        fontsize=32,
+        fontweight="bold",
+        fontfamily="monospace",
+        alpha=0.9,
+    )
+    ax.text(
+        1.0,
+        4.9,
+        "TEMPORAL COHERENCE & PHASE-LOCKING ENGINE",
+        color="#ffd700",
+        fontsize=12,
+        fontfamily="monospace",
+        alpha=0.8,
+    )
+    ax.text(
+        1.0,
+        4.5,
+        "// MODE: KURAMOTO_SYNC_ACTIVE",
+        color="#00ffff",
+        fontsize=10,
+        fontfamily="monospace",
+        alpha=0.5,
+    )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, bbox_inches="tight", pad_inches=0)

@@ -14,9 +14,20 @@ import click
 import numpy as np
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
+from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.coupling.geometry_constraints import (
+    NonNegativeConstraint,
+    SymmetryConstraint,
+    project_knm,
+)
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
+from scpn_phase_orchestrator.drivers.psi_informational import InformationalDriver
+from scpn_phase_orchestrator.drivers.psi_physical import PhysicalDriver
+from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
+from scpn_phase_orchestrator.imprint.state import ImprintState
+from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
@@ -53,7 +64,8 @@ def validate(binding_spec: str) -> None:
 @main.command()
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.option("--steps", default=100, type=int, help="Simulation steps")
-def run(binding_spec: str, steps: int) -> None:
+@click.option("--audit", default=None, type=click.Path(), help="Audit log (JSONL)")
+def run(binding_spec: str, steps: int, audit: str | None) -> None:
     """Run simulation from a binding spec."""
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
@@ -92,6 +104,22 @@ def run(binding_spec: str, steps: int) -> None:
         if rules:
             policy_engine = PolicyEngine(rules)
 
+    imprint_model = None
+    imprint_state = None
+    if spec.imprint_model is not None:
+        imprint_model = ImprintModel(
+            spec.imprint_model.decay_rate, spec.imprint_model.saturation
+        )
+        imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+
+    geo_constraints = []
+    if spec.geometry_prior is not None:
+        ct = spec.geometry_prior.constraint_type.lower()
+        if "symmetric" in ct:
+            geo_constraints.append(SymmetryConstraint())
+        if "non_negative" in ct or "nonneg" in ct:
+            geo_constraints.append(NonNegativeConstraint())
+
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, 2 * np.pi, n_osc)
     omegas = np.array(
@@ -105,17 +133,52 @@ def run(binding_spec: str, steps: int) -> None:
         layer_osc_ranges[layer.index] = list(range(osc_idx, osc_idx + n_layer))
         osc_idx += n_layer
 
-    zeta = 0.0
+    # Initialise drive parameters from spec.drivers
+    zeta = max(
+        spec.drivers.physical.get("zeta", 0.0),
+        spec.drivers.informational.get("zeta", 0.0),
+        spec.drivers.symbolic.get("zeta", 0.0),
+    )
     zeta_ttl = 0
-    psi_target = 0.0
-    for _ in range(steps):
+    psi_target = spec.drivers.physical.get("psi", 0.0)
+
+    psi_driver = None
+    if "frequency" in spec.drivers.physical:
+        psi_driver = PhysicalDriver(
+            frequency=spec.drivers.physical["frequency"],
+            amplitude=spec.drivers.physical.get("amplitude", 1.0),
+        )
+    elif "cadence_hz" in spec.drivers.informational:
+        psi_driver = InformationalDriver(
+            cadence_hz=spec.drivers.informational["cadence_hz"],
+        )
+    elif "sequence" in spec.drivers.symbolic:
+        psi_driver = SymbolicDriver(
+            sequence=spec.drivers.symbolic["sequence"],
+        )
+    audit_logger = AuditLogger(audit) if audit else None
+    for step_idx in range(steps):
         if zeta_ttl > 0:
             zeta_ttl -= 1
             if zeta_ttl == 0:
                 zeta = 0.0
-        phases = engine.step(
-            phases, omegas, coupling.knm, zeta, psi_target, coupling.alpha
-        )
+
+        if psi_driver is not None:
+            t = step_idx * spec.sample_period_s
+            if isinstance(psi_driver, SymbolicDriver):
+                psi_target = psi_driver.compute(step_idx)
+            else:
+                psi_target = psi_driver.compute(t)
+
+        eff_knm = coupling.knm
+        eff_alpha = coupling.alpha
+        if imprint_model is not None and imprint_state is not None:
+            eff_knm = imprint_model.modulate_coupling(eff_knm, imprint_state)
+            eff_alpha = imprint_model.modulate_lag(eff_alpha, imprint_state)
+        if geo_constraints:
+            eff_knm = project_knm(eff_knm, geo_constraints)
+
+        phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
 
         layer_states = []
         for layer in spec.layers:
@@ -146,7 +209,10 @@ def run(binding_spec: str, steps: int) -> None:
             stability_proxy=mean_r,
             regime_id=regime_manager.current_regime.value,
         )
-        boundary_state = boundary_observer.observe({"R": upde_state.stability_proxy})
+        obs_values = {"R": upde_state.stability_proxy}
+        for i, ls in enumerate(layer_states):
+            obs_values[f"R_{i}"] = ls.R
+        boundary_state = boundary_observer.observe(obs_values)
         actions = supervisor.decide(upde_state, boundary_state)
 
         if policy_engine is not None:
@@ -185,6 +251,24 @@ def run(binding_spec: str, steps: int) -> None:
             elif act.knob == "Psi":
                 psi_target = act.value
             prev_values[act.knob] = act.value
+
+        if imprint_model is not None and imprint_state is not None:
+            exposure = np.array(
+                [
+                    layer_states[i].R
+                    for i, layer in enumerate(spec.layers)
+                    for _ in layer.oscillator_ids
+                ]
+            )
+            imprint_state = imprint_model.update(
+                imprint_state, exposure, spec.sample_period_s
+            )
+
+        if audit_logger is not None:
+            audit_logger.log_step(step_idx, upde_state, actions)
+
+    if audit_logger is not None:
+        audit_logger.close()
 
     # Final coherence
     good_phases = [
@@ -254,7 +338,7 @@ def scaffold(domain_name: str) -> None:
             "oscillator_families:\n"
             "  default:\n"
             "    channel: P\n"
-            "    extractor_type: hilbert\n"
+            "    extractor_type: physical\n"
             "coupling:\n"
             "  base_strength: 0.45\n"
             "  decay_alpha: 0.3\n"

@@ -25,7 +25,7 @@
     },
     "safety_tier": {
       "type": "string",
-      "enum": ["research", "clinical", "consumer"]
+      "enum": ["research", "clinical", "consumer", "production"]
     },
     "sample_period_s": {
       "type": "number",
@@ -64,7 +64,11 @@
           },
           "extractor_type": {
             "type": "string",
-            "enum": ["physical", "informational", "symbolic"]
+            "enum": [
+              "physical", "informational", "symbolic",
+              "hilbert", "wavelet", "zero_crossing",
+              "event", "ring", "graph"
+            ]
           },
           "config": {
             "type": "object"

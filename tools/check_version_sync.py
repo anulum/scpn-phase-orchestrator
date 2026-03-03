@@ -23,7 +23,11 @@ def main() -> int:
     citation = _extract(ROOT / "CITATION.cff", r"^version:\s*(\S+)")
     cargo = _extract(ROOT / "spo-kernel" / "Cargo.toml", r'^version\s*=\s*"([^"]+)"')
 
-    versions = {"pyproject.toml": pyproject, "CITATION.cff": citation, "Cargo.toml": cargo}
+    versions = {
+        "pyproject.toml": pyproject,
+        "CITATION.cff": citation,
+        "Cargo.toml": cargo,
+    }
     missing = [k for k, v in versions.items() if v is None]
     if missing:
         print(f"FAIL: could not extract version from: {', '.join(missing)}")

@@ -26,7 +26,11 @@ def main():
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
 
     builder = CouplingBuilder()
-    coupling = builder.build(n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha)
+    coupling = builder.build(
+        n_osc,
+        spec.coupling.base_strength,
+        spec.coupling.decay_alpha,
+    )
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
 
     rng = np.random.default_rng(SEED)

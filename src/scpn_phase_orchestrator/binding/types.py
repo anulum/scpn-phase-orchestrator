@@ -23,6 +23,8 @@ __all__ = [
     "VALID_SEVERITIES",
     "VALID_KNOBS",
     "VALID_SAFETY_TIERS",
+    "EXTRACTOR_ALIASES",
+    "VALID_EXTRACTORS",
     "BindingSpec",
 ]
 
@@ -97,6 +99,25 @@ VALID_CHANNELS = frozenset({"P", "I", "S"})
 VALID_SEVERITIES = frozenset({"soft", "hard"})
 VALID_KNOBS = frozenset({"K", "alpha", "zeta", "Psi"})
 VALID_SAFETY_TIERS = frozenset({"research", "clinical", "consumer", "production"})
+
+# Algorithm-level extractor types
+_ALGORITHM_EXTRACTORS = frozenset(
+    {
+        "hilbert",
+        "wavelet",
+        "zero_crossing",
+        "event",
+        "ring",
+        "graph",
+    }
+)
+# Channel-level aliases used in domainpacks → default algorithm
+EXTRACTOR_ALIASES: dict[str, str] = {
+    "physical": "hilbert",
+    "informational": "event",
+    "symbolic": "ring",
+}
+VALID_EXTRACTORS = _ALGORITHM_EXTRACTORS | frozenset(EXTRACTOR_ALIASES)
 
 
 @dataclass

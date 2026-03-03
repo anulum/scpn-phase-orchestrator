@@ -1,0 +1,39 @@
+rules:
+  - name: boost_symbolic_coupling
+    condition:
+      regime: desynchronised
+      metric: R_good
+      op: "<"
+      threshold: 0.4
+    action:
+      knob: K
+      scope: global
+      value: 0.15
+      ttl_s: 1.0
+      justification: "Boost coupling when good layers desynchronised"
+
+  - name: set_target_phase
+    condition:
+      regime: desynchronised
+      metric: R_bad
+      op: ">"
+      threshold: 0.5
+    action:
+      knob: Psi
+      scope: global
+      value: 1.57
+      ttl_s: 2.0
+      justification: "Shift target phase to disrupt bad-layer lock"
+
+  - name: damp_bad_coherence
+    condition:
+      regime: synchronised
+      metric: R_bad
+      op: ">"
+      threshold: 0.6
+    action:
+      knob: zeta
+      scope: global
+      value: 0.2
+      ttl_s: 0.5
+      justification: "Apply damping to suppress unwanted coherence"

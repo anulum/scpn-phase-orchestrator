@@ -26,19 +26,37 @@ def main():
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
 
     builder = CouplingBuilder()
-    coupling = builder.build(n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha)
+    coupling = builder.build(
+        n_osc,
+        spec.coupling.base_strength,
+        spec.coupling.decay_alpha,
+    )
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
 
     rng = np.random.default_rng(SEED)
     phases = rng.uniform(0, TWO_PI, n_osc)
 
     # Natural frequencies spanning biological timescales (normalised)
-    omegas = np.array([
-        10.0, 8.0, 0.5, 0.01,    # cellular: fast
-        1.0, 0.8, 0.3, 5.0,      # tissue
-        1.2, 0.25, 0.05, 0.04,   # organ
-        0.001, 0.01, 0.5, 0.002, # systemic: slow
-    ])
+    omegas = np.array(
+        [
+            10.0,
+            8.0,
+            0.5,
+            0.01,  # cellular: fast
+            1.0,
+            0.8,
+            0.3,
+            5.0,  # tissue
+            1.2,
+            0.25,
+            0.05,
+            0.04,  # organ
+            0.001,
+            0.01,
+            0.5,
+            0.002,  # systemic: slow
+        ]
+    )
 
     for step in range(N_STEPS):
         phases = engine.step(phases, omegas, coupling.knm, 0.1, 0.0, coupling.alpha)

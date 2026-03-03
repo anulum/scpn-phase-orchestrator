@@ -26,7 +26,11 @@ def main():
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
 
     builder = CouplingBuilder()
-    coupling = builder.build(n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha)
+    coupling = builder.build(
+        n_osc,
+        spec.coupling.base_strength,
+        spec.coupling.decay_alpha,
+    )
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
 
     rng = np.random.default_rng(SEED)
@@ -34,8 +38,8 @@ def main():
     omegas = np.array([1.0, 1.1, 0.9, 0.5, 0.2, 0.15])
 
     # Layer masks
-    bad_ids = {0, 1, 2}   # micro layer oscillator indices
-    good_ids = {4, 5}     # macro layer oscillator indices
+    bad_ids = {0, 1, 2}  # micro layer oscillator indices
+    good_ids = {4, 5}  # macro layer oscillator indices
 
     for step in range(N_STEPS):
         phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
