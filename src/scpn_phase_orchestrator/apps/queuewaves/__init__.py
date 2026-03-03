@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 __all__ = [
     "QueueWavesConfig",
     "ConfigCompiler",
@@ -17,32 +19,27 @@ __all__ = [
     "WebhookAlerter",
 ]
 
+_MODULES = {
+    "QueueWavesConfig": "config",
+    "ConfigCompiler": "config",
+    "MetricBuffer": "collector",
+    "PrometheusCollector": "collector",
+    "PhaseComputePipeline": "pipeline",
+    "PipelineSnapshot": "pipeline",
+    "AnomalyDetector": "detector",
+    "Anomaly": "detector",
+    "WebhookAlerter": "alerter",
+}
 
-def __getattr__(name: str):  # noqa: C901
+
+def __getattr__(name: str) -> Any:
     """Lazy imports — avoid pulling in fastapi/httpx at package level."""
-    _config = {"QueueWavesConfig", "ConfigCompiler"}
-    _collect = {"MetricBuffer", "PrometheusCollector"}
-    _pipe = {"PhaseComputePipeline", "PipelineSnapshot"}
-    _detect = {"AnomalyDetector", "Anomaly"}
+    mod_name = _MODULES.get(name)
+    if mod_name is not None:
+        import importlib
 
-    if name in _config:
-        from scpn_phase_orchestrator.apps.queuewaves import config as _m
-
-        return getattr(_m, name)
-    if name in _collect:
-        from scpn_phase_orchestrator.apps.queuewaves import collector as _m
-
-        return getattr(_m, name)
-    if name in _pipe:
-        from scpn_phase_orchestrator.apps.queuewaves import pipeline as _m
-
-        return getattr(_m, name)
-    if name in _detect:
-        from scpn_phase_orchestrator.apps.queuewaves import detector as _m
-
-        return getattr(_m, name)
-    if name == "WebhookAlerter":
-        from scpn_phase_orchestrator.apps.queuewaves import alerter
-
-        return alerter.WebhookAlerter
+        mod = importlib.import_module(
+            f"scpn_phase_orchestrator.apps.queuewaves.{mod_name}"
+        )
+        return getattr(mod, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
