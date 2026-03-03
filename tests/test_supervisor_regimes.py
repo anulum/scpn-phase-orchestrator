@@ -79,7 +79,9 @@ def test_recovery_path_from_critical():
 def test_empty_layers_evaluates_critical():
     rm = RegimeManager()
     empty = UPDEState(
-        layers=[], cross_layer_alignment=np.zeros((0, 0)),
-        stability_proxy=0.0, regime_id="test",
+        layers=[],
+        cross_layer_alignment=np.zeros((0, 0)),
+        stability_proxy=0.0,
+        regime_id="test",
     )
     assert rm.evaluate(empty, _NO_VIOLATIONS) == Regime.CRITICAL

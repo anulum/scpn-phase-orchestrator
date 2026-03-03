@@ -54,9 +54,13 @@ def test_non_mapping_top_level_raises(tmp_path):
 
 def test_missing_layer_name_raises(tmp_path):
     import yaml
+
     data = {
-        "name": "test", "version": "1.0.0", "safety_tier": "research",
-        "sample_period_s": 0.01, "control_period_s": 0.1,
+        "name": "test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.1,
         "layers": [{"index": 0}],  # missing "name"
         "oscillator_families": {},
         "coupling": {"base_strength": 0.5, "decay_alpha": 0.3},
@@ -71,9 +75,13 @@ def test_missing_layer_name_raises(tmp_path):
 
 def test_valid_minimal_spec_loads(tmp_path):
     import yaml
+
     data = {
-        "name": "minimal", "version": "1.0.0", "safety_tier": "research",
-        "sample_period_s": 0.01, "control_period_s": 0.1,
+        "name": "minimal",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.1,
         "layers": [{"name": "L0", "index": 0}],
         "oscillator_families": {"p": {"channel": "P", "extractor_type": "hilbert"}},
         "coupling": {"base_strength": 0.5, "decay_alpha": 0.3},

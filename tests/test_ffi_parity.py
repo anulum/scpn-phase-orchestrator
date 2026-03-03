@@ -43,8 +43,12 @@ def test_euler_parity(spo):
     alpha_flat = alpha.ravel().tolist()
     rust_result = np.array(
         rust.step(
-            phases.tolist(), omegas.tolist(), knm_flat,
-            0.0, 0.0, alpha_flat,
+            phases.tolist(),
+            omegas.tolist(),
+            knm_flat,
+            0.0,
+            0.0,
+            alpha_flat,
         )
     )
 
@@ -57,9 +61,7 @@ def test_rk4_parity(spo):
     phases = rng.uniform(0, 2 * np.pi, n)
     omegas = np.ones(n) + rng.normal(0, 0.1, n)
     base = 0.3
-    dist = np.abs(
-        np.arange(n)[:, None] - np.arange(n)[None, :]
-    ).astype(float)
+    dist = np.abs(np.arange(n)[:, None] - np.arange(n)[None, :]).astype(float)
     knm = base * np.exp(-0.3 * dist)
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
@@ -77,7 +79,12 @@ def test_rk4_parity(spo):
     om_list = omegas.tolist()
     for _ in range(50):
         rust_phases = rust.step(
-            rust_phases, om_list, knm_flat, 0.0, 0.0, alpha_flat,
+            rust_phases,
+            om_list,
+            knm_flat,
+            0.0,
+            0.0,
+            alpha_flat,
         )
     rust_phases = np.array(rust_phases)
 
