@@ -1,0 +1,59 @@
+name: quantum_simulation
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: qubit_register
+    index: 0
+    oscillator_ids: [q0, q1, q2, q3]
+  - name: logical_coherence
+    index: 1
+    oscillator_ids: [log0, log1, log2, log3]
+
+oscillator_families:
+  quantum_phase:
+    channel: P
+    extractor_type: physical
+    config: {}
+  entanglement_event:
+    channel: I
+    extractor_type: informational
+    config: {}
+
+coupling:
+  base_strength: 0.40
+  decay_alpha: 0.25
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.0
+    psi: 0.0
+  informational:
+    zeta: 0.0
+  symbolic: {}
+
+objectives:
+  good_layers: [1]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: fidelity_floor
+    variable: fidelity
+    lower: 0.5
+    upper: null
+    severity: hard
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: entrainment
+    knob: zeta
+    scope: global
+    limits: [0.0, 1.0]

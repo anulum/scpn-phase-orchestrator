@@ -1,0 +1,26 @@
+rules:
+  - name: suppress_elm_storm
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 3
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: alpha
+      scope: layer_0
+      value: 0.4
+      ttl_s: 5.0
+
+  - name: restore_transport_barrier
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 4
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.2
+      ttl_s: 10.0

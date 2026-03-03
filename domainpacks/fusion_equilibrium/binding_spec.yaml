@@ -1,0 +1,90 @@
+name: fusion_equilibrium
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.001
+control_period_s: 0.01
+
+layers:
+  - name: equilibrium
+    index: 0
+    oscillator_ids: [eq_q, eq_psi]
+  - name: stability
+    index: 1
+    oscillator_ids: [stab_beta, stab_mhd]
+  - name: transport
+    index: 2
+    oscillator_ids: [tr_tau, tr_chi]
+  - name: events
+    index: 3
+    oscillator_ids: [ev_saw, ev_elm]
+  - name: boundary
+    index: 4
+    oscillator_ids: [bnd_sep, bnd_wall]
+  - name: actuators
+    index: 5
+    oscillator_ids: [act_nbi, act_eccd]
+
+oscillator_families:
+  equilibrium_field:
+    channel: P
+    extractor_type: physical
+    config: {}
+  mhd_event:
+    channel: I
+    extractor_type: informational
+    config: {}
+  stability_state:
+    channel: S
+    extractor_type: symbolic
+    config: {}
+
+coupling:
+  base_strength: 0.40
+  decay_alpha: 0.35
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  good_layers: [0, 2, 4]
+  bad_layers: [3]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  - name: q_min
+    variable: q_min
+    lower: 1.0
+    upper: null
+    severity: hard
+  - name: beta_n_limit
+    variable: beta_n
+    lower: null
+    upper: 2.8
+    severity: hard
+  - name: tau_e_ratio
+    variable: tau_e_ratio
+    lower: 0.5
+    upper: null
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: entrainment
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+
+imprint_model:
+  decay_rate: 0.005
+  saturation: 2.0
+  modulates: ["K"]

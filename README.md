@@ -79,6 +79,23 @@ and is built from source via `maturin develop`.
 | `geometry_walk` | Graph systems | Random-walk phase coupling |
 | `bio_stub` | Biology | SCPN-compatible oscillator template |
 | `manufacturing_spc` | Manufacturing | Statistical process control (3 layers, 9 oscillators) |
+| `metaphysics_demo` | P/I/S showcase | Imprint + geometry ablation (3 layers, 7 oscillators) |
+| `quantum_simulation` | Quantum computing | Qubit register phase coupling (2 layers, 8 oscillators) |
+| `plasma_control` | Tokamak plasma | MHD/transport multi-scale control (8 layers, 16 oscillators) |
+| `fusion_equilibrium` | Fusion equilibrium | Grad-Shafranov observable mapping (6 layers, 12 oscillators) |
+
+### Adding a Domain
+
+1. Create `domainpacks/<name>/binding_spec.yaml` declaring layers,
+   oscillator families, coupling, drivers, objectives, and boundaries.
+2. Optionally add `policy.yaml` for declarative supervisor rules.
+3. Validate: `spo validate domainpacks/<name>/binding_spec.yaml`
+4. Run: `spo run domainpacks/<name>/binding_spec.yaml --steps 1000`
+
+See [`metaphysics_demo`](domainpacks/metaphysics_demo/) for a full
+example exercising all three channels, imprint modulation, geometry
+projection, and policy-driven control.  Spec format reference:
+[binding_spec.schema.json](docs/specs/binding_spec.schema.json).
 
 ## Development
 

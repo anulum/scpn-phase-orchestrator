@@ -39,6 +39,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+quantum = ["scpn-quantum-control>=0.1.0"]
+plasma = ["scpn-control>=0.1.0"]
+fusion = ["scpn-fusion-core>=3.9.0"]
+scpn-all = [
+    "scpn-quantum-control>=0.1.0",
+    "scpn-control>=0.1.0",
+    "scpn-fusion-core>=3.9.0",
+]
 plot = ["matplotlib>=3.7"]
 dev = [
     "pytest>=7.4",
