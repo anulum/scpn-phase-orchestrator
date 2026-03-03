@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-04
+
+### Added
+
+- **Petri net regime FSM** — `PetriNet`, `Place`, `Arc`, `Transition`, `Marking`, `Guard` for multi-phase protocol sequencing
+- **`PetriNetAdapter`** — maps Petri net markings to `Regime` values with highest-severity-wins priority
+- **`ProtocolNetSpec`** — binding spec `protocol_net:` key for declarative protocol sequencing in YAML
+- **Event-driven transitions** — `EventBus` + `RegimeEvent` pub/sub system with bounded history
+- **`RegimeManager.force_transition()`** — bypasses cooldown and hysteresis hold
+- **`RegimeManager.transition_history`** — deque of (step, prev, new) tuples (maxlen=100)
+- **`hysteresis_hold_steps`** — consecutive-step requirement for soft downward transitions
+- **`BoundaryObserver` event wiring** — posts `boundary_breach` events to EventBus
+- **SNN controller bridge** (`SNNControllerBridge`) — pure-numpy LIF rate model + Nengo/Lava optional backends
+- `nengo` and `lava` optional dependency groups
+- Event kinds: `boundary_breach`, `r_threshold`, `regime_transition`, `manual`, `petri_transition`
+- CLI wires EventBus, BoundaryObserver events, and Petri net when binding spec declares `protocol_net:`
+- Rust `RegimeManager.force_transition()` and `transition_log` for FFI contract parity
+- ~90 new tests across 5 new test files
+
+### Changed
+
+- `SupervisorPolicy` accepts optional `petri_adapter` argument; when present, `decide()` delegates regime to Petri net
+- `BoundaryObserver.observe()` accepts optional `step` kwarg for event attribution
+- `RegimeManager` constructor accepts `event_bus` and `hysteresis_hold_steps` params
+- `adapters/__init__.py` exports `SNNControllerBridge`
+
 ## [0.2.0] - 2026-03-04
 
 ### Added
@@ -150,7 +176,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/anulum/scpn-phase-orchestrator/releases/tag/v0.1.0

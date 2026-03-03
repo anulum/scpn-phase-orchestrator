@@ -30,6 +30,16 @@ from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.supervisor.events import EventBus
+from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
+from scpn_phase_orchestrator.supervisor.petri_net import (
+    Arc,
+    Marking,
+    PetriNet,
+    Place,
+    Transition,
+    parse_guard,
+)
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyEngine,
@@ -86,9 +96,35 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
         n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha
     )
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
+    event_bus = EventBus()
     boundary_observer = BoundaryObserver(spec.boundaries)
-    regime_manager = RegimeManager()
-    supervisor = SupervisorPolicy(regime_manager)
+    boundary_observer.set_event_bus(event_bus)
+    regime_manager = RegimeManager(event_bus=event_bus)
+
+    petri_adapter: PetriNetAdapter | None = None
+    if spec.protocol_net is not None:
+        pn = spec.protocol_net
+        places = [Place(name) for name in pn.places]
+        transitions = []
+        for ts in pn.transitions:
+            guard = parse_guard(ts.guard) if ts.guard else None
+            transitions.append(
+                Transition(
+                    name=ts.name,
+                    inputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.inputs],
+                    outputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.outputs],
+                    guard=guard,
+                )
+            )
+        net = PetriNet(places, transitions)
+        petri_adapter = PetriNetAdapter(
+            net,
+            Marking(tokens=dict(pn.initial)),
+            pn.place_regime,
+            event_bus=event_bus,
+        )
+
+    supervisor = SupervisorPolicy(regime_manager, petri_adapter=petri_adapter)
 
     # ActionProjector — clip outputs to safe bounds
     projector = ActionProjector(
@@ -221,8 +257,8 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
         obs_values = {"R": upde_state.stability_proxy}
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
-        boundary_state = boundary_observer.observe(obs_values)
-        actions = supervisor.decide(upde_state, boundary_state)
+        boundary_state = boundary_observer.observe(obs_values, step=step_idx)
+        actions = supervisor.decide(upde_state, boundary_state, petri_ctx=obs_values)
 
         if policy_engine is not None:
             actions.extend(
@@ -287,6 +323,8 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             )
 
     if audit_logger is not None:
+        for evt in event_bus.history:
+            audit_logger.log_event(evt.kind, evt.step, evt.detail)
         audit_logger.close()
 
     # Final coherence

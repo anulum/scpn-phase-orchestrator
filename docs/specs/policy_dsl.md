@@ -137,8 +137,54 @@ policy_engine = PolicyEngine(rules)
 actions = policy_engine.evaluate(regime, upde_state, good_layers, bad_layers)
 ```
 
+## Protocol Net (v0.3)
+
+The binding spec supports an optional `protocol_net:` key for Petri net
+regime sequencing.  When present, `SupervisorPolicy.decide()` delegates
+regime evaluation to `PetriNetAdapter` instead of `RegimeManager.evaluate()`.
+
+```yaml
+protocol_net:
+  places: [warmup, nominal, cooldown, done]
+  initial: {warmup: 1}
+  place_regime: {warmup: NOMINAL, nominal: NOMINAL, cooldown: RECOVERY, done: NOMINAL}
+  transitions:
+    - name: start
+      inputs: [{place: warmup, weight: 1}]
+      outputs: [{place: nominal, weight: 1}]
+      guard: "stability_proxy > 0.6"
+    - name: wind_down
+      inputs: [{place: nominal, weight: 1}]
+      outputs: [{place: cooldown, weight: 1}]
+      guard: "R_0 < 0.3"
+    - name: finish
+      inputs: [{place: cooldown, weight: 1}]
+      outputs: [{place: done, weight: 1}]
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `places` | list[str] | Place names in the net |
+| `initial` | dict[str, int] | Initial token marking |
+| `place_regime` | dict[str, str] | Maps each place to a Regime |
+| `transitions[].name` | str | Transition identifier |
+| `transitions[].inputs` | list[{place, weight}] | Input arcs |
+| `transitions[].outputs` | list[{place, weight}] | Output arcs |
+| `transitions[].guard` | str \| null | Guard expression: `"metric op threshold"` |
+
+Guard syntax uses the same operators as policy conditions: `>`, `>=`, `<`,
+`<=`, `==`.  Metrics are the same flat dict keys passed to policy rules
+(`R`, `R_0`..`R_n`, `stability_proxy`).
+
+When multiple places are marked, the highest-severity regime wins
+(CRITICAL > RECOVERY > DEGRADED > NOMINAL).
+
 ## References
 
 Implementation: `src/scpn_phase_orchestrator/supervisor/policy_rules.py`.
 The hardcoded default policy: `src/scpn_phase_orchestrator/supervisor/policy.py`.
+Petri net: `src/scpn_phase_orchestrator/supervisor/petri_net.py`.
+Petri adapter: `src/scpn_phase_orchestrator/supervisor/petri_adapter.py`.
 Threshold values used in example rules are empirical — see [ASSUMPTIONS.md](../ASSUMPTIONS.md).

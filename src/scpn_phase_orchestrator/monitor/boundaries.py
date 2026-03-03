@@ -26,8 +26,17 @@ class BoundaryObserver:
 
     def __init__(self, boundary_defs: list[BoundaryDef]):
         self._defs = boundary_defs
+        self._event_bus = None
+        self._step = 0
 
-    def observe(self, values: dict[str, float]) -> BoundaryState:
+    def set_event_bus(self, event_bus: object, step_ref: object = None) -> None:
+        self._event_bus = event_bus
+
+    def observe(
+        self, values: dict[str, float], *, step: int | None = None
+    ) -> BoundaryState:
+        if step is not None:
+            self._step = step
         state = BoundaryState()
         for bdef in self._defs:
             val = values.get(bdef.variable)
@@ -52,5 +61,16 @@ class BoundaryObserver:
                 state.soft_violations.append(msg)
             else:
                 state.hard_violations.append(msg)
+
+        if state.violations and self._event_bus is not None:
+            from scpn_phase_orchestrator.supervisor.events import RegimeEvent
+
+            self._event_bus.post(  # type: ignore[union-attr]
+                RegimeEvent(
+                    kind="boundary_breach",
+                    step=self._step,
+                    detail="; ".join(state.violations),
+                )
+            )
 
         return state

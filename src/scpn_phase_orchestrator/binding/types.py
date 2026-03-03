@@ -19,6 +19,7 @@ __all__ = [
     "ActuatorMapping",
     "ImprintSpec",
     "GeometrySpec",
+    "ProtocolNetSpec",
     "VALID_CHANNELS",
     "VALID_SEVERITIES",
     "VALID_KNOBS",
@@ -95,6 +96,22 @@ class GeometrySpec:
     params: dict
 
 
+@dataclass(frozen=True)
+class ProtocolTransitionSpec:
+    name: str
+    inputs: list[dict]
+    outputs: list[dict]
+    guard: str | None = None
+
+
+@dataclass(frozen=True)
+class ProtocolNetSpec:
+    places: list[str]
+    initial: dict[str, int]
+    place_regime: dict[str, str]
+    transitions: list[ProtocolTransitionSpec]
+
+
 VALID_CHANNELS = frozenset({"P", "I", "S"})
 VALID_SEVERITIES = frozenset({"soft", "hard"})
 VALID_KNOBS = frozenset({"K", "alpha", "zeta", "Psi"})
@@ -136,3 +153,4 @@ class BindingSpec:
     actuators: list[ActuatorMapping]
     imprint_model: ImprintSpec | None = None
     geometry_prior: GeometrySpec | None = None
+    protocol_net: ProtocolNetSpec | None = None

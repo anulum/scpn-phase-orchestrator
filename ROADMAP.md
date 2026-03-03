@@ -27,11 +27,13 @@
 - OpenTelemetry trace/metric export for production observability (`OTelExporter`)
 - Pre-commit hook for version consistency
 
-## v0.3
+## v0.3 (released)
 
-- Petri net regime FSM for multi-phase protocol sequencing
-- SNN controller bridge (Nengo/Lava backends)
-- Event-driven mode transitions with hysteresis
+- Petri net regime FSM for multi-phase protocol sequencing (`PetriNet`, `PetriNetAdapter`, `ProtocolNetSpec`)
+- SNN controller bridge (`SNNControllerBridge`) with Nengo/Lava optional backends
+- Event-driven mode transitions with `EventBus`, `RegimeEvent`, `force_transition()`, `hysteresis_hold_steps`
+- Rust `force_transition()` + `transition_log` for FFI parity
+- ~90 new tests (total ~800)
 
 ## v0.4
 

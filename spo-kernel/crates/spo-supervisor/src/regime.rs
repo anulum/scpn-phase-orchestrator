@@ -14,6 +14,7 @@ pub struct RegimeManager {
     cooldown_steps: u64,
     step_counter: u64,
     last_transition: u64,
+    pub transition_log: Vec<(u64, Regime, Regime)>,
 }
 
 impl RegimeManager {
@@ -25,6 +26,7 @@ impl RegimeManager {
             cooldown_steps,
             step_counter: 0,
             last_transition: 0,
+            transition_log: Vec::new(),
         }
     }
 
@@ -77,9 +79,24 @@ impl RegimeManager {
             return self.current;
         }
 
+        let prev = self.current;
         self.last_transition = self.step_counter;
         self.current = proposed;
+        self.transition_log.push((self.step_counter, prev, proposed));
         proposed
+    }
+
+    /// Bypass cooldown and hysteresis — used by event-driven triggers.
+    pub fn force_transition(&mut self, regime: Regime) -> Regime {
+        self.step_counter += 1;
+        if regime == self.current {
+            return self.current;
+        }
+        let prev = self.current;
+        self.last_transition = self.step_counter;
+        self.current = regime;
+        self.transition_log.push((self.step_counter, prev, regime));
+        regime
     }
 
     #[must_use]

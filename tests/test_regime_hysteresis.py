@@ -10,6 +10,7 @@ from __future__ import annotations
 import numpy as np
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
@@ -33,6 +34,9 @@ def _hard_violation():
         violations=["R below floor"],
         hard_violations=["R below floor"],
     )
+
+
+# --- original tests ---
 
 
 def test_nominal_when_r_high():
@@ -81,7 +85,6 @@ def test_always_escalate_to_critical():
 def test_recovery_when_current_is_critical():
     mgr = RegimeManager(cooldown_steps=0)
     mgr._current = Regime.CRITICAL
-    # R in [R_CRITICAL, R_DEGRADED) → Recovery
     state = _make_state([0.45, 0.50])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.RECOVERY
@@ -90,7 +93,6 @@ def test_recovery_when_current_is_critical():
 def test_critical_to_nominal_when_r_exceeds_band():
     mgr = RegimeManager(cooldown_steps=0)
     mgr._current = Regime.CRITICAL
-    # R well above R_DEGRADED + hysteresis → Nominal
     state = _make_state([0.7, 0.75])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.NOMINAL
@@ -101,3 +103,84 @@ def test_mean_r_empty_layers():
     state = _make_state([])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.CRITICAL
+
+
+# --- v0.3 event bus tests ---
+
+
+def test_transition_emits_event():
+    bus = EventBus()
+    mgr = RegimeManager(cooldown_steps=0, event_bus=bus)
+    mgr.transition(Regime.DEGRADED)
+    assert bus.count == 1
+    e = bus.history[0]
+    assert e.kind == "regime_transition"
+    assert "nominal->degraded" in e.detail
+
+
+def test_no_event_on_same_regime():
+    bus = EventBus()
+    mgr = RegimeManager(cooldown_steps=0, event_bus=bus)
+    mgr.transition(Regime.NOMINAL)
+    assert bus.count == 0
+
+
+def test_force_transition_bypasses_cooldown():
+    bus = EventBus()
+    mgr = RegimeManager(cooldown_steps=100, event_bus=bus)
+    mgr.transition(Regime.DEGRADED)
+    result = mgr.force_transition(Regime.NOMINAL)
+    assert result == Regime.NOMINAL
+    assert bus.count == 2
+
+
+def test_force_transition_same_regime_noop():
+    mgr = RegimeManager(cooldown_steps=0)
+    result = mgr.force_transition(Regime.NOMINAL)
+    assert result == Regime.NOMINAL
+    assert len(mgr.transition_history) == 0
+
+
+def test_transition_history_records():
+    mgr = RegimeManager(cooldown_steps=0)
+    mgr.transition(Regime.DEGRADED)
+    mgr.transition(Regime.CRITICAL)
+    assert len(mgr.transition_history) == 2
+    step, prev, new = mgr.transition_history[0]
+    assert prev == Regime.NOMINAL
+    assert new == Regime.DEGRADED
+
+
+def test_transition_history_bounded():
+    mgr = RegimeManager(cooldown_steps=0)
+    for _ in range(150):
+        mgr.transition(Regime.DEGRADED)
+        mgr.transition(Regime.NOMINAL)
+    assert len(mgr.transition_history) == 100
+
+
+def test_hysteresis_hold_blocks_downward():
+    mgr = RegimeManager(cooldown_steps=0, hysteresis_hold_steps=3)
+    # First downward attempt
+    result = mgr.transition(Regime.DEGRADED)
+    assert result == Regime.NOMINAL
+    # Second
+    result = mgr.transition(Regime.DEGRADED)
+    assert result == Regime.NOMINAL
+    # Third — meets threshold, transitions
+    result = mgr.transition(Regime.DEGRADED)
+    assert result == Regime.DEGRADED
+
+
+def test_hysteresis_hold_reset_on_same():
+    mgr = RegimeManager(cooldown_steps=0, hysteresis_hold_steps=3)
+    mgr.transition(Regime.DEGRADED)  # streak=1
+    mgr.transition(Regime.NOMINAL)  # same → resets streak
+    mgr.transition(Regime.DEGRADED)  # streak=1 again
+    assert mgr.current_regime == Regime.NOMINAL
+
+
+def test_critical_bypasses_hysteresis_hold():
+    mgr = RegimeManager(cooldown_steps=0, hysteresis_hold_steps=100)
+    result = mgr.transition(Regime.CRITICAL)
+    assert result == Regime.CRITICAL

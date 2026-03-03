@@ -22,6 +22,8 @@ from scpn_phase_orchestrator.binding.types import (
     ImprintSpec,
     ObjectivePartition,
     OscillatorFamily,
+    ProtocolNetSpec,
+    ProtocolTransitionSpec,
 )
 
 __all__ = ["load_binding_spec"]
@@ -146,6 +148,26 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
             params=geo_data.get("params", {}),
         )
 
+    pnet_data = data.get("protocol_net")
+    protocol_net = None
+    if pnet_data:
+        pnet_transitions = []
+        for t in _require(pnet_data, "transitions", "protocol_net"):
+            pnet_transitions.append(
+                ProtocolTransitionSpec(
+                    name=_require(t, "name", "protocol_net.transitions[]"),
+                    inputs=t.get("inputs", []),
+                    outputs=t.get("outputs", []),
+                    guard=t.get("guard"),
+                )
+            )
+        protocol_net = ProtocolNetSpec(
+            places=_require(pnet_data, "places", "protocol_net"),
+            initial=_require(pnet_data, "initial", "protocol_net"),
+            place_regime=pnet_data.get("place_regime", {}),
+            transitions=pnet_transitions,
+        )
+
     return BindingSpec(
         name=_require(data, "name", "root"),
         version=_require(data, "version", "root"),
@@ -161,4 +183,5 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         actuators=actuators,
         imprint_model=imprint,
         geometry_prior=geometry,
+        protocol_net=protocol_net,
     )

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
@@ -24,20 +25,28 @@ _RESTORE_FRACTION = 0.5
 class SupervisorPolicy:
     """Decide control actions based on regime and system state.
 
-    Default policy:
-        NOMINAL  -> no-op
-        DEGRADED -> increase global coupling K
-        CRITICAL -> increase damping zeta, reduce coupling on worst layers
-        RECOVERY -> gradual restore toward nominal parameters
+    When *petri_adapter* is provided, regime is derived from the Petri net
+    marking instead of RegimeManager.evaluate().
     """
 
-    def __init__(self, regime_manager: RegimeManager):
+    def __init__(
+        self,
+        regime_manager: RegimeManager,
+        petri_adapter: PetriNetAdapter | None = None,
+    ):
         self._regime_manager = regime_manager
+        self._petri_adapter = petri_adapter
 
     def decide(
-        self, upde_state: UPDEState, boundary_state: BoundaryState
+        self,
+        upde_state: UPDEState,
+        boundary_state: BoundaryState,
+        petri_ctx: dict[str, float] | None = None,
     ) -> list[ControlAction]:
-        proposed = self._regime_manager.evaluate(upde_state, boundary_state)
+        if self._petri_adapter is not None and petri_ctx is not None:
+            proposed = self._petri_adapter.step(petri_ctx)
+        else:
+            proposed = self._regime_manager.evaluate(upde_state, boundary_state)
         regime = self._regime_manager.transition(proposed)
 
         if regime == Regime.NOMINAL:
