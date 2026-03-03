@@ -21,7 +21,9 @@ venv/
 .pytest_cache/
 .hypothesis/
 .coverage
+coverage*.xml
 htmlcov/
+.ipynb_checkpoints/
 .tox/
 
 # Benchmark artifacts

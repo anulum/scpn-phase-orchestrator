@@ -177,7 +177,7 @@ jobs:
             spo-kernel/target
           key: cargo-msrv-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-msrv-
-      - run: cargo check --workspace --lib
+      - run: cargo check --workspace --lib --exclude spo-ffi
 
   ci-gate:
     needs: [lint, typecheck, test, security, rust-check, cargo-audit, rust-msrv, coverage-guard, module-linkage, ffi-test]

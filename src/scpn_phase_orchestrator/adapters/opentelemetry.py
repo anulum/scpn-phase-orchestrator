@@ -7,8 +7,6 @@
 
 from __future__ import annotations
 
-__all__ = ["OTelAdapter"]
-
 
 class OTelAdapter:
     """Extract phase-relevant events from OpenTelemetry span data."""

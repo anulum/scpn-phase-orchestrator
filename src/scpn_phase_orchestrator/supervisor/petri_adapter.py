@@ -7,8 +7,6 @@
 
 from __future__ import annotations
 
-__all__ = ["PetriNetAdapter"]
-
 
 class PetriNetAdapter:
     """Adapter for Petri net regime FSM integration.
@@ -19,5 +17,5 @@ class PetriNetAdapter:
         - returns the active Regime after firing
     """
 
-    def __init__(self) -> None:
+    def fire(self, state: object) -> object:
         raise NotImplementedError("Petri net FSM planned for v0.4 (see ROADMAP.md)")
