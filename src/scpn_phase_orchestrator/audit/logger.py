@@ -77,7 +77,9 @@ class AuditLogger:
             ],
         }
         if phases is not None:
-            assert omegas is not None and knm is not None and alpha is not None
+            if omegas is None or knm is None or alpha is None:
+                msg = "omegas, knm, alpha required when phases is provided"
+                raise ValueError(msg)
             record["phases"] = phases.tolist()
             record["omegas"] = omegas.tolist()
             record["knm"] = knm.tolist()
