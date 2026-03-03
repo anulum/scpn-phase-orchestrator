@@ -57,7 +57,7 @@ class AuditLogger:
         knm: NDArray[np.floating] | None = None,
         alpha: NDArray[np.floating] | None = None,
         zeta: float = 0.0,
-        psi: float = 0.0,
+        psi_drive: float = 0.0,
     ) -> None:
         record = {
             "ts": time.time(),
@@ -85,7 +85,7 @@ class AuditLogger:
             record["knm"] = knm.tolist()
             record["alpha"] = alpha.tolist()
             record["zeta"] = zeta
-            record["psi_drive"] = psi
+            record["psi_drive"] = psi_drive
         self._fh.write(json.dumps(record) + "\n")
 
     def log_event(self, event_type: str, data: dict) -> None:

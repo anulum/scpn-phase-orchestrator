@@ -283,7 +283,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                 knm=eff_knm,
                 alpha=eff_alpha,
                 zeta=zeta,
-                psi=psi_target,
+                psi_drive=psi_target,
             )
 
     if audit_logger is not None:
