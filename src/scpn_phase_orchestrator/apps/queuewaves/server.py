@@ -4,6 +4,7 @@
 # License: GNU AGPL v3 | Commercial licensing available
 
 import asyncio
+import contextlib
 import json
 import logging
 from collections import deque
@@ -102,8 +103,12 @@ def create_app(cfg: QueueWavesConfig) -> Any:
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        asyncio.create_task(_pipeline_loop())
+        task = asyncio.create_task(_pipeline_loop())
         yield
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+        await collector.close()
 
     app = FastAPI(title="QueueWaves", version="0.1.0", lifespan=_lifespan)
 
