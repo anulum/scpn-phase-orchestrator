@@ -63,7 +63,7 @@ class AlertSink:
 
 @dataclass(frozen=True)
 class ServerConfig:
-    host: str = "0.0.0.0"  # noqa: S104
+    host: str = "0.0.0.0"  # noqa: S104  # nosec B104
     port: int = 8080
 
 
@@ -110,7 +110,7 @@ def load_config(path: Path) -> QueueWavesConfig:
     ]
     srv_raw = raw.get("server", {})
     server_cfg = ServerConfig(
-        host=srv_raw.get("host", "0.0.0.0"),  # noqa: S104
+        host=srv_raw.get("host", "0.0.0.0"),  # noqa: S104  # nosec B104
         port=srv_raw.get("port", 8080),
     )
     return QueueWavesConfig(

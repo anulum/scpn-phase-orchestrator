@@ -229,7 +229,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
     return app
 
 
-def run_server(config_path: str, host: str = "0.0.0.0", port: int = 8080) -> None:  # noqa: S104
+def run_server(config_path: str, host: str = "0.0.0.0", port: int = 8080) -> None:  # noqa: S104  # nosec B104
     """Entry point for CLI: load config, create app, run uvicorn."""
     import uvicorn
 
