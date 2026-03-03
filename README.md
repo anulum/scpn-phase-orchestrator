@@ -83,6 +83,11 @@ and is built from source via `maturin develop`.
 | `quantum_simulation` | Quantum computing | Qubit register phase coupling (2 layers, 8 oscillators) |
 | `plasma_control` | Tokamak plasma | MHD/transport multi-scale control (8 layers, 16 oscillators) |
 | `fusion_equilibrium` | Fusion equilibrium | Grad-Shafranov observable mapping (6 layers, 12 oscillators) |
+| `neuroscience_eeg` | Neuroscience | EEG band→phase, seizure detection (6 layers, 14 oscillators) |
+| `power_grid` | Power systems | Swing equation = Kuramoto (5 layers, 12 oscillators) |
+| `cardiac_rhythm` | Cardiology | Gap-junction coupling, arrhythmia (4 layers, 10 oscillators) |
+| `rotating_machinery` | Vibration | Harmonics, ISO 10816 boundaries (4 layers, 10 oscillators) |
+| `chemical_reactor` | Process control | Hopf bifurcation, Semenov limit (4 layers, 10 oscillators) |
 
 ### Adding a Domain
 

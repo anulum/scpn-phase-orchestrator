@@ -28,6 +28,7 @@ nav:
       - "Knobs: K, alpha, zeta, Psi": concepts/knobs_K_alpha_zeta_Psi.md
       - Memory Imprint: concepts/memory_imprint.md
       - Phase Control Theory: concepts/phase_control_theory.md
+      - Domain Utilisation Schemas: concepts/domain_utilisation_schemas.md
   - Specs:
       - Binding Spec Schema: specs/binding_spec.schema.json
       - Phase Contract: specs/phase_contract.md

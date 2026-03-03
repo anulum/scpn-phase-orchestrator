@@ -1,0 +1,39 @@
+rules:
+  - name: suppress_frequency_oscillation
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: alpha
+      scope: layer_3
+      value: 0.4
+      ttl_s: 5.0
+
+  - name: restore_synchronism
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.4
+    action:
+      knob: K
+      scope: global
+      value: 0.2
+      ttl_s: 10.0
+
+  - name: curtail_renewable
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.8
+    action:
+      knob: Psi
+      scope: global
+      value: 3.14
+      ttl_s: 8.0

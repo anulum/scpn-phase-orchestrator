@@ -1,0 +1,39 @@
+rules:
+  - name: avoid_critical_speed
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: zeta
+      scope: global
+      value: 0.8
+      ttl_s: 3.0
+
+  - name: suppress_flutter
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.6
+    action:
+      knob: alpha
+      scope: layer_1
+      value: 0.4
+      ttl_s: 5.0
+
+  - name: flag_bearing
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.5
+    action:
+      knob: K
+      scope: global
+      value: 0.1
+      ttl_s: 10.0

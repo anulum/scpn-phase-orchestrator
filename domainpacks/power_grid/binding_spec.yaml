@@ -1,0 +1,99 @@
+name: power_grid
+version: "0.1.0"
+safety_tier: production
+sample_period_s: 0.002
+control_period_s: 0.02
+
+layers:
+  - name: generator_rotor
+    index: 0
+    oscillator_ids: [gen_coal, gen_gas, gen_hydro]
+  - name: area_frequency
+    index: 1
+    oscillator_ids: [area_east, area_west]
+  - name: tie_line
+    index: 2
+    oscillator_ids: [tie_ew, tie_ns]
+  - name: load_demand
+    index: 3
+    oscillator_ids: [load_industrial, load_residential, load_commercial]
+  - name: renewable_intermittency
+    index: 4
+    oscillator_ids: [solar_farm, wind_farm]
+
+# Swing equation dδ/dt=ω is second-order Kuramoto.  PMU phasor angle IS
+# the oscillator phase — no extraction needed.
+# Dorfler, Chertkov, Bullo (2013) "Synchronization in complex oscillator
+# networks and smart grids".
+oscillator_families:
+  rotor_angle:
+    channel: P
+    extractor_type: physical
+    config: {}
+  frequency_deviation:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Proportional to admittance magnitude of inter-machine ties.
+  # Typical 5-machine system: K_base ~ 0.5 pu on 100 MVA base.
+  base_strength: 0.50
+  decay_alpha: 0.25
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.04
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # Generator synchronism and area frequency = good.
+  # Load demand fluctuations and renewable intermittency = bad (desync sources).
+  good_layers: [0, 1]
+  bad_layers: [3, 4]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # NERC BAL-003-2: frequency must stay within ±0.5 Hz of nominal
+  - name: frequency_deviation
+    variable: frequency_dev
+    lower: -0.5
+    upper: 0.5
+    severity: hard
+  # ANSI C84.1: voltage magnitude 0.95-1.05 pu
+  - name: voltage_magnitude
+    variable: voltage_pu
+    lower: 0.95
+    upper: 1.05
+    severity: hard
+  # Transient stability: rotor angle separation < 90 deg
+  - name: rotor_angle
+    variable: rotor_angle_deg
+    lower: null
+    upper: 90.0
+    severity: hard
+
+actuators:
+  - name: governor_droop
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: agc_bias
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: load_shedding
+    knob: alpha
+    scope: layer_3
+    limits: [0.0, 1.57]
+  - name: renewable_curtailment
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+policy: policy.yaml

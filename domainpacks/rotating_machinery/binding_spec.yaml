@@ -1,0 +1,92 @@
+name: rotating_machinery
+version: "0.1.0"
+safety_tier: consumer
+sample_period_s: 0.001
+control_period_s: 0.01
+
+layers:
+  - name: shaft_rotation
+    index: 0
+    oscillator_ids: [shaft_1x, shaft_2x, shaft_3x]
+  - name: blade_dynamics
+    index: 1
+    oscillator_ids: [blade_pass, blade_flutter]
+  - name: bearing_condition
+    index: 2
+    oscillator_ids: [bearing_bpfi, bearing_bpfo, bearing_cage]
+  - name: structural_resonance
+    index: 3
+    oscillator_ids: [struct_mode1, struct_mode2]
+
+# ISO 10816 normalised angular velocities.
+# Shaft harmonics: 1X, 2X, 3X of running speed.
+# Blade pass frequency >> running speed; flutter is subsynchronous.
+# Bearing defect freqs: BPFI=1.68X, BPFO=1.2X, FTF=0.072X (SKF 6205).
+# Structural modes: 3.6X and 7.2X (FEA-derived).
+oscillator_families:
+  vibration:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  condition_indicator:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Mechanical coupling through shaft/bearing stiffness.
+  # Moderate strength — vibration transmits but attenuates between layers.
+  base_strength: 0.40
+  decay_alpha: 0.30
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.04
+    psi: 0.0
+  informational:
+    zeta: 0.01
+  symbolic: {}
+
+objectives:
+  # Shaft rotation at nominal = good.
+  # Blade flutter and structural resonance = bad.
+  good_layers: [0]
+  bad_layers: [1, 3]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # ISO 10816-3 zone C/D boundary for Group 2 machines
+  - name: vibration_velocity
+    variable: vibration_mm_s
+    lower: null
+    upper: 7.1
+    severity: hard
+  # API 670: radial shaft displacement
+  - name: shaft_displacement
+    variable: shaft_um
+    lower: null
+    upper: 100.0
+    severity: soft
+  - name: bearing_temperature
+    variable: bearing_degc
+    lower: null
+    upper: 105.0
+    severity: hard
+
+actuators:
+  - name: speed_setpoint
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: bearing_stiffness
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: damper_viscosity
+    knob: alpha
+    scope: layer_1
+    limits: [0.0, 1.57]
+
+policy: policy.yaml

@@ -1,0 +1,109 @@
+name: cardiac_rhythm
+version: "0.1.0"
+safety_tier: clinical
+sample_period_s: 0.002
+control_period_s: 0.02
+
+layers:
+  - name: sa_node
+    index: 0
+    oscillator_ids: [sa_primary, sa_secondary, sa_subsidiary]
+  - name: atrial_conduction
+    index: 1
+    oscillator_ids: [av_node, his_bundle]
+  - name: ventricular_depolarization
+    index: 2
+    oscillator_ids: [septum, freewall]
+  - name: repolarization
+    index: 3
+    oscillator_ids: [repol_apex, repol_base, repol_rved]
+
+# Guyton Ch. 10: SA node 70 bpm → 2*pi*(70/60) ≈ 7.33 rad/s.
+# Normalised to keep simulation stable (divide by ~6.3).
+# SA primary 1.17, secondary 0.83, subsidiary 0.58
+# AV 0.75, His 0.67, ventricles 0.5/0.42, repol 0.33
+oscillator_families:
+  cardiac_electrical:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  ecg_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Gap-junction (connexin-43) coupling: Strogatz (2003).
+  # Cardiac cells are literally electrically coupled Kuramoto oscillators.
+  # Strong base coupling reflects tight gap-junction conductance.
+  base_strength: 0.55
+  decay_alpha: 0.20
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.06
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # SA node and atrial conduction = healthy rhythm.
+  # Ventricular depolarization desync = arrhythmia.
+  good_layers: [0, 1]
+  bad_layers: [2]
+  good_weight: 1.0
+  bad_weight: 2.0
+
+boundaries:
+  # Heart rate 40-180 bpm
+  - name: heart_rate
+    variable: heart_rate_bpm
+    lower: 40.0
+    upper: 180.0
+    severity: hard
+  # QT interval < 500 ms — Torsade de Pointes risk (Roden 2004)
+  - name: qt_interval
+    variable: qt_ms
+    lower: null
+    upper: 500.0
+    severity: hard
+  # ST deviation ±0.2 mV
+  - name: st_deviation
+    variable: st_mv
+    lower: -0.2
+    upper: 0.3
+    severity: soft
+  # PR interval < 200 ms (first-degree block)
+  - name: pr_interval
+    variable: pr_ms
+    lower: null
+    upper: 200.0
+    severity: soft
+
+actuators:
+  - name: pacing_rate
+    knob: zeta
+    scope: global
+    limits: [0.0, 3.0]
+  - name: drug_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: vagal_stimulation
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: target_rhythm
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+# Drug accumulation: digoxin t½=36h, amiodarone t½=58d
+imprint_model:
+  decay_rate: 0.005
+  saturation: 3.0
+  modulates: ["K"]
+
+policy: policy.yaml

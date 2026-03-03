@@ -1,0 +1,39 @@
+rules:
+  - name: suppress_tachycardia
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.6
+    action:
+      knob: alpha
+      scope: layer_0
+      value: 0.4
+      ttl_s: 5.0
+
+  - name: restore_sinus
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.4
+    action:
+      knob: zeta
+      scope: global
+      value: 0.5
+      ttl_s: 10.0
+
+  - name: flag_qt_prolongation
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.5
+    action:
+      knob: K
+      scope: global
+      value: -0.1
+      ttl_s: 8.0

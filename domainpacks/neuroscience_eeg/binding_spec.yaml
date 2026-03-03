@@ -1,0 +1,109 @@
+name: neuroscience_eeg
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.004
+control_period_s: 0.04
+
+layers:
+  - name: delta
+    index: 0
+    oscillator_ids: [delta_frontal, delta_central, delta_occipital]
+  - name: theta
+    index: 1
+    oscillator_ids: [theta_frontal, theta_parietal]
+  - name: alpha
+    index: 2
+    oscillator_ids: [alpha_occipital, alpha_parietal, alpha_temporal]
+  - name: beta
+    index: 3
+    oscillator_ids: [beta_motor, beta_prefrontal]
+  - name: gamma
+    index: 4
+    oscillator_ids: [gamma_sensory, gamma_binding]
+  - name: network
+    index: 5
+    oscillator_ids: [infraslow_dmn, infraslow_salience]
+
+# Omega: 2*pi*f_center in rad/s.  Buzsaki (2006) "Rhythms of the Brain"
+# delta 2 Hz, theta 6, alpha 10, beta 20, gamma 40, network 0.1
+oscillator_families:
+  eeg_band:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  connectivity:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Moderate coupling; EEG inter-band connectivity decays with frequency
+  # separation.  base_strength ~ mean PLV across cortical regions.
+  base_strength: 0.35
+  decay_alpha: 0.35
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # Alpha coherence = relaxation/flow; gamma = consciousness binding
+  # (Fries 2005 "gamma-band synchronization").
+  # Delta hypersync during wakefulness = pathological; beta excess = anxiety.
+  good_layers: [2, 4, 5]
+  bad_layers: [0, 3]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # Lehnertz (2009): broadband synchronisation > 0.9 precedes seizure onset
+  - name: seizure_detection
+    variable: broadband_sync
+    lower: null
+    upper: 0.9
+    severity: hard
+  - name: arousal_floor
+    variable: alpha_power_ratio
+    lower: 0.2
+    upper: null
+    severity: soft
+  - name: gamma_ceiling
+    variable: gamma_amplitude
+    lower: null
+    upper: 0.95
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: lag_delta
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: entrainment
+    knob: zeta
+    scope: global
+    limits: [0.0, 1.5]
+  - name: target_phase
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+# Meditation training history — Lutz et al. (2004)
+imprint_model:
+  decay_rate: 0.02
+  saturation: 1.5
+  modulates: ["K", "alpha"]
+
+geometry_prior:
+  constraint_type: symmetric_non_negative
+  params: {}
+
+policy: policy.yaml

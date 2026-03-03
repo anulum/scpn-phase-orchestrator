@@ -1,0 +1,39 @@
+rules:
+  - name: suppress_thermal_runaway
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: K
+      scope: global
+      value: 0.3
+      ttl_s: 5.0
+
+  - name: restore_steady_state
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: zeta
+      scope: global
+      value: 0.5
+      ttl_s: 10.0
+
+  - name: emergency_quench
+    regime: [DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.9
+    action:
+      knob: alpha
+      scope: layer_0
+      value: 1.0
+      ttl_s: 3.0

@@ -1,0 +1,39 @@
+rules:
+  - name: suppress_hypersynchrony
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.8
+    action:
+      knob: alpha
+      scope: layer_0
+      value: 0.5
+      ttl_s: 5.0
+
+  - name: boost_alpha
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.15
+      ttl_s: 10.0
+
+  - name: reduce_beta_arousal
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: zeta
+      scope: global
+      value: 0.3
+      ttl_s: 8.0

@@ -1,0 +1,105 @@
+name: chemical_reactor
+version: "0.1.0"
+safety_tier: production
+sample_period_s: 0.005
+control_period_s: 0.05
+
+layers:
+  - name: reaction_kinetics
+    index: 0
+    oscillator_ids: [conc_a, conc_b, product]
+  - name: heat_transfer
+    index: 1
+    oscillator_ids: [temp_reactor, temp_jacket, temp_coolant]
+  - name: pressure_vessel
+    index: 2
+    oscillator_ids: [pressure_headspace, pressure_vent]
+  - name: feed_flow
+    index: 3
+    oscillator_ids: [flow_feed, flow_coolant]
+
+# Fogler Ch. 12: CSTR Hopf bifurcation oscillation period ~12-15s.
+# Omegas normalised so kinetics ~ 0.3-0.5, heat ~ 0.15-0.8, flow ~ 0.7-1.0.
+oscillator_families:
+  process_variable:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  alarm_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Heat-mass coupling in a CSTR: temperature affects rate constant
+  # (Arrhenius), concentration affects heat generation.
+  # Moderate coupling with slower inter-layer decay.
+  base_strength: 0.40
+  decay_alpha: 0.35
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # Heat transfer stability and feed flow control = good.
+  # Reaction kinetics oscillation (Hopf) = bad (runaway precursor).
+  good_layers: [1, 3]
+  bad_layers: [0]
+  good_weight: 1.0
+  bad_weight: 2.0
+
+boundaries:
+  # Semenov ignition temperature
+  - name: temperature_limit
+    variable: temperature_c
+    lower: null
+    upper: 450.0
+    severity: hard
+  # ASME Section VIII maximum allowable working pressure
+  - name: pressure_limit
+    variable: pressure_bar
+    lower: null
+    upper: 15.0
+    severity: hard
+  - name: concentration_floor
+    variable: concentration
+    lower: 0.1
+    upper: null
+    severity: soft
+  - name: coolant_flow_min
+    variable: coolant_lpm
+    lower: 10.0
+    upper: null
+    severity: soft
+
+actuators:
+  - name: coolant_flow
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: feed_rate
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: agitator_speed
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: jacket_setpoint
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+# Catalyst deactivation / fouling: very slow decay
+imprint_model:
+  decay_rate: 0.001
+  saturation: 5.0
+  modulates: ["K"]
+
+policy: policy.yaml
