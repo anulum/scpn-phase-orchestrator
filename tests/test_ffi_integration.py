@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
 import pytest
 
 spo = pytest.importorskip("spo_kernel")
@@ -26,20 +27,14 @@ class TestPyUPDEStepper:
         n = 4
         s = spo.PyUPDEStepper(n)
         phases = [0.0] * n
-        omegas = [1.0] * n
-        knm = [0.0] * (n * n)
-        alpha = [0.0] * (n * n)
-        result = s.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        result = s.step(phases, np.ones(n), np.zeros(n * n), 0.0, 0.0, np.zeros(n * n))
         assert len(result) == n
 
     def test_step_advances_phases(self):
         n = 4
         s = spo.PyUPDEStepper(n, dt=0.01)
         phases = [0.0] * n
-        omegas = [1.0] * n
-        knm = [0.0] * (n * n)
-        alpha = [0.0] * (n * n)
-        result = s.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        result = s.step(phases, np.ones(n), np.zeros(n * n), 0.0, 0.0, np.zeros(n * n))
         for p in result:
             assert abs(p - 0.01) < 1e-10
 
@@ -47,10 +42,9 @@ class TestPyUPDEStepper:
         n = 4
         s = spo.PyUPDEStepper(n)
         phases = [0.0] * n
-        omegas = [1.0] * n
-        knm = [0.0] * (n * n)
-        alpha = [0.0] * (n * n)
-        result = s.run(phases, omegas, knm, 0.0, 0.0, alpha, 100)
+        result = s.run(
+            phases, np.ones(n), np.zeros(n * n), 0.0, 0.0, np.zeros(n * n), 100
+        )
         assert len(result) == n
         assert all(0 <= p < 2 * math.pi for p in result)
 
@@ -62,11 +56,11 @@ class TestPyUPDEStepper:
         with pytest.raises(ValueError):
             s.step(
                 [float("nan")] * 4,
-                [1.0] * 4,
-                [0.0] * 16,
+                np.ones(4),
+                np.zeros(16),
                 0.0,
                 0.0,
-                [0.0] * 16,
+                np.zeros(16),
             )
 
     def test_nan_zeta_rejected(self):
@@ -74,11 +68,11 @@ class TestPyUPDEStepper:
         with pytest.raises(ValueError):
             s.step(
                 [0.0] * 4,
-                [1.0] * 4,
-                [0.0] * 16,
+                np.ones(4),
+                np.zeros(16),
                 float("nan"),
                 0.0,
-                [0.0] * 16,
+                np.zeros(16),
             )
 
     def test_inf_psi_rejected(self):
@@ -86,27 +80,24 @@ class TestPyUPDEStepper:
         with pytest.raises(ValueError):
             s.step(
                 [0.0] * 4,
-                [1.0] * 4,
-                [0.0] * 16,
+                np.ones(4),
+                np.zeros(16),
                 0.0,
                 float("inf"),
-                [0.0] * 16,
+                np.zeros(16),
             )
 
     def test_substeps_accepted(self):
         s = spo.PyUPDEStepper(4, dt=0.01, method="rk4", n_substeps=4)
         assert s.n == 4
         phases = [0.0] * 4
-        omegas = [1.0] * 4
-        knm = [0.0] * 16
-        alpha = [0.0] * 16
-        result = s.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        result = s.step(phases, np.ones(4), np.zeros(16), 0.0, 0.0, np.zeros(16))
         assert len(result) == 4
 
     def test_dimension_mismatch(self):
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
-            s.step([0.0] * 3, [1.0] * 4, [0.0] * 16, 0.0, 0.0, [0.0] * 16)
+            s.step([0.0] * 3, np.ones(4), np.zeros(16), 0.0, 0.0, np.zeros(16))
 
 
 # ─── PyCouplingBuilder ───────────────────────────────────────────
@@ -273,11 +264,11 @@ class TestPyPhaseQualityScorer:
 
 class TestFreeFunctions:
     def test_order_parameter(self):
-        r, psi = spo.order_parameter([0.0, 0.0, 0.0, 0.0])
+        r, psi = spo.order_parameter(np.zeros(4))
         assert abs(r - 1.0) < 1e-10
 
     def test_plv(self):
-        val = spo.plv([0.0, 0.1, 0.2], [0.0, 0.1, 0.2])
+        val = spo.plv(np.array([0.0, 0.1, 0.2]), np.array([0.0, 0.1, 0.2]))
         assert abs(val - 1.0) < 1e-10
 
     def test_ring_phase(self):
@@ -285,11 +276,11 @@ class TestFreeFunctions:
         assert abs(p - math.pi / 2) < 1e-10
 
     def test_event_phase(self):
-        result = spo.event_phase([0.0, 1.0, 2.0])
+        result = spo.event_phase(np.array([0.0, 1.0, 2.0]))
         assert len(result) == 3
 
     def test_physical_extract(self):
-        result = spo.physical_extract([1.0, 0.0], [0.0, 1.0], 2.0)
+        result = spo.physical_extract(np.array([1.0, 0.0]), np.array([0.0, 1.0]), 2.0)
         assert len(result) == 4
 
     def test_graph_walk_phase(self):
@@ -303,12 +294,12 @@ class TestFreeFunctions:
         assert spo.transition_quality(0, 10) == 0.2
 
     def test_layer_coherence_subset(self):
-        phases = [0.5, 0.5, 3.0, 0.5]
+        phases = np.array([0.5, 0.5, 3.0, 0.5])
         r = spo.layer_coherence(phases, [0, 1, 3])
         assert r > 0.9
 
     def test_layer_coherence_empty(self):
-        assert spo.layer_coherence([1.0, 2.0], []) == 0.0
+        assert spo.layer_coherence(np.array([1.0, 2.0]), []) == 0.0
 
 
 # ─── PyLagModel ──────────────────────────────────────────────────

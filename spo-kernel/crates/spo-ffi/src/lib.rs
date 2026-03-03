@@ -55,7 +55,14 @@ struct PyUPDEStepper {
 impl PyUPDEStepper {
     #[new]
     #[pyo3(signature = (n, dt = 0.01, method = "euler", n_substeps = 1, atol = 1e-6, rtol = 1e-3))]
-    fn new(n: usize, dt: f64, method: &str, n_substeps: u32, atol: f64, rtol: f64) -> PyResult<Self> {
+    fn new(
+        n: usize,
+        dt: f64,
+        method: &str,
+        n_substeps: u32,
+        atol: f64,
+        rtol: f64,
+    ) -> PyResult<Self> {
         let m = match method {
             "euler" => Method::Euler,
             "rk4" => Method::RK4,
@@ -84,10 +91,18 @@ impl PyUPDEStepper {
         alpha: PyReadonlyArray1<'_, f64>,
     ) -> PyResult<Vec<f64>> {
         let mut p = phases;
-        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        self.inner.step(&mut p, o, k, zeta, psi, a).map_err(spo_err)?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        self.inner
+            .step(&mut p, o, k, zeta, psi, a)
+            .map_err(spo_err)?;
         Ok(p)
     }
 
@@ -104,10 +119,18 @@ impl PyUPDEStepper {
         n_steps: u64,
     ) -> PyResult<Vec<f64>> {
         let mut p = phases;
-        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        self.inner.run(&mut p, o, k, zeta, psi, a, n_steps).map_err(spo_err)?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        self.inner
+            .run(&mut p, o, k, zeta, psi, a, n_steps)
+            .map_err(spo_err)?;
         Ok(p)
     }
 
@@ -474,14 +497,20 @@ impl PySupervisorPolicy {
 
 #[pyfunction]
 fn order_parameter(phases: PyReadonlyArray1<'_, f64>) -> PyResult<(f64, f64)> {
-    let s = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let s = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(order_params::compute_order_parameter(s))
 }
 
 #[pyfunction]
 fn plv(phases_a: PyReadonlyArray1<'_, f64>, phases_b: PyReadonlyArray1<'_, f64>) -> PyResult<f64> {
-    let a = phases_a.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let b = phases_b.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = phases_a
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let b = phases_b
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     order_params::compute_plv(a, b).map_err(spo_err)
 }
 
@@ -492,14 +521,24 @@ fn ring_phase(state_index: usize, n_states: usize) -> f64 {
 
 #[pyfunction]
 fn event_phase(timestamps: PyReadonlyArray1<'_, f64>) -> PyResult<(f64, f64, f64)> {
-    let s = timestamps.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let s = timestamps
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(informational::event_phase(s))
 }
 
 #[pyfunction]
-fn physical_extract(real: PyReadonlyArray1<'_, f64>, imag: PyReadonlyArray1<'_, f64>, sample_rate: f64) -> PyResult<(f64, f64, f64, f64)> {
-    let r = real.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let i = imag.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+fn physical_extract(
+    real: PyReadonlyArray1<'_, f64>,
+    imag: PyReadonlyArray1<'_, f64>,
+    sample_rate: f64,
+) -> PyResult<(f64, f64, f64, f64)> {
+    let r = real
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let i = imag
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(physical::extract_from_analytic(r, i, sample_rate))
 }
 
@@ -515,7 +554,9 @@ fn transition_quality(step_size: usize, n_states: usize) -> f64 {
 
 #[pyfunction]
 fn layer_coherence(phases: PyReadonlyArray1<'_, f64>, indices: Vec<usize>) -> PyResult<f64> {
-    let s = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let s = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(order_params::compute_layer_coherence(s, &indices))
 }
 

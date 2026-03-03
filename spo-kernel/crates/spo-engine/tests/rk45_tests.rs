@@ -23,9 +23,7 @@ fn zero_alpha(n: usize) -> Vec<f64> {
 fn rk45_phases_stay_bounded() {
     let n = 8;
     let mut s = UPDEStepper::new(n, rk45_config(0.01)).unwrap();
-    let mut phases: Vec<f64> = (0..n)
-        .map(|i| i as f64 * TAU / n as f64)
-        .collect();
+    let mut phases: Vec<f64> = (0..n).map(|i| i as f64 * TAU / n as f64).collect();
     let omegas = vec![2.0; n];
     let knm = vec![0.1; n * n];
     let alpha = zero_alpha(n);
@@ -35,10 +33,7 @@ fn rk45_phases_stay_bounded() {
             .unwrap();
     }
     for &p in &phases {
-        assert!(
-            (0.0..TAU).contains(&p),
-            "phase {p} out of [0, 2pi)"
-        );
+        assert!((0.0..TAU).contains(&p), "phase {p} out of [0, 2pi)");
     }
 }
 

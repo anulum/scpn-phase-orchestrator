@@ -45,10 +45,12 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
     if _HAS_RUST:
         from spo_kernel import plv as _rust_plv
 
-        return float(_rust_plv(
-            np.ascontiguousarray(phases_a.ravel()),
-            np.ascontiguousarray(phases_b.ravel()),
-        ))
+        return float(
+            _rust_plv(
+                np.ascontiguousarray(phases_a.ravel()),
+                np.ascontiguousarray(phases_b.ravel()),
+            )
+        )
     return float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b)))))
 
 

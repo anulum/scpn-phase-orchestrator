@@ -26,10 +26,24 @@ mod dp {
     pub(super) const A65: f64 = -5103.0 / 18656.0;
 
     // 5th-order weights (solution)
-    pub(super) const B5: [f64; 6] = [35.0 / 384.0, 0.0, 500.0 / 1113.0, 125.0 / 192.0, -2187.0 / 6784.0, 11.0 / 84.0];
+    pub(super) const B5: [f64; 6] = [
+        35.0 / 384.0,
+        0.0,
+        500.0 / 1113.0,
+        125.0 / 192.0,
+        -2187.0 / 6784.0,
+        11.0 / 84.0,
+    ];
 
     // 4th-order weights (error estimate)
-    pub(super) const B4: [f64; 6] = [5179.0 / 57600.0, 0.0, 7571.0 / 16695.0, 393.0 / 640.0, -92097.0 / 339200.0, 187.0 / 2100.0];
+    pub(super) const B4: [f64; 6] = [
+        5179.0 / 57600.0,
+        0.0,
+        7571.0 / 16695.0,
+        393.0 / 640.0,
+        -92097.0 / 339200.0,
+        187.0 / 2100.0,
+    ];
 }
 
 /// Kuramoto UPDE integrator with pre-allocated scratch arrays.
@@ -320,21 +334,47 @@ impl UPDEStepper {
             for i in 0..n {
                 self.tmp_phases[i] = phases[i] + dt * dp::A21 * self.k1[i];
             }
-            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k2);
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                knm,
+                zeta,
+                psi,
+                alpha,
+                &mut self.k2,
+            );
 
             // k3: phases + dt * (a31*k1 + a32*k2)
             for i in 0..n {
-                self.tmp_phases[i] =
-                    phases[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]);
+                self.tmp_phases[i] = phases[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k3);
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                knm,
+                zeta,
+                psi,
+                alpha,
+                &mut self.k3,
+            );
 
             // k4: phases + dt * (a41*k1 + a42*k2 + a43*k3)
             for i in 0..n {
                 self.tmp_phases[i] = phases[i]
                     + dt * (dp::A41 * self.k1[i] + dp::A42 * self.k2[i] + dp::A43 * self.k3[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k4);
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                knm,
+                zeta,
+                psi,
+                alpha,
+                &mut self.k4,
+            );
 
             // k5: phases + dt * (a51*k1 + a52*k2 + a53*k3 + a54*k4)
             for i in 0..n {
@@ -344,7 +384,16 @@ impl UPDEStepper {
                         + dp::A53 * self.k3[i]
                         + dp::A54 * self.k4[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k5);
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                knm,
+                zeta,
+                psi,
+                alpha,
+                &mut self.k5,
+            );
 
             // k6: phases + dt * (a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5)
             for i in 0..n {
@@ -355,14 +404,22 @@ impl UPDEStepper {
                         + dp::A64 * self.k4[i]
                         + dp::A65 * self.k5[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, knm, zeta, psi, alpha, &mut self.k6);
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                knm,
+                zeta,
+                psi,
+                alpha,
+                &mut self.k6,
+            );
 
             // 5th-order solution and error estimate
             let mut err_norm: f64 = 0.0;
             for i in 0..n {
                 let ks = [
-                    self.k1[i], self.k2[i], self.k3[i],
-                    self.k4[i], self.k5[i], self.k6[i],
+                    self.k1[i], self.k2[i], self.k3[i], self.k4[i], self.k5[i], self.k6[i],
                 ];
                 self.y5[i] = phases[i]
                     + dt * (dp::B5[0] * ks[0]
@@ -378,8 +435,7 @@ impl UPDEStepper {
                         + dp::B4[5] * ks[5]);
 
                 let err_i = (self.y5[i] - y4).abs();
-                let scale = self.atol
-                    + self.rtol * phases[i].abs().max(self.y5[i].abs());
+                let scale = self.atol + self.rtol * phases[i].abs().max(self.y5[i].abs());
                 let ratio = err_i / scale;
                 if ratio > err_norm {
                     err_norm = ratio;
