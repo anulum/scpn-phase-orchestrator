@@ -39,10 +39,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+rust = ["spo-kernel>=0.1.1"]
 quantum = ["scpn-quantum-control>=0.1.0"]
 plasma = ["scpn-control>=0.1.0"]
 fusion = ["scpn-fusion-core>=3.9.0"]
 scpn-all = [
+    "spo-kernel>=0.1.1",
     "scpn-quantum-control>=0.1.0",
     "scpn-control>=0.1.0",
     "scpn-fusion-core>=3.9.0",
