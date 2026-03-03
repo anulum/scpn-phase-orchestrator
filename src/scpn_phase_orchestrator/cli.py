@@ -13,11 +13,16 @@ from pathlib import Path
 import click
 import numpy as np
 
+from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    PolicyEngine,
+    load_policy_rules,
+)
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -70,6 +75,22 @@ def run(binding_spec: str, steps: int) -> None:
     boundary_observer = BoundaryObserver(spec.boundaries)
     regime_manager = RegimeManager()
     supervisor = SupervisorPolicy(regime_manager)
+
+    # ActionProjector — clip outputs to safe bounds
+    projector = ActionProjector(
+        rate_limits={"K": 0.1, "zeta": 0.2, "alpha": 0.1, "Psi": 0.5},
+        value_bounds={"K": (-0.5, 0.5), "zeta": (0.0, 0.5), "alpha": (-1.0, 1.0)},
+    )
+    prev_values: dict[str, float] = {"K": 0.0, "zeta": 0.0, "alpha": 0.0, "Psi": 0.0}
+
+    # Policy rules from domainpack (optional)
+    policy_engine: PolicyEngine | None = None
+    spec_path = Path(binding_spec)
+    policy_path = spec_path.parent / "policy.yaml"
+    if policy_path.exists():
+        rules = load_policy_rules(policy_path)
+        if rules:
+            policy_engine = PolicyEngine(rules)
 
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, 2 * np.pi, n_osc)
@@ -128,6 +149,18 @@ def run(binding_spec: str, steps: int) -> None:
         boundary_state = boundary_observer.observe({"R": upde_state.stability_proxy})
         actions = supervisor.decide(upde_state, boundary_state)
 
+        if policy_engine is not None:
+            actions.extend(
+                policy_engine.evaluate(
+                    regime_manager.current_regime,
+                    upde_state,
+                    spec.objectives.good_layers,
+                    spec.objectives.bad_layers,
+                )
+            )
+
+        actions = [projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions]
+
         for act in actions:
             if act.knob == "zeta":
                 zeta = min(zeta + act.value, 0.5)
@@ -151,6 +184,7 @@ def run(binding_spec: str, steps: int) -> None:
                     )
             elif act.knob == "Psi":
                 psi_target = act.value
+            prev_values[act.knob] = act.value
 
     # Final coherence
     good_phases = [
@@ -208,24 +242,28 @@ def scaffold(domain_name: str) -> None:
     spec_file = base / "binding_spec.yaml"
     if not spec_file.exists():
         spec_file.write_text(
-            f"# Binding spec for {domain_name}\n"
             f"name: {domain_name}\n"
             "version: '0.1.0'\n"
             "safety_tier: research\n"
             "sample_period_s: 0.01\n"
             "control_period_s: 0.1\n"
-            "layers: []\n"
-            "oscillator_families: {}\n"
+            "layers:\n"
+            "  - name: default\n"
+            "    index: 0\n"
+            "    oscillator_ids: [osc_0]\n"
+            "oscillator_families:\n"
+            "  default:\n"
+            "    channel: P\n"
+            "    extractor_type: hilbert\n"
             "coupling:\n"
             "  base_strength: 0.45\n"
             "  decay_alpha: 0.3\n"
-            "  templates: {}\n"
             "drivers:\n"
             "  physical: {}\n"
             "  informational: {}\n"
             "  symbolic: {}\n"
             "objectives:\n"
-            "  good_layers: []\n"
+            "  good_layers: [0]\n"
             "  bad_layers: []\n"
             "boundaries: []\n"
             "actuators: []\n",

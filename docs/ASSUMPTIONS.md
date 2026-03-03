@@ -75,3 +75,21 @@ See [references.bib](references.bib) for full bibliographic entries.
 |----------|-------|------------|---------|
 | CFL-like bound | `dt < π / (max_ω + N·max_K + ζ)` | Derived. Phase change per step must stay below half-cycle; analogous to CFL condition [courant1928]. Euler-specific. | `upde/numerics.py:21` |
 | `max_dt` | 0.01 | Empirical. Default upper bound for integration timestep. | `upde/numerics.py:18` |
+
+## RK45 Adaptive Integration
+
+| Constant | Value | Provenance | Used in |
+|----------|-------|------------|---------|
+| DP tableau | B5, B4, A-matrix | Derived. Dormand–Prince 5(4) pair [dormand1980]. | `upde/engine.py` |
+| safety factor | 0.9 | Empirical. Standard PI step-size controller safety [hairer1993, §II.4]. | `upde/engine.py` |
+| shrink bound | 0.2 | Empirical. Minimum dt scale factor per rejection. | `upde/engine.py` |
+| growth bound | 5.0 | Empirical. Maximum dt scale factor per accepted step. | `upde/engine.py` |
+| max rejections | 3 | Empirical. Caps retries per step before accepting with min dt. | `upde/engine.py` |
+| `atol` | 1e-6 | Empirical. Absolute error tolerance for step acceptance. | `upde/numerics.py` |
+| `rtol` | 1e-3 | Empirical. Relative error tolerance for step acceptance. | `upde/numerics.py` |
+
+## Policy Engine
+
+| Constant | Value | Provenance | Used in |
+|----------|-------|------------|---------|
+| Comparison operators | `>`, `>=`, `<`, `<=`, `==` | Standard. Evaluate policy rule conditions. | `supervisor/policy_rules.py` |
