@@ -1,10 +1,13 @@
-# Policy DSL (Planned v0.2)
+# Policy DSL
 
 YAML-based rule engine for declarative supervisor behaviour.
 
 ## Status
 
-Not yet implemented. The current supervisor uses hardcoded `SupervisorPolicy`. This spec describes the planned replacement.
+**Implemented** in `supervisor/policy_rules.py` (`PolicyEngine` + `load_policy_rules`).
+The hardcoded `SupervisorPolicy` provides default regime-driven actions;
+`PolicyEngine` extends it with domainpack-specific YAML rules evaluated
+per step.  12 of 17 domainpacks ship with `policy.yaml` files.
 
 ## Syntax
 
@@ -42,20 +45,26 @@ rules:
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | str | Rule identifier |
-| `regime` | list[str] | Active only in listed regimes |
-| `condition.metric` | str | `R_good`, `R_bad`, or any boundary variable |
-| `condition.layer` | int | Layer index for R metrics |
+| `regime` | list[str] | Active only in listed regimes (`NOMINAL`, `DEGRADED`, `CRITICAL`, `RECOVERY`) |
+| `condition.metric` | str | `R_good`, `R_bad`, or `R` (raw layer order parameter) |
+| `condition.layer` | int | Index into the good/bad layer list (for `R_good`/`R_bad`) or absolute layer index (for `R`) |
 | `condition.op` | str | `">"`, `"<"`, `">="`, `"<="`, `"=="` |
 | `condition.threshold` | float | Comparison value |
-| `action` | object | `ControlAction` fields |
+| `action.knob` | str | Control knob: `K`, `alpha`, `zeta`, or `Psi` |
+| `action.scope` | str | `global` or `layer_N` |
+| `action.value` | float | Adjustment magnitude |
+| `action.ttl_s` | float | Time-to-live in seconds |
 
 ## Evaluation
 
-Rules are evaluated in order. First matching rule fires. No chaining within a single step -- at most one rule fires per step per knob.
+Rules are evaluated in order.  All matching rules fire (not first-match-only).
+Each produces a `ControlAction` that the domainpack's main loop applies to
+coupling, lag, drive, or target phase.
 
 ## Regime Scoping
 
-A rule only fires if the current regime is in its `regime` list. This prevents conflicting actions across regimes.
+A rule only fires if the current regime (from `RegimeManager`) is in its
+`regime` list.  This prevents conflicting actions across regimes.
 
 ## Integration
 
@@ -65,8 +74,18 @@ The binding spec references a policy file:
 policy: policy.yaml
 ```
 
-Resolved relative to the binding spec directory.
+Resolved relative to the binding spec directory.  In `run.py`:
+
+```python
+from scpn_phase_orchestrator.supervisor.policy_rules import PolicyEngine, load_policy_rules
+
+rules = load_policy_rules(policy_path)
+policy_engine = PolicyEngine(rules)
+actions = policy_engine.evaluate(regime, upde_state, good_layers, bad_layers)
+```
 
 ## References
 
-Planned for v0.2 — see [ROADMAP.md](https://github.com/anulum/scpn-phase-orchestrator/blob/main/ROADMAP.md). The current hardcoded policy is documented in [regime_manager.md](regime_manager.md) § Supervisor Integration. Threshold values used in example rules are empirical — see [ASSUMPTIONS.md](../ASSUMPTIONS.md).
+Implementation: `src/scpn_phase_orchestrator/supervisor/policy_rules.py`.
+The hardcoded default policy: `src/scpn_phase_orchestrator/supervisor/policy.py`.
+Threshold values used in example rules are empirical — see [ASSUMPTIONS.md](../ASSUMPTIONS.md).

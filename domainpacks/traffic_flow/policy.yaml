@@ -1,0 +1,39 @@
+rules:
+  - name: prevent_gridlock
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: alpha
+      scope: layer_0
+      value: 0.3
+      ttl_s: 5.0
+
+  - name: green_wave_boost
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.15
+      ttl_s: 10.0
+
+  - name: demand_metering
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.6
+    action:
+      knob: Psi
+      scope: global
+      value: 3.14
+      ttl_s: 8.0

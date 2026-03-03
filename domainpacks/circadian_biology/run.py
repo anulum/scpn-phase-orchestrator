@@ -5,7 +5,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # License: GNU AGPL v3 | Commercial licensing available
 
-"""Queuewaves: steady -> spike -> retry storm -> breaker -> recovery."""
+"""Circadian: entrained -> jet lag -> free-run -> light therapy -> recovery."""
 
 from __future__ import annotations
 
@@ -15,6 +15,8 @@ import numpy as np
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
+from scpn_phase_orchestrator.imprint.state import ImprintState
+from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
@@ -29,18 +31,23 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_plv,
 )
 
-STEPS = 200
+STEPS = 250
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
+# ~24 h period normalised; Winfree (1967), Strogatz (2003) Ch. 5
 OMEGAS = np.array(
     [
-        1.0,
-        1.1,
-        0.9,  # micro: queue_a, queue_b, retry_burst
-        0.5,  # meso: latency_p99
-        0.2,
-        0.15,  # macro: error_rate, throughput
+        1.00,
+        1.05,
+        0.95,  # scn_core: Per/Cry, Bmal1, Rev-erb
+        0.98,
+        0.97,
+        1.02,  # peripheral: liver, kidney, adipose
+        0.50,
+        1.00,  # metabolic: glucose, cortisol
+        1.00,
+        0.50,  # behavioral: sleep/wake, feeding
     ]
 )
 
@@ -75,6 +82,11 @@ def main():
     rules = load_policy_rules(policy_path)
     policy_engine = PolicyEngine(rules) if rules else None
 
+    imprint_model = ImprintModel(
+        spec.imprint_model.decay_rate, spec.imprint_model.saturation
+    )
+    imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n_osc)
     omegas = OMEGAS[:n_osc].copy()
@@ -83,36 +95,35 @@ def main():
     zeta = spec.drivers.physical.get("zeta", 0.0)
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
-    print("=== Queuewaves: Steady -> Spike -> Retry Storm -> Breaker -> Recovery ===\n")
+    print("=== Circadian: Entrained -> Jet Lag -> Free-Run -> Light -> Recovery ===\n")
     print(f"{'step':>5}  {'R_good':>6}  {'R_bad':>5}  {'regime':>10}  phase")
     print("-" * 60)
 
     for step in range(STEPS):
-        # Phase 1 (0-39): steady state
-        # Phase 2 (40-79): traffic spike
-        if 40 <= step < 80:
-            micro_ids = layer_map[0]
-            omegas[micro_ids] = np.array([2.0, 2.2, 1.8])  # 2x load
+        # Phase 1 (0-49): entrained circadian rhythm
+        # Phase 2 (50-99): jet lag — shift SCN phases abruptly
+        if step == 50:
+            scn_ids = layer_map[0]
+            phases[scn_ids] += np.pi / 3  # ~4 h phase advance
 
-        # Phase 3 (80-119): retry storm — micro queues lock in phase
-        if 80 <= step < 120:
-            micro_ids = layer_map[0]
-            phases[micro_ids] = np.mean(phases[micro_ids])  # force sync
-            if step % 5 == 0:
-                phases[micro_ids] += rng.uniform(-0.05, 0.05, len(micro_ids))
+        # Phase 3 (100-149): peripheral clocks free-running (desynchronised)
+        if 100 <= step < 150:
+            periph_ids = layer_map[1]
+            omegas[periph_ids] *= 1.0 + rng.uniform(-0.02, 0.02, len(periph_ids))
 
-        # Phase 4 (120-159): circuit breaker — decouple micro, boost zeta
-        if step == 120:
+        # Phase 4 (150-199): light therapy intervention
+        if step == 150:
             omegas[:n_osc] = OMEGAS[:n_osc]
-            zeta = 0.3
+            zeta = 0.4
 
-        # Phase 5 (160-199): recovery
-        if step == 160:
-            zeta = 0.1
+        # Phase 5 (200-249): re-entrainment
+        if step == 200:
+            zeta = 0.2
 
-        phases = engine.step(
-            phases, omegas, coupling.knm, zeta, psi_target, coupling.alpha
-        )
+        eff_knm = imprint_model.modulate_coupling(coupling.knm, imprint_state)
+        eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
+
+        phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
 
         layer_states = []
         for layer in spec.layers:
@@ -137,11 +148,12 @@ def main():
             regime_id=regime_manager.current_regime.value,
         )
 
-        micro_r = layer_states[0].R
+        scn_r = layer_states[0].R
         obs_values = {
             "R": mean_r,
-            "queue_depth": 12000 * micro_r,  # 0-12000 scale
-            "p99_latency_ms": 100 + 500 * micro_r,
+            "phase_deviation_h": 12.0 * (1.0 - scn_r),  # 0-12 h scale
+            "cortisol_acrophase_shift_h": 6.0 * (1.0 - layer_states[2].R),
+            "temp_nadir_shift_h": 3.0 * (1.0 - scn_r),
         }
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
@@ -170,6 +182,17 @@ def main():
             elif act.knob == "Psi":
                 psi_target = act.value
 
+        exposure = np.array(
+            [
+                layer_states[i].R
+                for i, layer in enumerate(spec.layers)
+                for _ in layer.oscillator_ids
+            ]
+        )
+        imprint_state = imprint_model.update(
+            imprint_state, exposure, spec.sample_period_s
+        )
+
         good_ph = [
             phases[j]
             for idx in spec.objectives.good_layers
@@ -183,15 +206,15 @@ def main():
         r_good = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
         r_bad = compute_order_parameter(np.array(bad_ph))[0] if bad_ph else 0.0
 
-        if step % 20 == 0:
-            if step < 40:
-                label = "steady"
-            elif step < 80:
-                label = "spike"
-            elif step < 120:
-                label = "retry_storm"
-            elif step < 160:
-                label = "breaker"
+        if step % 25 == 0:
+            if step < 50:
+                label = "entrained"
+            elif step < 100:
+                label = "jet_lag"
+            elif step < 150:
+                label = "free_run"
+            elif step < 200:
+                label = "light_therapy"
             else:
                 label = "recovery"
             print(

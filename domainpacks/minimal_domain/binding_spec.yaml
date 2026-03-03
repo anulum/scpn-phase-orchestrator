@@ -43,3 +43,5 @@ actuators:
     knob: K
     scope: global
     limits: [0.0, 3.0]
+
+policy: policy.yaml

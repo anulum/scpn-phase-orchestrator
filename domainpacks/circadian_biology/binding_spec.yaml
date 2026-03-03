@@ -1,0 +1,97 @@
+name: circadian_biology
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: scn_core
+    index: 0
+    oscillator_ids: [per_cry, bmal1, rev_erb]
+  - name: peripheral_clocks
+    index: 1
+    oscillator_ids: [liver, kidney, adipose]
+  - name: metabolic_rhythm
+    index: 2
+    oscillator_ids: [glucose, cortisol]
+  - name: behavioral
+    index: 3
+    oscillator_ids: [sleep_wake, feeding]
+
+oscillator_families:
+  # SCN neurons are literal coupled oscillators; Winfree (1967)
+  clock_gene:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  metabolic_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # SCN gap-junction coupling: Strogatz (2003) "Sync" Ch. 5
+  base_strength: 0.50
+  decay_alpha: 0.25
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.08
+    psi: 0.0
+  informational:
+    zeta: 0.03
+  symbolic: {}
+
+objectives:
+  # SCN + peripheral entrained = healthy; behavioral desync = jet lag
+  good_layers: [0, 1]
+  bad_layers: [3]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # >3 h phase deviation = clinical circadian disruption
+  - name: phase_deviation
+    variable: phase_deviation_h
+    lower: null
+    upper: 3.0
+    severity: hard
+  # Cortisol acrophase shift >2 h (soft)
+  - name: cortisol_acrophase
+    variable: cortisol_acrophase_shift_h
+    lower: null
+    upper: 2.0
+    severity: soft
+  # Temperature nadir shift >1 h (soft)
+  - name: temperature_nadir
+    variable: temp_nadir_shift_h
+    lower: null
+    upper: 1.0
+    severity: soft
+
+actuators:
+  - name: light_exposure
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: meal_timing
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+  - name: coupling_strength
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: sleep_schedule
+    knob: alpha
+    scope: layer_3
+    limits: [0.0, 1.57]
+
+# Chronic jet lag / shift work accumulation; Czeisler et al. (1999)
+imprint_model:
+  decay_rate: 0.005
+  saturation: 3.0
+  modulates: ["K", "alpha"]
+
+policy: policy.yaml

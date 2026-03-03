@@ -5,6 +5,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # License: GNU AGPL v3 | Commercial licensing available
 
+"""Fusion equilibrium: startup -> sawtooth -> ELM crash -> controller recovery."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,68 +14,241 @@ from pathlib import Path
 import numpy as np
 
 from scpn_phase_orchestrator.adapters.fusion_core_bridge import FusionCoreBridge
-from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
+from scpn_phase_orchestrator.imprint.state import ImprintState
+from scpn_phase_orchestrator.imprint.update import ImprintModel
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    PolicyEngine,
+    load_policy_rules,
+)
+from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+from scpn_phase_orchestrator.upde.order_params import (
+    compute_order_parameter,
+    compute_plv,
+)
 
-TWO_PI = 2.0 * np.pi
+STEPS = 200
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
-N_STEPS = 200
-SEED = 42
+TWO_PI = 2.0 * np.pi
 SAWTOOTH_PERIOD = 50
+
+# ITER Physics Basis (2007) normalised frequencies
+OMEGAS = np.array(
+    [
+        0.3,
+        0.3,  # equilibrium: q, psi
+        0.5,
+        0.5,  # stability: beta, mhd
+        1.0,
+        1.0,  # transport: tau, chi
+        5.0,
+        5.0,  # events: sawtooth, elm
+        0.2,
+        0.2,  # boundary: separatrix, wall
+        0.1,
+        0.1,  # actuators: nbi, eccd
+    ]
+)
+
+
+def _build_layer_map(spec):
+    osc_idx = 0
+    ranges = {}
+    for layer in spec.layers:
+        n = len(layer.oscillator_ids)
+        ranges[layer.index] = list(range(osc_idx, osc_idx + n))
+        osc_idx += n
+    return ranges
 
 
 def main():
     spec = load_binding_spec(SPEC_PATH)
-    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    errors = validate_binding_spec(spec)
+    if errors:
+        raise RuntimeError(f"Invalid spec: {errors}")
 
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     builder = CouplingBuilder()
     coupling = builder.build(
-        n_osc,
-        spec.coupling.base_strength,
-        spec.coupling.decay_alpha,
+        n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha
     )
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
+    boundary_observer = BoundaryObserver(spec.boundaries)
+    regime_manager = RegimeManager()
+    supervisor = SupervisorPolicy(regime_manager)
 
-    bridge = FusionCoreBridge(n_layers=6)
+    bridge = FusionCoreBridge(n_layers=6)  # noqa: F841 — kept for observable mapping below
 
-    rng = np.random.default_rng(SEED)
-    omegas = np.array([0.3, 0.3, 0.5, 0.5, 1.0, 1.0, 5.0, 5.0, 0.2, 0.2, 0.1, 0.1])
+    policy_path = SPEC_PATH.parent / "policy.yaml"
+    rules = load_policy_rules(policy_path) if policy_path.exists() else []
+    policy_engine = PolicyEngine(rules) if rules else None
+
+    imprint_model = ImprintModel(
+        spec.imprint_model.decay_rate, spec.imprint_model.saturation
+    )
+    imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+
+    rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n_osc)
+    omegas = OMEGAS[:n_osc].copy()
+    layer_map = _build_layer_map(spec)
+
+    zeta = spec.drivers.physical.get("zeta", 0.0)
+    psi_target = spec.drivers.physical.get("psi", 0.0)
 
     saw_count = 0
     elm_count = 0
 
-    for step in range(N_STEPS):
-        # Periodic sawtooth crash
-        if step > 0 and step % SAWTOOTH_PERIOD == 0:
+    print("=== Fusion Equilibrium: Startup -> Sawtooth -> ELM Crash -> Recovery ===\n")
+    print(f"{'step':>5}  {'R_good':>6}  {'R_bad':>5}  {'regime':>10}  phase")
+    print("-" * 55)
+
+    for step in range(STEPS):
+        # Phase 1 (0-49): startup — ramp up
+        # Phase 2 (50-99): sawtooth regime
+        if step > 0 and step % SAWTOOTH_PERIOD == 0 and step < 100:
             saw_count += 1
+            event_ids = layer_map[3]
+            phases[event_ids] += rng.uniform(0.5, 1.5, len(event_ids))
 
-        phases = engine.step(phases, omegas, coupling.knm, 0.05, 0.0, coupling.alpha)
-        r, _ = engine.compute_order_parameter(phases)
+        # Phase 3 (100-149): ELM crash — events layer destabilises boundary
+        if step == 100:
+            elm_count += 1
+            event_ids = layer_map[3]
+            bnd_ids = layer_map[4]
+            omegas[event_ids] = 10.0
+            phases[bnd_ids] += rng.uniform(1.0, 2.0, len(bnd_ids))
 
-        if step % 40 == 0:
-            snapshot = {
-                "q_profile": 1.5 + 0.5 * np.sin(step * 0.05),
-                "q_min": 1.0 + 0.3 * r,
-                "q_max": 4.5,
-                "beta_n": 1.2 + 0.8 * (1 - r),
-                "tau_e": 1.5 + r,
-                "sawtooth_count": saw_count,
-                "elm_count": elm_count,
-                "mhd_amplitude": 0.3 * (1 - r),
-            }
-            obs_phases = bridge.observables_to_phases(snapshot)
-            feedback = bridge.phases_to_feedback(obs_phases, omegas[:6])
-            violations = bridge.check_stability(snapshot)
+        # Phase 4 (150-199): controller recovery
+        if step == 150:
+            omegas[:n_osc] = OMEGAS[:n_osc]
+            zeta = 0.3
 
-            print(
-                f"step={step:4d}  R_upde={r:.4f}  R_obs={feedback['R_global']:.4f}  "
-                f"saw={saw_count}  violations={len(violations)}"
+        eff_knm = imprint_model.modulate_coupling(coupling.knm, imprint_state)
+        eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
+
+        phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
+
+        layer_states = []
+        for layer in spec.layers:
+            ids = layer_map[layer.index]
+            r, psi = compute_order_parameter(phases[ids]) if ids else (0.0, 0.0)
+            layer_states.append(LayerState(R=r, psi=psi))
+
+        n_layers = len(spec.layers)
+        cla = np.zeros((n_layers, n_layers))
+        for li in range(n_layers):
+            for lj in range(li + 1, n_layers):
+                pi, pj = phases[layer_map[li]], phases[layer_map[lj]]
+                mn = min(len(pi), len(pj))
+                plv = compute_plv(pi[:mn], pj[:mn])
+                cla[li, lj] = cla[lj, li] = plv
+
+        mean_r = float(np.mean([ls.R for ls in layer_states]))
+        upde_state = UPDEState(
+            layers=layer_states,
+            cross_layer_alignment=cla,
+            stability_proxy=mean_r,
+            regime_id=regime_manager.current_regime.value,
+        )
+
+        eq_r = layer_states[0].R
+        snapshot = {
+            "q_profile": 1.5 + 0.5 * np.sin(step * 0.05),
+            "q_min": 1.0 + 0.3 * eq_r,
+            "q_max": 4.5,
+            "beta_n": 1.2 + 0.8 * (1 - eq_r),
+            "tau_e": 1.5 + eq_r,
+            "sawtooth_count": saw_count,
+            "elm_count": elm_count,
+            "mhd_amplitude": 0.3 * (1 - eq_r),
+        }
+        obs_values = {
+            "R": mean_r,
+            "q_min": snapshot["q_min"],
+            "beta_n": snapshot["beta_n"],
+            "tau_e_ratio": snapshot["tau_e"] / 2.0,
+        }
+        for i, ls in enumerate(layer_states):
+            obs_values[f"R_{i}"] = ls.R
+        boundary_state = boundary_observer.observe(obs_values)
+        actions = supervisor.decide(upde_state, boundary_state)
+
+        if policy_engine is not None:
+            actions.extend(
+                policy_engine.evaluate(
+                    regime_manager.current_regime,
+                    upde_state,
+                    spec.objectives.good_layers,
+                    spec.objectives.bad_layers,
+                )
             )
 
-    r_final, _ = engine.compute_order_parameter(phases)
-    print(f"\nFinal R={r_final:.4f}")
+        for act in actions:
+            if act.knob == "zeta":
+                zeta = min(zeta + act.value, 2.0)
+            elif act.knob == "K" and act.scope == "global":
+                coupling = CouplingState(
+                    knm=coupling.knm * (1.0 + act.value),
+                    alpha=coupling.alpha,
+                    active_template=coupling.active_template,
+                )
+
+        exposure = np.array(
+            [
+                layer_states[i].R
+                for i, layer in enumerate(spec.layers)
+                for _ in layer.oscillator_ids
+            ]
+        )
+        imprint_state = imprint_model.update(
+            imprint_state, exposure, spec.sample_period_s
+        )
+
+        good_ph = [
+            phases[j]
+            for idx in spec.objectives.good_layers
+            for j in layer_map.get(idx, [])
+        ]
+        bad_ph = [
+            phases[j]
+            for idx in spec.objectives.bad_layers
+            for j in layer_map.get(idx, [])
+        ]
+        r_good = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
+        r_bad = compute_order_parameter(np.array(bad_ph))[0] if bad_ph else 0.0
+
+        if step % 25 == 0:
+            if step < 50:
+                label = "startup"
+            elif step < 100:
+                label = "sawtooth"
+            elif step < 150:
+                label = "elm_crash"
+            else:
+                label = "recovery"
+            print(
+                f"{step:5d}  {r_good:.4f}  {r_bad:.4f}  "
+                f"{regime_manager.current_regime.value:>10}  {label}"
+            )
+
+    good_ph = [
+        phases[j] for idx in spec.objectives.good_layers for j in layer_map.get(idx, [])
+    ]
+    bad_ph = [
+        phases[j] for idx in spec.objectives.bad_layers for j in layer_map.get(idx, [])
+    ]
+    r_good_f = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
+    r_bad_f = compute_order_parameter(np.array(bad_ph))[0] if bad_ph else 0.0
+    print(
+        f"\nFinal  R_good={r_good_f:.4f}  R_bad={r_bad_f:.4f}"
+        f"  regime={regime_manager.current_regime.value}"
+    )
 
 
 if __name__ == "__main__":

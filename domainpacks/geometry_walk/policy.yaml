@@ -1,0 +1,26 @@
+rules:
+  - name: prevent_fragmentation
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R
+      layer: 0
+      op: "<"
+      threshold: 0.25
+    action:
+      knob: K
+      scope: global
+      value: 0.2
+      ttl_s: 5.0
+
+  - name: boost_coalescence
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.15
+      ttl_s: 10.0

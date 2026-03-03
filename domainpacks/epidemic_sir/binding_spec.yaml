@@ -1,0 +1,88 @@
+name: epidemic_sir
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: infection_wave
+    index: 0
+    oscillator_ids: [susceptible, infected, recovered]
+  - name: intervention
+    index: 1
+    oscillator_ids: [vaccination, social_distance, treatment]
+  - name: mobility
+    index: 2
+    oscillator_ids: [local_movement, inter_region]
+
+oscillator_families:
+  # Epidemic waves oscillate with seasonal forcing; Earn et al. (2000)
+  epi_wave:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  intervention_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Epidemiological contact coupling
+  base_strength: 0.40
+  decay_alpha: 0.30
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.03
+  symbolic: {}
+
+objectives:
+  # Coordinated intervention = suppression; synchronised infection = pandemic peak
+  good_layers: [1]
+  bad_layers: [0, 2]
+  good_weight: 1.0
+  bad_weight: 2.0
+
+boundaries:
+  # Case rate > 100/100k (hard, WHO threshold)
+  - name: case_rate
+    variable: cases_per_100k
+    lower: null
+    upper: 100.0
+    severity: hard
+  # Hospital occupancy > 80% (hard)
+  - name: hospital_occupancy
+    variable: hospital_occ
+    lower: null
+    upper: 0.8
+    severity: hard
+  # Rt > 1.5 (soft)
+  - name: reproduction_number
+    variable: rt
+    lower: null
+    upper: 1.5
+    severity: soft
+
+actuators:
+  - name: social_measures
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: vaccination_rate
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: mobility_restriction
+    knob: alpha
+    scope: layer_2
+    limits: [0.0, 1.57]
+  - name: lockdown
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+policy: policy.yaml

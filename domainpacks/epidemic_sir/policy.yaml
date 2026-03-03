@@ -1,0 +1,39 @@
+rules:
+  - name: suppress_wave
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.7
+    action:
+      knob: alpha
+      scope: layer_2
+      value: 0.5
+      ttl_s: 5.0
+
+  - name: boost_intervention_sync
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.2
+      ttl_s: 10.0
+
+  - name: restrict_mobility
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 1
+      op: ">"
+      threshold: 0.6
+    action:
+      knob: zeta
+      scope: global
+      value: 0.3
+      ttl_s: 8.0

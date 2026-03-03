@@ -1,0 +1,13 @@
+rules:
+  - name: restore_coherence
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.1
+      ttl_s: 10.0

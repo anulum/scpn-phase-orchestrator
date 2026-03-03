@@ -28,8 +28,19 @@ UPDEEngine
     |  Methods: Euler (default), RK4
     |  Output: phases, R per layer, cross-layer alignment
     v
-Supervisor (RegimeManager + SupervisorPolicy)
-    |  Reads: R_good, R_bad, boundary state
+ImprintModel (optional)
+    |  m_k(t+dt) = m_k(t)*exp(-decay*dt) + exposure*dt
+    |  Modulates: Knm scaling, alpha lag offset
+    |  Captures slow accumulation (drug PK, fatigue, tool wear)
+    v
+BoundaryObserver
+    |  Checks measured values against hard/soft limits
+    |  Output: BoundaryState (violations list)
+    v
+Supervisor (RegimeManager + SupervisorPolicy + PolicyEngine)
+    |  RegimeManager: R thresholds + hysteresis -> regime transitions
+    |  SupervisorPolicy: default regime-driven actions
+    |  PolicyEngine: YAML-declared domain-specific rules (policy.yaml)
     |  Decides: ControlActions on {K, alpha, zeta, Psi}
     |  Regime: NOMINAL / DEGRADED / CRITICAL / RECOVERY
     v
@@ -72,6 +83,9 @@ A new domain requires writing a binding spec and (optionally) custom extractors.
 | `BoundaryState` | `monitor.boundaries` | Violations (soft/hard) |
 | `ControlAction` | `actuation.mapper` | Knob adjustment command |
 | `ImprintState` | `imprint.state` | Memory imprint vector |
+| `ImprintModel` | `imprint.update` | Exponential exposure accumulation with decay and saturation |
+| `PolicyRule` | `supervisor.policy_rules` | YAML-declared condition→action rule |
+| `PolicyEngine` | `supervisor.policy_rules` | Evaluates domain policy rules against current state |
 
 ## Audit and Replay
 

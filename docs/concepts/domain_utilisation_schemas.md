@@ -1,42 +1,47 @@
 # Domain Utilisation Schemas
 
-Cross-domain comparison of all SPO domainpacks, showing how Kuramoto/UPDE
+Cross-domain comparison of all 17 SPO domainpacks, showing how Kuramoto/UPDE
 phase dynamics map to diverse physical, biological, and engineered systems.
 
 ## Master Domainpack Table
 
-| Pack | Layers | Osc | Safety Tier | Key Innovation |
-|------|--------|-----|-------------|---------------|
-| bio_stub | 3 | 7 | research | Placeholder biology template |
-| fusion_equilibrium | 4 | 10 | research | MHD equilibrium + transport |
-| geometry_walk | 2 | 6 | research | Random walk on graphs |
-| manufacturing_spc | 3 | 9 | consumer | SPC process drift detection |
-| metaphysics_demo | 3 | 7 | research | P/I/S + imprint + geometry |
-| minimal_domain | 2 | 4 | research | Minimal valid binding spec |
-| plasma_control | 8 | 16 | research | Full tokamak layer hierarchy |
-| quantum_simulation | 3 | 8 | research | Quantum gate phase tracking |
-| queuewaves | 3 | 6 | consumer | Service queue oscillations |
-| neuroscience_eeg | 6 | 14 | research | EEG band→phase, seizure detection |
-| power_grid | 5 | 12 | production | Swing equation = Kuramoto (exact) |
-| cardiac_rhythm | 4 | 10 | clinical | Gap-junction coupling, arrhythmia |
-| rotating_machinery | 4 | 10 | consumer | Vibration harmonics, ISO 10816 |
-| chemical_reactor | 4 | 10 | production | Hopf bifurcation, Semenov limit |
+| Pack | Layers | Osc | Safety Tier | Pipeline | Key Innovation |
+|------|--------|-----|-------------|----------|---------------|
+| bio_stub | 4 | 16 | research | full | Multi-scale biological oscillators |
+| cardiac_rhythm | 4 | 10 | clinical | full | Gap-junction coupling, arrhythmia |
+| chemical_reactor | 4 | 10 | production | full | Hopf bifurcation, Semenov limit |
+| circadian_biology | 4 | 10 | research | full | SCN clock-gene coupled oscillators |
+| epidemic_sir | 3 | 8 | research | full | Epidemic wave synchronisation |
+| fusion_equilibrium | 6 | 12 | research | full | MHD equilibrium + FusionCoreBridge |
+| geometry_walk | 2 | 8 | research | full | Random walk on graphs |
+| manufacturing_spc | 3 | 9 | consumer | full | SPC process drift detection |
+| metaphysics_demo | 3 | 7 | research | full | P/I/S + imprint + geometry |
+| minimal_domain | 2 | 4 | research | full | Minimal-but-complete pipeline example |
+| neuroscience_eeg | 6 | 14 | research | full | EEG band->phase, seizure detection |
+| plasma_control | 8 | 16 | research | adapter | Full tokamak layer hierarchy (PlasmaControlBridge) |
+| power_grid | 5 | 12 | production | full | Swing equation = Kuramoto (exact) |
+| quantum_simulation | 3 | 8 | research | adapter | Quantum gate phase tracking (QuantumControlBridge) |
+| queuewaves | 3 | 6 | consumer | full | Service queue oscillations |
+| rotating_machinery | 4 | 10 | consumer | full | Vibration harmonics, ISO 10816 |
+| traffic_flow | 4 | 10 | consumer | full | Signal coordination = phase sync |
+
+**Pipeline types**: *full* = BoundaryObserver + RegimeManager + SupervisorPolicy + PolicyEngine + ImprintModel (where applicable).  *adapter* = uses a specialised bridge class (FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge) as an alternative architecture.
 
 ## Why Kuramoto Fits Each Domain
 
 ### Neuroscience (EEG)
 
 Neural populations oscillate at characteristic band frequencies.  Bandpass
-filtering → Hilbert transform yields instantaneous phase, which IS a
+filtering -> Hilbert transform yields instantaneous phase, which IS a
 Kuramoto oscillator phase.  Inter-region phase-locking value (PLV) measures
 synchronisation.  Buzsaki (2006) *Rhythms of the Brain*; Fries (2005)
 "Communication through Coherence".
 
 ### Power Systems
 
-The swing equation `dδ/dt = ω` is literally a second-order Kuramoto model.
+The swing equation `d delta/dt = omega` is literally a second-order Kuramoto model.
 PMU phasor angles are oscillator phases; line admittances are coupling
-constants.  No phase extraction step is needed — measurement IS phase.
+constants.  No phase extraction step is needed -- measurement IS phase.
 Dorfler, Chertkov, Bullo (2013).
 
 ### Cardiac Electrophysiology
@@ -73,7 +78,7 @@ classic coupled-oscillator problem.  ITER Physics Basis (2007).
 
 Sensor signals (vibration, temperature, pressure) oscillate around
 setpoints.  Tool wear causes systematic drift that correlates sensor
-phases — exactly the kind of synchronisation Kuramoto detects.
+phases -- exactly the kind of synchronisation Kuramoto detects.
 
 ### Queue Networks
 
@@ -81,22 +86,79 @@ Service queues exhibit oscillatory behaviour under periodic demand.
 Phase relationships between upstream and downstream queues determine
 system throughput.  Spiked arrivals synchronise queue oscillations.
 
+### Circadian Biology
+
+SCN neurons are literal coupled oscillators with ~24 h period.  Clock
+genes (Per/Cry, Bmal1, Rev-erb) form transcription-translation feedback
+loops whose phase relationships determine circadian entrainment.
+Winfree (1967); Strogatz (2003) *Sync* Ch. 5.
+
+### Traffic Flow
+
+Traffic signal coordination IS phase synchronisation.  Each signalised
+intersection cycles with period ~90 s; offset-based green wave coordination
+aligns phase differences between adjacent signals.  Gershenson &
+Rosenblueth (2012) showed self-organising traffic lights converge via
+coupled-oscillator dynamics.
+
+### Epidemic SIR
+
+Epidemic waves oscillate with well-defined periods driven by seasonal
+forcing, immunity waning, and intervention cycles.  The SIR model produces
+damped oscillations that are naturally phase-coupled across regions via
+mobility.  Seasonal forcing acts as external drive (zeta).  Earn et al.
+(2000).
+
+### Biology (Bio Stub)
+
+Biological systems oscillate at every scale: Ca2+ transients (ms),
+cardiac rhythm (s), circadian clocks (24 h), hormonal cycles (days-weeks).
+Multi-scale coupling between cellular, tissue, organ, and systemic layers
+is inherently a Kuramoto hierarchy.
+
+### Graph Geometry (Geometry Walk)
+
+Random walkers on a graph synchronise when coupling exceeds a critical
+threshold related to spectral gap.  Phase = ring-mapped node index
+(theta = 2*pi*s/N).  Clustering and fragmentation transitions map to
+Kuramoto order parameter bifurcations.
+
+### Minimal Domain
+
+Minimal 2-layer, 4-oscillator test harness exercising every pipeline
+component: CouplingBuilder, UPDEEngine, BoundaryObserver, RegimeManager,
+SupervisorPolicy, PolicyEngine.  Reference implementation for new
+domain authors.
+
+### Fusion Equilibrium
+
+Grad-Shafranov equilibrium, MHD stability, transport, and ELM/sawtooth
+events form a coupled oscillator hierarchy.  FusionCoreBridge maps
+tokamak observables (q-profile, beta_N, tau_E) to oscillator phases.
+ITER Physics Basis (2007).
+
 ## Phase Extraction Rationale
 
 | Domain | Source Signal | Extraction | Phase = |
 |--------|-------------|-----------|---------|
 | EEG | Voltage time series | Bandpass + Hilbert | Instantaneous phase |
-| Power grid | PMU phasor | Direct measurement | Rotor angle δ |
+| Power grid | PMU phasor | Direct measurement | Rotor angle delta |
 | Cardiac | Intracardiac EGM | Activation time mapping | Activation phase |
 | Rotating | Accelerometer | Order tracking + FFT | Harmonic phase |
 | Chemical | T, C, P sensors | Detrend + Hilbert | Oscillation phase |
 | Plasma | Mirnov coils, ECE | Mode fitting | Mode phase |
 | Manufacturing | SPC sensor | Detrend around setpoint | Deviation phase |
 | Queue | Queue depth | Detrend + Hilbert | Demand phase |
+| Circadian | Clock gene expression | Cosinor fit | Acrophase |
+| Traffic | Signal state | Cycle normalisation | Cycle phase |
+| Epidemic | Case counts | Detrend + Hilbert | Wave phase |
+| Biology | Multi-modal sensors | Scale-appropriate | Per-scale phase |
+| Geometry | Graph node index | Ring mapping theta=2*pi*s/N | Node phase |
+| Fusion | Diagnostic signals | Observable mapping | Equilibrium phase |
 
 ## Good/Bad Layer Partition
 
-| Domain | Good (R↑ = healthy) | Bad (R↑ = pathological) |
+| Domain | Good (R up = healthy) | Bad (R up = pathological) |
 |--------|--------------------|-----------------------|
 | EEG | Alpha, gamma, network | Delta (wake), beta excess |
 | Power grid | Generator sync, area freq | Load demand, renewable |
@@ -105,19 +167,31 @@ system throughput.  Spiked arrivals synchronise queue oscillations.
 | Chemical | Heat transfer, feed flow | Kinetics oscillation |
 | Plasma | Transport barrier, current | Turbulence, sawteeth |
 | Manufacturing | Machine, line | Sensor (drift = bad) |
-| Queue | Server, throughput | Arrival burst |
+| Queue | Throughput (macro) | Retry burst (micro) |
+| Circadian | SCN core, peripheral | Behavioral desync (jet lag) |
+| Traffic | Corridor (green wave) | Intersection (gridlock), demand |
+| Epidemic | Intervention coordination | Infection wave, mobility |
+| Biology | Tissue, organ, systemic | (none defined) |
+| Geometry | Local, global coherence | (none defined) |
+| Minimal | Lower, upper | (none defined) |
+| Fusion | Equilibrium, transport, boundary | Events (sawtooth, ELM) |
 
 ## Boundary Sources
 
 | Domain | Hard Boundaries | Standard/Source |
 |--------|----------------|----------------|
 | EEG | Broadband sync < 0.9 | Lehnertz (2009) |
-| Power grid | Freq ±0.5 Hz, V 0.95–1.05 pu | NERC BAL-003-2, ANSI C84.1 |
-| Cardiac | HR 40–180 bpm, QT < 500 ms | ACC/AHA guidelines, Roden (2004) |
+| Power grid | Freq +/-0.5 Hz, V 0.95-1.05 pu | NERC BAL-003-2, ANSI C84.1 |
+| Cardiac | HR 40-180 bpm, QT < 500 ms | ACC/AHA guidelines, Roden (2004) |
 | Rotating | Vibration < 7.1 mm/s | ISO 10816-3 zone C/D |
-| Chemical | T < 450°C, P < 15 bar | Semenov limit, ASME VIII |
-| Plasma | q_min >= 1, β_N <= 2.8 | Kruskal-Shafranov, Troyon |
-| Manufacturing | Temp < 85°C, pressure > 2 | OEM specs |
+| Chemical | T < 450 C, P < 15 bar | Semenov limit, ASME VIII |
+| Plasma | q_min >= 1, beta_N <= 2.8 | Kruskal-Shafranov, Troyon |
+| Manufacturing | Temp < 85 C, pressure > 2 | OEM specs |
+| Circadian | Phase deviation < 3 h | Clinical circadian disruption |
+| Traffic | Queue < 50 vehicles | Intersection capacity |
+| Epidemic | Cases < 100/100k, hospital < 80% | WHO threshold |
+| Biology | HR 40-180 bpm | Clinical range |
+| Fusion | q_min >= 1, beta_N <= 2.8 | Kruskal-Shafranov, Troyon |
 
 ## Actuator Mapping
 
@@ -126,10 +200,18 @@ system throughput.  Spiked arrivals synchronise queue oscillations.
 | EEG | Connectivity | Delta band lag | Entrainment stim | Target phase |
 | Power grid | Governor droop | Load shed phase | AGC bias | Curtailment |
 | Cardiac | Drug coupling | Vagal modulation | Pacing rate | Pacing target |
-| Rotating | Bearing stiffness | Damper viscosity | Speed setpoint | — |
+| Rotating | Bearing stiffness | Damper viscosity | Speed setpoint | -- |
 | Chemical | Coolant flow | Agitator speed | Feed rate | Jacket SP |
-| Plasma | Global coupling | Turbulence lag | Damping | — |
-| Manufacturing | Global coupling | Sensor lag | Damping | — |
+| Plasma | Global coupling | Turbulence lag | Damping | -- |
+| Manufacturing | Global coupling | Sensor lag | Damping | -- |
+| Queue | Global coupling | Micro lag | Damping | -- |
+| Circadian | Inter-clock coupling | Sleep schedule lag | Light exposure | Meal timing |
+| Traffic | Signal coordination | Phase split | Green wave offset | Ramp metering |
+| Epidemic | Vaccination coordination | Travel restriction | Social measures | Lockdown target |
+| Biology | Global coupling | -- | Entrainment | Reference phase |
+| Geometry | Global coupling | -- | -- | -- |
+| Minimal | Global coupling | -- | -- | -- |
+| Fusion | Global coupling | -- | Entrainment | -- |
 
 ## Coupling Topology Rationale
 
@@ -138,22 +220,38 @@ system throughput.  Spiked arrivals synchronise queue oscillations.
 | EEG | Symmetric, non-negative | Cortical connectivity is undirected |
 | Power grid | Distance-decayed | Admittance ~ 1/impedance ~ 1/distance |
 | Cardiac | Strong nearest-neighbour | Gap junctions connect adjacent cells |
-| Rotating | Layer-block | Mechanical path: shaft → bearing → structure |
+| Rotating | Layer-block | Mechanical path: shaft -> bearing -> structure |
 | Chemical | Dense intra-layer | Heat-mass coupling is tight within reactions |
 | Plasma | Hierarchical decay | Timescale separation between layers |
 | Manufacturing | Weak cross-layer | Sensors are only indirectly coupled |
+| Queue | Distance-decayed | Upstream/downstream proximity |
+| Circadian | Strong intra-layer | Clock genes tightly coupled within SCN |
+| Traffic | Distance-decayed | Adjacent intersections strongly coupled |
+| Epidemic | Weak cross-layer | Regions coupled via mobility only |
+| Biology | Hierarchical decay | Timescale separation across scales |
+| Geometry | Distance-decayed | Graph adjacency determines coupling |
+| Minimal | Distance-decayed | Default template |
+| Fusion | Hierarchical decay | Timescale separation between layers |
 
 ## Imprint Semantics
 
 | Domain | Physical Meaning | Timescale | Modulates |
 |--------|-----------------|-----------|-----------|
-| EEG | Meditation training (plasticity) | Weeks–months | K, alpha |
-| Cardiac | Drug accumulation (pharmacokinetics) | Hours–days | K |
+| EEG | Meditation training (plasticity) | Weeks-months | K, alpha |
+| Cardiac | Drug accumulation (pharmacokinetics) | Hours-days | K |
 | Chemical | Catalyst fouling/deactivation | Months | K |
 | Manufacturing | Tool wear history | Weeks | K |
-| Plasma | (none) | — | — |
-| Power grid | (none) | — | — |
-| Rotating | (none) | — | — |
+| Circadian | Chronic jet lag / shift work debt | Days-weeks | K, alpha |
+| Biology | Chronic exposure accumulation | Days-months | K, alpha |
+| Fusion | Plasma facing component erosion | Weeks | K |
+| Plasma | (none) | -- | -- |
+| Power grid | (none) | -- | -- |
+| Rotating | (none) | -- | -- |
+| Queue | (none) | -- | -- |
+| Traffic | (none) | -- | -- |
+| Epidemic | (none) | -- | -- |
+| Geometry | (none) | -- | -- |
+| Minimal | (none) | -- | -- |
 
 ## Adding a New Domain
 

@@ -5,7 +5,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # License: GNU AGPL v3 | Commercial licensing available
 
-"""Queuewaves: steady -> spike -> retry storm -> breaker -> recovery."""
+"""Epidemic SIR: endemic -> surge -> wave -> NPI -> vaccination."""
 
 from __future__ import annotations
 
@@ -29,18 +29,21 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_plv,
 )
 
-STEPS = 200
+STEPS = 250
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
+# ~2-3 week infection cycle normalised; Earn et al. (2000)
 OMEGAS = np.array(
     [
-        1.0,
-        1.1,
-        0.9,  # micro: queue_a, queue_b, retry_burst
-        0.5,  # meso: latency_p99
-        0.2,
-        0.15,  # macro: error_rate, throughput
+        0.30,
+        0.50,
+        0.20,  # infection_wave: S, I, R
+        0.10,
+        0.05,
+        0.40,  # intervention: vax, distance, treatment
+        0.80,
+        0.15,  # mobility: local, inter-region
     ]
 )
 
@@ -83,32 +86,38 @@ def main():
     zeta = spec.drivers.physical.get("zeta", 0.0)
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
-    print("=== Queuewaves: Steady -> Spike -> Retry Storm -> Breaker -> Recovery ===\n")
+    print("=== Epidemic SIR: Endemic -> Surge -> Wave -> NPI -> Vaccination ===\n")
     print(f"{'step':>5}  {'R_good':>6}  {'R_bad':>5}  {'regime':>10}  phase")
     print("-" * 60)
 
     for step in range(STEPS):
-        # Phase 1 (0-39): steady state
-        # Phase 2 (40-79): traffic spike
-        if 40 <= step < 80:
-            micro_ids = layer_map[0]
-            omegas[micro_ids] = np.array([2.0, 2.2, 1.8])  # 2x load
+        # Phase 1 (0-49): endemic baseline
+        # Phase 2 (50-99): imported case surge — infection wave coupling boost
+        if step == 50:
+            inf_ids = layer_map[0]
+            omegas[inf_ids] *= 2.0  # doubling time drops
+            mob_ids = layer_map[2]
+            omegas[mob_ids] *= 1.5  # travel-related spread
 
-        # Phase 3 (80-119): retry storm — micro queues lock in phase
-        if 80 <= step < 120:
-            micro_ids = layer_map[0]
-            phases[micro_ids] = np.mean(phases[micro_ids])  # force sync
-            if step % 5 == 0:
-                phases[micro_ids] += rng.uniform(-0.05, 0.05, len(micro_ids))
+        # Phase 3 (100-149): community transmission wave
+        if 100 <= step < 150:
+            inf_ids = layer_map[0]
+            if step % 10 == 0:
+                phases[inf_ids] += rng.uniform(0.2, 0.8, len(inf_ids))
 
-        # Phase 4 (120-159): circuit breaker — decouple micro, boost zeta
-        if step == 120:
+        # Phase 4 (150-199): NPI intervention (social distancing)
+        if step == 150:
             omegas[:n_osc] = OMEGAS[:n_osc]
-            zeta = 0.3
+            zeta = 0.4
 
-        # Phase 5 (160-199): recovery
-        if step == 160:
-            zeta = 0.1
+        # Phase 5 (200-249): vaccination campaign -> suppression
+        if step == 200:
+            zeta = 0.2
+            coupling = CouplingState(
+                knm=coupling.knm * 1.3,
+                alpha=coupling.alpha,
+                active_template=coupling.active_template,
+            )
 
         phases = engine.step(
             phases, omegas, coupling.knm, zeta, psi_target, coupling.alpha
@@ -137,11 +146,12 @@ def main():
             regime_id=regime_manager.current_regime.value,
         )
 
-        micro_r = layer_states[0].R
+        inf_r = layer_states[0].R
         obs_values = {
             "R": mean_r,
-            "queue_depth": 12000 * micro_r,  # 0-12000 scale
-            "p99_latency_ms": 100 + 500 * micro_r,
+            "cases_per_100k": 200 * inf_r,  # 0-200 scale
+            "hospital_occ": 0.3 + 0.7 * inf_r,
+            "rt": 0.5 + 2.0 * inf_r,
         }
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
@@ -183,17 +193,17 @@ def main():
         r_good = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
         r_bad = compute_order_parameter(np.array(bad_ph))[0] if bad_ph else 0.0
 
-        if step % 20 == 0:
-            if step < 40:
-                label = "steady"
-            elif step < 80:
-                label = "spike"
-            elif step < 120:
-                label = "retry_storm"
-            elif step < 160:
-                label = "breaker"
+        if step % 25 == 0:
+            if step < 50:
+                label = "endemic"
+            elif step < 100:
+                label = "surge"
+            elif step < 150:
+                label = "wave"
+            elif step < 200:
+                label = "NPI"
             else:
-                label = "recovery"
+                label = "vaccination"
             print(
                 f"{step:5d}  {r_good:.4f}  {r_bad:.4f}  "
                 f"{regime_manager.current_regime.value:>10}  {label}"

@@ -5,7 +5,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # License: GNU AGPL v3 | Commercial licensing available
 
-"""Queuewaves: steady -> spike -> retry storm -> breaker -> recovery."""
+"""Traffic flow: free-flow -> rush -> spillback -> adaptive -> recovery."""
 
 from __future__ import annotations
 
@@ -33,14 +33,19 @@ STEPS = 200
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
+# Cycle ~90 s normalised; Gershenson & Rosenblueth (2012)
 OMEGAS = np.array(
     [
-        1.0,
-        1.1,
-        0.9,  # micro: queue_a, queue_b, retry_burst
-        0.5,  # meso: latency_p99
-        0.2,
-        0.15,  # macro: error_rate, throughput
+        1.00,
+        0.80,
+        0.50,  # intersection: signal, queue, pedestrian
+        1.00,
+        0.60,
+        0.30,  # corridor: green_wave, travel_time, bus
+        0.20,
+        0.15,  # network: area_flow, congestion_index
+        0.10,
+        0.05,  # demand: commuter, freight
     ]
 )
 
@@ -83,32 +88,34 @@ def main():
     zeta = spec.drivers.physical.get("zeta", 0.0)
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
-    print("=== Queuewaves: Steady -> Spike -> Retry Storm -> Breaker -> Recovery ===\n")
+    print(
+        "=== Traffic Flow: Free-Flow -> Rush -> Spillback -> Adaptive -> Recovery ===\n"
+    )
     print(f"{'step':>5}  {'R_good':>6}  {'R_bad':>5}  {'regime':>10}  phase")
-    print("-" * 60)
+    print("-" * 55)
 
     for step in range(STEPS):
-        # Phase 1 (0-39): steady state
-        # Phase 2 (40-79): traffic spike
+        # Phase 1 (0-39): free-flow conditions
+        # Phase 2 (40-79): morning rush — demand spike
         if 40 <= step < 80:
-            micro_ids = layer_map[0]
-            omegas[micro_ids] = np.array([2.0, 2.2, 1.8])  # 2x load
+            demand_ids = layer_map[3]
+            omegas[demand_ids] = np.array([0.5, 0.3])  # surge
 
-        # Phase 3 (80-119): retry storm — micro queues lock in phase
+        # Phase 3 (80-119): queue spillback — intersection sync (gridlock)
         if 80 <= step < 120:
-            micro_ids = layer_map[0]
-            phases[micro_ids] = np.mean(phases[micro_ids])  # force sync
+            int_ids = layer_map[0]
+            phases[int_ids] = np.mean(phases[int_ids])  # force lock
             if step % 5 == 0:
-                phases[micro_ids] += rng.uniform(-0.05, 0.05, len(micro_ids))
+                phases[int_ids] += rng.uniform(-0.1, 0.1, len(int_ids))
 
-        # Phase 4 (120-159): circuit breaker — decouple micro, boost zeta
+        # Phase 4 (120-159): adaptive signal control
         if step == 120:
             omegas[:n_osc] = OMEGAS[:n_osc]
             zeta = 0.3
 
-        # Phase 5 (160-199): recovery
+        # Phase 5 (160-199): green wave recovery
         if step == 160:
-            zeta = 0.1
+            zeta = 0.15
 
         phases = engine.step(
             phases, omegas, coupling.knm, zeta, psi_target, coupling.alpha
@@ -137,11 +144,12 @@ def main():
             regime_id=regime_manager.current_regime.value,
         )
 
-        micro_r = layer_states[0].R
+        int_r = layer_states[0].R
         obs_values = {
             "R": mean_r,
-            "queue_depth": 12000 * micro_r,  # 0-12000 scale
-            "p99_latency_ms": 100 + 500 * micro_r,
+            "queue_vehicles": 60 * int_r,  # 0-60 scale
+            "travel_time_s": 100 + 300 * (1.0 - layer_states[1].R),
+            "ped_wait_s": 30 + 120 * int_r,
         }
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
@@ -185,13 +193,13 @@ def main():
 
         if step % 20 == 0:
             if step < 40:
-                label = "steady"
+                label = "free_flow"
             elif step < 80:
-                label = "spike"
+                label = "rush"
             elif step < 120:
-                label = "retry_storm"
+                label = "spillback"
             elif step < 160:
-                label = "breaker"
+                label = "adaptive"
             else:
                 label = "recovery"
             print(

@@ -1,0 +1,91 @@
+name: traffic_flow
+version: "0.1.0"
+safety_tier: consumer
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: intersection
+    index: 0
+    oscillator_ids: [signal_phase, queue_length, pedestrian]
+  - name: corridor
+    index: 1
+    oscillator_ids: [green_wave, travel_time, bus_priority]
+  - name: network
+    index: 2
+    oscillator_ids: [area_flow, congestion_index]
+  - name: demand
+    index: 3
+    oscillator_ids: [commuter, freight]
+
+oscillator_families:
+  # Traffic signals are literal phase oscillators; Gershenson & Rosenblueth (2012)
+  signal_cycle:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  demand_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Signal coordination coupling proportional to link capacity
+  base_strength: 0.45
+  decay_alpha: 0.30
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # Green wave sync = good; intersection queue sync = gridlock; demand surge = bad
+  good_layers: [1]
+  bad_layers: [0, 3]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # Queue overflow > 50 vehicles (hard)
+  - name: queue_overflow
+    variable: queue_vehicles
+    lower: null
+    upper: 50.0
+    severity: hard
+  # Travel time > 300 s (soft)
+  - name: travel_time
+    variable: travel_time_s
+    lower: null
+    upper: 300.0
+    severity: soft
+  # Pedestrian wait > 120 s (soft, ADA compliance)
+  - name: pedestrian_wait
+    variable: ped_wait_s
+    lower: null
+    upper: 120.0
+    severity: soft
+
+actuators:
+  - name: cycle_length
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: offset
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: split
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: metering
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+policy: policy.yaml

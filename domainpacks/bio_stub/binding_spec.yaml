@@ -83,3 +83,5 @@ imprint_model:
   decay_rate: 0.01
   saturation: 2.0
   modulates: ["K", "alpha"]
+
+policy: policy.yaml
