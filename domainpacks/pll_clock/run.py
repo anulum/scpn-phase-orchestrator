@@ -5,7 +5,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # License: GNU AGPL v3 | Commercial licensing available
 
-"""Epidemic SIR: endemic -> surge -> wave -> NPI -> vaccination."""
+"""PLL clock: locked -> reference loss -> drift -> re-acquisition -> recovery."""
 
 from __future__ import annotations
 
@@ -31,21 +31,21 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_plv,
 )
 
-STEPS = 250
+STEPS = 200
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
-# ~2-3 week infection cycle normalised; Earn et al. (2000)
+# ITU-T G.811: near-nominal VCO frequencies, PLL hierarchy.
 OMEGAS = np.array(
     [
-        0.30,
+        1.000,
+        1.001,
+        0.999,
+        1.002,  # local_vco
         0.50,
-        0.20,  # infection_wave: S, I, R
+        0.50,  # network_pll
         0.10,
-        0.05,
-        0.40,  # intervention: vax, distance, treatment
-        0.80,
-        0.15,  # mobility: local, inter-region
+        0.05,  # stratum_hierarchy
     ]
 )
 
@@ -93,38 +93,42 @@ def main():
     zeta = spec.drivers.physical.get("zeta", 0.0)
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
-    print("=== Epidemic SIR: Endemic -> Surge -> Wave -> NPI -> Vaccination ===\n")
+    print("=== PLL Clock: Locked -> Ref Loss -> Drift -> Re-acquire -> Recovery ===\n")
     print(f"{'step':>5}  {'R_good':>6}  {'R_bad':>5}  {'regime':>10}  phase")
     print("-" * 60)
 
     for step in range(STEPS):
-        # Phase 1 (0-49): endemic baseline
-        # Phase 2 (50-99): imported case surge — infection wave coupling boost
-        if step == 50:
-            inf_ids = layer_map[0]
-            omegas[inf_ids] *= 2.0  # doubling time drops
-            mob_ids = layer_map[2]
-            omegas[mob_ids] *= 1.5  # travel-related spread
-
-        # Phase 3 (100-149): community transmission wave
-        if 100 <= step < 150:
-            inf_ids = layer_map[0]
-            if step % 10 == 0:
-                phases[inf_ids] += rng.uniform(0.2, 0.8, len(inf_ids))
-
-        # Phase 4 (150-199): NPI intervention (social distancing)
-        if step == 150:
-            omegas[:n_osc] = OMEGAS[:n_osc]
-            zeta = 0.4
-
-        # Phase 5 (200-249): vaccination campaign -> suppression
-        if step == 200:
-            zeta = 0.2
+        # Phase 1 (0-39): locked to reference
+        # Phase 2 (40-79): reference loss — stratum drifts
+        if step == 40:
+            strat_ids = layer_map[2]
+            omegas[strat_ids] = np.array([0.02, 0.01])  # holdover
+            coupling_knm = coupling.knm.copy()
+            coupling_knm[strat_ids[0], :] *= 0.1
+            coupling_knm[:, strat_ids[0]] *= 0.1
             coupling = CouplingState(
-                knm=coupling.knm * 1.3,
+                knm=coupling_knm,
                 alpha=coupling.alpha,
                 active_template=coupling.active_template,
             )
+
+        # Phase 3 (80-119): VCO drift accumulates
+        if 80 <= step < 120:
+            vco_ids = layer_map[0]
+            omegas[vco_ids] += 0.002 * rng.standard_normal(len(vco_ids))
+
+        # Phase 4 (120-159): PLL re-acquisition — reference restored
+        if step == 120:
+            omegas[:n_osc] = OMEGAS[:n_osc]
+            coupling = builder.build(
+                n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha
+            )
+            zeta = 0.3
+
+        # Phase 5 (160-199): phase step + recovery
+        if step == 160:
+            phases[layer_map[0]] += 0.5  # abrupt phase step
+            zeta = 0.15
 
         eff_knm = imprint_model.modulate_coupling(coupling.knm, imprint_state)
         eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
@@ -154,12 +158,12 @@ def main():
             regime_id=regime_manager.current_regime.value,
         )
 
-        inf_r = layer_states[0].R
+        vco_r = layer_states[0].R
         obs_values = {
             "R": mean_r,
-            "cases_per_100k": 200 * inf_r,  # 0-200 scale
-            "hospital_occ": 0.3 + 0.7 * inf_r,
-            "rt": 0.5 + 2.0 * inf_r,
+            "phase_error_ns": 150.0 * (1.0 - vco_r),
+            "freq_drift_ppm": 15.0 * (1.0 - vco_r),
+            "holdover_s": 1200.0 * layer_states[2].R,
         }
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
@@ -178,7 +182,7 @@ def main():
 
         for act in actions:
             if act.knob == "zeta":
-                zeta = min(zeta + act.value, 2.0)
+                zeta = min(zeta + act.value, 3.0)
             elif act.knob == "K" and act.scope == "global":
                 coupling = CouplingState(
                     knm=coupling.knm * (1.0 + act.value),
@@ -212,17 +216,17 @@ def main():
         r_good = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
         r_bad = compute_order_parameter(np.array(bad_ph))[0] if bad_ph else 0.0
 
-        if step % 25 == 0:
-            if step < 50:
-                label = "endemic"
-            elif step < 100:
-                label = "surge"
-            elif step < 150:
-                label = "wave"
-            elif step < 200:
-                label = "NPI"
+        if step % 20 == 0:
+            if step < 40:
+                label = "locked"
+            elif step < 80:
+                label = "ref-loss"
+            elif step < 120:
+                label = "drift"
+            elif step < 160:
+                label = "re-acquire"
             else:
-                label = "vaccination"
+                label = "recovery"
             print(
                 f"{step:5d}  {r_good:.4f}  {r_bad:.4f}  "
                 f"{regime_manager.current_regime.value:>10}  {label}"

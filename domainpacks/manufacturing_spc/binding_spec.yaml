@@ -79,8 +79,9 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
-imprint:
+imprint_model:
   decay_rate: 0.005
   saturation: 3.0
+  modulates: ["K"]
 
 policy: policy.yaml

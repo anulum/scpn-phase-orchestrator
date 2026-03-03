@@ -1,18 +1,37 @@
-# geometry_walk
+# Geometry Walk Domainpack
 
-Graph-walk coherence domain. Phase derived from random walk position on a discrete graph.
+Graph-walk coherence domain for SPO's Kuramoto/UPDE framework.
 
-## Setup
+## Why Kuramoto Fits This Domain
 
-8 oscillators across 2 layers, all Symbolic channel (graph mode). Each oscillator represents a random walker on a 16-node graph. Phase = normalised position on the walk sequence.
+Random walkers on a graph synchronise when coupling exceeds a critical
+threshold related to the graph's spectral gap.  Phase = ring-mapped node
+index (theta = 2*pi*s/N).  Clustering and fragmentation transitions map
+to Kuramoto order parameter bifurcations.  Jadbabaie, Lin, Morse (IEEE
+TAC 2003) proved consensus on graphs via coupled-oscillator dynamics.
 
-## Objective
+## Layers
 
-Maximise coherence across both layers. Tests the Symbolic extractor and graph-walk phase coupling.
+| Layer | Oscillators | Channel | Purpose |
+|-------|------------|---------|---------|
+| local | 4 | S (symbolic) | Individual random walkers |
+| global | 4 | S (symbolic) | Aggregate cluster coherence |
 
-## Run
+## Boundaries
 
-```bash
-spo run domainpacks/geometry_walk/binding_spec.yaml --steps 100
-python domainpacks/geometry_walk/run.py
-```
+- **R_floor**: R >= 0.1 (soft) -- minimum coherence for meaningful dynamics
+
+## Actuators
+
+| Actuator | Knob | Physical Meaning |
+|----------|------|-----------------|
+| coupling_global | K | Graph adjacency coupling strength |
+
+## Imprint
+
+None. Memoryless random walk dynamics.
+
+## Scenario
+
+100 steps: dispersed walkers -> coupling increase -> cluster emergence ->
+fragmentation event -> re-convergence.

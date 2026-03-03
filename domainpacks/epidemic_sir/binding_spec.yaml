@@ -85,4 +85,10 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+# Waning immunity: Antia et al. (2018) antibody decay kinetics.
+imprint_model:
+  decay_rate: 0.008
+  saturation: 2.0
+  modulates: ["K"]
+
 policy: policy.yaml

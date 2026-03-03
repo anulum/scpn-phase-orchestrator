@@ -36,6 +36,12 @@ networks and smart grids" proved this equivalence rigorously.
 | load_shedding | alpha | Under-frequency load shed |
 | renewable_curtailment | Psi | Curtailment anti-phase signal |
 
+## Imprint
+
+Transformer insulation aging: IEEE C57.91 thermal degradation model
+accumulates and modulates coupling, representing gradual loss of
+transmission capacity over years of operation.
+
 ## Scenario
 
 250 steps: steady-state → sudden load step → renewable ramp → generator

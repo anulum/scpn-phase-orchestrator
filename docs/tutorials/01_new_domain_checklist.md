@@ -92,7 +92,82 @@ actuators:
     limits: [0.0, 3.0]
 ```
 
-## 9. Validate and Run
+## 9. Write policy.yaml
+
+Declare supervisor rules that fire when regime/metric conditions match:
+
+```yaml
+rules:
+  - name: suppress_fault
+    description: Increase damping when bad-layer coherence rises
+    trigger:
+      regime: degraded
+      metric: R_bad
+      above: 0.5
+    action:
+      knob: zeta
+      delta: 0.2
+      scope: global
+
+  - name: restore_target
+    description: Boost coupling when good-layer coherence drops
+    trigger:
+      regime: degraded
+      metric: R_good
+      below: 0.4
+    action:
+      knob: K
+      delta: 0.3
+      scope: global
+```
+
+Reference `policy.yaml` in binding_spec.yaml: `policy: policy.yaml`.
+
+## 10. Add Imprint (If Applicable)
+
+If the domain has slow accumulation effects (wear, aging, drift), add
+an `imprint_model` section to binding_spec.yaml:
+
+```yaml
+imprint_model:
+  decay_rate: 0.002
+  saturation: 4.0
+  modulates: ["K"]
+```
+
+In run.py, integrate the ImprintModel:
+
+```python
+from scpn_phase_orchestrator.imprint.state import ImprintModel, ImprintState
+
+imprint_model = ImprintModel(
+    decay_rate=spec["imprint_model"]["decay_rate"],
+    saturation=spec["imprint_model"]["saturation"],
+)
+imprint_state = ImprintState(n=n_osc)
+
+# Before engine.step:
+coupling = imprint_model.modulate_coupling(coupling, imprint_state)
+# After actions:
+exposure = np.abs(phases - np.mean(phases))
+imprint_state = imprint_model.update(imprint_state, exposure, dt)
+```
+
+## 11. Write README.md
+
+Every domainpack README must include these sections:
+
+1. Title and one-line summary
+2. **Why Kuramoto Fits This Domain** — cite at least one paper
+3. **Layers** — table with Layer, Oscillators, Channel, Purpose
+4. **Boundaries** — list with standard/source
+5. **Actuators** — table with Actuator, Knob, Physical Meaning
+6. **Imprint** — physical basis or "None" with justification
+7. **Scenario** — step count and narrative arc
+
+See `domainpacks/cardiac_rhythm/README.md` as the gold standard.
+
+## 12. Validate and Run
 
 ```bash
 spo validate domainpacks/<domain>/binding_spec.yaml

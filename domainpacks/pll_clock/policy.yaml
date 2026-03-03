@@ -1,0 +1,26 @@
+rules:
+  - name: widen_loop_bandwidth
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 0
+      op: "<"
+      threshold: 0.4
+    action:
+      knob: K
+      scope: global
+      value: 0.4
+      ttl_s: 5.0
+
+  - name: suppress_holdover_drift
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_bad
+      layer: 0
+      op: ">"
+      threshold: 0.5
+    action:
+      knob: zeta
+      scope: global
+      value: 0.3
+      ttl_s: 10.0

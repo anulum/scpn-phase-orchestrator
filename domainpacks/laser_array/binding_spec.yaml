@@ -1,0 +1,93 @@
+name: laser_array
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.005
+control_period_s: 0.05
+
+layers:
+  - name: single_laser
+    index: 0
+    oscillator_ids: [laser_0, laser_1, laser_2, laser_3]
+  - name: array_coupling
+    index: 1
+    oscillator_ids: [evanescent_01, evanescent_23]
+  - name: external_cavity
+    index: 2
+    oscillator_ids: [feedback_in, feedback_out]
+
+# Winful & Wang, Appl Phys Lett 53(20), 1988.
+# Evanescent waveguide coupling between adjacent ridge lasers.
+oscillator_families:
+  optical_field:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  cavity_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Evanescent coupling decays exponentially with inter-guide spacing.
+  base_strength: 0.60
+  decay_alpha: 0.15
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # In-phase lock = good; feedback instability = bad.
+  good_layers: [0, 1]
+  bad_layers: [2]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # Kozyreff et al., PRL 85(18), 2000.
+  - name: phase_variance
+    variable: phase_var_rad
+    lower: null
+    upper: 0.3
+    severity: hard
+  - name: feedback_strength
+    variable: feedback_frac
+    lower: null
+    upper: 0.5
+    severity: hard
+  - name: power_imbalance
+    variable: power_imbalance_pct
+    lower: null
+    upper: 20.0
+    severity: soft
+
+actuators:
+  - name: injection_current
+    knob: zeta
+    scope: global
+    limits: [0.0, 3.0]
+  - name: evanescent_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: detuning_offset
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: feedback_phase
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+# Mirror degradation: reflectivity loss modulates coupling.
+imprint_model:
+  decay_rate: 0.002
+  saturation: 2.0
+  modulates: ["K"]
+
+policy: policy.yaml

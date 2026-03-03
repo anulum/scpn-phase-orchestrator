@@ -1,29 +1,42 @@
-# queuewaves
+# Queuewaves Domainpack
 
-Queue-wave desynchronisation domain. Models cloud retry storms as Kuramoto oscillators.
+Queue-wave desynchronisation domain for SPO's Kuramoto/UPDE framework.
+
+## Why Kuramoto Fits This Domain
+
+Service queues exhibit oscillatory behaviour under periodic demand.
+Phase relationships between upstream and downstream queues determine
+system throughput.  When queues synchronise (retry storm), correlated
+burst traffic overwhelms backends.  Breaking phase-lock (desync) is
+the control objective -- inverse of classical Kuramoto.
+
+## Layers
+
+| Layer | Oscillators | Channel | Purpose |
+|-------|------------|---------|---------|
+| micro | 3 | P (physical) | queue_a, queue_b, retry_burst depths |
+| meso | 1 | P (physical) | P99 latency indicator |
+| macro | 2 | I (informational) | error_rate, throughput health |
+
+## Boundaries
+
+- **queue_overflow**: queue_depth < 10000 (hard) -- backpressure limit
+- **latency_warning**: p99_latency < 500 ms (soft) -- SLA threshold
+
+## Actuators
+
+| Actuator | Knob | Physical Meaning |
+|----------|------|-----------------|
+| coupling_global | K | Inter-service coupling strength |
+| lag_micro | alpha | Retry backoff (phase shift) |
+| damping | zeta | Circuit breaker / rate limiting |
+
+## Imprint
+
+Service degradation: memory leaks, connection pool exhaustion, and GC
+pressure accumulate and modulate coupling, representing gradual system decay.
 
 ## Scenario
 
-A microservice system with:
-
-- **Micro layer (layer 0):** queue depths and retry bursts. High coherence here = retry storm (bad).
-- **Meso layer (layer 1):** P99 latency. Indicator, not directly controlled.
-- **Macro layer (layer 2):** error rate and throughput. High coherence here = coordinated service health (good).
-
-## Objective
-
-- Suppress R on layer 0 (R_bad) to break retry-storm synchronisation.
-- Maintain R on layer 2 (R_good) to keep services coordinated.
-
-## Policy
-
-`policy.yaml` defines two rules:
-1. If R_bad > 0.7, increase alpha on layer 0 (phase-shift retries).
-2. If R_good < 0.3, increase K globally (restore coordination).
-
-## Run
-
-```bash
-spo run domainpacks/queuewaves/binding_spec.yaml --steps 200
-python domainpacks/queuewaves/run.py
-```
+200 steps: steady state -> traffic spike (2x load) -> retry storm (micro
+sync) -> circuit breaker -> recovery.

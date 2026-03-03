@@ -1,6 +1,6 @@
 # Domain Utilisation Schemas
 
-Cross-domain comparison of all 17 SPO domainpacks, showing how Kuramoto/UPDE
+Cross-domain comparison of all 21 SPO domainpacks, showing how Kuramoto/UPDE
 phase dynamics map to diverse physical, biological, and engineered systems.
 
 ## Master Domainpack Table
@@ -12,17 +12,21 @@ phase dynamics map to diverse physical, biological, and engineered systems.
 | chemical_reactor | 4 | 10 | production | full | Hopf bifurcation, Semenov limit |
 | circadian_biology | 4 | 10 | research | full | SCN clock-gene coupled oscillators |
 | epidemic_sir | 3 | 8 | research | full | Epidemic wave synchronisation |
+| firefly_swarm | 2 | 8 | research | full | Mirollo-Strogatz flash synchronisation |
 | fusion_equilibrium | 6 | 12 | research | full | MHD equilibrium + FusionCoreBridge |
 | geometry_walk | 2 | 8 | research | full | Random walk on graphs |
+| laser_array | 3 | 8 | research | full | Evanescent-coupled laser phase-locking |
 | manufacturing_spc | 3 | 9 | consumer | full | SPC process drift detection |
 | metaphysics_demo | 3 | 7 | research | full | P/I/S + imprint + geometry |
 | minimal_domain | 2 | 4 | research | full | Minimal-but-complete pipeline example |
 | neuroscience_eeg | 6 | 14 | research | full | EEG band->phase, seizure detection |
 | plasma_control | 8 | 16 | research | adapter | Full tokamak layer hierarchy (PlasmaControlBridge) |
+| pll_clock | 3 | 8 | production | full | PLL network clock sync (ITU-T G.811) |
 | power_grid | 5 | 12 | production | full | Swing equation = Kuramoto (exact) |
 | quantum_simulation | 3 | 8 | research | adapter | Quantum gate phase tracking (QuantumControlBridge) |
 | queuewaves | 3 | 6 | consumer | full | Service queue oscillations |
 | rotating_machinery | 4 | 10 | consumer | full | Vibration harmonics, ISO 10816 |
+| swarm_robotics | 3 | 8 | consumer | full | Vicsek collective motion/formation |
 | traffic_flow | 4 | 10 | consumer | full | Signal coordination = phase sync |
 
 **Pipeline types**: *full* = BoundaryObserver + RegimeManager + SupervisorPolicy + PolicyEngine + ImprintModel (where applicable).  *adapter* = uses a specialised bridge class (FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge) as an alternative architecture.
@@ -137,6 +141,37 @@ events form a coupled oscillator hierarchy.  FusionCoreBridge maps
 tokamak observables (q-profile, beta_N, tau_E) to oscillator phases.
 ITER Physics Basis (2007).
 
+### Laser Arrays
+
+Semiconductor laser arrays couple via evanescent fields in shared
+waveguide substrates.  Each laser's optical phase evolves under gain
+competition and nearest-neighbour evanescent coupling — structurally
+identical to Kuramoto with finite-range coupling.  Winful & Wang,
+Appl Phys Lett 53(20), 1988; Kozyreff et al., PRL 85(18), 2000.
+
+### PLL Clock Networks
+
+Phase-locked loops track a reference clock by adjusting VCO frequency
+proportional to phase error — exactly the Kuramoto coupling term
+K·sin(θ_ref − θ_vco).  Hierarchical PLL networks (stratum clocks)
+synchronise via cascaded phase detectors.  Strogatz & Mirollo, SIAM
+J Appl Math 1988; ITU-T G.811.
+
+### Firefly Swarms
+
+Firefly flash synchronisation is the canonical biological Kuramoto
+example.  Each firefly adjusts its flash-phase based on visual
+coupling to neighbours, converging to collective synchrony.  Mirollo
+& Strogatz (1990) proved global synchronisation for identical
+pulse-coupled oscillators.
+
+### Swarm Robotics
+
+The Vicsek model — robots aligning heading angles with neighbours
+plus noise — is a discrete-time Kuramoto model on a proximity graph.
+Heading phase = oscillator phase; alignment = coupling.  Vicsek et al.,
+PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
+
 ## Phase Extraction Rationale
 
 | Domain | Source Signal | Extraction | Phase = |
@@ -155,6 +190,10 @@ ITER Physics Basis (2007).
 | Biology | Multi-modal sensors | Scale-appropriate | Per-scale phase |
 | Geometry | Graph node index | Ring mapping theta=2*pi*s/N | Node phase |
 | Fusion | Diagnostic signals | Observable mapping | Equilibrium phase |
+| Laser array | Optical field | Heterodyne interferometry | Optical phase |
+| PLL clock | VCO output | Phase detector | VCO phase |
+| Firefly | Flash events | Inter-flash interval | Flash phase |
+| Swarm | IMU heading | Compass reading | Heading angle |
 
 ## Good/Bad Layer Partition
 
@@ -175,6 +214,10 @@ ITER Physics Basis (2007).
 | Geometry | Local, global coherence | (none defined) |
 | Minimal | Lower, upper | (none defined) |
 | Fusion | Equilibrium, transport, boundary | Events (sawtooth, ELM) |
+| Laser array | Single laser, array coupling | External cavity (feedback) |
+| PLL clock | VCO lock, network PLL | Stratum hierarchy (holdover) |
+| Firefly | Individual flash, swarm | (none defined) |
+| Swarm | Heading alignment, flock direction | Formation breakup |
 
 ## Boundary Sources
 
@@ -192,6 +235,10 @@ ITER Physics Basis (2007).
 | Epidemic | Cases < 100/100k, hospital < 80% | WHO threshold |
 | Biology | HR 40-180 bpm | Clinical range |
 | Fusion | q_min >= 1, beta_N <= 2.8 | Kruskal-Shafranov, Troyon |
+| Laser array | Phase variance < 0.3 rad, feedback < 0.5 | Winful & Wang (1988) |
+| PLL clock | Phase error < 100 ns, drift < 10 ppm | IEEE 1588, ITU-T G.811 |
+| Firefly | Flash variance < 0.5 s | Observational ecology |
+| Swarm | Formation error < 2 m, collision > 0.5 m | Safety standards |
 
 ## Actuator Mapping
 
@@ -212,6 +259,10 @@ ITER Physics Basis (2007).
 | Geometry | Global coupling | -- | -- | -- |
 | Minimal | Global coupling | -- | -- | -- |
 | Fusion | Global coupling | -- | Entrainment | -- |
+| Laser array | Evanescent coupling | Detuning offset | Injection current | Feedback phase |
+| PLL clock | Loop bandwidth | Frequency trim | Reference drive | Phase target |
+| Firefly | Visual coupling | -- | Environmental light | Flash target |
+| Swarm | Alignment coupling | Obstacle avoidance | Formation drive | Target heading |
 
 ## Coupling Topology Rationale
 
@@ -232,6 +283,10 @@ ITER Physics Basis (2007).
 | Geometry | Distance-decayed | Graph adjacency determines coupling |
 | Minimal | Distance-decayed | Default template |
 | Fusion | Hierarchical decay | Timescale separation between layers |
+| Laser array | Distance-decayed | Evanescent field exponential decay |
+| PLL clock | Hierarchical decay | Stratum hierarchy (cascaded PLLs) |
+| Firefly | Distance-decayed | Line-of-sight visual range |
+| Swarm | Distance-decayed | Proximity-based communication range |
 
 ## Imprint Semantics
 
@@ -244,12 +299,16 @@ ITER Physics Basis (2007).
 | Circadian | Chronic jet lag / shift work debt | Days-weeks | K, alpha |
 | Biology | Chronic exposure accumulation | Days-months | K, alpha |
 | Fusion | Plasma facing component erosion | Weeks | K |
-| Plasma | (none) | -- | -- |
-| Power grid | (none) | -- | -- |
-| Rotating | (none) | -- | -- |
-| Queue | (none) | -- | -- |
-| Traffic | (none) | -- | -- |
-| Epidemic | (none) | -- | -- |
+| Laser array | Mirror degradation (facet erosion) | Months | K |
+| PLL clock | Crystal aging (frequency drift) | Years | K, alpha |
+| Firefly | (none — memoryless dynamics) | -- | -- |
+| Swarm | (none — stateless dynamics) | -- | -- |
+| Plasma | (none — fast relative to wall conditioning) | -- | -- |
+| Power grid | Transformer insulation aging (IEEE C57.91) | Years | K |
+| Rotating | Bearing wear (ISO 15243 spalling) | Weeks-months | K |
+| Queue | Service degradation (memory leaks, pool exhaustion) | Hours-days | K |
+| Traffic | Signal timing drift + road degradation | Weeks-months | K, alpha |
+| Epidemic | Waning immunity (Antia et al. 2018) | Months | K |
 | Geometry | (none) | -- | -- |
 | Minimal | (none) | -- | -- |
 

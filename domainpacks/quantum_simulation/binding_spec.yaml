@@ -57,3 +57,5 @@ actuators:
     knob: zeta
     scope: global
     limits: [0.0, 1.0]
+
+policy: policy.yaml

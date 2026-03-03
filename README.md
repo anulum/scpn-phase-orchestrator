@@ -79,17 +79,21 @@ and is built from source via `maturin develop`.
 | `chemical_reactor` | Process control | Hopf bifurcation, Semenov limit (4 layers, 10 oscillators) |
 | `circadian_biology` | Chronobiology | SCN clock-gene coupled oscillators (4 layers, 10 oscillators) |
 | `epidemic_sir` | Epidemiology | Epidemic wave synchronisation (3 layers, 8 oscillators) |
+| `firefly_swarm` | Ecology | Flash synchronisation, Mirollo-Strogatz (2 layers, 8 oscillators) |
 | `fusion_equilibrium` | Fusion equilibrium | Grad-Shafranov + FusionCoreBridge (6 layers, 12 oscillators) |
 | `geometry_walk` | Graph systems | Random-walk phase coupling (2 layers, 8 oscillators) |
+| `laser_array` | Photonics | Semiconductor laser phase-locking (3 layers, 8 oscillators) |
 | `manufacturing_spc` | Manufacturing | Statistical process control (3 layers, 9 oscillators) |
 | `metaphysics_demo` | P/I/S showcase | Imprint + geometry ablation (3 layers, 7 oscillators) |
 | `minimal_domain` | Synthetic | Minimal-but-complete pipeline example (2 layers, 4 oscillators) |
 | `neuroscience_eeg` | Neuroscience | EEG band->phase, seizure detection (6 layers, 14 oscillators) |
 | `plasma_control` | Tokamak plasma | MHD/transport multi-scale control (8 layers, 16 oscillators) |
+| `pll_clock` | Telecommunications | PLL network clock synchronisation (3 layers, 8 oscillators) |
 | `power_grid` | Power systems | Swing equation = Kuramoto (5 layers, 12 oscillators) |
 | `quantum_simulation` | Quantum computing | Qubit register phase coupling (3 layers, 8 oscillators) |
 | `queuewaves` | Cloud/queues | Retry storm desynchronisation (3 layers, 6 oscillators) |
 | `rotating_machinery` | Vibration | Harmonics, ISO 10816 boundaries (4 layers, 10 oscillators) |
+| `swarm_robotics` | Robotics | Vicsek collective motion (3 layers, 8 oscillators) |
 | `traffic_flow` | Transportation | Signal coordination = phase sync (4 layers, 10 oscillators) |
 
 ### Adding a Domain

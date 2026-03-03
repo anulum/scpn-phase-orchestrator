@@ -88,4 +88,10 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+# Signal controller timing drift + road surface degradation.
+imprint_model:
+  decay_rate: 0.003
+  saturation: 2.5
+  modulates: ["K", "alpha"]
+
 policy: policy.yaml

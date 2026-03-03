@@ -1,0 +1,95 @@
+name: pll_clock
+version: "0.1.0"
+safety_tier: production
+sample_period_s: 0.001
+control_period_s: 0.01
+
+layers:
+  - name: local_vco
+    index: 0
+    oscillator_ids: [vco_0, vco_1, vco_2, vco_3]
+  - name: network_pll
+    index: 1
+    oscillator_ids: [pll_master, pll_slave]
+  - name: stratum_hierarchy
+    index: 2
+    oscillator_ids: [stratum_1, stratum_2]
+
+# Strogatz & Mirollo, SIAM J Appl Math 1988.
+# PLL phase detectors implement sin(theta_m - theta_n) exactly.
+oscillator_families:
+  clock_phase:
+    channel: P
+    extractor_type: physical
+    config: {}
+  lock_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # PLL loop gain hierarchy: master drives slaves.
+  base_strength: 0.55
+  decay_alpha: 0.20
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.04
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # VCO lock + PLL sync = good; stratum desync/holdover = bad.
+  good_layers: [0, 1]
+  bad_layers: [2]
+  good_weight: 1.0
+  bad_weight: 2.0
+
+boundaries:
+  # IEEE 1588: phase error < 100 ns (normalised)
+  - name: phase_error
+    variable: phase_error_ns
+    lower: null
+    upper: 100.0
+    severity: hard
+  # ITU-T G.811: frequency drift < 10 ppm
+  - name: freq_drift
+    variable: freq_drift_ppm
+    lower: null
+    upper: 10.0
+    severity: hard
+  # Holdover duration limit
+  - name: holdover
+    variable: holdover_s
+    lower: null
+    upper: 1000.0
+    severity: soft
+
+actuators:
+  - name: loop_bandwidth
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: frequency_trim
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: reference_drive
+    knob: zeta
+    scope: global
+    limits: [0.0, 3.0]
+  - name: phase_target
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+# Crystal aging: quartz oscillator frequency drift over time.
+imprint_model:
+  decay_rate: 0.001
+  saturation: 1.5
+  modulates: ["K", "alpha"]
+
+policy: policy.yaml

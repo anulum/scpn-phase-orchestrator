@@ -5,7 +5,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # License: GNU AGPL v3 | Commercial licensing available
 
-"""Epidemic SIR: endemic -> surge -> wave -> NPI -> vaccination."""
+"""Firefly swarm: random -> gradual sync -> split -> re-emergence -> full sync."""
 
 from __future__ import annotations
 
@@ -15,8 +15,6 @@ import numpy as np
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
-from scpn_phase_orchestrator.imprint.state import ImprintState
-from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
@@ -31,21 +29,21 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_plv,
 )
 
-STEPS = 250
+STEPS = 200
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
-# ~2-3 week infection cycle normalised; Earn et al. (2000)
+# Mirollo & Strogatz (1990): heterogeneous intrinsic flash rates.
 OMEGAS = np.array(
     [
-        0.30,
-        0.50,
-        0.20,  # infection_wave: S, I, R
-        0.10,
-        0.05,
-        0.40,  # intervention: vax, distance, treatment
-        0.80,
-        0.15,  # mobility: local, inter-region
+        1.10,
+        0.95,
+        1.05,
+        0.90,
+        1.00,
+        0.98,  # individual_flash
+        0.20,
+        0.15,  # swarm_coherence
     ]
 )
 
@@ -80,11 +78,6 @@ def main():
     rules = load_policy_rules(policy_path)
     policy_engine = PolicyEngine(rules) if rules else None
 
-    imprint_model = ImprintModel(
-        spec.imprint_model.decay_rate, spec.imprint_model.saturation
-    )
-    imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
-
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n_osc)
     omegas = OMEGAS[:n_osc].copy()
@@ -93,43 +86,33 @@ def main():
     zeta = spec.drivers.physical.get("zeta", 0.0)
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
-    print("=== Epidemic SIR: Endemic -> Surge -> Wave -> NPI -> Vaccination ===\n")
+    print("=== Firefly Swarm: Random -> Sync -> Split -> Re-emerge -> Full Sync ===\n")
     print(f"{'step':>5}  {'R_good':>6}  {'R_bad':>5}  {'regime':>10}  phase")
     print("-" * 60)
 
     for step in range(STEPS):
-        # Phase 1 (0-49): endemic baseline
-        # Phase 2 (50-99): imported case surge — infection wave coupling boost
-        if step == 50:
-            inf_ids = layer_map[0]
-            omegas[inf_ids] *= 2.0  # doubling time drops
-            mob_ids = layer_map[2]
-            omegas[mob_ids] *= 1.5  # travel-related spread
+        # Phase 1 (0-39): random initial flashing
+        # Phase 2 (40-79): gradual synchronisation emerges
+        if step == 40:
+            zeta = 0.1
 
-        # Phase 3 (100-149): community transmission wave
-        if 100 <= step < 150:
-            inf_ids = layer_map[0]
-            if step % 10 == 0:
-                phases[inf_ids] += rng.uniform(0.2, 0.8, len(inf_ids))
+        # Phase 3 (80-119): disturbance splits swarm into two clusters
+        if step == 80:
+            half = n_osc // 2
+            phases[:half] += np.pi  # anti-phase shift
+            zeta = 0.0
 
-        # Phase 4 (150-199): NPI intervention (social distancing)
-        if step == 150:
-            omegas[:n_osc] = OMEGAS[:n_osc]
-            zeta = 0.4
+        # Phase 4 (120-159): re-emergence of global sync
+        if step == 120:
+            zeta = 0.15
 
-        # Phase 5 (200-249): vaccination campaign -> suppression
-        if step == 200:
-            zeta = 0.2
-            coupling = CouplingState(
-                knm=coupling.knm * 1.3,
-                alpha=coupling.alpha,
-                active_template=coupling.active_template,
-            )
+        # Phase 5 (160-199): full synchronisation
+        if step == 160:
+            zeta = 0.05
 
-        eff_knm = imprint_model.modulate_coupling(coupling.knm, imprint_state)
-        eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
-
-        phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
+        phases = engine.step(
+            phases, omegas, coupling.knm, zeta, psi_target, coupling.alpha
+        )
 
         layer_states = []
         for layer in spec.layers:
@@ -154,12 +137,11 @@ def main():
             regime_id=regime_manager.current_regime.value,
         )
 
-        inf_r = layer_states[0].R
+        flash_r = layer_states[0].R
         obs_values = {
             "R": mean_r,
-            "cases_per_100k": 200 * inf_r,  # 0-200 scale
-            "hospital_occ": 0.3 + 0.7 * inf_r,
-            "rt": 0.5 + 2.0 * inf_r,
+            "flash_var_s": 0.8 * (1.0 - flash_r),
+            "swarm_density": 0.05 + 0.95 * layer_states[1].R,
         }
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
@@ -185,59 +167,36 @@ def main():
                     alpha=coupling.alpha,
                     active_template=coupling.active_template,
                 )
-            elif act.knob == "Psi":
-                psi_target = act.value
-
-        exposure = np.array(
-            [
-                layer_states[i].R
-                for i, layer in enumerate(spec.layers)
-                for _ in layer.oscillator_ids
-            ]
-        )
-        imprint_state = imprint_model.update(
-            imprint_state, exposure, spec.sample_period_s
-        )
 
         good_ph = [
             phases[j]
             for idx in spec.objectives.good_layers
             for j in layer_map.get(idx, [])
         ]
-        bad_ph = [
-            phases[j]
-            for idx in spec.objectives.bad_layers
-            for j in layer_map.get(idx, [])
-        ]
         r_good = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
-        r_bad = compute_order_parameter(np.array(bad_ph))[0] if bad_ph else 0.0
 
-        if step % 25 == 0:
-            if step < 50:
-                label = "endemic"
-            elif step < 100:
-                label = "surge"
-            elif step < 150:
-                label = "wave"
-            elif step < 200:
-                label = "NPI"
+        if step % 20 == 0:
+            if step < 40:
+                label = "random"
+            elif step < 80:
+                label = "sync"
+            elif step < 120:
+                label = "split"
+            elif step < 160:
+                label = "re-emerge"
             else:
-                label = "vaccination"
+                label = "full-sync"
             print(
-                f"{step:5d}  {r_good:.4f}  {r_bad:.4f}  "
+                f"{step:5d}  {r_good:.4f}  {'---':>5}  "
                 f"{regime_manager.current_regime.value:>10}  {label}"
             )
 
     good_ph = [
         phases[j] for idx in spec.objectives.good_layers for j in layer_map.get(idx, [])
     ]
-    bad_ph = [
-        phases[j] for idx in spec.objectives.bad_layers for j in layer_map.get(idx, [])
-    ]
     r_good_f = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
-    r_bad_f = compute_order_parameter(np.array(bad_ph))[0] if bad_ph else 0.0
     print(
-        f"\nFinal  R_good={r_good_f:.4f}  R_bad={r_bad_f:.4f}"
+        f"\nFinal  R_good={r_good_f:.4f}  R_bad=---"
         f"  regime={regime_manager.current_regime.value}"
     )
 

@@ -5,17 +5,23 @@
 - Core scaffold with src layout and CLI
 - UPDE engine: RK4 integrator, pre-allocated arrays, Kuramoto coupling
 - 3-channel oscillator model (phase, frequency, coherence)
-- Coupling matrix builder with decay and cross-hierarchy boosts
-- Supervisor with order-parameter thresholds
+- Coupling matrix builder with decay, cross-hierarchy boosts, geometry constraints
+- BoundaryObserver, RegimeManager, SupervisorPolicy pipeline
+- PolicyEngine: declarative YAML rules with regime/metric triggers
+- ImprintModel: history-dependent coupling modulation (decay, saturation)
 - Actuation mapper for domain-agnostic output binding
-- 4 domainpacks: minimal_domain, queuewaves, geometry_walk, bio_stub
+- 21 domainpacks across neuroscience, cardiology, power systems, plasma physics, manufacturing, epidemiology, traffic, quantum, biology, chemistry, robotics, telecom, and more
+- Adapter bridges: FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge
+- spo-kernel Rust FFI: UPDE engine, coupling, imprint, order params, lags (112 tests)
+- 113+ Python tests, 112 Rust tests
 - PhaseExtractor base class for signal intake
+- PyPI package (trusted publisher OIDC), Zenodo DOI, GitHub Pages docs
 
 ## v0.2
 
 - Deterministic replay from recorded phase trajectories
-- Policy DSL for declarative threshold/action rules
-- Geometry constraints on coupling topology (ring, lattice, small-world)
+- Extended policy DSL with compound triggers and action chains
+- Prometheus and OpenTelemetry metric adapters
 
 ## v0.3
 

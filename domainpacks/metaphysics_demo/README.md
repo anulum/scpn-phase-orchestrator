@@ -1,30 +1,42 @@
-# metaphysics_demo domainpack
+# Metaphysics Demo Domainpack
 
-Demonstrates all three oscillator channels (P/I/S), imprint modulation,
-geometry projection, and policy-driven Ψ control in a single run.
+Exercises all three oscillator channels (P/I/S), imprint modulation,
+geometry projection, and policy-driven control in a single run.
 
-## Features Exercised
+## Why Kuramoto Fits This Domain
 
-- **P/I/S oscillators**: 3 physical, 2 informational, 2 symbolic.
-- **Imprint model**: decay_rate=0.01, saturation=2.0, modulates K and alpha.
-- **Geometry prior**: symmetric + non-negative projection on K_nm.
-- **Policy rules**: boost coupling, shift target phase, apply damping.
-- **Boundary observer**: R floor + per-layer R_2 ceiling.
+Reference implementation demonstrating the full SPO pipeline.  Three
+channels (Physical, Informational, Symbolic) show that any cyclic
+process -- continuous, event-driven, or discrete-state -- maps onto
+Kuramoto dynamics.  The ablation run quantifies imprint contribution.
 
-## Ablation
+## Layers
 
-`run.py` executes the simulation twice (same seed, same geometry):
+| Layer | Oscillators | Channel | Purpose |
+|-------|------------|---------|---------|
+| physical | 3 | P (hilbert) | Continuous waveform oscillators |
+| informational | 2 | I (event) | Event-driven phase oscillators |
+| symbolic | 2 | S (symbolic) | Discrete state-sequence oscillators |
 
-1. **Imprint ON** — ImprintModel active, modulating coupling each step.
-2. **Imprint OFF** — no imprint modulation.
+## Boundaries
 
-The delta between final R_good values quantifies imprint's contribution.
+- **R_floor**: R >= 0.1 (hard) -- minimum global coherence
+- **R_2_ceiling**: R_2 <= 0.9 (soft) -- symbolic layer cap
 
-## Usage
+## Actuators
 
-```bash
-python domainpacks/metaphysics_demo/run.py
-```
+| Actuator | Knob | Physical Meaning |
+|----------|------|-----------------|
+| coupling_global | K | Global coupling strength |
+| phase_target | Psi | Reference phase target |
+| damping | zeta | External drive / damping |
 
-With `matplotlib` installed (`pip install -e ".[plot]"`), a comparison plot
-is saved to `domainpacks/metaphysics_demo/ablation.png`.
+## Imprint
+
+Demonstration imprint: decay_rate=0.01, saturation=2.0, modulates K and
+alpha.  Ablation run (imprint ON vs OFF) quantifies the effect.
+
+## Scenario
+
+200 steps (x2 ablation): baseline -> perturbation -> policy response ->
+recovery.  Comparison plot saved to `ablation.png` with matplotlib.

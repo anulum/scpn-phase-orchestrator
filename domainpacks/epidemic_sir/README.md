@@ -34,6 +34,12 @@ epidemics across cities.
 | mobility_restriction | alpha | Travel restriction phase lag |
 | lockdown | Psi | Lockdown target phase |
 
+## Imprint
+
+Waning immunity: antibody titres decay over months post-infection or
+vaccination (Antia et al. 2018), modulating inter-region coupling as
+population susceptibility rises.
+
 ## Scenario
 
 250 steps: endemic baseline -> imported case surge -> community transmission

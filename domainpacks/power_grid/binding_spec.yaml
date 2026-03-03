@@ -96,4 +96,10 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+# Transformer insulation aging: IEEE C57.91 thermal life model.
+imprint_model:
+  decay_rate: 0.001
+  saturation: 2.0
+  modulates: ["K"]
+
 policy: policy.yaml

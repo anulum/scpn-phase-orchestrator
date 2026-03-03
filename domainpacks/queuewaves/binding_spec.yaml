@@ -71,4 +71,10 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
+# Service degradation: memory leaks, connection pool exhaustion.
+imprint_model:
+  decay_rate: 0.010
+  saturation: 3.0
+  modulates: ["K"]
+
 policy: policy.yaml

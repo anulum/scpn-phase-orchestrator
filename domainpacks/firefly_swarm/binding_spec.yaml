@@ -1,0 +1,75 @@
+name: firefly_swarm
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: individual_flash
+    index: 0
+    oscillator_ids: [fly_0, fly_1, fly_2, fly_3, fly_4, fly_5]
+  - name: swarm_coherence
+    index: 1
+    oscillator_ids: [cluster_a, cluster_b]
+
+# Mirollo & Strogatz, SIAM J Appl Math 1990.
+# Pulse-coupled firefly model: flash resets neighbours' phase.
+oscillator_families:
+  flash_cycle:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  swarm_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Line-of-sight visual coupling decays with swarm dispersion.
+  base_strength: 0.45
+  decay_alpha: 0.35
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.03
+    psi: 0.0
+  informational:
+    zeta: 0.01
+  symbolic: {}
+
+objectives:
+  # Flash sync + swarm coherence = good; no bad layers.
+  good_layers: [0, 1]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  # Buck, Q Rev Biol 1988.
+  - name: flash_variance
+    variable: flash_var_s
+    lower: null
+    upper: 0.5
+    severity: soft
+  - name: swarm_density
+    variable: swarm_density
+    lower: 0.1
+    upper: null
+    severity: soft
+
+actuators:
+  - name: visual_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: environmental_light
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: flash_target
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+policy: policy.yaml

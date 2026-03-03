@@ -34,7 +34,12 @@ specific bearing frequencies = inner/outer race defect.
 | bearing_stiffness | K | Support stiffness (pedestal adjustment) |
 | damper_viscosity | alpha | Squeeze-film damper viscosity |
 
+## Imprint
+
+Bearing wear: ISO 15243 spalling progression accumulates and modulates
+mechanical coupling, representing gradual bearing degradation.
+
 ## Scenario
 
-200 steps: cold start ramp → 1st critical speed crossing → nominal speed →
-bearing degradation onset → blade flutter event → policy response.
+200 steps: cold start ramp -> 1st critical speed crossing -> nominal speed ->
+bearing degradation onset -> blade flutter event -> policy response.

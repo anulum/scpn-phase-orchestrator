@@ -15,6 +15,8 @@ import numpy as np
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
+from scpn_phase_orchestrator.imprint.state import ImprintState
+from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
@@ -79,6 +81,11 @@ def main():
     rules = load_policy_rules(policy_path)
     policy_engine = PolicyEngine(rules) if rules else None
 
+    imprint_model = ImprintModel(
+        spec.imprint_model.decay_rate, spec.imprint_model.saturation
+    )
+    imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n_osc)
     omegas = OMEGAS[:n_osc].copy()
@@ -116,9 +123,10 @@ def main():
             blade_ids = layer_map[1]
             omegas[blade_ids[1]] = 0.8
 
-        phases = engine.step(
-            phases, omegas, coupling.knm, zeta, psi_target, coupling.alpha
-        )
+        eff_knm = imprint_model.modulate_coupling(coupling.knm, imprint_state)
+        eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
+
+        phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
 
         layer_states = []
         for layer in spec.layers:
@@ -174,8 +182,17 @@ def main():
                     alpha=coupling.alpha,
                     active_template=coupling.active_template,
                 )
-            elif act.knob == "alpha" and "layer_1" in act.scope:
-                pass
+
+        exposure = np.array(
+            [
+                layer_states[i].R
+                for i, layer in enumerate(spec.layers)
+                for _ in layer.oscillator_ids
+            ]
+        )
+        imprint_state = imprint_model.update(
+            imprint_state, exposure, spec.sample_period_s
+        )
 
         good_ph = [
             phases[j]

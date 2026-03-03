@@ -89,4 +89,10 @@ actuators:
     scope: layer_1
     limits: [0.0, 1.57]
 
+# Bearing wear: ISO 15243 spalling progression modulates mechanical coupling.
+imprint_model:
+  decay_rate: 0.002
+  saturation: 4.0
+  modulates: ["K"]
+
 policy: policy.yaml

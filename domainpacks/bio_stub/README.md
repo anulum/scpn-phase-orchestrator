@@ -1,27 +1,43 @@
-# bio_stub
+# Bio Stub Domainpack
 
-Biological domain stub. SCPN-compatible oscillator template.
+Multi-scale biological oscillator template for SPO's Kuramoto/UPDE framework.
 
-## Setup
+## Why Kuramoto Fits This Domain
 
-16 oscillators across 4 hierarchy layers (cellular, tissue, organ, systemic). Uses all 3 channels (P, I, S). Includes imprint model for history-dependent coupling.
+Biological systems oscillate at every scale: Ca2+ transients (ms), cardiac
+rhythm (s), circadian clocks (24 h), hormonal cycles (days-weeks).  Multi-scale
+coupling between cellular, tissue, organ, and systemic layers is inherently a
+Kuramoto hierarchy.  Winfree (1967) first modelled biological oscillator
+populations; Strogatz (2003) *Sync* Ch. 5 formalised the connection.
 
 ## Layers
 
-| Layer | Oscillators | Timescale |
-|-------|-------------|-----------|
-| cellular (0) | Ca2+ transients, membrane potential, metabolic cycles, mitotic clock | ms-s |
-| tissue (1) | ECM remodelling, vasculature tone, immune patrol, neural firing | s-min |
-| organ (2) | cardiac cycle, respiratory rhythm, hepatic clearance, renal filtration | s-min |
-| systemic (3) | circadian, hormonal, autonomic, global immune | hr-day |
+| Layer | Oscillators | Channel | Timescale | Purpose |
+|-------|------------|---------|-----------|---------|
+| cellular | 4 | P (hilbert) | ms-s | Ca2+, membrane, metabolic, mitotic |
+| tissue | 4 | I (event) | s-min | ECM, vasculature, immune, neural |
+| organ | 4 | P (hilbert) | s-min | Cardiac, respiratory, hepatic, renal |
+| systemic | 4 | S (symbolic) | hr-day | Circadian, hormonal, autonomic, immune |
 
-## Objective
+## Boundaries
 
-Maximise coherence on tissue, organ, and systemic layers. No explicit bad layers.
+- **heart_rate**: 40-180 bpm (hard) -- clinical range
+- **circadian_deviation**: < 3 h (soft) -- circadian disruption threshold
 
-## Run
+## Actuators
 
-```bash
-spo run domainpacks/bio_stub/binding_spec.yaml --steps 200
-python domainpacks/bio_stub/run.py
-```
+| Actuator | Knob | Physical Meaning |
+|----------|------|-----------------|
+| entrainment | zeta | External pacemaker drive |
+| coupling_global | K | Inter-scale coupling strength |
+| reference_phase | Psi | Circadian reference phase |
+
+## Imprint
+
+Chronic exposure accumulation: repeated stimulation builds history-dependent
+coupling modulation, representing biological plasticity.
+
+## Scenario
+
+200 steps: baseline homeostasis -> cellular stress -> tissue adaptation ->
+organ-level compensation -> systemic recovery.

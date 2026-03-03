@@ -34,6 +34,11 @@ converge via coupled-oscillator dynamics.
 | split | alpha | Phase split at intersections |
 | metering | Psi | Ramp metering target |
 
+## Imprint
+
+Signal controller timing drift and road surface degradation accumulate
+over weeks-months, modulating both coupling strength and phase lag.
+
 ## Scenario
 
 200 steps: free-flow -> morning rush (demand spike) -> queue spillback ->

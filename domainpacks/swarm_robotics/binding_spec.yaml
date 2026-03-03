@@ -1,0 +1,87 @@
+name: swarm_robotics
+version: "0.1.0"
+safety_tier: consumer
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: individual_heading
+    index: 0
+    oscillator_ids: [bot_0, bot_1, bot_2, bot_3]
+  - name: formation_shape
+    index: 1
+    oscillator_ids: [form_radius, form_angle]
+  - name: flock_direction
+    index: 2
+    oscillator_ids: [flock_heading, flock_speed]
+
+# Vicsek et al., PRL 75(6), 1995.
+# Heading alignment via local averaging = Kuramoto on the unit circle.
+oscillator_families:
+  heading_angle:
+    channel: P
+    extractor_type: physical
+    config: {}
+  formation_event:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  # Proximity-based communication: coupling decays with inter-robot distance.
+  base_strength: 0.40
+  decay_alpha: 0.30
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic: {}
+
+objectives:
+  # Heading alignment + flock coherence = good; formation breakup = bad.
+  good_layers: [0, 2]
+  bad_layers: [1]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  # Cucker & Smale, IEEE TAC 2007.
+  - name: formation_error
+    variable: formation_error_m
+    lower: null
+    upper: 2.0
+    severity: hard
+  - name: collision_dist
+    variable: min_dist_m
+    lower: 0.5
+    upper: null
+    severity: hard
+  - name: heading_variance
+    variable: heading_var_rad
+    lower: null
+    upper: 1.0
+    severity: soft
+
+actuators:
+  - name: alignment_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: formation_drive
+    knob: zeta
+    scope: global
+    limits: [0.0, 3.0]
+  - name: obstacle_avoidance
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+  - name: target_heading
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+policy: policy.yaml
