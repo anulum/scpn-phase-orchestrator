@@ -26,4 +26,4 @@ def test_lazy_import(name: str) -> None:
 
 def test_lazy_import_missing_raises() -> None:
     with pytest.raises(AttributeError, match="no_such_thing"):
-        getattr(qw, "no_such_thing")
+        qw.no_such_thing  # noqa: B018
