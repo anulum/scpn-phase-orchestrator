@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -26,6 +27,16 @@ class AuditLogger:
     def __init__(self, path: str | Path):
         self._path = Path(path)
         self._fh = self._path.open("a", encoding="utf-8", buffering=1)
+        self._prev_hash: str = "0" * 64
+
+    def _write_record(self, record: dict) -> None:
+        json_line = json.dumps(record, separators=(",", ":"))
+        digest = hashlib.sha256(
+            (self._prev_hash + json_line).encode()
+        ).hexdigest()
+        record["_hash"] = digest
+        self._prev_hash = digest
+        self._fh.write(json.dumps(record) + "\n")
 
     def log_header(
         self,
@@ -44,7 +55,7 @@ class AuditLogger:
         }
         if seed is not None:
             record["seed"] = seed
-        self._fh.write(json.dumps(record) + "\n")
+        self._write_record(record)
 
     def log_step(
         self,
@@ -86,11 +97,11 @@ class AuditLogger:
             record["alpha"] = alpha.tolist()
             record["zeta"] = zeta
             record["psi_drive"] = psi_drive
-        self._fh.write(json.dumps(record) + "\n")
+        self._write_record(record)
 
     def log_event(self, event_type: str, data: dict) -> None:
         record = {"ts": time.time(), "event": event_type, **data}
-        self._fh.write(json.dumps(record) + "\n")
+        self._write_record(record)
 
     def close(self) -> None:
         self._fh.flush()

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -93,6 +94,28 @@ class ReplayEngine:
                 return False, verified
             verified += 1
 
+        return True, verified
+
+    @staticmethod
+    def verify_integrity(entries: list[dict]) -> tuple[bool, int]:
+        """Verify the SHA256 hash chain of audit log entries.
+
+        Returns (all_valid, n_verified).  Legacy logs without ``_hash``
+        fields return (True, 0).
+        """
+        prev = "0" * 64
+        verified = 0
+        for entry in entries:
+            stored = entry.get("_hash")
+            if stored is None:
+                continue
+            without_hash = {k: v for k, v in entry.items() if k != "_hash"}
+            json_line = json.dumps(without_hash, separators=(",", ":"))
+            expected = hashlib.sha256((prev + json_line).encode()).hexdigest()
+            if expected != stored:
+                return False, verified
+            prev = stored
+            verified += 1
         return True, verified
 
     def verify_determinism(self, engine: UPDEEngine, steps: list[dict]) -> bool:

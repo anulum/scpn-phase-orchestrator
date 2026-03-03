@@ -308,6 +308,98 @@ def test_cli_replay_verify_roundtrip(tmp_path):
     assert "9 transitions OK" in result.output
 
 
+def test_hash_chain_present(tmp_path):
+    """Every record gets a _hash field."""
+    log = tmp_path / "hash.jsonl"
+    n = 4
+    rng = np.random.default_rng(0)
+    phases = rng.uniform(0, 2 * np.pi, n)
+    omegas = np.ones(n)
+    knm = 0.3 * np.ones((n, n))
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    with AuditLogger(log) as logger:
+        logger.log_header(n_oscillators=n, dt=0.01)
+        for i in range(5):
+            logger.log_step(
+                i, _make_state(0.8, 1.0), [],
+                phases=phases, omegas=omegas, knm=knm, alpha=alpha,
+            )
+
+    entries = ReplayEngine(log).load()
+    assert len(entries) == 6
+    for entry in entries:
+        assert "_hash" in entry
+        assert len(entry["_hash"]) == 64
+
+
+def test_hash_chain_integrity(tmp_path):
+    """verify_integrity passes on an untampered log."""
+    log = tmp_path / "intact.jsonl"
+    n = 4
+    rng = np.random.default_rng(1)
+    phases = rng.uniform(0, 2 * np.pi, n)
+    omegas = np.ones(n)
+    knm = 0.3 * np.ones((n, n))
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    with AuditLogger(log) as logger:
+        logger.log_header(n_oscillators=n, dt=0.01)
+        for i in range(5):
+            logger.log_step(
+                i, _make_state(0.8, 1.0), [],
+                phases=phases, omegas=omegas, knm=knm, alpha=alpha,
+            )
+
+    re = ReplayEngine(log)
+    ok, n_verified = re.verify_integrity(re.load())
+    assert ok
+    assert n_verified == 6
+
+
+def test_hash_chain_detects_tampering(tmp_path):
+    """Mutating a field without recomputing hashes breaks the chain."""
+    log = tmp_path / "tampered.jsonl"
+    n = 4
+    rng = np.random.default_rng(2)
+    phases = rng.uniform(0, 2 * np.pi, n)
+    omegas = np.ones(n)
+    knm = 0.3 * np.ones((n, n))
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    with AuditLogger(log) as logger:
+        logger.log_header(n_oscillators=n, dt=0.01)
+        for i in range(5):
+            logger.log_step(
+                i, _make_state(0.8, 1.0), [],
+                phases=phases, omegas=omegas, knm=knm, alpha=alpha,
+            )
+
+    entries = ReplayEngine(log).load()
+    entries[3]["stability"] = 0.0
+    ok, _ = ReplayEngine.verify_integrity(entries)
+    assert not ok
+
+
+def test_legacy_log_without_hashes(tmp_path):
+    """Logs without _hash fields return (True, 0)."""
+    log = tmp_path / "legacy.jsonl"
+    entries = [
+        {"step": 0, "regime": "nominal", "stability": 0.85, "layers": []},
+        {"step": 1, "regime": "nominal", "stability": 0.9, "layers": []},
+    ]
+    log.write_text(
+        "\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8"
+    )
+    re = ReplayEngine(log)
+    ok, n_verified = re.verify_integrity(re.load())
+    assert ok
+    assert n_verified == 0
+
+
 def test_cli_replay_verify_no_header(tmp_path):
     """CLI: replay --verify on legacy log (no header) exits 1."""
     log = tmp_path / "legacy.jsonl"
