@@ -27,6 +27,7 @@ nav:
       - "Oscillators & PIS": concepts/oscillators_PIS.md
       - "Knobs: K, alpha, zeta, Psi": concepts/knobs_K_alpha_zeta_Psi.md
       - Memory Imprint: concepts/memory_imprint.md
+      - Phase Control Theory: concepts/phase_control_theory.md
   - Specs:
       - Binding Spec Schema: specs/binding_spec.schema.json
       - Phase Contract: specs/phase_contract.md
@@ -39,6 +40,9 @@ nav:
       - Eval Protocol: specs/eval_protocol.md
       - Plugin API: specs/plugin_api.md
       - Policy DSL: specs/policy_dsl.md
+      - Imprint Dynamics: specs/imprint_dynamics.md
+      - Geometry Constraints: specs/geometry_constraints.md
+      - Knm Calibration: specs/knm_calibration.md
       - Audit Trace: specs/audit_trace.md
   - Tutorials:
       - New Domain Checklist: tutorials/01_new_domain_checklist.md
