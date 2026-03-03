@@ -1,5 +1,7 @@
 # System Overview
 
+![Synchronization Manifold](../assets/synchronization_manifold.png)
+
 ## Core Thesis
 
 Any system with coupled cycles maps onto Kuramoto phase dynamics. The orchestrator treats synchrony as a universal state-space: extract phases, integrate coupling, measure coherence, act on knobs.

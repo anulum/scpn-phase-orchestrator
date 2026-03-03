@@ -1,5 +1,7 @@
 # SCPN Phase Orchestrator
 
+![Synchronization Manifold](assets/synchronization_manifold.png)
+
 Domain-agnostic Kuramoto phase-dynamics engine for synchronising coupled-cycle systems.
 
 ## Documentation

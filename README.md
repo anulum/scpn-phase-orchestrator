@@ -8,6 +8,8 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
+![Synchronization Manifold](docs/assets/synchronization_manifold.png)
+
 ## What It Does
 
 Treats Kuramoto phase dynamics as a universal synchrony state-space.
