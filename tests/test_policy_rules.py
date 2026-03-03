@@ -43,7 +43,10 @@ def _rule(
         name=name,
         regimes=regimes or ["NOMINAL"],
         condition=PolicyCondition(
-            metric=metric, layer=layer, op=op, threshold=threshold,
+            metric=metric,
+            layer=layer,
+            op=op,
+            threshold=threshold,
         ),
         knob=knob,
         scope=scope,

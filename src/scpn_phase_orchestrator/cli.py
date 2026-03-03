@@ -159,9 +159,7 @@ def run(binding_spec: str, steps: int) -> None:
                 )
             )
 
-        actions = [
-            projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions
-        ]
+        actions = [projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions]
 
         for act in actions:
             if act.knob == "zeta":

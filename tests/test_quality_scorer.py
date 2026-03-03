@@ -14,8 +14,14 @@ from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 
 
 def _ps(quality: float, amplitude: float = 1.0) -> PhaseState:
-    return PhaseState(theta=0.0, omega=1.0, amplitude=amplitude,
-                      quality=quality, channel="P", node_id="test")
+    return PhaseState(
+        theta=0.0,
+        omega=1.0,
+        amplitude=amplitude,
+        quality=quality,
+        channel="P",
+        node_id="test",
+    )
 
 
 def test_score_empty_returns_zero():

@@ -48,9 +48,16 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
 
     layer_indices = {lay.index for lay in spec.layers}
 
-    valid_extractors = frozenset({
-        "hilbert", "wavelet", "zero_crossing", "event", "ring", "graph",
-    })
+    valid_extractors = frozenset(
+        {
+            "hilbert",
+            "wavelet",
+            "zero_crossing",
+            "event",
+            "ring",
+            "graph",
+        }
+    )
     for family_name, fam in spec.oscillator_families.items():
         if fam.channel not in VALID_CHANNELS:
             errors.append(

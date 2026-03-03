@@ -63,7 +63,10 @@ class PolicyEngine:
             if regime.value.upper() not in rule.regimes:
                 continue
             val = self._extract_metric(
-                rule.condition, upde_state, good_layers, bad_layers,
+                rule.condition,
+                upde_state,
+                good_layers,
+                bad_layers,
             )
             if val is None:
                 continue
