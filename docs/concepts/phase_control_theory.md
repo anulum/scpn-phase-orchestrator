@@ -897,7 +897,223 @@ does not replace the interlock.
 
 ---
 
-## 10. Limitations and Open Questions
+## 10. Scope of Competence: What SPO Is and Is Not
+
+This section draws explicit boundaries around the framework's claims.
+Overstating scope would be scientifically dishonest; understating it
+would obscure the genuine contribution.
+
+### 10.1 What SPO Is
+
+SPO is a **supervisory control layer** that monitors multi-scale
+coherence and issues corrective commands to domain actuators.
+
+It is a *control framework*, not a *physics solver*.  It does not
+compute equilibria, propagate wavefunctions, solve transport equations,
+or simulate fluid dynamics.  It consumes the outputs of domain-specific
+solvers and acts on them through the phase-synchronization abstraction.
+
+The analogy: SPO is to a tokamak what a conductor is to an orchestra.
+The conductor does not play any instrument (does not solve any physics
+equation).  The conductor listens to the ensemble (monitors phase
+coherence across layers), detects when sections drift out of sync
+(R_bad rising), and signals corrections (adjusts coupling K, phase
+lag α, drive ζ).  The musicians (domain solvers + physical actuators)
+produce the actual sound (maintain the actual equilibrium).
+
+### 10.2 What SPO Is Not
+
+| SPO is NOT | Why this matters |
+|-----------|-----------------|
+| An equilibrium solver | It cannot compute ψ(R,Z).  It depends on EFIT, FreeGS, or scpn-fusion-core for force balance. |
+| A turbulence simulator | It cannot predict ITG/TEM growth rates.  It monitors turbulence *signatures* via phase extraction. |
+| A disruption predictor | It detects coherence degradation, which may correlate with disruption precursors.  It does not model disruption physics (thermal quench, current quench, halo currents). |
+| A quantum error correction code | It monitors coherence of logical qubits.  It does not implement stabiliser measurements or syndrome decoding. |
+| A replacement for machine-protection interlocks | Hard-wired safety systems (vessel protection, magnet quench detection) operate on analog signals below SPO's software layer.  SPO cannot override them and must not attempt to. |
+
+### 10.3 What SPO Expects from the Domain
+
+For SPO to function, the domain must provide:
+
+1. **Oscillatory or quasi-oscillatory observables.**  The phase
+   extraction step requires signals that admit meaningful phase
+   angles.  Continuous oscillations (MHD modes, qubit precession)
+   map cleanly.  Slowly varying quantities (q-profile, β_N) map
+   via normalised ratios — a weaker but still informative encoding.
+   Signals with no temporal structure (static geometry, material
+   properties) cannot be phase-encoded and are outside SPO's scope.
+
+2. **A known coupling hierarchy.**  The Knm matrix encodes which
+   phenomena couple to which.  This must be specified by domain
+   knowledge (e.g., "micro-turbulence drives zonal flows which
+   modulate transport").  SPO does not discover coupling topology
+   from data — it exploits a topology provided in the binding spec.
+
+3. **Controllable actuators that influence coupling.**  The four
+   knobs (K, α, ζ, Ψ) must map to physical actuators that can
+   modulate the coupling, phase lag, or drive of the oscillatory
+   phenomena.  If the domain has no actuators (pure observation),
+   SPO reduces to a monitoring-only tool (still useful for
+   coherence detection, but not for control).
+
+4. **Meaningful good/bad partition.**  The dual objective requires
+   domain expertise to identify which synchrony is healthy and
+   which is pathological.  This is not always obvious — in some
+   systems, all synchrony might be desirable (or undesirable).
+   If no dual partition exists, SPO degenerates to a standard
+   single-objective coherence maximiser.
+
+### 10.4 Concrete Expectations per Domain
+
+#### 10.4.1 Tokamak Fusion Plasma
+
+**SPO's expected contribution: improved disruption avoidance through
+earlier detection of multi-scale coherence degradation.**
+
+SPO does not solve the Grad-Shafranov equation.  It does not compute
+MHD stability limits.  It monitors whether the plasma's oscillatory
+phenomena (turbulence, MHD modes, sawteeth, ELMs, transport barriers)
+are maintaining a healthy coherence pattern — and detects *correlated*
+degradation across timescales before individual diagnostic thresholds
+are crossed.
+
+The specific value proposition:
+
+- **Cascade detection**: when R_bad rises simultaneously on layers
+  [0, 2, 3] (turbulence, tearing, sawtooth/ELM), it signals a
+  coupled MHD cascade forming.  Individual diagnostics may still be
+  within limits, but the *correlation* is the precursor.  Existing
+  PID loops cannot see this because they monitor channels independently.
+
+- **Coordinated actuation**: instead of 6 independent PID loops
+  potentially fighting each other (shape controller demanding more
+  current while density controller demands less gas), SPO sees the
+  coupled system and issues coordinated commands through a single
+  coherence-aware policy.
+
+- **Transferability**: the same binding spec structure (8 layers, 16
+  oscillators, good/bad partition, physics boundaries) applies to any
+  tokamak.  Porting from DIII-D to ITER requires changing the Knm
+  calibration and boundary thresholds, not rewriting the controller.
+
+**What SPO does NOT expect to do for fusion**:
+- Replace the real-time equilibrium reconstruction (EFIT runs anyway)
+- Replace machine-protection interlocks (hard-wired, below SPO)
+- Guarantee disruption avoidance (it improves detection, not elimination)
+- Work without calibration (the Knm matrix and phase extraction
+  require tokamak-specific tuning against experimental data)
+
+**Confidence level**: MEDIUM.  The theoretical basis (Kuramoto
+coherence as a multi-scale health metric) is sound.  The practical
+value depends on: (a) phase extraction fidelity under real diagnostic
+noise, (b) Knm calibration against real inter-phenomenon coupling,
+(c) actuator response linearity.  None of these have been validated
+experimentally.
+
+#### 10.4.2 Quantum Coherence
+
+**SPO's expected contribution: real-time coherence monitoring and
+coupling topology adjustment during analog quantum simulation.**
+
+SPO does not implement quantum gates, error correction, or
+compilation.  It monitors the Bloch-sphere phases of physical
+qubits (directly measurable from readout resonators) and the
+logical coherence of error-corrected qubits (derived from
+syndrome statistics).
+
+The specific value proposition:
+
+- **Continuous fidelity tracking**: R_qubit dropping below threshold
+  triggers regime escalation *during* the computation, not after
+  post-hoc analysis.
+
+- **Coupling topology feedback**: the Knm matrix corresponds to
+  flux-tunable coupler settings.  SPO adjusts couplings to maintain
+  coherence — complementing gate-level optimal control (GRAPE/Krotov)
+  which optimises pulse shapes for specific unitaries.
+
+- **Cross-layer monitoring**: tracking both physical qubit phases and
+  logical qubit stability in a single framework, with the fidelity
+  boundary triggering corrective action when the physical layer
+  degrades.
+
+**Confidence level**: MODERATE-HIGH for monitoring, LOWER for active
+control.  Phase extraction from IQ readout is direct and high-fidelity.
+But the Kuramoto sinusoidal coupling is an approximation of the actual
+XY Hamiltonian dynamics — it captures the first harmonic but misses
+higher-order terms.  Active coupling adjustment via flux couplers is
+realistic but untested in a coherence-feedback loop.
+
+#### 10.4.3 General Process Control
+
+**SPO's expected contribution: detection of pathological
+synchronisation (retry storms, sensor drift correlation, cascade
+failures) in systems with coupled cyclical processes.**
+
+- **Cloud queues**: retry storm detection (R_bad on the retry layer)
+  is a natural fit — retry storms are literally pathological
+  synchronisation of request timing.  SPO detects and decouples
+  them via α (backoff) adjustment.  Confidence: HIGH.
+
+- **Manufacturing SPC**: sensor drift correlation detection identifies
+  systematic process shifts that single-channel SPC charts miss.
+  Confidence: MODERATE (phase extraction from slowly drifting
+  metrology signals is the weakest link).
+
+- **Biological oscillators**: EEG band coherence monitoring is
+  well-established (functional connectivity analysis uses similar
+  metrics).  SPO adds the dual good/bad partition and entrainment
+  control via audio.  Confidence: MODERATE-HIGH for monitoring,
+  MODERATE for entrainment effectiveness.
+
+### 10.5 What Would Constitute Validation
+
+The framework remains at **TRL 3–4** (analytical/experimental proof
+of concept in laboratory environment).  Advancing claims requires:
+
+| Validation target | Required evidence | Current status |
+|------------------|-------------------|---------------|
+| Phase extraction fidelity | Apply Hilbert/ratio/counter extraction to real diagnostic data from a tokamak shot database (DIII-D, EAST, JET).  Measure phase quality (SNR, continuity, bandwidth). | Not done.  Synthetic-only. |
+| Cascade detection lead time | Compare R_bad onset against disruption timestamps in a shot database.  Quantify how many ms earlier the coherence signal appears vs. single-channel thresholds. | Not done. |
+| Knm calibration | Fit Knm matrix to cross-correlation structure of real multi-diagnostic data.  Compare exponential-decay default against data-driven matrix. | Not done. |
+| Actuator coordination benefit | Run SPO in advisory mode alongside existing PCS on a real tokamak.  Compare shot-to-shot performance (confinement time, ELM frequency, disruption rate). | Not done.  Requires facility access. |
+| Quantum coherence feedback | Run SPO feedback loop on IBM Heron or Google Sycamore.  Compare fidelity trajectory with and without SPO-driven coupler adjustments. | Not done.  scpn-quantum-control has hardware results for open-loop characterisation only. |
+| Cross-domain transfer | Apply the same SPO engine to two unrelated domains (e.g., tokamak + cloud queue) with only binding spec changes.  Demonstrate that both benefit. | Demonstrated in simulation (9 domainpacks).  Not validated on real systems. |
+
+### 10.6 The Honest Claim
+
+SPO offers a **structural advance in control architecture** — the
+ability to monitor multi-scale coherence and act on coupling topology
+rather than individual setpoints.  This is genuinely new (§6).
+
+SPO does **not** offer a guarantee that this structural advance
+translates to practical performance gains in any specific domain.
+That translation depends on calibration, phase extraction fidelity,
+and actuator response — all domain-specific, all requiring
+experimental validation.
+
+The framework is **most likely to succeed** in domains where:
+- Pathological synchronisation is a known failure mode (ELMs, retry
+  storms, seizure-like cascades)
+- Multi-scale coupling is strong and poorly handled by independent
+  single-loop controllers
+- The good/bad coherence partition is physically clear
+
+The framework is **least likely to succeed** in domains where:
+- Observables lack oscillatory or quasi-periodic character
+- Coupling topology is unknown or highly nonlinear beyond first-harmonic
+- Actuators cannot modulate coupling (observation-only systems)
+- The required control bandwidth exceeds the UPDE computation time
+
+This section exists to prevent the framework from being oversold.
+A control abstraction with no experimental validation is a hypothesis,
+not a solution.  The hypothesis is well-motivated (§2–§7), the
+implementation is complete (§9), and the validation agenda is
+defined (§10.5).  What remains is the experiment.
+
+---
+
+## 11. Limitations and Open Questions
 
 1. **Phase extraction fidelity**: the Hilbert transform, event
    frequency, and ring-encoding methods have finite bandwidth and
@@ -925,7 +1141,7 @@ does not replace the interlock.
 
 ---
 
-## 11. References
+## 12. References
 
 - **[kuramoto1975]** Y. Kuramoto (1975). Self-entrainment of a population of coupled non-linear oscillators. *Lecture Notes in Physics* 39, 420–422.
 - **[sakaguchi1986]** H. Sakaguchi & Y. Kuramoto (1986). A soluble active rotater model showing phase transitions via mutual entertainment. *Prog. Theor. Phys.* 76, 576–581.
