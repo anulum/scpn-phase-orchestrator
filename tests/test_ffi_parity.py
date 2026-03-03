@@ -39,17 +39,8 @@ def test_euler_parity(spo):
     py_result = py_engine.step(phases.copy(), omegas, knm, 0.0, 0.0, alpha)
 
     rust = spo.PyUPDEStepper(n, dt=dt, method="euler")
-    knm_flat = knm.ravel().tolist()
-    alpha_flat = alpha.ravel().tolist()
     rust_result = np.array(
-        rust.step(
-            phases.tolist(),
-            omegas.tolist(),
-            knm_flat,
-            0.0,
-            0.0,
-            alpha_flat,
-        )
+        rust.step(phases.tolist(), omegas, knm.ravel(), 0.0, 0.0, alpha.ravel())
     )
 
     np.testing.assert_allclose(py_result, rust_result, atol=1e-10)
@@ -74,18 +65,10 @@ def test_rk4_parity(spo):
 
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
     rust_phases = phases.tolist()
-    knm_flat = knm.ravel().tolist()
-    alpha_flat = alpha.ravel().tolist()
-    om_list = omegas.tolist()
+    knm_flat = knm.ravel()
+    alpha_flat = alpha.ravel()
     for _ in range(50):
-        rust_phases = rust.step(
-            rust_phases,
-            om_list,
-            knm_flat,
-            0.0,
-            0.0,
-            alpha_flat,
-        )
+        rust_phases = rust.step(rust_phases, omegas, knm_flat, 0.0, 0.0, alpha_flat)
     rust_phases = np.array(rust_phases)
 
     np.testing.assert_allclose(py_phases, rust_phases, atol=1e-8)
@@ -110,18 +93,10 @@ def test_rk45_parity(spo):
 
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk45")
     rust_phases = phases.tolist()
-    knm_flat = knm.ravel().tolist()
-    alpha_flat = alpha.ravel().tolist()
-    om_list = omegas.tolist()
+    knm_flat = knm.ravel()
+    alpha_flat = alpha.ravel()
     for _ in range(50):
-        rust_phases = rust.step(
-            rust_phases,
-            om_list,
-            knm_flat,
-            0.0,
-            0.0,
-            alpha_flat,
-        )
+        rust_phases = rust.step(rust_phases, omegas, knm_flat, 0.0, 0.0, alpha_flat)
     rust_phases = np.array(rust_phases)
 
     np.testing.assert_allclose(py_phases, rust_phases, atol=1e-6)
@@ -130,5 +105,5 @@ def test_rk45_parity(spo):
 def test_order_parameter_parity(spo):
     phases = [0.1, 0.2, 0.15, 0.12]
     r_py, _ = compute_order_parameter(np.array(phases))
-    r_rust, _ = spo.order_parameter(phases)
+    r_rust, _ = spo.order_parameter(np.array(phases))
     assert abs(r_py - r_rust) < 1e-10
