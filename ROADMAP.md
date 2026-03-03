@@ -10,7 +10,7 @@
 - PolicyEngine: declarative YAML rules with regime/metric triggers
 - ImprintModel: history-dependent coupling modulation (decay, saturation)
 - Actuation mapper for domain-agnostic output binding
-- 21 domainpacks across neuroscience, cardiology, power systems, plasma physics, manufacturing, epidemiology, traffic, quantum, biology, chemistry, robotics, telecom, and more
+- 21 domainpacks: neuroscience_eeg, cardiac_rhythm, power_grid, plasma_control, manufacturing_spc, epidemic_sir, traffic_flow, quantum_simulation, chemical_reactor, swarm_robotics, and 11 more
 - Adapter bridges: FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge
 - QueueWaves: real-time cascade failure detector with Prometheus ingestion, WebSocket streaming, HTML dashboard, webhook alerts
 - Deterministic replay from audit.jsonl with chained phase-vector verification (`spo replay --verify`)

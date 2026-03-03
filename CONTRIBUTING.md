@@ -23,20 +23,42 @@ pip install -e ".[dev]"
 Create a directory under `domainpacks/<name>/` with a `binding_spec.yaml`:
 
 ```yaml
-name: my-domain
+name: my_domain
 version: "0.1.0"
-channels:
-  - name: channel_0
-    source: extractor_class_path
-    target: actuator_class_path
-    mapping:
-      phase_velocity: output_param_a
-      coherence: output_param_b
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: lower
+    index: 0
+    oscillator_ids: [osc_0, osc_1]
+
+oscillator_families:
+  base:
+    channel: P
+    extractor_type: physical
+
+coupling:
+  base_strength: 0.45
+  decay_alpha: 0.3
+
+drivers:
+  physical: {}
+  informational: {}
+  symbolic: {}
+
+objectives:
+  good_layers: [0]
+  bad_layers: []
+
+boundaries: []
+actuators: []
 ```
 
-Each channel maps one oscillator observable to one actuation output.
+See `domainpacks/minimal_domain/binding_spec.yaml` for a complete example.
 
-## Adding Extractors
+## Adding Oscillators
 
 Subclass `PhaseExtractor` in `src/scpn_phase_orchestrator/oscillators/`:
 
