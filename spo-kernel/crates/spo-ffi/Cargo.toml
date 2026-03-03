@@ -17,6 +17,7 @@ spo-engine = { path = "../spo-engine" }
 spo-oscillators = { path = "../spo-oscillators" }
 spo-supervisor = { path = "../spo-supervisor" }
 pyo3 = { workspace = true }
+numpy = { workspace = true }
 
 [lints]
 workspace = true

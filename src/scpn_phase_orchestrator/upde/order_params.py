@@ -24,7 +24,7 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
     if _HAS_RUST:
         from spo_kernel import order_parameter as _rust_order_param
 
-        r, psi = _rust_order_param(phases.ravel().tolist())
+        r, psi = _rust_order_param(np.ascontiguousarray(phases.ravel()))
         return float(r), float(psi)
     z = np.mean(np.exp(1j * phases))
     return float(np.abs(z)), float(np.angle(z) % TWO_PI)
@@ -45,7 +45,10 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
     if _HAS_RUST:
         from spo_kernel import plv as _rust_plv
 
-        return float(_rust_plv(phases_a.ravel().tolist(), phases_b.ravel().tolist()))
+        return float(_rust_plv(
+            np.ascontiguousarray(phases_a.ravel()),
+            np.ascontiguousarray(phases_b.ravel()),
+        ))
     return float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b)))))
 
 

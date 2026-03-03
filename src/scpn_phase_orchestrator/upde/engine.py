@@ -102,11 +102,11 @@ class UPDEEngine:
         if self._rust is not None:
             result = self._rust.step(
                 phases.ravel().tolist(),
-                omegas.ravel().tolist(),
-                knm.ravel().tolist(),
+                np.ascontiguousarray(omegas.ravel()),
+                np.ascontiguousarray(knm.ravel()),
                 float(zeta),
                 float(psi),
-                alpha.ravel().tolist(),
+                np.ascontiguousarray(alpha.ravel()),
             )
             return np.asarray(result, dtype=np.float64)
         if self._method == "euler":
