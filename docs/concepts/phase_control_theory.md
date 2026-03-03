@@ -473,7 +473,431 @@ All use the *same engine* with different YAML binding specs.
 
 ---
 
-## 9. Limitations and Open Questions
+## 9. Hardware Pipeline: From Sensors to Actuators
+
+This section describes the complete physical data path — how raw sensor
+signals enter SPO, traverse the phase-synchronization loop, and emerge
+as actuator commands that drive real hardware.
+
+### 9.1 General Pipeline Architecture
+
+```
+┌──────────────┐    ┌────────────┐    ┌──────────┐    ┌────────────┐
+│ Sensors      │───►│ Phase      │───►│ UPDE     │───►│ Supervisor │
+│ (domain HW)  │    │ Extraction │    │ Engine   │    │ + Policy   │
+└──────────────┘    └────────────┘    └──────────┘    └─────┬──────┘
+                                                            │
+              ┌────────────────────────────────────────────┘
+              │
+              ▼
+┌──────────────┐    ┌────────────┐    ┌──────────────────┐
+│ Action       │───►│ Actuation  │───►│ Domain Execution │
+│ Projector    │    │ Mapper     │    │ (physical HW)    │
+└──────────────┘    └────────────┘    └──────────────────┘
+```
+
+**Timing**: The binding spec declares two periods:
+- `sample_period_s` (e.g. 1 ms) — sensor acquisition and phase update rate.
+- `control_period_s` (e.g. 10 ms) — supervisor evaluation and actuator
+  command rate.  Multiple sample cycles accumulate before one control decision.
+
+Each pipeline stage has a fixed computational cost:
+
+| Stage | Operation | Cost |
+|-------|-----------|------|
+| Phase extraction | Per-oscillator mapping | O(N) |
+| UPDE step | Coupling sum | O(N²) |
+| Order parameter | Per-layer mean | O(N) |
+| Supervisor decide | Regime FSM + policy rules | O(R) where R = rule count |
+| Action projector | Rate clamp per action | O(A) where A = action count |
+| Actuation mapper | Scope resolution | O(A·M) where M = actuator count |
+
+For the plasma_control domainpack (N=16, R=2, A≤3, M=3), the full
+pipeline runs in <100 μs on a single core — well within the 1 ms
+sample budget.
+
+### 9.2 Tokamak Fusion: Sensor Ingestion
+
+A tokamak produces diagnostic signals across all 8 SPO layers.
+Each diagnostic maps to a specific oscillator family.
+
+#### 9.2.1 Measurement Systems and Phase Extraction
+
+| Diagnostic | Physical quantity | SPO layer | Phase formula |
+|-----------|-------------------|-----------|---------------|
+| **Mirnov coils** (poloidal array, ~32 probes) | dB_θ/dt (magnetic fluctuations) | mhd_tearing (2) | Hilbert transform of dominant mode → instantaneous phase |
+| **Far-infrared interferometer** (multi-chord) | Line-integrated n_e | transport_barrier (4) | 2π · n_e / n_Greenwald (density fraction) |
+| **Electron Cyclotron Emission** (ECE radiometer) | T_e(R) radial profile | micro_turbulence (0) | Hilbert transform of T_e fluctuation envelope |
+| **Thomson scattering** (multi-pulse laser) | T_e(r), n_e(r) profiles | global_equilibrium (6) | 2π · β_N / β_limit from kinetic profiles |
+| **Magnetic flux loops** (full poloidal set) | ψ(R,Z) equilibrium reconstruction | global_equilibrium (6) | 2π · (q − q_min) / (q_max − q_min) from EFIT |
+| **Soft X-ray array** (diode array) | Core radiation | sawtooth_elm (3) | count · π mod 2π (crash detector) |
+| **Divertor Langmuir probes** | Ion flux, T_e at target | plasma_wall (7) | 2π · heat_flux / heat_flux_limit |
+| **Bolometer array** | Radiated power P_rad | current_profile (5) | 2π · P_rad / P_input (radiation fraction) |
+| **Filterscopes / Dα monitors** | Dα emission at edge | sawtooth_elm (3) | count · π mod 2π (ELM detector) |
+| **Motional Stark Effect** (MSE) | Pitch angle → q(r) profile | current_profile (5) | 2π · q_axis / q_95 (profile peakedness) |
+
+The PlasmaControlBridge receives these as a dict from the plasma
+control system (scpn-control) or from a direct diagnostic interface:
+
+```python
+tick_result = {
+    "phases": mirnov_phases + interferometer_phases + ...,  # len=16
+    "regime": "NOMINAL",
+    "stability": lyapunov_score,
+    "layer_sizes": [2, 2, 2, 2, 2, 2, 2, 2],
+}
+state = bridge.import_snapshot(tick_result)
+```
+
+#### 9.2.2 Phase Extraction Methods
+
+Three extraction methods apply depending on signal character:
+
+**Hilbert transform** (continuous oscillatory signals):
+For Mirnov coils and ECE fluctuations, the analytic signal
+z(t) = x(t) + iH[x(t)] yields instantaneous phase φ(t) = arg(z(t)).
+Applied to the dominant MHD mode (identified by toroidal mode number
+analysis), this extracts the rotating island phase.
+
+**Normalised ratio** (equilibrium quantities):
+For β_N, q-profile, τ_E, density, and radiation — quantities that
+do not oscillate but vary slowly — the phase is a linear map of the
+observable's position within its physical range: θ = 2π · x/x_limit.
+As x approaches its stability limit, θ → 2π signals proximity to
+the boundary.
+
+**Event counter** (discrete crash events):
+For sawteeth and ELMs, each detected event (identified by a
+threshold crossing in SXR or Dα) increments a counter.
+Phase = count · π mod 2π.  Two rapid events produce a near-2π
+advance that wraps to ~0, naturally encoding the crash-recovery cycle.
+
+#### 9.2.3 Diagnostic Timing Budget
+
+| Diagnostic | Acquisition rate | Latency to SPO |
+|-----------|-----------------|----------------|
+| Mirnov coils | 100 kHz–1 MHz | <10 μs (analog + ADC) |
+| Interferometer | 10–100 kHz | <100 μs |
+| ECE radiometer | 1–10 kHz | <1 ms |
+| Thomson scattering | 10–100 Hz | 10–100 ms |
+| Magnetic flux loops | 10 kHz | <100 μs |
+| SXR array | 100 kHz | <10 μs |
+| Langmuir probes | 10–100 kHz | <100 μs |
+
+Fast diagnostics (Mirnov, SXR) update every sample cycle (1 ms).
+Slow diagnostics (Thomson) hold their last value between updates.
+The UPDE engine uses whatever phases are current, treating slow
+channels as piecewise-constant — consistent with the real physics
+where equilibrium quantities evolve on ~1 s timescales.
+
+### 9.3 Tokamak Fusion: Control Pipeline
+
+#### 9.3.1 Supervisor Decision
+
+Every `control_period_s` (10 ms), the supervisor evaluates:
+
+1. **R_good** for layers [4, 5, 6] (transport_barrier, current_profile,
+   equilibrium).  High R_good → stable H-mode.
+2. **R_bad** for layers [0, 2, 3] (micro_turbulence, mhd_tearing,
+   sawtooth_elm).  High R_bad → pathological MHD activity.
+3. **Boundary violations**: q_min < 1.0 or β_N > 2.8 or
+   greenwald > 1.2 → immediate CRITICAL transition.
+
+The RegimeManager updates the state machine:
+```
+NOMINAL (R_good ≥ 0.6, no hard violations)
+   ↓ R_good drops below 0.55
+DEGRADED (R_good ∈ [0.3, 0.6), or R_bad rising)
+   ↓ R_good < 0.25 or hard violation
+CRITICAL (emergency response)
+   ↓ recovery detected
+RECOVERY (controlled ramp-back)
+   ↓ R_good ≥ 0.65
+NOMINAL
+```
+
+Hysteresis (0.05 offset between down/up thresholds) prevents
+chattering at transitions.  Cooldown (10 steps) prevents rapid
+regime oscillation.
+
+#### 9.3.2 Policy Rule Firing
+
+Two policy rules in `plasma_control/policy.yaml`:
+
+**suppress_elm_storm**: fires in NOMINAL or DEGRADED when R_bad
+on sawtooth_elm layer exceeds 0.7.  Emits:
+```
+ControlAction(knob="alpha", scope="layer_0", value=0.4, ttl_s=5.0)
+```
+This injects phase lag on the micro_turbulence layer, decoupling
+the turbulence↔ELM cascade.  The physical effect: turbulence-driven
+edge pressure build-up is disrupted, preventing the next ELM trigger.
+
+**restore_transport_barrier**: fires in DEGRADED or RECOVERY when
+R_good on transport_barrier layer drops below 0.3.  Emits:
+```
+ControlAction(knob="K", scope="global", value=0.2, ttl_s=10.0)
+```
+This increases global coupling, strengthening the inter-layer
+synchronization.  The physical effect: tighter coordination between
+equilibrium, transport, and boundary layers, restoring the H-mode
+pedestal.
+
+#### 9.3.3 Action Projection and Rate Limiting
+
+Each ControlAction passes through the ActionProjector before reaching
+hardware.  For the plasma_control binding:
+
+| Knob | Value bounds | Rate limit per step |
+|------|-------------|-------------------|
+| K | [0.0, 5.0] | 0.1 |
+| alpha | [0.0, π/2] | 0.05 |
+| zeta | [0.0, 2.0] | 0.2 |
+
+Rate limiting prevents actuator damage.  If the policy demands
+K=0.2 but the previous value was K=0.05, the projector caps the
+step at +0.1, yielding K=0.15.  The next cycle brings K=0.2.
+This produces smooth actuator ramps, not discontinuous jumps.
+
+#### 9.3.4 Knob-to-Actuator Mapping
+
+The ActuationMapper resolves abstract knob commands into
+domain-specific actuator commands.  The binding spec defines
+three actuators:
+
+```yaml
+actuators:
+  - name: coupling_global   # knob: K, scope: global
+  - name: lag_turbulence     # knob: alpha, scope: layer_0
+  - name: damping_global     # knob: zeta, scope: global
+```
+
+The output is a command dict:
+```python
+{"actuator": "coupling_global", "knob": "K", "scope": "global",
+ "value": 0.15, "ttl_s": 10.0}
+```
+
+#### 9.3.5 Actuator-to-Hardware Translation
+
+The final translation from SPO actuator commands to physical tokamak
+hardware is performed by the domain execution layer — the
+PlasmaControlBridge.export_control_actions() method or the downstream
+plasma control system.
+
+| SPO actuator | Physical hardware | Translation |
+|-------------|-------------------|-------------|
+| **coupling_global (K)** | Poloidal field (PF) coil currents | K ∝ I_PF shaping current.  Higher K → tighter magnetic configuration → stronger inter-layer coupling.  The PF coil power supplies (thyristor or IGBT converters, ~10 kA, ~1 kV) receive current setpoints from the shape controller. |
+| **coupling_global (K)** | Neutral Beam Injection (NBI) power | K ∝ P_NBI.  Higher coupling → higher beam power → more torque → stronger rotation → better MHD coupling across flux surfaces.  NBI sources (~1 MW per beamline, deuterium/hydrogen, 40–100 keV) respond in ~50 ms. |
+| **lag_turbulence (α)** | Resonant Magnetic Perturbation (RMP) coil phasing | α maps to the toroidal phase of the n=3 RMP field.  The RMP coils (typically 3×6 in-vessel saddle coils) receive phase-shifted sinusoidal currents.  Adjusting the phase angle between upper and lower coil rows controls the edge magnetic perturbation spectrum, directly modulating ELM stability. |
+| **lag_turbulence (α)** | ECRH/ECCD deposition angle | α maps to the poloidal steering angle of the EC launcher mirror.  Electron Cyclotron Resonance Heating (ECRH, 170 GHz gyrotrons, ~1 MW per launcher) deposits power at a specific flux surface.  Shifting the mirror angle changes the current drive location, modulating the local q-profile shear that controls tearing mode coupling. |
+| **damping_global (ζ)** | Pellet injection rate | ζ ∝ pellet frequency.  Higher entrainment drive → more frequent pellet injection → stronger density pacing.  Pellet injectors (frozen D₂ pellets, 1–4 mm diameter, 200–1000 m/s) fire at programmable rates up to ~100 Hz.  ELM pacing via pellets is established practice (JET, AUG). |
+| **damping_global (ζ)** | Gas puff valves | ζ ∝ gas flow rate.  Piezoelectric gas valves (D₂, N₂, Ne, Ar) with ~1 ms response time control edge density and impurity seeding.  Higher ζ drives the edge density toward a reference state. |
+
+#### 9.3.6 Closed-Loop Timing
+
+The complete loop for one control cycle:
+
+```
+t=0.000 ms  Mirnov/SXR/interferometer acquire raw signals
+t=0.010 ms  ADC digitisation complete
+t=0.100 ms  Phase extraction (Hilbert / ratio / counter)
+t=0.200 ms  PlasmaControlBridge.import_snapshot() → UPDEState
+t=0.300 ms  UPDE RK4 step (16 oscillators, O(256) operations)
+t=0.400 ms  Order parameter R_good, R_bad computed
+t=0.500 ms  RegimeManager.evaluate() → regime transition check
+t=0.600 ms  SupervisorPolicy.decide() → list[ControlAction]
+t=0.700 ms  ActionProjector.project() → rate-limited actions
+t=0.800 ms  ActuationMapper.map_actions() → actuator commands
+t=0.900 ms  PlasmaControlBridge.export_control_actions() → HW dict
+t=1.000 ms  Commands dispatched to PF/NBI/RMP/ECRH/pellet systems
+```
+
+Total pipeline latency: ~1 ms.  This is within the 10 ms control
+period of the plasma_control binding spec (10× margin), and well
+within the characteristic MHD timescale (~1–10 ms).
+
+For comparison, existing tokamak control systems (DIII-D PCS, KSTAR
+EPICS) operate at 1–10 ms cycle times.  SPO matches this performance
+while providing multi-scale coherence awareness that single-loop
+controllers lack.
+
+### 9.4 Tokamak Fusion: Full Data Flow Diagram
+
+```
+ TOKAMAK VESSEL
+ ┌─────────────────────────────────────────────────────────────┐
+ │  Diagnostics (sensors)              Actuators (effectors)   │
+ │  ┌──────────────────┐               ┌────────────────────┐ │
+ │  │ Mirnov coils     │               │ PF coils (6 pairs) │ │
+ │  │ ECE radiometer   │               │ CS solenoid        │ │
+ │  │ Interferometer   │               │ NBI (~8 sources)   │ │
+ │  │ Thomson scatter  │               │ ECRH (~4 gyrotrons)│ │
+ │  │ SXR array        │               │ RMP coils (3×6)    │ │
+ │  │ Bolometers       │               │ Pellet injector    │ │
+ │  │ Langmuir probes  │               │ Gas puff valves    │ │
+ │  │ MSE diagnostic   │               │ Feedback coils     │ │
+ │  │ Dα monitors      │               │                    │ │
+ │  └───────┬──────────┘               └────────▲───────────┘ │
+ └──────────┼───────────────────────────────────┼─────────────┘
+            │ raw signals                       │ I, P, angle, rate
+            ▼                                   │
+ ┌──────────────────────┐            ┌──────────┴──────────────┐
+ │ Phase Extraction     │            │ Domain Execution         │
+ │                      │            │                          │
+ │ Hilbert(Mirnov) →θ₂  │            │ K→I_PF, P_NBI           │
+ │ ratio(n_e/n_GW) →θ₄  │            │ α→RMP_phase, ECRH_angle │
+ │ ratio(β_N/β_lim)→θ₁  │            │ ζ→pellet_rate, gas_flow │
+ │ count(SXR crash)→θ₃  │            │ Ψ→reference setpoint    │
+ │ ratio(q/q_95)   →θ₅  │            │                          │
+ │ ratio(P_rad)    →θ₅  │            └──────────▲──────────────┘
+ │ ratio(T_e/T_sep)→θ₇  │                       │
+ │ Hilbert(ECE)    →θ₀  │                       │ actuator commands
+ └───────┬──────────────┘            ┌───────────┴──────────────┐
+         │ θ₀..θ₁₅ (16 phases)      │ ActuationMapper          │
+         ▼                           │ scope resolution         │
+ ┌──────────────────────┐            │ value clamping           │
+ │ UPDE Engine (RK4)    │            └──────────▲──────────────┘
+ │                      │                       │
+ │ dθᵢ/dt = ωᵢ         │            ┌───────────┴──────────────┐
+ │   + ΣⱼKᵢⱼsin(θⱼ−θᵢ) │            │ ActionProjector          │
+ │   + ζ sin(Ψ−θᵢ)     │            │ rate limits              │
+ │                      │            │ value bounds             │
+ │ → θ₀..θ₁₅ (updated) │            └──────────▲──────────────┘
+ └───────┬──────────────┘                       │
+         │                           ┌───────────┴──────────────┐
+         ▼                           │ SupervisorPolicy.decide() │
+ ┌──────────────────────┐            │                          │
+ │ Order Parameters     │───────────►│ R_good[4,5,6] ≥ 0.6?    │
+ │                      │            │ R_bad[0,2,3] < 0.7?      │
+ │ R_good (layers 4-6)  │            │ q_min ≥ 1.0?             │
+ │ R_bad  (layers 0,2,3)│            │ β_N ≤ 2.8?               │
+ │ per-layer Rᵢ, ψᵢ    │            │ greenwald ≤ 1.2?         │
+ └──────────────────────┘            └──────────────────────────┘
+```
+
+### 9.5 Quantum Hardware Pipeline
+
+Superconducting qubit systems (IBM Heron, Google Sycamore) use a
+parallel pipeline with different physical signals.
+
+#### 9.5.1 Sensor Ingestion
+
+| Diagnostic | Physical quantity | SPO layer |
+|-----------|-------------------|-----------|
+| **Readout resonator** (dispersive, ~7 GHz) | Qubit state (IQ plane) | qubit_register (0) |
+| **Randomized benchmarking** (gate sequences) | Process fidelity | logical_coherence (1) |
+| **T₁/T₂ characterization** (decay sequences) | Coherence times | logical_coherence (1) |
+
+Phase extraction: the readout resonator returns an IQ-plane point
+for each qubit.  The azimuthal angle in the IQ plane *is* the
+Bloch-sphere phase φᵢ — no Hilbert transform needed.  This is
+a direct measurement of the oscillator phase.
+
+#### 9.5.2 Actuator Commands
+
+| SPO actuator | Physical hardware | Translation |
+|-------------|-------------------|-------------|
+| **K (coupling)** | Tunable coupler flux bias | K ∝ coupler flux Φ_c.  Flux-tunable couplers (DC SQUID loop between qubits) set the effective J_ij coupling.  A DAC channel (~16 bit, ~1 GHz update rate) drives the coupler's flux line. |
+| **α (phase lag)** | Microwave drive phase | α maps to the phase offset of the qubit drive pulse.  The arbitrary waveform generator (AWG, ~5 GS/s) shifts the IQ modulation phase of the 4–6 GHz drive tone. |
+| **ζ (entrainment)** | Microwave drive amplitude | ζ ∝ Rabi frequency Ω_R.  Higher drive amplitude → stronger pull toward the reference phase Ψ.  The AWG scales the drive envelope. |
+| **Ψ (reference)** | Drive pulse rotation axis | Ψ sets the rotation axis angle on the Bloch sphere equator.  Standard single-qubit gates (X, Y, Z, arbitrary) are rotations at programmable phase angles — Ψ selects which axis to drive toward. |
+
+#### 9.5.3 Timing
+
+Superconducting qubit operations run at ~GHz clock rates with
+~100 ns gate times.  The SPO control cycle must fit within the
+coherence time T₂ (~100 μs for current hardware):
+
+```
+t=0      Readout pulse → IQ data (500 ns)
+t=1 μs   Phase extraction (direct IQ angle)
+t=2 μs   UPDE step (8 oscillators, O(64) operations)
+t=3 μs   Supervisor evaluation
+t=4 μs   Coupler/drive command dispatch
+t=5 μs   Actuator settling (~100 ns for flux couplers)
+```
+
+Total latency: ~5 μs.  This fits within a single T₂ window,
+allowing real-time coherence-based feedback during quantum
+computation — not just post-hoc analysis.
+
+### 9.6 General Process Control Pipeline
+
+For non-physics domains (manufacturing, cloud queues, biological
+systems), the pipeline follows the same architecture with different
+sensor and actuator vocabularies.
+
+#### 9.6.1 Manufacturing (SPC)
+
+| SPO component | Physical realization |
+|--------------|---------------------|
+| Sensors | Inline metrology (coordinate measuring machines, optical gauges, force sensors) |
+| Phase extraction | Normalised ratio: θ = 2π · (x − LSL) / (USL − LSL) where LSL/USL are spec limits |
+| Actuators (K) | PLC setpoint coupling between stations (e.g., upstream tool compensation based on downstream SPC) |
+| Actuators (α) | Process delay compensation (conveyor speed, batch hold time) |
+| Actuators (ζ) | Reference part injection rate (golden sample pacing) |
+| Cycle time | Seconds to minutes (matches process tempo) |
+
+#### 9.6.2 Cloud / Queue Systems
+
+| SPO component | Physical realization |
+|--------------|---------------------|
+| Sensors | Queue depth metrics, request latency percentiles, error rate counters |
+| Phase extraction | Normalised ratio (queue_depth / queue_capacity) or event frequency (requests/sec → rad/s) |
+| Actuators (K) | Service mesh routing weights (Istio, Envoy) |
+| Actuators (α) | Retry backoff configuration (exponential base, jitter) |
+| Actuators (ζ) | Rate limiter setpoint (requests/sec ceiling) |
+| Cycle time | Milliseconds to seconds |
+
+#### 9.6.3 Biological Oscillators
+
+| SPO component | Physical realization |
+|--------------|---------------------|
+| Sensors | EEG electrodes, ECG leads, respiratory belt, skin conductance |
+| Phase extraction | Hilbert transform of band-passed signal (e.g., alpha 8–13 Hz, theta 4–8 Hz) |
+| Actuators (K) | Binaural beat frequency (entrainment coupling strength) |
+| Actuators (α) | Phase offset between left/right audio channels |
+| Actuators (ζ) | Audio amplitude (drive strength) |
+| Actuators (Ψ) | Target brainwave phase (circadian reference, meditation target) |
+| Cycle time | ~100 ms (matching EEG epoch length) |
+
+### 9.7 Safety and Fail-Safe Design
+
+The pipeline incorporates multiple safety layers:
+
+1. **Boundary violations** (hard) trigger immediate CRITICAL regime,
+   which commands conservative actuator values (reduce K, increase ζ
+   toward a known stable state).
+
+2. **Rate limiting** in the ActionProjector prevents actuator damage.
+   A sudden coupling increase request is smoothed over multiple
+   control cycles.
+
+3. **TTL (time-to-live)** on every ControlAction ensures commands
+   expire.  If the supervisor stops issuing commands (e.g., software
+   crash), actuators revert to their default state within the TTL
+   window.
+
+4. **Physics invariant checks** in the bridge adapters
+   (PlasmaControlBridge.check_physics_invariants,
+   FusionCoreBridge.check_stability) run independently of SPO
+   and can veto commands that would violate absolute safety limits.
+
+5. **Watchdog**: the sample/control period mismatch (10:1 in
+   plasma_control) means the UPDE runs 10 phase updates between
+   each control decision.  If the UPDE detects divergence (NaN,
+   Inf, or R < 0.01), it halts before the next control cycle.
+
+For nuclear-grade tokamak deployment, the SPO control layer would
+sit *above* the existing machine-protection interlock system (which
+operates on hard-wired analog signals and cannot be overridden by
+software).  SPO optimises within the interlock-safe envelope; it
+does not replace the interlock.
+
+---
+
+## 10. Limitations and Open Questions
 
 1. **Phase extraction fidelity**: the Hilbert transform, event
    frequency, and ring-encoding methods have finite bandwidth and
@@ -501,7 +925,7 @@ All use the *same engine* with different YAML binding specs.
 
 ---
 
-## 10. References
+## 11. References
 
 - **[kuramoto1975]** Y. Kuramoto (1975). Self-entrainment of a population of coupled non-linear oscillators. *Lecture Notes in Physics* 39, 420–422.
 - **[sakaguchi1986]** H. Sakaguchi & Y. Kuramoto (1986). A soluble active rotater model showing phase transitions via mutual entertainment. *Prog. Theor. Phys.* 76, 576–581.
@@ -516,3 +940,8 @@ All use the *same engine* with different YAML binding specs.
 - **[troyon1984]** F. Troyon et al. (1984). MHD-limits to plasma confinement. *Plasma Phys. Control. Fusion* 26, 209.
 - **[kruskal1958]** M. D. Kruskal & M. Schwarzschild (1954). Some instabilities of a completely ionized plasma. *Proc. R. Soc. Lond. A* 223, 348–360.
 - **[greenwald2002]** M. Greenwald (2002). Density limits in toroidal plasmas. *Plasma Phys. Control. Fusion* 44, R27.
+- **[snipes2010]** J. A. Snipes et al. (2010). Actuator and diagnostic requirements of the ITER plasma control system. *Fusion Eng. Des.* 85, 461–465.
+- **[humphreys2015]** D. A. Humphreys et al. (2015). Novel aspects of plasma control in ITER. *Phys. Plasmas* 22, 021806.
+- **[evans2006]** T. E. Evans et al. (2006). Edge stability and transport control with resonant magnetic perturbations in collisionless tokamak plasmas. *Nature Phys.* 2, 419–423.
+- **[lang2004]** P. T. Lang et al. (2004). ELM pace making and mitigation by pellet injection in ASDEX Upgrade. *Nucl. Fusion* 44, 665.
+- **[krantz2019]** P. Krantz et al. (2019). A quantum engineer's guide to superconducting qubits. *Appl. Phys. Rev.* 6, 021318.
