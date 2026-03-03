@@ -145,7 +145,7 @@ class PolicyEngine:
         cmp = _OPS.get(cond.op)
         if cmp is None:
             return False
-        return cmp(val, cond.threshold)
+        return bool(cmp(val, cond.threshold))
 
     # Keep old interface for callers that relied on _extract_metric
     _extract_metric = staticmethod(

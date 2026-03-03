@@ -17,7 +17,9 @@ implementation that silently discards spans and metrics.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Any
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
@@ -60,10 +62,10 @@ class OTelExporter:
     def __init__(self, service_name: str = "spo") -> None:
         self._service_name = service_name
         self._enabled = _HAS_OTEL
-        self._tracer: object = None
-        self._r_global_gauge: object = None
-        self._stability_gauge: object = None
-        self._step_counter: object = None
+        self._tracer: Any = None
+        self._r_global_gauge: Any = None
+        self._stability_gauge: Any = None
+        self._step_counter: Any = None
         if self._enabled:
             self._tracer = otel_trace.get_tracer(service_name)
             meter = otel_metrics.get_meter(service_name)
@@ -88,7 +90,9 @@ class OTelExporter:
         return self._enabled
 
     @contextmanager
-    def span(self, name: str, attributes: dict | None = None):
+    def span(
+        self, name: str, attributes: dict | None = None
+    ) -> Generator[Any, None, None]:
         """Trace span context manager. No-op when OTel is absent."""
         if not self._enabled:
             yield _NoOpSpan()
@@ -112,7 +116,6 @@ class OTelExporter:
         """Emit a span event for regime transitions."""
         if not self._enabled:
             return
-        tracer = self._tracer
-        with tracer.start_as_current_span("spo.regime_change") as s:
+        with self._tracer.start_as_current_span("spo.regime_change") as s:
             s.set_attribute("spo.regime.old", old)
             s.set_attribute("spo.regime.new", new)
