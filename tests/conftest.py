@@ -7,8 +7,11 @@
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
+from hypothesis import HealthCheck, settings
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
@@ -21,6 +24,12 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+settings.register_profile(
+    "ci", max_examples=500, suppress_health_check=[HealthCheck.too_slow]
+)
+settings.register_profile("dev", max_examples=50)
+settings.load_profile(os.getenv("HYPOTHESIS_PROFILE", "dev"))
 
 TWO_PI = 2.0 * np.pi
 
