@@ -314,6 +314,57 @@ def report(log_path: str) -> None:
     click.echo("Report generation planned for v0.3")
 
 
+@main.group()
+def queuewaves() -> None:
+    """QueueWaves — real-time cascade failure detector."""
+
+
+main.add_command(queuewaves)
+
+
+@queuewaves.command()
+@click.option("--config", "config_path", required=True, type=click.Path(exists=True))
+@click.option("--host", default="0.0.0.0")  # noqa: S104
+@click.option("--port", default=8080, type=int)
+def serve(config_path: str, host: str, port: int) -> None:
+    """Start QueueWaves server."""
+    from scpn_phase_orchestrator.apps.queuewaves.server import run_server
+
+    run_server(config_path, host=host, port=port)
+
+
+@queuewaves.command()
+@click.option("--config", "config_path", required=True, type=click.Path(exists=True))
+def check(config_path: str) -> None:
+    """One-shot: scrape → analyze → exit 0 (ok) or 1 (anomalies)."""
+    from pathlib import Path as _Path
+
+    from scpn_phase_orchestrator.apps.queuewaves.config import load_config
+    from scpn_phase_orchestrator.apps.queuewaves.detector import AnomalyDetector
+    from scpn_phase_orchestrator.apps.queuewaves.pipeline import PhaseComputePipeline
+
+    cfg = load_config(_Path(config_path))
+    pipeline = PhaseComputePipeline(cfg)
+
+    # Run a few ticks with empty buffers to initialise phases
+    import numpy as _np
+
+    rng = _np.random.default_rng(0)
+    buffers = {svc.name: rng.standard_normal(cfg.buffer_length) for svc in cfg.services}
+    snap = pipeline.tick(buffers)
+    detector = AnomalyDetector(cfg.thresholds)
+    anomalies = detector.detect(snap)
+
+    click.echo(
+        f"R_good={snap.r_good:.4f}  R_bad={snap.r_bad:.4f}  regime={snap.regime}"
+    )
+    if anomalies:
+        for a in anomalies:
+            click.echo(f"  [{a.severity}] {a.message}")
+        raise SystemExit(1)
+    click.echo("No anomalies detected.")
+
+
 @main.command()
 @click.argument("domain_name")
 def scaffold(domain_name: str) -> None:

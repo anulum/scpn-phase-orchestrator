@@ -1,0 +1,57 @@
+# QueueWaves example configuration
+# Monitors 6 microservices across 3 hierarchy layers.
+# micro-layer sync = bad (retry storms), macro-layer sync = good (coordinated throughput).
+
+prometheus_url: "http://prometheus:9090"
+scrape_interval_s: 15
+buffer_length: 64
+
+services:
+  # micro layer — individual retry-prone services
+  - name: payment-svc
+    promql: 'rate(http_requests_total{service="payment"}[1m])'
+    layer: micro
+    channel: P
+  - name: inventory-svc
+    promql: 'rate(http_requests_total{service="inventory"}[1m])'
+    layer: micro
+    channel: P
+  - name: notification-svc
+    promql: 'rate(http_requests_total{service="notification"}[1m])'
+    layer: micro
+    channel: P
+
+  # meso layer — aggregated queue depths
+  - name: order-queue
+    promql: 'rabbitmq_queue_messages{queue="orders"}'
+    layer: meso
+    channel: P
+
+  # macro layer — system-wide throughput
+  - name: gateway-rps
+    promql: 'rate(http_requests_total{service="gateway"}[5m])'
+    layer: macro
+    channel: P
+  - name: total-throughput
+    promql: 'rate(http_requests_total[5m])'
+    layer: macro
+    channel: P
+
+thresholds:
+  r_bad_warn: 0.50
+  r_bad_critical: 0.70
+  plv_cascade: 0.85
+  imprint_chronic: 1.5
+  cooldown_seconds: 300
+
+coupling:
+  strength: 0.50
+  decay: 0.25
+
+alert_sinks:
+  - url: "https://example.com/webhook/your-slack-or-generic-endpoint"
+    format: slack
+
+server:
+  host: "0.0.0.0"
+  port: 8080

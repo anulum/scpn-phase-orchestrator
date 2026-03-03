@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QueueWaves — Cascade Failure Detector</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0d1117;color:#c9d1d9}
+header{background:#161b22;border-bottom:1px solid #30363d;padding:12px 24px;display:flex;align-items:center;gap:16px}
+header h1{font-size:18px;font-weight:600;color:#f0f6fc}
+.status-pill{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}
+.regime-nominal{background:#238636;color:#fff}
+.regime-degraded{background:#d29922;color:#000}
+.regime-critical{background:#da3633;color:#fff}
+.regime-recovery{background:#1f6feb;color:#fff}
+.metrics{display:flex;gap:12px;margin-left:auto;font-size:13px;color:#8b949e}
+.metrics span{color:#f0f6fc;font-weight:600}
+main{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:12px;padding:12px;height:calc(100vh - 56px)}
+.panel{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;overflow:hidden}
+.panel h2{font-size:14px;color:#8b949e;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+#r-timeline{grid-row:1/2}
+#phase-wheel{grid-row:1/2}
+#alert-table{grid-column:1/-1}
+svg{width:100%;height:100%}
+.line-good{stroke:#3fb950;stroke-width:2;fill:none}
+.line-bad{stroke:#f85149;stroke-width:2;fill:none}
+.threshold-line{stroke:#d29922;stroke-width:1;stroke-dasharray:4 2}
+.axis{stroke:#30363d;stroke-width:1}
+.axis-label{fill:#8b949e;font-size:10px}
+.svc-dot{r:6;stroke:#fff;stroke-width:1.5}
+.svc-label{fill:#c9d1d9;font-size:10px;text-anchor:middle}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:6px 8px;border-bottom:1px solid #30363d;color:#8b949e}
+td{padding:6px 8px;border-bottom:1px solid #21262d}
+.sev-critical{color:#f85149;font-weight:600}
+.sev-warning{color:#d29922}
+.no-data{color:#484f58;text-align:center;padding:32px}
+</style>
+</head>
+<body>
+<header>
+  <h1>QueueWaves</h1>
+  <div id="regime-pill" class="status-pill regime-nominal">NOMINAL</div>
+  <div class="metrics">
+    R<sub>good</sub>: <span id="r-good-val">—</span> &nbsp;
+    R<sub>bad</sub>: <span id="r-bad-val">—</span> &nbsp;
+    Tick: <span id="tick-val">0</span>
+  </div>
+</header>
+<main>
+  <div class="panel" id="r-timeline">
+    <h2>Coherence Timeline</h2>
+    <svg id="timeline-svg" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+  </div>
+  <div class="panel" id="phase-wheel">
+    <h2>Phase Wheel</h2>
+    <svg id="wheel-svg" viewBox="0 0 250 250"></svg>
+  </div>
+  <div class="panel" id="alert-table">
+    <h2>Alerts</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Type</th><th>Severity</th><th>Service</th><th>Message</th></tr></thead>
+      <tbody id="alert-body"><tr><td colspan="5" class="no-data">No anomalies</td></tr></tbody>
+    </table>
+  </div>
+</main>
+<script>
+(function(){
+  const W=600,H=200,MAX_PTS=120;
+  const goodPts=[],badPts=[];
+  const alerts=[];
+  const layerColors={micro:"#f85149",meso:"#d29922",macro:"#3fb950",unknown:"#8b949e"};
+
+  function connectWS(){
+    const proto=location.protocol==="https:"?"wss:":"ws:";
+    const ws=new WebSocket(`${proto}//${location.host}/ws/stream`);
+    ws.onmessage=function(e){
+      const msg=JSON.parse(e.data);
+      if(msg.type==="tick") onTick(msg.data);
+      if(msg.type==="anomaly") onAnomaly(msg.data);
+    };
+    ws.onclose=function(){setTimeout(connectWS,2000)};
+    ws.onerror=function(){ws.close()};
+  }
+
+  function onTick(d){
+    document.getElementById("r-good-val").textContent=d.r_good.toFixed(3);
+    document.getElementById("r-bad-val").textContent=d.r_bad.toFixed(3);
+    document.getElementById("tick-val").textContent=d.tick;
+    const pill=document.getElementById("regime-pill");
+    pill.textContent=d.regime.toUpperCase();
+    pill.className="status-pill regime-"+d.regime;
+
+    goodPts.push(d.r_good);
+    badPts.push(d.r_bad);
+    if(goodPts.length>MAX_PTS){goodPts.shift();badPts.shift()}
+    drawTimeline();
+    drawWheel(d.services||[]);
+  }
+
+  function onAnomaly(a){
+    alerts.unshift(a);
+    if(alerts.length>50)alerts.pop();
+    drawAlerts();
+  }
+
+  function drawTimeline(){
+    const svg=document.getElementById("timeline-svg");
+    const n=goodPts.length;
+    if(n<2){svg.innerHTML="";return}
+    const dx=W/(n-1);
+    let gPath="",bPath="";
+    for(let i=0;i<n;i++){
+      const x=(i*dx).toFixed(1);
+      const yg=(H-goodPts[i]*H).toFixed(1);
+      const yb=(H-badPts[i]*H).toFixed(1);
+      gPath+=(i===0?"M":"L")+x+","+yg;
+      bPath+=(i===0?"M":"L")+x+","+yb;
+    }
+    const tY=(H-0.5*H).toFixed(1);
+    svg.innerHTML=`
+      <line x1="0" y1="${tY}" x2="${W}" y2="${tY}" class="threshold-line"/>
+      <line x1="0" y1="${H}" x2="${W}" y2="${H}" class="axis"/>
+      <text x="4" y="12" class="axis-label">1.0</text>
+      <text x="4" y="${H-2}" class="axis-label">0.0</text>
+      <path d="${gPath}" class="line-good"/>
+      <path d="${bPath}" class="line-bad"/>`;
+  }
+
+  function drawWheel(services){
+    const svg=document.getElementById("wheel-svg");
+    const cx=125,cy=125,r=90;
+    let html=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#30363d" stroke-width="1"/>`;
+    services.forEach(function(s){
+      const angle=s.phase;
+      const x=cx+r*Math.cos(angle);
+      const y=cy+r*Math.sin(angle);
+      const col=layerColors[s.layer]||layerColors.unknown;
+      html+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" class="svc-dot" fill="${col}"/>`;
+      const lx=cx+(r+14)*Math.cos(angle);
+      const ly=cy+(r+14)*Math.sin(angle);
+      html+=`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" class="svc-label">${s.name}</text>`;
+    });
+    svg.innerHTML=html;
+  }
+
+  function drawAlerts(){
+    const tb=document.getElementById("alert-body");
+    if(!alerts.length){tb.innerHTML='<tr><td colspan="5" class="no-data">No anomalies</td></tr>';return}
+    tb.innerHTML=alerts.map(function(a){
+      const cls=a.severity==="critical"?"sev-critical":"sev-warning";
+      const t=new Date().toLocaleTimeString();
+      return `<tr><td>${t}</td><td>${a.type}</td><td class="${cls}">${a.severity}</td><td>${a.service}</td><td>${a.message}</td></tr>`;
+    }).join("");
+  }
+
+  // Poll REST until WS connects (fallback for initial load)
+  async function pollOnce(){
+    try{
+      const r=await fetch("/api/v1/state");
+      if(r.ok){const d=await r.json();if(d.tick)onTick(d)}
+    }catch(e){}
+  }
+  pollOnce();
+  connectWS();
+})();
+</script>
+</body>
+</html>

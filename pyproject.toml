@@ -47,6 +47,12 @@ scpn-all = [
     "scpn-control>=0.1.0",
     "scpn-fusion-core>=3.9.0",
 ]
+queuewaves = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "httpx>=0.27",
+    "websockets>=12.0",
+]
 plot = ["matplotlib>=3.7"]
 dev = [
     "pytest>=7.4",
@@ -76,7 +82,7 @@ Changelog = "https://github.com/anulum/scpn-phase-orchestrator/blob/main/CHANGEL
 where = ["src"]
 
 [tool.setuptools.package-data]
-scpn_phase_orchestrator = ["py.typed"]
+scpn_phase_orchestrator = ["py.typed", "apps/queuewaves/static/*"]
 
 [tool.ruff]
 line-length = 88
