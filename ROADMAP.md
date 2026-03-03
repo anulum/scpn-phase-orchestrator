@@ -1,9 +1,9 @@
 # Roadmap
 
-## v0.1 (current)
+## v0.1 (released)
 
 - Core scaffold with src layout and CLI
-- UPDE engine: RK4 integrator, pre-allocated arrays, Kuramoto coupling
+- UPDE engine: RK4/RK45 integrator, pre-allocated arrays, Kuramoto coupling
 - 3-channel oscillator model (phase, frequency, coherence)
 - Coupling matrix builder with decay, cross-hierarchy boosts, geometry constraints
 - BoundaryObserver, RegimeManager, SupervisorPolicy pipeline
@@ -12,30 +12,25 @@
 - Actuation mapper for domain-agnostic output binding
 - 21 domainpacks across neuroscience, cardiology, power systems, plasma physics, manufacturing, epidemiology, traffic, quantum, biology, chemistry, robotics, telecom, and more
 - Adapter bridges: FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge
+- QueueWaves: real-time cascade failure detector with Prometheus ingestion, WebSocket streaming, HTML dashboard, webhook alerts
 - spo-kernel Rust FFI: UPDE engine, coupling, imprint, order params, lags (112 tests)
-- 113+ Python tests, 112 Rust tests
+- 648 Python tests, 112 Rust tests
 - PhaseExtractor base class for signal intake
 - PyPI package (trusted publisher OIDC), Zenodo DOI, GitHub Pages docs
 
 ## v0.2
 
-- Deterministic replay from recorded phase trajectories
+- Deterministic replay from audit.jsonl recorded phase trajectories
 - Extended policy DSL with compound triggers and action chains
-- Prometheus and OpenTelemetry metric adapters
+- OpenTelemetry trace/metric export for production observability
 
 ## v0.3
-
-- Prometheus and OpenTelemetry metric adapters
-- Real-time WebSocket streaming of phase state
-- Dashboard for live order-parameter monitoring
-
-## v0.4
 
 - Petri net regime FSM for multi-phase protocol sequencing
 - SNN controller bridge (Nengo/Lava backends)
 - Event-driven mode transitions with hysteresis
 
-## v0.5
+## v0.4
 
 - Amplitude extension via Stuart-Landau oscillators
 - Phase-amplitude coupling (PAC) gating

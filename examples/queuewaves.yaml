@@ -53,5 +53,5 @@ alert_sinks:
     format: slack
 
 server:
-  host: "0.0.0.0"
+  host: "0.0.0.0"  # bind all interfaces (for Docker); use 127.0.0.1 for local dev
   port: 8080

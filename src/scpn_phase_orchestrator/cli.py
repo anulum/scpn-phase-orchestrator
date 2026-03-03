@@ -324,7 +324,7 @@ main.add_command(queuewaves)
 
 @queuewaves.command()
 @click.option("--config", "config_path", required=True, type=click.Path(exists=True))
-@click.option("--host", default="0.0.0.0")  # noqa: S104  # nosec B104
+@click.option("--host", default="127.0.0.1")
 @click.option("--port", default=8080, type=int)
 def serve(config_path: str, host: str, port: int) -> None:
     """Start QueueWaves server."""

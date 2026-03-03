@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **QueueWaves** — real-time microservice cascade failure detector (`apps/queuewaves/`)
+  - PrometheusCollector with persistent async httpx client and ring buffers
+  - PhaseComputePipeline wrapping UPDE engine for Kuramoto phase analysis
+  - AnomalyDetector: retry-storm, cascade-propagation, chronic-degradation
+  - WebhookAlerter with deduplication and Slack/generic webhook formats
+  - FastAPI server with REST API, WebSocket streaming, Prometheus exposition
+  - Single-file HTML dashboard (R timeline, phase wheel, alert table)
+  - CLI subcommands: `spo queuewaves serve`, `spo queuewaves check`
+  - Graceful shutdown with task cancellation and resource cleanup
+  - 60 tests, coverage >90%
+- 12 new domainpacks: cardiac_rhythm, circadian_biology, chemical_reactor, epidemic_sir, firefly_swarm, laser_array, manufacturing_spc (upgraded), neuroscience_eeg, pll_clock, power_grid, rotating_machinery, swarm_robotics (total: 21)
+- 3 adapter bridges: FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge
+- RK45 adaptive integration with configurable tolerance and max-step limits
+- PolicyEngine: declarative YAML rules with regime/metric triggers and action chains
+- ActionProjector wiring for supervisor → actuation pipeline
+- BindingLoadError exception and validator guards for malformed specs
+- Phase-synchronization control theory docs (scope-of-competence, hardware pipeline)
+- Synchronization manifold header image
+- Queuewaves retry-storm demo notebook
+
 ### Fixed
 
 - **[P0]** Rust `ImprintModel.modulate_lag` added row-wise `m[i]` offset; now uses `m[i] - m[j]` preserving antisymmetry
@@ -14,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **[P0]** CLI `stability_proxy` used only first layer R; now uses mean R across all layers
 - **[P1]** Rust `PhysicalExtractor` quality hardcoded to 1.0; now computes envelope coefficient-of-variation
 - **[P1]** `compute_plv` silently truncated mismatched arrays; now raises `ValueError` / `SpoError::InvalidDimension`
+- All domainpack binding specs use semver (`0.1.0` not `0.1`)
+- 9 mypy type errors in bridges and CLI resolved
+- CI: queuewaves optional deps installed for test coverage
 
 ### Changed
 
@@ -21,7 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FFI `PyCoherenceMonitor` exposes `detect_phase_lock` with full CLA matrix
 - `ImprintState` and `CouplingState` are frozen dataclasses
 - CI: PRs to `develop` branch trigger CI; FFI test job runs full test suite
+- CI: install `.[dev,queuewaves]` in all jobs for full coverage
 - Previous sprints 1–9 entries moved to [0.1.1] section below
+- Repo hygiene: PEP 639 classifier fix, pre-commit pins, stub exports
 
 ## [0.1.1] - 2026-03-02
 
