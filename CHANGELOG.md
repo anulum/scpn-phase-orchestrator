@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-04
+
 ### Added
 
+- **Compound policy DSL** — `CompoundCondition` with AND/OR logic over multiple `PolicyCondition` triggers
+- **Action chains** — `PolicyRule.actions` accepts a list of `PolicyAction` items fired on a single trigger
+- **Rule rate-limiting** — per-rule `cooldown_s` and `max_fires` fields
+- **`stability_proxy` metric** in policy conditions (global mean R)
+- **OpenTelemetry export** — `OTelExporter` with span instrumentation, gauge metrics (`spo.r_global`, `spo.stability_proxy`), step counter; no-op fallback when `opentelemetry-api` is absent
+- `otel` optional dependency group (`opentelemetry-api>=1.20`, `opentelemetry-sdk>=1.20`)
+- Pre-commit hook for version consistency check across pyproject.toml, CITATION.cff, Cargo.toml
 - **QueueWaves** — real-time microservice cascade failure detector (`apps/queuewaves/`)
   - PrometheusCollector with persistent async httpx client and ring buffers
   - PhaseComputePipeline wrapping UPDE engine for Kuramoto phase analysis
@@ -22,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 12 new domainpacks: cardiac_rhythm, circadian_biology, chemical_reactor, epidemic_sir, firefly_swarm, laser_array, manufacturing_spc (upgraded), neuroscience_eeg, pll_clock, power_grid, rotating_machinery, swarm_robotics (total: 21)
 - 3 adapter bridges: FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge
 - RK45 adaptive integration with configurable tolerance and max-step limits
-- PolicyEngine: declarative YAML rules with regime/metric triggers and action chains
+- PolicyEngine: declarative YAML rules with regime/metric triggers
 - ActionProjector wiring for supervisor → actuation pipeline
 - BindingLoadError exception and validator guards for malformed specs
 - Phase-synchronization control theory docs (scope-of-competence, hardware pipeline)
@@ -46,9 +55,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All domainpack binding specs use semver (`0.1.0` not `0.1`)
 - 9 mypy type errors in bridges and CLI resolved
 - CI: queuewaves optional deps installed for test coverage
+- Ruff format violations in audit/logger.py and tests/test_audit_replay.py
 
 ### Changed
 
+- `PolicyRule` now uses `actions: list[PolicyAction]` instead of top-level knob/scope/value/ttl_s fields
+- `PolicyRule.condition` accepts both `PolicyCondition` and `CompoundCondition`
+- `PolicyEngine` tracks per-rule fire counts and cooldown timestamps
+- `OTelAdapter` stub replaced by production `OTelExporter` class
 - FFI `PyUPDEStepper` accepts `n_substeps` parameter
 - FFI `PyCoherenceMonitor` exposes `detect_phase_lock` with full CLA matrix
 - `ImprintState` and `CouplingState` are frozen dataclasses
@@ -136,6 +150,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/anulum/scpn-phase-orchestrator/releases/tag/v0.1.0

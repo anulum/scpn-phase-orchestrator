@@ -5,14 +5,114 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # License: GNU AGPL v3 | Commercial licensing available
 
+"""OpenTelemetry trace/metric export for production observability.
+
+Install the ``otel`` extra to use this module::
+
+    pip install scpn-phase-orchestrator[otel]
+
+Without the extra, :class:`OTelExporter` falls back to a no-op
+implementation that silently discards spans and metrics.
+"""
+
 from __future__ import annotations
 
+from contextlib import contextmanager
 
-class OTelAdapter:
-    """Extract phase-relevant events from OpenTelemetry span data."""
+from scpn_phase_orchestrator.upde.metrics import UPDEState
 
-    def __init__(self, service_name: str):
+__all__ = ["OTelExporter"]
+
+try:
+    from opentelemetry import metrics as otel_metrics
+    from opentelemetry import trace as otel_trace
+
+    _HAS_OTEL = True
+except ModuleNotFoundError:
+    _HAS_OTEL = False
+
+
+class _NoOpSpan:
+    """Minimal stand-in when opentelemetry-api is absent."""
+
+    def set_attribute(self, key: str, value: object) -> None:
+        pass
+
+    def set_status(self, status: object) -> None:
+        pass
+
+    def end(self) -> None:
+        pass
+
+    def __enter__(self) -> _NoOpSpan:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        pass
+
+
+class OTelExporter:
+    """Instrument UPDE steps with OpenTelemetry spans and metrics.
+
+    Falls back to no-op when ``opentelemetry-api`` is not installed.
+    """
+
+    def __init__(self, service_name: str = "spo") -> None:
         self._service_name = service_name
+        self._enabled = _HAS_OTEL
+        self._tracer: object = None
+        self._r_global_gauge: object = None
+        self._stability_gauge: object = None
+        self._step_counter: object = None
+        if self._enabled:
+            self._tracer = otel_trace.get_tracer(service_name)
+            meter = otel_metrics.get_meter(service_name)
+            self._r_global_gauge = meter.create_gauge(
+                "spo.r_global",
+                description="Global Kuramoto order parameter R",
+                unit="1",
+            )
+            self._stability_gauge = meter.create_gauge(
+                "spo.stability_proxy",
+                description="Mean R across layers",
+                unit="1",
+            )
+            self._step_counter = meter.create_counter(
+                "spo.steps_total",
+                description="Total UPDE integration steps",
+                unit="1",
+            )
 
-    def extract_events(self, span_data: list[dict]) -> list[float]:
-        raise NotImplementedError("OTel adapter planned for v0.3, see ROADMAP.md")
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @contextmanager
+    def span(self, name: str, attributes: dict | None = None):
+        """Trace span context manager. No-op when OTel is absent."""
+        if not self._enabled:
+            yield _NoOpSpan()
+            return
+        with self._tracer.start_as_current_span(name) as s:
+            if attributes:
+                for k, v in attributes.items():
+                    s.set_attribute(k, v)
+            yield s
+
+    def record_step(self, upde_state: UPDEState, step_idx: int) -> None:
+        """Record metrics from a completed UPDE step."""
+        if not self._enabled:
+            return
+        attrs = {"spo.regime": upde_state.regime_id}
+        self._r_global_gauge.set(upde_state.stability_proxy, attrs)
+        self._stability_gauge.set(upde_state.stability_proxy, attrs)
+        self._step_counter.add(1, attrs)
+
+    def record_regime_change(self, old: str, new: str) -> None:
+        """Emit a span event for regime transitions."""
+        if not self._enabled:
+            return
+        tracer = self._tracer
+        with tracer.start_as_current_span("spo.regime_change") as s:
+            s.set_attribute("spo.regime.old", old)
+            s.set_attribute("spo.regime.new", new)

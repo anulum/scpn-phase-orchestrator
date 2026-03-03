@@ -1,29 +1,57 @@
+# SCPN Phase Orchestrator
+# Copyright concepts (c) 1996-2026 Miroslav Sotek. All rights reserved.
+# Copyright code (c) 2026 Miroslav Sotek. All rights reserved.
+# ORCID: https://orcid.org/0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.adapters.opentelemetry import OTelAdapter
+from scpn_phase_orchestrator.adapters.opentelemetry import OTelExporter
 from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 from scpn_phase_orchestrator.adapters.scpn_control_bridge import SCPNControlBridge
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
 
-
-def test_otel_adapter_init():
-    adapter = OTelAdapter(service_name="test-svc")
-    assert adapter._service_name == "test-svc"
+# ── OTel adapter ──────────────────────────────────────────────────────
 
 
-def test_otel_adapter_not_implemented():
-    adapter = OTelAdapter("svc")
-    with pytest.raises(NotImplementedError):
-        adapter.extract_events([])
+def test_otel_exporter_noop_without_sdk():
+    exp = OTelExporter("test-svc")
+    # Should not raise regardless of whether opentelemetry is installed
+    state = UPDEState(
+        layers=[LayerState(R=0.8, psi=0.0)],
+        cross_layer_alignment=np.zeros((1, 1)),
+        stability_proxy=0.8,
+        regime_id="nominal",
+    )
+    exp.record_step(state, step_idx=0)
+    exp.record_regime_change("nominal", "degraded")
+
+
+def test_otel_exporter_span_context_manager():
+    exp = OTelExporter("test-svc")
+    with exp.span("test.span", {"key": "val"}) as s:
+        s.set_attribute("extra", 42)
+
+
+def test_otel_exporter_enabled_property():
+    exp = OTelExporter("test-svc")
+    assert isinstance(exp.enabled, bool)
+
+
+# ── Prometheus adapter ────────────────────────────────────────────────
 
 
 def test_prometheus_not_implemented():
     adapter = PrometheusAdapter("http://localhost:9090")
     with pytest.raises(NotImplementedError):
         adapter.fetch_metric("up", 0.0, 1.0, 0.1)
+
+
+# ── SCPN Control Bridge ──────────────────────────────────────────────
 
 
 def test_bridge_import_knm():

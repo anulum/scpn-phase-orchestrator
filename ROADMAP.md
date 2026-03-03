@@ -19,10 +19,13 @@
 - PhaseExtractor base class for signal intake
 - PyPI package (trusted publisher OIDC), Zenodo DOI, GitHub Pages docs
 
-## v0.2
+## v0.2 (released)
 
-- Extended policy DSL with compound triggers and action chains
-- OpenTelemetry trace/metric export for production observability
+- Extended policy DSL with compound triggers (AND/OR logic) and action chains
+- Per-rule cooldown and max-fire rate limiting
+- `stability_proxy` metric in policy conditions
+- OpenTelemetry trace/metric export for production observability (`OTelExporter`)
+- Pre-commit hook for version consistency
 
 ## v0.3
 

@@ -9,7 +9,7 @@ The hardcoded `SupervisorPolicy` provides default regime-driven actions;
 `PolicyEngine` extends it with domainpack-specific YAML rules evaluated
 per step.  12 of 17 domainpacks ship with `policy.yaml` files.
 
-## Syntax
+## Syntax (v0.1 — single condition, single action)
 
 ```yaml
 rules:
@@ -25,20 +25,61 @@ rules:
       scope: layer_1
       value: 0.3
       ttl_s: 5.0
+```
 
-  - name: restore_coordination
-    regime: [DEGRADED, RECOVERY]
-    condition:
-      metric: R_good
-      layer: 3
-      op: "<"
-      threshold: 0.3
+## Syntax (v0.2 — compound conditions, action chains)
+
+```yaml
+rules:
+  - name: emergency_boost
+    regime: [DEGRADED, CRITICAL]
+    logic: AND
+    conditions:
+      - metric: R
+        layer: 0
+        op: "<"
+        threshold: 0.3
+      - metric: stability_proxy
+        op: "<"
+        threshold: 0.5
+    actions:
+      - knob: K
+        scope: global
+        value: 0.5
+        ttl_s: 5.0
+      - knob: alpha
+        scope: layer_0
+        value: 0.1
+        ttl_s: 3.0
+    cooldown_s: 10.0
+    max_fires: 5
+
+  - name: either_layer_low
+    regime: [NOMINAL]
+    logic: OR
+    conditions:
+      - metric: R
+        layer: 0
+        op: "<"
+        threshold: 0.3
+      - metric: R
+        layer: 1
+        op: "<"
+        threshold: 0.3
     action:
       knob: K
       scope: global
-      value: 0.1
-      ttl_s: 10.0
+      value: 0.2
+      ttl_s: 5.0
 ```
+
+Both v0.1 and v0.2 syntax are supported in the same file.  The parser
+auto-detects:
+
+- `condition` (singular) → single `PolicyCondition`
+- `conditions` (plural) + `logic` → `CompoundCondition`
+- `action` (singular) → single-element action list
+- `actions` (plural) → multi-action chain
 
 ## Fields
 
@@ -46,20 +87,32 @@ rules:
 |-------|------|-------------|
 | `name` | str | Rule identifier |
 | `regime` | list[str] | Active only in listed regimes (`NOMINAL`, `DEGRADED`, `CRITICAL`, `RECOVERY`) |
-| `condition.metric` | str | `R_good`, `R_bad`, or `R` (raw layer order parameter) |
-| `condition.layer` | int | Index into the good/bad layer list (for `R_good`/`R_bad`) or absolute layer index (for `R`) |
+| `condition.metric` | str | `R`, `R_good`, `R_bad`, or `stability_proxy` |
+| `condition.layer` | int \| null | Layer index (null for global metrics like `stability_proxy`) |
 | `condition.op` | str | `">"`, `"<"`, `">="`, `"<="`, `"=="` |
 | `condition.threshold` | float | Comparison value |
+| `logic` | str | `"AND"` (default) or `"OR"` — combinator for `conditions` list |
 | `action.knob` | str | Control knob: `K`, `alpha`, `zeta`, or `Psi` |
 | `action.scope` | str | `global` or `layer_N` |
 | `action.value` | float | Adjustment magnitude |
 | `action.ttl_s` | float | Time-to-live in seconds |
+| `cooldown_s` | float | Minimum seconds between consecutive firings of this rule (0 = no cooldown) |
+| `max_fires` | int | Maximum total firings of this rule (0 = unlimited) |
 
 ## Evaluation
 
 Rules are evaluated in order.  All matching rules fire (not first-match-only).
-Each produces a `ControlAction` that the domainpack's main loop applies to
-coupling, lag, drive, or target phase.
+
+For compound conditions:
+- **AND**: all sub-conditions must pass
+- **OR**: at least one sub-condition must pass
+
+Each matching rule produces one `ControlAction` per entry in its `actions`
+list. The `justification` field of each action references the rule name.
+
+Rate-limiting applies per rule:
+- `cooldown_s` prevents re-firing within the specified interval
+- `max_fires` caps the total number of times the rule can fire
 
 ## Regime Scoping
 

@@ -24,3 +24,10 @@ repos:
         language: system
         pass_filenames: false
         files: \.rs$
+
+      - id: version-sync
+        name: version consistency
+        entry: python tools/check_version_sync.py
+        language: system
+        pass_filenames: false
+        files: (pyproject\.toml|CITATION\.cff|Cargo\.toml)

@@ -323,8 +323,13 @@ def test_hash_chain_present(tmp_path):
         logger.log_header(n_oscillators=n, dt=0.01)
         for i in range(5):
             logger.log_step(
-                i, _make_state(0.8, 1.0), [],
-                phases=phases, omegas=omegas, knm=knm, alpha=alpha,
+                i,
+                _make_state(0.8, 1.0),
+                [],
+                phases=phases,
+                omegas=omegas,
+                knm=knm,
+                alpha=alpha,
             )
 
     entries = ReplayEngine(log).load()
@@ -349,8 +354,13 @@ def test_hash_chain_integrity(tmp_path):
         logger.log_header(n_oscillators=n, dt=0.01)
         for i in range(5):
             logger.log_step(
-                i, _make_state(0.8, 1.0), [],
-                phases=phases, omegas=omegas, knm=knm, alpha=alpha,
+                i,
+                _make_state(0.8, 1.0),
+                [],
+                phases=phases,
+                omegas=omegas,
+                knm=knm,
+                alpha=alpha,
             )
 
     re = ReplayEngine(log)
@@ -374,8 +384,13 @@ def test_hash_chain_detects_tampering(tmp_path):
         logger.log_header(n_oscillators=n, dt=0.01)
         for i in range(5):
             logger.log_step(
-                i, _make_state(0.8, 1.0), [],
-                phases=phases, omegas=omegas, knm=knm, alpha=alpha,
+                i,
+                _make_state(0.8, 1.0),
+                [],
+                phases=phases,
+                omegas=omegas,
+                knm=knm,
+                alpha=alpha,
             )
 
     entries = ReplayEngine(log).load()
@@ -391,9 +406,7 @@ def test_legacy_log_without_hashes(tmp_path):
         {"step": 0, "regime": "nominal", "stability": 0.85, "layers": []},
         {"step": 1, "regime": "nominal", "stability": 0.9, "layers": []},
     ]
-    log.write_text(
-        "\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8"
-    )
+    log.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
     re = ReplayEngine(log)
     ok, n_verified = re.verify_integrity(re.load())
     assert ok

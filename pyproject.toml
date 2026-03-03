@@ -11,7 +11,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scpn-phase-orchestrator"
-version = "0.1.1"
+version = "0.2.0"
 description = "Domain-agnostic coherence control compiler built on SCPN's Kuramoto/UPDE framework"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
@@ -39,7 +39,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-rust = ["spo-kernel>=0.1.1"]
+rust = ["spo-kernel>=0.2.0"]
 quantum = ["scpn-quantum-control>=0.1.0"]
 plasma = ["scpn-control>=0.1.0"]
 fusion = ["scpn-fusion-core>=3.9.0"]
@@ -55,6 +55,7 @@ queuewaves = [
     "httpx>=0.27",
     "websockets>=12.0",
 ]
+otel = ["opentelemetry-api>=1.20", "opentelemetry-sdk>=1.20"]
 plot = ["matplotlib>=3.7"]
 notebook = ["jupyter>=1.0", "nbconvert>=7.0", "matplotlib>=3.7"]
 dev = [

@@ -31,9 +31,7 @@ class AuditLogger:
 
     def _write_record(self, record: dict) -> None:
         json_line = json.dumps(record, separators=(",", ":"))
-        digest = hashlib.sha256(
-            (self._prev_hash + json_line).encode()
-        ).hexdigest()
+        digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()
         record["_hash"] = digest
         self._prev_hash = digest
         self._fh.write(json.dumps(record) + "\n")
