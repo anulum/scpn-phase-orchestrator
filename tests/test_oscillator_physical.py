@@ -71,12 +71,12 @@ def test_quality_score_empty():
     assert extractor.quality_score([]) == 0.0
 
 
-def test_snr_estimate_clean_sinusoid():
+def test_envelope_quality_clean_sinusoid():
     """Clean sinusoid has near-constant envelope → quality well above 0.5."""
     from scipy.signal import hilbert
 
     signal = np.sin(TWO_PI * 5.0 * np.arange(0, 1.0, 0.001))
-    quality = PhysicalExtractor._snr_estimate(signal, hilbert(signal))
+    quality = PhysicalExtractor._envelope_quality(signal, hilbert(signal))
     assert quality > 0.7
 
 
@@ -89,8 +89,8 @@ def test_quality_discriminates_clean_vs_noisy():
     rng = np.random.default_rng(42)
     noisy = clean + rng.normal(0, 2.0, len(t))
 
-    q_clean = PhysicalExtractor._snr_estimate(clean, hilbert(clean))
-    q_noisy = PhysicalExtractor._snr_estimate(noisy, hilbert(noisy))
+    q_clean = PhysicalExtractor._envelope_quality(clean, hilbert(clean))
+    q_noisy = PhysicalExtractor._envelope_quality(noisy, hilbert(noisy))
 
     assert q_clean > 0.9, f"clean quality={q_clean}"
     assert q_noisy < 0.7, f"noisy quality={q_noisy}"
@@ -113,7 +113,9 @@ def test_rust_python_parity():
     analytic = hilbert(signal)
 
     r_theta, r_omega, r_amp, r_quality = physical_extract(
-        np.real(analytic).tolist(), np.imag(analytic).tolist(), fs
+        np.ascontiguousarray(np.real(analytic)),
+        np.ascontiguousarray(np.imag(analytic)),
+        fs,
     )
 
     inst_phase = np.angle(analytic) % TWO_PI

@@ -31,7 +31,9 @@ class PhysicalExtractor(PhaseExtractor):
             from spo_kernel import physical_extract
 
             theta, omega, amplitude, quality = physical_extract(
-                np.real(analytic).tolist(), np.imag(analytic).tolist(), sample_rate
+                np.ascontiguousarray(np.real(analytic)),
+                np.ascontiguousarray(np.imag(analytic)),
+                sample_rate,
             )
         else:
             inst_phase = np.angle(analytic) % TWO_PI
@@ -42,7 +44,7 @@ class PhysicalExtractor(PhaseExtractor):
             theta = float(inst_phase[-1])
             omega = float(np.median(inst_freq)) * TWO_PI  # rad/s
             amplitude = float(np.mean(inst_amp))
-            quality = self._snr_estimate(signal, analytic)
+            quality = self._envelope_quality(signal, analytic)
 
         return [
             PhaseState(
@@ -61,7 +63,7 @@ class PhysicalExtractor(PhaseExtractor):
         return float(np.mean([ps.quality for ps in phase_states]))
 
     @staticmethod
-    def _snr_estimate(signal: NDArray, analytic: NDArray) -> float:
+    def _envelope_quality(signal: NDArray, analytic: NDArray) -> float:
         envelope = np.abs(analytic)
         mean_env = np.mean(envelope)
         if mean_env < 1e-15:
