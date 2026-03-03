@@ -1,0 +1,74 @@
+name: satellite_constellation
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: orbit_mech
+    index: 0
+    oscillator_ids: [orbital_slot_0, orbital_slot_1]
+  - name: comms_link
+    index: 1
+    oscillator_ids: [link_0, link_1, link_2]
+  - name: beam_sync
+    index: 2
+    oscillator_ids: [beam_0, beam_1, beam_2]
+
+oscillator_families:
+  orbital:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  link:
+    channel: I
+    extractor_type: event
+    config: {}
+
+coupling:
+  base_strength: 0.40
+  decay_alpha: 0.25
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.02
+    psi: 0.0
+  informational:
+    zeta: 0.01
+  symbolic: {}
+
+objectives:
+  good_layers: [0, 1, 2]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: doppler_shift_max
+    variable: doppler_shift
+    lower: null
+    upper: 0.8
+    severity: soft
+  - name: link_budget_min
+    variable: link_budget
+    lower: 0.3
+    upper: null
+    severity: hard
+  - name: handover_gap_max
+    variable: handover_gap
+    lower: null
+    upper: 0.5
+    severity: soft
+
+actuators:
+  - name: global_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: beam_steering
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+
+policy: policy.yaml

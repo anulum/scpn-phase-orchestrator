@@ -1,0 +1,75 @@
+name: network_security
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: normal_traffic
+    index: 0
+    oscillator_ids: [client_0, client_1, client_2]
+  - name: attack_vector
+    index: 1
+    oscillator_ids: [attacker_0, attacker_1]
+  - name: defense_response
+    index: 2
+    oscillator_ids: [firewall_0, firewall_1, firewall_2]
+
+oscillator_families:
+  traffic:
+    channel: I
+    extractor_type: event
+    config: {}
+  defense:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+
+coupling:
+  base_strength: 0.35
+  decay_alpha: 0.30
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.02
+    psi: 0.0
+  informational:
+    zeta: 0.01
+  symbolic: {}
+
+objectives:
+  # Normal traffic + defense = good; attack vector = bad.
+  good_layers: [0, 2]
+  bad_layers: [1]
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: packet_loss_max
+    variable: packet_loss
+    lower: null
+    upper: 0.1
+    severity: hard
+  - name: latency_max
+    variable: latency
+    lower: null
+    upper: 0.8
+    severity: soft
+  - name: false_positive_max
+    variable: false_positive_rate
+    lower: null
+    upper: 0.05
+    severity: soft
+
+actuators:
+  - name: firewall_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 5.0]
+  - name: defense_drive
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+
+policy: policy.yaml

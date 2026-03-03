@@ -1,0 +1,26 @@
+rules:
+  - name: boost_beam_coupling
+    regime: [DEGRADED, RECOVERY]
+    condition:
+      metric: R_good
+      layer: 2
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 0.25
+      ttl_s: 10.0
+
+  - name: increase_steering_drive
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_good
+      layer: 2
+      op: "<"
+      threshold: 0.5
+    action:
+      knob: zeta
+      scope: global
+      value: 0.1
+      ttl_s: 5.0
