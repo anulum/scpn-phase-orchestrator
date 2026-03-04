@@ -1,0 +1,75 @@
+# SCPN Phase Orchestrator
+# Copyright concepts (c) 1996-2026 Miroslav Sotek. All rights reserved.
+# Copyright code (c) 2026 Miroslav Sotek. All rights reserved.
+# ORCID: https://orcid.org/0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# License: GNU AGPL v3 | Commercial licensing available
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+from numpy.typing import NDArray
+
+__all__ = ["extract_envelope", "envelope_modulation_depth", "EnvelopeState"]
+
+
+def extract_envelope(amplitudes_history: NDArray, window: int = 10) -> NDArray:
+    """Sliding-window RMS of amplitude history.
+
+    Args:
+        amplitudes_history: (T,) or (T, N) amplitude time series
+        window: RMS window length in samples
+
+    Returns:
+        (T,) or (T, N) envelope array (shorter by window-1 at the start,
+        padded with the first valid value).
+    """
+    if amplitudes_history.size == 0:
+        return amplitudes_history.copy()
+    if window < 1:
+        raise ValueError(f"window must be >= 1, got {window}")
+
+    sq = amplitudes_history.astype(np.float64) ** 2
+    if sq.ndim == 1:
+        cs = np.cumsum(sq)
+        cs = np.insert(cs, 0, 0.0)
+        rms = np.sqrt((cs[window:] - cs[:-window]) / window)
+        # Pad front with first valid value
+        pad = np.full(window - 1, rms[0] if rms.size > 0 else 0.0)
+        return np.concatenate([pad, rms])
+
+    # 2-D case: (T, N)
+    cs = np.cumsum(sq, axis=0)
+    cs = np.vstack([np.zeros((1, sq.shape[1]), dtype=np.float64), cs])
+    rms = np.sqrt((cs[window:] - cs[:-window]) / window)
+    first = rms[0] if rms.shape[0] > 0 else np.zeros(sq.shape[1])
+    pad = np.tile(first, (window - 1, 1))
+    return np.vstack([pad, rms])
+
+
+def envelope_modulation_depth(envelope: NDArray) -> float:
+    """Modulation depth: (max - min) / (max + min), ∈ [0, 1].
+
+    Returns 0.0 for empty or constant envelopes.
+    """
+    if envelope.size == 0:
+        return 0.0
+    flat = envelope.ravel()
+    vmax = float(np.max(flat))
+    vmin = float(np.min(flat))
+    denom = vmax + vmin
+    if denom <= 0.0:
+        return 0.0
+    return float((vmax - vmin) / denom)
+
+
+@dataclass(frozen=True)
+class EnvelopeState:
+    """Snapshot of amplitude envelope statistics."""
+
+    mean_amplitude: float
+    amplitude_spread: float
+    modulation_depth: float
+    subcritical_count: int

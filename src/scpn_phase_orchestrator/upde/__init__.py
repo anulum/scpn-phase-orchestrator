@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.envelope import EnvelopeState
 from scpn_phase_orchestrator.upde.metrics import UPDEState
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
-__all__ = ["UPDEEngine", "UPDEState"]
+__all__ = ["EnvelopeState", "StuartLandauEngine", "UPDEEngine", "UPDEState"]

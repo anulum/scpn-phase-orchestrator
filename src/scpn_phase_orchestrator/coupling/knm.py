@@ -22,6 +22,7 @@ class CouplingState:
     knm: NDArray
     alpha: NDArray
     active_template: str
+    knm_r: NDArray | None = None
 
 
 class CouplingBuilder:
@@ -46,8 +47,32 @@ class CouplingBuilder:
         alpha = np.zeros((n_layers, n_layers), dtype=np.float64)
         return CouplingState(knm=knm, alpha=alpha, active_template="default")
 
+    def build_with_amplitude(
+        self,
+        n_layers: int,
+        base_strength: float,
+        decay_alpha: float,
+        amp_strength: float,
+        amp_decay: float,
+    ) -> CouplingState:
+        """Build phase + amplitude coupling matrices together."""
+        phase = self.build(n_layers, base_strength, decay_alpha)
+        idx = np.arange(n_layers)
+        dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
+        knm_r = amp_strength * np.exp(-amp_decay * dist)
+        np.fill_diagonal(knm_r, 0.0)
+        return CouplingState(
+            knm=phase.knm,
+            alpha=phase.alpha,
+            active_template=phase.active_template,
+            knm_r=knm_r,
+        )
+
     def switch_template(
-        self, state: CouplingState, template_name: str, templates: dict[str, NDArray]
+        self,
+        state: CouplingState,
+        template_name: str,
+        templates: dict[str, NDArray],
     ) -> CouplingState:
         if template_name not in templates:
             raise KeyError(f"Template {template_name!r} not found")
@@ -55,4 +80,5 @@ class CouplingBuilder:
             knm=templates[template_name].copy(),
             alpha=state.alpha.copy(),
             active_template=template_name,
+            knm_r=state.knm_r,
         )

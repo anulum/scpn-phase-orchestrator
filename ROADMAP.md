@@ -35,11 +35,23 @@
 - Rust `force_transition()` + `transition_log` for FFI parity
 - ~90 new tests (total ~800)
 
-## v0.4
+## v0.4 (released)
 
-- Amplitude extension via Stuart-Landau oscillators
-- Phase-amplitude coupling (PAC) gating
-- Modulation envelope extraction and control
+- Stuart-Landau amplitude engine (`StuartLandauEngine`): coupled phase-amplitude ODE with Euler/RK4/RK45
+- Phase-amplitude coupling (PAC): Tort et al. modulation index, pac_matrix, pac_gate
+- Modulation envelope extraction: sliding-window RMS, modulation depth, EnvelopeState
+- `AmplitudeSpec` binding with `amplitude:` YAML block toggling Stuart-Landau mode
+- Amplitude coupling (`knm_r`), imprint mu-modulation, amplitude-aware metrics
+- CLI amplitude mode with PAC/envelope computation and audit replay support
+- ~80 new tests (total ~860)
+
+## v0.4.1
+
+- Rust `StuartLandauStepper` + FFI `PyStuartLandauStepper`
+- Rust PAC computation
+- PAC-driven policy rules
+- Domainpack amplitude configs
+- Amplitude-aware reporting/plots
 
 ## v1.0
 

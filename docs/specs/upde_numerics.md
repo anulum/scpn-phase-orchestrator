@@ -53,6 +53,27 @@ Use when oscillator frequencies vary by > 10x or coupling transients create shor
 
 Coefficients: Dormand & Prince (1980), *J. Comput. Appl. Math.* 6(1), 19–26.
 
+## Stuart-Landau Extension (v0.4)
+
+Coupled phase-amplitude system (Acebrón et al. 2005, Rev. Mod. Phys. 77, 137):
+
+```
+dtheta_i/dt = omega_i + sum_j K_ij sin(theta_j - theta_i - alpha_ij) + zeta sin(Psi - theta_i)
+dr_i/dt     = (mu_i - r_i^2) * r_i + epsilon * sum_j K^r_ij * r_j * cos(theta_j - theta_i)
+```
+
+State vector `(2N,)`: `state[:N]` = phases, `state[N:]` = amplitudes. Post-step: phases wrapped to `[0, 2π)`, amplitudes clamped `max(0, r_i)`.
+
+Order parameter: `Z = mean(r_i * exp(i*theta_i))`, `R = |Z|`. When amplitudes are uniform this reduces to standard Kuramoto.
+
+Key invariants:
+- `r_i >= 0` always (non-negativity enforced by clamp)
+- Uncoupled with `mu > 0`: `r -> sqrt(mu)` (supercritical limit cycle)
+- Uncoupled with `mu < 0`: `r -> 0` (subcritical decay)
+- `epsilon=0, K^r=0`: phase equation reduces to standard Kuramoto
+
+Scratch arrays: `_phase_diff (N,N)`, `_sin_diff (N,N)`, `_cos_diff (N,N)`, `_scratch_dtheta (N,)`, `_scratch_dr (N,)`, `_scratch_deriv (2N,)`.
+
 ## Stability Condition
 
 CFL-like bound:

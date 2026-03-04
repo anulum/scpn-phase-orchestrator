@@ -18,11 +18,13 @@ from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 from scpn_phase_orchestrator.supervisor import ControlAction
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 __all__ = [
     "BindingSpec",
     "ControlAction",
     "PhaseExtractor",
     "PhaseState",
+    "StuartLandauEngine",
     "UPDEEngine",
 ]

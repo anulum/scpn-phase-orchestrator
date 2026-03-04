@@ -52,6 +52,8 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_order_parameter,
     compute_plv,
 )
+from scpn_phase_orchestrator.upde.pac import modulation_index
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 
 @click.group()
@@ -92,10 +94,30 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
         raise SystemExit(1)
 
     builder = CouplingBuilder()
-    coupling = builder.build(
-        n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha
-    )
-    engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
+    amplitude_mode = spec.amplitude is not None
+    sl_engine: StuartLandauEngine | None = None
+    upde_engine: UPDEEngine | None = None
+    mu: np.ndarray | None = None
+
+    if amplitude_mode:
+        amp = spec.amplitude
+        assert amp is not None  # nosec B101 — narrowing for mypy
+        coupling = builder.build_with_amplitude(
+            n_osc,
+            spec.coupling.base_strength,
+            spec.coupling.decay_alpha,
+            amp.amp_coupling_strength,
+            amp.amp_coupling_decay,
+        )
+        sl_engine = StuartLandauEngine(n_osc, dt=spec.sample_period_s)
+        mu = np.full(n_osc, amp.mu)
+    else:
+        coupling = builder.build(
+            n_osc,
+            spec.coupling.base_strength,
+            spec.coupling.decay_alpha,
+        )
+        upde_engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
     event_bus = EventBus()
     boundary_observer = BoundaryObserver(spec.boundaries)
     boundary_observer.set_event_bus(event_bus)
@@ -164,6 +186,13 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
         [1.0 + 0.1 * layer.index for layer in spec.layers for _ in layer.oscillator_ids]
     )
 
+    # Stuart-Landau state: (2N,) = [phases, amplitudes]
+    if amplitude_mode and mu is not None:
+        r_init = np.sqrt(np.maximum(mu, 0.0))
+        sl_state = np.concatenate([phases, r_init])
+        phases_history: list[np.ndarray] = []
+        amps_history: list[np.ndarray] = []
+
     layer_osc_ranges: dict[int, list[int]] = {}
     osc_idx = 0
     for layer in spec.layers:
@@ -200,6 +229,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             n_oscillators=n_osc,
             dt=spec.sample_period_s,
             seed=seed,
+            amplitude_mode=amplitude_mode,
         )
     for step_idx in range(steps):
         if zeta_ttl > 0:
@@ -222,17 +252,49 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
         if geo_constraints:
             eff_knm = project_knm(eff_knm, geo_constraints)
 
-        input_phases = phases
-        phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
+        input_phases = phases.copy()
+        if amplitude_mode and sl_engine is not None and mu is not None:
+            assert coupling.knm_r is not None  # nosec B101
+            eff_mu = mu
+            if imprint_model is not None and imprint_state is not None:
+                eff_mu = imprint_model.modulate_mu(mu, imprint_state)
+            sl_state = sl_engine.step(
+                sl_state,
+                omegas,
+                eff_mu,
+                eff_knm,
+                coupling.knm_r,
+                zeta,
+                psi_target,
+                eff_alpha,
+                epsilon=spec.amplitude.epsilon,  # type: ignore[union-attr]
+            )
+            phases = sl_state[:n_osc]
+            amplitudes = sl_state[n_osc:]
+            phases_history.append(phases.copy())
+            amps_history.append(amplitudes.copy())
+        else:
+            assert upde_engine is not None  # nosec B101
+            phases = upde_engine.step(
+                phases, omegas, eff_knm, zeta, psi_target, eff_alpha
+            )
 
         layer_states = []
         for layer in spec.layers:
             osc_ids = layer_osc_ranges[layer.index]
             if osc_ids:
-                r, psi = compute_order_parameter(phases[osc_ids])
+                r, psi_l = compute_order_parameter(phases[osc_ids])
             else:
-                r, psi = 0.0, 0.0
-            layer_states.append(LayerState(R=r, psi=psi))
+                r, psi_l = 0.0, 0.0
+            ls_kwargs: dict = {"R": r, "psi": psi_l}
+            if amplitude_mode:
+                layer_r = amplitudes[osc_ids] if osc_ids else np.array([])
+                if layer_r.size > 0:
+                    ls_kwargs["mean_amplitude"] = float(np.mean(layer_r))
+                    mean_r = float(np.mean(layer_r))
+                    if mean_r > 0:
+                        ls_kwargs["amplitude_spread"] = float(np.std(layer_r) / mean_r)
+            layer_states.append(LayerState(**ls_kwargs))
 
         n_layers = len(spec.layers)
         cla = np.zeros((n_layers, n_layers))
@@ -247,14 +309,36 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                     cla[li, lj] = plv
                     cla[lj, li] = plv
 
-        mean_r = float(np.mean([ls.R for ls in layer_states])) if layer_states else 0.0
-        upde_state = UPDEState(
-            layers=layer_states,
-            cross_layer_alignment=cla,
-            stability_proxy=mean_r,
-            regime_id=regime_manager.current_regime.value,
+        mean_r_val = (
+            float(np.mean([ls.R for ls in layer_states])) if layer_states else 0.0
         )
-        obs_values = {"R": upde_state.stability_proxy}
+        state_kwargs: dict = {
+            "layers": layer_states,
+            "cross_layer_alignment": cla,
+            "stability_proxy": mean_r_val,
+            "regime_id": regime_manager.current_regime.value,
+        }
+        if amplitude_mode:
+            state_kwargs["mean_amplitude"] = float(np.mean(amplitudes))
+            sub_count = int(np.sum(amplitudes < 0.1))
+            state_kwargs["subcritical_fraction"] = (
+                sub_count / n_osc if n_osc > 0 else 0.0
+            )
+            if len(phases_history) >= 20:
+                recent_ph = np.array(phases_history[-20:])
+                recent_am = np.array(amps_history[-20:])
+                pac_vals = [
+                    modulation_index(recent_ph[:, i], recent_am[:, i])
+                    for i in range(n_osc)
+                ]
+                state_kwargs["pac_max"] = float(max(pac_vals))
+
+        upde_state = UPDEState(**state_kwargs)
+        obs_values: dict[str, float] = {"R": upde_state.stability_proxy}
+        if amplitude_mode:
+            obs_values["mean_amplitude"] = upde_state.mean_amplitude
+            obs_values["pac_max"] = upde_state.pac_max
+            obs_values["subcritical_fraction"] = upde_state.subcritical_fraction
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
         boundary_state = boundary_observer.observe(obs_values, step=step_idx)
@@ -343,7 +427,11 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
     r_bad = compute_order_parameter(np.array(bad_phases))[0] if bad_phases else 0.0
 
     regime = regime_manager.current_regime.value
-    click.echo(f"R_good={r_good:.4f}  R_bad={r_bad:.4f}  regime={regime}")
+    msg = f"R_good={r_good:.4f}  R_bad={r_bad:.4f}  regime={regime}"
+    if amplitude_mode:
+        mean_a = float(np.mean(amplitudes))
+        msg += f"  mean_amplitude={mean_a:.4f}"
+    click.echo(msg)
 
 
 @main.command()
@@ -367,8 +455,11 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
         if header is None:
             click.echo("ERROR: no header record in log", err=True)
             raise SystemExit(1)
-        upde = replay_engine.build_engine(header)
-        passed, n = replay_engine.verify_determinism_chained(upde, entries)
+        engine = replay_engine.build_engine(header)
+        if isinstance(engine, StuartLandauEngine):
+            click.echo("Stuart-Landau chained replay not yet supported")
+            raise SystemExit(0)
+        passed, n = replay_engine.verify_determinism_chained(engine, entries)
         if passed:
             click.echo(f"Determinism verified: {n} transitions OK")
         else:

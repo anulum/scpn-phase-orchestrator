@@ -49,3 +49,8 @@ class ImprintModel:
         offset = imprint.m_k[:, np.newaxis] - imprint.m_k[np.newaxis, :]
         result: NDArray = alpha + offset
         return result
+
+    def modulate_mu(self, mu: NDArray, imprint: ImprintState) -> NDArray:
+        """Scale bifurcation parameter: μ_k * (1 + m_k)."""
+        result: NDArray = mu * (1.0 + imprint.m_k)
+        return result

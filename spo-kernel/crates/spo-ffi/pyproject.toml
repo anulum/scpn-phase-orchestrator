@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "spo-kernel"
-version = "0.3.0"
+version = "0.4.0"
 description = "SCPN Phase Orchestrator — Rust-accelerated UPDE kernel"
 authors = [{name = "Miroslav Sotek", email = "protoscience@anulum.li"}]
 requires-python = ">=3.10"

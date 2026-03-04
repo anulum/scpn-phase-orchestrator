@@ -20,6 +20,7 @@ __all__ = [
     "ImprintSpec",
     "GeometrySpec",
     "ProtocolNetSpec",
+    "AmplitudeSpec",
     "VALID_CHANNELS",
     "VALID_SEVERITIES",
     "VALID_KNOBS",
@@ -112,6 +113,14 @@ class ProtocolNetSpec:
     transitions: list[ProtocolTransitionSpec]
 
 
+@dataclass(frozen=True)
+class AmplitudeSpec:
+    mu: float
+    epsilon: float
+    amp_coupling_strength: float = 0.0
+    amp_coupling_decay: float = 0.3
+
+
 VALID_CHANNELS = frozenset({"P", "I", "S"})
 VALID_SEVERITIES = frozenset({"soft", "hard"})
 VALID_KNOBS = frozenset({"K", "alpha", "zeta", "Psi"})
@@ -154,3 +163,4 @@ class BindingSpec:
     imprint_model: ImprintSpec | None = None
     geometry_prior: GeometrySpec | None = None
     protocol_net: ProtocolNetSpec | None = None
+    amplitude: AmplitudeSpec | None = None

@@ -113,4 +113,14 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
                 f"got {spec.imprint_model.saturation}"
             )
 
+    if spec.amplitude is not None:
+        import math
+
+        if not math.isfinite(spec.amplitude.mu):
+            errors.append("amplitude.mu must be finite")
+        if spec.amplitude.epsilon < 0.0:
+            errors.append(
+                f"amplitude.epsilon must be >= 0, got {spec.amplitude.epsilon}"
+            )
+
     return errors

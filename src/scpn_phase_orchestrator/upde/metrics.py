@@ -27,6 +27,8 @@ class LayerState:
     R: float
     psi: float
     lock_signatures: dict[str, LockSignature] = field(default_factory=dict)
+    mean_amplitude: float = 0.0
+    amplitude_spread: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -35,3 +37,6 @@ class UPDEState:
     cross_layer_alignment: NDArray
     stability_proxy: float
     regime_id: str
+    mean_amplitude: float = 0.0
+    pac_max: float = 0.0
+    subcritical_fraction: float = 0.0

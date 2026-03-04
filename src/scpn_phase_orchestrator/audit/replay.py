@@ -15,6 +15,7 @@ import numpy as np
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 __all__ = ["ReplayEngine"]
 
@@ -57,8 +58,14 @@ class ReplayEngine:
         """Filter to entries with full UPDE state (replayable)."""
         return [e for e in entries if "phases" in e]
 
-    def build_engine(self, header: dict) -> UPDEEngine:
-        """Construct a UPDEEngine from a header record."""
+    def build_engine(self, header: dict) -> UPDEEngine | StuartLandauEngine:
+        """Construct engine from header (UPDE or Stuart-Landau)."""
+        if header.get("amplitude_mode"):
+            return StuartLandauEngine(
+                n_oscillators=header["n_oscillators"],
+                dt=header["dt"],
+                method=header.get("method", "euler"),
+            )
         return UPDEEngine(
             n_oscillators=header["n_oscillators"],
             dt=header["dt"],

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-04
+
+### Added
+
+- **Stuart-Landau amplitude engine** — `StuartLandauEngine` integrates coupled phase-amplitude ODEs (Acebrón et al. 2005, Rev. Mod. Phys.): `dr_i/dt = (μ - r²)r + ε Σ K^r_ij r_j cos(θ_j - θ_i)`. Euler/RK4/RK45 methods, pre-allocated scratch arrays, amplitude clamping, weighted order parameter.
+- **Phase-amplitude coupling (PAC)** — `modulation_index()` (Tort et al. 2010), `pac_matrix()`, `pac_gate()` in `upde/pac.py`
+- **Modulation envelopes** — `extract_envelope()` (sliding-window RMS), `envelope_modulation_depth()`, `EnvelopeState` in `upde/envelope.py`
+- `AmplitudeSpec` dataclass in binding types; `amplitude:` YAML block activates Stuart-Landau mode
+- `CouplingState.knm_r` — amplitude coupling matrix alongside phase coupling
+- `CouplingBuilder.build_with_amplitude()` for joint phase + amplitude coupling
+- `ImprintModel.modulate_mu()` — imprint-dependent bifurcation parameter modulation
+- `LayerState.mean_amplitude`, `LayerState.amplitude_spread` (backward-compatible defaults)
+- `UPDEState.mean_amplitude`, `UPDEState.pac_max`, `UPDEState.subcritical_fraction`
+- CLI `run` command branches on amplitude mode: builds `StuartLandauEngine`, computes PAC, tracks envelope metrics
+- Audit logger records `amplitude_mode` in header; replay reconstructs correct engine type
+- ~80 new tests across 7 new test files (total ~860)
+
+### Changed
+
+- `AuditLogger.log_header()` accepts `amplitude_mode` parameter
+- `ReplayEngine.build_engine()` returns `StuartLandauEngine` when header has `amplitude_mode=True`
+- Binding validator rejects `amplitude.epsilon < 0` and non-finite `amplitude.mu`
+
 ## [0.3.0] - 2026-03-04
 
 ### Added

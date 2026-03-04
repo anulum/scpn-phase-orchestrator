@@ -13,6 +13,7 @@ from typing import Any
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
+    AmplitudeSpec,
     BindingSpec,
     BoundaryDef,
     CouplingSpec,
@@ -168,6 +169,16 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
             transitions=pnet_transitions,
         )
 
+    amp_data = data.get("amplitude")
+    amplitude = None
+    if amp_data:
+        amplitude = AmplitudeSpec(
+            mu=_require(amp_data, "mu", "amplitude"),
+            epsilon=_require(amp_data, "epsilon", "amplitude"),
+            amp_coupling_strength=amp_data.get("amp_coupling_strength", 0.0),
+            amp_coupling_decay=amp_data.get("amp_coupling_decay", 0.3),
+        )
+
     return BindingSpec(
         name=_require(data, "name", "root"),
         version=_require(data, "version", "root"),
@@ -184,4 +195,5 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         imprint_model=imprint,
         geometry_prior=geometry,
         protocol_net=protocol_net,
+        amplitude=amplitude,
     )

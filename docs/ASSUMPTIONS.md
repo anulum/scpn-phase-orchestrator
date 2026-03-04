@@ -88,6 +88,26 @@ See [references.bib](references.bib) for full bibliographic entries.
 | `atol` | 1e-6 | Empirical. Absolute error tolerance for step acceptance. | `upde/numerics.py` |
 | `rtol` | 1e-3 | Empirical. Relative error tolerance for step acceptance. | `upde/numerics.py` |
 
+## Stuart-Landau Amplitude (v0.4)
+
+| Constant | Value | Provenance | Used in |
+|----------|-------|------------|---------|
+| `mu` | (binding spec) | Bifurcation parameter. `mu > 0` → supercritical (limit cycle at `r = sqrt(mu)`); `mu < 0` → subcritical (decay to 0). Acebrón et al. 2005, Rev. Mod. Phys. 77, §3. | `upde/stuart_landau.py`, binding specs |
+| `epsilon` | (binding spec) | Amplitude coupling strength. Scales `K^r_ij` contribution. Must be >= 0. | `upde/stuart_landau.py`, binding specs |
+| `amp_coupling_strength` | 0.0 (default) | Empirical. Base strength for amplitude coupling matrix `K^r`. Zero disables amplitude coupling (phase-amplitude decoupled). | `coupling/knm.py`, binding specs |
+| `amp_coupling_decay` | 0.3 (default) | Empirical. Exponential distance falloff for `K^r`, same convention as phase coupling `decay_alpha`. | `coupling/knm.py`, binding specs |
+| Amplitude clamp | `max(0, r_i)` | Derived. Amplitude non-negativity enforced after every integration step; physically r represents oscillation envelope magnitude. | `upde/stuart_landau.py` |
+| Initial amplitude | `sqrt(max(mu, 0))` | Derived. Equilibrium of uncoupled Stuart-Landau at `mu > 0`. | `cli.py` |
+| Subcritical threshold | 0.1 | Empirical. Oscillators with `r < 0.1` counted as subcritical in `subcritical_fraction`. | `cli.py` |
+
+## Phase-Amplitude Coupling (v0.4)
+
+| Constant | Value | Provenance | Used in |
+|----------|-------|------------|---------|
+| `n_bins` | 18 (default) | Empirical. Tort et al. 2010, J. Neurophysiol.: 18 bins (20° each) standard for MI computation. | `upde/pac.py` |
+| `pac_gate threshold` | 0.3 (default) | Empirical. MI above 0.3 indicates significant phase-amplitude coupling. | `upde/pac.py` |
+| MI normalisation | `log(n_bins)` | Derived. KL divergence normalised by max entropy for uniform distribution. | `upde/pac.py` |
+
 ## Policy Engine
 
 | Constant | Value | Provenance | Used in |

@@ -43,6 +43,7 @@ class AuditLogger:
         dt: float,
         method: str = "euler",
         seed: int | None = None,
+        amplitude_mode: bool = False,
     ) -> None:
         """Engine configuration record for replay reconstruction."""
         record: dict = {
@@ -53,6 +54,8 @@ class AuditLogger:
         }
         if seed is not None:
             record["seed"] = seed
+        if amplitude_mode:
+            record["amplitude_mode"] = True
         self._write_record(record)
 
     def log_step(
