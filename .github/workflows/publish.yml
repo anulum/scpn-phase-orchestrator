@@ -39,6 +39,7 @@ jobs:
     name: Build wheels (${{ matrix.os }})
     needs: preflight
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -58,6 +59,11 @@ jobs:
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
+      - name: Set up QEMU (Linux aarch64 cross-compile)
+        if: matrix.target == 'aarch64' && runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
       - name: Build wheel via maturin
         uses: PyO3/maturin-action@v1
         with:
@@ -106,7 +112,8 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: [build-wheels, build-sdist, build-fallback-wheel]
+    needs: [build-sdist, build-fallback-wheel]
+    if: always() && needs.build-sdist.result == 'success' && needs.build-fallback-wheel.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -120,7 +127,8 @@ jobs:
 
   publish-testpypi:
     name: Publish to TestPyPI
-    needs: [build-wheels, build-sdist, build-fallback-wheel]
+    needs: [build-sdist, build-fallback-wheel]
+    if: always() && needs.build-sdist.result == 'success' && needs.build-fallback-wheel.result == 'success'
     runs-on: ubuntu-latest
     continue-on-error: true
     environment:
