@@ -71,6 +71,26 @@ class MyExtractor(PhaseExtractor):
         ...
 ```
 
+## Pre-push Preflight (mandatory)
+
+Every push is gated by a local CI mirror. Set it up once:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This installs a `pre-push` hook that runs `tools/preflight.py` — the same
+7 gates CI enforces (ruff, format, version-sync, mypy, module-linkage,
+pytest, bandit). Push is blocked if any gate fails.
+
+To run manually at any time:
+
+```bash
+python tools/preflight.py            # full (~3 min)
+python tools/preflight.py --no-tests # lint-only (~5 sec)
+python tools/preflight.py --coverage # full + coverage guard
+```
+
 ## Running Tests
 
 ```bash
