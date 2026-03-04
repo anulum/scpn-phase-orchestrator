@@ -78,6 +78,12 @@ class TestPhasesToFeedback:
         assert fb["R_global"] == pytest.approx(1.0)
 
 
+class TestConstructorValidation:
+    def test_n_layers_zero_raises(self):
+        with pytest.raises(ValueError, match="n_layers must be >= 1"):
+            FusionCoreBridge(n_layers=0)
+
+
 class TestQProfileImport:
     def test_dict_import(self):
         bridge = FusionCoreBridge()
@@ -96,6 +102,19 @@ class TestQProfileImport:
         result = bridge.import_q_profile({})
         assert result["q_min"] == pytest.approx(1.0)
         assert result["q_max"] == pytest.approx(5.0)
+
+    def test_object_import_via_getattr(self):
+        bridge = FusionCoreBridge()
+
+        class QProfile:
+            q_min = 0.8
+            q_max = 4.5
+            q_axis = 0.85
+            q_edge = 4.2
+
+        result = bridge.import_q_profile(QProfile())
+        assert result["q_min"] == pytest.approx(0.8)
+        assert result["q_edge"] == pytest.approx(4.2)
 
 
 class TestStabilityChecks:

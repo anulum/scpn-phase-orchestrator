@@ -15,7 +15,24 @@ from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumContr
 TWO_PI = 2.0 * np.pi
 
 
+class TestConstructorValidation:
+    def test_n_oscillators_zero_raises(self):
+        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+            QuantumControlBridge(n_oscillators=0)
+
+
 class TestQuantumControlBridge:
+    def test_import_artifact_empty_layer_group(self):
+        bridge = QuantumControlBridge(n_oscillators=4)
+        artifact = {
+            "phases": [0.1, 0.2],
+            "fidelity": 0.7,
+            "layer_assignments": [[0, 1], []],
+        }
+        state = bridge.import_artifact(artifact)
+        assert len(state.layers) == 2
+        assert pytest.approx(0.0) == state.layers[1].R
+
     def test_import_export_roundtrip(self):
         bridge = QuantumControlBridge(n_oscillators=8)
         phases = np.linspace(0, TWO_PI, 8, endpoint=False)

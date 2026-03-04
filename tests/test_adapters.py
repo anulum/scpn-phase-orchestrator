@@ -78,6 +78,75 @@ def test_otel_span_noop_path():
         s.set_attribute("x", 1)
 
 
+def test_otel_enabled_record_step_with_mock():
+    from unittest.mock import MagicMock
+
+    exp = OTelExporter("test-svc")
+    exp._enabled = True
+    exp._r_global_gauge = MagicMock()
+    exp._stability_gauge = MagicMock()
+    exp._step_counter = MagicMock()
+
+    state = UPDEState(
+        layers=[LayerState(R=0.8, psi=0.0)],
+        cross_layer_alignment=np.zeros((1, 1)),
+        stability_proxy=0.8,
+        regime_id="nominal",
+    )
+    exp.record_step(state, step_idx=0)
+    exp._r_global_gauge.set.assert_called_once()
+    exp._step_counter.add.assert_called_once()
+
+
+def test_otel_enabled_regime_change_with_mock():
+    from unittest.mock import MagicMock
+
+    exp = OTelExporter("test-svc")
+    exp._enabled = True
+    mock_span = MagicMock()
+    mock_span.__enter__ = MagicMock(return_value=mock_span)
+    mock_span.__exit__ = MagicMock(return_value=False)
+    mock_tracer = MagicMock()
+    mock_tracer.start_as_current_span.return_value = mock_span
+    exp._tracer = mock_tracer
+
+    exp.record_regime_change("nominal", "degraded")
+    mock_tracer.start_as_current_span.assert_called_once_with("spo.regime_change")
+
+
+def test_otel_enabled_span_with_mock():
+    from unittest.mock import MagicMock
+
+    exp = OTelExporter("test-svc")
+    exp._enabled = True
+    mock_span = MagicMock()
+    mock_span.__enter__ = MagicMock(return_value=mock_span)
+    mock_span.__exit__ = MagicMock(return_value=False)
+    mock_tracer = MagicMock()
+    mock_tracer.start_as_current_span.return_value = mock_span
+    exp._tracer = mock_tracer
+
+    with exp.span("test.span", {"key": "val"}) as s:
+        s.set_attribute("extra", 42)
+    mock_span.set_attribute.assert_any_call("key", "val")
+
+
+def test_otel_enabled_span_no_attributes():
+    from unittest.mock import MagicMock
+
+    exp = OTelExporter("test-svc")
+    exp._enabled = True
+    mock_span = MagicMock()
+    mock_span.__enter__ = MagicMock(return_value=mock_span)
+    mock_span.__exit__ = MagicMock(return_value=False)
+    mock_tracer = MagicMock()
+    mock_tracer.start_as_current_span.return_value = mock_span
+    exp._tracer = mock_tracer
+
+    with exp.span("test.bare"):
+        pass
+
+
 # ── Prometheus adapter ────────────────────────────────────────────────
 
 

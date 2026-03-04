@@ -17,6 +17,12 @@ from scpn_phase_orchestrator.adapters.plasma_control_bridge import (
 TWO_PI = 2.0 * np.pi
 
 
+class TestConstructorValidation:
+    def test_n_layers_zero_raises(self):
+        with pytest.raises(ValueError, match="n_layers must be >= 1"):
+            PlasmaControlBridge(n_layers=0)
+
+
 class TestKnmSpecImport:
     def test_kronecker_expansion_shape(self):
         bridge = PlasmaControlBridge(n_layers=4)
@@ -73,6 +79,13 @@ class TestSnapshotImport:
         state = bridge.import_snapshot(snapshot)
         assert len(state.layers) == 4
 
+    def test_snapshot_empty_layer_group(self):
+        bridge = PlasmaControlBridge(n_layers=3)
+        snapshot = {"phases": [0.1, 0.2], "layer_sizes": [1, 1, 0]}
+        state = bridge.import_snapshot(snapshot)
+        assert len(state.layers) == 3
+        assert pytest.approx(0.0) == state.layers[2].R
+
 
 class TestLyapunovVerdict:
     def test_stable_verdict(self):
@@ -85,6 +98,15 @@ class TestLyapunovVerdict:
         bridge = PlasmaControlBridge()
         result = bridge.import_lyapunov_verdict({"score": 0.1})
         assert result["stable"] is False
+
+    def test_verdict_from_object(self):
+        from types import SimpleNamespace
+
+        bridge = PlasmaControlBridge()
+        verdict = SimpleNamespace(score=0.6)
+        result = bridge.import_lyapunov_verdict(verdict)
+        assert result["lyapunov_score"] == pytest.approx(0.6)
+        assert result["stable"] is True
 
 
 class TestPhysicsInvariants:
@@ -148,6 +170,11 @@ class TestPlasmaOmega:
         omegas = bridge.import_plasma_omega(n_osc_per_layer=2)
         assert len(omegas) == 16
         assert np.all(omegas > 0)
+
+    def test_omega_single_oscillator(self):
+        bridge = PlasmaControlBridge(n_layers=4)
+        omegas = bridge.import_plasma_omega(n_osc_per_layer=1)
+        assert len(omegas) == 4
 
 
 class TestPlasmaDomainpack:

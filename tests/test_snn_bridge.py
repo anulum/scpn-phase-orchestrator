@@ -112,3 +112,36 @@ def test_lava_import_error():
     bridge = SNNControllerBridge()
     with contextlib.suppress(ImportError):
         bridge.build_lava_process(n_layers=3)
+
+
+def test_nengo_network_with_mock():
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock, patch
+
+    mock_nengo = MagicMock()
+    mock_model = SimpleNamespace()
+    mock_nengo.Network.return_value.__enter__ = MagicMock(return_value=mock_model)
+    mock_nengo.Network.return_value.__exit__ = MagicMock(return_value=False)
+
+    bridge = SNNControllerBridge(n_neurons=50)
+    with patch.dict("sys.modules", {"nengo": mock_nengo}):
+        bridge.build_nengo_network(n_layers=3, seed=42)
+    mock_nengo.Network.assert_called_once_with(seed=42)
+
+
+def test_lava_process_with_mock():
+    from unittest.mock import MagicMock, patch
+
+    mock_lif_mod = MagicMock()
+    mock_lif_cls = MagicMock()
+    mock_lif_mod.LIF = mock_lif_cls
+    modules = {
+        "lava": MagicMock(),
+        "lava.proc": MagicMock(),
+        "lava.proc.lif": MagicMock(),
+        "lava.proc.lif.process": mock_lif_mod,
+    }
+    bridge = SNNControllerBridge(n_neurons=50)
+    with patch.dict("sys.modules", modules):
+        bridge.build_lava_process(n_layers=3)
+    mock_lif_cls.assert_called_once()
