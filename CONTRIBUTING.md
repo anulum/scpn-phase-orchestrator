@@ -80,8 +80,9 @@ git config core.hooksPath .githooks
 ```
 
 This installs a `pre-push` hook that runs `tools/preflight.py` — the same
-7 gates CI enforces (ruff, format, version-sync, mypy, module-linkage,
-pytest, bandit). Push is blocked if any gate fails.
+10 gates CI enforces (ruff, format, version-sync, mypy, module-linkage,
+pytest, bandit, cargo fmt, cargo clippy, cargo test). Push is blocked if
+any gate fails.
 
 To run manually at any time:
 

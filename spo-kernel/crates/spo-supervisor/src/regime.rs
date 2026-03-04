@@ -82,7 +82,8 @@ impl RegimeManager {
         let prev = self.current;
         self.last_transition = self.step_counter;
         self.current = proposed;
-        self.transition_log.push((self.step_counter, prev, proposed));
+        self.transition_log
+            .push((self.step_counter, prev, proposed));
         proposed
     }
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # SCPN Phase Orchestrator — Local CI preflight
-# Mirrors every Python-side CI gate so failures are caught before push.
+# Mirrors every CI gate so failures are caught before push.
 # © 1998–2026 Miroslav Šotek. All rights reserved.
 
 from __future__ import annotations
 
+import shutil
 import subprocess  # noqa: S404
 import sys
 import time
@@ -13,31 +14,63 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 _PY = sys.executable
 _SRC = "src/scpn_phase_orchestrator/"
+_KERNEL = "spo-kernel"
 
-GATES: list[tuple[str, list[str]]] = [
-    ("ruff check", [_PY, "-m", "ruff", "check", "src/", "tests/"]),
+PYTHON_GATES: list[tuple[str, list[str], Path]] = [
+    ("ruff check", [_PY, "-m", "ruff", "check", "src/", "tests/"], ROOT),
     (
         "ruff format",
         [_PY, "-m", "ruff", "format", "--check", "src/", "tests/"],
+        ROOT,
     ),
-    ("version-sync", [_PY, "tools/check_version_sync.py"]),
+    ("version-sync", [_PY, "tools/check_version_sync.py"], ROOT),
     (
         "mypy",
         [_PY, "-m", "mypy", _SRC, "--ignore-missing-imports"],
+        ROOT,
     ),
-    ("module-linkage", [_PY, "tools/check_test_module_linkage.py"]),
+    (
+        "module-linkage",
+        [_PY, "tools/check_test_module_linkage.py"],
+        ROOT,
+    ),
     (
         "pytest",
         [_PY, "-m", "pytest", "tests/", "-x", "--tb=short", "-q"],
+        ROOT,
     ),
     (
         "bandit",
         [_PY, "-m", "bandit", "-r", "src/", "-c", "pyproject.toml", "--quiet"],
+        ROOT,
     ),
 ]
 
-COVERAGE_GATE: tuple[str, list[str]] = (
-    "coverage-guard",
+RUST_GATES: list[tuple[str, list[str], Path]] = [
+    ("cargo fmt", ["cargo", "fmt", "--check"], ROOT / _KERNEL),
+    (
+        "cargo clippy",
+        [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--exclude",
+            "spo-ffi",
+            "--",
+            "-D",
+            "warnings",
+        ],
+        ROOT / _KERNEL,
+    ),
+    (
+        "cargo test",
+        ["cargo", "test", "--workspace", "--exclude", "spo-ffi"],
+        ROOT / _KERNEL,
+    ),
+]
+
+COVERAGE_GATE: tuple[str, list[str], Path] = (
+    "coverage (pytest)",
     [
         _PY,
         "-m",
@@ -49,23 +82,20 @@ COVERAGE_GATE: tuple[str, list[str]] = (
         "--cov=scpn_phase_orchestrator",
         "--cov-report=xml:coverage-python.xml",
     ],
+    ROOT,
 )
-COVERAGE_CHECK: tuple[str, list[str]] = (
-    "coverage-guard (check)",
-    [
-        _PY,
-        "tools/coverage_guard.py",
-        "--coverage-xml",
-        "coverage-python.xml",
-    ],
+COVERAGE_CHECK: tuple[str, list[str], Path] = (
+    "coverage (guard)",
+    [_PY, "tools/coverage_guard.py", "--coverage-xml", "coverage-python.xml"],
+    ROOT,
 )
 
 
-def run_gate(name: str, cmd: list[str]) -> bool:
+def run_gate(name: str, cmd: list[str], cwd: Path) -> bool:
     t0 = time.monotonic()
     result = subprocess.run(  # noqa: S603
         cmd,
-        cwd=ROOT,
+        cwd=cwd,
         capture_output=True,
         text=True,
     )
@@ -86,28 +116,35 @@ def run_gate(name: str, cmd: list[str]) -> bool:
 def main() -> int:
     coverage = "--coverage" in sys.argv
     skip_tests = "--no-tests" in sys.argv
+    has_cargo = shutil.which("cargo") is not None
 
-    gates = list(GATES)
+    gates: list[tuple[str, list[str], Path]] = list(PYTHON_GATES)
     if skip_tests:
-        gates = [(n, c) for n, c in gates if n != "pytest"]
+        gates = [(n, c, d) for n, c, d in gates if n != "pytest"]
+    if has_cargo:
+        gates.extend(RUST_GATES)
 
-    suffix = " + coverage" if coverage else ""
-    print(f"preflight: {len(gates)} gates{suffix}")
+    parts = [f"{len(gates)} gates"]
+    if not has_cargo:
+        parts.append("no cargo")
+    if coverage:
+        parts.append("coverage")
+    print(f"preflight: {', '.join(parts)}")
     print()
 
     t_start = time.monotonic()
     failed: list[str] = []
 
-    for name, cmd in gates:
-        if not run_gate(name, cmd):
+    for name, cmd, cwd in gates:
+        if not run_gate(name, cmd, cwd):
             failed.append(name)
             break  # fail fast
 
     if not failed and coverage:
         if not run_gate(*COVERAGE_GATE):
-            failed.append("coverage-guard (pytest --cov)")
+            failed.append("coverage (pytest --cov)")
         elif not run_gate(*COVERAGE_CHECK):
-            failed.append("coverage-guard (check)")
+            failed.append("coverage (guard)")
 
     elapsed = time.monotonic() - t_start
     print()

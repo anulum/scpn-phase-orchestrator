@@ -42,6 +42,42 @@ def test_otel_exporter_enabled_property():
     assert isinstance(exp.enabled, bool)
 
 
+def test_noop_span_methods():
+    from scpn_phase_orchestrator.adapters.opentelemetry import _NoOpSpan
+
+    s = _NoOpSpan()
+    s.set_attribute("k", "v")
+    s.set_status(None)
+    s.end()
+    with s as entered:
+        assert entered is s
+
+
+def test_otel_record_step_noop():
+    exp = OTelExporter("test-svc")
+    exp._enabled = False
+    state = UPDEState(
+        layers=[LayerState(R=0.5, psi=0.0)],
+        cross_layer_alignment=np.zeros((1, 1)),
+        stability_proxy=0.5,
+        regime_id="degraded",
+    )
+    exp.record_step(state, step_idx=5)
+
+
+def test_otel_record_regime_change_noop():
+    exp = OTelExporter("test-svc")
+    exp._enabled = False
+    exp.record_regime_change("nominal", "critical")
+
+
+def test_otel_span_noop_path():
+    exp = OTelExporter("test-svc")
+    exp._enabled = False
+    with exp.span("test.noop") as s:
+        s.set_attribute("x", 1)
+
+
 # ── Prometheus adapter ────────────────────────────────────────────────
 
 
