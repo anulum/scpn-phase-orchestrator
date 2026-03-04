@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
+
+import pytest
 
 from scpn_phase_orchestrator.apps.queuewaves.alerter import (
     WebhookAlerter,
@@ -69,6 +72,10 @@ def test_different_anomaly_types_not_deduped() -> None:
     assert len(sent) == 2
 
 
+_HAS_HTTPX = importlib.util.find_spec("httpx") is not None
+
+
+@pytest.mark.skipif(not _HAS_HTTPX, reason="httpx not installed")
 def test_async_send_no_sinks() -> None:
     async def _run() -> None:
         alerter = WebhookAlerter([], cooldown_seconds=300.0)
@@ -78,6 +85,7 @@ def test_async_send_no_sinks() -> None:
     asyncio.run(_run())
 
 
+@pytest.mark.skipif(not _HAS_HTTPX, reason="httpx not installed")
 def test_async_send_dedup_suppresses() -> None:
     async def _run() -> None:
         alerter = WebhookAlerter([], cooldown_seconds=300.0)
