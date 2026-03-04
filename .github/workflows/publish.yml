@@ -36,7 +36,7 @@ jobs:
         working-directory: spo-kernel
 
   build-wheels:
-    name: Build wheels (${{ matrix.os }})
+    name: Build wheels (${{ matrix.os }}-${{ matrix.target }})
     needs: preflight
     strategy:
       fail-fast: false
@@ -44,8 +44,6 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64
-          - os: ubuntu-latest
-            target: aarch64
           - os: macos-latest
             target: x86_64
           - os: macos-latest
@@ -59,11 +57,6 @@ jobs:
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
-      - name: Set up QEMU (Linux aarch64 cross-compile)
-        if: matrix.target == 'aarch64' && runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
       - name: Build wheel via maturin
         uses: PyO3/maturin-action@v1
         with:
@@ -112,8 +105,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: [build-sdist, build-fallback-wheel]
-    if: always() && needs.build-sdist.result == 'success' && needs.build-fallback-wheel.result == 'success'
+    needs: [build-wheels, build-sdist, build-fallback-wheel]
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -124,21 +116,3 @@ jobs:
           path: dist/
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
-
-  publish-testpypi:
-    name: Publish to TestPyPI
-    needs: [build-sdist, build-fallback-wheel]
-    if: always() && needs.build-sdist.result == 'success' && needs.build-fallback-wheel.result == 'success'
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/scpn-phase-orchestrator
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist/
-          merge-multiple: true
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
