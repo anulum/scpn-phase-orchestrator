@@ -7,4 +7,6 @@
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from scpn_phase_orchestrator.reporting.plots import CoherencePlot
+
+__all__ = ["CoherencePlot"]

@@ -11,7 +11,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scpn-phase-orchestrator"
-version = "0.4.0"
+version = "0.4.1"
 description = "Domain-agnostic coherence control compiler built on SCPN's Kuramoto/UPDE framework"
 readme = "README.md"
 license = "AGPL-3.0-or-later"

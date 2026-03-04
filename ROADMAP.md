@@ -45,13 +45,14 @@
 - CLI amplitude mode with PAC/envelope computation and audit replay support
 - ~80 new tests (total ~860)
 
-## v0.4.1
+## v0.4.1 (released)
 
-- Rust `StuartLandauStepper` + FFI `PyStuartLandauStepper`
-- Rust PAC computation
-- PAC-driven policy rules
-- Domainpack amplitude configs
-- Amplitude-aware reporting/plots
+- Rust `StuartLandauStepper` + FFI `PyStuartLandauStepper` (Euler/RK4/RK45, 12 inline tests)
+- Rust `modulation_index` + `pac_matrix` (5 inline tests)
+- PAC-driven policy rules (`pac_max`, `mean_amplitude`, `subcritical_fraction`, `amplitude_spread`, `mean_amplitude_layer`)
+- Amplitude configs for 6 domainpacks (neuroscience_eeg, cardiac_rhythm, plasma_control, firefly_swarm, rotating_machinery, power_grid)
+- `CoherencePlot` matplotlib implementations (R timeline, regime timeline, action audit, amplitude timeline, PAC heatmap)
+- 4 Rust benchmarks, ~30 new Python tests (total ~895)
 
 ## v1.0
 

@@ -79,6 +79,17 @@ class StuartLandauEngine:
         self._rtol = rtol
         self._last_dt = dt
 
+        self._use_rust = False
+        try:
+            import spo_kernel  # noqa: PLC0415
+
+            self._rust = spo_kernel.PyStuartLandauStepper(
+                n_oscillators, dt=dt, method=method, n_substeps=1, atol=atol, rtol=rtol
+            )
+            self._use_rust = True
+        except (ImportError, Exception):  # noqa: BLE001, S110
+            pass  # Rust unavailable — fall through to Python
+
         n = n_oscillators
         self._phase_diff = np.empty((n, n), dtype=np.float64)
         self._sin_diff = np.empty((n, n), dtype=np.float64)
@@ -109,6 +120,22 @@ class StuartLandauEngine:
     ) -> NDArray:
         """Advance (θ, r) by one timestep. Returns new state (2N,)."""
         self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha)
+        if self._use_rust:
+            result = np.array(
+                self._rust.step(
+                    state.tolist(),
+                    omegas,
+                    mu,
+                    knm.ravel(),
+                    knm_r.ravel(),
+                    zeta,
+                    psi,
+                    alpha.ravel(),
+                    epsilon,
+                )
+            )
+            self._last_dt = self._rust.last_dt
+            return result
         p: _Params = (omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
         if self._method == "euler":
             return self._euler_step(state, p)

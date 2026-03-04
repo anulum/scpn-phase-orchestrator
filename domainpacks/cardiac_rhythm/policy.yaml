@@ -37,3 +37,27 @@ rules:
       scope: global
       value: -0.1
       ttl_s: 8.0
+
+  - name: pac_gating_alert
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: pac_max
+      op: ">"
+      threshold: 0.5
+    action:
+      knob: zeta
+      scope: global
+      value: 0.8
+      ttl_s: 10.0
+
+  - name: subcritical_recovery
+    regime: [DEGRADED, CRITICAL]
+    condition:
+      metric: subcritical_fraction
+      op: ">"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 1.5
+      ttl_s: 5.0

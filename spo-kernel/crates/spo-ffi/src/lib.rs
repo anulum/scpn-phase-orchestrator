@@ -21,7 +21,8 @@ use spo_engine::{
     coupling::{project_knm, CouplingBuilder},
     imprint::ImprintModel,
     lags::LagModel,
-    order_params,
+    order_params, pac,
+    stuart_landau::StuartLandauStepper,
     upde::UPDEStepper,
 };
 use spo_oscillators::{informational, physical, quality::PhaseQualityScorer, symbolic};
@@ -493,6 +494,123 @@ impl PySupervisorPolicy {
     }
 }
 
+// ─── PyStuartLandauStepper ─────────────────────────────────────────
+
+#[pyclass(name = "PyStuartLandauStepper")]
+struct PyStuartLandauStepper {
+    inner: StuartLandauStepper,
+}
+
+#[pymethods]
+impl PyStuartLandauStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01, method = "euler", n_substeps = 1, atol = 1e-6, rtol = 1e-3))]
+    fn new(
+        n: usize,
+        dt: f64,
+        method: &str,
+        n_substeps: u32,
+        atol: f64,
+        rtol: f64,
+    ) -> PyResult<Self> {
+        let m = match method {
+            "euler" => Method::Euler,
+            "rk4" => Method::RK4,
+            "rk45" => Method::RK45,
+            _ => return Err(PyValueError::new_err(format!("unknown method: {method}"))),
+        };
+        let config = IntegrationConfig {
+            dt,
+            method: m,
+            n_substeps,
+            atol,
+            rtol,
+        };
+        let inner = StuartLandauStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    /// Advance state [θ; r] by one step. Returns new state list (2N).
+    #[allow(clippy::too_many_arguments)]
+    fn step(
+        &mut self,
+        state: Vec<f64>,
+        omegas: PyReadonlyArray1<'_, f64>,
+        mu: PyReadonlyArray1<'_, f64>,
+        knm: PyReadonlyArray1<'_, f64>,
+        knm_r: PyReadonlyArray1<'_, f64>,
+        zeta: f64,
+        psi: f64,
+        alpha: PyReadonlyArray1<'_, f64>,
+        epsilon: f64,
+    ) -> PyResult<Vec<f64>> {
+        let mut s = state;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let m = mu
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let kr = knm_r
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        self.inner
+            .step(&mut s, o, m, k, kr, zeta, psi, a, epsilon)
+            .map_err(spo_err)?;
+        Ok(s)
+    }
+
+    #[getter]
+    fn n(&self) -> usize {
+        self.inner.n()
+    }
+
+    #[getter]
+    fn last_dt(&self) -> f64 {
+        self.inner.last_dt()
+    }
+}
+
+// ─── PAC Functions ──────────────────────────────────────────────────
+
+#[pyfunction]
+fn pac_modulation_index(
+    theta_low: PyReadonlyArray1<'_, f64>,
+    amp_high: PyReadonlyArray1<'_, f64>,
+    n_bins: usize,
+) -> PyResult<f64> {
+    let t = theta_low
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = amp_high
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(pac::modulation_index(t, a, n_bins))
+}
+
+#[pyfunction]
+fn pac_matrix_compute(
+    phases: PyReadonlyArray1<'_, f64>,
+    amplitudes: PyReadonlyArray1<'_, f64>,
+    t: usize,
+    n: usize,
+    n_bins: usize,
+) -> PyResult<Vec<f64>> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = amplitudes
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(pac::pac_matrix(p, a, t, n, n_bins))
+}
+
 // ─── Free Functions ─────────────────────────────────────────────────
 
 #[pyfunction]
@@ -649,6 +767,9 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPhaseQualityScorer>()?;
     m.add_class::<PyLagModel>()?;
     m.add_class::<PySupervisorPolicy>()?;
+    m.add_class::<PyStuartLandauStepper>()?;
+    m.add_function(wrap_pyfunction!(pac_modulation_index, m)?)?;
+    m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;
     m.add_function(wrap_pyfunction!(plv, m)?)?;
     m.add_function(wrap_pyfunction!(ring_phase, m)?)?;

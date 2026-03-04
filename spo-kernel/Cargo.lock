@@ -842,7 +842,7 @@ dependencies = [
 
 [[package]]
 name = "spo-engine"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "criterion",
  "proptest",
@@ -852,7 +852,7 @@ dependencies = [
 
 [[package]]
 name = "spo-ffi"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "numpy",
  "pyo3",
@@ -864,14 +864,14 @@ dependencies = [
 
 [[package]]
 name = "spo-oscillators"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "spo-types",
 ]
 
 [[package]]
 name = "spo-supervisor"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "serde",
  "spo-types",
@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "spo-types"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "serde",
  "serde_json",

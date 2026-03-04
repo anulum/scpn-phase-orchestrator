@@ -35,7 +35,11 @@ _OPS = {
 
 @dataclass(frozen=True)
 class PolicyCondition:
-    metric: str  # "R", "R_good", "R_bad", "stability_proxy"
+    """Known metrics: R, R_good, R_bad, stability_proxy, pac_max,
+    mean_amplitude, subcritical_fraction, amplitude_spread (per-layer),
+    mean_amplitude_layer (per-layer)."""
+
+    metric: str
     layer: int | None
     op: str
     threshold: float
@@ -178,6 +182,20 @@ def _extract_metric(
             layer_idx = bad_layers[idx]
             if layer_idx < len(state.layers):
                 return state.layers[layer_idx].R
+        return None
+    if cond.metric == "pac_max":
+        return state.pac_max
+    if cond.metric == "mean_amplitude":
+        return state.mean_amplitude
+    if cond.metric == "subcritical_fraction":
+        return state.subcritical_fraction
+    if cond.metric == "amplitude_spread" and cond.layer is not None:
+        if cond.layer < len(state.layers):
+            return state.layers[cond.layer].amplitude_spread
+        return None
+    if cond.metric == "mean_amplitude_layer" and cond.layer is not None:
+        if cond.layer < len(state.layers):
+            return state.layers[cond.layer].mean_amplitude
         return None
     return None
 
