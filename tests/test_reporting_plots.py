@@ -94,9 +94,68 @@ class TestCoherencePlot:
             plot.plot_pac_heatmap("/dev/null")
 
 
+class TestExtractors:
+    """Data extraction runs without matplotlib — always covered in CI."""
+
+    def test_extract_r_series(self) -> None:
+        plot = CoherencePlot(_make_log(n_steps=10, n_layers=2))
+        x, n_layers, series = plot._extract_r_series()
+        assert len(x) == 10
+        assert n_layers == 2
+        assert len(series) == 2
+        assert len(series[0]) == 10
+
+    def test_extract_regime_epochs(self) -> None:
+        plot = CoherencePlot(_make_log())
+        epochs = plot._extract_regime_epochs()
+        assert len(epochs) >= 2
+        regimes = [e[0] for e in epochs]
+        assert "NOMINAL" in regimes
+        assert "DEGRADED" in regimes
+
+    def test_extract_actions(self) -> None:
+        plot = CoherencePlot(_make_log())
+        x, r_global, knob_steps = plot._extract_actions()
+        assert len(x) == 20
+        assert len(r_global) == 20
+        assert "K" in knob_steps
+        assert all(0.0 <= r <= 1.5 for r in r_global)
+
+    def test_extract_amplitude(self) -> None:
+        plot = CoherencePlot(_make_log())
+        x, amps, sub_frac = plot._extract_amplitude()
+        assert len(x) == 20
+        assert all(a >= 0.0 for a in amps)
+        assert all(0.0 <= sf <= 1.0 for sf in sub_frac)
+
+    def test_extract_pac_matrix(self) -> None:
+        n = 4
+        matrix = [0.1 * (i * n + j) / (n * n) for i in range(n) for j in range(n)]
+        log = _make_log()
+        log.append({"event": "pac_snapshot", "pac_matrix": matrix, "n": n})
+        plot = CoherencePlot(log)
+        n_out, mat = plot._extract_pac_matrix()
+        assert n_out == 4
+        assert mat.shape == (4, 4)
+
+    def test_extract_pac_matrix_missing_raises(self) -> None:
+        plot = CoherencePlot(_make_log())
+        with pytest.raises(ValueError, match="No pac_matrix"):
+            plot._extract_pac_matrix()
+
+    def test_empty_log_raises(self) -> None:
+        plot = CoherencePlot([])
+        with pytest.raises(ValueError, match="No step records"):
+            plot._extract_r_series()
+
+    def test_require_steps_shared(self) -> None:
+        plot = CoherencePlot([])
+        with pytest.raises(ValueError, match="No step records"):
+            plot._require_steps()
+
+
 def test_no_matplotlib_guard() -> None:
-    """Empty log raises before matplotlib check."""
+    """Empty log raises ValueError before matplotlib is even needed."""
     plot = CoherencePlot([])
-    # Empty log → ValueError before matplotlib is even needed
     with pytest.raises((ValueError, ImportError)):
         plot.plot_r_timeline("/dev/null")

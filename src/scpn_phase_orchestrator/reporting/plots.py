@@ -46,22 +46,76 @@ class CoherencePlot:
         self._data = log_data
         self._steps = [d for d in log_data if "step" in d and "layers" in d]
 
-    def plot_r_timeline(self, output_path: str | Path) -> Path:
-        """Line chart of per-layer R over simulation steps."""
-        _require_matplotlib()
-        steps = self._steps
-        if not steps:
+    def _require_steps(self) -> list[dict]:
+        if not self._steps:
             raise ValueError("No step records in log data")
+        return self._steps
 
+    def _extract_r_series(self) -> tuple[list[int], int, list[list[float]]]:
+        steps = self._require_steps()
         x = [s["step"] for s in steps]
         n_layers = len(steps[0]["layers"])
+        series = []
+        for i in range(n_layers):
+            series.append(
+                [s["layers"][i]["R"] if i < len(s["layers"]) else 0.0 for s in steps]
+            )
+        return x, n_layers, series
+
+    def _extract_regime_epochs(self) -> list[tuple[str, int, int]]:
+        steps = self._require_steps()
+        epochs: list[tuple[str, int, int]] = []
+        prev = steps[0].get("regime", "NOMINAL")
+        start = steps[0]["step"]
+        for s in steps[1:]:
+            regime = s.get("regime", "NOMINAL")
+            if regime != prev:
+                epochs.append((prev, start, s["step"]))
+                prev = regime
+                start = s["step"]
+        epochs.append((prev, start, steps[-1]["step"] + 1))
+        return epochs
+
+    def _extract_actions(self) -> tuple[list[int], list[float], dict[str, list[int]]]:
+        steps = self._require_steps()
+        x = [s["step"] for s in steps]
+        r_global = []
+        for s in steps:
+            rs = [la["R"] for la in s["layers"]]
+            r_global.append(float(np.mean(rs)) if rs else 0.0)
+        knob_steps: dict[str, list[int]] = {}
+        for s in steps:
+            for a in s.get("actions", []):
+                knob_steps.setdefault(a["knob"], []).append(s["step"])
+        return x, r_global, knob_steps
+
+    def _extract_amplitude(self) -> tuple[list[int], list[float], list[float]]:
+        steps = self._require_steps()
+        x = [s["step"] for s in steps]
+        amps = [s.get("mean_amplitude", 0.0) for s in steps]
+        sub_frac = [s.get("subcritical_fraction", 0.0) for s in steps]
+        return x, amps, sub_frac
+
+    def _extract_pac_matrix(self) -> tuple[int, np.ndarray]:
+        pac_record = None
+        for d in reversed(self._data):
+            if "pac_matrix" in d:
+                pac_record = d
+                break
+        if pac_record is None:
+            raise ValueError("No pac_matrix record in log data")
+        flat = pac_record["pac_matrix"]
+        n = pac_record.get("n", int(np.sqrt(len(flat))))
+        return n, np.array(flat).reshape(n, n)
+
+    def plot_r_timeline(self, output_path: str | Path) -> Path:
+        """Line chart of per-layer R over simulation steps."""
+        x, n_layers, series = self._extract_r_series()
+        _require_matplotlib()
 
         fig, ax = plt.subplots(figsize=(10, 4))
         for i in range(n_layers):
-            r_vals = [
-                s["layers"][i]["R"] if i < len(s["layers"]) else 0.0 for s in steps
-            ]
-            ax.plot(x, r_vals, linewidth=0.8, label=f"L{i}")
+            ax.plot(x, series[i], linewidth=0.8, label=f"L{i}")
         ax.set_xlabel("Step")
         ax.set_ylabel("R (order parameter)")
         ax.set_ylim(-0.05, 1.05)
@@ -75,26 +129,14 @@ class CoherencePlot:
 
     def plot_regime_timeline(self, output_path: str | Path) -> Path:
         """Coloured horizontal bands per regime epoch."""
+        epochs = self._extract_regime_epochs()
         _require_matplotlib()
         steps = self._steps
-        if not steps:
-            raise ValueError("No step records in log data")
 
         fig, ax = plt.subplots(figsize=(10, 1.5))
-        prev_regime = steps[0].get("regime", "NOMINAL")
-        epoch_start = steps[0]["step"]
-
-        def _flush(regime: str, start: int, end: int) -> None:
+        for regime, start, end in epochs:
             color = _REGIME_COLORS.get(regime, "#95a5a6")
             ax.add_patch(Rectangle((start, 0), end - start, 1, color=color, alpha=0.7))
-
-        for s in steps[1:]:
-            regime = s.get("regime", "NOMINAL")
-            if regime != prev_regime:
-                _flush(prev_regime, epoch_start, s["step"])
-                prev_regime = regime
-                epoch_start = s["step"]
-        _flush(prev_regime, epoch_start, steps[-1]["step"] + 1)
 
         ax.set_xlim(steps[0]["step"], steps[-1]["step"] + 1)
         ax.set_ylim(0, 1)
@@ -114,28 +156,18 @@ class CoherencePlot:
 
     def plot_action_audit(self, output_path: str | Path) -> Path:
         """Vertical markers at steps where control actions fired."""
+        x_all, r_global, knob_steps = self._extract_actions()
         _require_matplotlib()
-        steps = self._steps
-        if not steps:
-            raise ValueError("No step records in log data")
-
-        x_all = [s["step"] for s in steps]
-        r_global = []
-        for s in steps:
-            rs = [la["R"] for la in s["layers"]]
-            r_global.append(float(np.mean(rs)) if rs else 0.0)
 
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(x_all, r_global, color="#2c3e50", linewidth=0.8, label="R_global")
 
-        knob_colors: dict[str, str] = {}
         palette = ["#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#f39c12"]
-        for s in steps:
-            for a in s.get("actions", []):
-                knob = a["knob"]
-                if knob not in knob_colors:
-                    knob_colors[knob] = palette[len(knob_colors) % len(palette)]
-                ax.axvline(s["step"], color=knob_colors[knob], alpha=0.4, linewidth=0.6)
+        knob_colors: dict[str, str] = {}
+        for idx, knob in enumerate(knob_steps):
+            knob_colors[knob] = palette[idx % len(palette)]
+            for step_x in knob_steps[knob]:
+                ax.axvline(step_x, color=knob_colors[knob], alpha=0.4, linewidth=0.6)
 
         ax.set_xlabel("Step")
         ax.set_ylabel("R_global")
@@ -157,14 +189,8 @@ class CoherencePlot:
         Reads 'mean_amplitude' from step records. Falls back to zero
         if the field is absent (phase-only simulation).
         """
+        x, amps, sub_frac = self._extract_amplitude()
         _require_matplotlib()
-        steps = self._steps
-        if not steps:
-            raise ValueError("No step records in log data")
-
-        x = [s["step"] for s in steps]
-        amps = [s.get("mean_amplitude", 0.0) for s in steps]
-        sub_frac = [s.get("subcritical_fraction", 0.0) for s in steps]
 
         fig, ax1 = plt.subplots(figsize=(10, 4))
         ax1.plot(x, amps, color="#2980b9", linewidth=1.0, label="mean amplitude")
@@ -201,18 +227,8 @@ class CoherencePlot:
         Reads the last 'pac_matrix' event/record from log data.
         The matrix should be stored as a flat list with shape (N, N).
         """
+        n, mat = self._extract_pac_matrix()
         _require_matplotlib()
-        pac_record = None
-        for d in reversed(self._data):
-            if "pac_matrix" in d:
-                pac_record = d
-                break
-        if pac_record is None:
-            raise ValueError("No pac_matrix record in log data")
-
-        flat = pac_record["pac_matrix"]
-        n = pac_record.get("n", int(np.sqrt(len(flat))))
-        mat = np.array(flat).reshape(n, n)
 
         fig, ax = plt.subplots(figsize=(6, 5))
         im = ax.imshow(mat, cmap="viridis", aspect="equal", vmin=0.0)
