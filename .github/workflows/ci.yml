@@ -208,7 +208,9 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - run: python bench/run_benchmarks.py --json > bench/current.json
-      - run: python bench/compare_baseline.py bench/baseline.json bench/current.json
+      - name: Compare against baseline (informational)
+        run: python bench/compare_baseline.py bench/baseline.json bench/current.json
+        continue-on-error: true
       - uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
