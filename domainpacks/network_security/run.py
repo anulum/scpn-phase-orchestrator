@@ -33,11 +33,18 @@ STEPS = 200
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
-OMEGAS = np.array([
-    1.00, 1.02, 0.98,     # normal_traffic
-    1.50, 1.48,            # attack_vector (higher frequency = flood)
-    0.80, 0.82, 0.78,     # defense_response
-])
+OMEGAS = np.array(
+    [
+        1.00,
+        1.02,
+        0.98,  # normal_traffic
+        1.50,
+        1.48,  # attack_vector (higher frequency = flood)
+        0.80,
+        0.82,
+        0.78,  # defense_response
+    ]
+)
 
 
 def _build_layer_map(spec):

@@ -33,11 +33,18 @@ STEPS = 200
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
-OMEGAS = np.array([
-    1.00,                       # leader
-    0.98, 1.01, 0.99, 1.02,    # followers
-    0.50, 0.48, 0.52,          # road_env
-])
+OMEGAS = np.array(
+    [
+        1.00,  # leader
+        0.98,
+        1.01,
+        0.99,
+        1.02,  # followers
+        0.50,
+        0.48,
+        0.52,  # road_env
+    ]
+)
 
 
 def _build_layer_map(spec):
@@ -172,8 +179,7 @@ def main():
     ]
     r_good_f = compute_order_parameter(np.array(good_ph))[0] if good_ph else 0.0
     print(
-        f"\nFinal  R_good={r_good_f:.4f}"
-        f"  regime={regime_manager.current_regime.value}"
+        f"\nFinal  R_good={r_good_f:.4f}  regime={regime_manager.current_regime.value}"
     )
 
 

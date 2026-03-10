@@ -55,12 +55,16 @@ def main() -> int:
         pct = (cur_val - base_val) / base_val * 100.0
         status = "PASS" if pct <= REGRESSION_THRESHOLD_PCT else "FAIL"
         label = f"N={key[0]:4d} {key[1]:>5s} {key[2]:>6s}"
-        print(f"  {status}  {label}  {base_val:8.1f} -> {cur_val:8.1f} us/step  ({pct:+.1f}%)")
+        print(
+            f"  {status}  {label}  {base_val:8.1f} -> {cur_val:8.1f} us/step  ({pct:+.1f}%)"
+        )
         if pct > REGRESSION_THRESHOLD_PCT:
             failures.append((label, pct))
 
     if failures:
-        print(f"\n{len(failures)} regression(s) exceeded {REGRESSION_THRESHOLD_PCT}% threshold:")
+        print(
+            f"\n{len(failures)} regression(s) exceeded {REGRESSION_THRESHOLD_PCT}% threshold:"
+        )
         for label, pct in failures:
             print(f"  {label}: {pct:+.1f}%")
         return 1
