@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import sys
-
+from pathlib import Path
 
 REGRESSION_THRESHOLD_PCT = 20.0
 
@@ -33,9 +33,9 @@ def main() -> int:
         print(f"Usage: {sys.argv[0]} <baseline.json> <current.json>", file=sys.stderr)
         return 2
 
-    with open(sys.argv[1]) as f:
+    with Path(sys.argv[1]).open() as f:
         baseline = _extract_results(json.load(f))
-    with open(sys.argv[2]) as f:
+    with Path(sys.argv[2]).open() as f:
         current = _extract_results(json.load(f))
 
     base_map: dict[tuple[int, str, str], float] = {}
@@ -55,16 +55,17 @@ def main() -> int:
         pct = (cur_val - base_val) / base_val * 100.0
         status = "PASS" if pct <= REGRESSION_THRESHOLD_PCT else "FAIL"
         label = f"N={key[0]:4d} {key[1]:>5s} {key[2]:>6s}"
-        print(
-            f"  {status}  {label}  {base_val:8.1f} -> {cur_val:8.1f} us/step  ({pct:+.1f}%)"
+        msg = (
+            f"  {status}  {label}  {base_val:8.1f} -> {cur_val:8.1f}"
+            f" us/step  ({pct:+.1f}%)"
         )
+        print(msg)
         if pct > REGRESSION_THRESHOLD_PCT:
             failures.append((label, pct))
 
     if failures:
-        print(
-            f"\n{len(failures)} regression(s) exceeded {REGRESSION_THRESHOLD_PCT}% threshold:"
-        )
+        n = len(failures)
+        print(f"\n{n} regression(s) exceeded {REGRESSION_THRESHOLD_PCT}% threshold:")
         for label, pct in failures:
             print(f"  {label}: {pct:+.1f}%")
         return 1
