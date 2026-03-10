@@ -26,14 +26,14 @@ class TestPyUPDEStepper:
     def test_step_returns_correct_length(self):
         n = 4
         s = spo.PyUPDEStepper(n)
-        phases = [0.0] * n
+        phases = np.zeros(n)
         result = s.step(phases, np.ones(n), np.zeros(n * n), 0.0, 0.0, np.zeros(n * n))
         assert len(result) == n
 
     def test_step_advances_phases(self):
         n = 4
         s = spo.PyUPDEStepper(n, dt=0.01)
-        phases = [0.0] * n
+        phases = np.zeros(n)
         result = s.step(phases, np.ones(n), np.zeros(n * n), 0.0, 0.0, np.zeros(n * n))
         for p in result:
             assert abs(p - 0.01) < 1e-10
@@ -41,7 +41,7 @@ class TestPyUPDEStepper:
     def test_run_multiple_steps(self):
         n = 4
         s = spo.PyUPDEStepper(n)
-        phases = [0.0] * n
+        phases = np.zeros(n)
         result = s.run(
             phases, np.ones(n), np.zeros(n * n), 0.0, 0.0, np.zeros(n * n), 100
         )
@@ -55,7 +55,7 @@ class TestPyUPDEStepper:
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
             s.step(
-                [float("nan")] * 4,
+                np.full(4, float("nan")),
                 np.ones(4),
                 np.zeros(16),
                 0.0,
@@ -67,7 +67,7 @@ class TestPyUPDEStepper:
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
             s.step(
-                [0.0] * 4,
+                np.zeros(4),
                 np.ones(4),
                 np.zeros(16),
                 float("nan"),
@@ -79,7 +79,7 @@ class TestPyUPDEStepper:
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
             s.step(
-                [0.0] * 4,
+                np.zeros(4),
                 np.ones(4),
                 np.zeros(16),
                 0.0,
@@ -90,14 +90,14 @@ class TestPyUPDEStepper:
     def test_substeps_accepted(self):
         s = spo.PyUPDEStepper(4, dt=0.01, method="rk4", n_substeps=4)
         assert s.n == 4
-        phases = [0.0] * 4
+        phases = np.zeros(4)
         result = s.step(phases, np.ones(4), np.zeros(16), 0.0, 0.0, np.zeros(16))
         assert len(result) == 4
 
     def test_dimension_mismatch(self):
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
-            s.step([0.0] * 3, np.ones(4), np.zeros(16), 0.0, 0.0, np.zeros(16))
+            s.step(np.zeros(3), np.ones(4), np.zeros(16), 0.0, 0.0, np.zeros(16))
 
 
 # ─── PyCouplingBuilder ───────────────────────────────────────────

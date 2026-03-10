@@ -12,7 +12,7 @@
 
 use std::collections::HashMap;
 
-use numpy::PyReadonlyArray1;
+use numpy::{PyArray1, PyArrayMethods, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -81,17 +81,20 @@ impl PyUPDEStepper {
         Ok(Self { inner })
     }
 
-    /// Advance phases by one step. Returns new phases list.
-    fn step(
+    /// Advance phases by one step. Returns new phases as numpy array.
+    fn step<'py>(
         &mut self,
-        phases: Vec<f64>,
-        omegas: PyReadonlyArray1<'_, f64>,
-        knm: PyReadonlyArray1<'_, f64>,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
         zeta: f64,
         psi: f64,
-        alpha: PyReadonlyArray1<'_, f64>,
-    ) -> PyResult<Vec<f64>> {
-        let mut p = phases;
+        alpha: PyReadonlyArray1<'py, f64>,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
         let o = omegas
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -104,22 +107,25 @@ impl PyUPDEStepper {
         self.inner
             .step(&mut p, o, k, zeta, psi, a)
             .map_err(spo_err)?;
-        Ok(p)
+        Ok(PyArray1::from_vec(py, p))
     }
 
-    /// Run n_steps. Returns final phases.
+    /// Run n_steps. Returns final phases as numpy array.
     #[allow(clippy::too_many_arguments)]
-    fn run(
+    fn run<'py>(
         &mut self,
-        phases: Vec<f64>,
-        omegas: PyReadonlyArray1<'_, f64>,
-        knm: PyReadonlyArray1<'_, f64>,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
         zeta: f64,
         psi: f64,
-        alpha: PyReadonlyArray1<'_, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
         n_steps: u64,
-    ) -> PyResult<Vec<f64>> {
-        let mut p = phases;
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
         let o = omegas
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -132,7 +138,7 @@ impl PyUPDEStepper {
         self.inner
             .run(&mut p, o, k, zeta, psi, a, n_steps)
             .map_err(spo_err)?;
-        Ok(p)
+        Ok(PyArray1::from_vec(py, p))
     }
 
     #[getter]

@@ -3,6 +3,14 @@ from __future__ import annotations
 import asyncio
 
 import numpy as np
+import pytest
+
+try:
+    import httpx  # noqa: F401
+
+    _HAS_HTTPX = True
+except ModuleNotFoundError:
+    _HAS_HTTPX = False
 
 from scpn_phase_orchestrator.apps.queuewaves.collector import (
     MetricBuffer,
@@ -68,6 +76,7 @@ def test_collector_get_signal_arrays_skips_not_ready() -> None:
     assert "s" not in collector.get_signal_arrays()
 
 
+@pytest.mark.skipif(not _HAS_HTTPX, reason="httpx not installed")
 def test_collector_client_lifecycle() -> None:
     async def _run() -> None:
         collector = PrometheusCollector(

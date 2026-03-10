@@ -100,20 +100,49 @@ class UPDEEngine:
         if alpha.shape != (n, n):
             raise ValueError(f"alpha.shape={alpha.shape}, expected ({n}, {n})")
         if self._rust is not None:
-            result = self._rust.step(
-                phases.ravel().tolist(),
-                np.ascontiguousarray(omegas.ravel()),
-                np.ascontiguousarray(knm.ravel()),
-                float(zeta),
-                float(psi),
-                np.ascontiguousarray(alpha.ravel()),
+            return np.asarray(
+                self._rust.step(
+                    np.ascontiguousarray(phases.ravel()),
+                    np.ascontiguousarray(omegas.ravel()),
+                    np.ascontiguousarray(knm.ravel()),
+                    float(zeta),
+                    float(psi),
+                    np.ascontiguousarray(alpha.ravel()),
+                )
             )
-            return np.asarray(result, dtype=np.float64)
         if self._method == "euler":
             return self._euler_step(phases, omegas, knm, zeta, psi, alpha)
         if self._method == "rk45":
             return self._rk45_step(phases, omegas, knm, zeta, psi, alpha)
         return self._rk4_step(phases, omegas, knm, zeta, psi, alpha)
+
+    def run(
+        self,
+        phases: NDArray,
+        omegas: NDArray,
+        knm: NDArray,
+        zeta: float,
+        psi: float,
+        alpha: NDArray,
+        n_steps: int,
+    ) -> NDArray:
+        """Run n_steps, return final phases. Uses Rust batch API when available."""
+        if self._rust is not None:
+            return np.asarray(
+                self._rust.run(
+                    np.ascontiguousarray(phases.ravel()),
+                    np.ascontiguousarray(omegas.ravel()),
+                    np.ascontiguousarray(knm.ravel()),
+                    float(zeta),
+                    float(psi),
+                    np.ascontiguousarray(alpha.ravel()),
+                    n_steps,
+                )
+            )
+        p = phases.copy()
+        for _ in range(n_steps):
+            p = self.step(p, omegas, knm, zeta, psi, alpha)
+        return p
 
     def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""

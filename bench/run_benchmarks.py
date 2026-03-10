@@ -28,7 +28,12 @@ STEPS = 1000
 WARMUP = 50
 
 
-def bench_step(n_osc: int, method: str = "euler", force_python: bool = False) -> dict:
+def bench_step(
+    n_osc: int,
+    method: str = "euler",
+    force_python: bool = False,
+    batch: bool = False,
+) -> dict:
     saved = _compat.HAS_RUST
     if force_python:
         _compat.HAS_RUST = False
@@ -44,19 +49,30 @@ def bench_step(n_osc: int, method: str = "euler", force_python: bool = False) ->
         for _ in range(WARMUP):
             phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
 
-        t0 = time.perf_counter()
-        for _ in range(STEPS):
-            phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
-        elapsed = time.perf_counter() - t0
+        if batch:
+            t0 = time.perf_counter()
+            phases = engine.run(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha, STEPS)
+            elapsed = time.perf_counter() - t0
+        else:
+            t0 = time.perf_counter()
+            for _ in range(STEPS):
+                phases = engine.step(
+                    phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha
+                )
+            elapsed = time.perf_counter() - t0
 
         r_final, _ = engine.compute_order_parameter(phases)
     finally:
         _compat.HAS_RUST = saved
 
+    backend = "python" if force_python else ("rust" if saved else "python")
+    if batch:
+        backend = "rust_batch"
+
     return {
         "n_osc": n_osc,
         "method": method,
-        "backend": "python" if force_python else ("rust" if saved else "python"),
+        "backend": backend,
         "steps": STEPS,
         "total_s": round(elapsed, 6),
         "us_per_step": round(elapsed / STEPS * 1e6, 1),
@@ -82,6 +98,9 @@ def main():
         for n in sizes:
             for m in ("euler", "rk4"):
                 results.append(bench_step(n, m, force_python=True))
+        for n in sizes:
+            for m in ("euler", "rk4"):
+                results.append(bench_step(n, m, batch=True))
 
     if args.json:
         output = {

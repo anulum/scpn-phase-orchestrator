@@ -1,17 +1,325 @@
-[
-  {"n_osc": 8, "method": "euler", "backend": "python", "us_per_step": 50.0},
-  {"n_osc": 8, "method": "rk4", "backend": "python", "us_per_step": 200.0},
-  {"n_osc": 8, "method": "rk45", "backend": "python", "us_per_step": 300.0},
-  {"n_osc": 16, "method": "euler", "backend": "python", "us_per_step": 80.0},
-  {"n_osc": 16, "method": "rk4", "backend": "python", "us_per_step": 320.0},
-  {"n_osc": 16, "method": "rk45", "backend": "python", "us_per_step": 500.0},
-  {"n_osc": 64, "method": "euler", "backend": "python", "us_per_step": 600.0},
-  {"n_osc": 64, "method": "rk4", "backend": "python", "us_per_step": 2400.0},
-  {"n_osc": 64, "method": "rk45", "backend": "python", "us_per_step": 3800.0},
-  {"n_osc": 256, "method": "euler", "backend": "python", "us_per_step": 8000.0},
-  {"n_osc": 256, "method": "rk4", "backend": "python", "us_per_step": 32000.0},
-  {"n_osc": 256, "method": "rk45", "backend": "python", "us_per_step": 50000.0},
-  {"n_osc": 1024, "method": "euler", "backend": "python", "us_per_step": 120000.0},
-  {"n_osc": 1024, "method": "rk4", "backend": "python", "us_per_step": 480000.0},
-  {"n_osc": 1024, "method": "rk45", "backend": "python", "us_per_step": 750000.0}
-]
+{
+  "meta": {
+    "python_version": "3.12.5",
+    "numpy_version": "2.4.2",
+    "scipy_version": "1.17.1",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "results": [
+    {
+      "n_osc": 8,
+      "method": "euler",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.007528,
+      "us_per_step": 7.5,
+      "R_final": 1.0
+    },
+    {
+      "n_osc": 8,
+      "method": "rk4",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.005631,
+      "us_per_step": 5.6,
+      "R_final": 1.0
+    },
+    {
+      "n_osc": 8,
+      "method": "rk45",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.013922,
+      "us_per_step": 13.9,
+      "R_final": 0.981124
+    },
+    {
+      "n_osc": 16,
+      "method": "euler",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.011649,
+      "us_per_step": 11.6,
+      "R_final": 0.999998
+    },
+    {
+      "n_osc": 16,
+      "method": "rk4",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.024444,
+      "us_per_step": 24.4,
+      "R_final": 0.999998
+    },
+    {
+      "n_osc": 16,
+      "method": "rk45",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.037892,
+      "us_per_step": 37.9,
+      "R_final": 0.827308
+    },
+    {
+      "n_osc": 64,
+      "method": "euler",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.056966,
+      "us_per_step": 57.0,
+      "R_final": 0.908094
+    },
+    {
+      "n_osc": 64,
+      "method": "rk4",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.257285,
+      "us_per_step": 257.3,
+      "R_final": 0.913159
+    },
+    {
+      "n_osc": 64,
+      "method": "rk45",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 0.372424,
+      "us_per_step": 372.4,
+      "R_final": 0.365965
+    },
+    {
+      "n_osc": 256,
+      "method": "euler",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 1.058877,
+      "us_per_step": 1058.9,
+      "R_final": 0.263789
+    },
+    {
+      "n_osc": 256,
+      "method": "rk4",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 3.142254,
+      "us_per_step": 3142.3,
+      "R_final": 0.267411
+    },
+    {
+      "n_osc": 256,
+      "method": "rk45",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 6.465428,
+      "us_per_step": 6465.4,
+      "R_final": 0.020817
+    },
+    {
+      "n_osc": 1024,
+      "method": "euler",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 18.494431,
+      "us_per_step": 18494.4,
+      "R_final": 0.186064
+    },
+    {
+      "n_osc": 1024,
+      "method": "rk4",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 60.547622,
+      "us_per_step": 60547.6,
+      "R_final": 0.186624
+    },
+    {
+      "n_osc": 1024,
+      "method": "rk45",
+      "backend": "rust",
+      "steps": 1000,
+      "total_s": 121.940024,
+      "us_per_step": 121940.0,
+      "R_final": 0.021329
+    },
+    {
+      "n_osc": 8,
+      "method": "euler",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 0.011315,
+      "us_per_step": 11.3,
+      "R_final": 1.0
+    },
+    {
+      "n_osc": 8,
+      "method": "rk4",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 0.010688,
+      "us_per_step": 10.7,
+      "R_final": 1.0
+    },
+    {
+      "n_osc": 16,
+      "method": "euler",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 0.007864,
+      "us_per_step": 7.9,
+      "R_final": 0.999998
+    },
+    {
+      "n_osc": 16,
+      "method": "rk4",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 0.011797,
+      "us_per_step": 11.8,
+      "R_final": 0.999998
+    },
+    {
+      "n_osc": 64,
+      "method": "euler",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 0.059898,
+      "us_per_step": 59.9,
+      "R_final": 0.908094
+    },
+    {
+      "n_osc": 64,
+      "method": "rk4",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 0.184381,
+      "us_per_step": 184.4,
+      "R_final": 0.913159
+    },
+    {
+      "n_osc": 256,
+      "method": "euler",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 0.986414,
+      "us_per_step": 986.4,
+      "R_final": 0.263789
+    },
+    {
+      "n_osc": 256,
+      "method": "rk4",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 3.749291,
+      "us_per_step": 3749.3,
+      "R_final": 0.267411
+    },
+    {
+      "n_osc": 1024,
+      "method": "euler",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 19.308461,
+      "us_per_step": 19308.5,
+      "R_final": 0.186064
+    },
+    {
+      "n_osc": 1024,
+      "method": "rk4",
+      "backend": "python",
+      "steps": 1000,
+      "total_s": 57.339005,
+      "us_per_step": 57339.0,
+      "R_final": 0.186624
+    },
+    {
+      "n_osc": 8,
+      "method": "euler",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 0.000487,
+      "us_per_step": 0.5,
+      "R_final": 1.0
+    },
+    {
+      "n_osc": 8,
+      "method": "rk4",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 0.001595,
+      "us_per_step": 1.6,
+      "R_final": 1.0
+    },
+    {
+      "n_osc": 16,
+      "method": "euler",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 0.00314,
+      "us_per_step": 3.1,
+      "R_final": 0.999998
+    },
+    {
+      "n_osc": 16,
+      "method": "rk4",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 0.007023,
+      "us_per_step": 7.0,
+      "R_final": 0.999998
+    },
+    {
+      "n_osc": 64,
+      "method": "euler",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 0.049954,
+      "us_per_step": 50.0,
+      "R_final": 0.908094
+    },
+    {
+      "n_osc": 64,
+      "method": "rk4",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 0.165329,
+      "us_per_step": 165.3,
+      "R_final": 0.913159
+    },
+    {
+      "n_osc": 256,
+      "method": "euler",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 0.904295,
+      "us_per_step": 904.3,
+      "R_final": 0.263789
+    },
+    {
+      "n_osc": 256,
+      "method": "rk4",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 3.450694,
+      "us_per_step": 3450.7,
+      "R_final": 0.267411
+    },
+    {
+      "n_osc": 1024,
+      "method": "euler",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 16.201916,
+      "us_per_step": 16201.9,
+      "R_final": 0.186064
+    },
+    {
+      "n_osc": 1024,
+      "method": "rk4",
+      "backend": "rust_batch",
+      "steps": 1000,
+      "total_s": 57.893398,
+      "us_per_step": 57893.4,
+      "R_final": 0.186624
+    }
+  ]
+}
