@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+# Contact: www.anulum.li | protoscience@anulum.li
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist
+        run: |
+          pip install build
+          python -m build --sdist
+
+      - name: Generate SBOM
+        run: |
+          pip install cyclonedx-bom
+          pip install -e .
+          cyclonedx-py environment -o sbom.json --output-format json
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          python -c "
+          import re, sys
+          text = open('CHANGELOG.md').read()
+          pattern = rf'## \[{re.escape(sys.argv[1])}\].*?\n(.*?)(?=\n## \[|\Z)'
+          m = re.search(pattern, text, re.DOTALL)
+          print(m.group(1).strip() if m else 'Release ' + sys.argv[1])
+          " "$VERSION" > release_notes.md
+
+      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b  # v2
+        with:
+          body_path: release_notes.md
+          files: |
+            dist/*.tar.gz
+            sbom.json
+          generate_release_notes: false

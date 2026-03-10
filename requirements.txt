@@ -1,0 +1,6 @@
+# Canonical source: pyproject.toml [project.dependencies]
+# This file pins runtime deps for reproducible environments.
+numpy>=1.24
+scipy>=1.11
+pyyaml>=6.0
+click>=8.1

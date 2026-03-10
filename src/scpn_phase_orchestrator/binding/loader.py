@@ -25,6 +25,7 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
     ProtocolNetSpec,
     ProtocolTransitionSpec,
+    resolve_extractor_type,
 )
 
 __all__ = ["load_binding_spec"]
@@ -83,7 +84,9 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
     osc_families = {
         k: OscillatorFamily(
             channel=_require(v, "channel", f"oscillator_families.{k}"),
-            extractor_type=_require(v, "extractor_type", f"oscillator_families.{k}"),
+            extractor_type=resolve_extractor_type(
+                _require(v, "extractor_type", f"oscillator_families.{k}")
+            ),
             config=v.get("config", {}),
         )
         for k, v in _require(data, "oscillator_families", "root").items()

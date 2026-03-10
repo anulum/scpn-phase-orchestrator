@@ -83,6 +83,7 @@ Repository = "https://github.com/anulum/scpn-phase-orchestrator"
 Issues = "https://github.com/anulum/scpn-phase-orchestrator/issues"
 Documentation = "https://anulum.github.io/scpn-phase-orchestrator/"
 Changelog = "https://github.com/anulum/scpn-phase-orchestrator/blob/main/CHANGELOG.md"
+Discussions = "https://github.com/anulum/scpn-phase-orchestrator/discussions"
 
 [tool.setuptools.packages.find]
 where = ["src"]

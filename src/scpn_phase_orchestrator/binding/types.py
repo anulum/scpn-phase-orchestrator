@@ -27,6 +27,7 @@ __all__ = [
     "VALID_SAFETY_TIERS",
     "EXTRACTOR_ALIASES",
     "VALID_EXTRACTORS",
+    "resolve_extractor_type",
     "BindingSpec",
 ]
 
@@ -144,6 +145,11 @@ EXTRACTOR_ALIASES: dict[str, str] = {
     "symbolic": "ring",
 }
 VALID_EXTRACTORS = _ALGORITHM_EXTRACTORS | frozenset(EXTRACTOR_ALIASES)
+
+
+def resolve_extractor_type(raw: str) -> str:
+    """Map alias to algorithm name; pass algorithm names through unchanged."""
+    return EXTRACTOR_ALIASES.get(raw, raw)
 
 
 @dataclass

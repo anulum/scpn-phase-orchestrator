@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ARCHITECTURE.md` — system overview, pipeline diagram, module map
+- `SUPPORT.md` — help channels, security advisories link
+- `GOVERNANCE.md` — decision process, project lead
+- `CONTRIBUTORS.md` — contributor attribution
+- `NOTICE.md` — AGPL compliance boundary table, third-party attribution
+- `REUSE.toml` — REUSE 3.0 license compliance
+- `Makefile` — 20 convenience targets (test, lint, fmt, docs, bench, bridge, etc.)
+- `requirements.txt` / `requirements-dev.txt` — pinned dependency files
+- `.gitattributes` — LF normalization, linguist overrides
+- `_typos.toml` — domain-specific allowlist for typos checker
+- `.github/FUNDING.yml` — sponsorship links
+- `.github/workflows/pre-commit.yml` — pre-commit hook enforcement in CI
+- `.github/workflows/codeql.yml` — CodeQL semantic security analysis (weekly + PR)
+- `.github/workflows/scorecard.yml` — OpenSSF Scorecard (weekly + push)
+- `.github/workflows/stale.yml` — auto-close stale issues/PRs (60+14 day lifecycle)
+- `.github/workflows/release.yml` — automated GitHub Release with changelog extraction and SBOM
+- `src/scpn_phase_orchestrator/exceptions.py` — centralized exception hierarchy (`SPOError`, `BindingError`, `ValidationError`, `ExtractorError`, `EngineError`, `PolicyError`, `AuditError`)
+- `resolve_extractor_type()` in `binding/types.py` — maps aliases (`physical`/`informational`/`symbolic`) to algorithm names (`hilbert`/`event`/`ring`)
+- `Discussions` link in `[project.urls]`
+
+### Fixed
+
+- **Contract drift**: Loader now resolves extractor_type aliases to algorithm names at parse time. Both `physical` and `hilbert` are valid input; internally normalized to algorithm names.
+
+### Changed
+
+- `SECURITY.md` — updated supported versions, added Security Advisories link
+
 ## [0.4.1] - 2026-03-04
 
 ### Added

@@ -1,0 +1,15 @@
+# SCPN Phase Orchestrator — Typos checker config
+
+[default.extend-words]
+# Domain-specific terms
+knm = "knm"       # coupling matrix notation K_nm
+upde = "upde"      # Universal Phase Dynamics Equation
+scpn = "scpn"      # Self-Consistent Phenomenological Network
+spo = "spo"        # SCPN Phase Orchestrator
+ffi = "ffi"        # Foreign Function Interface
+otel = "otel"      # OpenTelemetry
+pac = "pac"        # Phase-Amplitude Coupling
+plv = "plv"        # Phase-Locking Value
+isi = "isi"        # Inter-Spike Interval
+rng = "rng"        # Random Number Generator
+psd = "psd"        # Positive Semi-Definite / Power Spectral Density

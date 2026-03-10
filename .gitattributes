@@ -1,0 +1,31 @@
+# SCPN Phase Orchestrator — Git attributes
+# © 1998–2026 Miroslav Šotek. All rights reserved.
+
+# Normalize line endings
+* text=auto eol=lf
+
+# Explicit text files
+*.py text diff=python
+*.rs text diff=rust
+*.toml text
+*.yaml text
+*.yml text
+*.json text
+*.md text
+*.txt text
+*.cfg text
+*.rst text
+*.html text
+*.css text
+*.js text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.whl binary
+*.tar.gz binary
+*.npz binary
+
+# Linguist overrides
+*.rs linguist-language=Rust
+spo-kernel/** linguist-language=Rust

@@ -95,6 +95,40 @@ def test_load_with_geometry_prior(tmp_path):
     assert spec.geometry_prior.params == {"radius": 1.0}
 
 
+def test_loader_resolves_extractor_aliases(tmp_path):
+    """Aliases (physical/informational/symbolic) resolve to algorithm names."""
+    data = {
+        **_SPEC_DATA,
+        "oscillator_families": {
+            "p": {"channel": "P", "extractor_type": "physical", "config": {}},
+            "i": {"channel": "I", "extractor_type": "informational", "config": {}},
+            "s": {"channel": "S", "extractor_type": "symbolic", "config": {}},
+        },
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    spec = load_binding_spec(p)
+    assert spec.oscillator_families["p"].extractor_type == "hilbert"
+    assert spec.oscillator_families["i"].extractor_type == "event"
+    assert spec.oscillator_families["s"].extractor_type == "ring"
+
+
+def test_loader_passes_algorithm_names_through(tmp_path):
+    """Algorithm names (hilbert/event/graph) pass through unchanged."""
+    data = {
+        **_SPEC_DATA,
+        "oscillator_families": {
+            "h": {"channel": "P", "extractor_type": "hilbert", "config": {}},
+            "g": {"channel": "S", "extractor_type": "graph", "config": {}},
+        },
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    spec = load_binding_spec(p)
+    assert spec.oscillator_families["h"].extractor_type == "hilbert"
+    assert spec.oscillator_families["g"].extractor_type == "graph"
+
+
 def test_loader_validate_control_period_and_channels(tmp_path):
     from scpn_phase_orchestrator.binding import validate_binding_spec
 
