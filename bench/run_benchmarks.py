@@ -51,7 +51,9 @@ def bench_step(
 
         if batch:
             t0 = time.perf_counter()
-            phases = engine.run(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha, STEPS)
+            phases = engine.run(
+                phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha, STEPS
+            )
             elapsed = time.perf_counter() - t0
         else:
             t0 = time.perf_counter()

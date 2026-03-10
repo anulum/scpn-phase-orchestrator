@@ -144,14 +144,14 @@ def run_benchmark(n_osc):
             n_osc, omegas, coupling.knm, coupling.alpha, perturbed, use_supervisor=True
         )
     )
-    results["runs"].append(
-        run_scipy_recovery(n_osc, omegas, coupling.knm, perturbed)
-    )
+    results["runs"].append(run_scipy_recovery(n_osc, omegas, coupling.knm, perturbed))
     return results
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Competitive Kuramoto recovery benchmark")
+    parser = argparse.ArgumentParser(
+        description="Competitive Kuramoto recovery benchmark"
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
