@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `build_nengo_network()` replaced with pure-NumPy `build_numpy_network()` (old name kept as alias)
+- `nengo` optional extra is now empty (nengo 4.x incompatible with NumPy 2.x)
+
 ### Added
 
 - `ARCHITECTURE.md` — system overview, pipeline diagram, module map

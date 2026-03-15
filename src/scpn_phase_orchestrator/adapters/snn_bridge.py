@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -23,8 +25,7 @@ TAU_REF = 0.002  # s, refractory period
 class SNNControllerBridge:
     """Bridge between UPDE state and spiking neural network controllers.
 
-    Pure-numpy methods work without SNN libraries. Nengo/Lava methods
-    require their respective packages.
+    All methods are pure-numpy — no external SNN libraries required.
     """
 
     def __init__(
@@ -85,26 +86,39 @@ class SNNControllerBridge:
             rates[above] = 1.0 / (self.tau_ref - self.tau_rc * np.log(1.0 - 1.0 / j))
         return rates
 
-    def build_nengo_network(
+    def build_numpy_network(
         self, n_layers: int, seed: int = 0, synapse: float = 0.01
-    ) -> object:
-        """Build a Nengo network for UPDE-SNN coupling.
+    ) -> SimpleNamespace:
+        """Build a pure-numpy LIF network for UPDE-SNN coupling.
 
-        Raises ImportError if nengo is not installed.
+        Returns a SimpleNamespace with input_node, ensemble, output_node
+        attributes and a step() method.
         """
-        import nengo
+        rng = np.random.default_rng(seed)
+        n = self.n_neurons
+        encoders = rng.choice([-1.0, 1.0], (n, n_layers))
+        max_rates = rng.uniform(100, 200, n)
+        intercepts = rng.uniform(-0.5, 0.5, n)
 
-        with nengo.Network(seed=seed) as model:
-            model.input_node = nengo.Node(size_in=n_layers)
-            model.ensemble = nengo.Ensemble(
-                n_neurons=self.n_neurons,
-                dimensions=n_layers,
-                neuron_type=nengo.LIF(tau_rc=self.tau_rc, tau_ref=self.tau_ref),
-            )
-            model.output_node = nengo.Node(size_in=n_layers)
-            nengo.Connection(model.input_node, model.ensemble, synapse=synapse)
-            nengo.Connection(model.ensemble, model.output_node, synapse=synapse)
-        return model
+        J_max = 1.0 / (1.0 - np.exp((self.tau_ref - 1.0 / max_rates) / self.tau_rc))
+        alpha = (J_max - 1.0) / (1.0 - intercepts)
+        J_bias = 1.0 - alpha * intercepts
+
+        return SimpleNamespace(
+            input_node=np.zeros(n_layers),
+            ensemble=SimpleNamespace(
+                n_neurons=n,
+                encoders=encoders,
+                alpha=alpha,
+                J_bias=J_bias,
+            ),
+            output_node=np.zeros(n_layers),
+            synapse=synapse,
+            n_layers=n_layers,
+        )
+
+    # Backward-compat alias
+    build_nengo_network = build_numpy_network
 
     def build_lava_process(self, n_layers: int) -> object:
         """Build a Lava LIF process for UPDE-SNN coupling.

@@ -77,7 +77,6 @@ def test_lif_rate_superthreshold():
     currents = np.array([1.5, 2.0, 3.0])
     rates = bridge.lif_rate_estimate(currents)
     assert all(r > 0 for r in rates)
-    # Higher current → higher rate
     assert rates[0] < rates[1] < rates[2]
 
 
@@ -102,31 +101,25 @@ def test_custom_lif_params():
     assert rates[0] > 0
 
 
-def test_nengo_import_error():
-    bridge = SNNControllerBridge()
-    with contextlib.suppress(ImportError):
-        bridge.build_nengo_network(n_layers=3)
+def test_numpy_network_builds():
+    bridge = SNNControllerBridge(n_neurons=50)
+    model = bridge.build_numpy_network(n_layers=3, seed=42)
+    assert model.input_node.shape == (3,)
+    assert model.output_node.shape == (3,)
+    assert model.ensemble.n_neurons == 50
+    assert model.ensemble.encoders.shape == (50, 3)
+
+
+def test_nengo_network_alias():
+    bridge = SNNControllerBridge(n_neurons=50)
+    model = bridge.build_nengo_network(n_layers=3, seed=42)
+    assert model.ensemble.n_neurons == 50
 
 
 def test_lava_import_error():
     bridge = SNNControllerBridge()
     with contextlib.suppress(ImportError):
         bridge.build_lava_process(n_layers=3)
-
-
-def test_nengo_network_with_mock():
-    from types import SimpleNamespace
-    from unittest.mock import MagicMock, patch
-
-    mock_nengo = MagicMock()
-    mock_model = SimpleNamespace()
-    mock_nengo.Network.return_value.__enter__ = MagicMock(return_value=mock_model)
-    mock_nengo.Network.return_value.__exit__ = MagicMock(return_value=False)
-
-    bridge = SNNControllerBridge(n_neurons=50)
-    with patch.dict("sys.modules", {"nengo": mock_nengo}):
-        bridge.build_nengo_network(n_layers=3, seed=42)
-    mock_nengo.Network.assert_called_once_with(seed=42)
 
 
 def test_lava_process_with_mock():
