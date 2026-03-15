@@ -30,11 +30,11 @@ class AuditLogger:
         self._prev_hash: str = "0" * 64
 
     def _write_record(self, record: dict) -> None:
-        json_line = json.dumps(record, separators=(",", ":"))
+        clean = {k: v for k, v in record.items() if k != "_hash"}
+        json_line = json.dumps(clean, separators=(",", ":"))
         digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()
-        record["_hash"] = digest
         self._prev_hash = digest
-        self._fh.write(json.dumps(record) + "\n")
+        self._fh.write(json.dumps({**clean, "_hash": digest}) + "\n")
 
     def log_header(
         self,

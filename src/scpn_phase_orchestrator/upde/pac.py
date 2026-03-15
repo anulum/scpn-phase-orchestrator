@@ -29,7 +29,7 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
                 n_bins,
             )
         )
-    except (ImportError, Exception):  # noqa: BLE001, S110
+    except ImportError:
         pass  # Rust unavailable — fall through to Python
     if theta_low.size == 0 or amp_high.size == 0:
         return 0.0

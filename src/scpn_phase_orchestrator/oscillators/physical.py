@@ -25,6 +25,10 @@ class PhysicalExtractor(PhaseExtractor):
         self._node_id = node_id
 
     def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+        if signal.ndim != 1 or signal.size < 2:
+            raise ValueError(
+                f"signal must be 1-D with >= 2 samples, got shape {signal.shape}"
+            )
         analytic = hilbert(signal)
 
         if _HAS_RUST:

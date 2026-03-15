@@ -41,4 +41,5 @@ def project_knm(knm: NDArray, constraints: list[GeometryConstraint]) -> NDArray:
     result = knm.copy()
     for c in constraints:
         result = c.project(result)
+    np.fill_diagonal(result, 0.0)
     return result

@@ -231,207 +231,219 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             seed=seed,
             amplitude_mode=amplitude_mode,
         )
-    for step_idx in range(steps):
-        if zeta_ttl > 0:
-            zeta_ttl -= 1
-            if zeta_ttl == 0:
-                zeta = 0.0
+    try:
+        for step_idx in range(steps):
+            if zeta_ttl > 0:
+                zeta_ttl -= 1
+                if zeta_ttl == 0:
+                    zeta = 0.0
 
-        if psi_driver is not None:
-            t = step_idx * spec.sample_period_s
-            if isinstance(psi_driver, SymbolicDriver):
-                psi_target = psi_driver.compute(step_idx)
-            else:
-                psi_target = psi_driver.compute(t)
+            if psi_driver is not None:
+                t = step_idx * spec.sample_period_s
+                if isinstance(psi_driver, SymbolicDriver):
+                    psi_target = psi_driver.compute(step_idx)
+                else:
+                    psi_target = psi_driver.compute(t)
 
-        eff_knm = coupling.knm
-        eff_alpha = coupling.alpha
-        if imprint_model is not None and imprint_state is not None:
-            eff_knm = imprint_model.modulate_coupling(eff_knm, imprint_state)
-            eff_alpha = imprint_model.modulate_lag(eff_alpha, imprint_state)
-        if geo_constraints:
-            eff_knm = project_knm(eff_knm, geo_constraints)
-
-        input_phases = phases.copy()
-        if amplitude_mode and sl_engine is not None and mu is not None:
-            assert coupling.knm_r is not None  # nosec B101
-            eff_mu = mu
+            eff_knm = coupling.knm
+            eff_alpha = coupling.alpha
             if imprint_model is not None and imprint_state is not None:
-                eff_mu = imprint_model.modulate_mu(mu, imprint_state)
-            sl_state = sl_engine.step(
-                sl_state,
-                omegas,
-                eff_mu,
-                eff_knm,
-                coupling.knm_r,
-                zeta,
-                psi_target,
-                eff_alpha,
-                epsilon=spec.amplitude.epsilon,  # type: ignore[union-attr]
-            )
-            phases = sl_state[:n_osc]
-            amplitudes = sl_state[n_osc:]
-            phases_history.append(phases.copy())
-            amps_history.append(amplitudes.copy())
-        else:
-            assert upde_engine is not None  # nosec B101
-            phases = upde_engine.step(
-                phases, omegas, eff_knm, zeta, psi_target, eff_alpha
-            )
+                eff_knm = imprint_model.modulate_coupling(eff_knm, imprint_state)
+                eff_alpha = imprint_model.modulate_lag(eff_alpha, imprint_state)
+            if geo_constraints:
+                eff_knm = project_knm(eff_knm, geo_constraints)
 
-        layer_states = []
-        for layer in spec.layers:
-            osc_ids = layer_osc_ranges[layer.index]
-            if osc_ids:
-                r, psi_l = compute_order_parameter(phases[osc_ids])
-            else:
-                r, psi_l = 0.0, 0.0
-            ls_kwargs: dict = {"R": r, "psi": psi_l}
-            if amplitude_mode:
-                layer_r = amplitudes[osc_ids] if osc_ids else np.array([])
-                if layer_r.size > 0:
-                    ls_kwargs["mean_amplitude"] = float(np.mean(layer_r))
-                    mean_r = float(np.mean(layer_r))
-                    if mean_r > 0:
-                        ls_kwargs["amplitude_spread"] = float(np.std(layer_r) / mean_r)
-            layer_states.append(LayerState(**ls_kwargs))
-
-        n_layers = len(spec.layers)
-        cla = np.zeros((n_layers, n_layers))
-        for li in range(n_layers):
-            for lj in range(li + 1, n_layers):
-                ids_i = layer_osc_ranges[spec.layers[li].index]
-                ids_j = layer_osc_ranges[spec.layers[lj].index]
-                if ids_i and ids_j:
-                    pi, pj = phases[ids_i], phases[ids_j]
-                    min_len = min(len(pi), len(pj))
-                    plv = compute_plv(pi[:min_len], pj[:min_len])
-                    cla[li, lj] = plv
-                    cla[lj, li] = plv
-
-        mean_r_val = (
-            float(np.mean([ls.R for ls in layer_states])) if layer_states else 0.0
-        )
-        state_kwargs: dict = {
-            "layers": layer_states,
-            "cross_layer_alignment": cla,
-            "stability_proxy": mean_r_val,
-            "regime_id": regime_manager.current_regime.value,
-        }
-        if amplitude_mode:
-            state_kwargs["mean_amplitude"] = float(np.mean(amplitudes))
-            sub_count = int(np.sum(amplitudes < 0.1))
-            state_kwargs["subcritical_fraction"] = (
-                sub_count / n_osc if n_osc > 0 else 0.0
-            )
-            if len(phases_history) >= 20:
-                recent_ph = np.array(phases_history[-20:])
-                recent_am = np.array(amps_history[-20:])
-                pac_vals = [
-                    modulation_index(recent_ph[:, i], recent_am[:, i])
-                    for i in range(n_osc)
-                ]
-                state_kwargs["pac_max"] = float(max(pac_vals))
-
-        upde_state = UPDEState(**state_kwargs)
-        obs_values: dict[str, float] = {"R": upde_state.stability_proxy}
-        if amplitude_mode:
-            obs_values["mean_amplitude"] = upde_state.mean_amplitude
-            obs_values["pac_max"] = upde_state.pac_max
-            obs_values["subcritical_fraction"] = upde_state.subcritical_fraction
-        for i, ls in enumerate(layer_states):
-            obs_values[f"R_{i}"] = ls.R
-        boundary_state = boundary_observer.observe(obs_values, step=step_idx)
-        actions = supervisor.decide(upde_state, boundary_state, petri_ctx=obs_values)
-
-        if policy_engine is not None:
-            actions.extend(
-                policy_engine.evaluate(
-                    regime_manager.current_regime,
-                    upde_state,
-                    spec.objectives.good_layers,
-                    spec.objectives.bad_layers,
+            input_phases = phases.copy()
+            if amplitude_mode and sl_engine is not None and mu is not None:
+                assert coupling.knm_r is not None  # nosec B101
+                eff_mu = mu
+                if imprint_model is not None and imprint_state is not None:
+                    eff_mu = imprint_model.modulate_mu(mu, imprint_state)
+                sl_state = sl_engine.step(
+                    sl_state,
+                    omegas,
+                    eff_mu,
+                    eff_knm,
+                    coupling.knm_r,
+                    zeta,
+                    psi_target,
+                    eff_alpha,
+                    epsilon=spec.amplitude.epsilon,  # type: ignore[union-attr]
                 )
+                phases = sl_state[:n_osc]
+                amplitudes = sl_state[n_osc:]
+                phases_history.append(phases.copy())
+                amps_history.append(amplitudes.copy())
+            else:
+                assert upde_engine is not None  # nosec B101
+                phases = upde_engine.step(
+                    phases, omegas, eff_knm, zeta, psi_target, eff_alpha
+                )
+
+            layer_states = []
+            for layer in spec.layers:
+                osc_ids = layer_osc_ranges[layer.index]
+                if osc_ids:
+                    r, psi_l = compute_order_parameter(phases[osc_ids])
+                else:
+                    r, psi_l = 0.0, 0.0
+                ls_kwargs: dict = {"R": r, "psi": psi_l}
+                if amplitude_mode:
+                    layer_r = amplitudes[osc_ids] if osc_ids else np.array([])
+                    if layer_r.size > 0:
+                        ls_kwargs["mean_amplitude"] = float(np.mean(layer_r))
+                        mean_r = float(np.mean(layer_r))
+                        if mean_r > 0:
+                            ls_kwargs["amplitude_spread"] = float(
+                                np.std(layer_r) / mean_r
+                            )
+                layer_states.append(LayerState(**ls_kwargs))
+
+            n_layers = len(spec.layers)
+            cla = np.zeros((n_layers, n_layers))
+            for li in range(n_layers):
+                for lj in range(li + 1, n_layers):
+                    ids_i = layer_osc_ranges[spec.layers[li].index]
+                    ids_j = layer_osc_ranges[spec.layers[lj].index]
+                    if ids_i and ids_j:
+                        pi, pj = phases[ids_i], phases[ids_j]
+                        min_len = min(len(pi), len(pj))
+                        plv = compute_plv(pi[:min_len], pj[:min_len])
+                        cla[li, lj] = plv
+                        cla[lj, li] = plv
+
+            mean_r_val = (
+                float(np.mean([ls.R for ls in layer_states])) if layer_states else 0.0
+            )
+            state_kwargs: dict = {
+                "layers": layer_states,
+                "cross_layer_alignment": cla,
+                "stability_proxy": mean_r_val,
+                "regime_id": regime_manager.current_regime.value,
+            }
+            if amplitude_mode:
+                state_kwargs["mean_amplitude"] = float(np.mean(amplitudes))
+                sub_count = int(np.sum(amplitudes < 0.1))
+                state_kwargs["subcritical_fraction"] = (
+                    sub_count / n_osc if n_osc > 0 else 0.0
+                )
+                if len(phases_history) >= 20:
+                    recent_ph = np.array(phases_history[-20:])
+                    recent_am = np.array(amps_history[-20:])
+                    pac_vals = [
+                        modulation_index(recent_ph[:, i], recent_am[:, i])
+                        for i in range(n_osc)
+                    ]
+                    state_kwargs["pac_max"] = float(max(pac_vals))
+
+            upde_state = UPDEState(**state_kwargs)
+            obs_values: dict[str, float] = {"R": upde_state.stability_proxy}
+            if amplitude_mode:
+                obs_values["mean_amplitude"] = upde_state.mean_amplitude
+                obs_values["pac_max"] = upde_state.pac_max
+                obs_values["subcritical_fraction"] = upde_state.subcritical_fraction
+            for i, ls in enumerate(layer_states):
+                obs_values[f"R_{i}"] = ls.R
+            boundary_state = boundary_observer.observe(obs_values, step=step_idx)
+            actions = supervisor.decide(
+                upde_state, boundary_state, petri_ctx=obs_values
             )
 
-        actions = [projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions]
-
-        for act in actions:
-            if act.knob == "zeta":
-                zeta = min(zeta + act.value, 0.5)
-                zeta_ttl = int(act.ttl_s / spec.sample_period_s)
-            elif act.knob == "K":
-                if act.scope == "global":
-                    coupling = CouplingState(
-                        knm=coupling.knm * (1.0 + act.value),
-                        alpha=coupling.alpha,
-                        active_template=coupling.active_template,
+            if policy_engine is not None:
+                actions.extend(
+                    policy_engine.evaluate(
+                        regime_manager.current_regime,
+                        upde_state,
+                        spec.objectives.good_layers,
+                        spec.objectives.bad_layers,
                     )
-                elif act.scope.startswith("layer_"):
-                    idx = int(act.scope.split("_", 1)[1])
-                    new_knm = coupling.knm.copy()
-                    new_knm[idx, :] *= 1.0 + act.value
-                    new_knm[:, idx] *= 1.0 + act.value
-                    coupling = CouplingState(
-                        knm=new_knm,
-                        alpha=coupling.alpha,
-                        active_template=coupling.active_template,
-                    )
-            elif act.knob == "Psi":
-                psi_target = act.value
-            prev_values[act.knob] = act.value
+                )
 
-        if imprint_model is not None and imprint_state is not None:
-            exposure = np.array(
-                [
-                    layer_states[i].R
-                    for i, layer in enumerate(spec.layers)
-                    for _ in layer.oscillator_ids
-                ]
-            )
-            imprint_state = imprint_model.update(
-                imprint_state, exposure, spec.sample_period_s
-            )
+            actions = [
+                projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions
+            ]
 
+            for act in actions:
+                if act.knob == "zeta":
+                    zeta = min(zeta + act.value, 0.5)
+                    zeta_ttl = int(act.ttl_s / spec.sample_period_s)
+                elif act.knob == "K":
+                    if act.scope == "global":
+                        coupling = CouplingState(
+                            knm=coupling.knm * (1.0 + act.value),
+                            alpha=coupling.alpha,
+                            active_template=coupling.active_template,
+                        )
+                    elif act.scope.startswith("layer_"):
+                        idx = int(act.scope.split("_", 1)[1])
+                        new_knm = coupling.knm.copy()
+                        new_knm[idx, :] *= 1.0 + act.value
+                        new_knm[:, idx] *= 1.0 + act.value
+                        new_knm[idx, idx] = 0.0
+                        coupling = CouplingState(
+                            knm=new_knm,
+                            alpha=coupling.alpha,
+                            active_template=coupling.active_template,
+                        )
+                elif act.knob == "Psi":
+                    psi_target = act.value
+                prev_values[act.knob] = act.value
+
+            if imprint_model is not None and imprint_state is not None:
+                exposure = np.array(
+                    [
+                        layer_states[i].R
+                        for i, layer in enumerate(spec.layers)
+                        for _ in layer.oscillator_ids
+                    ]
+                )
+                imprint_state = imprint_model.update(
+                    imprint_state, exposure, spec.sample_period_s
+                )
+
+            if audit_logger is not None:
+                audit_logger.log_step(
+                    step_idx,
+                    upde_state,
+                    actions,
+                    phases=input_phases,
+                    omegas=omegas,
+                    knm=eff_knm,
+                    alpha=eff_alpha,
+                    zeta=zeta,
+                    psi_drive=psi_target,
+                )
+
+        # Final coherence
+        good_phases = [
+            phases[i]
+            for idx in spec.objectives.good_layers
+            for i in layer_osc_ranges.get(idx, [])
+        ]
+        bad_phases = [
+            phases[i]
+            for idx in spec.objectives.bad_layers
+            for i in layer_osc_ranges.get(idx, [])
+        ]
+
+        r_good = (
+            compute_order_parameter(np.array(good_phases))[0] if good_phases else 0.0
+        )
+        r_bad = compute_order_parameter(np.array(bad_phases))[0] if bad_phases else 0.0
+
+        regime = regime_manager.current_regime.value
+        msg = f"R_good={r_good:.4f}  R_bad={r_bad:.4f}  regime={regime}"
+        if amplitude_mode:
+            mean_a = float(np.mean(amplitudes))
+            msg += f"  mean_amplitude={mean_a:.4f}"
+        click.echo(msg)
+    finally:
         if audit_logger is not None:
-            audit_logger.log_step(
-                step_idx,
-                upde_state,
-                actions,
-                phases=input_phases,
-                omegas=omegas,
-                knm=eff_knm,
-                alpha=eff_alpha,
-                zeta=zeta,
-                psi_drive=psi_target,
-            )
-
-    if audit_logger is not None:
-        for evt in event_bus.history:
-            audit_logger.log_event(evt.kind, {"step": evt.step, "detail": evt.detail})
-        audit_logger.close()
-
-    # Final coherence
-    good_phases = [
-        phases[i]
-        for idx in spec.objectives.good_layers
-        for i in layer_osc_ranges.get(idx, [])
-    ]
-    bad_phases = [
-        phases[i]
-        for idx in spec.objectives.bad_layers
-        for i in layer_osc_ranges.get(idx, [])
-    ]
-
-    r_good = compute_order_parameter(np.array(good_phases))[0] if good_phases else 0.0
-    r_bad = compute_order_parameter(np.array(bad_phases))[0] if bad_phases else 0.0
-
-    regime = regime_manager.current_regime.value
-    msg = f"R_good={r_good:.4f}  R_bad={r_bad:.4f}  regime={regime}"
-    if amplitude_mode:
-        mean_a = float(np.mean(amplitudes))
-        msg += f"  mean_amplitude={mean_a:.4f}"
-    click.echo(msg)
+            for evt in event_bus.history:
+                audit_logger.log_event(
+                    evt.kind, {"step": evt.step, "detail": evt.detail}
+                )
+            audit_logger.close()
 
 
 @main.command()

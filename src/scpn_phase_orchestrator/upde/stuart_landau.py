@@ -87,7 +87,7 @@ class StuartLandauEngine:
                 n_oscillators, dt=dt, method=method, n_substeps=1, atol=atol, rtol=rtol
             )
             self._use_rust = True
-        except (ImportError, Exception):  # noqa: BLE001, S110
+        except ImportError:
             pass  # Rust unavailable — fall through to Python
 
         n = n_oscillators
@@ -199,9 +199,13 @@ class StuartLandauEngine:
         if zeta != 0.0:
             self._scratch_dtheta += zeta * np.sin(psi - theta)
 
+        # Clamp r >= 0 for coupling: intermediate RK stages can produce
+        # negative amplitudes that flip the coupling sign (P1-1 audit fix).
+        r_clamped = np.maximum(r, 0.0)
+
         np.cos(self._phase_diff, out=self._cos_diff)
         np.sum(
-            knm_r * self._cos_diff * r[np.newaxis, :],
+            knm_r * self._cos_diff * r_clamped[np.newaxis, :],
             axis=1,
             out=self._scratch_dr,
         )

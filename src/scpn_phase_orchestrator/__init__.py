@@ -14,17 +14,29 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0+unknown"
 
+from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.binding.types import BindingSpec
+from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.exceptions import SPOError
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 from scpn_phase_orchestrator.supervisor import ControlAction
+from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 __all__ = [
+    "AuditLogger",
     "BindingSpec",
+    "BoundaryObserver",
     "ControlAction",
+    "CouplingBuilder",
     "PhaseExtractor",
     "PhaseState",
+    "RegimeManager",
+    "SPOError",
     "StuartLandauEngine",
+    "SupervisorPolicy",
     "UPDEEngine",
 ]

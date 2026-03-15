@@ -82,6 +82,7 @@ impl PyUPDEStepper {
     }
 
     /// Advance phases by one step. Returns new phases as numpy array.
+    #[allow(clippy::too_many_arguments)]
     fn step<'py>(
         &mut self,
         py: Python<'py>,
@@ -568,6 +569,44 @@ impl PyStuartLandauStepper {
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         self.inner
             .step(&mut s, o, m, k, kr, zeta, psi, a, epsilon)
+            .map_err(spo_err)?;
+        Ok(s)
+    }
+
+    /// Run n_steps. Returns final state list (2N).
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, n_steps))]
+    fn run(
+        &mut self,
+        state: Vec<f64>,
+        omegas: PyReadonlyArray1<'_, f64>,
+        mu: PyReadonlyArray1<'_, f64>,
+        knm: PyReadonlyArray1<'_, f64>,
+        knm_r: PyReadonlyArray1<'_, f64>,
+        zeta: f64,
+        psi: f64,
+        alpha: PyReadonlyArray1<'_, f64>,
+        epsilon: f64,
+        n_steps: u64,
+    ) -> PyResult<Vec<f64>> {
+        let mut s = state;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let m = mu
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let kr = knm_r
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        self.inner
+            .run(&mut s, o, m, k, kr, zeta, psi, a, epsilon, n_steps)
             .map_err(spo_err)?;
         Ok(s)
     }

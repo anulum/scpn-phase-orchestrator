@@ -70,6 +70,9 @@ class RegimeManager:
         if is_recovering and avg_r < _R_DEGRADED + self._hysteresis:
             return Regime.RECOVERY
 
+        if self._current == Regime.CRITICAL:
+            return Regime.RECOVERY
+
         return Regime.NOMINAL
 
     def transition(self, proposed: Regime) -> Regime:

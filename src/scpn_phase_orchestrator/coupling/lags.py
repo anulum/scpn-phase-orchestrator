@@ -28,15 +28,19 @@ class LagModel:
         return float(lag_samples / sample_rate)
 
     def build_alpha_matrix(
-        self, lag_estimates: dict[tuple[int, int], float], n_layers: int
+        self,
+        lag_estimates: dict[tuple[int, int], float],
+        n_layers: int,
+        carrier_freq_hz: float = 1.0,
     ) -> NDArray:
         """Pairwise lag estimates (seconds) to phase-offset matrix (radians).
 
-        Assumes lag in fractions of nominal cycle period.
-        alpha[i,j] = 2*pi*lag[i,j], antisymmetric.
+        alpha[i,j] = 2*pi*carrier_freq_hz*lag[i,j], antisymmetric.
+        ``carrier_freq_hz`` defaults to 1.0 for backward compatibility.
         """
         alpha = np.zeros((n_layers, n_layers), dtype=np.float64)
         for (i, j), lag in lag_estimates.items():
-            alpha[i, j] = 2.0 * np.pi * lag
-            alpha[j, i] = -2.0 * np.pi * lag
+            offset = 2.0 * np.pi * carrier_freq_hz * lag
+            alpha[i, j] = offset
+            alpha[j, i] = -offset
         return alpha

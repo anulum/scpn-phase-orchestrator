@@ -90,9 +90,17 @@ def test_recovery_when_current_is_critical():
     assert regime == Regime.RECOVERY
 
 
-def test_critical_to_nominal_when_r_exceeds_band():
+def test_critical_must_pass_through_recovery():
     mgr = RegimeManager(cooldown_steps=0)
     mgr._current = Regime.CRITICAL
+    state = _make_state([0.7, 0.75])
+    regime = mgr.evaluate(state, _clean_boundary())
+    assert regime == Regime.RECOVERY
+
+
+def test_recovery_to_nominal_when_r_exceeds_band():
+    mgr = RegimeManager(cooldown_steps=0)
+    mgr._current = Regime.RECOVERY
     state = _make_state([0.7, 0.75])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.NOMINAL
