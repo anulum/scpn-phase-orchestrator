@@ -37,9 +37,11 @@ class CouplingBuilder:
 
             d = PyCouplingBuilder().build(n_layers, base_strength, decay_alpha)
             n = d["n"]
-            knm = np.asarray(d["knm"], dtype=np.float64).reshape(n, n)
-            alpha = np.asarray(d["alpha"], dtype=np.float64).reshape(n, n)
-            return CouplingState(knm=knm, alpha=alpha, active_template="default")
+            rust_knm = np.asarray(d["knm"], dtype=np.float64).reshape(n, n)
+            rust_alpha = np.asarray(d["alpha"], dtype=np.float64).reshape(n, n)
+            return CouplingState(
+                knm=rust_knm, alpha=rust_alpha, active_template="default"
+            )
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
         knm = base_strength * np.exp(-decay_alpha * dist)

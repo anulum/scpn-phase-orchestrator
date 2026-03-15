@@ -45,8 +45,7 @@ def extract_envelope(amplitudes_history: NDArray, window: int = 10) -> NDArray:
     cs = np.vstack([np.zeros((1, sq.shape[1]), dtype=np.float64), cs])
     rms = np.sqrt((cs[window:] - cs[:-window]) / window)
     first = rms[0] if rms.shape[0] > 0 else np.zeros(sq.shape[1])
-    pad = np.tile(first, (window - 1, 1))
-    return np.vstack([pad, rms])
+    return np.vstack([np.tile(first, (window - 1, 1)), rms])
 
 
 def envelope_modulation_depth(envelope: NDArray) -> float:
