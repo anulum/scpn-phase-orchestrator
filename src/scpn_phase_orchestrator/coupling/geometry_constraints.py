@@ -17,6 +17,7 @@ __all__ = [
     "SymmetryConstraint",
     "NonNegativeConstraint",
     "project_knm",
+    "validate_knm",
 ]
 
 
@@ -35,6 +36,22 @@ class NonNegativeConstraint(GeometryConstraint):
     def project(self, knm: NDArray) -> NDArray:
         result: NDArray = np.maximum(knm, 0.0)
         return result
+
+
+def validate_knm(knm: NDArray, *, atol: float = 1e-12) -> None:
+    """Check that a coupling matrix is square, symmetric, non-negative, zero-diagonal.
+
+    Raises ValueError with a specific message on the first violation found.
+    """
+    if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
+        raise ValueError(f"Knm must be square, got shape {knm.shape}")
+    if not np.allclose(knm, knm.T, atol=atol):
+        raise ValueError("Knm is not symmetric")
+    if np.any(knm < -atol):
+        raise ValueError("Knm contains negative entries")
+    diag_max = float(np.max(np.abs(np.diag(knm))))
+    if diag_max > atol:
+        raise ValueError(f"Knm diagonal is non-zero (max |diag| = {diag_max:.2e})")
 
 
 def project_knm(knm: NDArray, constraints: list[GeometryConstraint]) -> NDArray:

@@ -76,6 +76,18 @@ class BoundaryDef:
     upper: float | None
     severity: str  # "soft" or "hard"
 
+    def __post_init__(self) -> None:
+        if (
+            self.lower is not None
+            and self.upper is not None
+            and self.lower >= self.upper
+        ):
+            msg = (
+                f"BoundaryDef {self.name!r}: "
+                f"lower ({self.lower}) must be < upper ({self.upper})"
+            )
+            raise ValueError(msg)
+
 
 @dataclass(frozen=True)
 class ActuatorMapping:

@@ -19,4 +19,6 @@ class PrometheusAdapter:
     def fetch_metric(
         self, query: str, start: float, end: float, step: float
     ) -> NDArray:
-        raise NotImplementedError("Prometheus adapter planned for v0.3, see ROADMAP.md")
+        raise NotImplementedError(  # TODO(gh-21): implement fetch_metric
+            "Prometheus adapter planned for v0.3, see ROADMAP.md"
+        )

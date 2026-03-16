@@ -35,6 +35,11 @@ impl ImprintModel {
     }
 
     /// Update imprint state: exponential decay + exposure accumulation.
+    ///
+    /// # Arguments
+    ///
+    /// * `exposure` - Per-oscillator exposure intensities (length N).
+    /// * `dt` - Integration timestep in seconds.
     pub fn update(&mut self, exposure: &[f64], dt: f64) {
         let decay = (-self.decay_rate * dt).exp();
         for (m_k, &e_k) in self.m.iter_mut().zip(exposure.iter()) {

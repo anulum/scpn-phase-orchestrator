@@ -1543,14 +1543,8 @@ class TestBindingValidatorExtras:
     def test_boundary_lower_gt_upper(self, sample_binding_spec):
         from scpn_phase_orchestrator.binding.types import BoundaryDef
 
-        bad_bounds = [
-            BoundaryDef(
-                name="inv", variable="R", lower=0.9, upper=0.1, severity="hard"
-            ),
-        ]
-        bad = replace(sample_binding_spec, boundaries=bad_bounds)
-        errors = validate_binding_spec(bad)
-        assert any("lower" in e and "upper" in e for e in errors)
+        with pytest.raises(ValueError, match="lower.*upper"):
+            BoundaryDef(name="inv", variable="R", lower=0.9, upper=0.1, severity="hard")
 
     def test_actuator_scope_unknown(self, sample_binding_spec):
         from scpn_phase_orchestrator.binding.types import ActuatorMapping

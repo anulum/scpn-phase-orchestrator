@@ -18,6 +18,11 @@ impl Default for PhaseQualityScorer {
 
 impl PhaseQualityScorer {
     /// Weighted average quality. `qualities` and `amplitudes` must be same length.
+    ///
+    /// # Arguments
+    ///
+    /// * `qualities` - Per-oscillator quality values in [0, 1].
+    /// * `amplitudes` - Per-oscillator amplitudes used as weights.
     #[must_use]
     pub fn score(&self, qualities: &[f64], amplitudes: &[f64]) -> f64 {
         if qualities.is_empty() {
