@@ -7,6 +7,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 [![Docs](https://img.shields.io/badge/docs-gh--pages-blue)](https://anulum.github.io/scpn-phase-orchestrator/)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12193/badge)](https://www.bestpractices.dev/projects/12193)
 
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
