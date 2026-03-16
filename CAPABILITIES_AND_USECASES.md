@@ -6,7 +6,7 @@ $$ \frac{d\theta_i}{dt} = \omega_i + \frac{K}{N} \sum_{j=1}^{N} A_{ij} \sin(\the
 
 ### Technical Specifications:
 *   **`spo-kernel` (Rust PyO3 Backend):** The heavy lifting of the numerical integration (`euler`, `rk4`, `rk45`) is completely offloaded to a locally compiled, memory-safe Rust kernel, ensuring zero-overhead parallel computation.
-*   **Benchmark Performance:** 
+*   **Benchmark Performance:**
     *   **High-Frequency Control ($N=16$):** Integrates standard 16-layer systems in just **7.3 microseconds** per step.
     *   **Massive Swarms ($N=1,024$):** Calculates full dense-matrix interactions in **8.6 milliseconds** (~120 Hz).
     *   **City-Scale Networks ($N=10,000$):** Successfully allocates and integrates $100,000,000$ edge connections in **~850 milliseconds**.
