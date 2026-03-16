@@ -542,7 +542,9 @@ fn compute_derivative(
         for j in 0..n {
             let diff = theta[j] - theta[i];
             phase_coupling += knm[i * n + j] * (diff - alpha[i * n + j]).sin();
-            amp_coupling += knm_r[i * n + j] * r[j] * diff.cos();
+            // Clamp r_j >= 0: intermediate RK stages can go negative,
+            // flipping the coupling sign (Python parity fix).
+            amp_coupling += knm_r[i * n + j] * r[j].max(0.0) * diff.cos();
         }
         out[i] = omegas[i] + phase_coupling;
         if zeta != 0.0 {

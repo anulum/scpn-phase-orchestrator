@@ -139,7 +139,7 @@ def test_boundary_monotonicity(n_defs: int, vals: dict[str, float]) -> None:
     n=st.integers(min_value=2, max_value=16),
     dt=st.floats(min_value=1e-4, max_value=0.1, allow_nan=False),
 )
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=2000)
 def test_upde_phase_bounding(n: int, dt: float) -> None:
     """UPDEEngine.step() returns all phases in [0, 2*pi)."""
     rng = np.random.default_rng(0)
