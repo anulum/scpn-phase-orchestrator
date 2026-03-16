@@ -25,7 +25,7 @@ UPDEEngine
     |              + sum_j K_ij sin(theta_j - theta_i - alpha_ij)
     |              + zeta sin(Psi - theta_i)
     |
-    |  Methods: Euler (default), RK4
+    |  Methods: Euler (default), RK4, RK45 (adaptive Dormand-Prince)
     |  Output: phases, R per layer, cross-layer alignment
     v
 ImprintModel (optional)
@@ -76,16 +76,21 @@ A new domain requires writing a binding spec and (optionally) custom extractors.
 
 | Structure | Module | Purpose |
 |-----------|--------|---------|
-| `BindingSpec` | `binding.types` | Domain declaration |
+| `BindingSpec` | `binding.types` | Domain declaration (YAML) |
 | `PhaseState` | `oscillators.base` | Extracted phase per oscillator |
-| `CouplingState` | `coupling.knm` | Knm + alpha matrices + active template |
-| `UPDEState` | `upde.metrics` | R per layer, cross-layer alignment, regime |
+| `CouplingState` | `coupling.knm` | Knm + alpha + knm_r matrices + active template |
+| `UPDEState` | `upde.metrics` | R per layer, cross-layer alignment, regime, amplitude metrics |
 | `BoundaryState` | `monitor.boundaries` | Violations (soft/hard) |
 | `ControlAction` | `actuation.mapper` | Knob adjustment command |
 | `ImprintState` | `imprint.state` | Memory imprint vector |
 | `ImprintModel` | `imprint.update` | Exponential exposure accumulation with decay and saturation |
 | `PolicyRule` | `supervisor.policy_rules` | YAML-declared condition→action rule |
 | `PolicyEngine` | `supervisor.policy_rules` | Evaluates domain policy rules against current state |
+| `StuartLandauEngine` | `upde.stuart_landau` | Coupled phase-amplitude ODE integrator (v0.4) |
+| `AmplitudeSpec` | `binding.types` | Stuart-Landau amplitude config (v0.4) |
+| `SPOError` | `exceptions` | Centralized exception hierarchy |
+| `PetriNet` | `supervisor.petri_net` | Protocol sequencing FSM (v0.3) |
+| `RegimeEvent` | `supervisor.events` | Event bus pub/sub for regime transitions (v0.3) |
 
 ## Audit and Replay
 

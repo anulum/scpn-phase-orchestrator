@@ -21,7 +21,9 @@ pip install -e ".[dev,plot]"
 jupyter lab notebooks/
 ```
 
-All notebooks are validated in CI via `jupyter nbconvert --execute`.
+The 5 notebooks above are validated in CI via `jupyter nbconvert --execute`.
+The remaining 19 domainpacks ship a `binding_spec.yaml` and `run.py` but do not
+yet have dedicated notebooks.
 
 ## Adding a New Domainpack
 

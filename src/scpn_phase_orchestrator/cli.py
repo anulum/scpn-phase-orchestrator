@@ -223,6 +223,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
         psi_driver = SymbolicDriver(
             sequence=spec.drivers.symbolic["sequence"],
         )
+    control_interval = max(1, round(spec.control_period_s / spec.sample_period_s))
     audit_logger = AuditLogger(audit) if audit else None
     if audit_logger is not None:
         audit_logger.log_header(
@@ -345,27 +346,29 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             for i, ls in enumerate(layer_states):
                 obs_values[f"R_{i}"] = ls.R
             boundary_state = boundary_observer.observe(obs_values, step=step_idx)
-            actions = supervisor.decide(
-                upde_state, boundary_state, petri_ctx=obs_values
-            )
-
-            if policy_engine is not None:
-                actions.extend(
-                    policy_engine.evaluate(
-                        regime_manager.current_regime,
-                        upde_state,
-                        spec.objectives.good_layers,
-                        spec.objectives.bad_layers,
-                    )
+            actions: list = []
+            if step_idx % control_interval == 0:
+                actions = supervisor.decide(
+                    upde_state, boundary_state, petri_ctx=obs_values
                 )
 
-            actions = [
-                projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions
-            ]
+                if policy_engine is not None:
+                    actions.extend(
+                        policy_engine.evaluate(
+                            regime_manager.current_regime,
+                            upde_state,
+                            spec.objectives.good_layers,
+                            spec.objectives.bad_layers,
+                        )
+                    )
+
+                actions = [
+                    projector.project(a, prev_values.get(a.knob, 0.0)) for a in actions
+                ]
 
             for act in actions:
                 if act.knob == "zeta":
-                    zeta = min(zeta + act.value, 0.5)
+                    zeta = max(0.0, min(zeta + act.value, 0.5))
                     zeta_ttl = int(act.ttl_s / spec.sample_period_s)
                 elif act.knob == "K":
                     if act.scope == "global":

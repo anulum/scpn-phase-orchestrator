@@ -37,10 +37,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Contract drift**: Loader now resolves extractor_type aliases to algorithm names at parse time. Both `physical` and `hilbert` are valid input; internally normalized to algorithm names.
+- **Audit hash chain**: `_write_record` strips `_hash` key before digest to prevent user-data collision
+- **Stuart-Landau coupling**: clamp `r >= 0` in `_derivative` to prevent sign-flip in RK intermediate stages
+- **CLI audit logger**: simulation loop wrapped in `try/finally` to guarantee `close()` on exception
+- **Hilbert guard**: `PhysicalExtractor.extract()` validates signal shape before transform
+- **Lag model**: `build_alpha_matrix` uses `carrier_freq_hz` for correct seconds→radians conversion
+- **Exception swallowing**: `except Exception` → `except ImportError` in stuart_landau.py and pac.py
+- **Coupling diagonal**: layer-scoped K update zeros `knm[idx,idx]` after row/column scaling
+- **Regime state machine**: CRITICAL must pass through RECOVERY before NOMINAL
+- **Geometry projection**: `project_knm` zeros diagonal after constraint projection (Rust parity)
+- **Zeta lower bound**: `cli.py` zeta accumulation clamped to `max(0.0, ...)` to prevent negative drive
+- **Control period**: `control_period_s` from binding spec now gates supervisor/policy evaluation interval
+- **Gallery doc**: corrected "all notebooks validated in CI" to reflect actual 5/24 coverage
 
 ### Changed
 
 - `SECURITY.md` — updated supported versions, added Security Advisories link
+- `__init__.py` public API expanded: +`AuditLogger`, `BoundaryObserver`, `CouplingBuilder`, `RegimeManager`, `SPOError`, `SupervisorPolicy`
+- FFI: `PyStuartLandauStepper.run()` exposed via PyO3
+- Coverage guard: reporting threshold raised from 40% to 90%
+- `system_overview.md`: added RK45 to methods list, 5 missing data structures to key structures table
+- `CONTRIBUTING.md`: added `boundaries:`, `actuators:`, and `policy.yaml` examples
+- `ROADMAP.md`: corrected v0.4.1 test counts (1011 Python, 180 Rust)
+- `ASSUMPTIONS.md`: corrected CFL and max_dt line references
 
 ## [0.4.1] - 2026-03-04
 

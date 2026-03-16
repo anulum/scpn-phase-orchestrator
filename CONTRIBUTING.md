@@ -52,11 +52,29 @@ objectives:
   good_layers: [0]
   bad_layers: []
 
-boundaries: []
-actuators: []
+boundaries:
+  - name: r_floor
+    variable: R
+    lower: 0.2
+    severity: hard
+actuators:
+  - name: coupling_knob
+    knob: K
+    scope: global
 ```
 
-See `domainpacks/minimal_domain/binding_spec.yaml` for a complete example.
+Add a `policy.yaml` alongside the binding spec for domain-specific supervisor rules:
+
+```yaml
+rules:
+  - name: boost_coupling
+    condition: {metric: R, operator: "<", threshold: 0.5}
+    regime: degraded
+    actions:
+      - {knob: K, scope: global, value: 0.05, ttl_s: 5.0}
+```
+
+See `domainpacks/minimal_domain/` for a complete example.
 
 ## Adding Oscillators
 

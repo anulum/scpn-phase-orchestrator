@@ -73,8 +73,8 @@ See [references.bib](references.bib) for full bibliographic entries.
 
 | Constant | Value | Provenance | Used in |
 |----------|-------|------------|---------|
-| CFL-like bound | `dt < π / (max_ω + N·max_K + ζ)` | Derived. Phase change per step must stay below half-cycle; analogous to CFL condition [courant1928]. Euler-specific. | `upde/numerics.py:21` |
-| `max_dt` | 0.01 | Empirical. Default upper bound for integration timestep. | `upde/numerics.py:18` |
+| CFL-like bound | `dt < π / (max_ω + N·max_K + ζ)` | Derived. Phase change per step must stay below half-cycle; analogous to CFL condition [courant1928]. Euler-specific. | `upde/numerics.py:26` |
+| `max_dt` | 0.01 | Empirical. Default upper bound for integration timestep. | `upde/numerics.py:21` |
 
 ## RK45 Adaptive Integration
 
