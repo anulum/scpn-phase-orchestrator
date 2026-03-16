@@ -53,6 +53,7 @@ nav:
       - Domainpack Gallery: galleries/domainpack_gallery.md
   - Reference:
       - Assumptions & Constants: ASSUMPTIONS.md
+      - Bibliography: references.bib
 
 plugins:
   - search

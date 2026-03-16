@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `bench/bench_stuart_landau.py` — Stuart-Landau engine benchmark harness
+- `bench/baseline.json` — UPDE + SL baseline timing data (Python + Rust)
+- `tests/test_geometry_walk.py` — geometry_walk domainpack spec/run/policy tests
+- `tests/test_queuewaves_pipeline.py` — QueueWaves ConfigCompiler + PhaseComputePipeline tests
 - `ARCHITECTURE.md` — system overview, pipeline diagram, module map
 - `SUPPORT.md` — help channels, security advisories link
 - `GOVERNANCE.md` — decision process, project lead
@@ -73,6 +77,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CITATION.cff`: added `abstract` field
 - `bio_stub/README.md`: corrected boundary severity (lower: soft, not hard)
 - `safety_tier` runtime warning for non-research tiers
+- `pyproject.toml`: `scpn-all` extra now requires `spo-kernel>=0.2.0` (was stale `>=0.1.1`)
+- `docs/index.md`: added 6 missing nav entries to match `mkdocs.yml` (concepts, specs, gallery)
+- `mkdocs.yml`: added `references.bib` to Reference nav section
+- `README.md`: quickstart now includes `spo scaffold` example
+- `ruff.lint.ignore`: added `S603` (subprocess in tests is expected)
+- `CHANGELOG.md`: corrected QueueWaves path from `apps/queuewaves/` to full module path
 
 ## [0.4.1] - 2026-03-04
 
@@ -151,7 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OpenTelemetry export** — `OTelExporter` with span instrumentation, gauge metrics (`spo.r_global`, `spo.stability_proxy`), step counter; no-op fallback when `opentelemetry-api` is absent
 - `otel` optional dependency group (`opentelemetry-api>=1.20`, `opentelemetry-sdk>=1.20`)
 - Pre-commit hook for version consistency check across pyproject.toml, CITATION.cff, Cargo.toml
-- **QueueWaves** — real-time microservice cascade failure detector (`apps/queuewaves/`)
+- **QueueWaves** — real-time microservice cascade failure detector (`src/scpn_phase_orchestrator/apps/queuewaves/`)
   - PrometheusCollector with persistent async httpx client and ring buffers
   - PhaseComputePipeline wrapping UPDE engine for Kuramoto phase analysis
   - AnomalyDetector: retry-storm, cascade-propagation, chronic-degradation

@@ -44,7 +44,7 @@ quantum = ["scpn-quantum-control>=0.1.0"]
 plasma = ["scpn-control>=0.1.0"]
 fusion = ["scpn-fusion-core>=3.9.0"]
 scpn-all = [
-    "spo-kernel>=0.1.1",
+    "spo-kernel>=0.2.0",
     "scpn-quantum-control>=0.1.0",
     "scpn-control>=0.1.0",
     "scpn-fusion-core>=3.9.0",
@@ -97,7 +97,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
-ignore = ["S101", "N802", "N806"]
+ignore = ["S101", "S603", "N802", "N806"]
 
 [tool.mypy]
 strict = false

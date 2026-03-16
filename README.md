@@ -49,6 +49,9 @@ Domain Binder → Oscillator Extractors (P/I/S) → UPDE Engine → Supervisor �
 ```bash
 pip install -e ".[dev]"
 
+# Scaffold a new domainpack
+spo scaffold my_domain
+
 # Validate a domain binding spec
 spo validate domainpacks/minimal_domain/binding_spec.yaml
 
