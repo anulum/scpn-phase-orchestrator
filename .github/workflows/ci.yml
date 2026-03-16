@@ -13,6 +13,9 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -121,8 +124,8 @@ jobs:
         working-directory: spo-kernel
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e18c1f174353f47 # stable
-      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
         with:
           path: |
             ~/.cargo/registry
@@ -147,8 +150,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e18c1f174353f47 # stable
-      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
         with:
           path: |
             ~/.cargo/registry
@@ -179,7 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: rustsec/audit-check@69366f33c96575c4bbc24a1b60c1bf30810c16ea # v2.0.0
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: spo-kernel
@@ -191,8 +194,8 @@ jobs:
         working-directory: spo-kernel
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: dtolnay/rust-toolchain@1.75.0
-      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      - uses: dtolnay/rust-toolchain@5cdfcfbd9e32fbc2e562bfc289a94537ca9dba61 # 1.75.0
+      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
         with:
           path: |
             ~/.cargo/registry

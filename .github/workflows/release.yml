@@ -51,7 +51,7 @@ jobs:
           print(m.group(1).strip() if m else 'Release ' + sys.argv[1])
           " "$VERSION" > release_notes.md
 
-      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b  # v2
+      - uses: softprops/action-gh-release@26e8ad27a09a225049a7075d7ec1caa2df6ff332  # v2.6.0
         with:
           body_path: release_notes.md
           files: |

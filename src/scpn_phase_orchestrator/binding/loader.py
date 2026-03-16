@@ -49,7 +49,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
     path = Path(path)
     try:
         raw = path.read_text(encoding="utf-8")
-    except (FileNotFoundError, PermissionError) as exc:
+    except (FileNotFoundError, PermissionError, IsADirectoryError) as exc:
         raise BindingLoadError(f"cannot read {path}: {exc}") from exc
 
     if path.suffix in (".yaml", ".yml"):
