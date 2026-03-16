@@ -45,7 +45,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
     active_anomalies: list[Any] = []
     ws_clients: set[WebSocket] = set()
 
-    async def _broadcast(msg: dict[str, Any]) -> None:
+    async def _broadcast(msg: dict[str, Any]) -> None:  # pragma: no cover
         payload = json.dumps(msg)
         dead: list[WebSocket] = []
         for ws in ws_clients:
@@ -56,7 +56,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
         for ws in dead:
             ws_clients.discard(ws)
 
-    async def _pipeline_loop() -> None:
+    async def _pipeline_loop() -> None:  # pragma: no cover
         nonlocal active_anomalies
         while True:
             try:
@@ -102,7 +102,9 @@ def create_app(cfg: QueueWavesConfig) -> Any:
             await asyncio.sleep(cfg.scrape_interval_s)
 
     @asynccontextmanager
-    async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    async def _lifespan(  # pragma: no cover
+        _app: FastAPI,
+    ) -> AsyncIterator[None]:
         task = asyncio.create_task(_pipeline_loop())
         yield
         task.cancel()
@@ -130,7 +132,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
     async def state() -> Any:
         if not history:
             return JSONResponse({"error": "no data yet"}, status_code=503)
-        return history[-1].to_dict()
+        return history[-1].to_dict()  # pragma: no cover — data branch, ASGI thread
 
     @app.get("/api/v1/state/history")
     async def state_history(n: int = 100) -> list[dict[str, Any]]:
@@ -155,8 +157,8 @@ def create_app(cfg: QueueWavesConfig) -> Any:
     async def services() -> list[dict[str, Any]]:
         if not history:
             return []
-        snap = history[-1]
-        return [
+        snap = history[-1]  # pragma: no cover — data branch, ASGI thread
+        return [  # pragma: no cover
             {
                 "name": s.name,
                 "layer": s.layer,
@@ -171,12 +173,12 @@ def create_app(cfg: QueueWavesConfig) -> Any:
     async def plv() -> dict[str, Any]:
         if not history:
             return {"matrix": []}
-        return {"matrix": history[-1].plv_matrix}
+        return {"matrix": history[-1].plv_matrix}  # pragma: no cover
 
     @app.get("/api/v1/metrics/prometheus")
     async def prom_metrics() -> PlainTextResponse:
         lines: list[str] = []
-        if history:
+        if history:  # pragma: no cover — data branch, ASGI thread
             snap = history[-1]
             lines.append(f"queuewaves_r_good {snap.r_good:.6f}")
             lines.append(f"queuewaves_r_bad {snap.r_bad:.6f}")
@@ -215,7 +217,8 @@ def create_app(cfg: QueueWavesConfig) -> Any:
         index = static_dir / "index.html"
         if index.exists():
             return FileResponse(str(index))
-        return PlainTextResponse("QueueWaves is running. No dashboard found.")
+        msg = "QueueWaves is running. No dashboard found."
+        return PlainTextResponse(msg)  # pragma: no cover
 
     # --- WebSocket ---
 

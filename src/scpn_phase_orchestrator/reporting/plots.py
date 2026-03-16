@@ -17,7 +17,7 @@ try:
     from matplotlib.patches import Rectangle
 
     _HAS_MPL = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _HAS_MPL = False
 
 import numpy as np

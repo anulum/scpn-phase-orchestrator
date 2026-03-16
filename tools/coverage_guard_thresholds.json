@@ -1,17 +1,17 @@
 {
-  "global_min_line_rate": 90.0,
+  "global_min_line_rate": 95.0,
   "domain_min_line_rate": {
-    "coupling": 90.0,
-    "oscillators": 90.0,
-    "upde": 90.0,
-    "monitor": 90.0,
-    "supervisor": 90.0,
-    "binding": 90.0,
-    "audit": 90.0,
-    "imprint": 90.0,
-    "actuation": 90.0,
-    "drivers": 90.0,
-    "adapters": 90.0,
-    "reporting": 90.0
+    "coupling": 95.0,
+    "oscillators": 95.0,
+    "upde": 95.0,
+    "monitor": 95.0,
+    "supervisor": 95.0,
+    "binding": 95.0,
+    "audit": 95.0,
+    "imprint": 95.0,
+    "actuation": 95.0,
+    "drivers": 95.0,
+    "adapters": 95.0,
+    "reporting": 95.0
   }
 }

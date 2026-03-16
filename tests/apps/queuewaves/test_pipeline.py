@@ -79,3 +79,51 @@ def test_pipeline_plv_matrix_shape(minimal_config: QueueWavesConfig) -> None:
     assert len(snap.plv_matrix) == n_layers
     for row in snap.plv_matrix:
         assert len(row) == n_layers
+
+
+def test_pipeline_regime_property(minimal_config: QueueWavesConfig) -> None:
+    pipe = PhaseComputePipeline(minimal_config)
+    assert pipe.regime in ("nominal", "degraded", "critical", "recovery")
+
+
+def test_pipeline_imprint_levels_property(minimal_config: QueueWavesConfig) -> None:
+    pipe = PhaseComputePipeline(minimal_config)
+    levels = pipe.imprint_levels
+    assert levels.shape == (pipe._n_osc,)
+    np.testing.assert_allclose(levels, 0.0)
+
+
+def test_pipeline_empty_layer_osc_range() -> None:
+    """A layer with no oscillators should yield r=0.0, psi=0.0 (line 181)."""
+    from scpn_phase_orchestrator.apps.queuewaves.config import (
+        CouplingConfig,
+        QueueWavesConfig,
+        ServerConfig,
+        ServiceDef,
+        ThresholdConfig,
+    )
+    from scpn_phase_orchestrator.binding.types import HierarchyLayer
+
+    cfg = QueueWavesConfig(
+        prometheus_url="http://localhost:9090",
+        services=[
+            ServiceDef(name="a", promql="up", layer="micro"),
+        ],
+        scrape_interval_s=1.0,
+        buffer_length=16,
+        thresholds=ThresholdConfig(),
+        coupling=CouplingConfig(),
+        alert_sinks=[],
+        server=ServerConfig(port=0),
+    )
+    pipe = PhaseComputePipeline(cfg)
+
+    # Inject an empty-oscillator layer into the spec and ranges
+    empty_layer = HierarchyLayer(name="ghost", index=99, oscillator_ids=[])
+    pipe._spec.layers.append(empty_layer)
+    pipe._layer_osc_ranges[99] = []
+
+    rng = np.random.default_rng(5)
+    buffers = {"a": rng.standard_normal(16)}
+    snap = pipe.tick(buffers)
+    assert snap.tick == 1

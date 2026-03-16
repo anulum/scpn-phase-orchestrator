@@ -31,7 +31,7 @@ class PhysicalExtractor(PhaseExtractor):
             )
         analytic = hilbert(signal)
 
-        if _HAS_RUST:
+        if _HAS_RUST:  # pragma: no cover
             from spo_kernel import physical_extract
 
             theta, omega, amplitude, quality = physical_extract(

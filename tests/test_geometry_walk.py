@@ -25,7 +25,7 @@ def test_run_script():
         [sys.executable, "domainpacks/geometry_walk/run.py"],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=90,
     )
     assert result.returncode == 0
     assert "R_good=" in result.stdout

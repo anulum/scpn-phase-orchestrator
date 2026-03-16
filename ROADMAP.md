@@ -53,7 +53,7 @@
 - Amplitude configs for 6 domainpacks (neuroscience_eeg, cardiac_rhythm, plasma_control, firefly_swarm, rotating_machinery, power_grid)
 - `CoherencePlot` matplotlib implementations (R timeline, regime timeline, action audit, amplitude timeline, PAC heatmap)
 - Deep audit Phase 1: 12 correctness/safety fixes (hash chain, RK coupling, regime state machine, FFI `run()`, public API expansion)
-- 1023 Python tests, 180 Rust tests
+- 1142 Python tests, 180 Rust tests
 
 ## v1.0
 

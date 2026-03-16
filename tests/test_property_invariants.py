@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import numpy as np
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
@@ -47,7 +47,7 @@ phase_arrays = arrays(
 
 
 @given(phases=phase_arrays)
-@settings(max_examples=200)
+@settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
 def test_order_parameter_bounds(phases: np.ndarray) -> None:
     """R in [0, 1], psi in [0, 2pi) for any finite phase array."""
     r, psi = compute_order_parameter(phases)

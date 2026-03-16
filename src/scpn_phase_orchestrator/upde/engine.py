@@ -60,7 +60,7 @@ class UPDEEngine:
         self._last_dt = dt
 
         self._rust = None
-        if _HAS_RUST:
+        if _HAS_RUST:  # pragma: no cover
             from spo_kernel import PyUPDEStepper
 
             self._rust = PyUPDEStepper(n_oscillators, dt, method, atol=atol, rtol=rtol)
@@ -99,7 +99,7 @@ class UPDEEngine:
             raise ValueError(f"knm.shape={knm.shape}, expected ({n}, {n})")
         if alpha.shape != (n, n):
             raise ValueError(f"alpha.shape={alpha.shape}, expected ({n}, {n})")
-        if self._rust is not None:
+        if self._rust is not None:  # pragma: no cover
             return np.asarray(
                 self._rust.step(
                     np.ascontiguousarray(phases.ravel()),
@@ -127,7 +127,7 @@ class UPDEEngine:
         n_steps: int,
     ) -> NDArray:
         """Run n_steps, return final phases. Uses Rust batch API when available."""
-        if self._rust is not None:
+        if self._rust is not None:  # pragma: no cover
             return np.asarray(
                 self._rust.run(
                     np.ascontiguousarray(phases.ravel()),

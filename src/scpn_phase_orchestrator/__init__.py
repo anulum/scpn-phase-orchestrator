@@ -11,7 +11,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("scpn-phase-orchestrator")
-except PackageNotFoundError:
+except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0+unknown"
 
 from scpn_phase_orchestrator.audit.logger import AuditLogger

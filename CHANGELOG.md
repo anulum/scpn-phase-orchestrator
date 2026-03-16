@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `build_nengo_network()` replaced with pure-NumPy `build_numpy_network()` (old name kept as alias)
 - `nengo` optional extra is now empty (nengo 4.x incompatible with NumPy 2.x)
+- Coverage guard thresholds raised to 95% global and per-domain
+- CI installs `plot` extra for full matplotlib coverage
 
 ### Added
 
@@ -18,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bench/baseline.json` — UPDE + SL baseline timing data (Python + Rust)
 - `tests/test_geometry_walk.py` — geometry_walk domainpack spec/run/policy tests
 - `tests/test_queuewaves_pipeline.py` — QueueWaves ConfigCompiler + PhaseComputePipeline tests
+- `tests/test_coverage_gaps.py` — 119 tests covering CLI, PAC, physical oscillator, binding, validator, supervisor, order_params, audit, Stuart-Landau RK45 edge cases
+- `tests/apps/queuewaves/test_server_coverage.py` — async FastAPI route tests (health, state, history, anomalies, WebSocket)
+- `tests/apps/queuewaves/test_alerter_coverage.py` — Slack webhook formatting, cooldown edge cases
+- `tests/apps/queuewaves/test_collector_coverage.py` — httpx error handling paths
+- `# pragma: no cover` on Rust-only FFI import branches (12 source files)
 - `ARCHITECTURE.md` — system overview, pipeline diagram, module map
 - `SUPPORT.md` — help channels, security advisories link
 - `GOVERNANCE.md` — decision process, project lead

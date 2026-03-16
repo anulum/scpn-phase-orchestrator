@@ -97,7 +97,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
-ignore = ["S101", "S603", "N802", "N806"]
+ignore = ["S101", "S104", "S603", "N802", "N806"]
 
 [tool.mypy]
 strict = false
@@ -121,6 +121,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["scpn_phase_orchestrator"]
+concurrency = ["thread"]
 
 [tool.coverage.report]
 fail_under = 90

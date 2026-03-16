@@ -26,11 +26,11 @@ from scpn_phase_orchestrator.upde.metrics import UPDEState
 __all__ = ["OTelExporter"]
 
 try:
-    import opentelemetry.metrics as otel_metrics
-    import opentelemetry.trace as otel_trace
+    import opentelemetry.metrics as otel_metrics  # pragma: no cover
+    import opentelemetry.trace as otel_trace  # pragma: no cover
 
-    _HAS_OTEL = True
-except ModuleNotFoundError:
+    _HAS_OTEL = True  # pragma: no cover
+except ModuleNotFoundError:  # pragma: no cover
     _HAS_OTEL = False
 
 

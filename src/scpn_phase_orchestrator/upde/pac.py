@@ -19,7 +19,7 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
     Bins amplitude by phase, computes KL divergence from uniform.
     Returns MI ∈ [0, 1], normalised by log(n_bins).
     """
-    try:
+    try:  # pragma: no cover
         import spo_kernel  # noqa: PLC0415
 
         return float(
@@ -30,7 +30,7 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
             )
         )
     except ImportError:
-        pass  # Rust unavailable — fall through to Python
+        pass
     if theta_low.size == 0 or amp_high.size == 0:
         return 0.0
     n = min(theta_low.size, amp_high.size)

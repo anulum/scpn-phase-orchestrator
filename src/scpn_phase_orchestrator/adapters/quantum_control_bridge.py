@@ -102,7 +102,7 @@ class QuantumControlBridge:
                 "scpn-quantum-control is required for circuit construction. "
                 "Install with: pip install scpn-quantum-control"
             ) from exc
-        return xy_trotter_circuit(
+        return xy_trotter_circuit(  # pragma: no cover
             knm=knm,
             omegas=omegas,
             time=time,
@@ -122,4 +122,5 @@ class QuantumControlBridge:
                 "scpn-quantum-control is required for statevector analysis. "
                 "Install with: pip install scpn-quantum-control"
             ) from exc
-        return np.asarray(statevector_to_phases(statevector), dtype=np.float64) % TWO_PI
+        phases = statevector_to_phases(statevector)  # pragma: no cover
+        return np.asarray(phases, dtype=np.float64) % TWO_PI  # pragma: no cover
