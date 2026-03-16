@@ -7,29 +7,64 @@
 
 site_name: SCPN Phase Orchestrator
 site_url: https://anulum.github.io/scpn-phase-orchestrator
+site_description: Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
+site_author: Miroslav Šotek
 repo_url: https://github.com/anulum/scpn-phase-orchestrator
 repo_name: anulum/scpn-phase-orchestrator
+copyright: "© 1998–2026 Miroslav Šotek. All rights reserved."
 
 theme:
   name: material
   palette:
-    primary: deep purple
-    accent: amber
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - navigation.sections
     - navigation.expand
+    - navigation.tabs
+    - navigation.top
+    - navigation.indexes
     - content.code.copy
+    - content.code.annotate
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - "Tutorial: Hello World": getting-started/hello_world.md
   - Concepts:
       - System Overview: concepts/system_overview.md
       - "Oscillators & PIS": concepts/oscillators_PIS.md
-      - "Knobs: K, alpha, zeta, Psi": concepts/knobs_K_alpha_zeta_Psi.md
+      - "Knobs: K, α, ζ, Ψ": concepts/knobs_K_alpha_zeta_Psi.md
       - Memory Imprint: concepts/memory_imprint.md
       - Phase Control Theory: concepts/phase_control_theory.md
       - Domain Utilisation Schemas: concepts/domain_utilisation_schemas.md
-  - Specs:
+  - Guides:
+      - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
+      - QueueWaves Cascade Detector: guide/queuewaves.md
+      - Rust FFI Acceleration: guide/rust_ffi.md
+      - Adapter Bridges: guide/adapters.md
+      - Performance Tuning: guide/performance.md
+      - Production Deployment: guide/production.md
+  - Specifications:
       - Binding Spec Schema: specs/binding_spec.schema.json
       - Phase Contract: specs/phase_contract.md
       - UPDE Numerics: specs/upde_numerics.md
@@ -46,20 +81,84 @@ nav:
       - Knm Calibration: specs/knm_calibration.md
       - Audit Trace: specs/audit_trace.md
   - Tutorials:
-      - New Domain Checklist: tutorials/01_new_domain_checklist.md
-      - Oscillator Hunt Sheet: tutorials/02_oscillator_hunt_sheet.md
-      - Build Knm Templates: tutorials/03_build_knm_templates.md
+      - "00 — Hello World": getting-started/hello_world.md
+      - "01 — New Domain Checklist": tutorials/01_new_domain_checklist.md
+      - "02 — Oscillator Hunt Sheet": tutorials/02_oscillator_hunt_sheet.md
+      - "03 — Build Knm Templates": tutorials/03_build_knm_templates.md
+  - API Reference:
+      - Overview: reference/api/index.md
+      - Core & Exceptions: reference/api/core.md
+      - Binding: reference/api/binding.md
+      - UPDE Engine: reference/api/upde.md
+      - Oscillators: reference/api/oscillators.md
+      - Coupling: reference/api/coupling.md
+      - Supervisor: reference/api/supervisor.md
+      - Monitor: reference/api/monitor.md
+      - Actuation: reference/api/actuation.md
+      - Imprint: reference/api/imprint.md
+      - Drivers: reference/api/drivers.md
+      - Audit: reference/api/audit.md
+      - Reporting: reference/api/reporting.md
+      - Adapters: reference/api/adapters.md
+      - QueueWaves: reference/api/queuewaves.md
+      - CLI Reference: reference/cli.md
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md
+      - Capabilities & Use Cases: galleries/capabilities.md
   - Reference:
       - Assumptions & Constants: ASSUMPTIONS.md
+      - Competitive Analysis: competitive_analysis.md
       - Bibliography: references.bib
+  - FAQ: faq.md
 
 plugins:
   - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_category_heading: true
+            members_order: source
+            show_signature_annotations: true
+            separate_signature: true
+            docstring_style: google
+            merge_init_into_class: true
 
 markdown_extensions:
   - admonition
-  - codehilite
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - def_list
+
+extra_javascript:
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/anulum/scpn-phase-orchestrator
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/scpn-phase-orchestrator/
