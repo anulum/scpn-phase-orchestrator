@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src/scpn_phase_orchestrator/exceptions.py` — centralized exception hierarchy (`SPOError`, `BindingError`, `ValidationError`, `ExtractorError`, `EngineError`, `PolicyError`, `AuditError`)
 - `resolve_extractor_type()` in `binding/types.py` — maps aliases (`physical`/`informational`/`symbolic`) to algorithm names (`hilbert`/`event`/`ring`)
 - `Discussions` link in `[project.urls]`
+- `spo report` command: coherence summary from audit log (text + `--json-out`)
+- `spo replay --verify` for Stuart-Landau logs (chained phase-amplitude replay)
+- `ReplayEngine.verify_determinism_sl_chained()` for SL audit log verification
+- `linux-aarch64` wheel target in `publish.yml`
 
 ### Fixed
 
@@ -60,6 +64,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CONTRIBUTING.md`: added `boundaries:`, `actuators:`, and `policy.yaml` examples
 - `ROADMAP.md`: corrected v0.4.1 test counts (1011 Python, 180 Rust)
 - `ASSUMPTIONS.md`: corrected CFL and max_dt line references
+- `upde_numerics.md`: CFL formula corrected from `1` to `pi` (matching code and ASSUMPTIONS.md)
+- `policy_dsl.md`: domainpack count corrected (12/17 → 24/24), added 5 amplitude metrics to fields table
+- `index.md`: Policy DSL label changed from "planned v0.2" to "v0.2+"
+- `01_new_domain_checklist.md`: policy.yaml example updated to current schema
+- `README.md`: 3 missing domainpacks added (autonomous_vehicles, network_security, satellite_constellation)
+- `VALIDATION.md`: test counts and domain count updated (1011/180/24)
+- `CITATION.cff`: added `abstract` field
+- `bio_stub/README.md`: corrected boundary severity (lower: soft, not hard)
+- `safety_tier` runtime warning for non-research tiers
 
 ## [0.4.1] - 2026-03-04
 

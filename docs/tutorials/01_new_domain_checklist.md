@@ -99,26 +99,28 @@ Declare supervisor rules that fire when regime/metric conditions match:
 ```yaml
 rules:
   - name: suppress_fault
-    description: Increase damping when bad-layer coherence rises
-    trigger:
-      regime: degraded
+    regime: [DEGRADED, CRITICAL]
+    condition:
       metric: R_bad
-      above: 0.5
+      op: ">"
+      threshold: 0.5
     action:
       knob: zeta
-      delta: 0.2
       scope: global
+      value: 0.2
+      ttl_s: 5.0
 
   - name: restore_target
-    description: Boost coupling when good-layer coherence drops
-    trigger:
-      regime: degraded
+    regime: [DEGRADED]
+    condition:
       metric: R_good
-      below: 0.4
+      op: "<"
+      threshold: 0.4
     action:
       knob: K
-      delta: 0.3
       scope: global
+      value: 0.3
+      ttl_s: 5.0
 ```
 
 Reference `policy.yaml` in binding_spec.yaml: `policy: policy.yaml`.

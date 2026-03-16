@@ -88,6 +88,13 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
 
+    if spec.safety_tier != "research":
+        click.echo(
+            f"WARNING: safety_tier={spec.safety_tier!r} — "
+            "non-research tiers are not yet enforced at runtime",
+            err=True,
+        )
+
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     if n_osc == 0:
         click.echo("ERROR: no oscillators defined in layers", err=True)
@@ -472,9 +479,9 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
             raise SystemExit(1)
         engine = replay_engine.build_engine(header)
         if isinstance(engine, StuartLandauEngine):
-            click.echo("Stuart-Landau chained replay not yet supported")
-            raise SystemExit(0)
-        passed, n = replay_engine.verify_determinism_chained(engine, entries)
+            passed, n = replay_engine.verify_determinism_sl_chained(engine, entries)
+        else:
+            passed, n = replay_engine.verify_determinism_chained(engine, entries)
         if passed:
             click.echo(f"Determinism verified: {n} transitions OK")
         else:
@@ -484,9 +491,84 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
 
 @main.command()
 @click.argument("log_path", type=click.Path(exists=True))
-def report(log_path: str) -> None:
+@click.option("--json-out", is_flag=True, help="Output JSON instead of text")
+def report(log_path: str, json_out: bool) -> None:
     """Generate coherence report from audit log."""
-    click.echo("Report generation planned for v0.3")
+    import json as _json
+
+    replay_engine = ReplayEngine(log_path)
+    entries = replay_engine.load()
+    steps = [e for e in entries if "step" in e and "layers" in e]
+    events = [e for e in entries if "event" in e]
+    header = replay_engine.load_header(entries)
+
+    if not steps:
+        click.echo("ERROR: no step records in log", err=True)
+        raise SystemExit(1)
+
+    n_steps = len(steps)
+    n_layers = len(steps[0]["layers"])
+    r_series = [
+        [s["layers"][i]["R"] for s in steps if i < len(s["layers"])]
+        for i in range(n_layers)
+    ]
+
+    regime_counts: dict[str, int] = {}
+    for s in steps:
+        regime = s.get("regime", "NOMINAL")
+        regime_counts[regime] = regime_counts.get(regime, 0) + 1
+
+    action_counts: dict[str, int] = {}
+    for s in steps:
+        for a in s.get("actions", []):
+            knob = a.get("knob", "?")
+            action_counts[knob] = action_counts.get(knob, 0) + 1
+
+    integrity_ok, n_verified = ReplayEngine.verify_integrity(entries)
+
+    summary = {
+        "steps": n_steps,
+        "layers": n_layers,
+        "amplitude_mode": bool(header and header.get("amplitude_mode")),
+        "final_regime": steps[-1].get("regime", "unknown"),
+        "final_stability": steps[-1].get("stability", 0.0),
+        "layer_r_mean": [round(sum(rs) / len(rs), 4) if rs else 0.0 for rs in r_series],
+        "layer_r_final": [round(rs[-1], 4) if rs else 0.0 for rs in r_series],
+        "regime_counts": regime_counts,
+        "action_counts": action_counts,
+        "events": len(events),
+        "hash_chain_ok": integrity_ok,
+        "hash_chain_verified": n_verified,
+    }
+
+    if json_out:
+        click.echo(_json.dumps(summary, indent=2))
+        return
+
+    click.echo(f"Steps: {n_steps}  Layers: {n_layers}")
+    mode = "Stuart-Landau" if summary["amplitude_mode"] else "Kuramoto"
+    click.echo(f"Mode: {mode}")
+    click.echo(f"Final regime: {summary['final_regime']}")
+    click.echo(f"Final stability: {summary['final_stability']:.4f}")
+    click.echo()
+    for i in range(n_layers):
+        click.echo(
+            f"  L{i}: R_mean={summary['layer_r_mean'][i]:.4f}  "
+            f"R_final={summary['layer_r_final'][i]:.4f}"
+        )
+    click.echo()
+    click.echo("Regime distribution:")
+    for regime, count in sorted(regime_counts.items()):
+        pct = 100.0 * count / n_steps
+        click.echo(f"  {regime}: {count} ({pct:.1f}%)")
+    if action_counts:
+        click.echo()
+        click.echo("Actions fired:")
+        for knob, count in sorted(action_counts.items()):
+            click.echo(f"  {knob}: {count}")
+    click.echo()
+    status = "OK" if integrity_ok else "FAILED"
+    click.echo(f"Hash chain: {status} ({n_verified} records verified)")
 
 
 @main.group()

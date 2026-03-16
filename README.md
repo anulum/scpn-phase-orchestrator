@@ -74,6 +74,7 @@ and is built from source via `maturin develop`.
 
 | Pack | Domain | Purpose |
 |------|--------|---------|
+| `autonomous_vehicles` | Vehicles | Platoon phase-locking, leader-follower sync (3 layers, 8 oscillators) |
 | `bio_stub` | Biology | Multi-scale biological oscillators (4 layers, 16 oscillators) |
 | `cardiac_rhythm` | Cardiology | Gap-junction coupling, arrhythmia (4 layers, 10 oscillators) |
 | `chemical_reactor` | Process control | Hopf bifurcation, Semenov limit (4 layers, 10 oscillators) |
@@ -86,6 +87,7 @@ and is built from source via `maturin develop`.
 | `manufacturing_spc` | Manufacturing | Statistical process control (3 layers, 9 oscillators) |
 | `metaphysics_demo` | P/I/S showcase | Imprint + geometry ablation (3 layers, 7 oscillators) |
 | `minimal_domain` | Synthetic | Minimal-but-complete pipeline example (2 layers, 4 oscillators) |
+| `network_security` | Cybersecurity | Traffic anomaly detection, DDoS suppression (3 layers, 8 oscillators) |
 | `neuroscience_eeg` | Neuroscience | EEG band->phase, seizure detection (6 layers, 14 oscillators) |
 | `plasma_control` | Tokamak plasma | MHD/transport multi-scale control (8 layers, 16 oscillators) |
 | `pll_clock` | Telecommunications | PLL network clock synchronisation (3 layers, 8 oscillators) |
@@ -93,6 +95,7 @@ and is built from source via `maturin develop`.
 | `quantum_simulation` | Quantum computing | Qubit register phase coupling (3 layers, 8 oscillators) |
 | `queuewaves` | Cloud/queues | Retry storm desynchronisation (3 layers, 6 oscillators) |
 | `rotating_machinery` | Vibration | Harmonics, ISO 10816 boundaries (4 layers, 10 oscillators) |
+| `satellite_constellation` | Aerospace | Orbital slot synchronisation, beam handover (3 layers, 8 oscillators) |
 | `swarm_robotics` | Robotics | Vicsek collective motion (3 layers, 8 oscillators) |
 | `traffic_flow` | Transportation | Signal coordination = phase sync (4 layers, 10 oscillators) |
 

@@ -21,7 +21,7 @@ populations; Strogatz (2003) *Sync* Ch. 5 formalised the connection.
 
 ## Boundaries
 
-- **heart_rate**: 40-180 bpm (hard) -- clinical range
+- **heart_rate**: 40-180 bpm (upper: hard, lower: soft) -- clinical range
 - **circadian_deviation**: < 3 h (soft) -- circadian disruption threshold
 
 ## Actuators

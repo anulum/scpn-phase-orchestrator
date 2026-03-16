@@ -113,10 +113,26 @@ def test_replay_command(runner, audit_log_path):
     assert "Final regime: nominal" in result.output
 
 
-def test_report_placeholder(runner, audit_log_path):
+def test_report_text(runner, audit_log_path):
     result = runner.invoke(main, ["report", audit_log_path])
     assert result.exit_code == 0
-    assert "v0.3" in result.output
+    assert "Steps: 2" in result.output
+    assert "Layers: 1" in result.output
+    assert "Final regime: nominal" in result.output
+    assert "L0:" in result.output
+    assert "Regime distribution:" in result.output
+    assert "Hash chain:" in result.output
+
+
+def test_report_json(runner, audit_log_path):
+    result = runner.invoke(main, ["report", audit_log_path, "--json-out"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["steps"] == 2
+    assert data["layers"] == 1
+    assert data["final_regime"] == "nominal"
+    assert len(data["layer_r_mean"]) == 1
+    assert data["hash_chain_ok"] is True
 
 
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):

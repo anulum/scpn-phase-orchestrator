@@ -25,7 +25,7 @@ Domain-agnostic Kuramoto phase-dynamics engine for synchronising coupled-cycle s
 - [Action Compose](specs/action_compose.md) -- ControlAction, mapper, projector
 - [Eval Protocol](specs/eval_protocol.md) -- R_good/R_bad convergence, replay
 - [Plugin API](specs/plugin_api.md) -- custom extractors, constraints, drivers
-- [Policy DSL](specs/policy_dsl.md) -- YAML rule engine (planned v0.2)
+- [Policy DSL](specs/policy_dsl.md) -- YAML rule engine (v0.2+)
 - [Audit Trace](specs/audit_trace.md) -- JSONL format, deterministic replay
 
 ### Tutorials

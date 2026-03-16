@@ -7,7 +7,7 @@ YAML-based rule engine for declarative supervisor behaviour.
 **Implemented** in `supervisor/policy_rules.py` (`PolicyEngine` + `load_policy_rules`).
 The hardcoded `SupervisorPolicy` provides default regime-driven actions;
 `PolicyEngine` extends it with domainpack-specific YAML rules evaluated
-per step.  12 of 17 domainpacks ship with `policy.yaml` files.
+per step.  All 24 domainpacks ship with `policy.yaml` files.
 
 ## Syntax (v0.1 — single condition, single action)
 
@@ -87,7 +87,7 @@ auto-detects:
 |-------|------|-------------|
 | `name` | str | Rule identifier |
 | `regime` | list[str] | Active only in listed regimes (`NOMINAL`, `DEGRADED`, `CRITICAL`, `RECOVERY`) |
-| `condition.metric` | str | `R`, `R_good`, `R_bad`, or `stability_proxy` |
+| `condition.metric` | str | `R`, `R_good`, `R_bad`, `stability_proxy`, `pac_max`, `mean_amplitude`, `subcritical_fraction`, `amplitude_spread`, or `mean_amplitude_layer` |
 | `condition.layer` | int \| null | Layer index (null for global metrics like `stability_proxy`) |
 | `condition.op` | str | `">"`, `"<"`, `">="`, `"<="`, `"=="` |
 | `condition.threshold` | float | Comparison value |

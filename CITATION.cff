@@ -12,6 +12,7 @@ date-released: "2026-03-04"
 license: AGPL-3.0-or-later
 url: "https://github.com/anulum/scpn-phase-orchestrator"
 repository-code: "https://github.com/anulum/scpn-phase-orchestrator"
+abstract: "Domain-agnostic Kuramoto phase-dynamics engine for synchronising coupled-cycle systems. Extracts phases from arbitrary signals, integrates the Unified Phase Dynamics Equation via Euler/RK4/RK45, and applies coherence-based supervisory control through a binding-spec abstraction layer."
 keywords:
   - kuramoto
   - phase-dynamics

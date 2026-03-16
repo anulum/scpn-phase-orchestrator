@@ -413,6 +413,59 @@ def test_legacy_log_without_hashes(tmp_path):
     assert n_verified == 0
 
 
+def test_sl_chained_replay(tmp_path):
+    """Stuart-Landau replay: engine output matches logged next state."""
+    from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+    n = 4
+    dt = 0.01
+    engine = StuartLandauEngine(n, dt=dt)
+    rng = np.random.default_rng(42)
+    phases = rng.uniform(0, 2 * np.pi, n)
+    amps = np.ones(n) * 0.8
+    state = np.concatenate([phases, amps])
+    omegas = np.ones(n)
+    mu = np.full(n, 1.0)
+    knm = 0.3 * np.ones((n, n))
+    np.fill_diagonal(knm, 0.0)
+    knm_r = 0.1 * np.ones((n, n))
+    np.fill_diagonal(knm_r, 0.0)
+    alpha = np.zeros((n, n))
+
+    entries = [{"header": True, "n_oscillators": n, "dt": dt, "amplitude_mode": True}]
+    for step_idx in range(5):
+        entries.append(
+            {
+                "step": step_idx,
+                "phases": state.tolist(),
+                "omegas": omegas.tolist(),
+                "knm": knm.flatten().tolist(),
+                "alpha": alpha.flatten().tolist(),
+                "mu": mu.tolist(),
+                "knm_r": knm_r.flatten().tolist(),
+                "epsilon": 1.0,
+                "zeta": 0.0,
+                "psi_drive": 0.0,
+                "stability": 0.5,
+                "regime": "nominal",
+                "layers": [{"R": 0.5, "psi": 0.0}],
+            }
+        )
+        state = engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
+
+    log = tmp_path / "sl_replay.jsonl"
+    log.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
+
+    re = ReplayEngine(log)
+    loaded = re.load()
+    header = re.load_header(loaded)
+    replay_eng = re.build_engine(header)
+    assert isinstance(replay_eng, StuartLandauEngine)
+    passed, n_verified = re.verify_determinism_sl_chained(replay_eng, loaded)
+    assert passed
+    assert n_verified == 4
+
+
 def test_cli_replay_verify_no_header(tmp_path):
     """CLI: replay --verify on legacy log (no header) exits 1."""
     log = tmp_path / "legacy.jsonl"

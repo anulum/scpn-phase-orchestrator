@@ -125,6 +125,61 @@ class ReplayEngine:
             verified += 1
         return True, verified
 
+    def verify_determinism_sl_chained(
+        self,
+        engine: StuartLandauEngine,
+        entries: list[dict],
+        atol: float = 1e-6,
+    ) -> tuple[bool, int]:
+        """Chained multi-step replay for Stuart-Landau engine.
+
+        Requires step records to include 'phases' (SL state = [theta; r]).
+        Returns (passed, n_verified).
+        """
+        replayable = self.step_entries(entries)
+        if len(replayable) < 2:
+            return True, 0
+
+        verified = 0
+        for i in range(len(replayable) - 1):
+            curr = replayable[i]
+            nxt = replayable[i + 1]
+            state = np.asarray(curr["phases"])  # 2N: [theta; r]
+            omegas = np.asarray(curr["omegas"])
+            knm_flat = np.asarray(curr["knm"])
+            alpha_flat = np.asarray(curr["alpha"])
+            zeta = curr.get("zeta", 0.0)
+            psi_drive = curr.get("psi_drive", 0.0)
+
+            n = len(omegas)
+            knm_arr = knm_flat.reshape(n, n) if knm_flat.ndim == 1 else knm_flat
+            alpha_arr = alpha_flat.reshape(n, n) if alpha_flat.ndim == 1 else alpha_flat
+
+            # SL step requires mu and knm_r; use stored or zeros
+            mu = np.asarray(curr.get("mu", np.zeros(n)))
+            knm_r_flat = np.asarray(curr.get("knm_r", np.zeros(n * n)))
+            knm_r = knm_r_flat.reshape(n, n) if knm_r_flat.ndim == 1 else knm_r_flat
+            epsilon = curr.get("epsilon", 1.0)
+
+            computed = engine.step(
+                state,
+                omegas,
+                mu,
+                knm_arr,
+                knm_r,
+                zeta,
+                psi_drive,
+                alpha_arr,
+                epsilon=epsilon,
+            )
+            logged_next = np.asarray(nxt["phases"])
+
+            if not np.allclose(computed, logged_next, atol=atol):
+                return False, verified
+            verified += 1
+
+        return True, verified
+
     def verify_determinism(self, engine: UPDEEngine, steps: list[dict]) -> bool:
         """Re-run logged steps and compare R values.
 

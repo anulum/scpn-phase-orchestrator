@@ -79,10 +79,10 @@ Scratch arrays: `_phase_diff (N,N)`, `_sin_diff (N,N)`, `_cos_diff (N,N)`, `_scr
 CFL-like bound:
 
 ```
-dt < 1 / (max(omega) + N * max(K) + zeta)
+dt < pi / (max(omega) + N * max(K) + zeta)
 ```
 
-Where `N` is the number of oscillators. The coupling term contributes up to `N * max(K)` to the effective frequency. Exceeding this bound causes phase jumps that break the wrapping invariant.
+Where `N` is the number of oscillators. The coupling term contributes up to `N * max(K)` to the effective frequency. The π threshold ensures phase change per step stays below half-cycle; exceeding it causes phase jumps that break the wrapping invariant.
 
 The binding spec `sample_period_s` sets `dt`. Validate at initialisation.
 
