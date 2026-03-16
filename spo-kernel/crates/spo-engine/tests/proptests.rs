@@ -1,5 +1,9 @@
-// SCPN Phase Orchestrator — Property-based tests for spo-engine
-// (C) 1998-2026 Miroslav Sotek. All rights reserved.
+// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+// © Code 2020–2026 Miroslav Šotek. All rights reserved.
+// ORCID: 0009-0009-3560-0851
+// Contact: www.anulum.li | protoscience@anulum.li
+// SCPN Phase Orchestrator — Property-based tests
 
 use proptest::prelude::*;
 use spo_engine::{compute_order_parameter, compute_plv, CouplingBuilder};

@@ -1,4 +1,10 @@
-// SCPN Phase Orchestrator — Physical Phase Extraction (post-Hilbert)
+// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+// © Code 2020–2026 Miroslav Šotek. All rights reserved.
+// ORCID: 0009-0009-3560-0851
+// Contact: www.anulum.li | protoscience@anulum.li
+// SCPN Phase Orchestrator — Physical oscillator
+
 //!
 //! Fused extraction of theta, omega, amplitude, quality from a pre-computed
 //! analytic signal. Replaces five separate NumPy passes with two Rust loops.

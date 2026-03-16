@@ -1,4 +1,10 @@
-// SCPN Phase Orchestrator — Stuart-Landau Phase-Amplitude Integrator
+// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+// © Code 2020–2026 Miroslav Šotek. All rights reserved.
+// ORCID: 0009-0009-3560-0851
+// Contact: www.anulum.li | protoscience@anulum.li
+// SCPN Phase Orchestrator — Stuart-Landau model
+
 //!
 //! Phase: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) + ζ sin(Ψ - θ_i)
 //! Amplitude: dr_i/dt = (μ_i - r_i²)·r_i + ε Σ_j K^r_ij · r_j · cos(θ_j - θ_i)
