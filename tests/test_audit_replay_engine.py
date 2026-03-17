@@ -64,7 +64,7 @@ def test_verify_determinism_matching(tmp_path):
         "alpha": alpha.tolist(),
         "zeta": 0.0,
         "psi_drive": 0.0,
-        "stability_proxy": r,
+        "R": r,
     }
     replay = ReplayEngine("dummy.jsonl")
     assert replay.verify_determinism(engine, [entry]) is True
@@ -78,7 +78,7 @@ def test_verify_determinism_mismatch(tmp_path):
         "omegas": np.ones(n).tolist(),
         "knm": np.zeros((n, n)).tolist(),
         "alpha": np.zeros((n, n)).tolist(),
-        "stability_proxy": 999.0,  # intentionally wrong
+        "R": 999.0,  # intentionally wrong
     }
     replay = ReplayEngine("dummy.jsonl")
     assert replay.verify_determinism(engine, [entry]) is False

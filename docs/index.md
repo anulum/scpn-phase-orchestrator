@@ -15,7 +15,7 @@ hide:
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**1142 Python tests | 180 Rust tests | 100% coverage | 24 domainpacks**
+**1219 Python tests | 191 Rust tests | 100% coverage | 24 domainpacks**
 
 </div>
 

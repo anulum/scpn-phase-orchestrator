@@ -14,7 +14,23 @@ __all__ = ["LagModel"]
 
 
 class LagModel:
-    """Estimates phase lags between signal pairs via cross-correlation."""
+    """Phase-lag estimation and alpha matrix construction."""
+
+    @staticmethod
+    def estimate_from_distances(distances: NDArray, speed: float) -> NDArray:
+        """Build antisymmetric alpha matrix from pairwise distances and speed.
+
+        alpha[i,j] = 2*pi * distances[i,j] / speed.
+        Matches the Rust ``LagModel::estimate_from_distances`` algorithm.
+        """
+        n = distances.shape[0]
+        alpha = np.zeros((n, n), dtype=np.float64)
+        for i in range(n):
+            for j in range(i + 1, n):
+                lag = 2.0 * np.pi * distances[i, j] / speed
+                alpha[i, j] = lag
+                alpha[j, i] = -lag
+        return alpha
 
     def estimate_lag(
         self, signal_a: NDArray, signal_b: NDArray, sample_rate: float

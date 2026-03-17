@@ -10,6 +10,8 @@ from __future__ import annotations
 import operator
 from dataclasses import dataclass, field
 
+from scpn_phase_orchestrator.exceptions import PolicyError
+
 __all__ = ["Place", "Arc", "Transition", "Marking", "PetriNet"]
 
 _OPS = {
@@ -65,7 +67,7 @@ class Marking:
 
     def __setitem__(self, place: str, count: int) -> None:
         if count < 0:
-            raise ValueError(f"negative token count for {place!r}")
+            raise PolicyError(f"negative token count for {place!r}")
         if count == 0:
             self.tokens.pop(place, None)
         else:
@@ -82,7 +84,7 @@ def parse_guard(text: str) -> Guard:
     """Parse guard string like 'stability_proxy > 0.6'."""
     parts = text.split()
     if len(parts) != 3:
-        raise ValueError(f"guard must be 'metric op threshold', got {text!r}")
+        raise PolicyError(f"guard must be 'metric op threshold', got {text!r}")
     return Guard(metric=parts[0], op=parts[1], threshold=float(parts[2]))
 
 
@@ -105,7 +107,7 @@ class PetriNet:
         for t in self._transitions:
             for arc in t.inputs + t.outputs:
                 if arc.place not in self._place_names:
-                    raise ValueError(
+                    raise PolicyError(
                         f"transition {t.name!r} references unknown place {arc.place!r}"
                     )
 

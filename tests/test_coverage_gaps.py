@@ -1383,7 +1383,7 @@ class TestAuditLogger:
             stability_proxy=0.5,
             regime_id="NOMINAL",
         )
-        with pytest.raises(ValueError, match="omegas"):
+        with pytest.raises(RuntimeError, match="omegas"):
             logger.log_step(0, state, [], phases=np.zeros(4))
         logger.close()
 

@@ -53,10 +53,25 @@
 - Amplitude configs for 6 domainpacks (neuroscience_eeg, cardiac_rhythm, plasma_control, firefly_swarm, rotating_machinery, power_grid)
 - `CoherencePlot` matplotlib implementations (R timeline, regime timeline, action audit, amplitude timeline, PAC heatmap)
 - Deep audit Phase 1: 12 correctness/safety fixes (hash chain, RK coupling, regime state machine, FFI `run()`, public API expansion)
-- 1142 Python tests, 180 Rust tests
+- 1219 Python tests, 191 Rust tests
+
+## v0.5 (planned)
+
+- ~~Rust RegimeManager: hysteresis, EventBus, downward_streak parity with Python~~ (done)
+- ~~Rust LagModel: algorithm alignment with Python adaptive lag pipeline~~ (done)
+- ~~FFI improvements: PyStuartLandauStepper numpy array input, PyActionProjector unknown-knob warning~~ (done)
+- ~~Expand domainpack channel coverage (target: all 3 channels in 12+ packs)~~ (10/24 done)
+- Async test infrastructure: pytest-asyncio + httpx.AsyncClient for QueueWaves
+- Tutorial notebooks for binding, audit replay, reporting, adapter bridges
+- Petri net + PolicyEngine Rust port (spo-supervisor crate)
 
 ## v1.0
 
-- Production-hardened with fuzz testing and fault injection
-- Full benchmark suite against reference Kuramoto implementations
-- Complete API documentation and tutorial notebooks
+- Production-hardened with fuzz testing (Hypothesis profiles) and fault injection
+- Full benchmark suite: Kuramoto reference (Strogatz 2000), Stuart-Landau (Pikovsky 2001), Petri net reachability
+- ~~RK45 exhausted-retry fallback test coverage~~ (done)
+- Complete API documentation with mkdocstrings autodoc for all public modules
+- Docker multi-stage build with security scanning (Trivy/Grype)
+- ~~BoundaryObserver configurable default severity~~ (done — defaults to hard with warning)
+- ~~DP tableau deduplication between upde.rs and stuart_landau.rs~~ (done)
+- Stable public API freeze with semver guarantees

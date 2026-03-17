@@ -79,7 +79,7 @@ def test_verify_determinism_with_matching_data(tmp_path):
         "alpha": alpha.tolist(),
         "zeta": 0.0,
         "psi_drive": 0.0,
-        "stability_proxy": r_val,
+        "R": r_val,
     }
     log = tmp_path / "det.jsonl"
     log.write_text(json.dumps(entry) + "\n", encoding="utf-8")
@@ -111,7 +111,7 @@ def test_verify_determinism_returns_false_on_r_mismatch(tmp_path):
         "alpha": alpha.tolist(),
         "zeta": 0.0,
         "psi_drive": 0.0,
-        "stability_proxy": 0.0001,
+        "R": 0.0001,
     }
     log = tmp_path / "bad.jsonl"
     log.write_text(json.dumps(entry) + "\n", encoding="utf-8")

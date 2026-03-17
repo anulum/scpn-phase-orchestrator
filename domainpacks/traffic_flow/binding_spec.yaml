@@ -28,6 +28,13 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # Signal phase state: green/yellow/red/arrow/flashing
+  # MUTCD signal phasing (FHWA 2023)
+  signal_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 5
 
 coupling:
   # Signal coordination coupling proportional to link capacity

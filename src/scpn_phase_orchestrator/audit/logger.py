@@ -16,6 +16,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["AuditLogger"]
@@ -91,7 +92,7 @@ class AuditLogger:
         if phases is not None:
             if omegas is None or knm is None or alpha is None:
                 msg = "omegas, knm, alpha required when phases is provided"
-                raise ValueError(msg)
+                raise AuditError(msg)
             record["phases"] = phases.tolist()
             record["omegas"] = omegas.tolist()
             record["knm"] = knm.tolist()

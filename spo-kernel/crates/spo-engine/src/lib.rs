@@ -9,6 +9,7 @@
 //! UPDE integration, coupling, order parameters, lags, imprint, Stuart-Landau, PAC.
 
 pub mod coupling;
+pub mod dp_tableau;
 pub mod imprint;
 pub mod lags;
 pub mod order_params;

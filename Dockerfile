@@ -7,13 +7,17 @@
 
 FROM python:3.12-slim
 
+RUN groupadd --gid 1000 spo && useradd --uid 1000 --gid spo --create-home spo
+
 WORKDIR /app
 
 COPY pyproject.toml .
 COPY src/ src/
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir . && chown -R spo:spo /app
 
-COPY . .
+COPY --chown=spo:spo . .
+
+USER spo
 
 ENTRYPOINT ["spo"]

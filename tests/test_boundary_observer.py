@@ -65,3 +65,23 @@ def test_no_violation():
     assert state.violations == []
     assert state.soft_violations == []
     assert state.hard_violations == []
+
+
+def test_unknown_severity_defaults_to_hard(caplog):
+    defs = [
+        BoundaryDef(
+            name="X_check",
+            variable="X",
+            lower=0.0,
+            upper=None,
+            severity="medium",
+        ),
+    ]
+    obs = BoundaryObserver(defs)
+    import logging
+
+    log_name = "scpn_phase_orchestrator.monitor.boundaries"
+    with caplog.at_level(logging.WARNING, logger=log_name):
+        state = obs.observe({"X": -1.0})
+    assert len(state.hard_violations) == 1
+    assert "unknown severity" in caplog.text

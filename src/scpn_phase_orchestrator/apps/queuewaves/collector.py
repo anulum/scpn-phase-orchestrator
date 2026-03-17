@@ -18,6 +18,13 @@ __all__ = ["MetricBuffer", "PrometheusCollector"]
 
 logger = logging.getLogger(__name__)
 
+try:
+    from httpx import HTTPError as _HTTPError
+except ImportError:
+    _HTTPError = OSError  # type: ignore[assignment,misc]
+
+_SCRAPE_ERRORS: tuple[type[BaseException], ...] = (OSError, RuntimeError, _HTTPError)
+
 
 class MetricBuffer:
     """Fixed-size ring buffer of (timestamp, value) pairs for one service."""
@@ -94,7 +101,7 @@ class PrometheusCollector:
                 if results:
                     ts, val = results[0]["value"]
                     self._buffers[name].push(float(ts), float(val))
-            except Exception:
+            except _SCRAPE_ERRORS:
                 logger.warning("scrape failed for %s", name, exc_info=True)
         return self._buffers
 

@@ -17,6 +17,13 @@ __all__ = ["WebhookAlerter"]
 
 logger = logging.getLogger(__name__)
 
+try:
+    from httpx import HTTPError as _HTTPError
+except ImportError:
+    _HTTPError = OSError  # type: ignore[assignment,misc]
+
+_SEND_ERRORS: tuple[type[BaseException], ...] = (OSError, RuntimeError, _HTTPError)
+
 _SEVERITY_COLORS = {"critical": "#FF0000", "warning": "#FFA500"}
 _SEVERITY_EMOJI = {"critical": ":rotating_light:", "warning": ":warning:"}
 
@@ -99,7 +106,7 @@ class WebhookAlerter:
                     try:
                         resp = await client.post(sink.url, json=payload)
                         resp.raise_for_status()
-                    except Exception:
+                    except _SEND_ERRORS:
                         logger.warning(
                             "alert POST failed to %s",
                             sink.url,

@@ -181,12 +181,11 @@ class ReplayEngine:
         return True, verified
 
     def verify_determinism(self, engine: UPDEEngine, steps: list[dict]) -> bool:
-        """Re-run logged steps and compare R values.
+        """Re-run logged steps and compare global order parameter R.
 
-        Returns True if all reproduced layer-R values match within tolerance.
         Requires steps to include 'phases', 'omegas', 'knm', 'zeta', 'psi',
-        'alpha' fields for full replay. Falls back to log-only comparison
-        if engine input fields are missing.
+        'alpha' fields for full replay. Compares replayed global R against
+        logged 'R' (or 'r_global') field.
         """
         for entry in steps:
             if "phases" not in entry:
@@ -201,7 +200,8 @@ class ReplayEngine:
             new_phases = engine.step(phases, omegas, knm, zeta, psi_drive, alpha)
             r_actual, _ = engine.compute_order_parameter(new_phases)
 
-            r_logged = entry.get("stability_proxy")
+            # Compare against logged global R (same quantity as compute_order_parameter)
+            r_logged = entry.get("R") or entry.get("r_global")
             if r_logged is not None and abs(r_actual - r_logged) > 1e-6:
                 return False
         return True

@@ -48,7 +48,13 @@ Domain Binder → Oscillator Extractors (P/I/S) → UPDE Engine → Supervisor �
 ## Quickstart
 
 ```bash
-pip install -e ".[dev]"
+# Install from PyPI
+pip install scpn-phase-orchestrator
+
+# Or with optional extras
+pip install scpn-phase-orchestrator[queuewaves]  # FastAPI cascade detector
+pip install scpn-phase-orchestrator[plot]         # matplotlib visualisation
+pip install scpn-phase-orchestrator[otel]         # OpenTelemetry export
 
 # Scaffold a new domainpack
 spo scaffold my_domain
@@ -61,6 +67,14 @@ spo run domainpacks/queuewaves/binding_spec.yaml --steps 1000
 
 # Replay from audit log
 spo replay audit.jsonl --output report.json
+```
+
+For development, clone the repo and install in editable mode:
+
+```bash
+git clone https://github.com/anulum/scpn-phase-orchestrator.git
+cd scpn-phase-orchestrator
+pip install -e ".[dev]"
 ```
 
 ## Platform Support
@@ -136,5 +150,5 @@ See [CITATION.cff](CITATION.cff).
 
 ---
 
-© 1998–2026 Miroslav Šotek. All rights reserved.
+© 1996–2026 Miroslav Šotek. All rights reserved.
 Contact: www.anulum.li | protoscience@anulum.li

@@ -39,6 +39,13 @@ oscillator_families:
     channel: I
     extractor_type: informational
     config: {}
+  # Confinement regime: ohmic/L-mode/H-mode/ELMy/disruption
+  # ITER Physics Basis Ch. 2 (1999)
+  confinement_regime:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 5
 
 coupling:
   base_strength: 0.45

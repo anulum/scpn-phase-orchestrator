@@ -13,7 +13,7 @@ from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
 
 
-def _make_state(r_values, lock_pairs=None):
+def _make_state(r_values, lock_pairs=None, cla=None):
     layers = []
     for i, r in enumerate(r_values):
         sigs = {}
@@ -27,9 +27,11 @@ def _make_state(r_values, lock_pairs=None):
                         mean_lag=0.0,
                     )
         layers.append(LayerState(R=r, psi=0.0, lock_signatures=sigs))
+    if cla is None:
+        cla = np.eye(len(r_values))
     return UPDEState(
         layers=layers,
-        cross_layer_alignment=np.eye(len(r_values)),
+        cross_layer_alignment=cla,
         stability_proxy=float(np.mean(r_values)),
         regime_id="nominal",
     )
@@ -69,3 +71,20 @@ def test_empty_good_layers_returns_zero():
     monitor = CoherenceMonitor(good_layers=[], bad_layers=[0])
     state = _make_state([0.5])
     assert monitor.compute_r_good(state) == 0.0
+
+
+def test_detect_phase_lock_via_cla_matrix():
+    """CLA matrix is the primary PLV source (matches Rust implementation)."""
+    cla = np.array([[1.0, 0.95], [0.95, 1.0]])
+    state = _make_state([0.9, 0.8], cla=cla)
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+    locked = monitor.detect_phase_lock(state, threshold=0.9)
+    assert (0, 1) in locked
+
+
+def test_detect_phase_lock_cla_below_threshold():
+    cla = np.array([[1.0, 0.5], [0.5, 1.0]])
+    state = _make_state([0.9, 0.8], cla=cla)
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+    locked = monitor.detect_phase_lock(state, threshold=0.9)
+    assert locked == []

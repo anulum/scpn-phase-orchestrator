@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from scpn_phase_orchestrator.exceptions import ValidationError
+
 __all__ = [
     "HierarchyLayer",
     "OscillatorFamily",
@@ -86,7 +88,7 @@ class BoundaryDef:
                 f"BoundaryDef {self.name!r}: "
                 f"lower ({self.lower}) must be < upper ({self.upper})"
             )
-            raise ValueError(msg)
+            raise ValidationError(msg)
 
 
 @dataclass(frozen=True)

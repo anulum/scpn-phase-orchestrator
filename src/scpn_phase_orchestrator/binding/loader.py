@@ -27,11 +27,12 @@ from scpn_phase_orchestrator.binding.types import (
     ProtocolTransitionSpec,
     resolve_extractor_type,
 )
+from scpn_phase_orchestrator.exceptions import BindingError
 
 __all__ = ["load_binding_spec"]
 
 
-class BindingLoadError(ValueError):
+class BindingLoadError(BindingError):
     """Raised when a binding spec cannot be parsed."""
 
 

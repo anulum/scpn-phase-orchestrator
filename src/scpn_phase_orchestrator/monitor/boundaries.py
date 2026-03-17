@@ -7,10 +7,13 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from scpn_phase_orchestrator.supervisor.events import EventBus
@@ -63,7 +66,14 @@ class BoundaryObserver:
             state.violations.append(msg)
             if bdef.severity == "soft":
                 state.soft_violations.append(msg)
+            elif bdef.severity == "hard":
+                state.hard_violations.append(msg)
             else:
+                logger.warning(
+                    "unknown severity %r on %s, treating as hard",
+                    bdef.severity,
+                    bdef.name,
+                )
                 state.hard_violations.append(msg)
 
         if state.violations and self._event_bus is not None:

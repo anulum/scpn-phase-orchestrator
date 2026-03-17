@@ -11,7 +11,7 @@ site_description: Domain-agnostic coherence control compiler built on Kuramoto/U
 site_author: Miroslav Šotek
 repo_url: https://github.com/anulum/scpn-phase-orchestrator
 repo_name: anulum/scpn-phase-orchestrator
-copyright: "© 1998–2026 Miroslav Šotek. All rights reserved."
+copyright: "© 1996–2026 Miroslav Šotek. All rights reserved."
 
 theme:
   name: material
@@ -81,7 +81,6 @@ nav:
       - Knm Calibration: specs/knm_calibration.md
       - Audit Trace: specs/audit_trace.md
   - Tutorials:
-      - "00 — Hello World": getting-started/hello_world.md
       - "01 — New Domain Checklist": tutorials/01_new_domain_checklist.md
       - "02 — Oscillator Hunt Sheet": tutorials/02_oscillator_hunt_sheet.md
       - "03 — Build Knm Templates": tutorials/03_build_knm_templates.md
@@ -108,7 +107,6 @@ nav:
   - Reference:
       - Assumptions & Constants: ASSUMPTIONS.md
       - Competitive Analysis: competitive_analysis.md
-      - Bibliography: references.bib
   - FAQ: faq.md
 
 plugins:

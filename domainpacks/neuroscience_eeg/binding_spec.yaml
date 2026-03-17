@@ -35,6 +35,13 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # Vigilance state machine: wake/drowsy/N1/N2/N3/REM
+  # Iber et al. (2007) AASM scoring manual
+  brain_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 6
 
 coupling:
   # Moderate coupling; EEG inter-band connectivity decays with frequency

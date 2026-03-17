@@ -11,5 +11,8 @@ description = "SCPN Phase Orchestrator — regime FSM, policy, coherence monitor
 spo-types = { path = "../spo-types" }
 serde = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [lints]
 workspace = true

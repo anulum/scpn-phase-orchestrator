@@ -34,6 +34,13 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # Grid topology state: connected/islanded/cascading/blackstart
+  # NERC Reliability Standards TPL-001
+  grid_topology:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
 
 coupling:
   # Proportional to admittance magnitude of inter-machine ties.

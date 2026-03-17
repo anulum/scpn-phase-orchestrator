@@ -207,10 +207,11 @@ struct PyRegimeManager {
 #[pymethods]
 impl PyRegimeManager {
     #[new]
-    #[pyo3(signature = (hysteresis = 0.05, cooldown_steps = 10))]
-    fn new(hysteresis: f64, cooldown_steps: u64) -> Self {
+    #[pyo3(signature = (hysteresis = 0.05, cooldown_steps = 10, hysteresis_hold_steps = 0))]
+    fn new(hysteresis: f64, cooldown_steps: u64, hysteresis_hold_steps: u64) -> Self {
         Self {
-            inner: RegimeManager::new(hysteresis, cooldown_steps),
+            inner: RegimeManager::new(hysteresis, cooldown_steps)
+                .with_hold_steps(hysteresis_hold_steps),
         }
     }
 
@@ -229,9 +230,25 @@ impl PyRegimeManager {
         Ok(regime_to_str(actual))
     }
 
+    /// Bypass cooldown and hysteresis hold — event-driven triggers.
+    fn force_transition(&mut self, regime: &str) -> PyResult<String> {
+        let r = str_to_regime(regime)?;
+        let actual = self.inner.force_transition(r);
+        Ok(regime_to_str(actual))
+    }
+
     #[getter]
     fn current(&self) -> String {
         regime_to_str(self.inner.current)
+    }
+
+    #[getter]
+    fn transition_log(&self) -> Vec<(u64, String, String)> {
+        self.inner
+            .transition_log
+            .iter()
+            .map(|(step, prev, new)| (*step, regime_to_str(*prev), regime_to_str(*new)))
+            .collect()
     }
 }
 
@@ -369,16 +386,40 @@ struct PyActionProjector {
 impl PyActionProjector {
     #[new]
     fn new(
+        py: Python<'_>,
         rate_limits: HashMap<String, f64>,
         value_bounds: HashMap<String, (f64, f64)>,
     ) -> PyResult<Self> {
+        let warnings = py.import("warnings")?;
         let rl: HashMap<Knob, f64> = rate_limits
             .into_iter()
-            .filter_map(|(k, v)| str_to_knob(&k).ok().map(|knob| (knob, v)))
+            .filter_map(|(k, v)| match str_to_knob(&k) {
+                Ok(knob) => Some((knob, v)),
+                Err(_) => {
+                    let _ = warnings.call_method1(
+                        "warn",
+                        (format!(
+                            "PyActionProjector: ignoring unknown knob {k:?} in rate_limits"
+                        ),),
+                    );
+                    None
+                }
+            })
             .collect();
         let vb: HashMap<Knob, (f64, f64)> = value_bounds
             .into_iter()
-            .filter_map(|(k, v)| str_to_knob(&k).ok().map(|knob| (knob, v)))
+            .filter_map(|(k, v)| match str_to_knob(&k) {
+                Ok(knob) => Some((knob, v)),
+                Err(_) => {
+                    let _ = warnings.call_method1(
+                        "warn",
+                        (format!(
+                            "PyActionProjector: ignoring unknown knob {k:?} in value_bounds"
+                        ),),
+                    );
+                    None
+                }
+            })
             .collect();
         Ok(Self {
             inner: ActionProjector::new(rl, vb),
@@ -541,11 +582,11 @@ impl PyStuartLandauStepper {
         Ok(Self { inner })
     }
 
-    /// Advance state [θ; r] by one step. Returns new state list (2N).
+    /// Advance state [θ; r] by one step. Returns new state array (2N).
     #[allow(clippy::too_many_arguments)]
     fn step(
         &mut self,
-        state: Vec<f64>,
+        state: PyReadonlyArray1<'_, f64>,
         omegas: PyReadonlyArray1<'_, f64>,
         mu: PyReadonlyArray1<'_, f64>,
         knm: PyReadonlyArray1<'_, f64>,
@@ -555,7 +596,9 @@ impl PyStuartLandauStepper {
         alpha: PyReadonlyArray1<'_, f64>,
         epsilon: f64,
     ) -> PyResult<Vec<f64>> {
-        let mut s = state;
+        let mut s = state
+            .to_vec()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let o = omegas
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -582,7 +625,7 @@ impl PyStuartLandauStepper {
     #[pyo3(signature = (state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, n_steps))]
     fn run(
         &mut self,
-        state: Vec<f64>,
+        state: PyReadonlyArray1<'_, f64>,
         omegas: PyReadonlyArray1<'_, f64>,
         mu: PyReadonlyArray1<'_, f64>,
         knm: PyReadonlyArray1<'_, f64>,
@@ -593,7 +636,9 @@ impl PyStuartLandauStepper {
         epsilon: f64,
         n_steps: u64,
     ) -> PyResult<Vec<f64>> {
-        let mut s = state;
+        let mut s = state
+            .to_vec()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let o = omegas
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;

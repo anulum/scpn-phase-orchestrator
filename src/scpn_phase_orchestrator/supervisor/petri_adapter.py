@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.petri_net import Marking, PetriNet
 from scpn_phase_orchestrator.supervisor.regimes import Regime
@@ -44,7 +45,7 @@ class PetriNetAdapter:
         for place, regime_str in place_to_regime.items():
             key = regime_str.upper()
             if key not in _REGIME_LOOKUP:
-                raise ValueError(f"unknown regime {regime_str!r} for place {place!r}")
+                raise PolicyError(f"unknown regime {regime_str!r} for place {place!r}")
             self._place_to_regime[place] = _REGIME_LOOKUP[key]
         self._event_bus = event_bus
         self._step = 0

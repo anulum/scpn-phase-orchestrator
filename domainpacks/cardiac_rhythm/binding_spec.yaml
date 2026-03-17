@@ -31,6 +31,13 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # Rhythm classification: sinus/afib/aflutter/svt/vt/asystole
+  # ACC/AHA arrhythmia classification guidelines
+  rhythm_class:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 6
 
 coupling:
   # Gap-junction (connexin-43) coupling: Strogatz (2003).

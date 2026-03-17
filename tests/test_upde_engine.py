@@ -170,3 +170,25 @@ def test_rk45_accepted_in_method_list():
     UPDEEngine(n_oscillators=4, dt=0.01, method="rk45")
     with pytest.raises(ValueError, match="Unknown method"):
         UPDEEngine(n_oscillators=4, dt=0.01, method="bogus")
+
+
+def test_rk45_exhausted_retries_returns_valid_phases():
+    """When RK45 exhausts all retry attempts, it falls back to the last y5 result."""
+    n = 4
+    rng = np.random.default_rng(99)
+    phases = rng.uniform(0, TWO_PI, size=n)
+    omegas = np.ones(n) * 100.0  # large omega → large derivatives → large error
+    knm = np.full((n, n), 50.0)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    engine = UPDEEngine(n_oscillators=n, dt=0.01, method="rk45")
+    # Set extremely tight tolerances to force rejection
+    engine._atol = 1e-15
+    engine._rtol = 1e-15
+    result = engine.step(phases, omegas, knm, zeta=0.0, psi=0.0, alpha=alpha)
+    # Fallback must still produce valid wrapped phases
+    assert result.shape == (n,)
+    assert np.all(np.isfinite(result))
+    assert np.all(result >= 0.0)
+    assert np.all(result < TWO_PI)

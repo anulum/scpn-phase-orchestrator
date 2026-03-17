@@ -69,3 +69,26 @@ def test_alpha_matrix_diagonal_zero():
     lags = {(0, 1): 0.3}
     alpha = model.build_alpha_matrix(lags, n_layers=3)
     np.testing.assert_allclose(np.diag(alpha), 0.0, atol=1e-15)
+
+
+def test_estimate_from_distances_antisymmetric():
+    distances = np.array([[0.0, 1.0, 2.0], [1.0, 0.0, 1.5], [2.0, 1.5, 0.0]])
+    alpha = LagModel.estimate_from_distances(distances, speed=1.0)
+    np.testing.assert_allclose(alpha, -alpha.T, atol=1e-12)
+    np.testing.assert_allclose(np.diag(alpha), 0.0, atol=1e-15)
+
+
+def test_estimate_from_distances_scaling():
+    distances = np.array([[0.0, 1.0], [1.0, 0.0]])
+    a1 = LagModel.estimate_from_distances(distances, speed=1.0)
+    a2 = LagModel.estimate_from_distances(distances, speed=2.0)
+    np.testing.assert_allclose(a1, 2.0 * a2, atol=1e-12)
+
+
+def test_estimate_from_distances_matches_rust():
+    """Verify Python estimate_from_distances gives same result as Rust."""
+    distances = np.array([[0.0, 1.0], [1.0, 0.0]])
+    alpha = LagModel.estimate_from_distances(distances, speed=1.0)
+    expected = 2.0 * np.pi * 1.0 / 1.0
+    np.testing.assert_allclose(alpha[0, 1], expected, atol=1e-12)
+    np.testing.assert_allclose(alpha[1, 0], -expected, atol=1e-12)

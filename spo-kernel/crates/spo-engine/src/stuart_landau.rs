@@ -14,42 +14,7 @@
 
 use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 
-/// Dormand-Prince RK45 Butcher tableau (shared constants with upde.rs).
-mod dp {
-    pub(super) const A21: f64 = 1.0 / 5.0;
-    pub(super) const A31: f64 = 3.0 / 40.0;
-    pub(super) const A32: f64 = 9.0 / 40.0;
-    pub(super) const A41: f64 = 44.0 / 45.0;
-    pub(super) const A42: f64 = -56.0 / 15.0;
-    pub(super) const A43: f64 = 32.0 / 9.0;
-    pub(super) const A51: f64 = 19372.0 / 6561.0;
-    pub(super) const A52: f64 = -25360.0 / 2187.0;
-    pub(super) const A53: f64 = 64448.0 / 6561.0;
-    pub(super) const A54: f64 = -212.0 / 729.0;
-    pub(super) const A61: f64 = 9017.0 / 3168.0;
-    pub(super) const A62: f64 = -355.0 / 33.0;
-    pub(super) const A63: f64 = 46732.0 / 5247.0;
-    pub(super) const A64: f64 = 49.0 / 176.0;
-    pub(super) const A65: f64 = -5103.0 / 18656.0;
-
-    pub(super) const B5: [f64; 6] = [
-        35.0 / 384.0,
-        0.0,
-        500.0 / 1113.0,
-        125.0 / 192.0,
-        -2187.0 / 6784.0,
-        11.0 / 84.0,
-    ];
-
-    pub(super) const B4: [f64; 6] = [
-        5179.0 / 57600.0,
-        0.0,
-        7571.0 / 16695.0,
-        393.0 / 640.0,
-        -92097.0 / 339200.0,
-        187.0 / 2100.0,
-    ];
-}
+use crate::dp_tableau as dp;
 
 /// Stuart-Landau phase-amplitude integrator with pre-allocated scratch arrays.
 pub struct StuartLandauStepper {

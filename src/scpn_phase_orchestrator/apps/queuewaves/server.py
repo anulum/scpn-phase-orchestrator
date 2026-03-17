@@ -15,6 +15,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+try:
+    from httpx import HTTPError as _HTTPError
+except ImportError:
+    _HTTPError = OSError  # type: ignore[assignment,misc]
+
 from scpn_phase_orchestrator.apps.queuewaves.alerter import WebhookAlerter
 from scpn_phase_orchestrator.apps.queuewaves.collector import PrometheusCollector
 from scpn_phase_orchestrator.apps.queuewaves.config import QueueWavesConfig, load_config
@@ -22,6 +27,13 @@ from scpn_phase_orchestrator.apps.queuewaves.detector import AnomalyDetector
 from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
     PhaseComputePipeline,
     PipelineSnapshot,
+)
+
+_IO_ERRORS: tuple[type[BaseException], ...] = (
+    ConnectionError,
+    RuntimeError,
+    OSError,
+    _HTTPError,
 )
 
 __all__ = ["create_app"]
@@ -53,7 +65,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
         for ws in ws_clients:
             try:
                 await ws.send_text(payload)
-            except Exception:
+            except _IO_ERRORS:
                 dead.append(ws)
         for ws in dead:
             ws_clients.discard(ws)
@@ -63,7 +75,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
         while True:
             try:
                 await collector.scrape()
-            except Exception:
+            except _IO_ERRORS:
                 logger.warning("scrape cycle failed", exc_info=True)
 
             signals = collector.get_signal_arrays()
@@ -80,7 +92,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
             if anomalies:
                 try:
                     await alerter.send(anomalies)
-                except Exception:
+                except _IO_ERRORS:
                     logger.warning("alert send failed", exc_info=True)
 
             tick_msg = {"type": "tick", "data": snap.to_dict()}
