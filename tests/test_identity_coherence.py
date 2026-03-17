@@ -611,3 +611,102 @@ def test_build_identity_knm_properties(spec):
     assert np.allclose(knm_actual, knm_actual.T)
     assert np.all(knm_actual >= 0)
     assert np.allclose(np.diag(knm_actual), 0.0)
+
+
+# --- P/I/S extraction tests ---
+
+
+def test_extract_identity_phases_shape(spec):
+    """P/I/S extraction returns correct phase array shape."""
+    from domainpacks.identity_coherence.run import (
+        OMEGAS,
+        _build_layer_map,
+        extract_identity_phases,
+    )
+
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    layer_map = _build_layer_map(spec)
+    imprint = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+    phases, all_states = extract_identity_phases(spec, layer_map, OMEGAS, imprint)
+
+    assert phases.shape == (n_osc,)
+    assert np.all(np.isfinite(phases))
+    assert len(all_states) > 0
+
+
+def test_extract_identity_phases_all_channels(spec):
+    """Extraction produces states from all three channels."""
+    from domainpacks.identity_coherence.run import (
+        OMEGAS,
+        _build_layer_map,
+        extract_identity_phases,
+    )
+
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    layer_map = _build_layer_map(spec)
+    imprint = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+    _, all_states = extract_identity_phases(spec, layer_map, OMEGAS, imprint)
+
+    channels = {s.channel for s in all_states}
+    assert "P" in channels
+    assert "I" in channels
+    assert "S" in channels
+
+
+def test_imprint_affects_extraction_quality(spec):
+    """High imprint produces higher P-channel quality (less noise)."""
+    from domainpacks.identity_coherence.run import (
+        OMEGAS,
+        _build_layer_map,
+        extract_identity_phases,
+    )
+
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    layer_map = _build_layer_map(spec)
+
+    fresh = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+    _, states_fresh = extract_identity_phases(spec, layer_map, OMEGAS, fresh, seed=42)
+
+    saturated = ImprintState(m_k=np.full(n_osc, 0.8), last_update=100.0)
+    _, states_sat = extract_identity_phases(spec, layer_map, OMEGAS, saturated, seed=42)
+
+    p_fresh = [s.quality for s in states_fresh if s.channel == "P"]
+    p_sat = [s.quality for s in states_sat if s.channel == "P"]
+
+    # Saturated imprint = less noise = higher quality
+    assert np.mean(p_sat) > np.mean(p_fresh)
+
+
+def test_session_start_check_passes_for_identity(spec):
+    """Full session-start check passes for identity_coherence domainpack."""
+    from domainpacks.identity_coherence.run import (
+        OMEGAS,
+        _build_layer_map,
+        run_session_start_check,
+    )
+
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    layer_map = _build_layer_map(spec)
+    imprint = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+
+    phases, report = run_session_start_check(spec, layer_map, OMEGAS, imprint)
+    assert report.passed
+    assert phases.shape == (n_osc,)
+    assert "P" in report.quality_scores
+
+
+def test_session_start_check_with_imprint(spec):
+    """Session-start check reports imprint level when loaded."""
+    from domainpacks.identity_coherence.run import (
+        OMEGAS,
+        _build_layer_map,
+        run_session_start_check,
+    )
+
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    layer_map = _build_layer_map(spec)
+    imprint = ImprintState(m_k=np.full(n_osc, 0.5), last_update=50.0)
+
+    _, report = run_session_start_check(spec, layer_map, OMEGAS, imprint)
+    assert report.passed
+    assert abs(report.imprint_level - 0.5) < 1e-6

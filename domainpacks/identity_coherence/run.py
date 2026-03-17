@@ -34,6 +34,10 @@ from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.monitor.session_start import check_session_start
+from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
+from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyEngine,
@@ -188,6 +192,129 @@ def _build_identity_knm(n_osc: int, layer_map: dict) -> np.ndarray:
     return knm
 
 
+def _generate_layer_signals(
+    layer_name: str,
+    n_osc: int,
+    omegas: np.ndarray,
+    imprint_mk: np.ndarray,
+    rng: np.random.Generator,
+) -> tuple[list, list, list]:
+    """Generate representative P/I/S signals for one layer's oscillators.
+
+    P (substrate): sinusoid at natural frequency + noise scaled by (1 - imprint).
+    I (disposition): regular event timestamps; rate = omega/TWO_PI.
+    S (normative): state sequence biased by imprint level.
+
+    Returns:
+        (p_states, i_states, s_states) — PhaseState lists from each extractor.
+    """
+    fs = 1000.0
+    duration = 1.0
+    t = np.arange(0, duration, 1.0 / fs)
+
+    p_states_all = []
+    i_states_all = []
+    s_states_all = []
+
+    for k in range(n_osc):
+        omega_k = omegas[k]
+        mk = imprint_mk[k]
+
+        # P channel: sinusoidal substrate. Low imprint → more noise.
+        noise_scale = 0.5 * (1.0 - mk)
+        signal = np.sin(TWO_PI * (omega_k / TWO_PI) * t)
+        signal += rng.normal(0, noise_scale, len(t))
+        p_ext = PhysicalExtractor(node_id=f"p_{layer_name}_{k}")
+        p_states_all.extend(p_ext.extract(signal, fs))
+
+        # I channel: event timestamps at rate ~ omega/TWO_PI Hz.
+        rate_hz = max(omega_k / TWO_PI, 0.1)
+        n_events = max(int(duration * rate_hz * 10), 3)
+        intervals = rng.exponential(1.0 / (rate_hz * 10), n_events)
+        timestamps = np.cumsum(intervals)
+        i_ext = InformationalExtractor(node_id=f"i_{layer_name}_{k}")
+        i_states_all.extend(i_ext.extract(timestamps, fs))
+
+        # S channel: 3-state sequence. High imprint biases toward nominal (0).
+        p_nominal = 0.5 + 0.4 * mk  # imprint makes nominal more likely
+        p_rest = 1.0 - p_nominal
+        probs = [p_nominal, p_rest * 0.7, p_rest * 0.3]
+        states_seq = rng.choice([0, 1, 2], size=20, p=probs)
+        s_ext = SymbolicExtractor(n_states=3, node_id=f"s_{layer_name}_{k}")
+        s_states_all.extend(s_ext.extract(states_seq, 1.0))
+
+    return p_states_all, i_states_all, s_states_all
+
+
+def extract_identity_phases(
+    spec,
+    layer_map: dict,
+    omegas: np.ndarray,
+    imprint_state: ImprintState,
+    seed: int = 42,
+) -> tuple[np.ndarray, list]:
+    """Extract initial phases from P/I/S signals instead of random init.
+
+    Physical channel (Hilbert) provides the initial phase for each oscillator.
+    Informational and Symbolic channels contribute to the session-start check
+    but don't override the phase (they measure disposition activity patterns).
+
+    Returns:
+        (phases, all_phase_states) where phases is shape (n_osc,).
+    """
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    rng = np.random.default_rng(seed)
+    phases = np.zeros(n_osc)
+    all_states = []
+
+    for layer in spec.layers:
+        ids = layer_map[layer.index]
+        layer_omegas = omegas[ids]
+        layer_mk = imprint_state.m_k[ids]
+
+        p_states, i_states, s_states = _generate_layer_signals(
+            layer.name, len(ids), layer_omegas, layer_mk, rng
+        )
+        all_states.extend(p_states)
+        all_states.extend(i_states)
+        # Only take final state per symbolic sequence (one per oscillator)
+        for idx_in_layer, _osc_idx in enumerate(ids):
+            sym_chunk = s_states[idx_in_layer * 20 : (idx_in_layer + 1) * 20]
+            if sym_chunk:
+                all_states.append(sym_chunk[-1])
+
+        # Use physical channel theta as initial phase
+        for idx_in_layer, osc_idx in enumerate(ids):
+            phases[osc_idx] = p_states[idx_in_layer].theta
+
+    return phases, all_states
+
+
+def run_session_start_check(spec, layer_map, omegas, imprint_state, seed=42):
+    """Extract P/I/S phases, run coherence gate, print report."""
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    phases, all_states = extract_identity_phases(
+        spec, layer_map, omegas, imprint_state, seed
+    )
+    report = check_session_start(all_states, phases, imprint_state, n_osc)
+
+    print("=== Session-Start Coherence Check ===\n")
+    for ch, q in sorted(report.quality_scores.items()):
+        print(f"  Channel {ch}: quality={q:.3f}")
+    print(f"  Initial R: {report.initial_r:.3f}")
+    print(f"  Imprint level: {report.imprint_level:.3f}")
+    if report.warnings:
+        for w in report.warnings:
+            print(f"  WARN: {w}")
+    if report.errors:
+        for e in report.errors:
+            print(f"  ERROR: {e}")
+    status = "PASS" if report.passed else "FAIL"
+    print(f"  Status: {status}\n")
+
+    return phases, report
+
+
 def main():
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
@@ -226,9 +353,12 @@ def main():
     default_gc = [SymmetryConstraint(), NonNegativeConstraint()]
     geo_constraints = constraint_map.get(ct, default_gc)
 
-    rng = np.random.default_rng(42)
-    phases = rng.uniform(0, TWO_PI, n_osc)
+    # P/I/S extraction + session-start coherence gate
+    phases, session_report = run_session_start_check(
+        spec, layer_map, OMEGAS, imprint_state
+    )
 
+    rng = np.random.default_rng(42)
     zeta = spec.drivers.informational.get("zeta", 0.1)
     psi_target = 0.0
 
@@ -395,9 +525,10 @@ def run_stuart_landau():
     )
     imprint_state = load_imprint(n_osc)
 
+    # P/I/S extraction for initial phases; amplitudes from imprint level
+    phases, _ = run_session_start_check(spec, layer_map, OMEGAS, imprint_state)
     rng = np.random.default_rng(42)
-    phases = rng.uniform(0, TWO_PI, n_osc)
-    amplitudes = rng.uniform(0.5, 1.5, n_osc)
+    amplitudes = 0.5 + imprint_state.m_k + rng.uniform(0, 0.5, n_osc)
     state = np.concatenate([phases, amplitudes])
 
     mu_base = np.full(n_osc, amp_cfg.mu)

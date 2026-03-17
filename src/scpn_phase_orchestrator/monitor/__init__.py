@@ -9,5 +9,14 @@ from __future__ import annotations
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
+from scpn_phase_orchestrator.monitor.session_start import (
+    SessionCoherenceReport,
+    check_session_start,
+)
 
-__all__ = ["CoherenceMonitor", "BoundaryObserver"]
+__all__ = [
+    "CoherenceMonitor",
+    "BoundaryObserver",
+    "SessionCoherenceReport",
+    "check_session_start",
+]
