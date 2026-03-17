@@ -33,6 +33,7 @@ use spo_oscillators::{informational, physical, quality::PhaseQualityScorer, symb
 use spo_supervisor::{
     boundaries::{BoundaryDef, BoundaryObserver, Severity},
     coherence::CoherenceMonitor,
+    petri_net,
     policy::SupervisorPolicy,
     projector::ActionProjector,
     regime::RegimeManager,
@@ -772,6 +773,92 @@ fn layer_coherence(phases: PyReadonlyArray1<'_, f64>, indices: Vec<usize>) -> Py
     Ok(order_params::compute_layer_coherence(s, &indices))
 }
 
+// ─── PyPetriNet ─────────────────────────────────────────────────
+
+/// (place_name, weight)
+type ArcTuple = (String, u32);
+/// (name, inputs, outputs, guard_text_or_none)
+type TransitionTuple = (String, Vec<ArcTuple>, Vec<ArcTuple>, Option<String>);
+
+#[pyclass(name = "PyPetriNet")]
+struct PyPetriNet {
+    inner: petri_net::PetriNet,
+}
+
+#[pymethods]
+impl PyPetriNet {
+    #[new]
+    fn new(places: Vec<String>, transitions: Vec<TransitionTuple>) -> PyResult<Self> {
+        let ts: Vec<petri_net::Transition> = transitions
+            .into_iter()
+            .map(|(name, inputs, outputs, guard_text)| {
+                let guard = match guard_text {
+                    Some(text) => Some(petri_net::parse_guard(&text).map_err(|e| {
+                        PyValueError::new_err(format!("guard parse error: {e}"))
+                    })?),
+                    None => None,
+                };
+                Ok(petri_net::Transition {
+                    name,
+                    inputs: inputs
+                        .into_iter()
+                        .map(|(p, w)| petri_net::Arc { place: p, weight: w })
+                        .collect(),
+                    outputs: outputs
+                        .into_iter()
+                        .map(|(p, w)| petri_net::Arc { place: p, weight: w })
+                        .collect(),
+                    guard,
+                })
+            })
+            .collect::<PyResult<Vec<_>>>()?;
+        let inner = petri_net::PetriNet::new(places, ts)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(Self { inner })
+    }
+
+    /// Step: fire first enabled transition. Returns (tokens_dict, fired_name_or_none).
+    fn step<'py>(
+        &self,
+        py: Python<'py>,
+        tokens: HashMap<String, u32>,
+        ctx: HashMap<String, f64>,
+    ) -> PyResult<(Bound<'py, PyDict>, Option<String>)> {
+        let mut marking = petri_net::Marking::default();
+        for (p, n) in &tokens {
+            marking.set(p, *n);
+        }
+        let (new_marking, fired_idx) = self.inner.step(&marking, &ctx);
+        let dict = PyDict::new(py);
+        for p in self.inner.place_names() {
+            let n = new_marking.get(p);
+            if n > 0 {
+                dict.set_item(p, n)?;
+            }
+        }
+        let fired_name = fired_idx.map(|i| self.inner.transitions()[i].name.clone());
+        Ok((dict, fired_name))
+    }
+
+    /// Return names of all enabled transitions.
+    fn enabled(&self, tokens: HashMap<String, u32>, ctx: HashMap<String, f64>) -> Vec<String> {
+        let mut marking = petri_net::Marking::default();
+        for (p, n) in &tokens {
+            marking.set(p, *n);
+        }
+        self.inner
+            .enabled(&marking, &ctx)
+            .into_iter()
+            .map(|i| self.inner.transitions()[i].name.clone())
+            .collect()
+    }
+
+    #[getter]
+    fn place_names(&self) -> Vec<String> {
+        self.inner.place_names().to_vec()
+    }
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
 fn make_upde_state(layer_rs: &[f64]) -> UPDEState {
@@ -862,6 +949,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyLagModel>()?;
     m.add_class::<PySupervisorPolicy>()?;
     m.add_class::<PyStuartLandauStepper>()?;
+    m.add_class::<PyPetriNet>()?;
     m.add_function(wrap_pyfunction!(pac_modulation_index, m)?)?;
     m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;
