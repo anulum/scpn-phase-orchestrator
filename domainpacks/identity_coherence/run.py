@@ -52,6 +52,34 @@ STEPS = 2000
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
+# Imprint persistence path (Arcane Sapience filesystem)
+IMPRINT_DIR = Path(__file__).resolve().parents[3] / "04_ARCANE_SAPIENCE" / "imprint"
+
+
+def save_imprint(state: ImprintState, path: Path | None = None) -> Path:
+    """Persist ImprintState as .npz for cross-session continuity."""
+    dst = path or IMPRINT_DIR / "identity_coherence_imprint.npz"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        dst,
+        m_k=state.m_k,
+        last_update=np.array(state.last_update),
+    )
+    return dst
+
+
+def load_imprint(n_osc: int, path: Path | None = None) -> ImprintState:
+    """Load persisted ImprintState, or return zero state if absent."""
+    src = path or IMPRINT_DIR / "identity_coherence_imprint.npz"
+    if not src.exists():
+        return ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+    data = np.load(src)
+    m_k = data["m_k"]
+    if m_k.shape[0] != n_osc:
+        return ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+    return ImprintState(m_k=m_k, last_update=float(data["last_update"]))
+
+
 # Natural frequencies (rad/s). Tightly clustered within layers to
 # allow Kuramoto synchronization. Acebrón et al. 2005: K_c ~ 2*sigma/pi
 # for Lorentzian g(omega). Keeping sigma < 0.1 within each layer ensures
@@ -186,7 +214,7 @@ def main():
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )
-    imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+    imprint_state = load_imprint(n_osc)
 
     constraint_map = {
         "symmetric_non_negative": [SymmetryConstraint(), NonNegativeConstraint()],
@@ -341,6 +369,9 @@ def main():
         f"  imprint={float(np.mean(imprint_state.m_k)):.4f}"
     )
 
+    dst = save_imprint(imprint_state)
+    print(f"Imprint saved to {dst}")
+
 
 def run_stuart_landau():
     """Stuart-Landau conviction dynamics on identity dispositions.
@@ -362,7 +393,7 @@ def run_stuart_landau():
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )
-    imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
+    imprint_state = load_imprint(n_osc)
 
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n_osc)
@@ -441,6 +472,8 @@ def run_stuart_landau():
         f"  amp_dom={amp_dom:.4f}  amp_core={amp_core:.4f}"
         f"  R_sl={r_sl:.3f}  imprint={mi:.4f}"
     )
+    dst = save_imprint(imprint_state)
+    print(f"Imprint saved to {dst}")
 
 
 if __name__ == "__main__":

@@ -128,3 +128,49 @@ def test_bio_stub_domainpack() -> None:
     spec = load_binding_spec(DOMAINPACKS / "bio_stub" / "binding_spec.yaml")
     assert spec.name == "bio_stub"
     assert len(spec.layers) >= 1
+
+
+def test_identity_coherence_domainpack() -> None:
+    """Load identity_coherence, build layer-aware coupling, run UPDE."""
+    spec = load_binding_spec(DOMAINPACKS / "identity_coherence" / "binding_spec.yaml")
+    assert spec.name == "identity_coherence"
+    assert len(spec.layers) == 6
+
+    n_osc = sum(len(lay.oscillator_ids) for lay in spec.layers)
+    assert n_osc == 35
+
+    # Layer-aware coupling (not CouplingBuilder — identity uses explicit Knm)
+    from domainpacks.identity_coherence.run import (
+        _build_identity_knm,
+        _build_layer_map,
+    )
+
+    layer_map = _build_layer_map(spec)
+    knm = _build_identity_knm(n_osc, layer_map)
+    alpha = np.zeros((n_osc, n_osc))
+
+    engine = UPDEEngine(n_oscillators=n_osc, dt=spec.sample_period_s)
+    rng = np.random.default_rng(42)
+    phases = rng.uniform(0, TWO_PI, size=n_osc)
+    omegas = np.ones(n_osc)
+
+    for _ in range(100):
+        phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+    assert np.all(np.isfinite(phases))
+    R, _ = compute_order_parameter(phases)
+    assert R > 0.9
+
+    observer = BoundaryObserver(spec.boundaries)
+    boundary_state = observer.observe({"R_good": R, "layer_2_R": R, "layer_3_R": R})
+
+    layer_states = [LayerState(R=R, psi=0.0) for _ in spec.layers]
+    upde_state = UPDEState(
+        layers=layer_states,
+        cross_layer_alignment=np.eye(len(spec.layers)),
+        stability_proxy=R,
+        regime_id="nominal",
+    )
+    mgr = RegimeManager(cooldown_steps=0)
+    regime = mgr.evaluate(upde_state, boundary_state)
+    assert regime.value in ("nominal", "degraded", "critical", "recovery")
