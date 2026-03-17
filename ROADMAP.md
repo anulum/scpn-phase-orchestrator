@@ -53,7 +53,7 @@
 - Amplitude configs for 6 domainpacks (neuroscience_eeg, cardiac_rhythm, plasma_control, firefly_swarm, rotating_machinery, power_grid)
 - `CoherencePlot` matplotlib implementations (R timeline, regime timeline, action audit, amplitude timeline, PAC heatmap)
 - Deep audit Phase 1: 12 correctness/safety fixes (hash chain, RK coupling, regime state machine, FFI `run()`, public API expansion)
-- 1219 Python tests, 191 Rust tests
+- 1225 Python tests, 191 Rust tests
 
 ## v0.5 (planned)
 
@@ -61,8 +61,8 @@
 - ~~Rust LagModel: algorithm alignment with Python adaptive lag pipeline~~ (done)
 - ~~FFI improvements: PyStuartLandauStepper numpy array input, PyActionProjector unknown-knob warning~~ (done)
 - ~~Expand domainpack channel coverage (target: all 3 channels in 12+ packs)~~ (10/24 done)
-- Async test infrastructure: pytest-asyncio + httpx.AsyncClient for QueueWaves
-- Tutorial notebooks for binding, audit replay, reporting, adapter bridges
+- ~~Async test infrastructure: pytest-asyncio + httpx.AsyncClient for QueueWaves~~ (done)
+- ~~Tutorial notebooks for binding, audit replay, reporting, adapter bridges~~ (done)
 - Petri net + PolicyEngine Rust port (spo-supervisor crate)
 
 ## v1.0

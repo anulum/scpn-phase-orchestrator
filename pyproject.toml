@@ -62,6 +62,7 @@ plot = ["matplotlib>=3.7"]
 notebook = ["jupyter>=1.0", "nbconvert>=7.0", "matplotlib>=3.7"]
 dev = [
     "pytest>=7.4",
+    "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
     "hypothesis>=6.82",
     "coverage[toml]>=7.3",
@@ -116,6 +117,7 @@ testpaths = ["tests"]
 addopts = "-v --tb=short"
 xfail_strict = true
 filterwarnings = ["error::DeprecationWarning"]
+asyncio_mode = "auto"
 markers = [
     "integration: end-to-end integration tests",
     "contract: boundary-contract verification tests",
