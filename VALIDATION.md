@@ -4,7 +4,7 @@
 
 | Suite | Count | Scope |
 |-------|------:|-------|
-| Python unit/integration | 1299 | `pytest tests/` across 80+ files |
+| Python unit/integration | 1305 | `pytest tests/` across 80+ files |
 | Rust unit/integration | 203 | `cargo test --workspace` across 5 crates |
 | FFI parity | 20 | Python vs Rust parity: UPDE, Stuart-Landau, Petri net, RuleEngine |
 | Notebook execution | 10 | `nbclient` runs all `.ipynb` cells under Python 3.12 |
