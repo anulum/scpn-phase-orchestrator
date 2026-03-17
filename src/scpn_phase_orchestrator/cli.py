@@ -383,6 +383,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                             knm=coupling.knm * (1.0 + act.value),
                             alpha=coupling.alpha,
                             active_template=coupling.active_template,
+                            knm_r=coupling.knm_r,
                         )
                     elif act.scope.startswith("layer_"):
                         idx = int(act.scope.split("_", 1)[1])
@@ -394,6 +395,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                             knm=new_knm,
                             alpha=coupling.alpha,
                             active_template=coupling.active_template,
+                            knm_r=coupling.knm_r,
                         )
                 elif act.knob == "Psi":
                     psi_target = act.value

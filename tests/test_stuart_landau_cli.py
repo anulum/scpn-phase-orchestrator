@@ -193,3 +193,83 @@ class TestCLIAmplitudeMode:
         result = runner.invoke(main, ["validate", str(spec_path)])
         assert result.exit_code == 1
         assert "epsilon" in result.output
+
+
+class TestCLIAmplitudeReporting:
+    def test_amplitude_output_fields(self, tmp_path: Path) -> None:
+        spec_path = _write_spec(tmp_path, _MINIMAL_AMPLITUDE_SPEC)
+        runner = CliRunner()
+        result = runner.invoke(main, ["run", str(spec_path), "--steps", "30"])
+        assert result.exit_code == 0
+        assert "mean_amplitude=" in result.output
+        assert "R_good=" in result.output
+        assert "regime=" in result.output
+
+    def test_amplitude_with_policy_rules(self, tmp_path: Path) -> None:
+        policy_data = {
+            "rules": [
+                {
+                    "name": "amp_boost",
+                    "regime": ["DEGRADED"],
+                    "condition": {
+                        "metric": "mean_amplitude",
+                        "op": "<",
+                        "threshold": 0.5,
+                    },
+                    "action": {
+                        "knob": "K",
+                        "scope": "global",
+                        "value": 0.1,
+                        "ttl_s": 10.0,
+                    },
+                }
+            ]
+        }
+        spec = {
+            **_MINIMAL_AMPLITUDE_SPEC,
+            "policy": "policy.yaml",
+        }
+        spec_path = _write_spec(tmp_path, spec)
+        policy_path = tmp_path / "policy.yaml"
+        policy_path.write_text(
+            yaml.dump(policy_data),
+            encoding="utf-8",
+        )
+        runner = CliRunner()
+        result = runner.invoke(main, ["run", str(spec_path), "--steps", "20"])
+        assert result.exit_code == 0
+
+
+class TestCLIRealDomainpacks:
+    _PACK_DIR = Path(__file__).parent.parent / "domainpacks"
+
+    def test_cardiac_rhythm_runs(self) -> None:
+        spec = self._PACK_DIR / "cardiac_rhythm" / "binding_spec.yaml"
+        runner = CliRunner()
+        result = runner.invoke(main, ["run", str(spec), "--steps", "20"])
+        assert result.exit_code == 0, result.output
+        assert "mean_amplitude=" in result.output
+
+    def test_neuroscience_eeg_runs(self) -> None:
+        spec = self._PACK_DIR / "neuroscience_eeg" / "binding_spec.yaml"
+        runner = CliRunner()
+        result = runner.invoke(main, ["run", str(spec), "--steps", "20"])
+        assert result.exit_code == 0, result.output
+        assert "mean_amplitude=" in result.output
+
+    def test_laser_array_runs(self) -> None:
+        spec = self._PACK_DIR / "laser_array" / "binding_spec.yaml"
+        runner = CliRunner()
+        result = runner.invoke(main, ["run", str(spec), "--steps", "20"])
+        assert result.exit_code == 0
+
+    def test_validate_all_domainpacks(self) -> None:
+        runner = CliRunner()
+        for pack_dir in sorted(self._PACK_DIR.iterdir()):
+            spec = pack_dir / "binding_spec.yaml"
+            if not spec.exists():
+                continue
+            result = runner.invoke(main, ["validate", str(spec)])
+            assert result.exit_code == 0, (
+                f"{pack_dir.name} validation failed: {result.output}"
+            )
