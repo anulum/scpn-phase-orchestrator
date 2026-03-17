@@ -3,7 +3,7 @@ rules:
   - name: identity_nominal
     regime: [NOMINAL]
     condition:
-      metric: R_good
+      metric: stability_proxy
       op: ">"
       threshold: 0.6
     action:
@@ -16,7 +16,7 @@ rules:
   - name: identity_degraded_retrieve
     regime: [DEGRADED]
     condition:
-      metric: R_good
+      metric: stability_proxy
       op: "<"
       threshold: 0.5
     action:
@@ -43,7 +43,7 @@ rules:
   - name: identity_critical_recovery
     regime: [CRITICAL]
     condition:
-      metric: R_good
+      metric: stability_proxy
       op: "<"
       threshold: 0.3
     action:

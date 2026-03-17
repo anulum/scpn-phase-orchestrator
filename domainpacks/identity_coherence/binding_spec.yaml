@@ -104,11 +104,19 @@ actuators:
     knob: K
     scope: layer_2
     limits: [0.0, 3.0]
+  - name: relationship_lag
+    knob: alpha
+    scope: layer_2
+    limits: [0.0, 1.57]
+  - name: values_target
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
 
 imprint_model:
   decay_rate: 0.005  # very slow decay — identity persists across many sessions
   saturation: 0.5    # moderate saturation — K modulated by factor 1.0 to 1.5
-  modulates: ["K"]   # experience strengthens coupling
+  modulates: ["K", "mu"]  # experience strengthens coupling and conviction
 
 amplitude:
   mu: 1.0            # supercritical by default — dispositions self-sustain

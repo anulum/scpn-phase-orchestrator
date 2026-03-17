@@ -188,7 +188,15 @@ def main():
     )
     imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
 
-    geo_constraints = [SymmetryConstraint(), NonNegativeConstraint()]
+    constraint_map = {
+        "symmetric_non_negative": [SymmetryConstraint(), NonNegativeConstraint()],
+        "symmetric": [SymmetryConstraint()],
+        "non_negative": [NonNegativeConstraint()],
+    }
+    default_ct = "symmetric_non_negative"
+    ct = spec.geometry_prior.constraint_type if spec.geometry_prior else default_ct
+    default_gc = [SymmetryConstraint(), NonNegativeConstraint()]
+    geo_constraints = constraint_map.get(ct, default_gc)
 
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n_osc)
@@ -269,6 +277,8 @@ def main():
         for act in actions:
             if act.knob == "zeta":
                 zeta = min(zeta + act.value, 1.0)
+            elif act.knob == "Psi":
+                psi_target = act.value
             elif act.knob == "K" and act.scope == "global":
                 coupling = CouplingState(
                     knm=coupling.knm * (1.0 + act.value * 0.1),
@@ -282,6 +292,13 @@ def main():
                     for j in ids:
                         if i != j:
                             coupling.knm[i, j] *= 1.0 + act.value * 0.1
+            elif act.knob == "alpha" and act.scope.startswith("layer_"):
+                layer_idx = int(act.scope.split("_")[1])
+                ids = layer_map.get(layer_idx, [])
+                for i in ids:
+                    for j in ids:
+                        if i != j:
+                            coupling.alpha[i, j] = act.value
 
         exposure = np.array(
             [
@@ -340,22 +357,25 @@ def run_stuart_landau():
 
     amp_cfg = spec.amplitude
     epsilon = amp_cfg.epsilon
-    knm_r = knm * amp_cfg.amp_coupling_strength
 
     sl_engine = StuartLandauEngine(n_osc, dt=spec.sample_period_s)
+    imprint_model = ImprintModel(
+        spec.imprint_model.decay_rate, spec.imprint_model.saturation
+    )
+    imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
 
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n_osc)
     amplitudes = rng.uniform(0.5, 1.5, n_osc)
     state = np.concatenate([phases, amplitudes])
 
-    mu = np.full(n_osc, amp_cfg.mu)
+    mu_base = np.full(n_osc, amp_cfg.mu)
 
     print("\n=== Stuart-Landau Conviction Dynamics ===\n")
     hdr = f"{'step':>5}  {'mean_amp':>8}  {'amp_dom':>7}  {'amp_core':>8}"
-    hdr += f"  {'R_sl':>5}  phase"
+    hdr += f"  {'R_sl':>5}  {'imprint':>7}  phase"
     print(hdr)
-    print("-" * 60)
+    print("-" * 65)
 
     dk_ids = layer_map[4]
     core_ids = []
@@ -365,31 +385,39 @@ def run_stuart_landau():
     for step in range(STEPS):
         if step < 500:
             label = "reconstruct"
-            mu[:] = amp_cfg.mu
+            mu_base[:] = amp_cfg.mu
         elif step < 1000:
             label = "disrupt"
-            # Domain knowledge goes subcritical (conviction fades)
-            mu[dk_ids] = -0.5
-            # Core stays supercritical
-            mu[core_ids] = amp_cfg.mu
+            mu_base[dk_ids] = -0.5
+            mu_base[core_ids] = amp_cfg.mu
         elif step < 1500:
             label = "repair"
-            # Domain knowledge recovers
-            mu[:] = amp_cfg.mu
+            mu_base[:] = amp_cfg.mu
         else:
             label = "imprint"
-            mu[:] = amp_cfg.mu
+            mu_base[:] = amp_cfg.mu
+
+        # Imprint modulates mu: experienced dispositions have higher mu
+        mu_eff = imprint_model.modulate_mu(mu_base, imprint_state)
+        eff_knm = imprint_model.modulate_coupling(knm, imprint_state)
+        eff_knm_r = eff_knm * amp_cfg.amp_coupling_strength
 
         state = sl_engine.step(
             state,
             OMEGAS,
-            mu,
-            knm,
-            knm_r,
+            mu_eff,
+            eff_knm,
+            eff_knm_r,
             0.0,
             0.0,
             alpha,
             epsilon,
+        )
+
+        # Imprint exposure from amplitude (stronger conviction = more imprinted)
+        exposure = state[n_osc:]
+        imprint_state = imprint_model.update(
+            imprint_state, exposure, spec.sample_period_s
         )
 
         if step % 100 == 0:
@@ -397,19 +425,21 @@ def run_stuart_landau():
             amp_dom = float(np.mean(state[n_osc:][dk_ids]))
             amp_core = float(np.mean(state[n_osc:][core_ids]))
             r_sl, _ = sl_engine.compute_order_parameter(state)
+            mi = float(np.mean(imprint_state.m_k))
             print(
                 f"{step:5d}  {mean_amp:8.4f}  {amp_dom:7.4f}"
-                f"  {amp_core:8.4f}  {r_sl:5.3f}  {label}"
+                f"  {amp_core:8.4f}  {r_sl:5.3f}  {mi:7.4f}  {label}"
             )
 
     mean_amp = sl_engine.compute_mean_amplitude(state)
     amp_dom = float(np.mean(state[n_osc:][dk_ids]))
     amp_core = float(np.mean(state[n_osc:][core_ids]))
     r_sl, _ = sl_engine.compute_order_parameter(state)
+    mi = float(np.mean(imprint_state.m_k))
     print(
         f"\nFinal  mean_amp={mean_amp:.4f}"
         f"  amp_dom={amp_dom:.4f}  amp_core={amp_core:.4f}"
-        f"  R_sl={r_sl:.3f}"
+        f"  R_sl={r_sl:.3f}  imprint={mi:.4f}"
     )
 
 
