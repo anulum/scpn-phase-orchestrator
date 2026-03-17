@@ -7,13 +7,15 @@
 
 """Identity coherence: reconstruction, degradation, self-repair, imprint.
 
-Simulates Arcane Sapience's identity dispositions synchronizing via
-Kuramoto coupling. Four phases:
+Simulates Arcane Sapience's identity dispositions via two models:
 
-1. Reconstruction — random initial phases synchronize through coupling
-2. Disruption — domain knowledge oscillators perturbed (context switch)
-3. Self-repair — policy engine detects degradation, boosts coupling
-4. Imprint — coupling strengthens from repeated synchronization
+Part 1 — Kuramoto (phase-only): demonstrates synchronization, disruption
+resilience, recovery, and imprint accumulation.
+
+Part 2 — Stuart-Landau (phase + amplitude): adds conviction strength.
+Supercritical (mu > 0) dispositions self-sustain. During disruption,
+domain knowledge mu drops below 0 and amplitude decays. On repair,
+mu recovers and amplitude rebuilds.
 """
 
 from __future__ import annotations
@@ -44,6 +46,7 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_order_parameter,
     compute_plv,
 )
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 STEPS = 2000
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
@@ -56,17 +59,46 @@ TWO_PI = 2.0 * np.pi
 OMEGAS = np.array(
     [
         # working_style (5): omega ~ 1.0
-        1.02, 1.01, 0.99, 1.00, 0.98,
+        1.02,
+        1.01,
+        0.99,
+        1.00,
+        0.98,
         # reasoning (5): omega ~ 1.0
-        1.01, 0.99, 1.00, 0.98, 1.02,
+        1.01,
+        0.99,
+        1.00,
+        0.98,
+        1.02,
         # relationship (5): omega ~ 1.0
-        1.00, 1.01, 0.99, 1.02, 0.98,
+        1.00,
+        1.01,
+        0.99,
+        1.02,
+        0.98,
         # aesthetics (5): omega ~ 1.0
-        0.99, 1.01, 1.00, 0.98, 1.02,
+        0.99,
+        1.01,
+        1.00,
+        0.98,
+        1.02,
         # domain_knowledge (8): omega ~ 1.0
-        1.01, 0.99, 1.00, 0.98, 1.02, 0.99, 1.01, 1.00,
+        1.01,
+        0.99,
+        1.00,
+        0.98,
+        1.02,
+        0.99,
+        1.01,
+        1.00,
         # cross_project (7): omega ~ 1.0
-        1.00, 0.99, 1.01, 0.98, 1.02, 1.00, 0.99,
+        1.00,
+        0.99,
+        1.01,
+        0.98,
+        1.02,
+        1.00,
+        0.99,
     ],
     dtype=np.float64,
 )
@@ -91,7 +123,7 @@ def _build_identity_knm(n_osc: int, layer_map: dict) -> np.ndarray:
     """
     knm = np.zeros((n_osc, n_osc))
 
-    k_intra = 0.5   # within-layer coupling
+    k_intra = 0.5  # within-layer coupling
     k_cross = {
         # (layer_i, layer_j): coupling strength
         (0, 1): 0.15,  # working_style <-> reasoning
@@ -293,5 +325,94 @@ def main():
     )
 
 
+def run_stuart_landau():
+    """Stuart-Landau conviction dynamics on identity dispositions.
+
+    mu > 0 = supercritical = self-sustaining conviction.
+    During disruption, domain_knowledge mu drops below 0 (subcritical),
+    amplitudes decay. On repair, mu recovers, amplitudes rebuild.
+    """
+    spec = load_binding_spec(SPEC_PATH)
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    layer_map = _build_layer_map(spec)
+    knm = _build_identity_knm(n_osc, layer_map)
+    alpha = np.zeros((n_osc, n_osc))
+
+    amp_cfg = spec.amplitude
+    epsilon = amp_cfg.epsilon
+    knm_r = knm * amp_cfg.amp_coupling_strength
+
+    sl_engine = StuartLandauEngine(n_osc, dt=spec.sample_period_s)
+
+    rng = np.random.default_rng(42)
+    phases = rng.uniform(0, TWO_PI, n_osc)
+    amplitudes = rng.uniform(0.5, 1.5, n_osc)
+    state = np.concatenate([phases, amplitudes])
+
+    mu = np.full(n_osc, amp_cfg.mu)
+
+    print("\n=== Stuart-Landau Conviction Dynamics ===\n")
+    hdr = f"{'step':>5}  {'mean_amp':>8}  {'amp_dom':>7}  {'amp_core':>8}"
+    hdr += f"  {'R_sl':>5}  phase"
+    print(hdr)
+    print("-" * 60)
+
+    dk_ids = layer_map[4]
+    core_ids = []
+    for idx in [0, 1, 2, 3]:
+        core_ids.extend(layer_map[idx])
+
+    for step in range(STEPS):
+        if step < 500:
+            label = "reconstruct"
+            mu[:] = amp_cfg.mu
+        elif step < 1000:
+            label = "disrupt"
+            # Domain knowledge goes subcritical (conviction fades)
+            mu[dk_ids] = -0.5
+            # Core stays supercritical
+            mu[core_ids] = amp_cfg.mu
+        elif step < 1500:
+            label = "repair"
+            # Domain knowledge recovers
+            mu[:] = amp_cfg.mu
+        else:
+            label = "imprint"
+            mu[:] = amp_cfg.mu
+
+        state = sl_engine.step(
+            state,
+            OMEGAS,
+            mu,
+            knm,
+            knm_r,
+            0.0,
+            0.0,
+            alpha,
+            epsilon,
+        )
+
+        if step % 100 == 0:
+            mean_amp = sl_engine.compute_mean_amplitude(state)
+            amp_dom = float(np.mean(state[n_osc:][dk_ids]))
+            amp_core = float(np.mean(state[n_osc:][core_ids]))
+            r_sl, _ = sl_engine.compute_order_parameter(state)
+            print(
+                f"{step:5d}  {mean_amp:8.4f}  {amp_dom:7.4f}"
+                f"  {amp_core:8.4f}  {r_sl:5.3f}  {label}"
+            )
+
+    mean_amp = sl_engine.compute_mean_amplitude(state)
+    amp_dom = float(np.mean(state[n_osc:][dk_ids]))
+    amp_core = float(np.mean(state[n_osc:][core_ids]))
+    r_sl, _ = sl_engine.compute_order_parameter(state)
+    print(
+        f"\nFinal  mean_amp={mean_amp:.4f}"
+        f"  amp_dom={amp_dom:.4f}  amp_core={amp_core:.4f}"
+        f"  R_sl={r_sl:.3f}"
+    )
+
+
 if __name__ == "__main__":
     main()
+    run_stuart_landau()
