@@ -57,7 +57,7 @@ def test_euler_parity(spo):
     rust = spo.PyStuartLandauStepper(n, dt=dt, method="euler")
     rust_result = np.array(
         rust.step(
-            state.tolist(),
+            state.copy(),
             omegas,
             mu,
             knm.ravel(),
@@ -90,20 +90,22 @@ def test_rk4_parity(spo):
         )
 
     rust = spo.PyStuartLandauStepper(n, dt=dt, method="rk4")
-    rust_state = state.tolist()
+    knm_flat, knm_r_flat, alpha_flat = knm.ravel(), knm_r.ravel(), alpha.ravel()
+    rust_state = state.copy()
     for _ in range(50):
-        rust_state = rust.step(
-            rust_state,
-            omegas,
-            mu,
-            knm.ravel(),
-            knm_r.ravel(),
-            0.0,
-            0.0,
-            alpha.ravel(),
-            0.5,
+        rust_state = np.asarray(
+            rust.step(
+                rust_state,
+                omegas,
+                mu,
+                knm_flat,
+                knm_r_flat,
+                0.0,
+                0.0,
+                alpha_flat,
+                0.5,
+            )
         )
-    rust_state = np.array(rust_state)
 
     np.testing.assert_allclose(py_state, rust_state, atol=1e-8)
 
@@ -126,20 +128,22 @@ def test_rk45_parity(spo):
         )
 
     rust = spo.PyStuartLandauStepper(n, dt=dt, method="rk45")
-    rust_state = state.tolist()
+    knm_flat, knm_r_flat, alpha_flat = knm.ravel(), knm_r.ravel(), alpha.ravel()
+    rust_state = state.copy()
     for _ in range(50):
-        rust_state = rust.step(
-            rust_state,
-            omegas,
-            mu,
-            knm.ravel(),
-            knm_r.ravel(),
-            0.0,
-            0.0,
-            alpha.ravel(),
-            0.5,
+        rust_state = np.asarray(
+            rust.step(
+                rust_state,
+                omegas,
+                mu,
+                knm_flat,
+                knm_r_flat,
+                0.0,
+                0.0,
+                alpha_flat,
+                0.5,
+            )
         )
-    rust_state = np.array(rust_state)
 
     np.testing.assert_allclose(py_state, rust_state, atol=1e-5)
 
@@ -160,7 +164,7 @@ def test_external_drive_parity(spo):
     rust = spo.PyStuartLandauStepper(n, dt=dt, method="euler")
     rust_result = np.array(
         rust.step(
-            state.tolist(),
+            state.copy(),
             omegas,
             mu,
             knm.ravel(),
@@ -191,7 +195,7 @@ def test_zero_epsilon_parity(spo):
     rust = spo.PyStuartLandauStepper(n, dt=dt, method="euler")
     rust_result = np.array(
         rust.step(
-            state.tolist(),
+            state.copy(),
             omegas,
             mu,
             knm.ravel(),

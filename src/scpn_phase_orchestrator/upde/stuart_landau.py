@@ -121,16 +121,16 @@ class StuartLandauEngine:
         """Advance (θ, r) by one timestep. Returns new state (2N,)."""
         self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha)
         if self._use_rust:  # pragma: no cover
-            result = np.array(
+            result = np.asarray(
                 self._rust.step(
-                    state.tolist(),
-                    omegas,
-                    mu,
-                    knm.ravel(),
-                    knm_r.ravel(),
+                    np.ascontiguousarray(state),
+                    np.ascontiguousarray(omegas),
+                    np.ascontiguousarray(mu),
+                    np.ascontiguousarray(knm.ravel()),
+                    np.ascontiguousarray(knm_r.ravel()),
                     zeta,
                     psi,
-                    alpha.ravel(),
+                    np.ascontiguousarray(alpha.ravel()),
                     epsilon,
                 )
             )
