@@ -19,6 +19,7 @@ from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyEngine,
@@ -27,7 +28,6 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.upde.order_params import (
     compute_order_parameter,
     compute_plv,
