@@ -80,6 +80,12 @@ imprint_model:
   saturation: 2.0
   modulates: ["K", "alpha"]
 
+amplitude:
+  mu: 1.0
+  epsilon: 0.5
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
 geometry_prior:
   constraint_type: symmetric_non_negative
   params: {}

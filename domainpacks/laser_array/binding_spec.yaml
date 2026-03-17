@@ -97,4 +97,10 @@ imprint_model:
   saturation: 2.0
   modulates: ["K"]
 
+amplitude:
+  mu: 3.0
+  epsilon: 0.8
+  amp_coupling_strength: 0.3
+  amp_coupling_decay: 0.2
+
 policy: policy.yaml

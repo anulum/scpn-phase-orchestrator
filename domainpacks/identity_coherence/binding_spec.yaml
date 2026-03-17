@@ -119,10 +119,10 @@ imprint_model:
   modulates: ["K", "mu"]  # experience strengthens coupling and conviction
 
 amplitude:
-  mu: 1.0            # supercritical by default — dispositions self-sustain
-  epsilon: 0.3       # moderate nonlinear saturation
+  mu: 1.0
+  epsilon: 0.3
   amp_coupling_strength: 0.2
-  amp_coupling_decay: 0.2
+  amp_coupling_decay: 0.3
 
 geometry_prior:
   constraint_type: symmetric_non_negative

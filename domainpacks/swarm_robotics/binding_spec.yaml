@@ -91,4 +91,10 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+amplitude:
+  mu: 1.0
+  epsilon: 0.4
+  amp_coupling_strength: 0.25
+  amp_coupling_decay: 0.3
+
 policy: policy.yaml
