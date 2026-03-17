@@ -1,0 +1,80 @@
+rules:
+  # When identity is coherent — proceed autonomously
+  - name: identity_nominal
+    regime: [NOMINAL]
+    condition:
+      metric: R_good
+      op: ">"
+      threshold: 0.6
+    action:
+      knob: zeta
+      scope: global
+      value: 0.02
+      ttl_s: 10.0
+
+  # When identity degrades — boost context retrieval
+  - name: identity_degraded_retrieve
+    regime: [DEGRADED]
+    condition:
+      metric: R_good
+      op: "<"
+      threshold: 0.5
+    action:
+      knob: zeta
+      scope: global
+      value: 0.5
+      ttl_s: 10.0
+
+  # When relationship coherence drops — strengthen relationship coupling
+  - name: relationship_drift_boost
+    regime: [DEGRADED, CRITICAL]
+    condition:
+      metric: R_good
+      layer: 2
+      op: "<"
+      threshold: 0.4
+    action:
+      knob: K
+      scope: layer_2
+      value: 1.5
+      ttl_s: 10.0
+
+  # When identity is critical — full coupling boost
+  - name: identity_critical_recovery
+    regime: [CRITICAL]
+    condition:
+      metric: R_good
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 2.0
+      ttl_s: 5.0
+
+  # When aesthetics erode — reinforce from working style
+  - name: aesthetic_erosion_reinforce
+    regime: [NOMINAL, DEGRADED]
+    condition:
+      metric: R_good
+      layer: 3
+      op: "<"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: layer_3
+      value: 1.0
+      ttl_s: 10.0
+
+  # Subcritical recovery — dispositions fading, boost amplitude
+  - name: subcritical_recovery
+    regime: [DEGRADED, CRITICAL]
+    condition:
+      metric: subcritical_fraction
+      op: ">"
+      threshold: 0.3
+    action:
+      knob: K
+      scope: global
+      value: 1.5
+      ttl_s: 5.0

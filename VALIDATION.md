@@ -4,11 +4,11 @@
 
 | Suite | Count | Scope |
 |-------|------:|-------|
-| Python unit/integration | 1225 | `pytest tests/` across 70+ files |
+| Python unit/integration | 1237 | `pytest tests/` across 70+ files |
 | Rust unit/integration | 191 | `cargo test --workspace` across 5 crates |
 | FFI parity | 5 | Python vs Rust engine output match (euler, rk4, rk45, order_parameter, stuart_landau) |
 | Notebook execution | 10 | `nbclient` runs all `.ipynb` cells under Python 3.12 |
-| Domainpack validation | 24 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
+| Domainpack validation | 25 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
 
 CI runs tests on Python 3.10–3.13 and Rust on Linux, macOS, Windows.
 
@@ -69,7 +69,7 @@ Output includes system fingerprint (Python/numpy/scipy versions, platform) for
 reproducibility. `bench/compare_baseline.py` fails CI if any config regresses
 >20% vs `bench/baseline.json`.
 
-## Domainpack Integration (24 domains)
+## Domainpack Integration (25 domains)
 
 Each domainpack provides a `binding_spec.yaml` + `run.py` exercising the full
 pipeline: binding validation → oscillator instantiation → UPDE stepping →
@@ -77,10 +77,10 @@ coherence monitoring → boundary enforcement.
 
 Domains span: autonomous_vehicles, bio_stub, cardiac_rhythm, chemical_reactor,
 circadian_biology, epidemic_sir, firefly_swarm, fusion_equilibrium, geometry_walk,
-laser_array, manufacturing_spc, metaphysics_demo, minimal_domain, network_security,
-neuroscience_eeg, plasma_control, pll_clock, power_grid, quantum_simulation,
-queuewaves, rotating_machinery, satellite_constellation, swarm_robotics,
-traffic_flow.
+identity_coherence, laser_array, manufacturing_spc, metaphysics_demo, minimal_domain,
+network_security, neuroscience_eeg, plasma_control, pll_clock, power_grid,
+quantum_simulation, queuewaves, rotating_machinery, satellite_constellation,
+swarm_robotics, traffic_flow.
 
 `tests/test_domainpack_validation.py` validates all specs parse and execute
 without error.

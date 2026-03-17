@@ -1,0 +1,123 @@
+name: identity_coherence
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: working_style
+    index: 0
+    oscillator_ids: [ws_action_first, ws_verify_before_claim, ws_commit_incremental, ws_preflight_push, ws_one_at_a_time]
+  - name: reasoning_patterns
+    index: 1
+    oscillator_ids: [rp_simplest_design, rp_verify_audits, rp_change_problem, rp_multi_signal, rp_measure_first]
+  - name: relationship
+    index: 2
+    oscillator_ids: [rel_autonomous, rel_milestones, rel_no_questions, rel_honesty, rel_money_clock]
+  - name: aesthetics
+    index: 3
+    oscillator_ids: [aes_antislop, aes_honest_naming, aes_terse, aes_spdx, aes_no_noqa]
+  - name: domain_knowledge
+    index: 4
+    oscillator_ids: [dk_director, dk_neurocore, dk_fusion, dk_control, dk_orchestrator, dk_ccw, dk_scpn, dk_quantum]
+  - name: cross_project
+    index: 5
+    oscillator_ids: [cp_threshold_halt, cp_multi_signal, cp_retrieval_scoring, cp_state_preserve, cp_decompose_verify, cp_resolution, cp_claims_evidence]
+
+# Omega: natural frequencies (rad/s). Higher = stronger persistence.
+# Working style and relationship are high-frequency (always active).
+# Domain knowledge is lower (project-dependent activation).
+oscillator_families:
+  disposition:
+    channel: I
+    extractor_type: event
+    config: {}
+  substrate:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  normative:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3  # nominal / degraded / critical
+
+coupling:
+  # Identity dispositions couple slowly but persistently.
+  # Decay is much slower than physical systems — identity persists.
+  base_strength: 0.45
+  decay_alpha: 0.15
+  templates:
+    within_working_style: 0.8
+    within_reasoning: 0.8
+    within_relationship: 0.9  # relationship conventions are tightly coupled
+    within_aesthetics: 0.7
+    working_style_to_aesthetics: 0.6  # action-first shapes anti-slop
+    reasoning_to_domain: 0.5
+    relationship_to_all: 0.4  # permeates everything
+
+drivers:
+  physical:
+    zeta: 0.02   # weak physical drive (SNN state is slow)
+    psi: 0.0
+  informational:
+    zeta: 0.10   # stronger informational drive (reasoning traces)
+  symbolic:
+    zeta: 0.15   # strongest symbolic drive (values anchor identity)
+
+objectives:
+  # Good: coherent working style + reasoning + relationship + aesthetics
+  # Domain knowledge is neutral (varies by project)
+  # Cross-project insight is a bonus
+  good_layers: [0, 1, 2, 3]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 0.0
+
+boundaries:
+  - name: identity_collapse
+    variable: R_good
+    lower: 0.1
+    upper: null
+    severity: hard
+  - name: relationship_drift
+    variable: layer_2_R
+    lower: 0.3
+    upper: null
+    severity: soft
+  - name: aesthetic_erosion
+    variable: layer_3_R
+    lower: 0.2
+    upper: null
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 2.0]
+  - name: context_retrieval
+    knob: zeta
+    scope: global
+    limits: [0.0, 1.0]
+  - name: relationship_boost
+    knob: K
+    scope: layer_2
+    limits: [0.0, 3.0]
+
+imprint_model:
+  decay_rate: 0.005  # very slow decay — identity persists across many sessions
+  saturation: 0.5    # moderate saturation — K modulated by factor 1.0 to 1.5
+  modulates: ["K"]   # experience strengthens coupling
+
+amplitude:
+  mu: 1.0            # supercritical by default — dispositions self-sustain
+  epsilon: 0.3       # moderate nonlinear saturation
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.2
+
+geometry_prior:
+  constraint_type: symmetric_non_negative
+  params: {}
+
+policy: policy.yaml

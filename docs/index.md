@@ -15,7 +15,7 @@ hide:
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**1225 Python tests | 191 Rust tests | 100% coverage | 24 domainpacks**
+**1237 Python tests | 191 Rust tests | 100% coverage | 25 domainpacks**
 
 </div>
 
@@ -39,11 +39,11 @@ binding_spec.yaml   3-channel          Kuramoto ODE     Policy DSL   ControlActi
 
 <div class="grid cards" markdown>
 
--   **24 Domainpacks**
+-   **25 Domainpacks**
 
     ---
 
-    Plug-and-play domain bindings: plasma control, power grids, traffic flow, cardiac rhythm, neuroscience EEG, swarm robotics, queuewaves, and 17 more.
+    Plug-and-play domain bindings: plasma control, power grids, traffic flow, cardiac rhythm, neuroscience EEG, swarm robotics, queuewaves, identity coherence, and 17 more.
 
     [:octicons-arrow-right-24: Gallery](galleries/domainpack_gallery.md)
 
