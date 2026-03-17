@@ -4,9 +4,9 @@
 
 | Suite | Count | Scope |
 |-------|------:|-------|
-| Python unit/integration | 1249 | `pytest tests/` across 70+ files |
-| Rust unit/integration | 191 | `cargo test --workspace` across 5 crates |
-| FFI parity | 5 | Python vs Rust engine output match (euler, rk4, rk45, order_parameter, stuart_landau) |
+| Python unit/integration | 1279 | `pytest tests/` across 80+ files |
+| Rust unit/integration | 193 | `cargo test --workspace` across 5 crates |
+| FFI parity | 7 | Python vs Rust engine output match (euler, rk4, rk45, order_parameter, stuart_landau step+run) |
 | Notebook execution | 10 | `nbclient` runs all `.ipynb` cells under Python 3.12 |
 | Domainpack validation | 25 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
 
