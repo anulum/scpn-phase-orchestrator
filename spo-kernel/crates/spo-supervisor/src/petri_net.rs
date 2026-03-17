@@ -163,11 +163,7 @@ impl PetriNet {
 
     /// Fire the first enabled transition. Returns (new_marking, fired_index).
     #[must_use]
-    pub fn step(
-        &self,
-        marking: &Marking,
-        ctx: &HashMap<String, f64>,
-    ) -> (Marking, Option<usize>) {
+    pub fn step(&self, marking: &Marking, ctx: &HashMap<String, f64>) -> (Marking, Option<usize>) {
         for (i, t) in self.transitions.iter().enumerate() {
             if let Some(g) = &t.guard {
                 if !g.evaluate(ctx) {
