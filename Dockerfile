@@ -3,21 +3,53 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Container Image
+# SCPN Phase Orchestrator — Multi-stage Container Image
 
-FROM python:3.12-slim
+# ── Stage 1: Build Rust FFI extension ────────────────────────────
+FROM rust:1.83-slim AS rust-builder
 
-RUN groupadd --gid 1000 spo && useradd --uid 1000 --gid spo --create-home spo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-dev python3-pip python3-venv && \
+    rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+RUN pip3 install --break-system-packages maturin
+
+WORKDIR /build
+COPY spo-kernel/ spo-kernel/
+
+RUN cd spo-kernel && \
+    maturin build --release -m crates/spo-ffi/Cargo.toml --out /wheels
+
+# ── Stage 2: Build Python package ────────────────────────────────
+FROM python:3.12-slim AS python-builder
+
+WORKDIR /build
 
 COPY pyproject.toml .
 COPY src/ src/
+COPY domainpacks/ domainpacks/
+COPY --from=rust-builder /wheels/*.whl /wheels/
 
-RUN pip install --no-cache-dir . && chown -R spo:spo /app
+RUN pip install --no-cache-dir --prefix=/install . /wheels/*.whl
 
-COPY --chown=spo:spo . .
+# ── Stage 3: Production image ────────────────────────────────────
+FROM python:3.12-slim AS production
 
+LABEL maintainer="Miroslav Sotek <protoscience@anulum.li>"
+LABEL org.opencontainers.image.source="https://github.com/anulum/scpn-phase-orchestrator"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later"
+
+RUN groupadd --gid 1000 spo && \
+    useradd --uid 1000 --gid spo --create-home spo
+
+COPY --from=python-builder /install /usr/local
+COPY --chown=spo:spo domainpacks/ /app/domainpacks/
+
+WORKDIR /app
 USER spo
 
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD ["python", "-c", "import scpn_phase_orchestrator; print('ok')"]
+
 ENTRYPOINT ["spo"]
+CMD ["--help"]
