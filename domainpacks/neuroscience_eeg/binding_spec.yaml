@@ -56,7 +56,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.02
-  symbolic: {}
+  symbolic:
+    zeta: 0.01
 
 objectives:
   # Alpha coherence = relaxation/flow; gamma = consciousness binding

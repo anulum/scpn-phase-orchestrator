@@ -13,6 +13,14 @@ layers:
     oscillator_ids: [walk_4, walk_5, walk_6, walk_7]
 
 oscillator_families:
+  signal_substrate:
+    channel: P
+    extractor_type: physical
+    config: {}
+  walk_events:
+    channel: I
+    extractor_type: event
+    config: {}
   graph_walker:
     channel: S
     extractor_type: symbolic
@@ -26,8 +34,11 @@ coupling:
   templates: {}
 
 drivers:
-  physical: {}
-  informational: {}
+  physical:
+    zeta: 0.02
+    psi: 0.0
+  informational:
+    zeta: 0.01
   symbolic:
     zeta: 0.05
     psi: 0.0

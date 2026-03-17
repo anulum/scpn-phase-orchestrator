@@ -23,6 +23,12 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # Mirollo & Strogatz (1990) integrate-and-fire cycle states
+  flash_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
 
 coupling:
   # Line-of-sight visual coupling decays with swarm dispersion.
@@ -36,7 +42,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.01
-  symbolic: {}
+  symbolic:
+    zeta: 0.03
 
 objectives:
   # Flash sync + swarm coherence = good; no bad layers.

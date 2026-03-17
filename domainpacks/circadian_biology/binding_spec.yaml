@@ -28,6 +28,12 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # AASM sleep staging: Iber et al. (2007) manual
+  sleep_stage:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 5
 
 coupling:
   # SCN gap-junction coupling: Strogatz (2003) "Sync" Ch. 5
@@ -41,7 +47,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.03
-  symbolic: {}
+  symbolic:
+    zeta: 0.01
 
 objectives:
   # SCN + peripheral entrained = healthy; behavioral desync = jet lag

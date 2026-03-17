@@ -40,7 +40,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.0
-  symbolic: {}
+  symbolic:
+    zeta: 0.02
 
 objectives:
   good_layers: [1, 2]

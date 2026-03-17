@@ -24,6 +24,12 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # Orbital operations mode; CCSDS 502.0-B-2 manoeuvre classification
+  orbital_mode:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
 
 coupling:
   base_strength: 0.40
@@ -36,7 +42,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.01
-  symbolic: {}
+  symbolic:
+    zeta: 0.01
 
 objectives:
   good_layers: [0, 1, 2]

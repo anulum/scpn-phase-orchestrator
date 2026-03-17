@@ -32,6 +32,12 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # ISO 17359 condition monitoring state classification
+  machine_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
 
 coupling:
   # Mechanical coupling through shaft/bearing stiffness.
@@ -46,7 +52,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.01
-  symbolic: {}
+  symbolic:
+    zeta: 0.02
 
 objectives:
   # Shaft rotation at nominal = good.

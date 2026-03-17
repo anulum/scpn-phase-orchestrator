@@ -21,6 +21,12 @@ oscillator_families:
     channel: I
     extractor_type: informational
     config: {}
+  # Decoherence regime classification; Zurek (2003) pointer states
+  coherence_regime:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
 
 coupling:
   base_strength: 0.40
@@ -33,7 +39,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.0
-  symbolic: {}
+  symbolic:
+    zeta: 0.01
 
 objectives:
   good_layers: [1]

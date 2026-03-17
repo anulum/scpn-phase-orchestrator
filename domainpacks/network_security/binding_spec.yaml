@@ -24,6 +24,12 @@ oscillator_families:
     channel: P
     extractor_type: hilbert
     config: {}
+  # NIST Cybersecurity Framework alert levels
+  threat_level:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
 
 coupling:
   base_strength: 0.35
@@ -36,7 +42,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.01
-  symbolic: {}
+  symbolic:
+    zeta: 0.02
 
 objectives:
   # Normal traffic + defense = good; attack vector = bad.

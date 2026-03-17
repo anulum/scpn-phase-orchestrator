@@ -25,6 +25,12 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # WHO pandemic phase classification adapted to SIR dynamics
+  epidemic_phase:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
 
 coupling:
   # Epidemiological contact coupling
@@ -38,7 +44,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.03
-  symbolic: {}
+  symbolic:
+    zeta: 0.02
 
 objectives:
   # Coordinated intervention = suppression; synchronised infection = pandemic peak

@@ -24,6 +24,12 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # SAE J3016 driving automation levels mapped to discrete modes
+  driving_mode:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 5
 
 coupling:
   base_strength: 0.50
@@ -36,7 +42,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.01
-  symbolic: {}
+  symbolic:
+    zeta: 0.02
 
 objectives:
   # Leader + followers = good; road_env is neutral (no bad).

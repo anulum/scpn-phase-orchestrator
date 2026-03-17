@@ -17,6 +17,16 @@ oscillator_families:
     channel: P
     extractor_type: physical
     config: {}
+  event_log:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Minimal operational state machine for test coverage
+  operational_mode:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
 
 coupling:
   base_strength: 0.45
@@ -27,8 +37,10 @@ drivers:
   physical:
     zeta: 0.0
     psi: 0.0
-  informational: {}
-  symbolic: {}
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.02
 
 objectives:
   good_layers: [0, 1]

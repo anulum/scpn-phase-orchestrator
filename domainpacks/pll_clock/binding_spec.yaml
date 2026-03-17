@@ -26,6 +26,12 @@ oscillator_families:
     channel: I
     extractor_type: event
     config: {}
+  # PLL lock acquisition state machine; Best Ch. 3
+  lock_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
 
 coupling:
   # PLL loop gain hierarchy: master drives slaves.
@@ -39,7 +45,8 @@ drivers:
     psi: 0.0
   informational:
     zeta: 0.02
-  symbolic: {}
+  symbolic:
+    zeta: 0.03
 
 objectives:
   # VCO lock + PLL sync = good; stratum desync/holdover = bad.
