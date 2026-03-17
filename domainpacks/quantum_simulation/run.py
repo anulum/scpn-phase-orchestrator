@@ -14,6 +14,7 @@ import numpy as np
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 TWO_PI = 2.0 * np.pi
@@ -34,9 +35,8 @@ def main():
     )
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
 
-    rng = np.random.default_rng(SEED)
-    phases = rng.uniform(0, TWO_PI, n_osc)
     omegas = np.ones(n_osc) * 1.0
+    phases = extract_initial_phases(spec, omegas)
 
     bridge = QuantumControlBridge(n_oscillators=n_osc)
 

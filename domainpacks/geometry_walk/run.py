@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.upde.order_params import (
     compute_order_parameter,
     compute_plv,
@@ -65,10 +66,8 @@ def main():
     policy_engine = PolicyEngine(rules) if rules else None
 
     rng = np.random.default_rng(42)
-    n_states = 16
-    initial_nodes = rng.integers(0, n_states, size=n_osc)
-    phases = TWO_PI * initial_nodes / n_states
     omegas = rng.uniform(0.5, 1.5, n_osc)
+    phases = extract_initial_phases(spec, omegas)
     layer_map = _build_layer_map(spec)
 
     zeta = spec.drivers.symbolic.get("zeta", 0.0) if spec.drivers.symbolic else 0.05
