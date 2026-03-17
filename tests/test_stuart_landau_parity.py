@@ -208,3 +208,77 @@ def test_zero_epsilon_parity(spo):
     )
 
     np.testing.assert_allclose(py_result, rust_result, atol=1e-10)
+
+
+def test_run_parity(spo):
+    """PyStuartLandauStepper.run() matches N sequential Python steps."""
+    n = 8
+    n_steps = 100
+    rng = np.random.default_rng(60)
+    theta = rng.uniform(0, TWO_PI, n)
+    r = rng.uniform(0.3, 1.5, n)
+    state = np.concatenate([theta, r])
+    omegas, mu, knm, knm_r, alpha = _build_params(n, rng)
+    dt = 0.01
+
+    py_eng = StuartLandauEngine(n, dt=dt, method="rk4")
+    py_eng._use_rust = False
+    py_state = state.copy()
+    for _ in range(n_steps):
+        py_state = py_eng.step(
+            py_state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha, epsilon=0.5
+        )
+
+    rust = spo.PyStuartLandauStepper(n, dt=dt, method="rk4")
+    rust_state = np.asarray(
+        rust.run(
+            state.copy(),
+            omegas,
+            mu,
+            knm.ravel(),
+            knm_r.ravel(),
+            0.0,
+            0.0,
+            alpha.ravel(),
+            0.5,
+            n_steps,
+        )
+    )
+
+    np.testing.assert_allclose(py_state, rust_state, atol=1e-8)
+
+
+def test_run_with_drive_parity(spo):
+    """run() parity with external drive (zeta, psi)."""
+    n = 4
+    n_steps = 50
+    rng = np.random.default_rng(70)
+    state = np.concatenate([rng.uniform(0, TWO_PI, n), np.ones(n)])
+    omegas, mu, knm, knm_r, alpha = _build_params(n, rng)
+    dt = 0.01
+
+    py_eng = StuartLandauEngine(n, dt=dt, method="euler")
+    py_eng._use_rust = False
+    py_state = state.copy()
+    for _ in range(n_steps):
+        py_state = py_eng.step(
+            py_state, omegas, mu, knm, knm_r, 0.3, 1.5, alpha, epsilon=1.0
+        )
+
+    rust = spo.PyStuartLandauStepper(n, dt=dt, method="euler")
+    rust_state = np.asarray(
+        rust.run(
+            state.copy(),
+            omegas,
+            mu,
+            knm.ravel(),
+            knm_r.ravel(),
+            0.3,
+            1.5,
+            alpha.ravel(),
+            1.0,
+            n_steps,
+        )
+    )
+
+    np.testing.assert_allclose(py_state, rust_state, atol=1e-10)
