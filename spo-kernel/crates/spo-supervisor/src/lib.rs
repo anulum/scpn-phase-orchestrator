@@ -15,6 +15,7 @@ pub mod petri_net;
 pub mod policy;
 pub mod projector;
 pub mod regime;
+pub mod rule_engine;
 
 pub use boundaries::{BoundaryDef, BoundaryObserver, BoundaryState, Severity};
 pub use coherence::CoherenceMonitor;
@@ -23,3 +24,4 @@ pub use petri_net::{Marking, PetriNet};
 pub use policy::SupervisorPolicy;
 pub use projector::ActionProjector;
 pub use regime::RegimeManager;
+pub use rule_engine::RuleEngine;

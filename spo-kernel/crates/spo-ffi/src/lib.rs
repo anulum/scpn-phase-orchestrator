@@ -37,6 +37,7 @@ use spo_supervisor::{
     policy::SupervisorPolicy,
     projector::ActionProjector,
     regime::RegimeManager,
+    rule_engine,
 };
 use spo_types::{
     ControlAction, CouplingConfig, IntegrationConfig, Knob, LayerState, Method, Regime, SpoError,
@@ -773,6 +774,120 @@ fn layer_coherence(phases: PyReadonlyArray1<'_, f64>, indices: Vec<usize>) -> Py
     Ok(order_params::compute_layer_coherence(s, &indices))
 }
 
+// ─── PyRuleEngine ───────────────────────────────────────────────
+
+/// (metric, op_str, threshold)
+type CondTuple = (String, String, f64);
+/// (knob, scope, value, ttl_s)
+type ActionTuple = (String, String, f64, f64);
+/// (name, regimes, conditions, logic, actions, cooldown_s, max_fires)
+type RuleTuple = (
+    String,
+    Vec<String>,
+    Vec<CondTuple>,
+    String,
+    Vec<ActionTuple>,
+    f64,
+    u32,
+);
+
+fn parse_op(s: &str) -> PyResult<petri_net::GuardOp> {
+    match s {
+        ">" => Ok(petri_net::GuardOp::Gt),
+        ">=" => Ok(petri_net::GuardOp::Ge),
+        "<" => Ok(petri_net::GuardOp::Lt),
+        "<=" => Ok(petri_net::GuardOp::Le),
+        "==" => Ok(petri_net::GuardOp::Eq),
+        _ => Err(PyValueError::new_err(format!("unknown op: {s}"))),
+    }
+}
+
+#[pyclass(name = "PyRuleEngine")]
+struct PyRuleEngine {
+    inner: rule_engine::RuleEngine,
+}
+
+#[pymethods]
+impl PyRuleEngine {
+    #[new]
+    fn new(rules: Vec<RuleTuple>) -> PyResult<Self> {
+        let parsed: Vec<rule_engine::PolicyRule> = rules
+            .into_iter()
+            .map(
+                |(name, regimes, conds, logic, actions, cooldown_s, max_fires)| {
+                    let conditions: Vec<rule_engine::Condition> = conds
+                        .into_iter()
+                        .map(|(metric, op, threshold)| {
+                            Ok(rule_engine::Condition {
+                                metric,
+                                op: parse_op(&op)?,
+                                threshold,
+                            })
+                        })
+                        .collect::<PyResult<Vec<_>>>()?;
+                    let condition = if conditions.len() == 1 {
+                        rule_engine::RuleCondition::Single(
+                            conditions.into_iter().next().expect("len==1"),
+                        )
+                    } else {
+                        let logic = match logic.to_uppercase().as_str() {
+                            "OR" => rule_engine::Logic::Or,
+                            _ => rule_engine::Logic::And,
+                        };
+                        rule_engine::RuleCondition::Compound { conditions, logic }
+                    };
+                    let rule_actions: Vec<rule_engine::RuleAction> = actions
+                        .into_iter()
+                        .map(|(knob, scope, value, ttl_s)| rule_engine::RuleAction {
+                            knob,
+                            scope,
+                            value,
+                            ttl_s,
+                        })
+                        .collect();
+                    Ok(rule_engine::PolicyRule {
+                        name,
+                        regimes: regimes.into_iter().map(|r| r.to_uppercase()).collect(),
+                        condition,
+                        actions: rule_actions,
+                        cooldown_s,
+                        max_fires,
+                    })
+                },
+            )
+            .collect::<PyResult<Vec<_>>>()?;
+        Ok(Self {
+            inner: rule_engine::RuleEngine::new(parsed),
+        })
+    }
+
+    /// Evaluate rules. Returns list of (knob, scope, value, ttl_s, rule_name).
+    fn evaluate(
+        &mut self,
+        regime: &str,
+        ctx: HashMap<String, f64>,
+    ) -> Vec<(String, String, f64, f64, String)> {
+        self.inner
+            .evaluate(regime, &ctx)
+            .into_iter()
+            .map(|a| (a.knob, a.scope, a.value, a.ttl_s, a.rule_name))
+            .collect()
+    }
+
+    fn advance_clock(&mut self, dt: f64) {
+        self.inner.advance_clock(dt);
+    }
+
+    fn reset(&mut self) {
+        self.inner.reset();
+    }
+
+    #[getter]
+    fn clock(&self) -> f64 {
+        self.inner.clock()
+    }
+}
+
 // ─── PyPetriNet ─────────────────────────────────────────────────
 
 /// (place_name, weight)
@@ -792,21 +907,28 @@ impl PyPetriNet {
         let ts: Vec<petri_net::Transition> = transitions
             .into_iter()
             .map(|(name, inputs, outputs, guard_text)| {
-                let guard = match guard_text {
-                    Some(text) => Some(petri_net::parse_guard(&text).map_err(|e| {
-                        PyValueError::new_err(format!("guard parse error: {e}"))
-                    })?),
-                    None => None,
-                };
+                let guard =
+                    match guard_text {
+                        Some(text) => Some(petri_net::parse_guard(&text).map_err(|e| {
+                            PyValueError::new_err(format!("guard parse error: {e}"))
+                        })?),
+                        None => None,
+                    };
                 Ok(petri_net::Transition {
                     name,
                     inputs: inputs
                         .into_iter()
-                        .map(|(p, w)| petri_net::Arc { place: p, weight: w })
+                        .map(|(p, w)| petri_net::Arc {
+                            place: p,
+                            weight: w,
+                        })
                         .collect(),
                     outputs: outputs
                         .into_iter()
-                        .map(|(p, w)| petri_net::Arc { place: p, weight: w })
+                        .map(|(p, w)| petri_net::Arc {
+                            place: p,
+                            weight: w,
+                        })
                         .collect(),
                     guard,
                 })
@@ -950,6 +1072,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySupervisorPolicy>()?;
     m.add_class::<PyStuartLandauStepper>()?;
     m.add_class::<PyPetriNet>()?;
+    m.add_class::<PyRuleEngine>()?;
     m.add_function(wrap_pyfunction!(pac_modulation_index, m)?)?;
     m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;
