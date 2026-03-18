@@ -53,13 +53,7 @@ class SimulationState:
             spec.coupling.base_strength,
             spec.coupling.decay_alpha,
         )
-        self.omegas = np.array(
-            [
-                1.0 + 0.1 * layer.index
-                for layer in spec.layers
-                for _ in layer.oscillator_ids
-            ]
-        )
+        self.omegas = np.array(spec.get_omegas(), dtype=np.float64)
         self.phases = extract_initial_phases(spec, self.omegas)
         self.engine = UPDEEngine(self.n_osc, dt=spec.sample_period_s)
         self.regime_manager = RegimeManager()

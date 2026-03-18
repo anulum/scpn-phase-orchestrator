@@ -203,7 +203,7 @@ class StuartLandauEngine:
         # negative amplitudes that flip the coupling sign (P1-1 audit fix).
         r_clamped = np.maximum(r, 0.0)
 
-        np.cos(self._phase_diff, out=self._cos_diff)
+        np.cos(self._phase_diff - alpha, out=self._cos_diff)
         np.sum(
             knm_r * self._cos_diff * r_clamped[np.newaxis, :],
             axis=1,

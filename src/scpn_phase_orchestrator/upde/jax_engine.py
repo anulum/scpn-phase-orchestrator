@@ -7,11 +7,12 @@
 
 """GPU-accelerated Kuramoto solver via JAX JIT compilation.
 
-Falls back to NumPy UPDEEngine if JAX is not installed.
+Raises ImportError if JAX is not installed. Check HAS_JAX before use.
 Usage:
-    from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
-    engine = JaxUPDEEngine(n, dt=0.01)
-    phases = engine.step(phases, omegas, knm, zeta, psi, alpha)
+    from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX
+    if HAS_JAX:
+        from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
+        engine = JaxUPDEEngine(n, dt=0.01)
 """
 
 from __future__ import annotations
@@ -78,7 +79,7 @@ def _build_jax_sl_step():  # type: ignore[no-untyped-def]
             diff = th[jnp.newaxis, :] - th[:, jnp.newaxis]
             phase_coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
             amp_coupling = jnp.sum(
-                knm_r * jnp.maximum(am, 0.0)[jnp.newaxis, :] * jnp.cos(diff),
+                knm_r * jnp.maximum(am, 0.0)[jnp.newaxis, :] * jnp.cos(diff - alpha),
                 axis=1,
             )
             dtheta = omegas + phase_coupling + zeta * jnp.sin(psi - th)
