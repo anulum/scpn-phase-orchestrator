@@ -19,6 +19,8 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
     Bins amplitude by phase, computes KL divergence from uniform.
     Returns MI ∈ [0, 1], normalised by log(n_bins).
     """
+    if n_bins < 2:
+        return 0.0
     try:  # pragma: no cover
         import spo_kernel  # noqa: PLC0415
 

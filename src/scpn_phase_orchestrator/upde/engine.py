@@ -27,19 +27,20 @@ class UPDEEngine:
     # Dormand-Prince RK45 Butcher tableau coefficients
     _DP_A = np.array(
         [
-            [0, 0, 0, 0, 0, 0],
-            [1 / 5, 0, 0, 0, 0, 0],
-            [3 / 40, 9 / 40, 0, 0, 0, 0],
-            [44 / 45, -56 / 15, 32 / 9, 0, 0, 0],
-            [19372 / 6561, -25360 / 2187, 64448 / 6561, -212 / 729, 0, 0],
-            [9017 / 3168, -355 / 33, 46732 / 5247, 49 / 176, -5103 / 18656, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1 / 5, 0, 0, 0, 0, 0, 0],
+            [3 / 40, 9 / 40, 0, 0, 0, 0, 0],
+            [44 / 45, -56 / 15, 32 / 9, 0, 0, 0, 0],
+            [19372 / 6561, -25360 / 2187, 64448 / 6561, -212 / 729, 0, 0, 0],
+            [9017 / 3168, -355 / 33, 46732 / 5247, 49 / 176, -5103 / 18656, 0, 0],
+            [35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0],
         ]
     )
     _DP_B4 = np.array(
-        [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 2100]
+        [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 2100, 1 / 40]
     )
-    _DP_B5 = np.array([35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84])
-    _DP_C = np.array([0, 1 / 5, 3 / 10, 4 / 5, 8 / 9, 1])
+    _DP_B5 = np.array([35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0])
+    _DP_C = np.array([0, 1 / 5, 3 / 10, 4 / 5, 8 / 9, 1, 1])
 
     def __init__(
         self,
@@ -70,7 +71,7 @@ class UPDEEngine:
         self._scratch_dtheta = np.empty(n_oscillators, dtype=np.float64)
 
         if method == "rk45":
-            self._ks = [np.empty(n_oscillators, dtype=np.float64) for _ in range(6)]
+            self._ks = [np.empty(n_oscillators, dtype=np.float64) for _ in range(7)]
             self._err_buf = np.empty(n_oscillators, dtype=np.float64)
 
     @property
@@ -99,6 +100,14 @@ class UPDEEngine:
             raise ValueError(f"knm.shape={knm.shape}, expected ({n}, {n})")
         if alpha.shape != (n, n):
             raise ValueError(f"alpha.shape={alpha.shape}, expected ({n}, {n})")
+        if not np.all(np.isfinite(phases)):
+            raise ValueError("phases contain NaN/Inf")
+        if not np.all(np.isfinite(omegas)):
+            raise ValueError("omegas contain NaN/Inf")
+        if not np.all(np.isfinite(knm)):
+            raise ValueError("knm contains NaN/Inf")
+        if not np.all(np.isfinite(alpha)):
+            raise ValueError("alpha contains NaN/Inf")
         if self._rust is not None:  # pragma: no cover
             return np.asarray(
                 self._rust.step(
@@ -226,7 +235,7 @@ class UPDEEngine:
 
         for _ in range(max_reject + 1):
             ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
-            for i in range(1, 6):
+            for i in range(1, 7):
                 stage = phases + dt * np.dot(A[i, :i], np.array(ks[:i]))
                 ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
 

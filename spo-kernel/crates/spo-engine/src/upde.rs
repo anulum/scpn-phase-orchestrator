@@ -31,6 +31,7 @@ pub struct UPDEStepper {
     k4: Vec<f64>,
     k5: Vec<f64>,
     k6: Vec<f64>,
+    k7: Vec<f64>,
     y5: Vec<f64>,
     tmp_phases: Vec<f64>,
 }
@@ -70,6 +71,7 @@ impl UPDEStepper {
             k4: vec![0.0; n],
             k5: vec![0.0; n],
             k6: vec![0.0; n],
+            k7: vec![0.0; n],
             y5: vec![0.0; n],
             tmp_phases: vec![0.0; n],
         })
@@ -123,6 +125,13 @@ impl UPDEStepper {
         for &k in knm {
             if !k.is_finite() {
                 return Err(SpoError::IntegrationDiverged("knm contains NaN/Inf".into()));
+            }
+        }
+        for &a in alpha {
+            if !a.is_finite() {
+                return Err(SpoError::IntegrationDiverged(
+                    "alpha contains NaN/Inf".into(),
+                ));
             }
         }
         if !zeta.is_finite() || !psi.is_finite() {
@@ -384,24 +393,29 @@ impl UPDEStepper {
                 &mut self.k6,
             );
 
-            // 5th-order solution and error estimate
+            // 5th-order solution (B5[6] = 0, so k7 does not contribute to y5)
+            for i in 0..n {
+                self.y5[i] = phases[i]
+                    + dt * (dp::B5[0] * self.k1[i]
+                        + dp::B5[2] * self.k3[i]
+                        + dp::B5[3] * self.k4[i]
+                        + dp::B5[4] * self.k5[i]
+                        + dp::B5[5] * self.k6[i]);
+            }
+
+            // k7: evaluate derivative at y5 (FSAL property)
+            compute_derivative(n, &self.y5, omegas, knm, zeta, psi, alpha, &mut self.k7);
+
+            // Error estimate using 4th-order weights (B4[6] = 1/40)
             let mut err_norm: f64 = 0.0;
             for i in 0..n {
-                let ks = [
-                    self.k1[i], self.k2[i], self.k3[i], self.k4[i], self.k5[i], self.k6[i],
-                ];
-                self.y5[i] = phases[i]
-                    + dt * (dp::B5[0] * ks[0]
-                        + dp::B5[2] * ks[2]
-                        + dp::B5[3] * ks[3]
-                        + dp::B5[4] * ks[4]
-                        + dp::B5[5] * ks[5]);
                 let y4 = phases[i]
-                    + dt * (dp::B4[0] * ks[0]
-                        + dp::B4[2] * ks[2]
-                        + dp::B4[3] * ks[3]
-                        + dp::B4[4] * ks[4]
-                        + dp::B4[5] * ks[5]);
+                    + dt * (dp::B4[0] * self.k1[i]
+                        + dp::B4[2] * self.k3[i]
+                        + dp::B4[3] * self.k4[i]
+                        + dp::B4[4] * self.k5[i]
+                        + dp::B4[5] * self.k6[i]
+                        + dp::B4[6] * self.k7[i]);
 
                 let err_i = (self.y5[i] - y4).abs();
                 let scale = self.atol + self.rtol * phases[i].abs().max(self.y5[i].abs());

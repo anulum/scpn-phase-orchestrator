@@ -109,6 +109,8 @@ class JaxUPDEEngine:
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
+        if method not in ("euler", "rk4"):
+            raise ValueError(f"unsupported method {method!r}")
         self._n = n
         self._dt = dt
         self._method = method
