@@ -46,3 +46,6 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+# Internal business docs — never commit
+docs/internal/
