@@ -8,15 +8,19 @@ layers:
   - name: sa_node
     index: 0
     oscillator_ids: [sa_primary, sa_secondary, sa_subsidiary]
+    omegas: [1.17, 0.83, 0.58]
   - name: atrial_conduction
     index: 1
     oscillator_ids: [av_node, his_bundle]
+    omegas: [0.75, 0.67]
   - name: ventricular_depolarization
     index: 2
     oscillator_ids: [septum, freewall]
+    omegas: [0.50, 0.42]
   - name: repolarization
     index: 3
     oscillator_ids: [repol_apex, repol_base, repol_rved]
+    omegas: [0.33, 0.33, 0.33]
 
 # Guyton Ch. 10: SA node 70 bpm → 2*pi*(70/60) ≈ 7.33 rad/s.
 # Normalised to keep simulation stable (divide by ~6.3).

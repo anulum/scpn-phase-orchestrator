@@ -155,10 +155,19 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
 
     supervisor = SupervisorPolicy(regime_manager, petri_adapter=petri_adapter)
 
-    # ActionProjector — clip outputs to safe bounds
+    # ActionProjector — derive bounds from domainpack actuators
+    value_bounds: dict[str, tuple[float, float]] = {}
+    for act in spec.actuators:
+        if act.limits and len(act.limits) == 2:
+            value_bounds[act.knob] = (act.limits[0], act.limits[1])
     projector = ActionProjector(
         rate_limits={"K": 0.1, "zeta": 0.2, "alpha": 0.1, "Psi": 0.5},
-        value_bounds={"K": (-0.5, 0.5), "zeta": (0.0, 0.5), "alpha": (-1.0, 1.0)},
+        value_bounds=value_bounds
+        or {
+            "K": (-0.5, 0.5),
+            "zeta": (0.0, 0.5),
+            "alpha": (-1.0, 1.0),
+        },
     )
     prev_values: dict[str, float] = {"K": 0.0, "zeta": 0.0, "alpha": 0.0, "Psi": 0.0}
 
@@ -189,9 +198,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
 
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0, 2 * np.pi, n_osc)
-    omegas = np.array(
-        [1.0 + 0.1 * layer.index for layer in spec.layers for _ in layer.oscillator_ids]
-    )
+    omegas = np.array(spec.get_omegas(), dtype=np.float64)
 
     # Stuart-Landau state: (2N,) = [phases, amplitudes]
     if amplitude_mode and mu is not None:
