@@ -109,7 +109,7 @@ class BrainFlowAdapter:
 
     @property
     def sample_rate(self) -> int:
-        return self._sample_rate
+        return int(self._sample_rate)
 
     @property
     def eeg_channels(self) -> list[int]:
@@ -134,12 +134,12 @@ class BrainFlowAdapter:
         """Get recent samples from one EEG channel."""
         data = self._board.get_current_board_data(n_samples)
         ch = self._eeg_channels[channel_idx]
-        return data[ch]
+        return np.asarray(data[ch])
 
     def get_all_eeg(self, n_samples: int = 256) -> NDArray:
         """Get (n_eeg_channels, n_samples) of recent EEG data."""
         data = self._board.get_current_board_data(n_samples)
-        return data[self._eeg_channels]
+        return np.asarray(data[self._eeg_channels])
 
 
 class SimulatedBoardAdapter:
@@ -181,8 +181,8 @@ class SimulatedBoardAdapter:
 
     def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> NDArray:
         t = np.linspace(self._t, self._t + n_samples / self._sample_rate, n_samples)
-        self._t = t[-1]
-        return np.sin(2.0 * np.pi * self._freqs[channel_idx] * t)
+        self._t = float(t[-1])
+        return np.asarray(np.sin(2.0 * np.pi * self._freqs[channel_idx] * t))
 
     def get_all_eeg(self, n_samples: int = 256) -> NDArray:
         t = np.linspace(self._t, self._t + n_samples / self._sample_rate, n_samples)

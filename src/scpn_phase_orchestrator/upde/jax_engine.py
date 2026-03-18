@@ -37,11 +37,11 @@ if TYPE_CHECKING:
     import jax.numpy as jnp
 
 
-def _build_jax_step():
+def _build_jax_step():  # type: ignore[no-untyped-def]
     """Build JIT-compiled Kuramoto step function."""
 
     @jit
-    def _kuramoto_step(phases, omegas, knm, zeta, psi, alpha, dt):
+    def _kuramoto_step(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
         diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
         coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
         dphi = omegas + coupling
@@ -50,8 +50,8 @@ def _build_jax_step():
         return new_phases % (2.0 * jnp.pi)
 
     @jit
-    def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):
-        def deriv(p):
+    def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
+        def deriv(p):  # type: ignore[no-untyped-def]
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
             return omegas + coupling + zeta * jnp.sin(psi - p)
@@ -66,14 +66,14 @@ def _build_jax_step():
     return _kuramoto_step, _kuramoto_rk4
 
 
-def _build_jax_sl_step():
+def _build_jax_sl_step():  # type: ignore[no-untyped-def]
     """Build JIT-compiled Stuart-Landau step function."""
 
     @jit
-    def _sl_rk4(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, dt):
+    def _sl_rk4(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, dt):  # type: ignore[no-untyped-def]
         n = omegas.shape[0]
 
-        def deriv(s):
+        def deriv(s):  # type: ignore[no-untyped-def]
             th, am = s[:n], s[n:]
             diff = th[jnp.newaxis, :] - th[:, jnp.newaxis]
             phase_coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)

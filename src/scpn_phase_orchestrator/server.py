@@ -69,7 +69,7 @@ class SimulationState:
         self.sl_state: np.ndarray | None = None
         self.mu: np.ndarray | None = None
 
-        if self.amplitude_mode:
+        if self.amplitude_mode and spec.amplitude is not None:
             amp = spec.amplitude
             self.sl_engine = StuartLandauEngine(
                 self.n_osc,
@@ -92,7 +92,14 @@ class SimulationState:
 
     def step(self) -> dict:
         """Advance one timestep, return state snapshot."""
-        if self.amplitude_mode and self.sl_engine and self.mu is not None:
+        if (
+            self.amplitude_mode
+            and self.sl_engine is not None
+            and self.mu is not None
+            and self.sl_state is not None
+            and self.coupling.knm_r is not None
+            and self.spec.amplitude is not None
+        ):
             self.sl_state = self.sl_engine.step(
                 self.sl_state,
                 self.omegas,
@@ -258,7 +265,7 @@ fetchState().then(render);
 </html>"""
 
 
-def create_app(spec_path: str | Path):  # -> FastAPI
+def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]
     """Create FastAPI app for the given binding spec."""
     try:
         from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -272,23 +279,23 @@ def create_app(spec_path: str | Path):  # -> FastAPI
     app = FastAPI(title="SPO Dashboard", version="0.4.1")
 
     @app.get("/", response_class=HTMLResponse)
-    async def dashboard():
+    async def dashboard() -> str:
         return DASHBOARD_HTML
 
     @app.get("/api/state")
-    async def get_state():
+    async def get_state() -> dict:
         return sim.snapshot()
 
     @app.post("/api/step")
-    async def post_step():
+    async def post_step() -> dict:
         return sim.step()
 
     @app.post("/api/reset")
-    async def post_reset():
+    async def post_reset() -> dict:
         return sim.reset()
 
     @app.get("/api/config")
-    async def get_config():
+    async def get_config() -> dict:
         return {
             "name": spec.name,
             "n_oscillators": sim.n_osc,
@@ -299,7 +306,7 @@ def create_app(spec_path: str | Path):  # -> FastAPI
         }
 
     @app.websocket("/ws/stream")
-    async def ws_stream(websocket: WebSocket):
+    async def ws_stream(websocket: WebSocket) -> None:
         await websocket.accept()
         try:
             while True:
