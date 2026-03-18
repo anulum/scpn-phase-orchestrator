@@ -32,6 +32,7 @@ pub struct StuartLandauStepper {
     k4: Vec<f64>,
     k5: Vec<f64>,
     k6: Vec<f64>,
+    k7: Vec<f64>,
     y5: Vec<f64>,
     tmp_state: Vec<f64>,
 }
@@ -72,6 +73,7 @@ impl StuartLandauStepper {
             k4: vec![0.0; dim],
             k5: vec![0.0; dim],
             k6: vec![0.0; dim],
+            k7: vec![0.0; dim],
             y5: vec![0.0; dim],
             tmp_state: vec![0.0; dim],
         })
@@ -133,6 +135,8 @@ impl StuartLandauStepper {
         validate_finite_slice(omegas, "omegas")?;
         validate_finite_slice(mu, "mu")?;
         validate_finite_slice(knm, "knm")?;
+        validate_finite_slice(knm_r, "knm_r")?;
+        validate_finite_slice(alpha, "alpha")?;
         if !zeta.is_finite() || !psi.is_finite() || !epsilon.is_finite() {
             return Err(SpoError::IntegrationDiverged(
                 "zeta/psi/epsilon contain NaN/Inf".into(),
@@ -444,23 +448,41 @@ impl StuartLandauStepper {
                 &mut self.k6,
             );
 
+            // 5th-order solution (B5[6] = 0, so k7 does not contribute to y5)
+            for i in 0..dim {
+                self.y5[i] = state[i]
+                    + dt * (dp::B5[0] * self.k1[i]
+                        + dp::B5[2] * self.k3[i]
+                        + dp::B5[3] * self.k4[i]
+                        + dp::B5[4] * self.k5[i]
+                        + dp::B5[5] * self.k6[i]);
+            }
+
+            // k7: evaluate derivative at y5 (FSAL property)
+            compute_derivative(
+                self.n,
+                &self.y5,
+                omegas,
+                mu,
+                knm,
+                knm_r,
+                zeta,
+                psi,
+                alpha,
+                epsilon,
+                &mut self.k7,
+            );
+
+            // Error estimate using 4th-order weights (B4[6] = 1/40)
             let mut err_norm: f64 = 0.0;
             for i in 0..dim {
-                let ks = [
-                    self.k1[i], self.k2[i], self.k3[i], self.k4[i], self.k5[i], self.k6[i],
-                ];
-                self.y5[i] = state[i]
-                    + dt * (dp::B5[0] * ks[0]
-                        + dp::B5[2] * ks[2]
-                        + dp::B5[3] * ks[3]
-                        + dp::B5[4] * ks[4]
-                        + dp::B5[5] * ks[5]);
                 let y4 = state[i]
-                    + dt * (dp::B4[0] * ks[0]
-                        + dp::B4[2] * ks[2]
-                        + dp::B4[3] * ks[3]
-                        + dp::B4[4] * ks[4]
-                        + dp::B4[5] * ks[5]);
+                    + dt * (dp::B4[0] * self.k1[i]
+                        + dp::B4[2] * self.k3[i]
+                        + dp::B4[3] * self.k4[i]
+                        + dp::B4[4] * self.k5[i]
+                        + dp::B4[5] * self.k6[i]
+                        + dp::B4[6] * self.k7[i]);
                 let err_i = (self.y5[i] - y4).abs();
                 let scale = self.atol + self.rtol * state[i].abs().max(self.y5[i].abs());
                 let ratio = err_i / scale;

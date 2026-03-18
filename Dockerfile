@@ -6,7 +6,8 @@
 # SCPN Phase Orchestrator — Multi-stage Container Image
 
 # ── Stage 1: Build Rust FFI extension ────────────────────────────
-FROM rust:1.83-slim AS rust-builder
+# Pin base images by digest for reproducible builds
+FROM rust:1.83-slim@sha256:89e45d1b4de96d61e457618ae4da44690eae5578fe2f11d26d1ed02ce5c8e412 AS rust-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev python3-pip python3-venv && \
@@ -21,7 +22,7 @@ RUN cd spo-kernel && \
     maturin build --release -m crates/spo-ffi/Cargo.toml --out /wheels
 
 # ── Stage 2: Build Python package ────────────────────────────────
-FROM python:3.12-slim AS python-builder
+FROM python:3.12-slim@sha256:2be8daddbd3438e0e0c82ddd4a37e0e7ff3c1e0a0e7e0e4ed4e3be0ba26d3e21 AS python-builder
 
 WORKDIR /build
 
@@ -33,7 +34,7 @@ COPY --from=rust-builder /wheels/*.whl /wheels/
 RUN pip install --no-cache-dir --prefix=/install . /wheels/*.whl
 
 # ── Stage 3: Production image ────────────────────────────────────
-FROM python:3.12-slim AS production
+FROM python:3.12-slim@sha256:2be8daddbd3438e0e0c82ddd4a37e0e7ff3c1e0a0e7e0e4ed4e3be0ba26d3e21 AS production
 
 LABEL maintainer="Miroslav Sotek <protoscience@anulum.li>"
 LABEL org.opencontainers.image.source="https://github.com/anulum/scpn-phase-orchestrator"

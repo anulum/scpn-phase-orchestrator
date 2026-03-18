@@ -21,6 +21,8 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
 
     R = |mean(exp(i * theta))|, psi_mean = arg(mean(exp(i * theta))).
     """
+    if phases.size == 0:
+        return (0.0, 0.0)
     if _HAS_RUST:  # pragma: no cover
         from spo_kernel import order_parameter as _rust_order_param
 
@@ -38,6 +40,8 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
     Raises:
         ValueError: If arrays have different lengths.
     """
+    if phases_a.size == 0 or phases_b.size == 0:
+        return 0.0
     if phases_a.size != phases_b.size:
         raise ValueError(
             f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"

@@ -31,9 +31,11 @@ import numpy as np
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
@@ -116,6 +118,24 @@ class SimulationState:
                 self.coupling.alpha,
             )
         self.step_count += 1
+
+        layer_states = []
+        idx = 0
+        for layer in self.spec.layers:
+            n = len(layer.oscillator_ids)
+            r, psi = compute_order_parameter(self.phases[idx : idx + n])
+            layer_states.append(LayerState(R=r, psi=psi))
+            idx += n
+        r_global, _ = compute_order_parameter(self.phases)
+        upde_state = UPDEState(
+            layers=layer_states,
+            cross_layer_alignment=np.eye(len(self.spec.layers)),
+            stability_proxy=r_global,
+            regime_id=self.regime_manager.current_regime.value,
+        )
+        proposed = self.regime_manager.evaluate(upde_state, BoundaryState())
+        self.regime_manager.transition(proposed)
+
         return self.snapshot()
 
     def snapshot(self) -> dict:

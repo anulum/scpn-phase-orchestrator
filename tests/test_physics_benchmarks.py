@@ -301,3 +301,36 @@ class TestCouplingBuilderPhysics:
         weak = CouplingBuilder().build(n, 0.1, 0.3)
         strong = CouplingBuilder().build(n, 1.0, 0.3)
         assert np.all(strong.knm >= weak.knm - 1e-12)
+
+
+class TestChimeraState:
+    """Abrams & Strogatz (2004): partial synchronisation in nonlocally
+    coupled identical oscillators on a ring."""
+
+    def test_partial_sync_emerges(self):
+        """Nonlocal coupling on a ring: some oscillators sync, others drift."""
+        n = 32
+        rng = np.random.default_rng(99)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = np.ones(n)
+
+        # Nonlocal ring coupling: each oscillator couples to R nearest
+        r_range = n // 4
+        knm = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                dist = min(abs(i - j), n - abs(i - j))
+                if 0 < dist <= r_range:
+                    knm[i, j] = 0.5
+        alpha = np.full((n, n), 1.46)  # Abrams-Strogatz α ≈ π/2 - 0.1
+        np.fill_diagonal(alpha, 0.0)
+
+        engine = UPDEEngine(n, dt=0.01, method="rk4")
+        for _ in range(5000):
+            phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+        r_global, _ = compute_order_parameter(phases)
+        # Chimera: partial sync means 0 < R < 1 (not fully synced)
+        assert 0.1 < r_global < 0.95, (
+            f"R={r_global:.4f}, expected partial sync (chimera range)"
+        )
