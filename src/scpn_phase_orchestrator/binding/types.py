@@ -39,6 +39,7 @@ class HierarchyLayer:
     name: str
     index: int
     oscillator_ids: list[str]
+    omegas: list[float] | None = None  # natural frequencies (rad/s) per oscillator
 
 
 @dataclass(frozen=True)
@@ -184,3 +185,17 @@ class BindingSpec:
     geometry_prior: GeometrySpec | None = None
     protocol_net: ProtocolNetSpec | None = None
     amplitude: AmplitudeSpec | None = None
+
+    def get_omegas(self) -> list[float]:
+        """Collect natural frequencies from all layers.
+
+        Falls back to 1.0 rad/s per oscillator if omegas is not defined.
+        """
+        result: list[float] = []
+        for layer in self.layers:
+            n = len(layer.oscillator_ids)
+            if layer.omegas is not None and len(layer.omegas) == n:
+                result.extend(layer.omegas)
+            else:
+                result.extend([1.0] * n)
+        return result
