@@ -40,6 +40,7 @@ class HierarchyLayer:
     index: int
     oscillator_ids: list[str]
     omegas: list[float] | None = None  # natural frequencies (rad/s) per oscillator
+    family: str | None = None  # maps to oscillator_families key
 
 
 @dataclass(frozen=True)

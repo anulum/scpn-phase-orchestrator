@@ -79,6 +79,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
             index=_require(lay, "index", "layers[]"),
             oscillator_ids=lay.get("oscillator_ids", []),
             omegas=lay.get("omegas"),
+            family=lay.get("family"),
         )
         for lay in _require(data, "layers", "root")
     ]
