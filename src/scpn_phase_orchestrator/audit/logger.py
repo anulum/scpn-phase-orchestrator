@@ -71,6 +71,10 @@ class AuditLogger:
         alpha: NDArray[np.floating] | None = None,
         zeta: float = 0.0,
         psi_drive: float = 0.0,
+        amplitudes: NDArray[np.floating] | None = None,
+        mu: NDArray[np.floating] | None = None,
+        knm_r: NDArray[np.floating] | None = None,
+        epsilon: float | None = None,
     ) -> None:
         record = {
             "ts": time.time(),
@@ -99,6 +103,14 @@ class AuditLogger:
             record["alpha"] = alpha.tolist()
             record["zeta"] = zeta
             record["psi_drive"] = psi_drive
+        if amplitudes is not None:
+            record["amplitudes"] = amplitudes.tolist()
+        if mu is not None:
+            record["mu"] = mu.tolist()
+        if knm_r is not None:
+            record["knm_r"] = knm_r.tolist()
+        if epsilon is not None:
+            record["epsilon"] = epsilon
         self._write_record(record)
 
     def log_event(self, event_type: str, data: dict) -> None:

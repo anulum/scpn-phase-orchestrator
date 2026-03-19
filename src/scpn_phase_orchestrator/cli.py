@@ -269,6 +269,8 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                 eff_knm = project_knm(eff_knm, geo_constraints)
 
             input_phases = phases.copy()
+            logged_zeta = zeta
+            logged_psi = psi_target
             if amplitude_mode and sl_engine is not None and mu is not None:
                 assert coupling.knm_r is not None  # nosec B101
                 eff_mu = mu
@@ -421,16 +423,24 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                 )
 
             if audit_logger is not None:
+                log_kwargs: dict = {
+                    "phases": input_phases,
+                    "omegas": omegas,
+                    "knm": eff_knm,
+                    "alpha": eff_alpha,
+                    "zeta": logged_zeta,
+                    "psi_drive": logged_psi,
+                }
+                if amplitude_mode:
+                    log_kwargs["amplitudes"] = amplitudes
+                    log_kwargs["mu"] = eff_mu
+                    log_kwargs["knm_r"] = coupling.knm_r
+                    log_kwargs["epsilon"] = spec.amplitude.epsilon  # type: ignore[union-attr]
                 audit_logger.log_step(
                     step_idx,
                     upde_state,
                     actions,
-                    phases=input_phases,
-                    omegas=omegas,
-                    knm=eff_knm,
-                    alpha=eff_alpha,
-                    zeta=zeta,
-                    psi_drive=psi_target,
+                    **log_kwargs,
                 )
 
         # Final coherence
