@@ -299,7 +299,8 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
 
     @app.get("/api/state")
     async def get_state() -> dict:
-        return sim.snapshot()
+        async with sim._lock:
+            return sim.snapshot()
 
     @app.post("/api/step")
     async def post_step() -> dict:
