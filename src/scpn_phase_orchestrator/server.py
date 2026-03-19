@@ -49,6 +49,7 @@ class SimulationState:
 
     def __init__(self, spec: BindingSpec) -> None:
         self.spec = spec
+        self._lock = asyncio.Lock()
         self.n_osc = sum(len(ly.oscillator_ids) for ly in spec.layers)
         self.coupling = CouplingBuilder().build(
             self.n_osc,
@@ -302,11 +303,13 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
 
     @app.post("/api/step")
     async def post_step() -> dict:
-        return sim.step()
+        async with sim._lock:
+            return sim.step()
 
     @app.post("/api/reset")
     async def post_reset() -> dict:
-        return sim.reset()
+        async with sim._lock:
+            return sim.reset()
 
     @app.get("/api/config")
     async def get_config() -> dict:
@@ -324,7 +327,8 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
         await websocket.accept()
         try:
             while True:
-                state = sim.step()
+                async with sim._lock:
+                    state = sim.step()
                 await websocket.send_text(json.dumps(state))
                 await asyncio.sleep(spec.sample_period_s)
         except WebSocketDisconnect:

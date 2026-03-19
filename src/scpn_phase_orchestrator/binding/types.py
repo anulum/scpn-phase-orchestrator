@@ -191,11 +191,18 @@ class BindingSpec:
         """Collect natural frequencies from all layers.
 
         Falls back to 1.0 rad/s per oscillator if omegas is not defined.
+        Raises ValueError if omegas is defined but length mismatches.
         """
         result: list[float] = []
         for layer in self.layers:
             n = len(layer.oscillator_ids)
-            if layer.omegas is not None and len(layer.omegas) == n:
+            if layer.omegas is not None:
+                if len(layer.omegas) != n:
+                    msg = (
+                        f"Layer {layer.name!r}: omegas length {len(layer.omegas)}"
+                        f" != oscillator count {n}"
+                    )
+                    raise ValueError(msg)
                 result.extend(layer.omegas)
             else:
                 result.extend([1.0] * n)

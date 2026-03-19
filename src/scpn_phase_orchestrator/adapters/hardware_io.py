@@ -180,13 +180,15 @@ class SimulatedBoardAdapter:
         self._running = False
 
     def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> NDArray:
-        t = np.linspace(self._t, self._t + n_samples / self._sample_rate, n_samples)
-        self._t = float(t[-1])
+        sr = self._sample_rate
+        t = np.arange(n_samples) / sr + self._t
+        self._t += n_samples / sr
         return np.asarray(np.sin(2.0 * np.pi * self._freqs[channel_idx] * t))
 
     def get_all_eeg(self, n_samples: int = 256) -> NDArray:
-        t = np.linspace(self._t, self._t + n_samples / self._sample_rate, n_samples)
-        self._t = t[-1]
+        sr = self._sample_rate
+        t = np.arange(n_samples) / sr + self._t
+        self._t += n_samples / sr
         return np.array([np.sin(2.0 * np.pi * f * t) for f in self._freqs])
 
 
