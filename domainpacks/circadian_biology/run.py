@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_order_parameter,
     compute_plv,
 )
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 STEPS = 250
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
@@ -71,10 +72,23 @@ def main():
 
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     builder = CouplingBuilder()
-    coupling = builder.build(
-        n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha
-    )
-    engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
+    amplitude_mode = spec.amplitude is not None
+    if amplitude_mode:
+        amp = spec.amplitude
+        coupling = builder.build_with_amplitude(
+            n_osc,
+            spec.coupling.base_strength,
+            spec.coupling.decay_alpha,
+            amp.amp_coupling_strength,
+            amp.amp_coupling_decay,
+        )
+        sl_engine = StuartLandauEngine(n_osc, dt=spec.sample_period_s)
+        mu = np.full(n_osc, amp.mu)
+    else:
+        coupling = builder.build(
+            n_osc, spec.coupling.base_strength, spec.coupling.decay_alpha
+        )
+        engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
     boundary_observer = BoundaryObserver(spec.boundaries)
     regime_manager = RegimeManager()
     supervisor = SupervisorPolicy(regime_manager)
@@ -91,6 +105,8 @@ def main():
     rng = np.random.default_rng(42)
     omegas = OMEGAS[:n_osc].copy()
     phases = extract_initial_phases(spec, omegas)
+    if amplitude_mode:
+        sl_state = np.concatenate([phases, np.sqrt(np.maximum(mu, 0.0))])
     layer_map = _build_layer_map(spec)
 
     zeta = spec.drivers.physical.get("zeta", 0.0)
@@ -124,7 +140,21 @@ def main():
         eff_knm = imprint_model.modulate_coupling(coupling.knm, imprint_state)
         eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
 
-        phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
+        if amplitude_mode:
+            sl_state = sl_engine.step(
+                sl_state,
+                omegas,
+                mu,
+                eff_knm,
+                coupling.knm_r,
+                zeta,
+                psi_target,
+                eff_alpha,
+                epsilon=amp.epsilon,
+            )
+            phases = sl_state[:n_osc]
+        else:
+            phases = engine.step(phases, omegas, eff_knm, zeta, psi_target, eff_alpha)
 
         layer_states = []
         for layer in spec.layers:
@@ -179,6 +209,7 @@ def main():
                     knm=coupling.knm * (1.0 + act.value),
                     alpha=coupling.alpha,
                     active_template=coupling.active_template,
+                    knm_r=coupling.knm_r,
                 )
             elif act.knob == "Psi":
                 psi_target = act.value
