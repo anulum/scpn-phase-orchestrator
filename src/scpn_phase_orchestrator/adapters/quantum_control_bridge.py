@@ -88,39 +88,43 @@ class QuantumControlBridge:
             active_template="quantum_import",
         )
 
-    def build_quantum_circuit(
-        self, knm: NDArray, omegas: NDArray, time: float, trotter_steps: int = 10
-    ) -> object:
-        """Build a Trotterised XY-Hamiltonian circuit.
-
-        Requires scpn-quantum-control.  Returns a Qiskit QuantumCircuit.
-        """
-        try:
-            from scpn_quantum_control.circuits import xy_trotter_circuit
-        except ImportError as exc:
-            raise ImportError(
-                "scpn-quantum-control is required for circuit construction. "
-                "Install with: pip install scpn-quantum-control"
-            ) from exc
-        return xy_trotter_circuit(  # pragma: no cover
-            knm=knm,
-            omegas=omegas,
-            time=time,
-            trotter_steps=trotter_steps,
-            trotter_order=self._trotter_order,
-        )
-
-    def extract_phases_from_statevector(self, statevector: object) -> NDArray:
-        """Extract per-qubit phases from a Qiskit Statevector.
+    def build_hamiltonian(self, knm: NDArray, omegas: NDArray) -> object:
+        """Build Kuramoto XY Hamiltonian as SparsePauliOp.
 
         Requires scpn-quantum-control.
         """
-        try:
-            from scpn_quantum_control.analysis import statevector_to_phases
-        except ImportError as exc:
-            raise ImportError(
-                "scpn-quantum-control is required for statevector analysis. "
-                "Install with: pip install scpn-quantum-control"
-            ) from exc
-        phases = statevector_to_phases(statevector)  # pragma: no cover
-        return np.asarray(phases, dtype=np.float64) % TWO_PI  # pragma: no cover
+        from scpn_quantum_control import knm_to_hamiltonian  # pragma: no cover
+
+        return knm_to_hamiltonian(knm, omegas)  # pragma: no cover
+
+    def orchestrator_to_quantum(
+        self,
+        state: UPDEState,
+    ) -> NDArray:
+        """Convert orchestrator UPDEState to quantum phase array.
+
+        Requires scpn-quantum-control.
+        """
+        from scpn_quantum_control import (  # pragma: no cover
+            orchestrator_to_quantum_phases,
+        )
+
+        payload = self.export_artifact(state)  # pragma: no cover
+        layer_phases = {  # pragma: no cover
+            f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
+        }
+        return orchestrator_to_quantum_phases(layer_phases)  # pragma: no cover
+
+    def quantum_to_orchestrator(
+        self,
+        quantum_theta: NDArray,
+    ) -> dict:
+        """Convert quantum phase array back to orchestrator-compatible dict.
+
+        Requires scpn-quantum-control.
+        """
+        from scpn_quantum_control import (  # pragma: no cover
+            quantum_to_orchestrator_phases,
+        )
+
+        return quantum_to_orchestrator_phases(quantum_theta)  # pragma: no cover
