@@ -1,6 +1,6 @@
 rules:
   - name: boost_symbolic_coupling
-    regime: [desynchronised]
+    regime: [DEGRADED]
     condition:
       metric: R_good
       op: "<"
@@ -13,7 +13,7 @@ rules:
       justification: "Boost coupling when good layers desynchronised"
 
   - name: set_target_phase
-    regime: [desynchronised]
+    regime: [DEGRADED]
     condition:
       metric: R_bad
       op: ">"
@@ -26,7 +26,7 @@ rules:
       justification: "Shift target phase to disrupt bad-layer lock"
 
   - name: damp_bad_coherence
-    regime: [synchronised]
+    regime: [NOMINAL]
     condition:
       metric: R_bad
       op: ">"

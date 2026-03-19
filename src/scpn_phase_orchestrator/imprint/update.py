@@ -20,6 +20,10 @@ class ImprintModel:
 
     m_k(t+dt) = m_k(t) * exp(-decay_rate * dt) + exposure * dt,
     clipped to [0, saturation].
+
+    Modulates: K (phase coupling), alpha (lag), mu (bifurcation).
+    Does NOT modulate knm_r (amplitude coupling strength) — amplitude
+    coupling topology is fixed by the binding spec, not learned.
     """
 
     def __init__(self, decay_rate: float, saturation: float):
