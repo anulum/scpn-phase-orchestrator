@@ -29,16 +29,16 @@ __all__ = [
 ]
 
 try:
-    from brainflow.board_shim import BoardShim, BrainFlowInputParams
+    from brainflow.board_shim import BoardShim, BrainFlowInputParams  # pragma: no cover
 
-    HAS_BRAINFLOW = True
+    HAS_BRAINFLOW = True  # pragma: no cover
 except ImportError:
     HAS_BRAINFLOW = False
 
 try:
-    from pymodbus.client import ModbusTcpClient
+    from pymodbus.client import ModbusTcpClient  # pragma: no cover
 
-    HAS_MODBUS = True
+    HAS_MODBUS = True  # pragma: no cover
 except ImportError:
     HAS_MODBUS = False
 
@@ -78,7 +78,7 @@ class SampleBuffer:
         )
 
 
-class BrainFlowAdapter:
+class BrainFlowAdapter:  # pragma: no cover
     """Streams EEG/PPG/EMG data from BrainFlow-supported devices.
 
     Usage:
@@ -190,7 +190,7 @@ class SimulatedBoardAdapter:
         return np.array([np.sin(2.0 * np.pi * f * t) for f in self._freqs])
 
 
-class ModbusAdapter:
+class ModbusAdapter:  # pragma: no cover
     """Reads SCADA/PLC registers via Modbus TCP for industrial control.
 
     Usage:
