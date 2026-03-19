@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +17,8 @@ import numpy as np
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+_log = logging.getLogger(__name__)
 
 __all__ = ["ReplayEngine"]
 
@@ -133,7 +136,10 @@ class ReplayEngine:
     ) -> tuple[bool, int]:
         """Chained multi-step replay for Stuart-Landau engine.
 
-        Requires step records to include 'phases' (SL state = [theta; r]).
+        Supports two log formats:
+        - New format: separate 'phases' (N) + 'amplitudes' (N) fields.
+        - Legacy format: 'phases' holds the full SL state (2N) with 'mu' present.
+        When neither mu nor amplitudes are present, skips with a warning.
         Returns (passed, n_verified).
         """
         replayable = self.step_entries(entries)
@@ -144,18 +150,29 @@ class ReplayEngine:
         for i in range(len(replayable) - 1):
             curr = replayable[i]
             nxt = replayable[i + 1]
-            state = np.asarray(curr["phases"])  # 2N: [theta; r]
+
             omegas = np.asarray(curr["omegas"])
+            n = len(omegas)
+
+            if "amplitudes" in curr:
+                state = np.concatenate(
+                    [np.asarray(curr["phases"]), np.asarray(curr["amplitudes"])]
+                )
+            elif "mu" in curr:
+                # Legacy: full SL state [theta; r] stored in 'phases'
+                state = np.asarray(curr["phases"])
+            else:
+                _log.warning("SL replay step %d: amplitude fields missing, skipping", i)
+                continue
+
             knm_flat = np.asarray(curr["knm"])
             alpha_flat = np.asarray(curr["alpha"])
             zeta = curr.get("zeta", 0.0)
             psi_drive = curr.get("psi_drive", 0.0)
 
-            n = len(omegas)
             knm_arr = knm_flat.reshape(n, n) if knm_flat.ndim == 1 else knm_flat
             alpha_arr = alpha_flat.reshape(n, n) if alpha_flat.ndim == 1 else alpha_flat
 
-            # SL step requires mu and knm_r; use stored or zeros
             mu = np.asarray(curr.get("mu", np.zeros(n)))
             knm_r_flat = np.asarray(curr.get("knm_r", np.zeros(n * n)))
             knm_r = knm_r_flat.reshape(n, n) if knm_r_flat.ndim == 1 else knm_r_flat
@@ -172,7 +189,13 @@ class ReplayEngine:
                 alpha_arr,
                 epsilon=epsilon,
             )
-            logged_next = np.asarray(nxt["phases"])
+
+            if "amplitudes" in nxt:
+                logged_next = np.concatenate(
+                    [np.asarray(nxt["phases"]), np.asarray(nxt["amplitudes"])]
+                )
+            else:
+                logged_next = np.asarray(nxt["phases"])
 
             if not np.allclose(computed, logged_next, atol=atol):
                 return False, verified

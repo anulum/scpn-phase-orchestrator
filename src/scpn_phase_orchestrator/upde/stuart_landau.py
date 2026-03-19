@@ -27,7 +27,7 @@ class StuartLandauEngine:
         dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) + ζ sin(Ψ - θ_i)
 
     Amplitude ODE:
-        dr_i/dt = (μ_i - r_i²)·r_i + ε Σ_j K^r_ij · r_j · cos(θ_j - θ_i)
+        dr_i/dt = (μ_i - r_i²)·r_i + ε Σ_j K^r_ij · r_j · cos(θ_j - θ_i - α_ij)
     """
 
     # Dormand-Prince RK45 Butcher tableau
@@ -106,7 +106,7 @@ class StuartLandauEngine:
         epsilon: float = 1.0,
     ) -> NDArray:
         """Advance (θ, r) by one timestep. Returns new state (2N,)."""
-        self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha)
+        self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
         if self._use_rust:  # pragma: no cover
             result = np.asarray(
                 self._rust.step(
@@ -149,6 +149,7 @@ class StuartLandauEngine:
         zeta: float,
         psi: float,
         alpha: NDArray,
+        epsilon: float = 1.0,
     ) -> None:
         n = self._n
         if state.shape != (2 * n,):
@@ -177,6 +178,8 @@ class StuartLandauEngine:
             raise ValueError("knm_r contains NaN/Inf")
         if not np.all(np.isfinite(alpha)):
             raise ValueError("alpha contains NaN/Inf")
+        if not np.isfinite(epsilon):
+            raise ValueError("epsilon must be finite")
 
     def _derivative(self, state: NDArray, p: _Params) -> NDArray:
         omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon = p

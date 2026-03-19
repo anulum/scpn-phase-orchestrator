@@ -88,9 +88,10 @@ def _resolve_channel(
     if layer_family is not None and layer_family in families:
         return families[layer_family].channel
     channels = []
-    for fam in families.values():
-        if fam.channel not in channels:
-            channels.append(fam.channel)
+    for key in sorted(families.keys()):
+        ch = families[key].channel
+        if ch not in channels:
+            channels.append(ch)
     if not channels:
         return "P"
     return channels[osc_idx % len(channels)]

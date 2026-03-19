@@ -148,10 +148,11 @@ def main():
         eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
 
         if amplitude_mode:
+            eff_mu = imprint_model.modulate_mu(mu, imprint_state)
             sl_state = sl_engine.step(
                 sl_state,
                 omegas,
-                mu,
+                eff_mu,
                 eff_knm,
                 coupling.knm_r,
                 zeta,
