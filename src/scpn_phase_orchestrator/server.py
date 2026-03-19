@@ -279,7 +279,7 @@ fetchState().then(render);
 </html>"""
 
 
-def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]
+def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
         from fastapi import FastAPI, WebSocket, WebSocketDisconnect

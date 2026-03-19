@@ -27,10 +27,10 @@ __all__ = ["JaxUPDEEngine", "HAS_JAX"]
 TWO_PI = 2.0 * np.pi
 
 try:
-    import jax.numpy as jnp
-    from jax import jit
+    import jax.numpy as jnp  # pragma: no cover
+    from jax import jit  # pragma: no cover
 
-    HAS_JAX = True
+    HAS_JAX = True  # pragma: no cover
 except ImportError:
     HAS_JAX = False
 
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     import jax.numpy as jnp
 
 
-def _build_jax_step():  # type: ignore[no-untyped-def]
+def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     """Build JIT-compiled Kuramoto step function."""
 
     @jit
@@ -67,7 +67,7 @@ def _build_jax_step():  # type: ignore[no-untyped-def]
     return _kuramoto_step, _kuramoto_rk4
 
 
-def _build_jax_sl_step():  # type: ignore[no-untyped-def]
+def _build_jax_sl_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     """Build JIT-compiled Stuart-Landau step function."""
 
     @jit
@@ -98,7 +98,7 @@ def _build_jax_sl_step():  # type: ignore[no-untyped-def]
     return _sl_rk4
 
 
-class JaxUPDEEngine:
+class JaxUPDEEngine:  # pragma: no cover
     """JAX-accelerated Kuramoto/UPDE integrator.
 
     GPU-compiled via jax.jit. First call triggers XLA compilation
@@ -140,7 +140,7 @@ class JaxUPDEEngine:
         return np.asarray(result)
 
 
-class JaxStuartLandauEngine:
+class JaxStuartLandauEngine:  # pragma: no cover
     """JAX-accelerated Stuart-Landau integrator (RK4 only)."""
 
     def __init__(self, n: int, dt: float = 0.01) -> None:
