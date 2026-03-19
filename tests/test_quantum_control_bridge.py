@@ -81,15 +81,18 @@ class TestQuantumControlBridge:
         for ls in state.layers:
             assert 0.0 <= ls.psi < TWO_PI
 
-    def test_build_circuit_requires_package(self):
+    def test_import_knm_square(self):
         bridge = QuantumControlBridge(n_oscillators=4)
-        with pytest.raises(ImportError, match="scpn-quantum-control"):
-            bridge.build_quantum_circuit(knm=np.eye(4), omegas=np.ones(4), time=1.0)
+        knm = np.diag([0.0, 0.0, 0.0, 0.0]) + 0.1
+        np.fill_diagonal(knm, 0.0)
+        cs = bridge.import_knm(knm)
+        assert cs.knm.shape == (4, 4)
+        assert cs.active_template == "quantum_import"
 
-    def test_extract_phases_requires_package(self):
+    def test_import_knm_non_square_error(self):
         bridge = QuantumControlBridge(n_oscillators=4)
-        with pytest.raises(ImportError, match="scpn-quantum-control"):
-            bridge.extract_phases_from_statevector(None)
+        with pytest.raises(ValueError, match="square"):
+            bridge.import_knm(np.ones((3, 4)))
 
 
 class TestQuantumDomainpack:

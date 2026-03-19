@@ -1357,15 +1357,17 @@ class TestPetriNetGuard:
 
 
 class TestQuantumControlBridge:
-    def test_build_quantum_circuit_import_error(self):
+    def test_import_export_roundtrip(self):
         bridge = QuantumControlBridge(4)
-        with pytest.raises(ImportError, match="scpn-quantum-control"):
-            bridge.build_quantum_circuit(np.eye(4), np.ones(4), 1.0)
+        artifact = {"phases": [0.1, 0.2, 0.3, 0.4], "fidelity": 0.9}
+        state = bridge.import_artifact(artifact)
+        exported = bridge.export_artifact(state)
+        assert exported["fidelity"] == state.stability_proxy
 
-    def test_extract_phases_import_error(self):
+    def test_import_knm_non_square_error(self):
         bridge = QuantumControlBridge(4)
-        with pytest.raises(ImportError, match="scpn-quantum-control"):
-            bridge.extract_phases_from_statevector(None)
+        with pytest.raises(ValueError, match="square"):
+            bridge.import_knm(np.ones((3, 4)))
 
 
 # ──────────────────────────────────────────────────────────────────────
