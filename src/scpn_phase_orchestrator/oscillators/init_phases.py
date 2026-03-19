@@ -49,7 +49,7 @@ def extract_initial_phases(
     for layer in spec.layers:
         for osc_id in layer.oscillator_ids:
             omega = omegas[osc_idx]
-            channel = _pick_channel(osc_idx, families)
+            channel = _resolve_channel(layer.family, families, osc_idx)
 
             if channel == "P":
                 signal = np.sin(omega * TWO_PI * t) + rng.normal(0, 0.1, len(t))
@@ -79,8 +79,14 @@ def extract_initial_phases(
     return phases
 
 
-def _pick_channel(osc_idx: int, families: dict[str, OscillatorFamily]) -> str:
-    """Cycle through P/I/S channels based on oscillator index."""
+def _resolve_channel(
+    layer_family: str | None,
+    families: dict[str, OscillatorFamily],
+    osc_idx: int,
+) -> str:
+    """Resolve channel from explicit family binding or round-robin fallback."""
+    if layer_family is not None and layer_family in families:
+        return families[layer_family].channel
     channels = []
     for fam in families.values():
         if fam.channel not in channels:

@@ -10,26 +10,32 @@ layers:
     index: 0
     oscillator_ids: [delta_frontal, delta_central, delta_occipital]
     omegas: [12.57, 12.57, 12.57]  # 2π × 2 Hz
+    family: eeg_band
   - name: theta
     index: 1
     oscillator_ids: [theta_frontal, theta_parietal]
     omegas: [37.70, 37.70]  # 2π × 6 Hz
+    family: eeg_band
   - name: alpha
     index: 2
     oscillator_ids: [alpha_occipital, alpha_parietal, alpha_temporal]
     omegas: [62.83, 62.83, 62.83]  # 2π × 10 Hz
+    family: eeg_band
   - name: beta
     index: 3
     oscillator_ids: [beta_motor, beta_prefrontal]
     omegas: [125.66, 125.66]  # 2π × 20 Hz
+    family: eeg_band
   - name: gamma
     index: 4
     oscillator_ids: [gamma_sensory, gamma_binding]
     omegas: [251.33, 251.33]  # 2π × 40 Hz
+    family: eeg_band
   - name: network
     index: 5
     oscillator_ids: [infraslow_dmn, infraslow_salience]
     omegas: [0.628, 0.628]  # 2π × 0.1 Hz
+    family: eeg_band
 
 # Omega: 2*pi*f_center in rad/s.  Buzsaki (2006) "Rhythms of the Brain"
 # delta 2 Hz, theta 6, alpha 10, beta 20, gamma 40, network 0.1
