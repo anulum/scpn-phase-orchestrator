@@ -35,7 +35,7 @@ class PrometheusAdapter:
         )
         req = Request(url, headers={"Accept": "application/json"})
         try:
-            with urlopen(req, timeout=self._timeout) as resp:  # noqa: S310
+            with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
                 body = json.loads(resp.read())
         except (URLError, OSError) as exc:
             raise ConnectionError(f"Prometheus query failed: {exc}") from exc
@@ -56,7 +56,7 @@ class PrometheusAdapter:
         url = f"{self._endpoint}/api/v1/query?query={query}"
         req = Request(url, headers={"Accept": "application/json"})
         try:
-            with urlopen(req, timeout=self._timeout) as resp:  # noqa: S310
+            with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
                 body = json.loads(resp.read())
         except (URLError, OSError) as exc:
             raise ConnectionError(f"Prometheus query failed: {exc}") from exc
