@@ -252,3 +252,31 @@ def test_multiple_marked_priority():
         {"a": "NOMINAL", "b": "DEGRADED", "c": "RECOVERY"},
     )
     assert adapter._active_regime() == Regime.RECOVERY
+
+
+def test_supervisor_fires_petri_transition():
+    """End-to-end: SupervisorPolicy → PetriNetAdapter → RegimeManager."""
+    from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+    from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+    from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
+    from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+    bus = EventBus()
+    rm = RegimeManager(event_bus=bus)
+    adapter = PetriNetAdapter(
+        _protocol_net(),
+        Marking(tokens={"warmup": 1}),
+        _place_regime_map(),
+        event_bus=bus,
+    )
+    supervisor = SupervisorPolicy(rm, petri_adapter=adapter)
+    upde = UPDEState(
+        layers=[LayerState(R=0.8, psi=0.0)],
+        cross_layer_alignment=[[1.0]],
+        stability_proxy=0.8,
+        regime_id="nominal",
+    )
+    actions = supervisor.decide(upde, BoundaryState(), petri_ctx={"stability_proxy": 0.8})
+    assert adapter.marking["nominal"] == 1
+    assert adapter.marking["warmup"] == 0
+    assert any(e.kind == "petri_transition" for e in bus.history)
