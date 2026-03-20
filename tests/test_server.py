@@ -103,6 +103,18 @@ class TestSimulationState:
         sim = SimulationState(spec)
         assert len(sim.geo_constraints) == 0
 
+    def test_boundary_observer_wired_to_regime(self):
+        spec = load_binding_spec(
+            DOMAINPACK_DIR / "neuroscience_eeg" / "binding_spec.yaml"
+        )
+        sim = SimulationState(spec)
+        assert sim.boundary_observer is not None
+        assert sim.event_bus is not None
+        assert sim.boundary_observer._event_bus is sim.event_bus
+        for _ in range(5):
+            sim.step()
+        assert sim.step_count == 5
+
 
 try:
     from fastapi.testclient import TestClient
