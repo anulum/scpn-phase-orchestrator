@@ -43,9 +43,15 @@ class SymbolicExtractor(PhaseExtractor):
         if self._mode == "ring":
             thetas = TWO_PI * indices / self._n_states
         else:
-            # Graph-walk: normalise sequential position to [0, 2*pi)
-            positions = np.arange(len(indices), dtype=np.float64)
-            thetas = TWO_PI * positions / max(len(indices), 1)
+            # Graph-walk: cumulative phase from state transitions
+            # Each step adds phase proportional to the transition distance
+            if len(indices) < 2:
+                thetas = TWO_PI * indices.astype(np.float64) / self._n_states
+            else:
+                steps = np.abs(np.diff(indices)).astype(np.float64)
+                cumulative = np.concatenate([[0.0], np.cumsum(steps)])
+                total = cumulative[-1] if cumulative[-1] > 0 else 1.0
+                thetas = TWO_PI * cumulative / total
 
         thetas = thetas % TWO_PI
         dt = 1.0 / sample_rate if sample_rate > 0 else 1.0
