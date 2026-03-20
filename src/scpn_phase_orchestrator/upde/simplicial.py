@@ -109,4 +109,5 @@ class SimplicialEngine:
         if zeta != 0.0:
             result = result + zeta * np.sin(psi - theta)
 
-        return result
+        out: NDArray = result
+        return out

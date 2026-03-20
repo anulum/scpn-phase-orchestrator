@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.coupling.spectral import fiedler_value, spectral_gap
+from scpn_phase_orchestrator.coupling.spectral import fiedler_value
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 __all__ = ["SSGFCosts", "compute_ssgf_costs"]
@@ -30,7 +30,7 @@ class SSGFCosts:
 def compute_ssgf_costs(
     W: NDArray,
     phases: NDArray,
-    weights: tuple[float, float, float, float] = (1.0, 0.5, 0.1, 0.1),
+    weights: tuple[float, ...] = (1.0, 0.5, 0.1, 0.1),
 ) -> SSGFCosts:
     """Compute SSGF cost terms for geometry W given current phases.
 

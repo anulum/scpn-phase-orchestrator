@@ -50,9 +50,9 @@ class OttAntonsenReduction:
 
     def steady_state_R(self) -> float:
         """Analytical steady-state order parameter R_ss = √(1 - 2Δ/K)."""
-        if self._K <= self.K_c:
+        if self.K_c >= self._K:
             return 0.0
-        return np.sqrt(1.0 - 2.0 * self._delta / self._K)
+        return float(np.sqrt(1.0 - 2.0 * self._delta / self._K))
 
     def step(self, z: complex) -> complex:
         """RK4 integration of dz/dt = -(Δ+iω₀)z + (K/2)(z-|z|²z)."""

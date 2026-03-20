@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard, LyapunovState
+from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard
 
 
 def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:

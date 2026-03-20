@@ -276,7 +276,9 @@ def test_supervisor_fires_petri_transition():
         stability_proxy=0.8,
         regime_id="nominal",
     )
-    actions = supervisor.decide(upde, BoundaryState(), petri_ctx={"stability_proxy": 0.8})
+    _actions = supervisor.decide(
+        upde, BoundaryState(), petri_ctx={"stability_proxy": 0.8}
+    )
     assert adapter.marking["nominal"] == 1
     assert adapter.marking["warmup"] == 0
     assert any(e.kind == "petri_transition" for e in bus.history)

@@ -76,7 +76,7 @@ class TestNPE:
 
     def test_custom_max_radius(self):
         phases = np.linspace(0, 2 * np.pi, 8, endpoint=False)
-        npe_full = compute_npe(phases)
+        _npe_full = compute_npe(phases)
         npe_half = compute_npe(phases, max_radius=0.5)
         # Restricting radius may change result
         assert isinstance(npe_half, float)

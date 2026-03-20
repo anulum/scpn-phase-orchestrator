@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -50,7 +51,9 @@ class GeometryCarrier:
         self._z = self._rng.normal(0, 0.1, z_dim)
         # Decoder: W = softplus(A @ z) reshaped to (n, n), zero diagonal
         # A is a fixed random projection (n*n × z_dim)
-        self._A = self._rng.normal(0, 1.0 / np.sqrt(z_dim), (n_oscillators * n_oscillators, z_dim))
+        self._A = self._rng.normal(
+            0, 1.0 / np.sqrt(z_dim), (n_oscillators * n_oscillators, z_dim)
+        )
         self._step = 0
 
     @property
@@ -69,9 +72,15 @@ class GeometryCarrier:
         # Softplus ensures non-negative coupling
         W = np.log1p(np.exp(raw)).reshape(self._n, self._n)
         np.fill_diagonal(W, 0.0)
-        return W
+        out: NDArray = W
+        return out
 
-    def update(self, cost: float, cost_fn=None, epsilon: float = 1e-4) -> SSGFState:
+    def update(
+        self,
+        cost: float,
+        cost_fn: Callable[[NDArray], float] | None = None,
+        epsilon: float = 1e-4,
+    ) -> SSGFState:
         """One SSGF outer step: compute gradient of cost w.r.t. z, descend.
 
         If cost_fn is provided, uses finite differences on z.
@@ -86,7 +95,10 @@ class GeometryCarrier:
                 z_plus[i] += epsilon
                 z_minus = self._z.copy()
                 z_minus[i] -= epsilon
-                grad[i] = (cost_fn(self.decode(z_plus)) - cost_fn(self.decode(z_minus))) / (2 * epsilon)
+                grad[i] = (
+                    cost_fn(self.decode(z_plus))
+                    - cost_fn(self.decode(z_minus))
+                ) / (2 * epsilon)
 
         self._z -= self._lr * grad
         W = self.decode()

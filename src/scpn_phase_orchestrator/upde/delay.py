@@ -84,11 +84,7 @@ class DelayedEngine:
     ) -> NDArray:
         delayed = self._buffer.get_delayed(self._delay_steps)
         self._buffer.push(phases)
-        if delayed is None:
-            # Not enough history yet — use instantaneous coupling
-            coupling_phases = phases
-        else:
-            coupling_phases = delayed
+        coupling_phases = phases if delayed is None else delayed
 
         # dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j(t-τ) - θ_i(t) - α_ij)
         diff = coupling_phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
