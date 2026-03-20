@@ -84,9 +84,7 @@ class SimulationState:
             self.imprint_model = ImprintModel(
                 spec.imprint_model.decay_rate, spec.imprint_model.saturation
             )
-            self.imprint_state = ImprintState(
-                m_k=np.zeros(self.n_osc), last_update=0.0
-            )
+            self.imprint_state = ImprintState(m_k=np.zeros(self.n_osc), last_update=0.0)
 
         self.geo_constraints: list[GeometryConstraint] = []
         if spec.geometry_prior is not None:

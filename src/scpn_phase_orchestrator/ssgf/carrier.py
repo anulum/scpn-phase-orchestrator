@@ -96,8 +96,7 @@ class GeometryCarrier:
                 z_minus = self._z.copy()
                 z_minus[i] -= epsilon
                 grad[i] = (
-                    cost_fn(self.decode(z_plus))
-                    - cost_fn(self.decode(z_minus))
+                    cost_fn(self.decode(z_plus)) - cost_fn(self.decode(z_minus))
                 ) / (2 * epsilon)
 
         self._z -= self._lr * grad

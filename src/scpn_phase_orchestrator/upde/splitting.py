@@ -97,10 +97,6 @@ class SplittingEngine:
         k3 = self._coupling_deriv(
             (phases + 0.5 * dt * k2) % TWO_PI, knm, zeta, psi, alpha
         )
-        k4 = self._coupling_deriv(
-            (phases + dt * k3) % TWO_PI, knm, zeta, psi, alpha
-        )
-        result: NDArray = (
-            (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
-        )
+        k4 = self._coupling_deriv((phases + dt * k3) % TWO_PI, knm, zeta, psi, alpha)
+        result: NDArray = (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
         return result

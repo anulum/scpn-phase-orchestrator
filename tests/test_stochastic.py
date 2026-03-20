@@ -98,7 +98,11 @@ class TestFindOptimalNoise:
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         result = find_optimal_noise(
-            engine, phases, omegas, knm, alpha,
+            engine,
+            phases,
+            omegas,
+            knm,
+            alpha,
             D_range=np.array([0.0, 0.1, 0.5]),
             n_steps=50,
         )

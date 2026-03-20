@@ -79,7 +79,9 @@ class TCBOObserver:
         min_len = self._embed_dim * self._embed_delay + 2
         if len(self._history) < min_len:
             return TCBOState(
-                p_h1=0.0, is_conscious=False, s_h1=0.0,
+                p_h1=0.0,
+                is_conscious=False,
+                s_h1=0.0,
                 method="insufficient_data",
             )
 
@@ -114,11 +116,13 @@ class TCBOObserver:
         that captures the same qualitative behavior (high PLV ↔ high p_h1)
         without the topological guarantees.
         """
-        recent = np.array(self._history[-self._window_size:])
+        recent = np.array(self._history[-self._window_size :])
         n_osc = recent.shape[1]
         if n_osc < 2:
             return TCBOState(
-                p_h1=0.0, is_conscious=False, s_h1=0.0,
+                p_h1=0.0,
+                is_conscious=False,
+                s_h1=0.0,
                 method="plv_approx",
             )
 
@@ -144,7 +148,7 @@ class TCBOObserver:
 
     def _delay_embed(self) -> NDArray:
         """Delay-embed phase history into d-dimensional point cloud."""
-        recent = np.array(self._history[-self._window_size:])
+        recent = np.array(self._history[-self._window_size :])
         T, n_ch = recent.shape
         d = self._embed_dim
         tau = self._embed_delay

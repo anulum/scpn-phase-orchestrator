@@ -68,8 +68,11 @@ class PGBO:
                     alignment = 0.0
 
         snap = PGBOSnapshot(
-            R=R, psi=psi, costs=costs,
-            phase_geometry_alignment=alignment, step=self._step,
+            R=R,
+            psi=psi,
+            costs=costs,
+            phase_geometry_alignment=alignment,
+            step=self._step,
         )
         self._history.append(snap)
         return snap

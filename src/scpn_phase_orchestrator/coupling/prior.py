@@ -90,7 +90,6 @@ class UniversalPrior:
         """Log-probability under the Gaussian prior (unnormalized)."""
         lp_K = -0.5 * ((K_base - self._K_base_mean) / self._K_base_std) ** 2
         lp_a = (
-            -0.5
-            * ((decay_alpha - self._decay_alpha_mean) / self._decay_alpha_std) ** 2
+            -0.5 * ((decay_alpha - self._decay_alpha_mean) / self._decay_alpha_std) ** 2
         )
         return lp_K + lp_a
