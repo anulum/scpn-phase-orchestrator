@@ -353,15 +353,21 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                     ]
                     state_kwargs["pac_max"] = float(max(pac_vals))
 
-            upde_state = UPDEState(**state_kwargs)
-            obs_values: dict[str, float] = {"R": upde_state.stability_proxy}
+            if imprint_state is not None:
+                state_kwargs["imprint_mean"] = float(np.mean(imprint_state.m_k))
+
+            obs_values: dict[str, float] = {"R": state_kwargs["stability_proxy"]}
             if amplitude_mode:
-                obs_values["mean_amplitude"] = upde_state.mean_amplitude
-                obs_values["pac_max"] = upde_state.pac_max
-                obs_values["subcritical_fraction"] = upde_state.subcritical_fraction
+                obs_values["mean_amplitude"] = state_kwargs.get("mean_amplitude", 0.0)
+                obs_values["pac_max"] = state_kwargs.get("pac_max", 0.0)
+                obs_values["subcritical_fraction"] = state_kwargs.get(
+                    "subcritical_fraction", 0.0
+                )
             for i, ls in enumerate(layer_states):
                 obs_values[f"R_{i}"] = ls.R
             boundary_state = boundary_observer.observe(obs_values, step=step_idx)
+            state_kwargs["boundary_violation_count"] = len(boundary_state.violations)
+            upde_state = UPDEState(**state_kwargs)
             actions: list = []
             if step_idx % control_interval == 0:
                 actions = supervisor.decide(

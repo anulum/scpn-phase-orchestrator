@@ -40,3 +40,5 @@ class UPDEState:
     mean_amplitude: float = 0.0
     pac_max: float = 0.0
     subcritical_fraction: float = 0.0
+    boundary_violation_count: int = 0
+    imprint_mean: float = 0.0
