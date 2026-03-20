@@ -108,7 +108,7 @@ class TCBOObserver:
             method="ripser",
         )
 
-    def _observe_plv(self) -> TCBOState:
+    def _observe_plv(self) -> TCBOState:  # pragma: no cover
         """PLV-based approximation when ripser is not available.
 
         Uses mean pairwise PLV as a proxy for topological integration.
