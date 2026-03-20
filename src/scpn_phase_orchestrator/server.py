@@ -37,6 +37,8 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
     project_knm,
 )
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.imprint.state import ImprintState
+from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver, BoundaryState
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.supervisor.events import EventBus
@@ -76,6 +78,16 @@ class SimulationState:
         self.sl_state: np.ndarray | None = None
         self.mu: np.ndarray | None = None
 
+        self.imprint_model: ImprintModel | None = None
+        self.imprint_state: ImprintState | None = None
+        if spec.imprint_model is not None:
+            self.imprint_model = ImprintModel(
+                spec.imprint_model.decay_rate, spec.imprint_model.saturation
+            )
+            self.imprint_state = ImprintState(
+                m_k=np.zeros(self.n_osc), last_update=0.0
+            )
+
         self.geo_constraints: list[GeometryConstraint] = []
         if spec.geometry_prior is not None:
             ct = spec.geometry_prior.constraint_type.lower()
@@ -108,6 +120,10 @@ class SimulationState:
     def step(self) -> dict:
         """Advance one timestep, return state snapshot."""
         eff_knm = self.coupling.knm
+        eff_alpha = self.coupling.alpha
+        if self.imprint_model is not None and self.imprint_state is not None:
+            eff_knm = self.imprint_model.modulate_coupling(eff_knm, self.imprint_state)
+            eff_alpha = self.imprint_model.modulate_lag(eff_alpha, self.imprint_state)
         if self.geo_constraints:
             eff_knm = project_knm(eff_knm, self.geo_constraints)
 
@@ -127,7 +143,7 @@ class SimulationState:
                 self.coupling.knm_r,
                 0.0,
                 0.0,
-                self.coupling.alpha,
+                eff_alpha,
                 epsilon=self.spec.amplitude.epsilon,
             )
             self.phases = self.sl_state[: self.n_osc]
@@ -138,7 +154,7 @@ class SimulationState:
                 eff_knm,
                 0.0,
                 0.0,
-                self.coupling.alpha,
+                eff_alpha,
             )
         self.step_count += 1
 
@@ -149,6 +165,18 @@ class SimulationState:
             r, psi = compute_order_parameter(self.phases[idx : idx + n])
             layer_states.append(LayerState(R=r, psi=psi))
             idx += n
+        if self.imprint_model is not None and self.imprint_state is not None:
+            exposure = np.array(
+                [
+                    layer_states[i].R
+                    for i, layer in enumerate(self.spec.layers)
+                    for _ in layer.oscillator_ids
+                ]
+            )
+            self.imprint_state = self.imprint_model.update(
+                self.imprint_state, exposure, self.spec.sample_period_s
+            )
+
         r_global, _ = compute_order_parameter(self.phases)
         upde_state = UPDEState(
             layers=layer_states,
