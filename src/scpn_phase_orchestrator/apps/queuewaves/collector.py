@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from httpx import HTTPError as _HTTPError
-except ImportError:
+except ImportError:  # pragma: no cover
     _HTTPError = OSError  # type: ignore[assignment,misc]
 
 _SCRAPE_ERRORS: tuple[type[BaseException], ...] = (OSError, RuntimeError, _HTTPError)

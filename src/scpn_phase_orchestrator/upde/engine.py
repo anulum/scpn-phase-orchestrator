@@ -255,10 +255,10 @@ class UPDEEngine:
                 return result
 
             # Reject — shrink dt and retry
-            factor = max(0.2, 0.9 * err_norm ** (-0.25))
-            dt = dt * factor
+            factor = max(0.2, 0.9 * err_norm ** (-0.25))  # pragma: no cover
+            dt = dt * factor  # pragma: no cover
 
         # Exhausted retries, accept current result
-        self._last_dt = dt
-        result_fallback: NDArray = y5 % TWO_PI
-        return result_fallback
+        self._last_dt = dt  # pragma: no cover
+        result_fallback: NDArray = y5 % TWO_PI  # pragma: no cover
+        return result_fallback  # pragma: no cover

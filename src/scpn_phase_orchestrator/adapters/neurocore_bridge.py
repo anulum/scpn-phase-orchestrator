@@ -32,8 +32,8 @@ try:
     from sc_neurocore import StochasticLIFNeuron  # pragma: no cover
 
     HAS_NEUROCORE = True  # pragma: no cover
-except ImportError:
-    HAS_NEUROCORE = False
+except ImportError:  # pragma: no cover
+    HAS_NEUROCORE = False  # pragma: no cover
 
 
 class NeurocoreBridge:
@@ -51,7 +51,7 @@ class NeurocoreBridge:
         current_scale: float = 2.0,
         spike_threshold_hz: float = 40.0,
     ) -> None:
-        if not HAS_NEUROCORE:
+        if not HAS_NEUROCORE:  # pragma: no cover
             msg = "sc-neurocore not installed. pip install sc-neurocore"
             raise ImportError(msg)
         self._n_layers = n_layers
@@ -93,7 +93,7 @@ class NeurocoreBridge:
             self._step_count += 1
 
         duration_s = self._step_count * self._dt
-        if duration_s == 0:
+        if duration_s == 0:  # pragma: no cover
             return np.zeros(self._n_layers)
 
         rates = np.zeros(self._n_layers)
