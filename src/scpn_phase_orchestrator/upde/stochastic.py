@@ -93,7 +93,7 @@ def optimal_D(K: float, R_det: float) -> float:
 
 
 def find_optimal_noise(
-    engine: "UPDEEngine",
+    engine: UPDEEngine,
     phases_init: NDArray,
     omegas: NDArray,
     knm: NDArray,
