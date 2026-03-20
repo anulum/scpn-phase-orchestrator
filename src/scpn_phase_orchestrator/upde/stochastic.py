@@ -8,13 +8,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.special import i0, i1  # type: ignore[import-untyped]
+from scipy.special import i0, i1
 
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 __all__ = ["StochasticInjector", "NoiseProfile", "find_optimal_noise"]
 
@@ -72,10 +76,7 @@ def _self_consistency_R(K: float, D: float) -> float:
     R = 0.5
     for _ in range(100):
         x = K * R / D
-        if x > 500:
-            R_new = 1.0 - 0.5 / x
-        else:
-            R_new = float(i1(x) / i0(x))
+        R_new = 1.0 - 0.5 / x if x > 500 else float(i1(x) / i0(x))
         if abs(R_new - R) < 1e-10:
             return R_new
         R = 0.7 * R_new + 0.3 * R
@@ -92,7 +93,7 @@ def optimal_D(K: float, R_det: float) -> float:
 
 
 def find_optimal_noise(
-    engine,
+    engine: "UPDEEngine",
     phases_init: NDArray,
     omegas: NDArray,
     knm: NDArray,
@@ -114,7 +115,6 @@ def find_optimal_noise(
     R_det = 0.0
 
     for i, D in enumerate(D_range):
-        rng = np.random.default_rng(seed)
         phases = phases_init.copy()
         injector = StochasticInjector(D, seed=seed + i)
         for _ in range(n_steps):
@@ -124,7 +124,7 @@ def find_optimal_noise(
         R, _ = compute_order_parameter(phases)
         if i == 0:
             R_det = R
-        if R > best_R:
+        if best_R < R:
             best_R = R
             best_D = float(D)
 

@@ -56,12 +56,16 @@ def gradient_knm_fd(
 
             knm_plus = knm.copy()
             knm_plus[i, j] += epsilon
-            p_plus = engine.run(phases_init, omegas, knm_plus, zeta, psi, alpha, n_steps)
+            p_plus = engine.run(
+                phases_init, omegas, knm_plus, zeta, psi, alpha, n_steps
+            )
             c_plus = cost_R(p_plus)
 
             knm_minus = knm.copy()
             knm_minus[i, j] -= epsilon
-            p_minus = engine.run(phases_init, omegas, knm_minus, zeta, psi, alpha, n_steps)
+            p_minus = engine.run(
+                phases_init, omegas, knm_minus, zeta, psi, alpha, n_steps
+            )
             c_minus = cost_R(p_minus)
 
             grad[i, j] = (c_plus - c_minus) / (2 * epsilon)

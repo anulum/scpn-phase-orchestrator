@@ -127,7 +127,8 @@ class PredictionModel:
             return np.zeros(self._n)
         error = phases - self._prev_predicted
         error = (error + np.pi) % TWO_PI - np.pi
-        return self._error_gain * error
+        out: NDArray = self._error_gain * error
+        return out
 
     def reset(self) -> None:
         self._W[:] = 0.0

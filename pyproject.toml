@@ -100,7 +100,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
-ignore = ["S101", "S104", "S603", "N802", "N806"]
+ignore = ["S101", "S104", "S310", "S603", "N802", "N803", "N806", "N815"]
 
 [tool.mypy]
 strict = false

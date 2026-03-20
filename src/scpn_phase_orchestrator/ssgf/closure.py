@@ -9,11 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
-from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
+from scpn_phase_orchestrator.ssgf.costs import compute_ssgf_costs
 
 __all__ = ["CyberneticClosure", "ClosureState"]
 
@@ -87,7 +86,9 @@ class CyberneticClosure:
             converging=converging,
         )
 
-    def run(self, phases: NDArray, n_outer_steps: int) -> tuple[NDArray, list[ClosureState]]:
+    def run(
+        self, phases: NDArray, n_outer_steps: int
+    ) -> tuple[NDArray, list[ClosureState]]:
         """Run n outer steps, return final W and history."""
         states = []
         W = self._carrier.decode()

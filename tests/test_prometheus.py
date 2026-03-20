@@ -61,9 +61,8 @@ class TestFetchMetric:
         with patch(
             "scpn_phase_orchestrator.adapters.prometheus.urlopen",
             return_value=_mock_response(body),
-        ):
-            with pytest.raises(ValueError, match="status="):
-                adapter.fetch_metric("bad", 0, 100, 15)
+        ), pytest.raises(ValueError, match="status="):
+            adapter.fetch_metric("bad", 0, 100, 15)
 
     def test_connection_error(self):
         from urllib.error import URLError
@@ -72,9 +71,8 @@ class TestFetchMetric:
         with patch(
             "scpn_phase_orchestrator.adapters.prometheus.urlopen",
             side_effect=URLError("refused"),
-        ):
-            with pytest.raises(ConnectionError):
-                adapter.fetch_metric("up", 0, 100, 15)
+        ), pytest.raises(ConnectionError):
+            adapter.fetch_metric("up", 0, 100, 15)
 
 
 class TestFetchInstant:
@@ -97,9 +95,8 @@ class TestFetchInstant:
         with patch(
             "scpn_phase_orchestrator.adapters.prometheus.urlopen",
             return_value=_mock_response(body),
-        ):
-            with pytest.raises(ValueError, match="empty"):
-                adapter.fetch_instant("missing")
+        ), pytest.raises(ValueError, match="empty"):
+            adapter.fetch_instant("missing")
 
     def test_strips_trailing_slash(self):
         adapter = PrometheusAdapter("http://localhost:9090/")

@@ -65,7 +65,9 @@ def compute_ethical_cost(
     """
     n = len(phases)
     if n == 0:
-        return EthicalCost(J_sec=0.0, phi_ethics=0.0, c15_sec=1.0, constraints_violated=0)
+        return EthicalCost(
+            J_sec=0.0, phi_ethics=0.0, c15_sec=1.0, constraints_violated=0
+        )
 
     R, _ = compute_order_parameter(phases)
     lam2 = fiedler_value(knm)

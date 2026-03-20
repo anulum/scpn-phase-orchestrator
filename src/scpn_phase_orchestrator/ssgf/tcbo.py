@@ -23,7 +23,7 @@ __all__ = ["TCBOObserver", "TCBOState"]
 _TAU_H1 = 0.72  # from SCPN-CODEBASE optimizations/tcbo/observer.py
 
 try:
-    from ripser import ripser as _ripser  # type: ignore[import-untyped]
+    from ripser import ripser as _ripser
 
     _HAS_RIPSER = True
 except ImportError:  # pragma: no cover
@@ -72,12 +72,16 @@ class TCBOObserver:
     def observe(self, phases: NDArray) -> TCBOState:
         """Add phase snapshot, compute TCBO if enough history."""
         self._history.append(phases.copy())
-        if len(self._history) > self._window_size + self._embed_dim * self._embed_delay:
-            self._history = self._history[-(self._window_size + self._embed_dim * self._embed_delay):]
+        max_len = self._window_size + self._embed_dim * self._embed_delay
+        if len(self._history) > max_len:
+            self._history = self._history[-max_len:]
 
         min_len = self._embed_dim * self._embed_delay + 2
         if len(self._history) < min_len:
-            return TCBOState(p_h1=0.0, is_conscious=False, s_h1=0.0, method="insufficient_data")
+            return TCBOState(
+                p_h1=0.0, is_conscious=False, s_h1=0.0,
+                method="insufficient_data",
+            )
 
         if _HAS_RIPSER:
             return self._observe_ripser()
@@ -113,7 +117,10 @@ class TCBOObserver:
         recent = np.array(self._history[-self._window_size:])
         n_osc = recent.shape[1]
         if n_osc < 2:
-            return TCBOState(p_h1=0.0, is_conscious=False, s_h1=0.0, method="plv_approx")
+            return TCBOState(
+                p_h1=0.0, is_conscious=False, s_h1=0.0,
+                method="plv_approx",
+            )
 
         # Mean PLV across all pairs
         plv_sum = 0.0

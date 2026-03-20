@@ -96,4 +96,4 @@ def sync_convergence_rate(
         return 0.0
     lambda2 = fiedler_value(knm)
     k_eff = float(np.mean(knm[knm > 0])) if np.any(knm > 0) else 0.0
-    return k_eff * lambda2 * np.cos(gamma_max) / n
+    return float(k_eff * lambda2 * np.cos(gamma_max) / n)

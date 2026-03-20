@@ -53,8 +53,7 @@ class SplittingEngine:
         # B(dt): RK4 on coupling-only derivative
         p = self._rk4_coupling(p, knm, zeta, psi, alpha, dt)
         # A(dt/2): exact rotation
-        p = (p + 0.5 * dt * omegas) % TWO_PI
-        return p
+        return (p + 0.5 * dt * omegas) % TWO_PI
 
     def run(
         self,
@@ -92,8 +91,16 @@ class SplittingEngine:
         dt: float,
     ) -> NDArray:
         k1 = self._coupling_deriv(phases, knm, zeta, psi, alpha)
-        k2 = self._coupling_deriv((phases + 0.5 * dt * k1) % TWO_PI, knm, zeta, psi, alpha)
-        k3 = self._coupling_deriv((phases + 0.5 * dt * k2) % TWO_PI, knm, zeta, psi, alpha)
-        k4 = self._coupling_deriv((phases + dt * k3) % TWO_PI, knm, zeta, psi, alpha)
-        result: NDArray = (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+        k2 = self._coupling_deriv(
+            (phases + 0.5 * dt * k1) % TWO_PI, knm, zeta, psi, alpha
+        )
+        k3 = self._coupling_deriv(
+            (phases + 0.5 * dt * k2) % TWO_PI, knm, zeta, psi, alpha
+        )
+        k4 = self._coupling_deriv(
+            (phases + dt * k3) % TWO_PI, knm, zeta, psi, alpha
+        )
+        result: NDArray = (
+            (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+        )
         return result

@@ -39,7 +39,7 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
-from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver, BoundaryState
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
@@ -187,7 +187,9 @@ class SimulationState:
         obs_values: dict[str, float] = {"R": r_global}
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
-        boundary_state = self.boundary_observer.observe(obs_values, step=self.step_count)
+        boundary_state = self.boundary_observer.observe(
+            obs_values, step=self.step_count
+        )
         proposed = self.regime_manager.evaluate(upde_state, boundary_state)
         self.regime_manager.transition(proposed)
 
