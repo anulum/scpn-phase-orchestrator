@@ -71,3 +71,12 @@ class TestPGBO:
         pgbo = PGBO()
         snap = pgbo.observe(np.array([1.0]), np.array([[0.0]]))
         assert snap.phase_geometry_alignment == 0.0
+
+    def test_varied_phases_nonuniform_W(self):
+        pgbo = PGBO()
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, 6)
+        W = rng.uniform(0.1, 2.0, (6, 6))
+        np.fill_diagonal(W, 0.0)
+        snap = pgbo.observe(phases, W)
+        assert np.isfinite(snap.phase_geometry_alignment)

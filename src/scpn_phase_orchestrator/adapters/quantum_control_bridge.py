@@ -113,7 +113,10 @@ class QuantumControlBridge:
         layer_phases = {  # pragma: no cover
             f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
         }
-        return orchestrator_to_quantum_phases(layer_phases)  # pragma: no cover
+        result: NDArray = orchestrator_to_quantum_phases(  # pragma: no cover
+            layer_phases
+        )
+        return result  # pragma: no cover
 
     def quantum_to_orchestrator(
         self,
@@ -127,4 +130,5 @@ class QuantumControlBridge:
             quantum_to_orchestrator_phases,
         )
 
-        return quantum_to_orchestrator_phases(quantum_theta)  # pragma: no cover
+        result: dict = quantum_to_orchestrator_phases(quantum_theta)  # pragma: no cover
+        return result  # pragma: no cover
