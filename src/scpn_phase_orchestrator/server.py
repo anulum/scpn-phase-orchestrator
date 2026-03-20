@@ -30,6 +30,12 @@ import numpy as np
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
+from scpn_phase_orchestrator.coupling.geometry_constraints import (
+    GeometryConstraint,
+    NonNegativeConstraint,
+    SymmetryConstraint,
+    project_knm,
+)
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
@@ -66,6 +72,14 @@ class SimulationState:
         self.sl_state: np.ndarray | None = None
         self.mu: np.ndarray | None = None
 
+        self.geo_constraints: list[GeometryConstraint] = []
+        if spec.geometry_prior is not None:
+            ct = spec.geometry_prior.constraint_type.lower()
+            if "symmetric" in ct:
+                self.geo_constraints.append(SymmetryConstraint())
+            if "non_negative" in ct or "nonneg" in ct:
+                self.geo_constraints.append(NonNegativeConstraint())
+
         if self.amplitude_mode and spec.amplitude is not None:
             amp = spec.amplitude
             self.sl_engine = StuartLandauEngine(
@@ -89,6 +103,10 @@ class SimulationState:
 
     def step(self) -> dict:
         """Advance one timestep, return state snapshot."""
+        eff_knm = self.coupling.knm
+        if self.geo_constraints:
+            eff_knm = project_knm(eff_knm, self.geo_constraints)
+
         if (
             self.amplitude_mode
             and self.sl_engine is not None
@@ -101,7 +119,7 @@ class SimulationState:
                 self.sl_state,
                 self.omegas,
                 self.mu,
-                self.coupling.knm,
+                eff_knm,
                 self.coupling.knm_r,
                 0.0,
                 0.0,
@@ -113,7 +131,7 @@ class SimulationState:
             self.phases = self.engine.step(
                 self.phases,
                 self.omegas,
-                self.coupling.knm,
+                eff_knm,
                 0.0,
                 0.0,
                 self.coupling.alpha,
