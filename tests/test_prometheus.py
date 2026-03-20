@@ -31,11 +31,7 @@ class TestFetchMetric:
     def test_returns_values(self):
         body = {
             "status": "success",
-            "data": {
-                "result": [
-                    {"values": [[1, "0.5"], [2, "0.7"], [3, "0.9"]]}
-                ]
-            },
+            "data": {"result": [{"values": [[1, "0.5"], [2, "0.7"], [3, "0.9"]]}]},
         }
         adapter = PrometheusAdapter("http://localhost:9090")
         with patch(
@@ -58,20 +54,26 @@ class TestFetchMetric:
     def test_error_status(self):
         body = {"status": "error", "errorType": "bad_data"}
         adapter = PrometheusAdapter("http://localhost:9090")
-        with patch(
-            "scpn_phase_orchestrator.adapters.prometheus.urlopen",
-            return_value=_mock_response(body),
-        ), pytest.raises(ValueError, match="status="):
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                return_value=_mock_response(body),
+            ),
+            pytest.raises(ValueError, match="status="),
+        ):
             adapter.fetch_metric("bad", 0, 100, 15)
 
     def test_connection_error(self):
         from urllib.error import URLError
 
         adapter = PrometheusAdapter("http://localhost:9090")
-        with patch(
-            "scpn_phase_orchestrator.adapters.prometheus.urlopen",
-            side_effect=URLError("refused"),
-        ), pytest.raises(ConnectionError):
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                side_effect=URLError("refused"),
+            ),
+            pytest.raises(ConnectionError),
+        ):
             adapter.fetch_metric("up", 0, 100, 15)
 
 
@@ -92,10 +94,13 @@ class TestFetchInstant:
     def test_empty_result_raises(self):
         body = {"status": "success", "data": {"result": []}}
         adapter = PrometheusAdapter("http://localhost:9090")
-        with patch(
-            "scpn_phase_orchestrator.adapters.prometheus.urlopen",
-            return_value=_mock_response(body),
-        ), pytest.raises(ValueError, match="empty"):
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                return_value=_mock_response(body),
+            ),
+            pytest.raises(ValueError, match="empty"),
+        ):
             adapter.fetch_instant("missing")
 
     def test_strips_trailing_slash(self):

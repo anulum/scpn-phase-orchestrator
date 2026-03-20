@@ -52,8 +52,10 @@ class TestGeometryCarrier:
 
     def test_update_descends_cost(self):
         gc = GeometryCarrier(4, z_dim=3, lr=0.05, seed=42)
+
         def cost_fn(W):
             return float(np.sum((W - 0.5) ** 2))
+
         costs = []
         for _ in range(20):
             W = gc.decode()

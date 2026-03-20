@@ -105,7 +105,12 @@ class TestSimplicialEngine:
         n = 5
         eng = SimplicialEngine(n, dt=0.01, sigma2=0.2)
         result = eng.run(
-            np.zeros(n), np.ones(n), _complete_knm(n),
-            0.0, 0.0, np.zeros((n, n)), n_steps=50,
+            np.zeros(n),
+            np.ones(n),
+            _complete_knm(n),
+            0.0,
+            0.0,
+            np.zeros((n, n)),
+            n_steps=50,
         )
         assert result.shape == (n,)

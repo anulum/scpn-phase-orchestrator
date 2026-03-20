@@ -68,8 +68,12 @@ class TestTorusEngine:
         n = 5
         eng = TorusEngine(n, dt=0.01)
         result = eng.run(
-            np.zeros(n), np.ones(n),
-            np.zeros((n, n)), 0.0, 0.0, np.zeros((n, n)),
+            np.zeros(n),
+            np.ones(n),
+            np.zeros((n, n)),
+            0.0,
+            0.0,
+            np.zeros((n, n)),
             n_steps=10,
         )
         assert result.shape == (n,)

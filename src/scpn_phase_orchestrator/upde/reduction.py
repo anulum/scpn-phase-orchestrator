@@ -59,9 +59,8 @@ class OttAntonsenReduction:
         dt = self._dt
 
         def f(zz: complex) -> complex:
-            return (
-                -(self._delta + 1j * self._omega_0) * zz
-                + (self._K / 2.0) * (zz - abs(zz) ** 2 * zz)
+            return -(self._delta + 1j * self._omega_0) * zz + (self._K / 2.0) * (
+                zz - abs(zz) ** 2 * zz
             )
 
         k1 = f(z)
