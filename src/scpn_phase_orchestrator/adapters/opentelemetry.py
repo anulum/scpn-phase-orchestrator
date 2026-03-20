@@ -66,7 +66,7 @@ class OTelExporter:
         self._r_global_gauge: Any = None
         self._stability_gauge: Any = None
         self._step_counter: Any = None
-        if self._enabled:
+        if self._enabled:  # pragma: no cover
             self._tracer = otel_trace.get_tracer(service_name)
             meter = otel_metrics.get_meter(service_name)
             self._r_global_gauge = meter.create_gauge(

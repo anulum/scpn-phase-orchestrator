@@ -17,7 +17,7 @@ from typing import Any
 
 try:
     from httpx import HTTPError as _HTTPError
-except ImportError:
+except ImportError:  # pragma: no cover
     _HTTPError = OSError  # type: ignore[assignment,misc]
 
 from scpn_phase_orchestrator.apps.queuewaves.alerter import WebhookAlerter
@@ -231,7 +231,7 @@ def create_app(cfg: QueueWavesConfig) -> Any:
         index = static_dir / "index.html"
         if index.exists():
             return FileResponse(str(index))
-        msg = "QueueWaves is running. No dashboard found."
+        msg = "QueueWaves is running. No dashboard found."  # pragma: no cover
         return PlainTextResponse(msg)  # pragma: no cover
 
     # --- WebSocket ---

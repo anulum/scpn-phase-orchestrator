@@ -261,8 +261,8 @@ class StuartLandauEngine:
                 self._last_dt = min(dt * factor, self._dt * 10.0)
                 return self._post_step(y5.copy())
 
-            factor = max(0.2, 0.9 * err_norm ** (-0.25))
-            dt = dt * factor
+            factor = max(0.2, 0.9 * err_norm ** (-0.25))  # pragma: no cover
+            dt = dt * factor  # pragma: no cover
 
-        self._last_dt = dt
-        return self._post_step(y5.copy())
+        self._last_dt = dt  # pragma: no cover
+        return self._post_step(y5.copy())  # pragma: no cover

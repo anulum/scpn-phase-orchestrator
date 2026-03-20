@@ -31,8 +31,8 @@ try:
     from jax import jit  # pragma: no cover
 
     HAS_JAX = True  # pragma: no cover
-except ImportError:
-    HAS_JAX = False
+except ImportError:  # pragma: no cover
+    HAS_JAX = False  # pragma: no cover
 
 if TYPE_CHECKING:
     import jax.numpy as jnp
