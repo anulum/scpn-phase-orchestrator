@@ -197,6 +197,10 @@ def _extract_metric(
         if cond.layer < len(state.layers):
             return state.layers[cond.layer].mean_amplitude
         return None
+    if cond.metric == "boundary_violation_count":
+        return float(state.boundary_violation_count)
+    if cond.metric == "imprint_mean":
+        return state.imprint_mean
     return None
 
 
