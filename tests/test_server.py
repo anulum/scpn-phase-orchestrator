@@ -87,6 +87,22 @@ class TestSimulationState:
         snap = sim.snapshot()
         assert isinstance(snap["amplitude_mode"], bool)
 
+    def test_geometry_constraints_applied(self):
+        spec = load_binding_spec(
+            DOMAINPACK_DIR / "neuroscience_eeg" / "binding_spec.yaml"
+        )
+        sim = SimulationState(spec)
+        assert len(sim.geo_constraints) == 2
+        sim.step()
+        assert sim.step_count == 1
+
+    def test_geometry_constraints_absent_when_no_prior(self):
+        spec = load_binding_spec(
+            DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml"
+        )
+        sim = SimulationState(spec)
+        assert len(sim.geo_constraints) == 0
+
 
 try:
     from fastapi.testclient import TestClient
