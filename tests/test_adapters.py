@@ -150,9 +150,9 @@ def test_otel_enabled_span_no_attributes():
 # ── Prometheus adapter ────────────────────────────────────────────────
 
 
-def test_prometheus_not_implemented():
-    adapter = PrometheusAdapter("http://localhost:9090")
-    with pytest.raises(NotImplementedError):
+def test_prometheus_connection_error():
+    adapter = PrometheusAdapter("http://localhost:9090", timeout=1.0)
+    with pytest.raises(ConnectionError):
         adapter.fetch_metric("up", 0.0, 1.0, 0.1)
 
 
