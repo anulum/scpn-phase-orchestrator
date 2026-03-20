@@ -37,8 +37,9 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
     project_knm,
 )
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
-from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver, BoundaryState
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -65,7 +66,10 @@ class SimulationState:
         self.omegas = np.array(spec.get_omegas(), dtype=np.float64)
         self.phases = extract_initial_phases(spec, self.omegas)
         self.engine = UPDEEngine(self.n_osc, dt=spec.sample_period_s)
-        self.regime_manager = RegimeManager()
+        self.event_bus = EventBus()
+        self.boundary_observer = BoundaryObserver(spec.boundaries)
+        self.boundary_observer.set_event_bus(self.event_bus)
+        self.regime_manager = RegimeManager(event_bus=self.event_bus)
         self.step_count = 0
         self.amplitude_mode = spec.amplitude is not None
         self.sl_engine: StuartLandauEngine | None = None
@@ -152,7 +156,11 @@ class SimulationState:
             stability_proxy=r_global,
             regime_id=self.regime_manager.current_regime.value,
         )
-        proposed = self.regime_manager.evaluate(upde_state, BoundaryState())
+        obs_values: dict[str, float] = {"R": r_global}
+        for i, ls in enumerate(layer_states):
+            obs_values[f"R_{i}"] = ls.R
+        boundary_state = self.boundary_observer.observe(obs_values, step=self.step_count)
+        proposed = self.regime_manager.evaluate(upde_state, boundary_state)
         self.regime_manager.transition(proposed)
 
         return self.snapshot()
