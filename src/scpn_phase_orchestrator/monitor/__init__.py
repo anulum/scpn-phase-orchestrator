@@ -9,9 +9,14 @@ from __future__ import annotations
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
+from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 from scpn_phase_orchestrator.monitor.session_start import (
     SessionCoherenceReport,
     check_session_start,
+)
+from scpn_phase_orchestrator.monitor.sleep_staging import (
+    classify_sleep_stage,
+    ultradian_phase,
 )
 
 __all__ = [
@@ -19,4 +24,8 @@ __all__ = [
     "BoundaryObserver",
     "SessionCoherenceReport",
     "check_session_start",
+    "classify_sleep_stage",
+    "compute_itpc",
+    "itpc_persistence",
+    "ultradian_phase",
 ]
