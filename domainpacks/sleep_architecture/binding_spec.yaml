@@ -1,0 +1,102 @@
+name: sleep_architecture
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  # Iber et al. (2007) AASM sleep scoring: N3/N2/N1/REM mapped to EEG bands
+  # omegas = 2*pi*f_center in rad/s
+  - name: delta
+    index: 0
+    oscillator_ids: [delta_frontal, delta_central]
+    omegas: [3.14, 3.14]  # 2pi * 0.5 Hz
+    family: sleep_band
+  - name: theta
+    index: 1
+    oscillator_ids: [theta_hippocampal, theta_cortical]
+    omegas: [25.13, 25.13]  # 2pi * 4.0 Hz
+    family: sleep_band
+  - name: alpha
+    index: 2
+    oscillator_ids: [alpha_occipital, alpha_parietal]
+    omegas: [50.27, 50.27]  # 2pi * 8.0 Hz
+    family: sleep_band
+  - name: gamma
+    index: 3
+    oscillator_ids: [gamma_rem, gamma_binding]
+    omegas: [251.33, 251.33]  # 2pi * 40.0 Hz
+    family: sleep_band
+
+oscillator_families:
+  sleep_band:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  arousal_event:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Sleep stage FSM: wake/N1/N2/N3/REM
+  sleep_stage:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 5
+
+coupling:
+  # Cross-frequency coupling during sleep (Staresina et al. 2015)
+  base_strength: 0.4
+  decay_alpha: 0.25
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.03
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.01
+
+objectives:
+  # Delta dominance in N3, theta in N2, alpha suppression in deep sleep
+  # Gamma bursts during REM = dreaming
+  good_layers: [0, 1]
+  bad_layers: [2]
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: delta_power_ceiling
+    variable: delta_power_ratio
+    lower: null
+    upper: 0.95
+    severity: soft
+  - name: arousal_index
+    variable: arousals_per_hour
+    lower: null
+    upper: 25.0
+    severity: hard
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: circadian_drive
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: phase_advance
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.4
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml

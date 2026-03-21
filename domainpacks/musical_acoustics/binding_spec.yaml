@@ -1,0 +1,93 @@
+name: musical_acoustics
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.001
+control_period_s: 0.01
+
+layers:
+  # Consonance as Kuramoto order parameter R (Lots & Stone 2008)
+  # Groove = phase-locking coefficient alpha
+  - name: bass
+    index: 0
+    oscillator_ids: [bass_fundamental, bass_first_harmonic, bass_second_harmonic]
+    family: harmonic_mode
+  - name: harmony
+    index: 1
+    oscillator_ids: [harm_root, harm_third, harm_fifth]
+    family: harmonic_mode
+  - name: melody
+    index: 2
+    oscillator_ids: [mel_lead, mel_ornament, mel_vibrato]
+    family: harmonic_mode
+
+oscillator_families:
+  harmonic_mode:
+    channel: P
+    extractor_type: physical
+    config: {}
+  onset_event:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Tonal mode: major/minor/atonal
+  tonal_mode:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
+
+coupling:
+  # Harmonic series: integer frequency ratios produce consonance
+  base_strength: 0.55
+  decay_alpha: 0.1
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.03
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.02
+
+objectives:
+  # Bass-harmony lock = consonance; melody freedom = expression
+  good_layers: [0, 1]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: dissonance_ceiling
+    variable: roughness_index
+    lower: null
+    upper: 0.8
+    severity: soft
+  - name: amplitude_ceiling
+    variable: spl_db
+    lower: null
+    upper: 95.0
+    severity: hard
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: tempo_drive
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: tuning_offset
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.3
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml

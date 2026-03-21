@@ -1,0 +1,91 @@
+name: financial_markets
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 1.0
+control_period_s: 10.0
+
+layers:
+  - name: equities
+    index: 0
+    oscillator_ids: [eq_sp500, eq_eurostoxx]
+    family: asset_price
+  - name: bonds
+    index: 1
+    oscillator_ids: [bond_us10y, bond_bund]
+    family: asset_price
+  - name: commodities
+    index: 2
+    oscillator_ids: [comm_gold, comm_oil]
+    family: asset_price
+  - name: forex
+    index: 3
+    oscillator_ids: [fx_eurusd, fx_usdjpy]
+    family: asset_price
+
+oscillator_families:
+  asset_price:
+    channel: P
+    extractor_type: physical
+    config: {}
+  correlation_event:
+    channel: I
+    extractor_type: event
+    config: {}
+  market_regime:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
+
+coupling:
+  # Crash = explosive sync across asset classes (Forbes & Rigobon 2002)
+  base_strength: 0.35
+  decay_alpha: 0.2
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.0
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.02
+
+objectives:
+  # Cross-asset decorrelation = healthy diversification
+  # Equity-bond correlation spike = contagion risk
+  good_layers: [0, 1]
+  bad_layers: [2, 3]
+  good_weight: 1.0
+  bad_weight: 1.5
+
+boundaries:
+  - name: correlation_ceiling
+    variable: cross_asset_sync
+    lower: null
+    upper: 0.85
+    severity: hard
+  - name: volatility_floor
+    variable: implied_vol
+    lower: 0.05
+    upper: null
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: rebalance_lag
+    knob: alpha
+    scope: layer_0
+    limits: [0.0, 1.57]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.3
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml
