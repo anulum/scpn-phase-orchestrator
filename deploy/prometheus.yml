@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: "spo-server"
+    metrics_path: "/api/metrics"
+    static_configs:
+      - targets: ["spo-server:8000"]
+        labels:
+          instance: "spo-primary"

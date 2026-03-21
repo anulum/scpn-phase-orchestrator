@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SCPN Phase Orchestrator — Helm Chart
+
+apiVersion: v2
+name: scpn-phase-orchestrator
+description: Domain-agnostic coherence control compiler built on SCPN's Kuramoto/UPDE framework
+type: application
+version: 0.4.1
+appVersion: "0.4.1"
+home: https://github.com/anulum/scpn-phase-orchestrator
+maintainers:
+  - name: Miroslav Sotek
+    email: protoscience@anulum.li
+    url: https://www.anulum.li

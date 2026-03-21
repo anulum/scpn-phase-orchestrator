@@ -1,0 +1,21 @@
+[package]
+name = "spo-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "SCPN Phase Orchestrator — WASM bindings for browser/edge deployment"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spo-types = { path = "../spo-types" }
+spo-engine = { path = "../spo-engine" }
+wasm-bindgen = "0.2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
