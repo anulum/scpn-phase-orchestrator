@@ -377,6 +377,29 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
             "control_period_s": spec.control_period_s,
         }
 
+    @app.get("/api/metrics")
+    async def get_metrics() -> str:  # pragma: no cover
+        from fastapi.responses import PlainTextResponse
+
+        from scpn_phase_orchestrator.adapters.metrics_exporter import (
+            MetricsExporter,
+        )
+
+        async with sim._lock:
+            snap = sim.snapshot()
+        exporter = MetricsExporter()
+        upde_state = UPDEState(
+            layers=[
+                LayerState(R=ly["R"], psi=ly.get("psi", 0.0))
+                for ly in snap["layers"]
+            ],
+            cross_layer_alignment=np.eye(len(snap["layers"])),
+            stability_proxy=snap["R_global"],
+            regime_id=snap["regime"],
+        )
+        text = exporter.export(upde_state, snap["regime"], 0.0)
+        return PlainTextResponse(text, media_type="text/plain")
+
     @app.websocket("/ws/stream")
     async def ws_stream(websocket: WebSocket) -> None:
         await websocket.accept()

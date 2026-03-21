@@ -12,6 +12,7 @@ members = [
     "crates/spo-oscillators",
     "crates/spo-supervisor",
     "crates/spo-ffi",
+    "crates/spo-wasm",
 ]
 resolver = "2"
 
