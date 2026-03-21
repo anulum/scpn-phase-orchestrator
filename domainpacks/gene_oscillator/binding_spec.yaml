@@ -1,0 +1,89 @@
+name: gene_oscillator
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.1
+control_period_s: 1.0
+
+layers:
+  # Elowitz & Leibler (2000): repressilator — three-gene negative feedback loop
+  - name: repressilator_a
+    index: 0
+    oscillator_ids: [repr_a_lacI, repr_a_tetR]
+    family: gene_expression
+  - name: repressilator_b
+    index: 1
+    oscillator_ids: [repr_b_cI, repr_b_lacI]
+    family: gene_expression
+  - name: quorum
+    index: 2
+    oscillator_ids: [qs_luxI, qs_luxR]
+    family: gene_expression
+
+oscillator_families:
+  gene_expression:
+    channel: P
+    extractor_type: physical
+    config: {}
+  promoter_event:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Cell-cycle phase: G1/S/G2/M
+  cell_phase:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
+
+coupling:
+  # Quorum sensing: N-acyl homoserine lactone diffusion (Garcia-Ojalvo 2004)
+  base_strength: 0.6
+  decay_alpha: 0.15
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.03
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.01
+
+objectives:
+  # Stable repressilator oscillation = healthy circuit
+  # Quorum desync = population-level breakdown
+  good_layers: [0, 1]
+  bad_layers: [2]
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: expression_ceiling
+    variable: protein_concentration
+    lower: null
+    upper: 0.95
+    severity: soft
+  - name: quorum_threshold
+    variable: ahl_concentration
+    lower: 0.1
+    upper: null
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: inducer_dose
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.4
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml

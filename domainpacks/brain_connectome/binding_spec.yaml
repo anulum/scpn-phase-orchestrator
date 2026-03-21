@@ -1,0 +1,113 @@
+name: brain_connectome
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  # HCP (Human Connectome Project) inspired parcellation
+  # omegas in alpha range 8-12 Hz: 2*pi*f rad/s
+  - name: visual
+    index: 0
+    oscillator_ids: [vis_v1, vis_v2, vis_mt]
+    omegas: [62.83, 62.83, 56.55]  # 10, 10, 9 Hz
+    family: cortical_region
+  - name: motor
+    index: 1
+    oscillator_ids: [mot_m1, mot_sma, mot_pmc]
+    omegas: [75.40, 69.12, 69.12]  # 12, 11, 11 Hz
+    family: cortical_region
+  - name: default_mode
+    index: 2
+    oscillator_ids: [dmn_mpfc, dmn_pcc, dmn_ag]
+    omegas: [56.55, 56.55, 50.27]  # 9, 9, 8 Hz
+    family: cortical_region
+  - name: frontoparietal
+    index: 3
+    oscillator_ids: [fpn_dlpfc, fpn_ips, fpn_aip]
+    omegas: [69.12, 62.83, 62.83]  # 11, 10, 10 Hz
+    family: cortical_region
+
+oscillator_families:
+  cortical_region:
+    channel: P
+    extractor_type: hilbert
+    config: {}
+  connectivity_event:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Cognitive state: rest/task/sleep/anesthesia
+  cognitive_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
+
+coupling:
+  # Structural connectivity from HCP diffusion tractography
+  # Honey et al. (2009): structure-function coupling in resting state
+  base_strength: 0.47
+  decay_alpha: 0.25
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.04
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.01
+
+objectives:
+  # DMN anticorrelated with frontoparietal during task (Fox et al. 2005)
+  # Visual-motor coherence during sensorimotor tasks
+  good_layers: [0, 1, 3]
+  bad_layers: [2]
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  # Global synchrony > 0.9 = seizure-like (Lehnertz 2009)
+  - name: global_sync_ceiling
+    variable: global_sync
+    lower: null
+    upper: 0.9
+    severity: hard
+  - name: dmn_suppression_floor
+    variable: dmn_activation
+    lower: 0.1
+    upper: null
+    severity: soft
+  - name: functional_connectivity
+    variable: fc_magnitude
+    lower: 0.05
+    upper: null
+    severity: soft
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: neuromodulation
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: stimulation_phase
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+  - name: tms_target
+    knob: alpha
+    scope: layer_3
+    limits: [0.0, 1.57]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.4
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml

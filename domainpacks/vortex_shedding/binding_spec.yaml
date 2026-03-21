@@ -1,0 +1,94 @@
+name: vortex_shedding
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.001
+control_period_s: 0.01
+
+layers:
+  # Stuart-Landau oscillators modelling von Karman vortex street
+  # Noack et al. (2003): mean-field model of cylinder wake
+  - name: upstream
+    index: 0
+    oscillator_ids: [up_wake_0, up_wake_1, up_wake_2]
+    family: vortex_mode
+  - name: midstream
+    index: 1
+    oscillator_ids: [mid_wake_0, mid_wake_1, mid_wake_2]
+    family: vortex_mode
+  - name: downstream
+    index: 2
+    oscillator_ids: [down_wake_0, down_wake_1, down_wake_2]
+    family: vortex_mode
+
+oscillator_families:
+  vortex_mode:
+    channel: P
+    extractor_type: physical
+    config: {}
+  pressure_event:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Flow regime: laminar/transitional/turbulent
+  flow_regime:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
+
+coupling:
+  # Convective coupling decays downstream; Re-dependent
+  base_strength: 0.8
+  decay_alpha: 0.1
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.01
+
+objectives:
+  # Upstream lock-in = vortex-induced vibration risk
+  # Downstream decorrelation = wake stabilisation target
+  good_layers: [2]
+  bad_layers: [0]
+  good_weight: 1.0
+  bad_weight: 2.0
+
+boundaries:
+  - name: strouhal_band
+    variable: shedding_frequency
+    lower: 0.15
+    upper: 0.25
+    severity: soft
+  - name: amplitude_ceiling
+    variable: lift_coefficient
+    lower: null
+    upper: 1.5
+    severity: hard
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: blowing_rate
+    knob: zeta
+    scope: global
+    limits: [0.0, 2.0]
+  - name: splitter_angle
+    knob: Psi
+    scope: global
+    limits: [0.0, 6.28]
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.3
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml
