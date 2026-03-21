@@ -90,7 +90,7 @@ def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
     entropy = -float(np.sum(probs * np.log(probs)))
     max_entropy = np.log(len(probs)) if len(probs) > 1 else 1.0
 
-    if max_entropy < 1e-15:
+    if max_entropy < 1e-15:  # pragma: no cover — log(n) > 0 for n >= 2
         return 0.0
 
     return entropy / max_entropy

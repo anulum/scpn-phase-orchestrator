@@ -87,7 +87,7 @@ class TCBOObserver:
 
         if _HAS_RIPSER:
             return self._observe_ripser()
-        return self._observe_plv()
+        return self._observe_plv()  # pragma: no cover
 
     def _observe_ripser(self) -> TCBOState:
         cloud = self._delay_embed()
