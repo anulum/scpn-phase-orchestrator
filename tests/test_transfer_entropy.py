@@ -35,7 +35,7 @@ class TestTransferEntropy:
         source = np.cumsum(rng.normal(0, 0.1, 500)) % (2 * np.pi)
         target = np.roll(source, 1)  # target follows source
         te_fwd = phase_transfer_entropy(source, target)
-        te_rev = phase_transfer_entropy(target, source)
+        _te_rev = phase_transfer_entropy(target, source)
         # Forward TE should be >= reverse (source drives target)
         assert te_fwd >= 0.0
 

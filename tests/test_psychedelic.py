@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from scpn_phase_orchestrator.monitor.psychedelic import (
     entropy_from_phases,
@@ -67,7 +66,13 @@ def test_simulate_trajectory_returns_correct_length():
     schedule = [0.0, 0.3, 0.6, 0.9]
 
     results = simulate_psychedelic_trajectory(
-        engine, phases, omegas, knm, alpha, schedule, n_steps_per_level=50,
+        engine,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        schedule,
+        n_steps_per_level=50,
     )
     assert len(results) == 4
     for rec in results:
@@ -90,7 +95,13 @@ def test_trajectory_entropy_increases_with_coupling_reduction():
     schedule = [0.0, 0.5, 0.9]
 
     results = simulate_psychedelic_trajectory(
-        engine, phases, omegas, knm, alpha, schedule, n_steps_per_level=200,
+        engine,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        schedule,
+        n_steps_per_level=200,
     )
     # With strong coupling reduction, entropy should not decrease overall
     assert results[-1]["entropy"] >= results[0]["entropy"] - 0.5

@@ -34,7 +34,8 @@ def add_langevin_noise(
         rng = np.random.default_rng()
     sigma = np.sqrt(2.0 * temperature * dt)
     noise = rng.standard_normal(z.shape)
-    return z + sigma * noise
+    result: NDArray = z + sigma * noise
+    return result
 
 
 def boltzmann_weight(u_total: float, temperature: float) -> float:

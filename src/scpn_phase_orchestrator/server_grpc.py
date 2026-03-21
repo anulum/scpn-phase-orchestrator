@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Iterator
 from dataclasses import asdict
-from typing import Any, Iterator
+from typing import Any
 
 __all__ = ["PhaseStreamServicer", "HAS_GRPC"]
 
@@ -28,7 +29,7 @@ try:
 
     HAS_GRPC = True
 except ModuleNotFoundError:  # pragma: no cover
-    grpc = None  # type: ignore[assignment]
+    grpc = None
     HAS_GRPC = False
 
 
@@ -57,18 +58,17 @@ class PhaseStreamServicer:
         self._max_steps = max_steps
         self._interval = interval_s
 
-    def StreamPhases(
-        self, request: Any, context: Any
-    ) -> Iterator[_PhaseResponse]:
+    def StreamPhases(self, request: Any, context: Any) -> Iterator[_PhaseResponse]:
         """Server-streaming RPC: yield phase snapshots as JSON payloads."""
         for step in range(self._max_steps):
-            if context is not None and hasattr(context, "is_active"):
-                if not context.is_active():
-                    return
+            if (
+                context is not None
+                and hasattr(context, "is_active")
+                and not context.is_active()
+            ):
+                return
             state = self._source()
-            payload = json.dumps(
-                _serialise_state(state, step), default=str
-            )
+            payload = json.dumps(_serialise_state(state, step), default=str)
             yield _PhaseResponse(payload)
             time.sleep(self._interval)
 

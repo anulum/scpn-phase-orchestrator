@@ -10,7 +10,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.autotune.freq_id import FrequencyResult, identify_frequencies
+from scpn_phase_orchestrator.autotune.freq_id import (
+    FrequencyResult,
+    identify_frequencies,
+)
 
 
 def _multi_sine(freqs: list[float], fs: float, duration: float) -> np.ndarray:

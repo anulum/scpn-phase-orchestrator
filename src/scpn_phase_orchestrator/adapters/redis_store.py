@@ -17,7 +17,7 @@ try:
 
     _HAS_REDIS = True
 except ModuleNotFoundError:  # pragma: no cover
-    _redis_mod = None  # type: ignore[assignment]
+    _redis_mod = None
     _HAS_REDIS = False
 
 
@@ -39,9 +39,7 @@ class RedisStateStore:
         if client is not None:
             self._client = client
         elif not _HAS_REDIS:
-            raise RuntimeError(
-                "redis package not installed — pip install redis"
-            )
+            raise RuntimeError("redis package not installed — pip install redis")
         else:
             self._client = _redis_mod.Redis(host=host, port=port, db=db)
 
@@ -54,7 +52,8 @@ class RedisStateStore:
         raw = self._client.get(self._key)
         if raw is None:
             return None
-        return json.loads(raw)
+        result: dict = json.loads(raw)
+        return result
 
     def delete_state(self) -> None:
         """Remove the stored state key."""

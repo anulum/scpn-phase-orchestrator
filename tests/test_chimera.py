@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
 
@@ -88,7 +87,11 @@ def test_no_coupling_gives_zero_r_local():
 
 
 def test_dataclass_fields():
-    state = ChimeraState(coherent_indices=[0, 1], incoherent_indices=[3], chimera_index=0.25)
+    state = ChimeraState(
+        coherent_indices=[0, 1],
+        incoherent_indices=[3],
+        chimera_index=0.25,
+    )
     assert state.coherent_indices == [0, 1]
     assert state.incoherent_indices == [3]
     assert state.chimera_index == 0.25

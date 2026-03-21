@@ -49,15 +49,15 @@ class TestEntropyProductionRate:
     def test_coupling_reduces_dissipation_near_lock(self):
         """Strong coupling at phases where sin opposes ω should reduce dθ/dt."""
         # ω_0=+1, ω_1=-1 with θ_0 behind θ_1: coupling pulls 0 forward, 1 backward
-        phases = np.array([0.0, 1.0])
-        omegas = np.array([1.0, -1.0])
-        knm = np.array([[0.0, 50.0], [50.0, 0.0]])
+        _phases = np.array([0.0, 1.0])
+        _omegas = np.array([1.0, -1.0])
+        _knm = np.array([[0.0, 50.0], [50.0, 0.0]])
         # Coupling sin(1.0)≈0.84, (α/N)·K·sin ≈ 25·0.84=21 opposes ω_1=-1
         # dθ_1/dt = -1 + 25·sin(-1) ≈ -1 - 21 = -22 → larger magnitude
         # Instead test: identical phases, omegas differ → coupling is zero
         # Use phases where coupling *reduces* the spread of dθ/dt
-        phases2 = np.array([0.0, 0.5])
-        omegas2 = np.array([-1.0, 1.0])
+        _phases2 = np.array([0.0, 0.5])
+        _omegas2 = np.array([-1.0, 1.0])
         # sin(0.5)≈0.48 → coupling pulls osc 0 toward osc 1 (positive)
         # dθ_0/dt = -1 + 25·sin(0.5) ≈ -1+12 = +11
         # dθ_1/dt = +1 + 25·sin(-0.5) ≈ 1-12 = -11
@@ -67,10 +67,22 @@ class TestEntropyProductionRate:
         phases_fp = np.zeros(3)
         omegas_fp = np.zeros(3)
         knm_fp = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=float)
-        rate_fp = entropy_production_rate(phases_fp, omegas_fp, knm_fp, alpha=1.0, dt=0.01)
+        rate_fp = entropy_production_rate(
+            phases_fp,
+            omegas_fp,
+            knm_fp,
+            alpha=1.0,
+            dt=0.01,
+        )
         # Perturbed phases: coupling creates restoring force
         phases_perturbed = np.array([0.0, 0.3, -0.3])
-        rate_perturbed = entropy_production_rate(phases_perturbed, omegas_fp, knm_fp, alpha=1.0, dt=0.01)
+        rate_perturbed = entropy_production_rate(
+            phases_perturbed,
+            omegas_fp,
+            knm_fp,
+            alpha=1.0,
+            dt=0.01,
+        )
         assert rate_fp < rate_perturbed
 
     def test_empty_phases(self):

@@ -60,7 +60,9 @@ def load_hcp_connectome(n_regions: int) -> NDArray:
     # Inter-hemispheric: corpus callosum — homotopic connections strongest
     for i in range(min(half, n_regions - half)):
         j = i + half
-        weight = _INTER_HEMI_STRENGTH * np.exp(-0.1 * abs(i - i))  # homotopic = strongest
+        weight = _INTER_HEMI_STRENGTH * np.exp(
+            -0.1 * abs(i - i)
+        )  # homotopic = strongest
         # Add distance decay for non-homotopic callosal fibers
         spread = min(3, half)
         for offset in range(-spread, spread + 1):
@@ -86,6 +88,4 @@ def load_hcp_connectome(n_regions: int) -> NDArray:
     # Symmetrise and clean diagonal
     knm = (knm + knm.T) / 2.0
     np.fill_diagonal(knm, 0.0)
-    knm = np.clip(knm, 0, None)
-
-    return knm
+    return np.clip(knm, 0, None)

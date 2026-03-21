@@ -54,7 +54,7 @@ def identify_frequencies(
     U, S, Vt = np.linalg.svd(X, full_matrices=False)
 
     if n_modes is None:
-        n_modes = int(np.sum(S > rank_threshold * S[0]))
+        n_modes = int(np.sum(rank_threshold * S[0] < S))
     n_modes = max(1, min(n_modes, len(S)))
 
     U_r = U[:, :n_modes]

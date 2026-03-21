@@ -66,9 +66,7 @@ def extract_phases(
     )
 
 
-def _bandpass_filter(
-    x: NDArray, fs: float, low: float, high: float
-) -> NDArray:
+def _bandpass_filter(x: NDArray, fs: float, low: float, high: float) -> NDArray:
     """Simple FFT-based bandpass filter."""
     n = len(x)
     freqs = np.fft.rfftfreq(n, d=1.0 / fs)

@@ -38,7 +38,9 @@ def test_intra_stronger_than_inter():
     n = 40
     knm = load_hcp_connectome(n)
     half = n // 2
-    intra_mean = (knm[:half, :half].sum() + knm[half:, half:].sum()) / (2 * half * (half - 1))
+    intra_mean = (knm[:half, :half].sum() + knm[half:, half:].sum()) / (
+        2 * half * (half - 1)
+    )
     inter_mean = knm[:half, half:].sum() / (half * (n - half))
     assert intra_mean > inter_mean
 

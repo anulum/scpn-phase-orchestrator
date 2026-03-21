@@ -23,7 +23,7 @@ try:
 
     HAS_PYMODBUS = True  # pragma: no cover
 except ImportError:
-    ModbusTlsClient = None  # type: ignore[assignment,misc]
+    ModbusTlsClient = None
     HAS_PYMODBUS = False
 
 
@@ -91,10 +91,12 @@ class SecureModbusAdapter:
 
         Raises ConnectionError if the read fails or returns an error frame.
         """
-        result = self._client.read_holding_registers(address, count=1)  # type: ignore[attr-defined]
-        if result.isError():  # type: ignore[union-attr]
+        result = self._client.read_holding_registers(  # type: ignore[attr-defined]
+            address, count=1
+        )
+        if result.isError():
             raise ConnectionError(f"Modbus read error at address {address}: {result}")
-        return int(result.registers[0])  # type: ignore[union-attr]
+        return int(result.registers[0])
 
     def write_register(self, address: int, value: int) -> None:
         """Write a single holding register.
@@ -102,12 +104,12 @@ class SecureModbusAdapter:
         Raises ConnectionError if the write fails.
         """
         result = self._client.write_register(address, value)  # type: ignore[attr-defined]
-        if result.isError():  # type: ignore[union-attr]
+        if result.isError():
             raise ConnectionError(f"Modbus write error at address {address}: {result}")
 
     def validate_connection(self) -> bool:
         """Return True if the TLS-wrapped Modbus connection is active."""
         try:
-            return self._client.connected  # type: ignore[attr-defined]
+            return bool(self._client.connected)  # type: ignore[attr-defined]
         except Exception:
             return False

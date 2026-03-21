@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -56,10 +58,8 @@ def estimate_coupling(
 
         # Least squares: target = K_i · regressors
         # K_i = target @ regressors^T @ (regressors @ regressors^T)^{-1}
-        try:
+        with contextlib.suppress(np.linalg.LinAlgError):
             knm[i, :] = np.linalg.lstsq(regressors.T, target, rcond=None)[0]
-        except np.linalg.LinAlgError:  # pragma: no cover
-            pass
 
     np.fill_diagonal(knm, 0.0)
     return knm

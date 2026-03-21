@@ -15,7 +15,8 @@ from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
 
 class TestRedundancy:
     def test_identical_groups_maximum_redundancy(self):
-        """Same oscillators in both groups → redundancy = MI of that group with whole."""
+        """Same oscillators in both groups →
+        redundancy = MI of that group with whole."""
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, 100)
         group = list(range(50))
@@ -68,11 +69,14 @@ class TestSynergy:
         assert np.isfinite(s)
 
     def test_synergy_with_structured_phases(self):
-        """Phases with structure (e.g. two clusters) should produce measurable synergy."""
+        """Phases with structure (e.g. two clusters)
+        should produce measurable synergy."""
         rng = np.random.default_rng(55)
-        phases = np.concatenate([
-            rng.normal(0.5, 0.3, 50) % (2 * np.pi),
-            rng.normal(3.5, 0.3, 50) % (2 * np.pi),
-        ])
+        phases = np.concatenate(
+            [
+                rng.normal(0.5, 0.3, 50) % (2 * np.pi),
+                rng.normal(3.5, 0.3, 50) % (2 * np.pi),
+            ]
+        )
         s = synergy(phases, list(range(0, 25)), list(range(25, 50)))
         assert s >= 0.0
