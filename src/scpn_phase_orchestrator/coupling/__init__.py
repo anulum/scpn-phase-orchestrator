@@ -7,6 +7,17 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
+from scpn_phase_orchestrator.coupling.plasticity import (
+    compute_eligibility,
+    three_factor_update,
+)
 
-__all__ = ["CouplingBuilder", "CouplingState"]
+__all__ = [
+    "CouplingBuilder",
+    "CouplingState",
+    "compute_eligibility",
+    "load_hcp_connectome",
+    "three_factor_update",
+]
