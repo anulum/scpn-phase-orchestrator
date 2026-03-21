@@ -56,7 +56,7 @@ class PGBO:
             alignment = 0.0
         else:
             diff = phases[:, np.newaxis] - phases[np.newaxis, :]
-            plv_matrix = np.abs(np.exp(1j * diff))
+            plv_matrix = np.cos(diff)
             triu = np.triu_indices(n, k=1)
             plv_flat = plv_matrix[triu]
             w_flat = W[triu]
@@ -64,7 +64,7 @@ class PGBO:
                 alignment = 0.0
             else:
                 alignment = float(np.corrcoef(plv_flat, w_flat)[0, 1])
-                if not np.isfinite(alignment):
+                if not np.isfinite(alignment):  # pragma: no cover
                     alignment = 0.0
 
         snap = PGBOSnapshot(
