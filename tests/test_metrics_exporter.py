@@ -42,7 +42,7 @@ def test_export_contains_r_global():
     state = _make_state([0.8, 0.6])
     result = exp.export(state, "nominal", 2.0)
     assert "spo_r_global" in result
-    assert '0.700000' in result
+    assert "0.700000" in result
 
 
 def test_export_contains_latency():
@@ -88,7 +88,7 @@ def test_per_layer_r_values():
     exp = MetricsExporter()
     state = _make_state([0.1, 0.2, 0.3])
     lines = exp.exposition_lines(state, "nominal", 1.0)
-    layer_lines = [l for l in lines if "spo_layer_r" in l]
+    layer_lines = [line for line in lines if "spo_layer_r" in line]
     assert len(layer_lines) == 3
     assert 'layer="0"' in layer_lines[0]
     assert 'layer="2"' in layer_lines[2]

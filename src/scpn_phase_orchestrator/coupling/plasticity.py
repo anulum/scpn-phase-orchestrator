@@ -22,7 +22,8 @@ def compute_eligibility(phases: NDArray) -> NDArray:
     diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
     elig = np.cos(diffs)
     np.fill_diagonal(elig, 0.0)
-    return elig
+    result: NDArray = elig
+    return result
 
 
 def three_factor_update(
@@ -39,7 +40,8 @@ def three_factor_update(
         2. modulator — scalar reward/error signal from L16 director
         3. phase_gate — boolean from TCBO consciousness boundary
 
-    Friston 2005, Philos. Trans. R. Soc. B 360:815-836 (free energy & synaptic plasticity).
+    Friston 2005, Philos. Trans. R. Soc. B
+    360:815-836 (free energy & synaptic plasticity).
 
     Args:
         knm: current coupling matrix, shape (n, n).

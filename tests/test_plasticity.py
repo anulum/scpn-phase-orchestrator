@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from scpn_phase_orchestrator.coupling.plasticity import (
     compute_eligibility,

@@ -35,9 +35,10 @@ class TestSecureModbusAdapterTLS:
         cert.write_text("dummy-cert")
         key.write_text("dummy-key")
 
-        with patch(
-            "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient", None
-        ), patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl:
+        with (
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient", None),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
             mock_ssl.PROTOCOL_TLS_CLIENT = 2
@@ -61,10 +62,13 @@ class TestSecureModbusAdapterTLS:
         mock_client.read_holding_registers.return_value = mock_result
         mock_client.connect.return_value = True
 
-        with patch(
-            "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
-            return_value=mock_client,
-        ), patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl:
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
             mock_ssl.PROTOCOL_TLS_CLIENT = 2
@@ -87,10 +91,13 @@ class TestSecureModbusAdapterTLS:
         mock_client.write_register.return_value = mock_write_result
         mock_client.connect.return_value = True
 
-        with patch(
-            "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
-            return_value=mock_client,
-        ), patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl:
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
             mock_ssl.PROTOCOL_TLS_CLIENT = 2
@@ -112,10 +119,13 @@ class TestSecureModbusAdapterTLS:
         mock_client.connect.return_value = True
         mock_client.connected = True
 
-        with patch(
-            "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
-            return_value=mock_client,
-        ), patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl:
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
             mock_ssl.PROTOCOL_TLS_CLIENT = 2
@@ -134,12 +144,17 @@ class TestSecureModbusAdapterTLS:
 
         mock_client = MagicMock()
         mock_client.connect.return_value = True
-        type(mock_client).connected = property(lambda self: (_ for _ in ()).throw(OSError("boom")))
+        type(mock_client).connected = property(
+            lambda self: (_ for _ in ()).throw(OSError("boom"))
+        )
 
-        with patch(
-            "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
-            return_value=mock_client,
-        ), patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl:
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
             mock_ssl.PROTOCOL_TLS_CLIENT = 2
@@ -159,10 +174,13 @@ class TestSecureModbusAdapterTLS:
         mock_client = MagicMock()
         mock_client.connect.return_value = False
 
-        with patch(
-            "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
-            return_value=mock_client,
-        ), patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl:
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
             mock_ssl.PROTOCOL_TLS_CLIENT = 2

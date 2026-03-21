@@ -20,10 +20,10 @@ __all__ = ["classify_sleep_stage", "ultradian_phase"]
 #                 (distinguishes REM from light wakefulness).
 # Wake:           desynchronised cortex (R < 0.3, no functional_desync).
 _STAGE_THRESHOLDS = {
-    "N3":   0.70,
-    "N2":   0.40,
-    "N1":   0.30,
-    "REM":  0.20,
+    "N3": 0.70,
+    "N2": 0.40,
+    "N1": 0.30,
+    "REM": 0.20,
 }
 
 
@@ -40,16 +40,16 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
         One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
     """
     R = float(R)
-    if R >= _STAGE_THRESHOLDS["N3"]:
+    if _STAGE_THRESHOLDS["N3"] <= R:
         return "N3"
-    if R >= _STAGE_THRESHOLDS["N2"]:
+    if _STAGE_THRESHOLDS["N2"] <= R:
         return "N2"
-    if R >= _STAGE_THRESHOLDS["N1"]:
+    if _STAGE_THRESHOLDS["N1"] <= R:
         if functional_desync:
             return "REM"
         return "N1"
     # Below N1 threshold
-    if functional_desync and R >= _STAGE_THRESHOLDS["REM"]:
+    if functional_desync and _STAGE_THRESHOLDS["REM"] <= R:
         return "REM"
     return "Wake"
 

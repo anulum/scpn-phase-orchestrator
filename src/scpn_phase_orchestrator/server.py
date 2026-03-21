@@ -337,7 +337,7 @@ fetchState().then(render);
 def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
-        from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+        from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
         from fastapi.responses import HTMLResponse
     except ImportError as exc:
         msg = "fastapi not installed. pip install fastapi uvicorn"
@@ -378,7 +378,7 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
         }
 
     @app.get("/api/metrics")
-    async def get_metrics() -> str:  # pragma: no cover
+    async def get_metrics() -> Response:  # pragma: no cover
         from fastapi.responses import PlainTextResponse
 
         from scpn_phase_orchestrator.adapters.metrics_exporter import (
@@ -390,8 +390,7 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
         exporter = MetricsExporter()
         upde_state = UPDEState(
             layers=[
-                LayerState(R=ly["R"], psi=ly.get("psi", 0.0))
-                for ly in snap["layers"]
+                LayerState(R=ly["R"], psi=ly.get("psi", 0.0)) for ly in snap["layers"]
             ],
             cross_layer_alignment=np.eye(len(snap["layers"])),
             stability_proxy=snap["R_global"],

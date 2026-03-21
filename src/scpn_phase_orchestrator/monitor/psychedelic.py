@@ -88,17 +88,27 @@ def simulate_psychedelic_trajectory(
 
     for rf in reduction_schedule:
         k_reduced = reduce_coupling(knm, rf)
-        p = engine.run(p, omegas, k_reduced, zeta=0.0, psi=0.0, alpha=alpha, n_steps=n_steps_per_level)
+        p = engine.run(
+            p,
+            omegas,
+            k_reduced,
+            zeta=0.0,
+            psi=0.0,
+            alpha=alpha,
+            n_steps=n_steps_per_level,
+        )
         r_val, _ = engine.compute_order_parameter(p)
         ent = entropy_from_phases(p)
         chimera = detect_chimera(p, k_reduced)
 
-        results.append({
-            "reduction_factor": rf,
-            "R": r_val,
-            "entropy": ent,
-            "chimera_index": chimera.chimera_index,
-            "phases": p.copy(),
-        })
+        results.append(
+            {
+                "reduction_factor": rf,
+                "R": r_val,
+                "entropy": ent,
+                "chimera_index": chimera.chimera_index,
+                "phases": p.copy(),
+            }
+        )
 
     return results

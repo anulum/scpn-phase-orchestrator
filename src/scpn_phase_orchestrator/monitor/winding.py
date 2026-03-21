@@ -30,14 +30,16 @@ def winding_numbers(phases_history: NDArray) -> NDArray:
         (N,) integer array of winding numbers.
     """
     if phases_history.ndim != 2 or phases_history.shape[0] < 2:
-        return np.zeros(phases_history.shape[-1] if phases_history.ndim == 2 else 0, dtype=np.int64)
+        n = phases_history.shape[-1] if phases_history.ndim == 2 else 0
+        return np.zeros(n, dtype=np.int64)
 
     # Unwrap via cumulative phase increments to handle wrap-around correctly
     dtheta = np.diff(phases_history, axis=0)
     # Wrap increments to [-π, π] to detect true direction
     dtheta_wrapped = (dtheta + np.pi) % TWO_PI - np.pi
     cumulative = np.sum(dtheta_wrapped, axis=0)
-    return np.floor(cumulative / TWO_PI).astype(np.int64)
+    result: NDArray = np.floor(cumulative / TWO_PI).astype(np.int64)
+    return result
 
 
 def winding_vector(phases_history: NDArray) -> NDArray:

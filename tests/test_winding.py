@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
 
@@ -77,8 +76,8 @@ class TestWindingNumbers:
         """Multiple oscillators with different winding numbers."""
         T = 200
         history = np.zeros((T, 3))
-        history[:, 0] = np.linspace(0, 2.1 * np.pi, T)   # floor(1.05) = +1
-        history[:, 1] = np.linspace(0, 6.1 * np.pi, T)   # floor(3.05) = +3
+        history[:, 0] = np.linspace(0, 2.1 * np.pi, T)  # floor(1.05) = +1
+        history[:, 1] = np.linspace(0, 6.1 * np.pi, T)  # floor(3.05) = +3
         history[:, 2] = np.linspace(0, -3.9 * np.pi, T)  # floor(-1.95) = -2
         w = winding_numbers(history)
         assert w[0] == 1

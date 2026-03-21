@@ -44,14 +44,16 @@ def torus_points_json(
         x = (R + r * np.cos(p)) * np.cos(theta)
         y = (R + r * np.cos(p)) * np.sin(theta)
         z = r * np.sin(p)
-        points.append({
-            "x": round(float(x), 4),
-            "y": round(float(y), 4),
-            "z": round(float(z), 4),
-            "phase": round(theta, 4),
-            "R": round(float(R_values[i]), 4),
-            "id": i,
-        })
+        points.append(
+            {
+                "x": round(float(x), 4),
+                "y": round(float(y), 4),
+                "z": round(float(z), 4),
+                "phase": round(theta, 4),
+                "R": round(float(R_values[i]), 4),
+                "id": i,
+            }
+        )
 
     return json.dumps({"points": points}, indent=2)
 
@@ -68,11 +70,13 @@ def phase_wheel_json(phases: NDArray, layer_names: list[str] | None = None) -> s
     entries = []
     for i in range(n):
         theta = float(phases[i])
-        entries.append({
-            "name": layer_names[i],
-            "phase": round(theta, 4),
-            "x": round(float(np.cos(theta)), 4),
-            "y": round(float(np.sin(theta)), 4),
-        })
+        entries.append(
+            {
+                "name": layer_names[i],
+                "phase": round(theta, 4),
+                "x": round(float(np.cos(theta)), 4),
+                "y": round(float(np.sin(theta)), 4),
+            }
+        )
 
     return json.dumps({"oscillators": entries}, indent=2)

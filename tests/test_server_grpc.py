@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-import pytest
-
 from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
 
 
@@ -78,8 +76,6 @@ def test_stream_handles_dataclass_state():
 
 
 def test_stream_with_none_context():
-    svc = PhaseStreamServicer(
-        lambda: {"v": 1}, max_steps=2, interval_s=0.0
-    )
+    svc = PhaseStreamServicer(lambda: {"v": 1}, max_steps=2, interval_s=0.0)
     results = list(svc.StreamPhases(None, None))
     assert len(results) == 2

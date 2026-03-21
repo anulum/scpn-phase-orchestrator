@@ -19,7 +19,7 @@ try:
 
     HAS_RTAMT = True  # pragma: no cover
 except Exception:  # rtamt's antlr4 dep breaks on Python >=3.12
-    rtamt = None  # type: ignore[assignment]
+    rtamt = None
     HAS_RTAMT = False
 
 
@@ -79,5 +79,5 @@ class STLMonitor:
         robustness = self._stl.evaluate(datasets)
         # rtamt returns a list of (time, robustness) pairs; min is worst-case
         if isinstance(robustness, list):
-            return min(r for _, r in robustness)
+            return float(min(r for _, r in robustness))
         return float(robustness)

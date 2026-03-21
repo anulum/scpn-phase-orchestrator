@@ -41,7 +41,10 @@ class TestHodgeDecomposition:
         np.fill_diagonal(knm, 0.0)
         phases = rng.uniform(0, 2 * np.pi, 5)
         result = hodge_decomposition(knm, phases)
-        total = np.sum(knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]), axis=1)
+        total = np.sum(
+            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]),
+            axis=1,
+        )
         np.testing.assert_allclose(
             result.gradient + result.curl + result.harmonic, total, atol=1e-10
         )

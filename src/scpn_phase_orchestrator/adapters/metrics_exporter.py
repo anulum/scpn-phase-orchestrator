@@ -35,17 +35,14 @@ class MetricsExporter:
         lines.append(f"# HELP {p}_stability_proxy Mean R across layers")
         lines.append(f"# TYPE {p}_stability_proxy gauge")
         lines.append(
-            f'{p}_stability_proxy{{regime="{regime}"}} '
-            f"{upde_state.stability_proxy:.6f}"
+            f'{p}_stability_proxy{{regime="{regime}"}} {upde_state.stability_proxy:.6f}'
         )
 
         lines.append(f"# HELP {p}_pac_max Maximum phase-amplitude coupling")
         lines.append(f"# TYPE {p}_pac_max gauge")
         lines.append(f'{p}_pac_max{{regime="{regime}"}} {upde_state.pac_max:.6f}')
 
-        lines.append(
-            f"# HELP {p}_latency_ms UPDE step latency in milliseconds"
-        )
+        lines.append(f"# HELP {p}_latency_ms UPDE step latency in milliseconds")
         lines.append(f"# TYPE {p}_latency_ms gauge")
         lines.append(f'{p}_latency_ms{{regime="{regime}"}} {latency_ms:.3f}')
 
@@ -54,16 +51,10 @@ class MetricsExporter:
         lines.append(f"{p}_layer_count {len(upde_state.layers)}")
 
         for i, layer in enumerate(upde_state.layers):
-            lines.append(
-                f'{p}_layer_r{{layer="{i}",regime="{regime}"}} {layer.R:.6f}'
-            )
+            lines.append(f'{p}_layer_r{{layer="{i}",regime="{regime}"}} {layer.R:.6f}')
 
         return lines
 
-    def export(
-        self, upde_state: UPDEState, regime: str, latency_ms: float
-    ) -> str:
+    def export(self, upde_state: UPDEState, regime: str, latency_ms: float) -> str:
         """Return full Prometheus text exposition as a single string."""
-        return "\n".join(
-            self.exposition_lines(upde_state, regime, latency_ms)
-        ) + "\n"
+        return "\n".join(self.exposition_lines(upde_state, regime, latency_ms)) + "\n"

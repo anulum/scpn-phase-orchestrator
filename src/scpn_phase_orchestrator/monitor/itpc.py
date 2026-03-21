@@ -29,7 +29,8 @@ def compute_itpc(phases_trials: NDArray) -> NDArray:
         return np.array([1.0])
     if phases.shape[0] == 0:
         return np.array([])
-    return np.abs(np.mean(np.exp(1j * phases), axis=0))
+    result: NDArray = np.abs(np.mean(np.exp(1j * phases), axis=0))
+    return result
 
 
 def itpc_persistence(

@@ -268,4 +268,4 @@ class TestAllDomainpacksLoad:
             assert len(spec.layers) > 0
             assert len(spec.oscillator_families) > 0
             loaded += 1
-        assert loaded == 25
+        assert loaded == 32

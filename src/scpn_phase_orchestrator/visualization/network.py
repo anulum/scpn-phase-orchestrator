@@ -34,22 +34,26 @@ def network_graph_json(
 
     nodes = []
     for i in range(n):
-        nodes.append({
-            "id": i,
-            "name": layer_names[i],
-            "R": round(float(R_values[i]), 4),
-        })
+        nodes.append(
+            {
+                "id": i,
+                "name": layer_names[i],
+                "R": round(float(R_values[i]), 4),
+            }
+        )
 
     links = []
     for i in range(n):
         for j in range(i + 1, n):
             w = float(knm[i, j])
             if abs(w) > threshold:
-                links.append({
-                    "source": i,
-                    "target": j,
-                    "weight": round(w, 4),
-                })
+                links.append(
+                    {
+                        "source": i,
+                        "target": j,
+                        "weight": round(w, 4),
+                    }
+                )
 
     return json.dumps({"nodes": nodes, "links": links}, indent=2)
 
@@ -71,9 +75,12 @@ def coupling_heatmap_json(
         row = [round(float(knm[i, j]), 4) for j in range(n)]
         matrix.append(row)
 
-    return json.dumps({
-        "labels": layer_names,
-        "matrix": matrix,
-        "min": round(float(np.min(knm)), 4),
-        "max": round(float(np.max(knm)), 4),
-    }, indent=2)
+    return json.dumps(
+        {
+            "labels": layer_names,
+            "matrix": matrix,
+            "min": round(float(np.min(knm)), 4),
+            "max": round(float(np.max(knm)), 4),
+        },
+        indent=2,
+    )

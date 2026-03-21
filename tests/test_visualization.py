@@ -48,9 +48,7 @@ class TestNetworkGraph:
     def test_R_values(self):
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
-        data = json.loads(
-            network_graph_json(knm, R_values=[0.8, 0.9])
-        )
+        data = json.loads(network_graph_json(knm, R_values=[0.8, 0.9]))
         assert data["nodes"][0]["R"] == 0.8
 
 
@@ -86,9 +84,7 @@ class TestTorusPoints:
 
     def test_custom_radii(self):
         phases = np.array([0.0])
-        data = json.loads(
-            torus_points_json(phases, major_radius=5.0, minor_radius=1.0)
-        )
+        data = json.loads(torus_points_json(phases, major_radius=5.0, minor_radius=1.0))
         p = data["points"][0]
         assert abs(p["x"] - 6.0) < 0.01  # (5+1)·cos(0)
 
