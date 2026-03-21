@@ -8,8 +8,14 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
+from scpn_phase_orchestrator.monitor.psychedelic import (
+    entropy_from_phases,
+    reduce_coupling,
+    simulate_psychedelic_trajectory,
+)
 from scpn_phase_orchestrator.monitor.session_start import (
     SessionCoherenceReport,
     check_session_start,
@@ -20,12 +26,17 @@ from scpn_phase_orchestrator.monitor.sleep_staging import (
 )
 
 __all__ = [
-    "CoherenceMonitor",
     "BoundaryObserver",
+    "ChimeraState",
+    "CoherenceMonitor",
     "SessionCoherenceReport",
     "check_session_start",
     "classify_sleep_stage",
     "compute_itpc",
+    "detect_chimera",
+    "entropy_from_phases",
     "itpc_persistence",
+    "reduce_coupling",
+    "simulate_psychedelic_trajectory",
     "ultradian_phase",
 ]
