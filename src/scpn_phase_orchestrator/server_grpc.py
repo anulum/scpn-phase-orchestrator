@@ -37,7 +37,7 @@ try:
 
     HAS_GRPC = True  # pragma: no cover
 except ModuleNotFoundError:
-    grpc = None  # type: ignore[assignment]
+    grpc = None
     HAS_GRPC = False
 
 

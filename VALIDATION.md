@@ -8,7 +8,7 @@
 | Rust unit/integration | 203 | `cargo test --workspace` across 5 crates |
 | FFI parity | 20 | Python vs Rust parity: UPDE, Stuart-Landau, Petri net, RuleEngine |
 | Notebook execution | 10 | `nbclient` runs all `.ipynb` cells under Python 3.12 |
-| Domainpack validation | 25 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
+| Domainpack validation | 31 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
 
 CI runs tests on Python 3.10–3.13 and Rust on Linux, macOS, Windows.
 

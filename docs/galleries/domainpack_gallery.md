@@ -16,23 +16,27 @@ simulations.
 | 06 | **stuart_landau** | 8 | Phase-amplitude ODE, bifurcation tracking, PAC | `06_stuart_landau_amplitude.ipynb` |
 | 07 | **policy_petri_net** | 8 | Policy DSL, regime FSM, Petri net sequencing | `07_policy_petri_net.ipynb` |
 
-## All 24 Domainpacks
+## All 31 Domainpacks
 
 | Pack | Domain | Layers | Oscillators | Channels |
 |------|--------|--------|-------------|----------|
 | `autonomous_vehicles` | Vehicle platoons | 3 | 8 | P/I |
 | `bio_stub` | Multi-scale biology | 4 | 16 | P/I/S |
+| `brain_connectome` | HCP-inspired structural connectivity | 4 | 12 | P/I/S |
 | `cardiac_rhythm` | Cardiology | 4 | 10 | P/I |
 | `chemical_reactor` | Process control | 4 | 10 | P/I |
 | `circadian_biology` | Chronobiology | 4 | 10 | S |
 | `epidemic_sir` | Epidemiology | 3 | 8 | P/I |
+| `financial_markets` | Stock sync and crash detection | 4 | 8 | P/I/S |
 | `firefly_swarm` | Ecology | 2 | 8 | P/I |
 | `fusion_equilibrium` | Fusion plasma | 6 | 12 | P/I |
+| `gene_oscillator` | Repressilator + quorum sensing | 3 | 6 | P/I/S |
 | `geometry_walk` | Graph systems | 2 | 8 | S |
 | `laser_array` | Photonics | 3 | 8 | P/I |
 | `manufacturing_spc` | Manufacturing | 3 | 9 | P/I/S |
 | `metaphysics_demo` | P/I/S showcase | 3 | 7 | P/I/S |
 | `minimal_domain` | Synthetic baseline | 2 | 4 | P |
+| `musical_acoustics` | Consonance and groove via sync | 3 | 9 | P/I/S |
 | `network_security` | Cybersecurity | 3 | 8 | I |
 | `neuroscience_eeg` | Neuroscience | 6 | 14 | P/I |
 | `plasma_control` | Tokamak plasma | 8 | 16 | P/I |
@@ -40,10 +44,13 @@ simulations.
 | `power_grid` | Power systems | 5 | 12 | P/I |
 | `quantum_simulation` | Quantum computing | 3 | 8 | P/I |
 | `queuewaves` | Cloud/queues | 3 | 6 | P/I |
+| `robotic_cpg` | Quadruped CPG locomotion | 4 | 8 | P/I/S |
 | `rotating_machinery` | Vibration | 4 | 10 | P/I |
 | `satellite_constellation` | Aerospace | 3 | 8 | P/I |
+| `sleep_architecture` | AASM sleep staging from R values | 4 | 8 | P/I/S |
 | `swarm_robotics` | Robotics | 3 | 8 | P/I |
 | `traffic_flow` | Transportation | 4 | 10 | P/I |
+| `vortex_shedding` | Wake dynamics (Stuart-Landau) | 3 | 9 | P/I/S |
 
 ## Running Locally
 
