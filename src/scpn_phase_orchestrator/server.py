@@ -48,6 +48,17 @@ from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
+try:
+    from fastapi import (  # pragma: no cover
+        Response,
+        WebSocket,
+        WebSocketDisconnect,  # pragma: no cover
+    )
+except ImportError:
+    Response = None  # type: ignore[assignment,misc]
+    WebSocket = None  # type: ignore[assignment,misc]
+    WebSocketDisconnect = None  # type: ignore[assignment,misc]
+
 __all__ = ["create_app", "SimulationState"]
 
 TWO_PI = 2.0 * np.pi
@@ -337,7 +348,7 @@ fetchState().then(render);
 def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
-        from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
+        from fastapi import FastAPI
         from fastapi.responses import HTMLResponse
     except ImportError as exc:
         msg = "fastapi not installed. pip install fastapi uvicorn"
