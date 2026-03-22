@@ -82,9 +82,12 @@ The dominant cost is the 32-bit multiplier in the accumulation stage
 
 ## Files
 
-| File                    | Description                              |
-|------------------------|------------------------------------------|
-| `src/kuramoto_core.v`  | Top-level module + CORDIC sub-module     |
+| File                       | Description                                  |
+|---------------------------|----------------------------------------------|
+| `src/kuramoto_core.v`     | Top-level module + CORDIC sub-module         |
+| `build/synthesize.tcl`    | Vivado TCL script — synth + impl + bitstream |
+| `build/constraints.xdc`   | Pin constraints for Zynq-7020                |
+| `build/Makefile`          | `make synth` entry point                     |
 
 ## Integration
 
@@ -110,3 +113,25 @@ vvp kuramoto_tb
 
 A testbench is not yet included — synthesis-only verification against
 the Python/Rust reference implementations is the current validation path.
+
+## FPGA Build (Vivado)
+
+Requires Xilinx Vivado 2023.2+ (Linux only).
+
+```bash
+# From this directory
+cd build
+make synth
+```
+
+This runs Vivado in batch mode, targeting `xc7z020clg484-1` (Zynq-7020).
+Outputs land in `build/output/`:
+
+- `kuramoto_core.bit` — bitstream
+- `utilization_synth.rpt` / `utilization_impl.rpt` — resource usage
+- `timing_synth.rpt` / `timing_impl.rpt` — timing analysis
+
+The constraints file (`constraints.xdc`) maps clock to 100 MHz, reset
+to active-low, and exposes AXI-Lite address/control signals on PL pins.
+In a block-design flow the AXI mapping comes from the PS automatically,
+so the pin constraints for AXI ports can be removed.

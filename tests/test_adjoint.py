@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.upde.adjoint import cost_R, gradient_knm_fd
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -79,4 +80,51 @@ class TestGradientFD:
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         grad = gradient_knm_fd(engine, phases, omegas, knm, alpha, n_steps=10)
+        assert np.all(np.isfinite(grad))
+
+
+# --- JAX autodiff gradient ---
+
+jax = pytest.importorskip("jax")
+
+
+class TestGradientJAX:
+    def test_jax_gradient_matches_fd(self):
+        from scpn_phase_orchestrator.upde.adjoint import gradient_knm_jax
+
+        n = 4
+        dt = 0.01
+        n_steps = 20
+        engine = UPDEEngine(n, dt=dt)
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, n)
+        omegas = np.ones(n)
+        knm = np.full((n, n), 0.3)
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+
+        grad_fd = gradient_knm_fd(engine, phases, omegas, knm, alpha, n_steps=n_steps)
+        grad_jax = gradient_knm_jax(phases, omegas, knm, alpha, n_steps=n_steps, dt=dt)
+
+        assert grad_jax.shape == (n, n)
+        assert np.all(np.isfinite(grad_jax))
+
+        # Off-diagonal entries should match within 5%
+        mask = ~np.eye(n, dtype=bool)
+        fd_off = grad_fd[mask]
+        jax_off = grad_jax[mask]
+        # rtol=0.05 → 5% relative tolerance; atol for near-zero entries
+        np.testing.assert_allclose(jax_off, fd_off, rtol=0.05, atol=1e-5)
+
+    def test_jax_gradient_shape_and_finite(self):
+        from scpn_phase_orchestrator.upde.adjoint import gradient_knm_jax
+
+        n = 3
+        phases = np.array([0.0, 1.0, 2.0])
+        omegas = np.ones(n)
+        knm = np.full((n, n), 0.5)
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        grad = gradient_knm_jax(phases, omegas, knm, alpha, n_steps=10, dt=0.01)
+        assert grad.shape == (n, n)
         assert np.all(np.isfinite(grad))

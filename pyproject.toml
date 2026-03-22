@@ -97,6 +97,7 @@ scpn_phase_orchestrator = ["py.typed", "apps/queuewaves/static/*"]
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+exclude = ["src/scpn_phase_orchestrator/grpc_gen/spo_pb2.py", "src/scpn_phase_orchestrator/grpc_gen/spo_pb2_grpc.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
@@ -111,6 +112,10 @@ disallow_incomplete_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["scpn_phase_orchestrator.grpc_gen.spo_pb2", "scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc"]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

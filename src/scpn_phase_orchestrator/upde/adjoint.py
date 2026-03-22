@@ -17,7 +17,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-__all__ = ["cost_R", "gradient_knm_fd"]
+__all__ = ["cost_R", "gradient_knm_fd", "gradient_knm_jax"]
 
 
 def cost_R(phases: NDArray) -> float:
@@ -71,3 +71,51 @@ def gradient_knm_fd(
             grad[i, j] = (c_plus - c_minus) / (2 * epsilon)
 
     return grad
+
+
+def gradient_knm_jax(
+    phases_init: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    n_steps: int = 100,
+    dt: float = 0.01,
+) -> NDArray:
+    """Exact gradient of cost_R w.r.t. knm via JAX autodiff.
+
+    JIT-compiles a forward Kuramoto simulation and differentiates through it
+    using ``jax.grad``. Falls back to ``gradient_knm_fd`` if JAX unavailable.
+
+    Raises:
+        ImportError: If JAX is not installed.
+    """
+    try:
+        import jax
+        import jax.numpy as jnp
+    except ModuleNotFoundError:
+        raise ImportError(
+            "JAX is required for autodiff gradients: pip install jax jaxlib"
+        ) from None
+
+    jax.config.update("jax_enable_x64", True)
+
+    @jax.jit
+    def _forward(knm_j):  # type: ignore[no-untyped-def]
+        """Euler integration + cost, fully differentiable."""
+        theta = jnp.array(phases_init, dtype=jnp.float64)
+        om = jnp.array(omegas, dtype=jnp.float64)
+        al = jnp.array(alpha, dtype=jnp.float64)
+
+        def _body(_, th):  # type: ignore[no-untyped-def]
+            diff = th[jnp.newaxis, :] - th[:, jnp.newaxis] - al
+            coupling = jnp.sum(knm_j * jnp.sin(diff), axis=1)
+            dtheta = om + coupling
+            return th + dt * dtheta
+
+        theta = jax.lax.fori_loop(0, n_steps, _body, theta)
+        z = jnp.mean(jnp.exp(1j * theta))
+        return 1.0 - jnp.abs(z)
+
+    grad_fn = jax.grad(_forward)
+    knm_j = jnp.array(knm, dtype=jnp.float64)
+    return np.asarray(grad_fn(knm_j), dtype=np.float64)

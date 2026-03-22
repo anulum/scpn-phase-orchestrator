@@ -9,7 +9,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from scpn_phase_orchestrator.upde.prediction import PredictionModel, PredictionState
+from scpn_phase_orchestrator.upde.prediction import (
+    PredictionModel,
+    PredictionState,
+    VariationalPredictor,
+    VariationalState,
+)
 
 
 class TestPredictionModel:
@@ -115,3 +120,122 @@ class TestPredictionModel:
         assert hasattr(state, "prediction_error")
         assert hasattr(state, "mean_error")
         assert hasattr(state, "weights")
+
+
+class TestVariationalPredictor:
+    def test_variational_state_fields(self):
+        vp = VariationalPredictor(4)
+        state = vp.update(np.zeros(4), np.ones(4), dt=0.01)
+        assert isinstance(state, VariationalState)
+        assert state.predicted_phases.shape == (4,)
+        assert state.error.shape == (4,)
+        assert isinstance(state.free_energy, float)
+        assert state.precision.shape == (4,)
+        assert isinstance(state.complexity, float)
+
+    def test_free_energy_decreases_with_learning(self):
+        """F must decrease as mu converges to observed phases."""
+        n = 6
+        vp = VariationalPredictor(n, prior_precision=1.0, learning_rate=0.05)
+        omegas = np.ones(n) * 2.0
+        dt = 0.01
+        rng = np.random.default_rng(99)
+        phases = rng.uniform(0, 2 * np.pi, n)
+
+        energies = []
+        for _ in range(200):
+            phases = (phases + dt * omegas) % (2 * np.pi)
+            state = vp.update(phases, omegas, dt)
+            energies.append(state.free_energy)
+
+        # Compare mean of early window vs late window.
+        # After transient, free energy should be lower.
+        early = np.mean(energies[10:30])
+        late = np.mean(energies[-30:])
+        assert late < early, f"F did not decrease: early={early:.4f}, late={late:.4f}"
+
+    def test_precision_increases_with_consistent_input(self):
+        """Consistent (low-variance) input should drive precision up."""
+        n = 4
+        vp = VariationalPredictor(n, prior_precision=1.0, learning_rate=0.05)
+        omegas = np.ones(n) * 3.0
+        dt = 0.01
+
+        phases = np.zeros(n)
+        initial_prec = vp.precision.copy()
+
+        for _ in range(150):
+            phases = (phases + dt * omegas) % (2 * np.pi)
+            state = vp.update(phases, omegas, dt)
+
+        # Deterministic dynamics => small error variance => high precision
+        assert np.all(state.precision > initial_prec), (
+            f"Precision did not increase: {initial_prec} -> {state.precision}"
+        )
+
+    def test_fep_kuramoto_correspondence(self):
+        """Verify precision ~ coupling strength (the core FEP-Kuramoto map).
+
+        Two runs with different error magnitudes. Lower error => higher
+        precision => larger effective coupling. This tests the formal
+        correspondence: K_ij ~ Precision_ij.
+        """
+        n = 4
+        omegas = np.ones(n) * 2.0
+        dt = 0.01
+
+        # Run A: low-noise (deterministic dynamics)
+        vp_low = VariationalPredictor(n, prior_precision=1.0, learning_rate=0.05)
+        phases = np.zeros(n)
+        for _ in range(100):
+            phases = (phases + dt * omegas) % (2 * np.pi)
+            vp_low.update(phases, omegas, dt)
+        K_low_noise = vp_low.precision_weighted_coupling()
+
+        # Run B: high-noise (perturbed phases each step)
+        rng = np.random.default_rng(42)
+        vp_high = VariationalPredictor(n, prior_precision=1.0, learning_rate=0.05)
+        phases = np.zeros(n)
+        for _ in range(100):
+            phases = (phases + dt * omegas + rng.normal(0, 0.3, n)) % (2 * np.pi)
+            vp_high.update(phases, omegas, dt)
+        K_high_noise = vp_high.precision_weighted_coupling()
+
+        # Low-noise run should have higher diagonal coupling (= higher precision)
+        diag_low = np.diag(K_low_noise)
+        diag_high = np.diag(K_high_noise)
+        assert np.all(diag_low > diag_high), (
+            f"Precision-coupling violated: low_noise={diag_low}, high_noise={diag_high}"
+        )
+
+    def test_precision_weighted_coupling_shape(self):
+        n = 5
+        vp = VariationalPredictor(n)
+        K = vp.precision_weighted_coupling()
+        assert K.shape == (n, n)
+        # Off-diagonal should be zero (diagonal precision model)
+        mask = ~np.eye(n, dtype=bool)
+        np.testing.assert_array_equal(K[mask], 0.0)
+
+    def test_free_energy_positive_for_large_error(self):
+        """F should be positive when prediction and observation diverge."""
+        vp = VariationalPredictor(3, prior_precision=2.0)
+        predicted = np.array([0.0, 0.0, 0.0])
+        observed = np.array([2.0, 2.0, 2.0])
+        precision = np.array([2.0, 2.0, 2.0])
+        fe = vp.free_energy(predicted, observed, precision)
+        assert fe > 0.0
+
+    def test_complexity_zero_at_prior(self):
+        """KL divergence is zero when precision equals prior precision."""
+        vp = VariationalPredictor(4, prior_precision=1.0)
+        state = vp.update(np.zeros(4), np.ones(4), dt=0.01)
+        assert abs(state.complexity) < 1e-10
+
+    def test_reset(self):
+        vp = VariationalPredictor(3, prior_precision=2.0, learning_rate=0.1)
+        omegas = np.ones(3)
+        for _ in range(10):
+            vp.update(np.array([1.0, 2.0, 3.0]), omegas, dt=0.01)
+        vp.reset()
+        np.testing.assert_array_equal(vp.precision, np.full(3, 2.0))

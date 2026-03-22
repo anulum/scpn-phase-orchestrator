@@ -21,12 +21,11 @@ import time
 from collections.abc import Iterator
 from typing import Any
 
-from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (
+from scpn_phase_orchestrator.grpc_gen import (
     ConfigResponse,
-    StateResponse,
-)
-from scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc import (
+    LayerState,
     PhaseOrchestratorServicer,
+    StateResponse,
 )
 from scpn_phase_orchestrator.server import SimulationState
 
@@ -43,10 +42,8 @@ except ModuleNotFoundError:
 
 def _snap_to_response(snap: dict) -> StateResponse:
     """Convert a SimulationState.snapshot() dict to a StateResponse."""
-    from scpn_phase_orchestrator.grpc_gen.spo_pb2 import LayerState as PbLayerState
-
     layers = [
-        PbLayerState(
+        LayerState(
             name=ly.get("name", ""),
             R=ly.get("R", 0.0),
             psi=ly.get("psi", 0.0),

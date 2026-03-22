@@ -10,6 +10,7 @@ from __future__ import annotations
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
+from scpn_phase_orchestrator.monitor.evs import EVSMonitor, EVSResult
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 from scpn_phase_orchestrator.monitor.psychedelic import (
     entropy_from_phases,
@@ -29,6 +30,8 @@ __all__ = [
     "BoundaryObserver",
     "ChimeraState",
     "CoherenceMonitor",
+    "EVSMonitor",
+    "EVSResult",
     "SessionCoherenceReport",
     "check_session_start",
     "classify_sleep_stage",
