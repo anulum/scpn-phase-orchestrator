@@ -8,7 +8,7 @@
 //! Minimal WASM wrapper exposing a single-step UPDE integrator
 //! for browser and edge deployments.
 //!
-//! Build: `wasm-pack build --target web spo-kernel/crates/spo-wasm`
+//! Build: `cd spo-kernel && wasm-pack build crates/spo-wasm --target web --out-dir ../../../wasm-pkg`
 
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;

@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+// © Code 2020–2026 Miroslav Šotek. All rights reserved.
+// ORCID: 0009-0009-3560-0851
+// Contact: www.anulum.li | protoscience@anulum.li
+// SCPN Phase Orchestrator — gRPC service definition
+
+syntax = "proto3";
+package spo;
+
+service PhaseOrchestrator {
+  rpc GetState (StateRequest) returns (StateResponse);
+  rpc Step (StepRequest) returns (StateResponse);
+  rpc Reset (ResetRequest) returns (StateResponse);
+  rpc StreamPhases (StreamRequest) returns (stream StateResponse);
+  rpc GetConfig (ConfigRequest) returns (ConfigResponse);
+}
+
+message StateRequest {}
+message StepRequest { int32 n_steps = 1; }
+message ResetRequest {}
+message StreamRequest {
+  int32 max_steps = 1;
+  double interval_s = 2;
+}
+message ConfigRequest {}
+
+message LayerState {
+  string name = 1;
+  double R = 2;
+  double psi = 3;
+}
+
+message StateResponse {
+  int32 step = 1;
+  double R_global = 2;
+  string regime = 3;
+  bool amplitude_mode = 4;
+  double mean_amplitude = 5;
+  repeated LayerState layers = 6;
+}
+
+message ConfigResponse {
+  string name = 1;
+  int32 n_oscillators = 2;
+  int32 n_layers = 3;
+  bool amplitude_mode = 4;
+  double sample_period_s = 5;
+  double control_period_s = 6;
+}
