@@ -1,0 +1,6016 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/concepts/phase_control_theory/">
+      
+      
+        <link rel="prev" href="../memory_imprint/">
+      
+      
+        <link rel="next" href="../domain_utilisation_schemas/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Phase Control Theory - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phase-synchronization-control-theory" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase Control Theory
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/stuart_landau/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tutorials/01_new_domain_checklist/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/api/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../galleries/domainpack_gallery/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../ASSUMPTIONS/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-core-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Core Claim
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-mathematical-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Mathematical Foundation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Mathematical Foundation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-the-unified-phase-dynamics-equation-upde" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 The Unified Phase Dynamics Equation (UPDE)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-order-parameter-as-health-metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Order Parameter as Health Metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-dual-objective-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Dual Objective Partition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-regime-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Regime State Machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-fusion-plasma-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Fusion Plasma Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Fusion Plasma Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-the-control-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 The Control Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-spo-formulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 SPO Formulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-what-this-replaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 What This Replaces
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-the-kronecker-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 The Kronecker Expansion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-quantum-coherence-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Quantum Coherence Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Quantum Coherence Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-the-control-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 The Control Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-spo-formulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 SPO Formulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-what-this-adds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 What This Adds
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-the-fusion-core-bridge-equilibrium-to-phase-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The Fusion Core Bridge: Equilibrium-to-Phase Mapping
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. The Fusion Core Bridge: Equilibrium-to-Phase Mapping">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-the-grad-shafranov-gap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 The Grad-Shafranov Gap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-novelty-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Novelty Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Novelty Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-what-exists-in-the-literature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 What Exists in the Literature
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-specific-novelties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Specific Novelties
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-why-phase-synchronization-control-supersedes-classical-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Why Phase-Synchronization Control Supersedes Classical Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Why Phase-Synchronization Control Supersedes Classical Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-pid-single-variable-no-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 PID: Single-Variable, No Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-mpc-domain-specific-computationally-expensive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 MPC: Domain-Specific, Computationally Expensive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-lqr-linear-assumes-quadratic-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 LQR: Linear, Assumes Quadratic Cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#74-expert-systems-brittle-non-transferable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.4 Expert Systems: Brittle, Non-Transferable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#75-the-structural-advantage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.5 The Structural Advantage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-practical-implications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Practical Implications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Practical Implications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-for-fusion-energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 For Fusion Energy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-for-quantum-computing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 For Quantum Computing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#83-for-general-process-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 For General Process Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-hardware-pipeline-from-sensors-to-actuators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Hardware Pipeline: From Sensors to Actuators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Hardware Pipeline: From Sensors to Actuators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#91-general-pipeline-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 General Pipeline Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#92-tokamak-fusion-sensor-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Tokamak Fusion: Sensor Ingestion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.2 Tokamak Fusion: Sensor Ingestion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#921-measurement-systems-and-phase-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.1 Measurement Systems and Phase Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#922-phase-extraction-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.2 Phase Extraction Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#923-diagnostic-timing-budget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.3 Diagnostic Timing Budget
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#93-tokamak-fusion-control-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 Tokamak Fusion: Control Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.3 Tokamak Fusion: Control Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#931-supervisor-decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.1 Supervisor Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#932-policy-rule-firing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.2 Policy Rule Firing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#933-action-projection-and-rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.3 Action Projection and Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#934-knob-to-actuator-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.4 Knob-to-Actuator Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#935-actuator-to-hardware-translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.5 Actuator-to-Hardware Translation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#936-closed-loop-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.6 Closed-Loop Timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#94-tokamak-fusion-full-data-flow-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Tokamak Fusion: Full Data Flow Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#95-quantum-hardware-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5 Quantum Hardware Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.5 Quantum Hardware Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#951-sensor-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.1 Sensor Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#952-actuator-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.2 Actuator Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#953-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.3 Timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#96-general-process-control-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6 General Process Control Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.6 General Process Control Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#961-manufacturing-spc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.1 Manufacturing (SPC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#962-cloud-queue-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.2 Cloud / Queue Systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#963-biological-oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.3 Biological Oscillators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#97-safety-and-fail-safe-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.7 Safety and Fail-Safe Design
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-scope-of-competence-what-spo-is-and-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Scope of Competence: What SPO Is and Is Not
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Scope of Competence: What SPO Is and Is Not">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#101-what-spo-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 What SPO Is
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#102-what-spo-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 What SPO Is Not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#103-what-spo-expects-from-the-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.3 What SPO Expects from the Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#104-concrete-expectations-per-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4 Concrete Expectations per Domain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10.4 Concrete Expectations per Domain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1041-tokamak-fusion-plasma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4.1 Tokamak Fusion Plasma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1042-quantum-coherence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4.2 Quantum Coherence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1043-general-process-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4.3 General Process Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#105-what-would-constitute-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.5 What Would Constitute Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#106-the-honest-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.6 The Honest Claim
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-limitations-and-open-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Limitations and Open Questions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../domain_utilisation_schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../competitive_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-core-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Core Claim
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-mathematical-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Mathematical Foundation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Mathematical Foundation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-the-unified-phase-dynamics-equation-upde" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 The Unified Phase Dynamics Equation (UPDE)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-order-parameter-as-health-metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Order Parameter as Health Metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-dual-objective-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Dual Objective Partition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-regime-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Regime State Machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-fusion-plasma-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Fusion Plasma Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Fusion Plasma Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-the-control-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 The Control Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-spo-formulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 SPO Formulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-what-this-replaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 What This Replaces
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-the-kronecker-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 The Kronecker Expansion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-quantum-coherence-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Quantum Coherence Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Quantum Coherence Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-the-control-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 The Control Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-spo-formulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 SPO Formulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-what-this-adds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 What This Adds
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-the-fusion-core-bridge-equilibrium-to-phase-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The Fusion Core Bridge: Equilibrium-to-Phase Mapping
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. The Fusion Core Bridge: Equilibrium-to-Phase Mapping">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-the-grad-shafranov-gap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 The Grad-Shafranov Gap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-novelty-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Novelty Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Novelty Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-what-exists-in-the-literature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 What Exists in the Literature
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-specific-novelties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Specific Novelties
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-why-phase-synchronization-control-supersedes-classical-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Why Phase-Synchronization Control Supersedes Classical Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Why Phase-Synchronization Control Supersedes Classical Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-pid-single-variable-no-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 PID: Single-Variable, No Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-mpc-domain-specific-computationally-expensive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 MPC: Domain-Specific, Computationally Expensive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-lqr-linear-assumes-quadratic-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 LQR: Linear, Assumes Quadratic Cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#74-expert-systems-brittle-non-transferable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.4 Expert Systems: Brittle, Non-Transferable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#75-the-structural-advantage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.5 The Structural Advantage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-practical-implications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Practical Implications
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Practical Implications">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-for-fusion-energy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 For Fusion Energy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-for-quantum-computing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 For Quantum Computing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#83-for-general-process-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 For General Process Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-hardware-pipeline-from-sensors-to-actuators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Hardware Pipeline: From Sensors to Actuators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Hardware Pipeline: From Sensors to Actuators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#91-general-pipeline-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 General Pipeline Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#92-tokamak-fusion-sensor-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Tokamak Fusion: Sensor Ingestion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.2 Tokamak Fusion: Sensor Ingestion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#921-measurement-systems-and-phase-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.1 Measurement Systems and Phase Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#922-phase-extraction-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.2 Phase Extraction Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#923-diagnostic-timing-budget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2.3 Diagnostic Timing Budget
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#93-tokamak-fusion-control-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 Tokamak Fusion: Control Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.3 Tokamak Fusion: Control Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#931-supervisor-decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.1 Supervisor Decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#932-policy-rule-firing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.2 Policy Rule Firing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#933-action-projection-and-rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.3 Action Projection and Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#934-knob-to-actuator-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.4 Knob-to-Actuator Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#935-actuator-to-hardware-translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.5 Actuator-to-Hardware Translation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#936-closed-loop-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3.6 Closed-Loop Timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#94-tokamak-fusion-full-data-flow-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 Tokamak Fusion: Full Data Flow Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#95-quantum-hardware-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5 Quantum Hardware Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.5 Quantum Hardware Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#951-sensor-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.1 Sensor Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#952-actuator-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.2 Actuator Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#953-timing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5.3 Timing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#96-general-process-control-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6 General Process Control Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9.6 General Process Control Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#961-manufacturing-spc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.1 Manufacturing (SPC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#962-cloud-queue-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.2 Cloud / Queue Systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#963-biological-oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.6.3 Biological Oscillators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#97-safety-and-fail-safe-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.7 Safety and Fail-Safe Design
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-scope-of-competence-what-spo-is-and-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Scope of Competence: What SPO Is and Is Not
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Scope of Competence: What SPO Is and Is Not">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#101-what-spo-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 What SPO Is
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#102-what-spo-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 What SPO Is Not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#103-what-spo-expects-from-the-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.3 What SPO Expects from the Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#104-concrete-expectations-per-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4 Concrete Expectations per Domain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10.4 Concrete Expectations per Domain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1041-tokamak-fusion-plasma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4.1 Tokamak Fusion Plasma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1042-quantum-coherence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4.2 Quantum Coherence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1043-general-process-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4.3 General Process Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#105-what-would-constitute-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.5 What Would Constitute Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#106-the-honest-claim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.6 The Honest Claim
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-limitations-and-open-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Limitations and Open Questions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="phase-synchronization-control-theory">Phase-Synchronization Control Theory<a class="headerlink" href="#phase-synchronization-control-theory" title="Permanent link">&para;</a></h1>
+<h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Permanent link">&para;</a></h2>
+<p>This document presents the theoretical basis for using Kuramoto phase
+dynamics as a <strong>universal control abstraction</strong> — a domain-agnostic
+framework where any system with coupled cycles is controlled by
+manipulating synchronization topology rather than tracking setpoints.
+We demonstrate three concrete instantiations: tokamak fusion plasma,
+qubit register coherence, and multi-scale plasma MHD hierarchy, and
+argue that the approach constitutes a structural advance over classical
+control methods (PID, MPC, LQR) by operating on the geometric invariant
+(phase coherence) rather than on domain-specific state variables.</p>
+<hr />
+<h2 id="1-core-claim">1. Core Claim<a class="headerlink" href="#1-core-claim" title="Permanent link">&para;</a></h2>
+<p><strong>Synchronization is a universal control variable.</strong></p>
+<p>Every physical system with coupled cyclical degrees of freedom —
+rotating machinery, oscillating plasmas, precessing qubits, rhythmic
+biological processes, queued computational workloads — admits a
+description in terms of phase angles θ_i(t) evolving on the N-torus
+T^N.  The Kuramoto order parameter R = |⟨e^{iθ}⟩| then measures
+the <em>degree of coherence</em> of those phases.</p>
+<p>The key insight: instead of designing a bespoke controller for each
+domain's state variables (temperatures, pressures, currents, gate
+fidelities), we:</p>
+<ol>
+<li><strong>Map</strong> domain observables → phase angles via principled extraction
+   (Hilbert transform, event frequency, state-ring encoding, or
+   analytic formulas).</li>
+<li><strong>Couple</strong> phases through a Knm matrix whose topology encodes the
+   desired interaction structure.</li>
+<li><strong>Measure</strong> coherence R per layer and partition layers into
+   <em>good</em> (synchrony to promote) and <em>bad</em> (synchrony to suppress).</li>
+<li><strong>Act</strong> on four universal knobs — coupling K, phase lag α,
+   entrainment ζ, reference phase Ψ — which the domain binding
+   translates back into physical actuators.</li>
+</ol>
+<p>This four-step pipeline is the <strong>SCPN Phase Orchestrator (SPO)</strong>.</p>
+<hr />
+<h2 id="2-mathematical-foundation">2. Mathematical Foundation<a class="headerlink" href="#2-mathematical-foundation" title="Permanent link">&para;</a></h2>
+<h3 id="21-the-unified-phase-dynamics-equation-upde">2.1 The Unified Phase Dynamics Equation (UPDE)<a class="headerlink" href="#21-the-unified-phase-dynamics-equation-upde" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j − θ_i − α_ij) + ζ sin(Ψ − θ_i)
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Meaning</th>
+<th>Controllable?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ω_i</td>
+<td>Natural frequency of oscillator i</td>
+<td>No (intrinsic)</td>
+</tr>
+<tr>
+<td>K_ij</td>
+<td>Coupling strength between i and j</td>
+<td>Yes (knob K)</td>
+</tr>
+<tr>
+<td>α_ij</td>
+<td>Phase lag between i and j</td>
+<td>Yes (knob α)</td>
+</tr>
+<tr>
+<td>ζ</td>
+<td>External entrainment drive</td>
+<td>Yes (knob ζ)</td>
+</tr>
+<tr>
+<td>Ψ</td>
+<td>Reference phase</td>
+<td>Yes (knob Ψ)</td>
+</tr>
+</tbody>
+</table>
+<p>This is the Sakaguchi–Kuramoto equation [sakaguchi1986] with an
+external drive term.  The coupling matrix K_ij, lag matrix α_ij,
+drive ζ, and reference Ψ are the four degrees of freedom available
+to the controller.</p>
+<h3 id="22-order-parameter-as-health-metric">2.2 Order Parameter as Health Metric<a class="headerlink" href="#22-order-parameter-as-health-metric" title="Permanent link">&para;</a></h3>
+<p>For a group G of oscillators:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>R_G e^{iψ_G} = (1/|G|) Σ_{i∈G} e^{iθ_i}
+</code></pre></div>
+<p>R_G ∈ [0, 1] measures coherence.  R = 1 means perfect phase-locking;
+R = 0 means uniform scatter.  This is a <strong>topological invariant</strong> — it
+depends only on the relative phase distribution, not on the absolute
+values or the physical meaning of the oscillators.</p>
+<h3 id="23-dual-objective-partition">2.3 Dual Objective Partition<a class="headerlink" href="#23-dual-objective-partition" title="Permanent link">&para;</a></h3>
+<p>The binding spec partitions layers into two sets:</p>
+<ul>
+<li><strong>good_layers</strong>: R_good should be maximised (healthy coordination).</li>
+<li><strong>bad_layers</strong>: R_bad should be suppressed (pathological lock-in).</li>
+</ul>
+<p>This captures a pattern universal across domains:</p>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>good (maximise R)</th>
+<th>bad (suppress R)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tokamak plasma</td>
+<td>Transport barrier, equilibrium</td>
+<td>ELM cascade, tearing modes</td>
+</tr>
+<tr>
+<td>Cloud queues</td>
+<td>Throughput coordination</td>
+<td>Retry storm synchrony</td>
+</tr>
+<tr>
+<td>Manufacturing</td>
+<td>Line yield coherence</td>
+<td>Sensor drift correlation</td>
+</tr>
+<tr>
+<td>Neuroscience</td>
+<td>Functional connectivity</td>
+<td>Seizure-like hypersynchrony</td>
+</tr>
+<tr>
+<td>Quantum computing</td>
+<td>Logical qubit coherence</td>
+<td>Decoherence crosstalk</td>
+</tr>
+</tbody>
+</table>
+<p>No classical control formulation natively represents this dual objective
+without domain-specific cost function engineering.</p>
+<h3 id="24-regime-state-machine">2.4 Regime State Machine<a class="headerlink" href="#24-regime-state-machine" title="Permanent link">&para;</a></h3>
+<p>The supervisor maps (R_good, R_bad, boundary violations) to four regimes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>NOMINAL ←→ DEGRADED ←→ CRITICAL ←→ RECOVERY
+</code></pre></div>
+<ul>
+<li>NOMINAL: R_good ≥ 0.6, no hard violations.</li>
+<li>DEGRADED: R_good ∈ [0.3, 0.6), or R_bad rising.</li>
+<li>CRITICAL: R_good &lt; 0.3, or any hard boundary violation.</li>
+<li>RECOVERY: exiting CRITICAL, restoring coupling.</li>
+</ul>
+<p>Transitions have hysteresis (0.05) and cooldown (10 steps) to prevent
+oscillation.  This is a finite-state supervisory controller
+[ramadge1987] realised on top of Kuramoto observables.</p>
+<hr />
+<h2 id="3-fusion-plasma-control">3. Fusion Plasma Control<a class="headerlink" href="#3-fusion-plasma-control" title="Permanent link">&para;</a></h2>
+<h3 id="31-the-control-problem">3.1 The Control Problem<a class="headerlink" href="#31-the-control-problem" title="Permanent link">&para;</a></h3>
+<p>A tokamak confines plasma (T &gt; 10^8 K) magnetically.  The plasma
+exhibits coupled oscillatory phenomena across timescales spanning
+six orders of magnitude:</p>
+<table>
+<thead>
+<tr>
+<th>Phenomenon</th>
+<th>Timescale</th>
+<th>Character</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Micro-turbulence (ITG/TEM)</td>
+<td>~μs</td>
+<td>Broadband fluctuation</td>
+</tr>
+<tr>
+<td>Zonal flows</td>
+<td>~ms</td>
+<td>Shear oscillation</td>
+</tr>
+<tr>
+<td>MHD tearing modes</td>
+<td>~ms</td>
+<td>Rotating magnetic islands</td>
+</tr>
+<tr>
+<td>Sawtooth crashes</td>
+<td>~10–100 ms</td>
+<td>Periodic core relaxation</td>
+</tr>
+<tr>
+<td>ELM cycles</td>
+<td>~1–10 ms</td>
+<td>Edge pressure collapse</td>
+</tr>
+<tr>
+<td>Transport barrier</td>
+<td>~100 ms</td>
+<td>Steady-state H-mode pedestal</td>
+</tr>
+<tr>
+<td>Current profile (q)</td>
+<td>~1 s</td>
+<td>Slow diffusive evolution</td>
+</tr>
+<tr>
+<td>Global equilibrium</td>
+<td>~1–10 s</td>
+<td>Grad-Shafranov force balance</td>
+</tr>
+</tbody>
+</table>
+<p>Existing tokamak control uses separate PID loops for each phenomenon:
+a shape controller for equilibrium, a density controller for Greenwald
+limit, NTM controllers for tearing modes, ELM pace-making, etc.
+These loops are designed independently, with ad-hoc priority rules
+when they conflict.</p>
+<h3 id="32-spo-formulation">3.2 SPO Formulation<a class="headerlink" href="#32-spo-formulation" title="Permanent link">&para;</a></h3>
+<p>The <code>plasma_control</code> domainpack maps these phenomena to 8 Kuramoto
+layers (16 oscillators, 2 per layer).  The observable-to-phase mapping:</p>
+<table>
+<thead>
+<tr>
+<th>Observable</th>
+<th>Phase formula</th>
+<th>Physical rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>q_profile</td>
+<td>2π(q − q_min)/(q_max − q_min)</td>
+<td>Safety factor MHD proximity</td>
+</tr>
+<tr>
+<td>β_N</td>
+<td>2πβ_N/β_limit</td>
+<td>Troyon stability margin</td>
+</tr>
+<tr>
+<td>τ_E</td>
+<td>2πτ_E/τ_ref</td>
+<td>Confinement quality fraction</td>
+</tr>
+<tr>
+<td>Sawtooth count</td>
+<td>count·π mod 2π</td>
+<td>π-phase kick per crash event</td>
+</tr>
+<tr>
+<td>ELM count</td>
+<td>count·π mod 2π</td>
+<td>π-phase kick per ELM event</td>
+</tr>
+<tr>
+<td>MHD amplitude</td>
+<td>2π·amplitude/threshold</td>
+<td>Mode activity normalised</td>
+</tr>
+</tbody>
+</table>
+<p>Each formula maps the observable's physics-relevant range onto [0, 2π).
+Event-driven phenomena (sawteeth, ELMs) produce discrete phase kicks
+rather than continuous evolution — this naturally represents their
+crash-then-recover dynamics.</p>
+<p><strong>Physics boundaries</strong> enforce hard limits:</p>
+<ul>
+<li>q_min ≥ 1.0 (Kruskal–Shafranov MHD stability)</li>
+<li>β_N ≤ 2.8 (Troyon no-wall ideal limit)</li>
+<li>Greenwald fraction ≤ 1.2 (density limit)</li>
+</ul>
+<p>These map to SPO hard boundaries → immediate CRITICAL regime if violated.</p>
+<p><strong>Coupling topology</strong>: the Knm matrix uses exponential distance decay
+(K_ij = K_base · exp(−α|i−j|)) between layers, encoding the physical
+reality that adjacent-timescale phenomena couple more strongly.</p>
+<p><strong>Dual objective</strong>: layers 4–6 (transport barrier, current profile,
+equilibrium) are <em>good</em> — their coherence indicates stable H-mode.
+Layers 0, 2, 3 (micro-turbulence, tearing, sawtooth/ELM) are <em>bad</em> —
+their synchronisation indicates confinement-degrading MHD activity.</p>
+<p><strong>Policy rules</strong> implement two key responses:
+1. <code>suppress_elm_storm</code>: when R_bad on the sawtooth/ELM layer exceeds
+   0.7, inject phase lag α on the turbulence layer to decouple the
+   cascade.
+2. <code>restore_transport_barrier</code>: when R_good on the transport barrier
+   drops below 0.3, boost global coupling K.</p>
+<h3 id="33-what-this-replaces">3.3 What This Replaces<a class="headerlink" href="#33-what-this-replaces" title="Permanent link">&para;</a></h3>
+<p>Conventional tokamak control stacks:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Conventional</th>
+<th>SPO equivalent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shape control</td>
+<td>MIMO PID on gaps/currents</td>
+<td>Equilibrium layer R + ζ drive</td>
+</tr>
+<tr>
+<td>Density</td>
+<td>PID on line-integrated density</td>
+<td>Greenwald boundary (hard)</td>
+</tr>
+<tr>
+<td>NTM suppression</td>
+<td>ECCD aimed at island O-point</td>
+<td>MHD layer R_bad + α decouple</td>
+</tr>
+<tr>
+<td>ELM mitigation</td>
+<td>Pellet/RMP pacing</td>
+<td>ELM layer R_bad + policy rule</td>
+</tr>
+<tr>
+<td>q-profile</td>
+<td>Feedforward + slow PID</td>
+<td>Current profile layer R_good</td>
+</tr>
+<tr>
+<td>Disruption avoidance</td>
+<td>Expert-system exception handler</td>
+<td>CRITICAL regime + Lyapunov boundary</td>
+</tr>
+</tbody>
+</table>
+<p>The SPO formulation replaces ~6 independent SISO/MIMO PID loops and
+a disruption handler with a single coherence-aware supervisory
+controller that sees the <em>relationships</em> between phenomena, not just
+individual setpoints.</p>
+<h3 id="34-the-kronecker-expansion">3.4 The Kronecker Expansion<a class="headerlink" href="#34-the-kronecker-expansion" title="Permanent link">&para;</a></h3>
+<p>The <code>PlasmaControlBridge.import_knm_spec</code> method performs a critical
+step: it takes an (L×L) <em>layer-level</em> coupling matrix (describing how
+fast turbulence couples to slow equilibrium) and expands it to an
+(N×N) <em>oscillator-level</em> matrix via Kronecker product:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>K_osc = K_layer ⊗ 1_{n×n}
+</code></pre></div>
+<p>where n is the number of oscillators per layer.  This preserves the
+inter-layer coupling topology while giving each oscillator within a
+layer uniform intra-block coupling (with zero self-coupling on the
+diagonal).</p>
+<hr />
+<h2 id="4-quantum-coherence-control">4. Quantum Coherence Control<a class="headerlink" href="#4-quantum-coherence-control" title="Permanent link">&para;</a></h2>
+<h3 id="41-the-control-problem">4.1 The Control Problem<a class="headerlink" href="#41-the-control-problem" title="Permanent link">&para;</a></h3>
+<p>A register of N qubits evolving under an XY Hamiltonian:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>H = Σ_{i&lt;j} J_ij (X_i X_j + Y_i Y_j) + Σ_i h_i Z_i
+</code></pre></div>
+<p>can be interpreted as N coupled oscillators in the XY plane.
+The Bloch-sphere azimuthal angles φ_i play the role of Kuramoto
+phases, and the coupling constants J_ij play the role of K_ij.</p>
+<h3 id="42-spo-formulation">4.2 SPO Formulation<a class="headerlink" href="#42-spo-formulation" title="Permanent link">&para;</a></h3>
+<p>The <code>quantum_simulation</code> domainpack maps this:</p>
+<ul>
+<li><strong>qubit_register layer</strong> (4 oscillators): raw XY-plane phases φ_i
+  of individual qubits, extracted from the statevector.</li>
+<li><strong>logical_coherence layer</strong> (4 oscillators): logical qubit phases
+  after error correction, treated as informational events (entanglement
+  success/failure timestamps → frequency → phase).</li>
+</ul>
+<p>The order parameter R_qubit measures how well the physical qubits
+maintain phase coherence (≈ entanglement fidelity for the XY
+Hamiltonian).  R_logical measures logical error rate stability.</p>
+<p><strong>Boundary</strong>: fidelity ≥ 0.5 (hard) — below this, the quantum state
+is no better than random.</p>
+<p>The <code>QuantumControlBridge</code> provides:
+- <code>import_artifact</code> / <code>export_artifact</code>: pure dict conversion, no
+  quantum library needed.
+- <code>build_quantum_circuit</code>: constructs a Trotterised circuit from the
+  Knm coupling matrix (requires scpn-quantum-control).
+- <code>extract_phases_from_statevector</code>: extracts per-qubit Bloch-sphere
+  phases from a Qiskit Statevector.</p>
+<h3 id="43-what-this-adds">4.3 What This Adds<a class="headerlink" href="#43-what-this-adds" title="Permanent link">&para;</a></h3>
+<p>Standard quantum optimal control (GRAPE, Krotov, DRAG) optimises
+pulse waveforms to achieve a target unitary.  SPO offers a
+complementary view: instead of optimising for a specific gate, it
+monitors <em>ongoing coherence</em> as the system evolves, and adjusts
+coupling topology to maintain synchrony.  This is relevant for:</p>
+<ul>
+<li>Analog quantum simulation (maintaining collective coherence in
+  Hamiltonian evolution)</li>
+<li>Quantum error correction monitoring (tracking logical qubit phase
+  stability across correction cycles)</li>
+<li>Variational quantum circuits (adjusting entangler structure based
+  on coherence feedback)</li>
+</ul>
+<hr />
+<h2 id="5-the-fusion-core-bridge-equilibrium-to-phase-mapping">5. The Fusion Core Bridge: Equilibrium-to-Phase Mapping<a class="headerlink" href="#5-the-fusion-core-bridge-equilibrium-to-phase-mapping" title="Permanent link">&para;</a></h2>
+<h3 id="51-the-grad-shafranov-gap">5.1 The Grad-Shafranov Gap<a class="headerlink" href="#51-the-grad-shafranov-gap" title="Permanent link">&para;</a></h3>
+<p>The Grad-Shafranov equation governs tokamak equilibrium:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Δ*ψ = −μ_0 R² dp/dψ − F dF/dψ
+</code></pre></div>
+<p>It produces continuous field solutions (ψ, q, pressure, current),
+not oscillatory dynamics.  There is no natural "phase" in an
+equilibrium solver output.</p>
+<p>The <code>FusionCoreBridge</code> resolves this gap by defining six analytic
+phase-mapping formulas that convert equilibrium observables into
+[0, 2π) phases (§3.2 table).  Each formula maps the observable's
+physical range onto the circle:</p>
+<ul>
+<li><strong>Linear normalisation</strong> for continuous observables (q, β_N, τ_E,
+  MHD amplitude): the ratio of current value to its physical limit
+  sets the phase.  A phase near 2π means the system is near its limit.</li>
+<li><strong>Event-driven kicks</strong> for discrete phenomena (sawtooth crashes,
+  ELMs): each event advances the phase by π, producing a half-cycle
+  jump.  Pairs of rapid events produce near-2π advances, which wrap
+  back near zero — naturally encoding the periodic crash-recovery cycle.</li>
+</ul>
+<p>This mapping is invertible (<code>phases_to_feedback</code> recovers the mean
+phase and coherence), allowing closed-loop operation: equilibrium
+solver → phases → UPDE evolution → feedback → equilibrium solver.</p>
+<hr />
+<h2 id="6-novelty-analysis">6. Novelty Analysis<a class="headerlink" href="#6-novelty-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="61-what-exists-in-the-literature">6.1 What Exists in the Literature<a class="headerlink" href="#61-what-exists-in-the-literature" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Scope</th>
+<th>Phase-based?</th>
+<th>Multi-scale?</th>
+<th>Domain-agnostic?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kuramoto model [kuramoto1975]</td>
+<td>Descriptive</td>
+<td>Yes</td>
+<td>No</td>
+<td>No (physics only)</td>
+</tr>
+<tr>
+<td>PID control</td>
+<td>Control</td>
+<td>No</td>
+<td>No</td>
+<td>Partially</td>
+</tr>
+<tr>
+<td>MPC [rawlings2017]</td>
+<td>Control</td>
+<td>No</td>
+<td>Partially</td>
+<td>No</td>
+</tr>
+<tr>
+<td>LQR/LQG</td>
+<td>Control</td>
+<td>No</td>
+<td>No</td>
+<td>Partially</td>
+</tr>
+<tr>
+<td>DIII-D PCS [ferron2006]</td>
+<td>Tokamak control</td>
+<td>No</td>
+<td>Partially</td>
+<td>No</td>
+</tr>
+<tr>
+<td>GRAPE [khaneja2005]</td>
+<td>Quantum control</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Synchrophasor (PMU)</td>
+<td>Power grid</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>SPO</strong></td>
+<td><strong>Control</strong></td>
+<td><strong>Yes</strong></td>
+<td><strong>Yes</strong></td>
+<td><strong>Yes</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The Kuramoto model has been used to <em>describe</em> synchronisation in
+power grids [dorfler2014], neural networks [breakspear2010], and
+chemical oscillators.  But it has never been used as a <em>control
+abstraction</em> — a framework where:</p>
+<ol>
+<li>Arbitrary domain observables are systematically mapped into phases.</li>
+<li>The Kuramoto coupling matrix K_ij becomes a <strong>control variable</strong>.</li>
+<li>The order parameter R becomes a <strong>health metric</strong>.</li>
+<li>A supervisory policy operates on (R_good, R_bad) to drive the
+   system between regimes.</li>
+</ol>
+<p>This four-part combination — observable→phase mapping + coupling
+as actuator + R as metric + dual-objective supervision — is, to the
+authors' knowledge, not present in any published control framework.</p>
+<h3 id="62-specific-novelties">6.2 Specific Novelties<a class="headerlink" href="#62-specific-novelties" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Dual R_good/R_bad objective</strong>: no standard cost function
+   formulation natively distinguishes "synchrony to promote" from
+   "synchrony to suppress" as structurally independent objectives.
+   MPC/LQR penalise deviation from a setpoint; they do not partition
+   the state space into "good coherence" and "bad coherence."</p>
+</li>
+<li>
+<p><strong>Observable-to-phase mapping as a formal bridge</strong>: the analytic
+   formulas (§3.2, §5.1) constitute a systematic procedure for
+   embedding non-oscillatory observables (equilibrium fields,
+   event counts) into the Kuramoto state space.  This has not been
+   formalised as a general control methodology.</p>
+</li>
+<li>
+<p><strong>Kronecker coupling expansion</strong> (§3.4): the technique of
+   specifying inter-layer coupling at the hierarchy level and
+   expanding to oscillator level via Kronecker product is a practical
+   contribution that preserves multi-scale topology while keeping
+   the configuration compact.</p>
+</li>
+<li>
+<p><strong>Regime-based supervisory control on Kuramoto observables</strong>:
+   integrating a finite-state supervisor (NOMINAL/DEGRADED/CRITICAL/
+   RECOVERY) with Kuramoto R thresholds and physics-derived hard
+   boundaries (q &gt; 1.0, β_N &lt; 2.8) in a single framework.</p>
+</li>
+<li>
+<p><strong>Domain-agnostic binding spec</strong>: the same engine, integrator,
+   supervisor, and policy rules control tokamak plasma, qubit
+   registers, cloud queue systems, manufacturing lines, and
+   biological oscillators — with only a YAML configuration change.</p>
+</li>
+</ol>
+<hr />
+<h2 id="7-why-phase-synchronization-control-supersedes-classical-methods">7. Why Phase-Synchronization Control Supersedes Classical Methods<a class="headerlink" href="#7-why-phase-synchronization-control-supersedes-classical-methods" title="Permanent link">&para;</a></h2>
+<h3 id="71-pid-single-variable-no-structure">7.1 PID: Single-Variable, No Structure<a class="headerlink" href="#71-pid-single-variable-no-structure" title="Permanent link">&para;</a></h3>
+<p>PID tracks a single variable against a setpoint.  It has no concept
+of:</p>
+<ul>
+<li>Multi-scale coupling between phenomena</li>
+<li>Phase relationships (lead/lag) between oscillators</li>
+<li>Coherence as a collective property</li>
+<li>Dual objectives (promote some sync, suppress other sync)</li>
+</ul>
+<p>A tokamak running 6 PID loops has 6 independent controllers that
+can (and do) fight each other.  SPO sees the 6 phenomena as one
+coupled dynamical system and acts on the coupling structure.</p>
+<h3 id="72-mpc-domain-specific-computationally-expensive">7.2 MPC: Domain-Specific, Computationally Expensive<a class="headerlink" href="#72-mpc-domain-specific-computationally-expensive" title="Permanent link">&para;</a></h3>
+<p>Model Predictive Control solves an optimisation problem at each
+timestep using a plant model.  It is powerful but:</p>
+<ul>
+<li>Requires a domain-specific model (cannot reuse across domains)</li>
+<li>Scales poorly with state dimension (quadratic or worse in N)</li>
+<li>Solves for actuator trajectories, not for coupling topology</li>
+<li>Cannot express "suppress this coherence" without manual cost
+  function engineering</li>
+</ul>
+<p>SPO's per-step cost is O(N²) for the Kuramoto coupling sum —
+dominated by the sin(θ_j − θ_i) computation — and O(N) for the
+order parameter.  No optimisation problem is solved online.</p>
+<h3 id="73-lqr-linear-assumes-quadratic-cost">7.3 LQR: Linear, Assumes Quadratic Cost<a class="headerlink" href="#73-lqr-linear-assumes-quadratic-cost" title="Permanent link">&para;</a></h3>
+<p>Linear-Quadratic Regulator requires linearisation around an
+operating point.  Phase dynamics are inherently nonlinear
+(sin(·) coupling).  Linearising destroys the wrap-around topology
+of the N-torus and cannot represent phase-locking transitions.</p>
+<h3 id="74-expert-systems-brittle-non-transferable">7.4 Expert Systems: Brittle, Non-Transferable<a class="headerlink" href="#74-expert-systems-brittle-non-transferable" title="Permanent link">&para;</a></h3>
+<p>Current tokamak disruption avoidance uses expert-rule exception
+handlers (e.g., DIII-D's PCS exception handling system).  These
+rules are:</p>
+<ul>
+<li>Written by domain experts for specific machines</li>
+<li>Not transferable between tokamaks (let alone to other domains)</li>
+<li>Triggered by absolute thresholds, not relational coherence</li>
+<li>Unable to detect emergent pathological synchronisation</li>
+</ul>
+<p>SPO's policy rules operate on <em>relational</em> observables (R_bad
+on a specific layer exceeding a threshold), which transfers
+across machines with the same phenomenological hierarchy.</p>
+<h3 id="75-the-structural-advantage">7.5 The Structural Advantage<a class="headerlink" href="#75-the-structural-advantage" title="Permanent link">&para;</a></h3>
+<p>The fundamental advantage is dimensional: SPO operates on one
+scalar per layer (R), plus one regime state, plus four knobs.
+This is a <strong>constant-dimension</strong> control space regardless of how
+many raw state variables the domain has.  A tokamak with 10⁴
+measurement channels collapses to 8 R-values + 4 boundaries +
+4 knobs.  The controller complexity does not scale with plant
+complexity.</p>
+<hr />
+<h2 id="8-practical-implications">8. Practical Implications<a class="headerlink" href="#8-practical-implications" title="Permanent link">&para;</a></h2>
+<h3 id="81-for-fusion-energy">8.1 For Fusion Energy<a class="headerlink" href="#81-for-fusion-energy" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A single SPO instance replaces the 6+ independent PID loops in a
+  tokamak plasma control system.</li>
+<li>Physics boundaries (Kruskal–Shafranov, Troyon, Greenwald) are
+  first-class hard constraints, not afterthought exception handlers.</li>
+<li>The <code>plasma_control</code> policy rules encode ELM suppression and
+  transport barrier recovery as declarative YAML — transferable
+  between machines (ITER, SPARC, DEMO) by adjusting the binding spec.</li>
+<li>The Lyapunov verdict import allows integration with existing
+  disruption prediction systems as a soft boundary signal.</li>
+</ul>
+<h3 id="82-for-quantum-computing">8.2 For Quantum Computing<a class="headerlink" href="#82-for-quantum-computing" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Ongoing coherence monitoring during analog quantum simulation,
+  complementing gate-level optimal control.</li>
+<li>Entanglement topology (the Knm matrix) as a control variable,
+  adjusted based on real-time R feedback.</li>
+<li>The fidelity hard boundary (≥ 0.5) triggers regime escalation
+  before the quantum state becomes irrecoverable.</li>
+</ul>
+<h3 id="83-for-general-process-control">8.3 For General Process Control<a class="headerlink" href="#83-for-general-process-control" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cloud/queue systems: retry storm detection via R_bad, automatic
+  decoupling via α lag injection (queuewaves domainpack).</li>
+<li>Manufacturing: sensor drift correlation detection, yield coherence
+  monitoring (manufacturing_spc domainpack).</li>
+<li>Biology: multi-scale oscillator monitoring from cellular to
+  systemic (bio_stub domainpack).</li>
+</ul>
+<p>All use the <em>same engine</em> with different YAML binding specs.</p>
+<hr />
+<h2 id="9-hardware-pipeline-from-sensors-to-actuators">9. Hardware Pipeline: From Sensors to Actuators<a class="headerlink" href="#9-hardware-pipeline-from-sensors-to-actuators" title="Permanent link">&para;</a></h2>
+<p>This section describes the complete physical data path — how raw sensor
+signals enter SPO, traverse the phase-synchronization loop, and emerge
+as actuator commands that drive real hardware.</p>
+<h3 id="91-general-pipeline-architecture">9.1 General Pipeline Architecture<a class="headerlink" href="#91-general-pipeline-architecture" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>┌──────────────┐    ┌────────────┐    ┌──────────┐    ┌────────────┐
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>│ Sensors      │───►│ Phase      │───►│ UPDE     │───►│ Supervisor │
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│ (domain HW)  │    │ Extraction │    │ Engine   │    │ + Policy   │
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>└──────────────┘    └────────────┘    └──────────┘    └─────┬──────┘
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>                                                            │
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>              ┌────────────────────────────────────────────┘
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>              │
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>              ▼
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>┌──────────────┐    ┌────────────┐    ┌──────────────────┐
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>│ Action       │───►│ Actuation  │───►│ Domain Execution │
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>│ Projector    │    │ Mapper     │    │ (physical HW)    │
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>└──────────────┘    └────────────┘    └──────────────────┘
+</code></pre></div>
+<p><strong>Timing</strong>: The binding spec declares two periods:
+- <code>sample_period_s</code> (e.g. 1 ms) — sensor acquisition and phase update rate.
+- <code>control_period_s</code> (e.g. 10 ms) — supervisor evaluation and actuator
+  command rate.  Multiple sample cycles accumulate before one control decision.</p>
+<p>Each pipeline stage has a fixed computational cost:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Operation</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase extraction</td>
+<td>Per-oscillator mapping</td>
+<td>O(N)</td>
+</tr>
+<tr>
+<td>UPDE step</td>
+<td>Coupling sum</td>
+<td>O(N²)</td>
+</tr>
+<tr>
+<td>Order parameter</td>
+<td>Per-layer mean</td>
+<td>O(N)</td>
+</tr>
+<tr>
+<td>Supervisor decide</td>
+<td>Regime FSM + policy rules</td>
+<td>O(R) where R = rule count</td>
+</tr>
+<tr>
+<td>Action projector</td>
+<td>Rate clamp per action</td>
+<td>O(A) where A = action count</td>
+</tr>
+<tr>
+<td>Actuation mapper</td>
+<td>Scope resolution</td>
+<td>O(A·M) where M = actuator count</td>
+</tr>
+</tbody>
+</table>
+<p>For the plasma_control domainpack (N=16, R=2, A≤3, M=3), the full
+pipeline runs in &lt;100 μs on a single core — well within the 1 ms
+sample budget.</p>
+<h3 id="92-tokamak-fusion-sensor-ingestion">9.2 Tokamak Fusion: Sensor Ingestion<a class="headerlink" href="#92-tokamak-fusion-sensor-ingestion" title="Permanent link">&para;</a></h3>
+<p>A tokamak produces diagnostic signals across all 8 SPO layers.
+Each diagnostic maps to a specific oscillator family.</p>
+<h4 id="921-measurement-systems-and-phase-extraction">9.2.1 Measurement Systems and Phase Extraction<a class="headerlink" href="#921-measurement-systems-and-phase-extraction" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Diagnostic</th>
+<th>Physical quantity</th>
+<th>SPO layer</th>
+<th>Phase formula</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mirnov coils</strong> (poloidal array, ~32 probes)</td>
+<td>dB_θ/dt (magnetic fluctuations)</td>
+<td>mhd_tearing (2)</td>
+<td>Hilbert transform of dominant mode → instantaneous phase</td>
+</tr>
+<tr>
+<td><strong>Far-infrared interferometer</strong> (multi-chord)</td>
+<td>Line-integrated n_e</td>
+<td>transport_barrier (4)</td>
+<td>2π · n_e / n_Greenwald (density fraction)</td>
+</tr>
+<tr>
+<td><strong>Electron Cyclotron Emission</strong> (ECE radiometer)</td>
+<td>T_e(R) radial profile</td>
+<td>micro_turbulence (0)</td>
+<td>Hilbert transform of T_e fluctuation envelope</td>
+</tr>
+<tr>
+<td><strong>Thomson scattering</strong> (multi-pulse laser)</td>
+<td>T_e(r), n_e(r) profiles</td>
+<td>global_equilibrium (6)</td>
+<td>2π · β_N / β_limit from kinetic profiles</td>
+</tr>
+<tr>
+<td><strong>Magnetic flux loops</strong> (full poloidal set)</td>
+<td>ψ(R,Z) equilibrium reconstruction</td>
+<td>global_equilibrium (6)</td>
+<td>2π · (q − q_min) / (q_max − q_min) from EFIT</td>
+</tr>
+<tr>
+<td><strong>Soft X-ray array</strong> (diode array)</td>
+<td>Core radiation</td>
+<td>sawtooth_elm (3)</td>
+<td>count · π mod 2π (crash detector)</td>
+</tr>
+<tr>
+<td><strong>Divertor Langmuir probes</strong></td>
+<td>Ion flux, T_e at target</td>
+<td>plasma_wall (7)</td>
+<td>2π · heat_flux / heat_flux_limit</td>
+</tr>
+<tr>
+<td><strong>Bolometer array</strong></td>
+<td>Radiated power P_rad</td>
+<td>current_profile (5)</td>
+<td>2π · P_rad / P_input (radiation fraction)</td>
+</tr>
+<tr>
+<td><strong>Filterscopes / Dα monitors</strong></td>
+<td>Dα emission at edge</td>
+<td>sawtooth_elm (3)</td>
+<td>count · π mod 2π (ELM detector)</td>
+</tr>
+<tr>
+<td><strong>Motional Stark Effect</strong> (MSE)</td>
+<td>Pitch angle → q(r) profile</td>
+<td>current_profile (5)</td>
+<td>2π · q_axis / q_95 (profile peakedness)</td>
+</tr>
+</tbody>
+</table>
+<p>The PlasmaControlBridge receives these as a dict from the plasma
+control system (scpn-control) or from a direct diagnostic interface:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">tick_result</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="s2">&quot;phases&quot;</span><span class="p">:</span> <span class="n">mirnov_phases</span> <span class="o">+</span> <span class="n">interferometer_phases</span> <span class="o">+</span> <span class="o">...</span><span class="p">,</span>  <span class="c1"># len=16</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="s2">&quot;regime&quot;</span><span class="p">:</span> <span class="s2">&quot;NOMINAL&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="s2">&quot;stability&quot;</span><span class="p">:</span> <span class="n">lyapunov_score</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="s2">&quot;layer_sizes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">state</span> <span class="o">=</span> <span class="n">bridge</span><span class="o">.</span><span class="n">import_snapshot</span><span class="p">(</span><span class="n">tick_result</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="922-phase-extraction-methods">9.2.2 Phase Extraction Methods<a class="headerlink" href="#922-phase-extraction-methods" title="Permanent link">&para;</a></h4>
+<p>Three extraction methods apply depending on signal character:</p>
+<p><strong>Hilbert transform</strong> (continuous oscillatory signals):
+For Mirnov coils and ECE fluctuations, the analytic signal
+z(t) = x(t) + iH[x(t)] yields instantaneous phase φ(t) = arg(z(t)).
+Applied to the dominant MHD mode (identified by toroidal mode number
+analysis), this extracts the rotating island phase.</p>
+<p><strong>Normalised ratio</strong> (equilibrium quantities):
+For β_N, q-profile, τ_E, density, and radiation — quantities that
+do not oscillate but vary slowly — the phase is a linear map of the
+observable's position within its physical range: θ = 2π · x/x_limit.
+As x approaches its stability limit, θ → 2π signals proximity to
+the boundary.</p>
+<p><strong>Event counter</strong> (discrete crash events):
+For sawteeth and ELMs, each detected event (identified by a
+threshold crossing in SXR or Dα) increments a counter.
+Phase = count · π mod 2π.  Two rapid events produce a near-2π
+advance that wraps to ~0, naturally encoding the crash-recovery cycle.</p>
+<h4 id="923-diagnostic-timing-budget">9.2.3 Diagnostic Timing Budget<a class="headerlink" href="#923-diagnostic-timing-budget" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Diagnostic</th>
+<th>Acquisition rate</th>
+<th>Latency to SPO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mirnov coils</td>
+<td>100 kHz–1 MHz</td>
+<td>&lt;10 μs (analog + ADC)</td>
+</tr>
+<tr>
+<td>Interferometer</td>
+<td>10–100 kHz</td>
+<td>&lt;100 μs</td>
+</tr>
+<tr>
+<td>ECE radiometer</td>
+<td>1–10 kHz</td>
+<td>&lt;1 ms</td>
+</tr>
+<tr>
+<td>Thomson scattering</td>
+<td>10–100 Hz</td>
+<td>10–100 ms</td>
+</tr>
+<tr>
+<td>Magnetic flux loops</td>
+<td>10 kHz</td>
+<td>&lt;100 μs</td>
+</tr>
+<tr>
+<td>SXR array</td>
+<td>100 kHz</td>
+<td>&lt;10 μs</td>
+</tr>
+<tr>
+<td>Langmuir probes</td>
+<td>10–100 kHz</td>
+<td>&lt;100 μs</td>
+</tr>
+</tbody>
+</table>
+<p>Fast diagnostics (Mirnov, SXR) update every sample cycle (1 ms).
+Slow diagnostics (Thomson) hold their last value between updates.
+The UPDE engine uses whatever phases are current, treating slow
+channels as piecewise-constant — consistent with the real physics
+where equilibrium quantities evolve on ~1 s timescales.</p>
+<h3 id="93-tokamak-fusion-control-pipeline">9.3 Tokamak Fusion: Control Pipeline<a class="headerlink" href="#93-tokamak-fusion-control-pipeline" title="Permanent link">&para;</a></h3>
+<h4 id="931-supervisor-decision">9.3.1 Supervisor Decision<a class="headerlink" href="#931-supervisor-decision" title="Permanent link">&para;</a></h4>
+<p>Every <code>control_period_s</code> (10 ms), the supervisor evaluates:</p>
+<ol>
+<li><strong>R_good</strong> for layers [4, 5, 6] (transport_barrier, current_profile,
+   equilibrium).  High R_good → stable H-mode.</li>
+<li><strong>R_bad</strong> for layers [0, 2, 3] (micro_turbulence, mhd_tearing,
+   sawtooth_elm).  High R_bad → pathological MHD activity.</li>
+<li><strong>Boundary violations</strong>: q_min &lt; 1.0 or β_N &gt; 2.8 or
+   greenwald &gt; 1.2 → immediate CRITICAL transition.</li>
+</ol>
+<p>The RegimeManager updates the state machine:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>NOMINAL (R_good ≥ 0.6, no hard violations)
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>   ↓ R_good drops below 0.55
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>DEGRADED (R_good ∈ [0.3, 0.6), or R_bad rising)
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>   ↓ R_good &lt; 0.25 or hard violation
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>CRITICAL (emergency response)
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>   ↓ recovery detected
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>RECOVERY (controlled ramp-back)
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>   ↓ R_good ≥ 0.65
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>NOMINAL
+</code></pre></div></p>
+<p>Hysteresis (0.05 offset between down/up thresholds) prevents
+chattering at transitions.  Cooldown (10 steps) prevents rapid
+regime oscillation.</p>
+<h4 id="932-policy-rule-firing">9.3.2 Policy Rule Firing<a class="headerlink" href="#932-policy-rule-firing" title="Permanent link">&para;</a></h4>
+<p>Two policy rules in <code>plasma_control/policy.yaml</code>:</p>
+<p><strong>suppress_elm_storm</strong>: fires in NOMINAL or DEGRADED when R_bad
+on sawtooth_elm layer exceeds 0.7.  Emits:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ControlAction(knob=&quot;alpha&quot;, scope=&quot;layer_0&quot;, value=0.4, ttl_s=5.0)
+</code></pre></div>
+This injects phase lag on the micro_turbulence layer, decoupling
+the turbulence↔ELM cascade.  The physical effect: turbulence-driven
+edge pressure build-up is disrupted, preventing the next ELM trigger.</p>
+<p><strong>restore_transport_barrier</strong>: fires in DEGRADED or RECOVERY when
+R_good on transport_barrier layer drops below 0.3.  Emits:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>ControlAction(knob=&quot;K&quot;, scope=&quot;global&quot;, value=0.2, ttl_s=10.0)
+</code></pre></div>
+This increases global coupling, strengthening the inter-layer
+synchronization.  The physical effect: tighter coordination between
+equilibrium, transport, and boundary layers, restoring the H-mode
+pedestal.</p>
+<h4 id="933-action-projection-and-rate-limiting">9.3.3 Action Projection and Rate Limiting<a class="headerlink" href="#933-action-projection-and-rate-limiting" title="Permanent link">&para;</a></h4>
+<p>Each ControlAction passes through the ActionProjector before reaching
+hardware.  For the plasma_control binding:</p>
+<table>
+<thead>
+<tr>
+<th>Knob</th>
+<th>Value bounds</th>
+<th>Rate limit per step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>K</td>
+<td>[0.0, 5.0]</td>
+<td>0.1</td>
+</tr>
+<tr>
+<td>alpha</td>
+<td>[0.0, π/2]</td>
+<td>0.05</td>
+</tr>
+<tr>
+<td>zeta</td>
+<td>[0.0, 2.0]</td>
+<td>0.2</td>
+</tr>
+</tbody>
+</table>
+<p>Rate limiting prevents actuator damage.  If the policy demands
+K=0.2 but the previous value was K=0.05, the projector caps the
+step at +0.1, yielding K=0.15.  The next cycle brings K=0.2.
+This produces smooth actuator ramps, not discontinuous jumps.</p>
+<h4 id="934-knob-to-actuator-mapping">9.3.4 Knob-to-Actuator Mapping<a class="headerlink" href="#934-knob-to-actuator-mapping" title="Permanent link">&para;</a></h4>
+<p>The ActuationMapper resolves abstract knob commands into
+domain-specific actuator commands.  The binding spec defines
+three actuators:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">actuators</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">coupling_global</span><span class="w">   </span><span class="c1"># knob: K, scope: global</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lag_turbulence</span><span class="w">     </span><span class="c1"># knob: alpha, scope: layer_0</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">damping_global</span><span class="w">     </span><span class="c1"># knob: zeta, scope: global</span>
+</code></pre></div>
+<p>The output is a command dict:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span><span class="s2">&quot;actuator&quot;</span><span class="p">:</span> <span class="s2">&quot;coupling_global&quot;</span><span class="p">,</span> <span class="s2">&quot;knob&quot;</span><span class="p">:</span> <span class="s2">&quot;K&quot;</span><span class="p">,</span> <span class="s2">&quot;scope&quot;</span><span class="p">:</span> <span class="s2">&quot;global&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span> <span class="s2">&quot;ttl_s&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">}</span>
+</code></pre></div></p>
+<h4 id="935-actuator-to-hardware-translation">9.3.5 Actuator-to-Hardware Translation<a class="headerlink" href="#935-actuator-to-hardware-translation" title="Permanent link">&para;</a></h4>
+<p>The final translation from SPO actuator commands to physical tokamak
+hardware is performed by the domain execution layer — the
+PlasmaControlBridge.export_control_actions() method or the downstream
+plasma control system.</p>
+<table>
+<thead>
+<tr>
+<th>SPO actuator</th>
+<th>Physical hardware</th>
+<th>Translation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>coupling_global (K)</strong></td>
+<td>Poloidal field (PF) coil currents</td>
+<td>K ∝ I_PF shaping current.  Higher K → tighter magnetic configuration → stronger inter-layer coupling.  The PF coil power supplies (thyristor or IGBT converters, ~10 kA, ~1 kV) receive current setpoints from the shape controller.</td>
+</tr>
+<tr>
+<td><strong>coupling_global (K)</strong></td>
+<td>Neutral Beam Injection (NBI) power</td>
+<td>K ∝ P_NBI.  Higher coupling → higher beam power → more torque → stronger rotation → better MHD coupling across flux surfaces.  NBI sources (~1 MW per beamline, deuterium/hydrogen, 40–100 keV) respond in ~50 ms.</td>
+</tr>
+<tr>
+<td><strong>lag_turbulence (α)</strong></td>
+<td>Resonant Magnetic Perturbation (RMP) coil phasing</td>
+<td>α maps to the toroidal phase of the n=3 RMP field.  The RMP coils (typically 3×6 in-vessel saddle coils) receive phase-shifted sinusoidal currents.  Adjusting the phase angle between upper and lower coil rows controls the edge magnetic perturbation spectrum, directly modulating ELM stability.</td>
+</tr>
+<tr>
+<td><strong>lag_turbulence (α)</strong></td>
+<td>ECRH/ECCD deposition angle</td>
+<td>α maps to the poloidal steering angle of the EC launcher mirror.  Electron Cyclotron Resonance Heating (ECRH, 170 GHz gyrotrons, ~1 MW per launcher) deposits power at a specific flux surface.  Shifting the mirror angle changes the current drive location, modulating the local q-profile shear that controls tearing mode coupling.</td>
+</tr>
+<tr>
+<td><strong>damping_global (ζ)</strong></td>
+<td>Pellet injection rate</td>
+<td>ζ ∝ pellet frequency.  Higher entrainment drive → more frequent pellet injection → stronger density pacing.  Pellet injectors (frozen D₂ pellets, 1–4 mm diameter, 200–1000 m/s) fire at programmable rates up to ~100 Hz.  ELM pacing via pellets is established practice (JET, AUG).</td>
+</tr>
+<tr>
+<td><strong>damping_global (ζ)</strong></td>
+<td>Gas puff valves</td>
+<td>ζ ∝ gas flow rate.  Piezoelectric gas valves (D₂, N₂, Ne, Ar) with ~1 ms response time control edge density and impurity seeding.  Higher ζ drives the edge density toward a reference state.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="936-closed-loop-timing">9.3.6 Closed-Loop Timing<a class="headerlink" href="#936-closed-loop-timing" title="Permanent link">&para;</a></h4>
+<p>The complete loop for one control cycle:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>t=0.000 ms  Mirnov/SXR/interferometer acquire raw signals
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>t=0.010 ms  ADC digitisation complete
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>t=0.100 ms  Phase extraction (Hilbert / ratio / counter)
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>t=0.200 ms  PlasmaControlBridge.import_snapshot() → UPDEState
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>t=0.300 ms  UPDE RK4 step (16 oscillators, O(256) operations)
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>t=0.400 ms  Order parameter R_good, R_bad computed
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>t=0.500 ms  RegimeManager.evaluate() → regime transition check
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>t=0.600 ms  SupervisorPolicy.decide() → list[ControlAction]
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>t=0.700 ms  ActionProjector.project() → rate-limited actions
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>t=0.800 ms  ActuationMapper.map_actions() → actuator commands
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>t=0.900 ms  PlasmaControlBridge.export_control_actions() → HW dict
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>t=1.000 ms  Commands dispatched to PF/NBI/RMP/ECRH/pellet systems
+</code></pre></div>
+<p>Total pipeline latency: ~1 ms.  This is within the 10 ms control
+period of the plasma_control binding spec (10× margin), and well
+within the characteristic MHD timescale (~1–10 ms).</p>
+<p>For comparison, existing tokamak control systems (DIII-D PCS, KSTAR
+EPICS) operate at 1–10 ms cycle times.  SPO matches this performance
+while providing multi-scale coherence awareness that single-loop
+controllers lack.</p>
+<h3 id="94-tokamak-fusion-full-data-flow-diagram">9.4 Tokamak Fusion: Full Data Flow Diagram<a class="headerlink" href="#94-tokamak-fusion-full-data-flow-diagram" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a> TOKAMAK VESSEL
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a> ┌─────────────────────────────────────────────────────────────┐
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a> │  Diagnostics (sensors)              Actuators (effectors)   │
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a> │  ┌──────────────────┐               ┌────────────────────┐ │
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a> │  │ Mirnov coils     │               │ PF coils (6 pairs) │ │
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a> │  │ ECE radiometer   │               │ CS solenoid        │ │
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a> │  │ Interferometer   │               │ NBI (~8 sources)   │ │
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a> │  │ Thomson scatter  │               │ ECRH (~4 gyrotrons)│ │
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a> │  │ SXR array        │               │ RMP coils (3×6)    │ │
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a> │  │ Bolometers       │               │ Pellet injector    │ │
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a> │  │ Langmuir probes  │               │ Gas puff valves    │ │
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a> │  │ MSE diagnostic   │               │ Feedback coils     │ │
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a> │  │ Dα monitors      │               │                    │ │
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a> │  └───────┬──────────┘               └────────▲───────────┘ │
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a> └──────────┼───────────────────────────────────┼─────────────┘
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>            │ raw signals                       │ I, P, angle, rate
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>            ▼                                   │
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a> ┌──────────────────────┐            ┌──────────┴──────────────┐
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a> │ Phase Extraction     │            │ Domain Execution         │
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a> │                      │            │                          │
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a> │ Hilbert(Mirnov) →θ₂  │            │ K→I_PF, P_NBI           │
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a> │ ratio(n_e/n_GW) →θ₄  │            │ α→RMP_phase, ECRH_angle │
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a> │ ratio(β_N/β_lim)→θ₁  │            │ ζ→pellet_rate, gas_flow │
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a> │ count(SXR crash)→θ₃  │            │ Ψ→reference setpoint    │
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a> │ ratio(q/q_95)   →θ₅  │            │                          │
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a> │ ratio(P_rad)    →θ₅  │            └──────────▲──────────────┘
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a> │ ratio(T_e/T_sep)→θ₇  │                       │
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a> │ Hilbert(ECE)    →θ₀  │                       │ actuator commands
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a> └───────┬──────────────┘            ┌───────────┴──────────────┐
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a>         │ θ₀..θ₁₅ (16 phases)      │ ActuationMapper          │
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a>         ▼                           │ scope resolution         │
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a> ┌──────────────────────┐            │ value clamping           │
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a> │ UPDE Engine (RK4)    │            └──────────▲──────────────┘
+<a id="__codelineno-14-34" name="__codelineno-14-34" href="#__codelineno-14-34"></a> │                      │                       │
+<a id="__codelineno-14-35" name="__codelineno-14-35" href="#__codelineno-14-35"></a> │ dθᵢ/dt = ωᵢ         │            ┌───────────┴──────────────┐
+<a id="__codelineno-14-36" name="__codelineno-14-36" href="#__codelineno-14-36"></a> │   + ΣⱼKᵢⱼsin(θⱼ−θᵢ) │            │ ActionProjector          │
+<a id="__codelineno-14-37" name="__codelineno-14-37" href="#__codelineno-14-37"></a> │   + ζ sin(Ψ−θᵢ)     │            │ rate limits              │
+<a id="__codelineno-14-38" name="__codelineno-14-38" href="#__codelineno-14-38"></a> │                      │            │ value bounds             │
+<a id="__codelineno-14-39" name="__codelineno-14-39" href="#__codelineno-14-39"></a> │ → θ₀..θ₁₅ (updated) │            └──────────▲──────────────┘
+<a id="__codelineno-14-40" name="__codelineno-14-40" href="#__codelineno-14-40"></a> └───────┬──────────────┘                       │
+<a id="__codelineno-14-41" name="__codelineno-14-41" href="#__codelineno-14-41"></a>         │                           ┌───────────┴──────────────┐
+<a id="__codelineno-14-42" name="__codelineno-14-42" href="#__codelineno-14-42"></a>         ▼                           │ SupervisorPolicy.decide() │
+<a id="__codelineno-14-43" name="__codelineno-14-43" href="#__codelineno-14-43"></a> ┌──────────────────────┐            │                          │
+<a id="__codelineno-14-44" name="__codelineno-14-44" href="#__codelineno-14-44"></a> │ Order Parameters     │───────────►│ R_good[4,5,6] ≥ 0.6?    │
+<a id="__codelineno-14-45" name="__codelineno-14-45" href="#__codelineno-14-45"></a> │                      │            │ R_bad[0,2,3] &lt; 0.7?      │
+<a id="__codelineno-14-46" name="__codelineno-14-46" href="#__codelineno-14-46"></a> │ R_good (layers 4-6)  │            │ q_min ≥ 1.0?             │
+<a id="__codelineno-14-47" name="__codelineno-14-47" href="#__codelineno-14-47"></a> │ R_bad  (layers 0,2,3)│            │ β_N ≤ 2.8?               │
+<a id="__codelineno-14-48" name="__codelineno-14-48" href="#__codelineno-14-48"></a> │ per-layer Rᵢ, ψᵢ    │            │ greenwald ≤ 1.2?         │
+<a id="__codelineno-14-49" name="__codelineno-14-49" href="#__codelineno-14-49"></a> └──────────────────────┘            └──────────────────────────┘
+</code></pre></div>
+<h3 id="95-quantum-hardware-pipeline">9.5 Quantum Hardware Pipeline<a class="headerlink" href="#95-quantum-hardware-pipeline" title="Permanent link">&para;</a></h3>
+<p>Superconducting qubit systems (IBM Heron, Google Sycamore) use a
+parallel pipeline with different physical signals.</p>
+<h4 id="951-sensor-ingestion">9.5.1 Sensor Ingestion<a class="headerlink" href="#951-sensor-ingestion" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Diagnostic</th>
+<th>Physical quantity</th>
+<th>SPO layer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Readout resonator</strong> (dispersive, ~7 GHz)</td>
+<td>Qubit state (IQ plane)</td>
+<td>qubit_register (0)</td>
+</tr>
+<tr>
+<td><strong>Randomized benchmarking</strong> (gate sequences)</td>
+<td>Process fidelity</td>
+<td>logical_coherence (1)</td>
+</tr>
+<tr>
+<td><strong>T₁/T₂ characterization</strong> (decay sequences)</td>
+<td>Coherence times</td>
+<td>logical_coherence (1)</td>
+</tr>
+</tbody>
+</table>
+<p>Phase extraction: the readout resonator returns an IQ-plane point
+for each qubit.  The azimuthal angle in the IQ plane <em>is</em> the
+Bloch-sphere phase φᵢ — no Hilbert transform needed.  This is
+a direct measurement of the oscillator phase.</p>
+<h4 id="952-actuator-commands">9.5.2 Actuator Commands<a class="headerlink" href="#952-actuator-commands" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>SPO actuator</th>
+<th>Physical hardware</th>
+<th>Translation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>K (coupling)</strong></td>
+<td>Tunable coupler flux bias</td>
+<td>K ∝ coupler flux Φ_c.  Flux-tunable couplers (DC SQUID loop between qubits) set the effective J_ij coupling.  A DAC channel (~16 bit, ~1 GHz update rate) drives the coupler's flux line.</td>
+</tr>
+<tr>
+<td><strong>α (phase lag)</strong></td>
+<td>Microwave drive phase</td>
+<td>α maps to the phase offset of the qubit drive pulse.  The arbitrary waveform generator (AWG, ~5 GS/s) shifts the IQ modulation phase of the 4–6 GHz drive tone.</td>
+</tr>
+<tr>
+<td><strong>ζ (entrainment)</strong></td>
+<td>Microwave drive amplitude</td>
+<td>ζ ∝ Rabi frequency Ω_R.  Higher drive amplitude → stronger pull toward the reference phase Ψ.  The AWG scales the drive envelope.</td>
+</tr>
+<tr>
+<td><strong>Ψ (reference)</strong></td>
+<td>Drive pulse rotation axis</td>
+<td>Ψ sets the rotation axis angle on the Bloch sphere equator.  Standard single-qubit gates (X, Y, Z, arbitrary) are rotations at programmable phase angles — Ψ selects which axis to drive toward.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="953-timing">9.5.3 Timing<a class="headerlink" href="#953-timing" title="Permanent link">&para;</a></h4>
+<p>Superconducting qubit operations run at ~GHz clock rates with
+~100 ns gate times.  The SPO control cycle must fit within the
+coherence time T₂ (~100 μs for current hardware):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>t=0      Readout pulse → IQ data (500 ns)
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>t=1 μs   Phase extraction (direct IQ angle)
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>t=2 μs   UPDE step (8 oscillators, O(64) operations)
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>t=3 μs   Supervisor evaluation
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>t=4 μs   Coupler/drive command dispatch
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>t=5 μs   Actuator settling (~100 ns for flux couplers)
+</code></pre></div>
+<p>Total latency: ~5 μs.  This fits within a single T₂ window,
+allowing real-time coherence-based feedback during quantum
+computation — not just post-hoc analysis.</p>
+<h3 id="96-general-process-control-pipeline">9.6 General Process Control Pipeline<a class="headerlink" href="#96-general-process-control-pipeline" title="Permanent link">&para;</a></h3>
+<p>For non-physics domains (manufacturing, cloud queues, biological
+systems), the pipeline follows the same architecture with different
+sensor and actuator vocabularies.</p>
+<h4 id="961-manufacturing-spc">9.6.1 Manufacturing (SPC)<a class="headerlink" href="#961-manufacturing-spc" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>SPO component</th>
+<th>Physical realization</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensors</td>
+<td>Inline metrology (coordinate measuring machines, optical gauges, force sensors)</td>
+</tr>
+<tr>
+<td>Phase extraction</td>
+<td>Normalised ratio: θ = 2π · (x − LSL) / (USL − LSL) where LSL/USL are spec limits</td>
+</tr>
+<tr>
+<td>Actuators (K)</td>
+<td>PLC setpoint coupling between stations (e.g., upstream tool compensation based on downstream SPC)</td>
+</tr>
+<tr>
+<td>Actuators (α)</td>
+<td>Process delay compensation (conveyor speed, batch hold time)</td>
+</tr>
+<tr>
+<td>Actuators (ζ)</td>
+<td>Reference part injection rate (golden sample pacing)</td>
+</tr>
+<tr>
+<td>Cycle time</td>
+<td>Seconds to minutes (matches process tempo)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="962-cloud-queue-systems">9.6.2 Cloud / Queue Systems<a class="headerlink" href="#962-cloud-queue-systems" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>SPO component</th>
+<th>Physical realization</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensors</td>
+<td>Queue depth metrics, request latency percentiles, error rate counters</td>
+</tr>
+<tr>
+<td>Phase extraction</td>
+<td>Normalised ratio (queue_depth / queue_capacity) or event frequency (requests/sec → rad/s)</td>
+</tr>
+<tr>
+<td>Actuators (K)</td>
+<td>Service mesh routing weights (Istio, Envoy)</td>
+</tr>
+<tr>
+<td>Actuators (α)</td>
+<td>Retry backoff configuration (exponential base, jitter)</td>
+</tr>
+<tr>
+<td>Actuators (ζ)</td>
+<td>Rate limiter setpoint (requests/sec ceiling)</td>
+</tr>
+<tr>
+<td>Cycle time</td>
+<td>Milliseconds to seconds</td>
+</tr>
+</tbody>
+</table>
+<h4 id="963-biological-oscillators">9.6.3 Biological Oscillators<a class="headerlink" href="#963-biological-oscillators" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>SPO component</th>
+<th>Physical realization</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensors</td>
+<td>EEG electrodes, ECG leads, respiratory belt, skin conductance</td>
+</tr>
+<tr>
+<td>Phase extraction</td>
+<td>Hilbert transform of band-passed signal (e.g., alpha 8–13 Hz, theta 4–8 Hz)</td>
+</tr>
+<tr>
+<td>Actuators (K)</td>
+<td>Binaural beat frequency (entrainment coupling strength)</td>
+</tr>
+<tr>
+<td>Actuators (α)</td>
+<td>Phase offset between left/right audio channels</td>
+</tr>
+<tr>
+<td>Actuators (ζ)</td>
+<td>Audio amplitude (drive strength)</td>
+</tr>
+<tr>
+<td>Actuators (Ψ)</td>
+<td>Target brainwave phase (circadian reference, meditation target)</td>
+</tr>
+<tr>
+<td>Cycle time</td>
+<td>~100 ms (matching EEG epoch length)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="97-safety-and-fail-safe-design">9.7 Safety and Fail-Safe Design<a class="headerlink" href="#97-safety-and-fail-safe-design" title="Permanent link">&para;</a></h3>
+<p>The pipeline incorporates multiple safety layers:</p>
+<ol>
+<li>
+<p><strong>Boundary violations</strong> (hard) trigger immediate CRITICAL regime,
+   which commands conservative actuator values (reduce K, increase ζ
+   toward a known stable state).</p>
+</li>
+<li>
+<p><strong>Rate limiting</strong> in the ActionProjector prevents actuator damage.
+   A sudden coupling increase request is smoothed over multiple
+   control cycles.</p>
+</li>
+<li>
+<p><strong>TTL (time-to-live)</strong> on every ControlAction ensures commands
+   expire.  If the supervisor stops issuing commands (e.g., software
+   crash), actuators revert to their default state within the TTL
+   window.</p>
+</li>
+<li>
+<p><strong>Physics invariant checks</strong> in the bridge adapters
+   (PlasmaControlBridge.check_physics_invariants,
+   FusionCoreBridge.check_stability) run independently of SPO
+   and can veto commands that would violate absolute safety limits.</p>
+</li>
+<li>
+<p><strong>Watchdog</strong>: the sample/control period mismatch (10:1 in
+   plasma_control) means the UPDE runs 10 phase updates between
+   each control decision.  If the UPDE detects divergence (NaN,
+   Inf, or R &lt; 0.01), it halts before the next control cycle.</p>
+</li>
+</ol>
+<p>For nuclear-grade tokamak deployment, the SPO control layer would
+sit <em>above</em> the existing machine-protection interlock system (which
+operates on hard-wired analog signals and cannot be overridden by
+software).  SPO optimises within the interlock-safe envelope; it
+does not replace the interlock.</p>
+<hr />
+<h2 id="10-scope-of-competence-what-spo-is-and-is-not">10. Scope of Competence: What SPO Is and Is Not<a class="headerlink" href="#10-scope-of-competence-what-spo-is-and-is-not" title="Permanent link">&para;</a></h2>
+<p>This section draws explicit boundaries around the framework's claims.
+Overstating scope would be scientifically dishonest; understating it
+would obscure the genuine contribution.</p>
+<h3 id="101-what-spo-is">10.1 What SPO Is<a class="headerlink" href="#101-what-spo-is" title="Permanent link">&para;</a></h3>
+<p>SPO is a <strong>supervisory control layer</strong> that monitors multi-scale
+coherence and issues corrective commands to domain actuators.</p>
+<p>It is a <em>control framework</em>, not a <em>physics solver</em>.  It does not
+compute equilibria, propagate wavefunctions, solve transport equations,
+or simulate fluid dynamics.  It consumes the outputs of domain-specific
+solvers and acts on them through the phase-synchronization abstraction.</p>
+<p>The analogy: SPO is to a tokamak what a conductor is to an orchestra.
+The conductor does not play any instrument (does not solve any physics
+equation).  The conductor listens to the ensemble (monitors phase
+coherence across layers), detects when sections drift out of sync
+(R_bad rising), and signals corrections (adjusts coupling K, phase
+lag α, drive ζ).  The musicians (domain solvers + physical actuators)
+produce the actual sound (maintain the actual equilibrium).</p>
+<h3 id="102-what-spo-is-not">10.2 What SPO Is Not<a class="headerlink" href="#102-what-spo-is-not" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>SPO is NOT</th>
+<th>Why this matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>An equilibrium solver</td>
+<td>It cannot compute ψ(R,Z).  It depends on EFIT, FreeGS, or scpn-fusion-core for force balance.</td>
+</tr>
+<tr>
+<td>A turbulence simulator</td>
+<td>It cannot predict ITG/TEM growth rates.  It monitors turbulence <em>signatures</em> via phase extraction.</td>
+</tr>
+<tr>
+<td>A disruption predictor</td>
+<td>It detects coherence degradation, which may correlate with disruption precursors.  It does not model disruption physics (thermal quench, current quench, halo currents).</td>
+</tr>
+<tr>
+<td>A quantum error correction code</td>
+<td>It monitors coherence of logical qubits.  It does not implement stabiliser measurements or syndrome decoding.</td>
+</tr>
+<tr>
+<td>A replacement for machine-protection interlocks</td>
+<td>Hard-wired safety systems (vessel protection, magnet quench detection) operate on analog signals below SPO's software layer.  SPO cannot override them and must not attempt to.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="103-what-spo-expects-from-the-domain">10.3 What SPO Expects from the Domain<a class="headerlink" href="#103-what-spo-expects-from-the-domain" title="Permanent link">&para;</a></h3>
+<p>For SPO to function, the domain must provide:</p>
+<ol>
+<li>
+<p><strong>Oscillatory or quasi-oscillatory observables.</strong>  The phase
+   extraction step requires signals that admit meaningful phase
+   angles.  Continuous oscillations (MHD modes, qubit precession)
+   map cleanly.  Slowly varying quantities (q-profile, β_N) map
+   via normalised ratios — a weaker but still informative encoding.
+   Signals with no temporal structure (static geometry, material
+   properties) cannot be phase-encoded and are outside SPO's scope.</p>
+</li>
+<li>
+<p><strong>A known coupling hierarchy.</strong>  The Knm matrix encodes which
+   phenomena couple to which.  This must be specified by domain
+   knowledge (e.g., "micro-turbulence drives zonal flows which
+   modulate transport").  SPO does not discover coupling topology
+   from data — it exploits a topology provided in the binding spec.</p>
+</li>
+<li>
+<p><strong>Controllable actuators that influence coupling.</strong>  The four
+   knobs (K, α, ζ, Ψ) must map to physical actuators that can
+   modulate the coupling, phase lag, or drive of the oscillatory
+   phenomena.  If the domain has no actuators (pure observation),
+   SPO reduces to a monitoring-only tool (still useful for
+   coherence detection, but not for control).</p>
+</li>
+<li>
+<p><strong>Meaningful good/bad partition.</strong>  The dual objective requires
+   domain expertise to identify which synchrony is healthy and
+   which is pathological.  This is not always obvious — in some
+   systems, all synchrony might be desirable (or undesirable).
+   If no dual partition exists, SPO degenerates to a standard
+   single-objective coherence maximiser.</p>
+</li>
+</ol>
+<h3 id="104-concrete-expectations-per-domain">10.4 Concrete Expectations per Domain<a class="headerlink" href="#104-concrete-expectations-per-domain" title="Permanent link">&para;</a></h3>
+<h4 id="1041-tokamak-fusion-plasma">10.4.1 Tokamak Fusion Plasma<a class="headerlink" href="#1041-tokamak-fusion-plasma" title="Permanent link">&para;</a></h4>
+<p><strong>SPO's expected contribution: improved disruption avoidance through
+earlier detection of multi-scale coherence degradation.</strong></p>
+<p>SPO does not solve the Grad-Shafranov equation.  It does not compute
+MHD stability limits.  It monitors whether the plasma's oscillatory
+phenomena (turbulence, MHD modes, sawteeth, ELMs, transport barriers)
+are maintaining a healthy coherence pattern — and detects <em>correlated</em>
+degradation across timescales before individual diagnostic thresholds
+are crossed.</p>
+<p>The specific value proposition:</p>
+<ul>
+<li>
+<p><strong>Cascade detection</strong>: when R_bad rises simultaneously on layers
+  [0, 2, 3] (turbulence, tearing, sawtooth/ELM), it signals a
+  coupled MHD cascade forming.  Individual diagnostics may still be
+  within limits, but the <em>correlation</em> is the precursor.  Existing
+  PID loops cannot see this because they monitor channels independently.</p>
+</li>
+<li>
+<p><strong>Coordinated actuation</strong>: instead of 6 independent PID loops
+  potentially fighting each other (shape controller demanding more
+  current while density controller demands less gas), SPO sees the
+  coupled system and issues coordinated commands through a single
+  coherence-aware policy.</p>
+</li>
+<li>
+<p><strong>Transferability</strong>: the same binding spec structure (8 layers, 16
+  oscillators, good/bad partition, physics boundaries) applies to any
+  tokamak.  Porting from DIII-D to ITER requires changing the Knm
+  calibration and boundary thresholds, not rewriting the controller.</p>
+</li>
+</ul>
+<p><strong>What SPO does NOT expect to do for fusion</strong>:
+- Replace the real-time equilibrium reconstruction (EFIT runs anyway)
+- Replace machine-protection interlocks (hard-wired, below SPO)
+- Guarantee disruption avoidance (it improves detection, not elimination)
+- Work without calibration (the Knm matrix and phase extraction
+  require tokamak-specific tuning against experimental data)</p>
+<p><strong>Confidence level</strong>: MEDIUM.  The theoretical basis (Kuramoto
+coherence as a multi-scale health metric) is sound.  The practical
+value depends on: (a) phase extraction fidelity under real diagnostic
+noise, (b) Knm calibration against real inter-phenomenon coupling,
+(c) actuator response linearity.  None of these have been validated
+experimentally.</p>
+<h4 id="1042-quantum-coherence">10.4.2 Quantum Coherence<a class="headerlink" href="#1042-quantum-coherence" title="Permanent link">&para;</a></h4>
+<p><strong>SPO's expected contribution: real-time coherence monitoring and
+coupling topology adjustment during analog quantum simulation.</strong></p>
+<p>SPO does not implement quantum gates, error correction, or
+compilation.  It monitors the Bloch-sphere phases of physical
+qubits (directly measurable from readout resonators) and the
+logical coherence of error-corrected qubits (derived from
+syndrome statistics).</p>
+<p>The specific value proposition:</p>
+<ul>
+<li>
+<p><strong>Continuous fidelity tracking</strong>: R_qubit dropping below threshold
+  triggers regime escalation <em>during</em> the computation, not after
+  post-hoc analysis.</p>
+</li>
+<li>
+<p><strong>Coupling topology feedback</strong>: the Knm matrix corresponds to
+  flux-tunable coupler settings.  SPO adjusts couplings to maintain
+  coherence — complementing gate-level optimal control (GRAPE/Krotov)
+  which optimises pulse shapes for specific unitaries.</p>
+</li>
+<li>
+<p><strong>Cross-layer monitoring</strong>: tracking both physical qubit phases and
+  logical qubit stability in a single framework, with the fidelity
+  boundary triggering corrective action when the physical layer
+  degrades.</p>
+</li>
+</ul>
+<p><strong>Confidence level</strong>: MODERATE-HIGH for monitoring, LOWER for active
+control.  Phase extraction from IQ readout is direct and high-fidelity.
+But the Kuramoto sinusoidal coupling is an approximation of the actual
+XY Hamiltonian dynamics — it captures the first harmonic but misses
+higher-order terms.  Active coupling adjustment via flux couplers is
+realistic but untested in a coherence-feedback loop.</p>
+<h4 id="1043-general-process-control">10.4.3 General Process Control<a class="headerlink" href="#1043-general-process-control" title="Permanent link">&para;</a></h4>
+<p><strong>SPO's expected contribution: detection of pathological
+synchronisation (retry storms, sensor drift correlation, cascade
+failures) in systems with coupled cyclical processes.</strong></p>
+<ul>
+<li>
+<p><strong>Cloud queues</strong>: retry storm detection (R_bad on the retry layer)
+  is a natural fit — retry storms are literally pathological
+  synchronisation of request timing.  SPO detects and decouples
+  them via α (backoff) adjustment.  Confidence: HIGH.</p>
+</li>
+<li>
+<p><strong>Manufacturing SPC</strong>: sensor drift correlation detection identifies
+  systematic process shifts that single-channel SPC charts miss.
+  Confidence: MODERATE (phase extraction from slowly drifting
+  metrology signals is the weakest link).</p>
+</li>
+<li>
+<p><strong>Biological oscillators</strong>: EEG band coherence monitoring is
+  well-established (functional connectivity analysis uses similar
+  metrics).  SPO adds the dual good/bad partition and entrainment
+  control via audio.  Confidence: MODERATE-HIGH for monitoring,
+  MODERATE for entrainment effectiveness.</p>
+</li>
+</ul>
+<h3 id="105-what-would-constitute-validation">10.5 What Would Constitute Validation<a class="headerlink" href="#105-what-would-constitute-validation" title="Permanent link">&para;</a></h3>
+<p>The framework remains at <strong>TRL 3–4</strong> (analytical/experimental proof
+of concept in laboratory environment).  Advancing claims requires:</p>
+<table>
+<thead>
+<tr>
+<th>Validation target</th>
+<th>Required evidence</th>
+<th>Current status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase extraction fidelity</td>
+<td>Apply Hilbert/ratio/counter extraction to real diagnostic data from a tokamak shot database (DIII-D, EAST, JET).  Measure phase quality (SNR, continuity, bandwidth).</td>
+<td>Not done.  Synthetic-only.</td>
+</tr>
+<tr>
+<td>Cascade detection lead time</td>
+<td>Compare R_bad onset against disruption timestamps in a shot database.  Quantify how many ms earlier the coherence signal appears vs. single-channel thresholds.</td>
+<td>Not done.</td>
+</tr>
+<tr>
+<td>Knm calibration</td>
+<td>Fit Knm matrix to cross-correlation structure of real multi-diagnostic data.  Compare exponential-decay default against data-driven matrix.</td>
+<td>Not done.</td>
+</tr>
+<tr>
+<td>Actuator coordination benefit</td>
+<td>Run SPO in advisory mode alongside existing PCS on a real tokamak.  Compare shot-to-shot performance (confinement time, ELM frequency, disruption rate).</td>
+<td>Not done.  Requires facility access.</td>
+</tr>
+<tr>
+<td>Quantum coherence feedback</td>
+<td>Run SPO feedback loop on IBM Heron or Google Sycamore.  Compare fidelity trajectory with and without SPO-driven coupler adjustments.</td>
+<td>Not done.  scpn-quantum-control has hardware results for open-loop characterisation only.</td>
+</tr>
+<tr>
+<td>Cross-domain transfer</td>
+<td>Apply the same SPO engine to two unrelated domains (e.g., tokamak + cloud queue) with only binding spec changes.  Demonstrate that both benefit.</td>
+<td>Demonstrated in simulation (9 domainpacks).  Not validated on real systems.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="106-the-honest-claim">10.6 The Honest Claim<a class="headerlink" href="#106-the-honest-claim" title="Permanent link">&para;</a></h3>
+<p>SPO offers a <strong>structural advance in control architecture</strong> — the
+ability to monitor multi-scale coherence and act on coupling topology
+rather than individual setpoints.  This is genuinely new (§6).</p>
+<p>SPO does <strong>not</strong> offer a guarantee that this structural advance
+translates to practical performance gains in any specific domain.
+That translation depends on calibration, phase extraction fidelity,
+and actuator response — all domain-specific, all requiring
+experimental validation.</p>
+<p>The framework is <strong>most likely to succeed</strong> in domains where:
+- Pathological synchronisation is a known failure mode (ELMs, retry
+  storms, seizure-like cascades)
+- Multi-scale coupling is strong and poorly handled by independent
+  single-loop controllers
+- The good/bad coherence partition is physically clear</p>
+<p>The framework is <strong>least likely to succeed</strong> in domains where:
+- Observables lack oscillatory or quasi-periodic character
+- Coupling topology is unknown or highly nonlinear beyond first-harmonic
+- Actuators cannot modulate coupling (observation-only systems)
+- The required control bandwidth exceeds the UPDE computation time</p>
+<p>This section exists to prevent the framework from being oversold.
+A control abstraction with no experimental validation is a hypothesis,
+not a solution.  The hypothesis is well-motivated (§2–§7), the
+implementation is complete (§9), and the validation agenda is
+defined (§10.5).  What remains is the experiment.</p>
+<hr />
+<h2 id="11-limitations-and-open-questions">11. Limitations and Open Questions<a class="headerlink" href="#11-limitations-and-open-questions" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Phase extraction fidelity</strong>: the Hilbert transform, event
+   frequency, and ring-encoding methods have finite bandwidth and
+   quality limits.  Not all domain signals have a clean oscillatory
+   component.  The quality gating system (§ oscillators_PIS.md)
+   mitigates this but does not eliminate it.</p>
+</li>
+<li>
+<p><strong>Coupling matrix design</strong>: the exponential-decay Knm is a
+   reasonable default but may not match the true coupling topology
+   of a specific system.  Domain calibration is needed.</p>
+</li>
+<li>
+<p><strong>Observable-to-phase mapping invertibility</strong>: the analytic formulas
+   (§3.2) are forward-only surjections, not bijections.  The
+   <code>phases_to_feedback</code> method recovers aggregate statistics (R, mean
+   phase) but cannot reconstruct the original observables.</p>
+</li>
+<li>
+<p><strong>Computational limits</strong>: the N² coupling computation limits
+   real-time operation to ~10³ oscillators at ~1 kHz on current
+   hardware.  The Rust FFI backend extends this to ~10⁴.</p>
+</li>
+<li>
+<p><strong>Validation</strong>: the framework is demonstrated on synthetic
+   simulations.  Validation against real tokamak data (DIII-D,
+   EAST, JET) and real quantum hardware (IBM Eagle/Heron) remains
+   future work.</p>
+</li>
+</ol>
+<hr />
+<h2 id="12-references">12. References<a class="headerlink" href="#12-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>[kuramoto1975]</strong> Y. Kuramoto (1975). Self-entrainment of a population of coupled non-linear oscillators. <em>Lecture Notes in Physics</em> 39, 420–422.</li>
+<li><strong>[sakaguchi1986]</strong> H. Sakaguchi &amp; Y. Kuramoto (1986). A soluble active rotater model showing phase transitions via mutual entertainment. <em>Prog. Theor. Phys.</em> 76, 576–581.</li>
+<li><strong>[acebron2005]</strong> J. A. Acebrón et al. (2005). The Kuramoto model: a simple paradigm for synchronization phenomena. <em>Rev. Mod. Phys.</em> 77, 137–185.</li>
+<li><strong>[dorfler2014]</strong> F. Dörfler &amp; F. Bullo (2014). Synchronization in complex networks of phase oscillators: a survey. <em>Automatica</em> 50, 1539–1564.</li>
+<li><strong>[breakspear2010]</strong> M. Breakspear, S. Heitmann &amp; A. Daffertshofer (2010). Generative models of cortical oscillations. <em>Front. Hum. Neurosci.</em> 4, 190.</li>
+<li><strong>[rawlings2017]</strong> J. B. Rawlings, D. Q. Mayne &amp; M. M. Diehl (2017). <em>Model Predictive Control: Theory, Computation, and Design</em>. 2nd ed., Nob Hill Publishing.</li>
+<li><strong>[ferron2006]</strong> J. R. Ferron et al. (2006). Real time equilibrium reconstruction for tokamak discharge control. <em>Nucl. Fusion</em> 38, 1055.</li>
+<li><strong>[khaneja2005]</strong> N. Khaneja et al. (2005). Optimal control of coupled spin dynamics: design of NMR pulse sequences by gradient ascent. <em>J. Magn. Reson.</em> 172, 296–305.</li>
+<li><strong>[ramadge1987]</strong> P. J. Ramadge &amp; W. M. Wonham (1987). Supervisory control of a class of discrete event processes. <em>SIAM J. Control Optim.</em> 25(1), 206–230.</li>
+<li><strong>[dormand1980]</strong> J. R. Dormand &amp; P. J. Prince (1980). A family of embedded Runge-Kutta formulae. <em>J. Comput. Appl. Math.</em> 6(1), 19–26.</li>
+<li><strong>[troyon1984]</strong> F. Troyon et al. (1984). MHD-limits to plasma confinement. <em>Plasma Phys. Control. Fusion</em> 26, 209.</li>
+<li><strong>[kruskal1958]</strong> M. D. Kruskal &amp; M. Schwarzschild (1954). Some instabilities of a completely ionized plasma. <em>Proc. R. Soc. Lond. A</em> 223, 348–360.</li>
+<li><strong>[greenwald2002]</strong> M. Greenwald (2002). Density limits in toroidal plasmas. <em>Plasma Phys. Control. Fusion</em> 44, R27.</li>
+<li><strong>[snipes2010]</strong> J. A. Snipes et al. (2010). Actuator and diagnostic requirements of the ITER plasma control system. <em>Fusion Eng. Des.</em> 85, 461–465.</li>
+<li><strong>[humphreys2015]</strong> D. A. Humphreys et al. (2015). Novel aspects of plasma control in ITER. <em>Phys. Plasmas</em> 22, 021806.</li>
+<li><strong>[evans2006]</strong> T. E. Evans et al. (2006). Edge stability and transport control with resonant magnetic perturbations in collisionless tokamak plasmas. <em>Nature Phys.</em> 2, 419–423.</li>
+<li><strong>[lang2004]</strong> P. T. Lang et al. (2004). ELM pace making and mitigation by pellet injection in ASDEX Upgrade. <em>Nucl. Fusion</em> 44, 665.</li>
+<li><strong>[krantz2019]</strong> P. Krantz et al. (2019). A quantum engineer's guide to superconducting qubits. <em>Appl. Phys. Rev.</em> 6, 021318.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
