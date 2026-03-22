@@ -116,6 +116,13 @@ and is built from source via `maturin develop`.
 | `satellite_constellation` | Aerospace | Orbital slot synchronisation, beam handover (3 layers, 8 oscillators) |
 | `swarm_robotics` | Robotics | Vicsek collective motion (3 layers, 8 oscillators) |
 | `traffic_flow` | Transportation | Signal coordination = phase sync (4 layers, 10 oscillators) |
+| `financial_markets` | Finance | Stock synchronization, crash detection |
+| `gene_oscillator` | Synthetic biology | Repressilator quorum coupling |
+| `vortex_shedding` | Fluid dynamics | Wake station Stuart-Landau |
+| `robotic_cpg` | Robotics | Joint CPG locomotion |
+| `sleep_architecture` | Sleep medicine | AASM sleep staging from R |
+| `musical_acoustics` | Acoustics | Consonance = R, groove = alpha |
+| `brain_connectome` | Neuroscience | HCP-inspired coupling |
 
 ### Adding a Domain
 

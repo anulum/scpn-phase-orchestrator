@@ -7,15 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- `build_nengo_network()` replaced with pure-NumPy `build_numpy_network()` (old name kept as alias)
-- `nengo` optional extra is now empty (nengo 4.x incompatible with NumPy 2.x)
-- Coverage guard thresholds raised to 95% global and per-domain
-- CI installs `plot` extra for full matplotlib coverage
+## [0.5.0] - 2026-03-22
 
 ### Added
 
+- Auto-tune pipeline: Hilbert phase extraction, DMD frequency ID, coupling estimation
+- Visualization: D3 network graph, coupling heatmap, Three.js torus, phase wheel
+- 7 new domainpacks (32 total): financial_markets, gene_oscillator, vortex_shedding, robotic_cpg, sleep_architecture, musical_acoustics, brain_connectome
+- Information theory: transfer entropy, entropy production, PID synergy/redundancy
+- Topology: Hodge decomposition, winding numbers, NPE
+- SSGF: free energy (Langevin noise, Boltzmann weight)
+- Safety: STL runtime monitor (rtamt), Modbus TLS adapter, Kani proof stubs
+- Production: Helm chart, docker-compose (Redis+Prometheus+Grafana), Prometheus metrics exporter, Redis state store, gRPC streaming, WASM crate
+- Publication: 4 paper drafts (JOSS, dual R+p_h1, SSGF identity, safety cert)
+- Hardware: FPGA Verilog kuramoto_core.v (Zynq-7020, CORDIC)
+- Clinical: ITPC, sleep staging, validation study protocol
+- Consciousness model: chimera detection, 3-factor plasticity, psychedelic simulation, HCP connectome
 - `bench/bench_stuart_landau.py` — Stuart-Landau engine benchmark harness
 - `bench/baseline.json` — UPDE + SL baseline timing data (Python + Rust)
 - `tests/test_geometry_walk.py` — geometry_walk domainpack spec/run/policy tests
@@ -67,6 +74,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `build_nengo_network()` replaced with pure-NumPy `build_numpy_network()` (old name kept as alias)
+- `nengo` optional extra is now empty (nengo 4.x incompatible with NumPy 2.x)
+- Coverage guard thresholds raised to 95% global and per-domain
+- CI installs `plot` extra for full matplotlib coverage
 - `SECURITY.md` — updated supported versions, added Security Advisories link
 - `__init__.py` public API expanded: +`AuditLogger`, `BoundaryObserver`, `CouplingBuilder`, `RegimeManager`, `SPOError`, `SupervisorPolicy`
 - FFI: `PyStuartLandauStepper.run()` exposed via PyO3
@@ -300,7 +311,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.2.0...v0.3.0

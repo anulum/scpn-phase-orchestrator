@@ -356,7 +356,7 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
 
     spec = load_binding_spec(spec_path)
     sim = SimulationState(spec)
-    app = FastAPI(title="SPO Dashboard", version="0.4.1")
+    app = FastAPI(title="SPO Dashboard", version="0.5.0")
 
     @app.get("/", response_class=HTMLResponse)
     async def dashboard() -> str:
