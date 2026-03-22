@@ -19,7 +19,46 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["load_hcp_connectome"]
+__all__ = ["load_hcp_connectome", "load_neurolib_hcp"]
+
+_NEUROLIB_HCP_SIZE = 80  # Cakan & Obermayer 2021, Neuroimage 227:117474
+
+
+def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
+    """Load real HCP structural connectivity from neurolib.
+
+    Args:
+        n_regions: number of regions to return (max 80). If < 80, returns
+            the top-left (n_regions, n_regions) submatrix.
+
+    Returns:
+        Symmetric non-negative coupling matrix, shape (n_regions, n_regions).
+
+    Raises:
+        ImportError: If neurolib is not installed.
+        ValueError: If n_regions < 2 or > 80.
+    """
+    try:
+        from neurolib.utils.loadData import Dataset
+    except ModuleNotFoundError:
+        raise ImportError(
+            "neurolib is required for real HCP data: pip install neurolib"
+        ) from None
+
+    if n_regions < 2:
+        msg = f"n_regions must be >= 2, got {n_regions}"
+        raise ValueError(msg)
+    if n_regions > _NEUROLIB_HCP_SIZE:
+        msg = f"n_regions must be <= {_NEUROLIB_HCP_SIZE}, got {n_regions}"
+        raise ValueError(msg)
+
+    ds = Dataset("hcp")
+    sc: NDArray = np.asarray(ds.Cmat, dtype=np.float64)
+    sc = sc[:n_regions, :n_regions]
+    np.fill_diagonal(sc, 0.0)
+    result: NDArray = np.clip(sc, 0.0, None)
+    return result
+
 
 # Hagmann et al. 2008, PLoS Biol. 6:e159 — structural connectivity statistics
 _INTRA_HEMI_STRENGTH = 0.5

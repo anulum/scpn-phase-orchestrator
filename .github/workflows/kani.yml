@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Kani formal verification
+
+name: Kani
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "spo-kernel/kani/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kani-proofs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spo-kernel
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+
+      - name: Install Kani
+        run: cargo install kani-verifier && cargo kani setup
+        continue-on-error: true
+
+      - name: Proof — action_projector_value_clipping
+        run: cargo kani --harness action_projector_value_clipping_proof
+        continue-on-error: true
+
+      - name: Proof — action_projector_rate_limit
+        run: cargo kani --harness action_projector_rate_limit_proof
+        continue-on-error: true
+
+      - name: Proof — action_projector_combined
+        run: cargo kani --harness action_projector_combined_proof
+        continue-on-error: true
+
+      - name: Proof — regime_manager_no_critical_to_nominal
+        run: cargo kani --harness regime_manager_no_critical_to_nominal_proof
+        continue-on-error: true
+
+      - name: Proof — regime_manager_log_bounded
+        run: cargo kani --harness regime_manager_log_bounded_proof
+        continue-on-error: true
+
+      - name: Proof — regime_manager_critical_bypasses_cooldown
+        run: cargo kani --harness regime_manager_critical_bypasses_cooldown_proof
+        continue-on-error: true

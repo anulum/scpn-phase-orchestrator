@@ -13,17 +13,23 @@ from unittest.mock import MagicMock
 import pytest
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (
+from scpn_phase_orchestrator.grpc_gen import (
     ConfigRequest,
     ConfigResponse,
     LayerState,
+    PhaseOrchestratorServicer,
     ResetRequest,
     StateRequest,
     StateResponse,
     StepRequest,
     StreamRequest,
 )
-from scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc import PhaseOrchestratorServicer
+from scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback import (
+    StateRequest as _FBStateRequest,
+)
+from scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback import (
+    PhaseOrchestratorServicer as _FBServicer,
+)
 from scpn_phase_orchestrator.server import SimulationState
 from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
 
@@ -153,14 +159,20 @@ class TestMessageDataclasses:
         assert sr.step == 0
         assert sr.layers == []
 
+    def test_fallback_modules_importable(self):
+        assert _FBStateRequest is not None
+        assert _FBServicer is not None
+
     def test_step_request_default(self):
         sr = StepRequest()
-        assert sr.n_steps == 1
+        # proto3: scalar defaults are 0; servicer handles via `or 1`
+        assert sr.n_steps in (0, 1)
 
     def test_stream_request_defaults(self):
         sr = StreamRequest()
-        assert sr.max_steps == 100
-        assert sr.interval_s == 0.05
+        # proto3: scalar defaults are 0/0.0; servicer handles via `or` fallback
+        assert sr.max_steps in (0, 100)
+        assert sr.interval_s in (0.0, 0.05)
 
     def test_config_response_defaults(self):
         cr = ConfigResponse()

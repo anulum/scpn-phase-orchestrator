@@ -3,27 +3,63 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Generated gRPC stubs
+# SCPN Phase Orchestrator — gRPC stub loader
 #
-# Files in this package are generated from proto/spo.proto.
-# Re-generate with: bash tools/generate_grpc.sh
-# Hand-written fallback stubs are provided for environments
-# where grpc_tools is not installed.
+# Generated stubs live in spo_pb2.py / spo_pb2_grpc.py (from proto/spo.proto).
+# Hand-written dataclass fallbacks in _spo_pb2_fallback.py / _spo_pb2_grpc_fallback.py.
+#
+# Import order:
+#   1. Try generated protobuf messages (requires google.protobuf).
+#   2. Fall back to hand-written dataclass stubs.
+#   3. Try generated gRPC servicer (requires grpcio).
+#   4. Fall back to hand-written ABC servicer.
 
-from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (
-    ConfigRequest,
-    ConfigResponse,
-    LayerState,
-    ResetRequest,
-    StateRequest,
-    StateResponse,
-    StepRequest,
-    StreamRequest,
-)
-from scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc import (
-    PhaseOrchestratorServicer,
-    add_PhaseOrchestratorServicer_to_server,
-)
+from __future__ import annotations
+
+USING_GENERATED_PB2: bool
+USING_GENERATED_GRPC: bool
+
+try:
+    from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (  # type: ignore[attr-defined]
+        ConfigRequest,
+        ConfigResponse,
+        LayerState,
+        ResetRequest,
+        StateRequest,
+        StateResponse,
+        StepRequest,
+        StreamRequest,
+    )
+
+    USING_GENERATED_PB2 = True
+except Exception:
+    from scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback import (
+        ConfigRequest,
+        ConfigResponse,
+        LayerState,
+        ResetRequest,
+        StateRequest,
+        StateResponse,
+        StepRequest,
+        StreamRequest,
+    )
+
+    USING_GENERATED_PB2 = False
+
+try:
+    from scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc import (
+        PhaseOrchestratorServicer,
+        add_PhaseOrchestratorServicer_to_server,
+    )
+
+    USING_GENERATED_GRPC = True
+except Exception:
+    from scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback import (  # type: ignore[assignment]
+        PhaseOrchestratorServicer,
+        add_PhaseOrchestratorServicer_to_server,
+    )
+
+    USING_GENERATED_GRPC = False
 
 __all__ = [
     "ConfigRequest",
@@ -36,4 +72,6 @@ __all__ = [
     "StreamRequest",
     "PhaseOrchestratorServicer",
     "add_PhaseOrchestratorServicer_to_server",
+    "USING_GENERATED_PB2",
+    "USING_GENERATED_GRPC",
 ]
