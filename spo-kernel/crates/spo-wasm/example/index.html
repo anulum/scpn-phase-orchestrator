@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SPO-WASM — Kuramoto Simulation</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 1em; }
+    #output { white-space: pre; height: 80vh; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>SCPN Phase Orchestrator — WASM Kuramoto Demo</h2>
+  <p>Open the browser console for raw output.</p>
+  <div id="output"></div>
+
+  <script type="module">
+    import init, { init as spo_init, step, get_phases } from '../../../../wasm-pkg/spo_wasm.js';
+
+    const out = document.getElementById('output');
+    function log(msg) {
+      console.log(msg);
+      out.textContent += msg + '\n';
+      out.scrollTop = out.scrollHeight;
+    }
+
+    await init();
+
+    const N = 8;
+    const STEPS = 100;
+    const DT = 0.05;
+    const K = 2.0;
+
+    // Natural frequencies drawn from a narrow Gaussian-like spread
+    const omega = Array.from({ length: N }, (_, i) => 1.0 + 0.3 * (i - N / 2) / N);
+    const omegaJson = JSON.stringify(omega);
+
+    spo_init(N);
+    log(`Initialized ${N} oscillators`);
+    log(`omega = ${omegaJson}`);
+    log(`K = ${K}, dt = ${DT}`);
+    log('---');
+
+    for (let t = 0; t < STEPS; t++) {
+      const R = step(omegaJson, K, DT);
+      if (t % 10 === 0 || t === STEPS - 1) {
+        log(`step ${String(t).padStart(3)}  R = ${R.toFixed(6)}`);
+      }
+    }
+
+    log('---');
+    log(`Final phases: ${get_phases()}`);
+    log('Simulation complete.');
+  </script>
+</body>
+</html>

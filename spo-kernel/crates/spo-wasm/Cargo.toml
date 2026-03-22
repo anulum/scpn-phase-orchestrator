@@ -11,8 +11,6 @@ description = "SCPN Phase Orchestrator — WASM bindings for browser/edge deploy
 crate-type = ["cdylib"]
 
 [dependencies]
-spo-types = { path = "../spo-types" }
-spo-engine = { path = "../spo-engine" }
 wasm-bindgen = "0.2"
 serde = { workspace = true }
 serde_json = { workspace = true }

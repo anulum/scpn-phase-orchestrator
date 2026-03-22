@@ -3,24 +3,32 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — gRPC streaming service
+# SCPN Phase Orchestrator — gRPC PhaseOrchestrator service
 
-"""gRPC server-streaming service for live UPDE phase data.
+"""gRPC service implementing the full PhaseOrchestrator API.
 
-Install grpcio to use this module::
+Install grpcio to run a live server::
 
     pip install grpcio grpcio-tools
 
-Without grpcio, importing this module raises ImportError.
+Without grpcio the servicer still works for in-process testing
+with a mocked context.
 """
 
 from __future__ import annotations
 
-import json
 import time
 from collections.abc import Iterator
-from dataclasses import asdict
 from typing import Any
+
+from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (
+    ConfigResponse,
+    StateResponse,
+)
+from scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc import (
+    PhaseOrchestratorServicer,
+)
+from scpn_phase_orchestrator.server import SimulationState
 
 __all__ = ["PhaseStreamServicer", "HAS_GRPC"]
 
@@ -29,58 +37,80 @@ try:
 
     HAS_GRPC = True  # pragma: no cover
 except ModuleNotFoundError:
-    grpc = None
+    grpc = None  # type: ignore[assignment]
     HAS_GRPC = False
 
 
-class _PhaseResponse:
-    """Minimal response wrapper when no protobuf definitions are compiled."""
+def _snap_to_response(snap: dict) -> StateResponse:
+    """Convert a SimulationState.snapshot() dict to a StateResponse."""
+    from scpn_phase_orchestrator.grpc_gen.spo_pb2 import LayerState as PbLayerState
 
-    def __init__(self, payload: str) -> None:
-        self.payload = payload
+    layers = [
+        PbLayerState(
+            name=ly.get("name", ""),
+            R=ly.get("R", 0.0),
+            psi=ly.get("psi", 0.0),
+        )
+        for ly in snap.get("layers", [])
+    ]
+    return StateResponse(
+        step=snap.get("step", 0),
+        R_global=snap.get("R_global", 0.0),
+        regime=snap.get("regime", ""),
+        amplitude_mode=snap.get("amplitude_mode", False),
+        mean_amplitude=snap.get("mean_amplitude", 0.0),
+        layers=layers,
+    )
 
 
-class PhaseStreamServicer:
-    """gRPC servicer that streams UPDE state snapshots.
+class PhaseStreamServicer(PhaseOrchestratorServicer):
+    """gRPC servicer that exposes state, step, reset, streaming, and config.
 
-    Accepts a callable ``state_source`` that yields UPDEState-like
-    objects on each call. The stream terminates when ``max_steps``
-    is reached or the context is cancelled.
+    Wraps a ``SimulationState`` (from server.py) and translates its
+    dict snapshots into proto-compatible ``StateResponse`` messages.
     """
 
-    def __init__(
-        self,
-        state_source: Any,
-        max_steps: int = 100,
-        interval_s: float = 0.05,
-    ) -> None:
-        self._source = state_source
-        self._max_steps = max_steps
-        self._interval = interval_s
+    def __init__(self, sim: SimulationState) -> None:
+        self._sim = sim
 
-    def StreamPhases(self, request: Any, context: Any) -> Iterator[_PhaseResponse]:
-        """Server-streaming RPC: yield phase snapshots as JSON payloads."""
-        for step in range(self._max_steps):
+    # -- unary RPCs -----------------------------------------------------------
+
+    def GetState(self, request: Any, context: Any) -> StateResponse:
+        return _snap_to_response(self._sim.snapshot())
+
+    def Step(self, request: Any, context: Any) -> StateResponse:
+        n = getattr(request, "n_steps", 1) or 1
+        for _ in range(n):
+            self._sim.step()
+        return _snap_to_response(self._sim.snapshot())
+
+    def Reset(self, request: Any, context: Any) -> StateResponse:
+        self._sim.reset()
+        return _snap_to_response(self._sim.snapshot())
+
+    def GetConfig(self, request: Any, context: Any) -> ConfigResponse:
+        spec = self._sim.spec
+        return ConfigResponse(
+            name=spec.name,
+            n_oscillators=self._sim.n_osc,
+            n_layers=len(spec.layers),
+            amplitude_mode=self._sim.amplitude_mode,
+            sample_period_s=spec.sample_period_s,
+            control_period_s=spec.control_period_s,
+        )
+
+    # -- server-streaming RPC -------------------------------------------------
+
+    def StreamPhases(self, request: Any, context: Any) -> Iterator[StateResponse]:
+        max_steps = getattr(request, "max_steps", 100) or 100
+        interval = getattr(request, "interval_s", 0.05) or 0.05
+        for _ in range(max_steps):
             if (
                 context is not None
                 and hasattr(context, "is_active")
                 and not context.is_active()
             ):
                 return
-            state = self._source()
-            payload = json.dumps(_serialise_state(state, step), default=str)
-            yield _PhaseResponse(payload)
-            time.sleep(self._interval)
-
-
-def _serialise_state(state: Any, step: int) -> dict:
-    """Convert a UPDEState (or plain dict) to JSON-safe dict."""
-    if hasattr(state, "__dataclass_fields__"):
-        d = asdict(state)
-    elif isinstance(state, dict):
-        d = state
-    else:
-        d = {"value": str(state)}
-    d["step"] = step
-    d["timestamp"] = time.time()
-    return d
+            self._sim.step()
+            yield _snap_to_response(self._sim.snapshot())
+            time.sleep(interval)

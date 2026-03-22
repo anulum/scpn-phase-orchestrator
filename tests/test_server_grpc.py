@@ -7,10 +7,15 @@
 
 from __future__ import annotations
 
-import json
+from pathlib import Path
 from unittest.mock import MagicMock
 
+from scpn_phase_orchestrator.binding.loader import load_binding_spec
+from scpn_phase_orchestrator.grpc_gen.spo_pb2 import StateResponse, StreamRequest
+from scpn_phase_orchestrator.server import SimulationState
 from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
+
+DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
 
 
 class _FakeContext:
@@ -21,61 +26,44 @@ class _FakeContext:
         return self._active
 
 
+def _make_servicer():
+    spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+    sim = SimulationState(spec)
+    return PhaseStreamServicer(sim)
+
+
 def test_stream_yields_responses():
-    counter = 0
-
-    def source():
-        nonlocal counter
-        counter += 1
-        return {"R": 0.9, "regime": "nominal"}
-
-    svc = PhaseStreamServicer(source, max_steps=5, interval_s=0.0)
-    results = list(svc.StreamPhases(None, _FakeContext()))
+    svc = _make_servicer()
+    req = StreamRequest(max_steps=5, interval_s=0.0)
+    results = list(svc.StreamPhases(req, _FakeContext()))
     assert len(results) == 5
     for resp in results:
-        data = json.loads(resp.payload)
-        assert "R" in data
-        assert "step" in data
-        assert "timestamp" in data
+        assert isinstance(resp, StateResponse)
+        assert isinstance(resp.R_global, float)
+        assert resp.step > 0
+        assert resp.regime != ""
 
 
 def test_stream_stops_on_inactive_context():
-    call_count = 0
-
-    def source():
-        nonlocal call_count
-        call_count += 1
-        return {"R": 0.5}
-
+    svc = _make_servicer()
     ctx = MagicMock()
     ctx.is_active.side_effect = [True, True, False]
-
-    svc = PhaseStreamServicer(source, max_steps=100, interval_s=0.0)
-    results = list(svc.StreamPhases(None, ctx))
+    req = StreamRequest(max_steps=100, interval_s=0.0)
+    results = list(svc.StreamPhases(req, ctx))
     assert len(results) == 2
 
 
-def test_stream_handles_dataclass_state():
-    import numpy as np
-
-    from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-
-    state = UPDEState(
-        layers=[LayerState(R=0.8, psi=0.1)],
-        cross_layer_alignment=np.eye(1),
-        stability_proxy=0.8,
-        regime_id="nominal",
-    )
-
-    svc = PhaseStreamServicer(lambda: state, max_steps=3, interval_s=0.0)
-    results = list(svc.StreamPhases(None, _FakeContext()))
+def test_stream_has_layer_data():
+    svc = _make_servicer()
+    req = StreamRequest(max_steps=3, interval_s=0.0)
+    results = list(svc.StreamPhases(req, _FakeContext()))
     assert len(results) == 3
-    data = json.loads(results[0].payload)
-    assert "stability_proxy" in data
-    assert data["regime_id"] == "nominal"
+    assert len(results[0].layers) > 0
+    assert results[0].layers[0].name != ""
 
 
 def test_stream_with_none_context():
-    svc = PhaseStreamServicer(lambda: {"v": 1}, max_steps=2, interval_s=0.0)
-    results = list(svc.StreamPhases(None, None))
+    svc = _make_servicer()
+    req = StreamRequest(max_steps=2, interval_s=0.0)
+    results = list(svc.StreamPhases(req, None))
     assert len(results) == 2
