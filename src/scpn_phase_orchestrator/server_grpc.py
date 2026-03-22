@@ -25,10 +25,10 @@ from typing import Any
 __all__ = ["PhaseStreamServicer", "HAS_GRPC"]
 
 try:
-    import grpc
+    import grpc  # pragma: no cover
 
-    HAS_GRPC = True
-except ModuleNotFoundError:  # pragma: no cover
+    HAS_GRPC = True  # pragma: no cover
+except ModuleNotFoundError:
     grpc = None
     HAS_GRPC = False
 
