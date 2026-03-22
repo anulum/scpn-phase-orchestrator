@@ -32,9 +32,7 @@ def main() -> None:
 
     engine = UPDEEngine(n_osc, dt=spec.sample_period_s)
     for step in range(200):
-        phases = engine.step(
-            phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha
-        )
+        phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
         if step % 50 == 0:
             R, _ = compute_order_parameter(phases)
             print(f"step={step:4d}  R={R:.4f}")

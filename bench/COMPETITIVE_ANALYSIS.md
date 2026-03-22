@@ -6,20 +6,22 @@ No direct competitor combines Kuramoto/Stuart-Landau phase dynamics, domain-agno
 
 ## Comparison Matrix
 
-| Feature | SPO v0.4.1 | SciPy Kuramoto | Brian2 | Nengo | PyDSTool | NEST |
-|---------|-----------|----------------|--------|-------|----------|------|
-| Kuramoto solver | RK4/RK45 + Euler, pre-allocated | solve_ivp | N/A | N/A | continuation | N/A |
-| Stuart-Landau | Phase + amplitude ODE | Manual | N/A | N/A | Manual | N/A |
-| Rust FFI | PyO3, 10-100x faster | N/A | C++/Cython | N/A | C | C++ |
-| JAX GPU | JIT-compiled Kuramoto + SL | N/A | N/A | N/A | N/A | N/A |
-| Domain-agnostic | 25 YAML domainpacks | N/A | N/A | N/A | N/A | N/A |
-| Regime supervisor | FSM + policy engine | N/A | N/A | N/A | N/A | N/A |
-| P/I/S channels | 3-channel extraction | N/A | N/A | N/A | N/A | N/A |
-| Petri net | Guard-gated FSM | N/A | N/A | N/A | N/A | N/A |
-| PAC analysis | Tort et al. MI + matrix | N/A | N/A | N/A | N/A | N/A |
-| Audit trail | SHA256-chained replay | N/A | N/A | N/A | N/A | N/A |
-| Docker | Multi-stage + health check | N/A | Yes | Yes | N/A | Yes |
-| Tests | 1305 Python + 203 Rust | N/A | ~500 | ~1000 | ~200 | ~5000 |
+| Feature | SPO v0.4.1 | SciPy Kuramoto | Brian2 | Nengo | PyDSTool | NEST | DynamicalSystems.jl |
+|---------|-----------|----------------|--------|-------|----------|------|---------------------|
+| Kuramoto solver | RK4/RK45 + Euler, pre-allocated | solve_ivp | N/A | N/A | continuation | N/A | Manual |
+| Stuart-Landau | Phase + amplitude ODE | Manual | N/A | N/A | Manual | N/A | Manual |
+| Rust FFI | PyO3, 10-100x faster | N/A | C++/Cython | N/A | C | C++ | Julia JIT |
+| JAX GPU | JIT-compiled Kuramoto + SL | N/A | N/A | N/A | N/A | N/A | N/A |
+| Domain-agnostic | 31 YAML domainpacks | N/A | N/A | N/A | N/A | N/A | N/A |
+| Regime supervisor | FSM + policy engine | N/A | N/A | N/A | N/A | N/A | N/A |
+| P/I/S channels | 3-channel extraction | N/A | N/A | N/A | N/A | N/A | N/A |
+| Petri net | Guard-gated FSM | N/A | N/A | N/A | N/A | N/A | N/A |
+| PAC analysis | Tort et al. MI + matrix | N/A | N/A | N/A | N/A | N/A | N/A |
+| Audit trail | SHA256-chained replay | N/A | N/A | N/A | N/A | N/A | N/A |
+| Docker | Multi-stage + health check | N/A | Yes | Yes | N/A | Yes | N/A |
+| Tests | 1305 Python + 203 Rust | N/A | ~500 | ~1000 | ~200 | ~5000 | ~500 |
+| Lyapunov exponents | N/A | N/A | N/A | N/A | N/A | N/A | Native |
+| Recurrence analysis | N/A | N/A | N/A | N/A | N/A | N/A | Native |
 
 ## Detailed Comparisons
 
@@ -67,7 +69,7 @@ PyDSTool provides bifurcation analysis and continuation for general dynamical sy
 
 ## Unique Capabilities (No Competitor Has)
 
-1. **25 domain-specific binding specs** with P/I/S 3-channel extraction
+1. **31 domain-specific binding specs** with P/I/S 3-channel extraction
 2. **Regime FSM + policy engine** with cooldown, max-fires, compound conditions
 3. **Petri net protocol sequencing** for multi-phase clinical/industrial procedures
 4. **Hebbian imprint model** for history-dependent coupling modulation
@@ -89,6 +91,16 @@ Measured on Intel i7-7700 + GTX 1060 6GB (development machine).
 
 *JAX has ~0.8ms JIT overhead per call; amortized over many steps.
 Per-step time for 1000 steps of RK4 Kuramoto.
+
+### vs DynamicalSystems.jl (Julia)
+
+DynamicalSystems.jl provides Lyapunov exponents, attractor reconstruction, recurrence analysis, and general dynamical systems tools in Julia. It can model Kuramoto networks but has no domain binding layer, no supervisory control, and no production deployment story.
+
+**SPO advantage:** Domain-agnostic domainpacks, regime supervision, Rust FFI + JAX acceleration, Docker deployment, audit trail.
+
+**DynamicalSystems.jl advantage:** Julia's JIT performance, bifurcation continuation, Lyapunov spectrum, extensive nonlinear dynamics toolkit.
+
+**Benchmark status:** DynamicalSystems.jl benchmarks require Julia installation and are pending. Planned comparison: N=64 Kuramoto integration (1000 RK4 steps) and N=256 coherence recovery, measuring wall time and allocation.
 
 ## Summary
 

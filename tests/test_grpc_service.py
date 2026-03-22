@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (
     StepRequest,
     StreamRequest,
 )
+from scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc import PhaseOrchestratorServicer
 from scpn_phase_orchestrator.server import SimulationState
 from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
 
@@ -133,6 +134,11 @@ class TestGetConfig:
         assert isinstance(resp.amplitude_mode, bool)
         assert resp.sample_period_s > 0
         assert resp.control_period_s > 0
+
+
+class TestServicerBase:
+    def test_servicer_is_subclass(self, servicer):
+        assert isinstance(servicer, PhaseOrchestratorServicer)
 
 
 class TestMessageDataclasses:

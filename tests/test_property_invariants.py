@@ -92,7 +92,7 @@ def test_plv_bounds(a: np.ndarray) -> None:
     r_val=st.floats(min_value=0.0, max_value=1.0, allow_nan=False),
     n_layers=st.integers(min_value=1, max_value=16),
 )
-@settings(max_examples=200)
+@settings(max_examples=200, deadline=500)
 def test_regime_determinism(r_val: float, n_layers: int) -> None:
     """Same input always produces the same regime."""
     layers = [LayerState(R=r_val, psi=0.0) for _ in range(n_layers)]

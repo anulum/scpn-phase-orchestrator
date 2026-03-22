@@ -825,7 +825,7 @@ dependencies = [
 
 [[package]]
 name = "spo-engine"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "proptest",
@@ -835,7 +835,7 @@ dependencies = [
 
 [[package]]
 name = "spo-ffi"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "numpy",
  "pyo3",
@@ -847,14 +847,14 @@ dependencies = [
 
 [[package]]
 name = "spo-oscillators"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "spo-types",
 ]
 
 [[package]]
 name = "spo-supervisor"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -863,7 +863,7 @@ dependencies = [
 
 [[package]]
 name = "spo-types"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -872,12 +872,10 @@ dependencies = [
 
 [[package]]
 name = "spo-wasm"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "serde",
  "serde_json",
- "spo-engine",
- "spo-types",
  "wasm-bindgen",
 ]
 
