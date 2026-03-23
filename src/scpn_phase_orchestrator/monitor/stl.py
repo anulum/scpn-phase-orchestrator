@@ -71,16 +71,15 @@ class STLMonitor:
             self._stl.parse()
             self._parsed = True
 
-        # rtamt offline monitoring: list of (time, value) pairs per signal
-        datasets = {}
+        # rtamt discrete-time offline: flat lists per signal + 'time' key
+        datasets: dict[str, list[float]] = {}
         for name, values in trace.items():
-            datasets[name] = [(float(t), v) for t, v in enumerate(values)]
-        # rtamt requires explicit 'time' key
+            datasets[name] = [float(v) for v in values]
         if "time" not in datasets:
-            datasets["time"] = [(float(t), float(t)) for t in range(length)]
+            datasets["time"] = [float(t) for t in range(length)]
 
         robustness = self._stl.evaluate(datasets)
-        # rtamt returns a list of (time, robustness) pairs; min is worst-case
-        if isinstance(robustness, list):
-            return float(min(r for _, r in robustness))
+        # rtamt returns [[time, robustness], ...]; min is worst-case
+        if isinstance(robustness, list) and robustness:
+            return float(min(r[1] for r in robustness))
         return float(robustness)
