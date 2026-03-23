@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.grpc_gen.spo_pb2 import StateResponse, StreamRequest
+from scpn_phase_orchestrator.grpc_gen import StateResponse, StreamRequest
 from scpn_phase_orchestrator.server import SimulationState
 from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
 

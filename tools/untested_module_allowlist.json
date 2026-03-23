@@ -1,6 +1,10 @@
 {
   "allowlisted_modules": [
     {
+      "path": "src/scpn_phase_orchestrator/grpc_gen/spo_pb2.py",
+      "reason": "Generated protobuf stubs — requires google.protobuf, tested via grpc_gen package init dispatcher"
+    },
+    {
       "path": "src/scpn_phase_orchestrator/grpc_gen/spo_pb2_grpc.py",
       "reason": "Generated gRPC stubs — requires grpcio at import time, tested via grpc_gen package init dispatcher"
     }
