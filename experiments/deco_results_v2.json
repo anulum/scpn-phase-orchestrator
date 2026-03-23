@@ -1,0 +1,57 @@
+[
+  {
+    "correlation": 0.0653,
+    "p_value": 0.0002373978907764,
+    "n_pairs": 3160,
+    "sim_fc_mean": 0.053,
+    "emp_fc_mean": 0.3396,
+    "K": 0.1,
+    "duration": 300.0,
+    "mu": -0.01,
+    "wall_time_s": 98.23
+  },
+  {
+    "correlation": 0.1791,
+    "p_value": 3.527345266202544e-24,
+    "n_pairs": 3160,
+    "sim_fc_mean": 0.3142,
+    "emp_fc_mean": 0.3396,
+    "K": 0.5,
+    "duration": 300.0,
+    "mu": -0.01,
+    "wall_time_s": 120.74
+  },
+  {
+    "correlation": 0.1717,
+    "p_value": 2.5109984465731338e-22,
+    "n_pairs": 3160,
+    "sim_fc_mean": 0.517,
+    "emp_fc_mean": 0.3396,
+    "K": 1.0,
+    "duration": 300.0,
+    "mu": -0.01,
+    "wall_time_s": 100.42
+  },
+  {
+    "correlation": 0.1599,
+    "p_value": 1.5053912565507284e-19,
+    "n_pairs": 3160,
+    "sim_fc_mean": 0.7013,
+    "emp_fc_mean": 0.3396,
+    "K": 2.0,
+    "duration": 300.0,
+    "mu": -0.01,
+    "wall_time_s": 113.69
+  },
+  {
+    "correlation": 0.109,
+    "p_value": 8.222155539528321e-10,
+    "n_pairs": 3160,
+    "sim_fc_mean": 0.8605,
+    "emp_fc_mean": 0.3396,
+    "K": 5.0,
+    "duration": 300.0,
+    "mu": -0.01,
+    "wall_time_s": 132.93
+  }
+]
