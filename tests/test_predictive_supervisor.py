@@ -80,9 +80,7 @@ class TestDecide:
         knm = np.eye(4)
         alpha = np.zeros((4, 4))
         bs = BoundaryState(hard_violations=["test"])
-        actions = ps.decide(
-            phases, omegas, knm, alpha, _make_state(0.9), bs
-        )
+        actions = ps.decide(phases, omegas, knm, alpha, _make_state(0.9), bs)
         assert len(actions) == 1
         assert actions[0].knob == "zeta"
 

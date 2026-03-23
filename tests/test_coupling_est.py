@@ -98,19 +98,16 @@ class TestHarmonicCoupling:
         phases = rng.uniform(0, 2 * np.pi, (3, 500))
         omegas = np.ones(3)
         knm_std = estimate_coupling(phases, omegas, dt=0.01)
-        knm_harm = estimate_coupling_harmonics(
-            phases, omegas, dt=0.01, n_harmonics=1
-        )
+        knm_harm = estimate_coupling_harmonics(phases, omegas, dt=0.01, n_harmonics=1)
         # Sign of dominant coupling should match
         mask = np.abs(knm_std) > 0.1
         if np.any(mask):
-            assert np.sum(np.sign(knm_harm["sin_1"][mask]) == np.sign(knm_std[mask])) > 0
+            signs_match = np.sign(knm_harm["sin_1"][mask]) == np.sign(knm_std[mask])
+            assert np.sum(signs_match) > 0
 
     def test_custom_n_harmonics(self):
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (3, 100))
-        result = estimate_coupling_harmonics(
-            phases, np.ones(3), dt=0.01, n_harmonics=3
-        )
+        result = estimate_coupling_harmonics(phases, np.ones(3), dt=0.01, n_harmonics=3)
         assert "sin_3" in result
         assert "cos_3" in result

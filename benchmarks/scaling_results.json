@@ -1,0 +1,38 @@
+[
+  {
+    "N": 16,
+    "n_steps": 100,
+    "wall_time_s": 0.0034,
+    "ms_per_step": 0.034,
+    "steps_per_sec": 29155.4,
+    "final_R": 0.2323,
+    "memory_MB": 0.0
+  },
+  {
+    "N": 64,
+    "n_steps": 100,
+    "wall_time_s": 0.0093,
+    "ms_per_step": 0.093,
+    "steps_per_sec": 10798.7,
+    "final_R": 0.1441,
+    "memory_MB": 0.07
+  },
+  {
+    "N": 256,
+    "n_steps": 100,
+    "wall_time_s": 0.7003,
+    "ms_per_step": 7.003,
+    "steps_per_sec": 142.8,
+    "final_R": 0.0237,
+    "memory_MB": 1.05
+  },
+  {
+    "N": 1000,
+    "n_steps": 100,
+    "wall_time_s": 4.6746,
+    "ms_per_step": 46.746,
+    "steps_per_sec": 21.4,
+    "final_R": 0.0254,
+    "memory_MB": 16.01
+  }
+]
