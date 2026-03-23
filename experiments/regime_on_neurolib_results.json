@@ -1,0 +1,19 @@
+{
+  "n_windows": 3000,
+  "R_mean": 0.4077,
+  "R_std": 0.0728,
+  "R_min": 0.2856,
+  "R_max": 0.9996,
+  "NPE_mean": 0.7977,
+  "TCBO_p_h1_mean": 0.9976,
+  "regime_counts": {
+    "nominal": 57,
+    "degraded": 41,
+    "critical": 80,
+    "recovery": 2822
+  },
+  "n_transitions": 19,
+  "n_events": 19,
+  "sim_duration_ms": 30000,
+  "K": 2.0
+}
