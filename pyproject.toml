@@ -131,6 +131,10 @@ markers = [
 [tool.coverage.run]
 source = ["scpn_phase_orchestrator"]
 concurrency = ["thread"]
+omit = [
+    "*/grpc_gen/spo_pb2.py",
+    "*/grpc_gen/spo_pb2_grpc.py",
+]
 
 [tool.coverage.report]
 fail_under = 95

@@ -19,7 +19,7 @@ from __future__ import annotations
 USING_GENERATED_PB2: bool
 USING_GENERATED_GRPC: bool
 
-try:
+try:  # pragma: no cover — requires google.protobuf + grpcio
     from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (  # type: ignore[attr-defined]
         ConfigRequest,
         ConfigResponse,
@@ -46,7 +46,7 @@ except Exception:
 
     USING_GENERATED_PB2 = False
 
-try:
+try:  # pragma: no cover — requires grpcio
     from scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc import (
         PhaseOrchestratorServicer,
         add_PhaseOrchestratorServicer_to_server,
