@@ -1,0 +1,56 @@
+[
+  {
+    "correlation": -0.0619,
+    "p_value": 0.000501851216080522,
+    "n_pairs": 3160,
+    "K": 0.5,
+    "duration_ms": 60000,
+    "wall_time_s": 46.84,
+    "n_timepoints": 60
+  },
+  {
+    "correlation": 0.0264,
+    "p_value": 0.1376113398447941,
+    "n_pairs": 3160,
+    "K": 1.0,
+    "duration_ms": 60000,
+    "wall_time_s": 36.88,
+    "n_timepoints": 60
+  },
+  {
+    "correlation": 0.2003,
+    "p_value": 5.762916058962677e-30,
+    "n_pairs": 3160,
+    "K": 2.0,
+    "duration_ms": 60000,
+    "wall_time_s": 35.28,
+    "n_timepoints": 60
+  },
+  {
+    "correlation": -0.1233,
+    "p_value": 3.484286645189099e-12,
+    "n_pairs": 3160,
+    "K": 5.0,
+    "duration_ms": 60000,
+    "wall_time_s": 35.07,
+    "n_timepoints": 60
+  },
+  {
+    "correlation": -0.123,
+    "p_value": 4.013771475191134e-12,
+    "n_pairs": 3160,
+    "K": 10.0,
+    "duration_ms": 60000,
+    "wall_time_s": 34.59,
+    "n_timepoints": 60
+  },
+  {
+    "correlation": -0.1077,
+    "p_value": 1.283000501859468e-09,
+    "n_pairs": 3160,
+    "K": 20.0,
+    "duration_ms": 60000,
+    "wall_time_s": 34.18,
+    "n_timepoints": 60
+  }
+]
