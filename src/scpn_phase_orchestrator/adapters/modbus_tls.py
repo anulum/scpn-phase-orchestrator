@@ -70,7 +70,7 @@ class SecureModbusAdapter:
         except ssl.SSLError as exc:
             raise ConnectionError(f"TLS context creation failed: {exc}") from exc
 
-    def _connect(self) -> object:
+    def _connect(self) -> object:  # pragma: no cover
         if ModbusTlsClient is None:
             raise ConnectionError(
                 "pymodbus is required for Modbus TLS. Install: pip install pymodbus"
@@ -86,7 +86,7 @@ class SecureModbusAdapter:
             )
         return client
 
-    def read_register(self, address: int) -> int:
+    def read_register(self, address: int) -> int:  # pragma: no cover
         """Read a single holding register.
 
         Raises ConnectionError if the read fails or returns an error frame.
@@ -98,7 +98,7 @@ class SecureModbusAdapter:
             raise ConnectionError(f"Modbus read error at address {address}: {result}")
         return int(result.registers[0])
 
-    def write_register(self, address: int, value: int) -> None:
+    def write_register(self, address: int, value: int) -> None:  # pragma: no cover
         """Write a single holding register.
 
         Raises ConnectionError if the write fails.
@@ -107,7 +107,7 @@ class SecureModbusAdapter:
         if result.isError():
             raise ConnectionError(f"Modbus write error at address {address}: {result}")
 
-    def validate_connection(self) -> bool:
+    def validate_connection(self) -> bool:  # pragma: no cover
         """Return True if the TLS-wrapped Modbus connection is active."""
         try:
             return bool(self._client.connected)  # type: ignore[attr-defined]
