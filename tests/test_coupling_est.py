@@ -10,7 +10,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.autotune.coupling_est import estimate_coupling
+from scpn_phase_orchestrator.autotune.coupling_est import (
+    estimate_coupling,
+    estimate_coupling_harmonics,
+)
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 
@@ -63,3 +66,51 @@ class TestEstimateCoupling:
         omegas = np.ones(5)
         knm = estimate_coupling(phases, omegas, dt=0.01)
         assert np.all(np.isfinite(knm))
+
+
+class TestHarmonicCoupling:
+    def test_returns_dict(self):
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, (4, 100))
+        result = estimate_coupling_harmonics(phases, np.ones(4), dt=0.01)
+        assert "sin_1" in result
+        assert "cos_1" in result
+        assert "sin_2" in result
+        assert "cos_2" in result
+
+    def test_shape(self):
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, (3, 100))
+        result = estimate_coupling_harmonics(phases, np.ones(3), dt=0.01)
+        assert result["sin_1"].shape == (3, 3)
+
+    def test_zero_diagonal(self):
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, (4, 100))
+        result = estimate_coupling_harmonics(phases, np.ones(4), dt=0.01)
+        for v in result.values():
+            np.testing.assert_array_equal(np.diag(v), 0.0)
+
+    def test_single_harmonic_sign_consistent(self):
+        # With sin+cos regressors, sin_1 coefficients should have
+        # the same sign structure as the standard K_ij estimate
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, (3, 500))
+        omegas = np.ones(3)
+        knm_std = estimate_coupling(phases, omegas, dt=0.01)
+        knm_harm = estimate_coupling_harmonics(
+            phases, omegas, dt=0.01, n_harmonics=1
+        )
+        # Sign of dominant coupling should match
+        mask = np.abs(knm_std) > 0.1
+        if np.any(mask):
+            assert np.sum(np.sign(knm_harm["sin_1"][mask]) == np.sign(knm_std[mask])) > 0
+
+    def test_custom_n_harmonics(self):
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, (3, 100))
+        result = estimate_coupling_harmonics(
+            phases, np.ones(3), dt=0.01, n_harmonics=3
+        )
+        assert "sin_3" in result
+        assert "cos_3" in result

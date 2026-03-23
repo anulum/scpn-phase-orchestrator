@@ -63,3 +63,62 @@ def estimate_coupling(
 
     np.fill_diagonal(knm, 0.0)
     return knm
+
+
+def estimate_coupling_harmonics(
+    phases: NDArray,
+    omegas: NDArray,
+    dt: float,
+    n_harmonics: int = 2,
+) -> dict[str, NDArray]:
+    """Estimate coupling with higher Fourier harmonics.
+
+    Fits: dθ_i/dt - ω_i = Σ_j Σ_k [a_jk sin(k·Δθ) + b_jk cos(k·Δθ)]
+    for k = 1..n_harmonics.
+
+    Real biological oscillators have non-sinusoidal coupling
+    (Stankovski 2017, Rev. Mod. Phys.).
+
+    Returns dict with keys 'sin_1', 'cos_1', 'sin_2', 'cos_2', ...
+    each an (n, n) matrix of coefficients.
+    """
+    phases = np.atleast_2d(phases)
+    n, T = phases.shape
+    if T < 3:
+        raise ValueError(f"Need >= 3 timesteps, got {T}")
+
+    dphase = np.diff(np.unwrap(phases, axis=1), axis=1) / dt
+    phases_mid = phases[:, :-1]
+    T_eff = dphase.shape[1]
+
+    result: dict[str, NDArray] = {}
+    for k in range(1, n_harmonics + 1):
+        result[f"sin_{k}"] = np.zeros((n, n), dtype=np.float64)
+        result[f"cos_{k}"] = np.zeros((n, n), dtype=np.float64)
+
+    for i in range(n):
+        target = dphase[i, :] - omegas[i]
+        diff = phases_mid[:, :T_eff] - phases_mid[i : i + 1, :T_eff]
+
+        # Build regressor matrix: [sin(Δθ), cos(Δθ), sin(2Δθ), cos(2Δθ), ...]
+        blocks = []
+        for k in range(1, n_harmonics + 1):
+            blocks.append(np.sin(k * diff))
+            blocks.append(np.cos(k * diff))
+        regressors = np.vstack(blocks)  # (2*n_harmonics*n, T_eff)
+
+        with contextlib.suppress(np.linalg.LinAlgError):
+            coeffs = np.linalg.lstsq(regressors.T, target, rcond=None)[0]
+
+        # Unpack coefficients
+        idx = 0
+        for k in range(1, n_harmonics + 1):
+            result[f"sin_{k}"][i, :] = coeffs[idx : idx + n]
+            idx += n
+            result[f"cos_{k}"][i, :] = coeffs[idx : idx + n]
+            idx += n
+
+    for key in result:
+        np.fill_diagonal(result[key], 0.0)
+
+    return result
