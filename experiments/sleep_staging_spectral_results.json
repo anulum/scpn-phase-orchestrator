@@ -1,0 +1,78 @@
+{
+  "method": "spectral_power_paper2",
+  "overall_accuracy": 0.0906,
+  "correct": 240,
+  "total_valid": 2650,
+  "per_stage": {
+    "Wake": {
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 1997
+    },
+    "N1": {
+      "accuracy": 0.3276,
+      "correct": 19,
+      "total": 58
+    },
+    "N2": {
+      "accuracy": 0.004,
+      "correct": 1,
+      "total": 250
+    },
+    "N3": {
+      "accuracy": 1.0,
+      "correct": 220,
+      "total": 220
+    },
+    "REM": {
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 125
+    }
+  },
+  "confusion": {
+    "Wake": {
+      "Wake": 0,
+      "N1": 17,
+      "N2": 397,
+      "N3": 1563,
+      "REM": 20
+    },
+    "N1": {
+      "Wake": 0,
+      "N1": 19,
+      "N2": 4,
+      "N3": 34,
+      "REM": 1
+    },
+    "N2": {
+      "Wake": 0,
+      "N1": 1,
+      "N2": 1,
+      "N3": 248,
+      "REM": 0
+    },
+    "N3": {
+      "Wake": 0,
+      "N1": 0,
+      "N2": 0,
+      "N3": 220,
+      "REM": 0
+    },
+    "REM": {
+      "Wake": 0,
+      "N1": 33,
+      "N2": 22,
+      "N3": 70,
+      "REM": 0
+    }
+  },
+  "mean_powers": {
+    "delta": 0.589,
+    "theta": 0.0726,
+    "alpha": 0.019,
+    "sigma": 0.008,
+    "beta": 0.0167,
+    "gamma": 0.017
+  }
+}

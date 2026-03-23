@@ -1,0 +1,33 @@
+{
+  "method": "nearest_centroid_calibrated",
+  "train_epochs": 1854,
+  "test_epochs": 796,
+  "overall_accuracy": 0.9824,
+  "per_stage": {
+    "Wake": {
+      "accuracy": 0.9824,
+      "correct": 782,
+      "total": 796
+    },
+    "N1": {
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 0
+    },
+    "N2": {
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 0
+    },
+    "N3": {
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 0
+    },
+    "REM": {
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 0
+    }
+  }
+}
