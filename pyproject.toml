@@ -132,8 +132,7 @@ markers = [
 source = ["scpn_phase_orchestrator"]
 concurrency = ["thread"]
 omit = [
-    "*/grpc_gen/spo_pb2.py",
-    "*/grpc_gen/spo_pb2_grpc.py",
+    "*/grpc_gen/*",
 ]
 
 [tool.coverage.report]
