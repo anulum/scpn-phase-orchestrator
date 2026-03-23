@@ -40,6 +40,8 @@ def run_stuart_landau(
     mu: float = -0.05,
     noise_sigma: float = 0.02,
     seed: int = 42,
+    dmat: np.ndarray | None = None,
+    velocity: float = 5.0,
 ) -> np.ndarray:
     """Run Stuart-Landau near Hopf bifurcation on structural connectivity.
 
@@ -58,8 +60,21 @@ def run_stuart_landau(
     # NOT gamma band — the SL model operates at the BOLD envelope timescale
     omega = rng.uniform(0.04, 0.07, n) * 2 * np.pi
 
+    # Conduction delays from distance matrix
+    if dmat is not None:
+        delay_steps = np.round(dmat / (velocity * dt)).astype(int)
+        max_delay = int(delay_steps.max()) + 1
+    else:
+        delay_steps = np.zeros((n, n), dtype=int)
+        max_delay = 1
+
     # Initialize near fixed point with small perturbation
     z = 0.01 * rng.standard_normal((n,)) + 0.01j * rng.standard_normal((n,))
+
+    # History buffer for delayed coupling
+    z_history = np.zeros((max_delay + 1, n), dtype=complex)
+    z_history[0] = z.copy()
+    hist_idx = 0
 
     # Store BOLD-like signal (real part, downsampled)
     downsample = max(1, int(0.72 / dt))  # ~0.72s TR
@@ -69,11 +84,23 @@ def run_stuart_landau(
         # Stuart-Landau dynamics
         dzdt = (mu + 1j * omega - np.abs(z) ** 2) * z
 
-        # Global coupling: K * Σ_k C_jk (z_k - z_j) / degree_j
-        # Normalization by degree prevents high-degree nodes from exploding
+        # Global coupling with conduction delays
+        # z_delayed[j,k] = z_k at time (t - delay_jk)
         degrees = sc.sum(axis=1)
         degrees[degrees < 1e-10] = 1.0
-        coupling = K * (sc @ z - degrees * z) / degrees
+        if max_delay > 1:
+            z_delayed = np.zeros(n, dtype=complex)
+            for j in range(n):
+                delayed_input = 0.0 + 0.0j
+                for k in range(n):
+                    if sc[j, k] > 0:
+                        d = delay_steps[j, k]
+                        idx = (hist_idx - d) % (max_delay + 1)
+                        delayed_input += sc[j, k] * z_history[idx, k]
+                z_delayed[j] = delayed_input
+            coupling = K * (z_delayed - degrees * z) / degrees
+        else:
+            coupling = K * (sc @ z - degrees * z) / degrees
 
         # Noise
         noise = noise_sigma * (
@@ -81,6 +108,10 @@ def run_stuart_landau(
         )
 
         z = z + dt * (dzdt + coupling) + np.sqrt(dt) * noise
+
+        # Update history buffer
+        hist_idx = (hist_idx + 1) % (max_delay + 1)
+        z_history[hist_idx] = z.copy()
 
         if step % downsample == 0:
             bold.append(z.real.copy())
@@ -131,9 +162,11 @@ def main() -> None:
     print("Loading HCP data...")
     ds = Dataset("hcp")
     sc = ds.Cmat
+    dmat = ds.Dmat
     emp_fc = np.mean(ds.FCs, axis=0)  # average across subjects
     np.fill_diagonal(emp_fc, 0.0)
-    print(f"  SC: {sc.shape}, FC: {emp_fc.shape}, subjects: {len(ds.FCs)}")
+    print(f"  SC: {sc.shape}, Dmat: {dmat.shape}, FC: {emp_fc.shape}, subjects: {len(ds.FCs)}")
+    print(f"  Dmat range: [{dmat.min():.1f}, {dmat.max():.1f}] mm")
 
     K_values = args.K_sweep or [args.K]
     results = []
@@ -141,7 +174,9 @@ def main() -> None:
     for K in K_values:
         print(f"\nRunning K={K:.2f}, duration={args.duration}s, mu={args.mu}...")
         t0 = time.perf_counter()
-        bold = run_stuart_landau(sc, K=K, duration=args.duration, mu=args.mu)
+        bold = run_stuart_landau(
+            sc, K=K, duration=args.duration, mu=args.mu, dmat=dmat
+        )
         elapsed = time.perf_counter() - t0
         print(f"  Simulation: {elapsed:.1f}s, BOLD shape: {bold.shape}")
 
