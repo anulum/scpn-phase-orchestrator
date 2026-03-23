@@ -1,0 +1,124 @@
+[
+  {
+    "K": 5.0,
+    "R_mean": 0.4002,
+    "R_std": 0.0877,
+    "R_min": 0.305,
+    "R_max": 0.9846,
+    "regime_counts": {
+      "nominal": 51,
+      "degraded": 1449
+    },
+    "n_transitions": 3,
+    "wall_time_s": 44.83,
+    "n_windows": 1500
+  },
+  {
+    "K": 3.0,
+    "R_mean": 0.4128,
+    "R_std": 0.0953,
+    "R_min": 0.2851,
+    "R_max": 1.0,
+    "regime_counts": {
+      "nominal": 57,
+      "degraded": 25,
+      "critical": 101,
+      "recovery": 1317
+    },
+    "n_transitions": 24,
+    "wall_time_s": 12.34,
+    "n_windows": 1500
+  },
+  {
+    "K": 2.0,
+    "R_mean": 0.4076,
+    "R_std": 0.0859,
+    "R_min": 0.2927,
+    "R_max": 0.9994,
+    "regime_counts": {
+      "nominal": 52,
+      "degraded": 47,
+      "critical": 30,
+      "recovery": 1371
+    },
+    "n_transitions": 9,
+    "wall_time_s": 11.95,
+    "n_windows": 1500
+  },
+  {
+    "K": 1.5,
+    "R_mean": 0.4299,
+    "R_std": 0.097,
+    "R_min": 0.2794,
+    "R_max": 0.9567,
+    "regime_counts": {
+      "nominal": 63,
+      "degraded": 37,
+      "critical": 270,
+      "recovery": 1130
+    },
+    "n_transitions": 59,
+    "wall_time_s": 10.69,
+    "n_windows": 1500
+  },
+  {
+    "K": 1.0,
+    "R_mean": 0.4185,
+    "R_std": 0.0896,
+    "R_min": 0.3129,
+    "R_max": 0.9773,
+    "regime_counts": {
+      "nominal": 57,
+      "degraded": 1443
+    },
+    "n_transitions": 3,
+    "wall_time_s": 12.16,
+    "n_windows": 1500
+  },
+  {
+    "K": 0.5,
+    "R_mean": 0.4381,
+    "R_std": 0.0981,
+    "R_min": 0.2833,
+    "R_max": 1.0,
+    "regime_counts": {
+      "nominal": 59,
+      "degraded": 48,
+      "critical": 51,
+      "recovery": 1342
+    },
+    "n_transitions": 14,
+    "wall_time_s": 12.51,
+    "n_windows": 1500
+  },
+  {
+    "K": 0.2,
+    "R_mean": 0.4123,
+    "R_std": 0.0891,
+    "R_min": 0.3289,
+    "R_max": 0.9999,
+    "regime_counts": {
+      "nominal": 58,
+      "degraded": 1442
+    },
+    "n_transitions": 4,
+    "wall_time_s": 9.79,
+    "n_windows": 1500
+  },
+  {
+    "K": 0.1,
+    "R_mean": 0.42,
+    "R_std": 0.1007,
+    "R_min": 0.2693,
+    "R_max": 1.0,
+    "regime_counts": {
+      "nominal": 57,
+      "degraded": 96,
+      "critical": 61,
+      "recovery": 1286
+    },
+    "n_transitions": 16,
+    "wall_time_s": 10.76,
+    "n_windows": 1500
+  }
+]
