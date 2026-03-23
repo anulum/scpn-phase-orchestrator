@@ -1,0 +1,46 @@
+[
+  {
+    "correlation": -0.003,
+    "p_value": 0.8672269597922695,
+    "n_pairs": 3160,
+    "sim_fc_mean": -0.001,
+    "emp_fc_mean": 0.3396,
+    "K": 0.1,
+    "duration": 120.0,
+    "mu": -0.01,
+    "wall_time_s": 283.41
+  },
+  {
+    "correlation": -0.0193,
+    "p_value": 0.27736614797274467,
+    "n_pairs": 3160,
+    "sim_fc_mean": 0.0054,
+    "emp_fc_mean": 0.3396,
+    "K": 0.5,
+    "duration": 120.0,
+    "mu": -0.01,
+    "wall_time_s": 249.91
+  },
+  {
+    "correlation": -0.0238,
+    "p_value": 0.18022956959483408,
+    "n_pairs": 3160,
+    "sim_fc_mean": 0.0012,
+    "emp_fc_mean": 0.3396,
+    "K": 1.0,
+    "duration": 120.0,
+    "mu": -0.01,
+    "wall_time_s": 292.96
+  },
+  {
+    "correlation": -0.0237,
+    "p_value": 0.1821745415209366,
+    "n_pairs": 3160,
+    "sim_fc_mean": -0.0007,
+    "emp_fc_mean": 0.3396,
+    "K": 2.0,
+    "duration": 120.0,
+    "mu": -0.01,
+    "wall_time_s": 255.06
+  }
+]
