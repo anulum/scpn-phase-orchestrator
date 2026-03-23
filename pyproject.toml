@@ -60,6 +60,17 @@ lava = ["lava-nc>=0.9"]
 otel = ["opentelemetry-api>=1.20", "opentelemetry-sdk>=1.20"]
 plot = ["matplotlib>=3.7"]
 notebook = ["jupyter>=1.0", "nbconvert>=7.0", "matplotlib>=3.7"]
+full = [
+    "neurolib>=0.6",
+    "grpcio>=1.60",
+    "grpcio-tools>=1.60",
+    "protobuf>=4.0",
+    "pymodbus>=3.5",
+    "jax>=0.4",
+    "diffrax>=0.5",
+    "rtamt>=0.3",
+    "ripser>=0.6",
+]
 dev = [
     "pytest>=7.4",
     "pytest-asyncio>=0.23",

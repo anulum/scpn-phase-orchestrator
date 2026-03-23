@@ -24,7 +24,7 @@ __all__ = ["load_hcp_connectome", "load_neurolib_hcp"]
 _NEUROLIB_HCP_SIZE = 80  # Cakan & Obermayer 2021, Neuroimage 227:117474
 
 
-def load_neurolib_hcp(n_regions: int = 80) -> NDArray:  # pragma: no cover
+def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
     """Load real HCP structural connectivity from neurolib.
 
     Args:
