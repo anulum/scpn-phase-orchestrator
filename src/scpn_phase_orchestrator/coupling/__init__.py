@@ -11,7 +11,13 @@ from scpn_phase_orchestrator.coupling.connectome import (
     load_hcp_connectome,
     load_neurolib_hcp,
 )
-from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
+from scpn_phase_orchestrator.coupling.knm import (
+    SCPN_CALIBRATION_ANCHORS,
+    SCPN_LAYER_NAMES,
+    SCPN_LAYER_TIMESCALES,
+    CouplingBuilder,
+    CouplingState,
+)
 from scpn_phase_orchestrator.coupling.plasticity import (
     compute_eligibility,
     three_factor_update,
@@ -20,6 +26,9 @@ from scpn_phase_orchestrator.coupling.plasticity import (
 __all__ = [
     "CouplingBuilder",
     "CouplingState",
+    "SCPN_CALIBRATION_ANCHORS",
+    "SCPN_LAYER_NAMES",
+    "SCPN_LAYER_TIMESCALES",
     "compute_eligibility",
     "load_hcp_connectome",
     "load_neurolib_hcp",
