@@ -21,18 +21,18 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import numpy as np
-from scipy.signal import hilbert
-
 from neurolib.models.aln import ALNModel
 from neurolib.utils.loadData import Dataset
+from scipy.signal import hilbert
 
-from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver, BoundaryState
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.monitor.npe import compute_npe
 from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver
 from scpn_phase_orchestrator.supervisor.events import EventBus
-from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -117,9 +117,9 @@ def main() -> None:
 
     transitions = len(regime_manager.transition_history)
 
-    print(f"\n{'='*60}")
-    print(f"SPO Supervision Results on neurolib ALN output")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("SPO Supervision Results on neurolib ALN output")
+    print(f"{'=' * 60}")
     print(f"Windows analyzed: {n_windows}")
     print(f"R range: [{min(R_history):.4f}, {max(R_history):.4f}]")
     print(f"R mean: {np.mean(R_history):.4f}")
@@ -144,9 +144,9 @@ def main() -> None:
         "K": 2.0,
     }
 
-    with open("experiments/regime_on_neurolib_results.json", "w") as f:
+    with Path("experiments/regime_on_neurolib_results.json").open("w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved to experiments/regime_on_neurolib_results.json")
+    print("\nSaved to experiments/regime_on_neurolib_results.json")
 
 
 if __name__ == "__main__":

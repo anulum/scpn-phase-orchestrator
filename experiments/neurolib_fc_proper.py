@@ -28,14 +28,14 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from pathlib import Path
 
 import numpy as np
-from scipy.signal import butter, filtfilt
-from scipy.stats import pearsonr
-
 from neurolib.models.aln import ALNModel
 from neurolib.models.bold import BOLDModel
 from neurolib.utils.loadData import Dataset
+from scipy.signal import butter, filtfilt
+from scipy.stats import pearsonr
 
 
 def bandpass_bold(signal, fs, low=0.01, high=0.1):
@@ -81,7 +81,9 @@ def run_one(ds, K, duration_ms, discard_ms=10000):
         return None, sim_time
 
     # Discard initial transient
-    discard_samples = max(0, int(discard_ms / (t_bold[1] - t_bold[0]))) if len(t_bold) > 1 else 0
+    discard_samples = (
+        max(0, int(discard_ms / (t_bold[1] - t_bold[0]))) if len(t_bold) > 1 else 0
+    )
     bold = bold[:, discard_samples:]
 
     if bold.shape[1] < 20:
@@ -116,9 +118,13 @@ def run_one(ds, K, duration_ms, discard_ms=10000):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--duration", type=int, default=300000, help="Duration in ms (default 300s)")
+    parser.add_argument(
+        "--duration", type=int, default=300000, help="Duration in ms (default 300s)"
+    )
     parser.add_argument("--coupling", type=float, default=None, help="Single K value")
-    parser.add_argument("--output", type=str, default="experiments/neurolib_fc_proper_results.json")
+    parser.add_argument(
+        "--output", type=str, default="experiments/neurolib_fc_proper_results.json"
+    )
     args = parser.parse_args()
 
     print("Loading HCP data...")
@@ -139,7 +145,7 @@ def main():
         out, wall_time = run_one(ds, K, args.duration)
 
         if out is None:
-            print(f"  FAILED: insufficient data")
+            print("  FAILED: insufficient data")
             continue
 
         r, p, n_pairs = fc_upper_triangle(out["sim_fc"], emp_fc)
@@ -155,19 +161,19 @@ def main():
             "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz",
         }
         results.append(entry)
-        print(f"  FC correlation: r={r:.4f} (p={p:.2e}), {out['n_bold_timepoints']} BOLD timepoints")
+        print(f"  FC: r={r:.4f} (p={p:.2e}), {out['n_bold_timepoints']} BOLD pts")
 
     if results:
         best = max(results, key=lambda r: r["fc_correlation"])
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Best: K={best['K']}, r={best['fc_correlation']:.4f}")
-        print(f"Literature target: r~0.72 (Deco et al. 2018)")
+        print("Literature target: r~0.72 (Deco et al. 2018)")
         gap = 0.72 - best["fc_correlation"]
         print(f"Gap: {gap:.4f}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
     if args.output and results:
-        with open(args.output, "w") as f:
+        with Path(args.output).open("w") as f:
             json.dump(results, f, indent=2)
         print(f"\nSaved to {args.output}")
 

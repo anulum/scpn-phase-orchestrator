@@ -18,12 +18,12 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import numpy as np
-from scipy.signal import hilbert
-
 from neurolib.models.aln import ALNModel
 from neurolib.utils.loadData import Dataset
+from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -86,14 +86,16 @@ def main():
 
         # MPC prediction
         pred = mpc.predict(window_phases, omegas, coupling.knm, coupling.alpha)
-        predictions.append({
-            "window": w,
-            "R_current": round(float(R), 4),
-            "R_predicted_final": round(pred.R_predicted[-1], 4),
-            "will_degrade": pred.will_degrade,
-            "will_critical": pred.will_critical,
-            "steps_to_degradation": pred.steps_to_degradation,
-        })
+        predictions.append(
+            {
+                "window": w,
+                "R_current": round(float(R), 4),
+                "R_predicted_final": round(pred.R_predicted[-1], 4),
+                "will_degrade": pred.will_degrade,
+                "will_critical": pred.will_critical,
+                "steps_to_degradation": pred.steps_to_degradation,
+            }
+        )
 
         # MPC control decision
         upde_state = UPDEState(
@@ -103,17 +105,23 @@ def main():
             regime_id=0,
         )
         actions = mpc.decide(
-            window_phases, omegas, coupling.knm, coupling.alpha,
-            upde_state, BoundaryState(),
+            window_phases,
+            omegas,
+            coupling.knm,
+            coupling.alpha,
+            upde_state,
+            BoundaryState(),
         )
         if actions:
-            actions_taken.append({
-                "window": w,
-                "R_current": round(float(R), 4),
-                "action": actions[0].justification,
-            })
+            actions_taken.append(
+                {
+                    "window": w,
+                    "R_current": round(float(R), 4),
+                    "action": actions[0].justification,
+                }
+            )
 
-    # Evaluate prediction accuracy: did "will_degrade" at t predict R < 0.6 at t+horizon?
+    # Did will_degrade at t predict R < 0.6 within horizon?
     R_arr = np.array(R_history)
     for i, p in enumerate(predictions):
         if p["will_degrade"]:
@@ -126,14 +134,15 @@ def main():
 
     # Count actual degradation events that were NOT predicted
     for i in range(len(R_arr) - 20):
-        actual_degrade = np.any(R_arr[i:i + 20] < 0.6)
+        actual_degrade = np.any(R_arr[i : i + 20] < 0.6)
         predicted = predictions[i]["will_degrade"]
         if actual_degrade and not predicted:
             prediction_misses += 1
 
     total_predictions = sum(1 for p in predictions if p["will_degrade"])
-    total_actual = sum(1 for i in range(len(R_arr) - 20)
-                       if np.any(R_arr[i:i + 20] < 0.6))
+    total_actual = sum(
+        1 for i in range(len(R_arr) - 20) if np.any(R_arr[i : i + 20] < 0.6)
+    )
 
     results = {
         "n_windows": n_windows,
@@ -154,21 +163,21 @@ def main():
         "mpc_horizon": 20,
     }
 
-    print(f"\n{'='*60}")
-    print(f"MPC Predictive Supervision Results")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("MPC Predictive Supervision Results")
+    print(f"{'=' * 60}")
     print(f"Windows: {n_windows}")
     print(f"R: {results['R_mean']:.4f} ± {results['R_std']:.4f}")
     print(f"Degradation predictions: {total_predictions}")
     print(f"Actual degradation windows: {total_actual}")
-    print(f"Hits: {prediction_hits}, False alarms: {false_alarms}, Misses: {prediction_misses}")
+    print(f"Hits: {prediction_hits}, FA: {false_alarms}, Miss: {prediction_misses}")
     print(f"Precision: {results['precision']:.4f}")
     print(f"Recall: {results['recall']:.4f}")
     print(f"Control actions triggered: {len(actions_taken)}")
 
-    with open("experiments/mpc_on_neurolib_results.json", "w") as f:
+    with Path("experiments/mpc_on_neurolib_results.json").open("w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved to experiments/mpc_on_neurolib_results.json")
+    print("\nSaved to experiments/mpc_on_neurolib_results.json")
 
 
 if __name__ == "__main__":

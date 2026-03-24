@@ -25,11 +25,11 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from pathlib import Path
 
 import numpy as np
-from scipy.stats import pearsonr
-
 from neurolib.utils.loadData import Dataset
+from scipy.stats import pearsonr
 
 
 def run_stuart_landau(
@@ -103,9 +103,7 @@ def run_stuart_landau(
             coupling = K * (sc @ z - degrees * z) / degrees
 
         # Noise
-        noise = noise_sigma * (
-            rng.standard_normal(n) + 1j * rng.standard_normal(n)
-        )
+        noise = noise_sigma * (rng.standard_normal(n) + 1j * rng.standard_normal(n))
 
         z = z + dt * (dzdt + coupling) + np.sqrt(dt) * noise
 
@@ -121,7 +119,7 @@ def run_stuart_landau(
 
 def compute_fc(bold: np.ndarray) -> np.ndarray:
     """Compute functional connectivity as pairwise Pearson correlation."""
-    n = bold.shape[0]
+    bold.shape[0]
     fc = np.corrcoef(bold)
     np.fill_diagonal(fc, 0.0)
     return fc
@@ -165,7 +163,7 @@ def main() -> None:
     dmat = ds.Dmat
     emp_fc = np.mean(ds.FCs, axis=0)  # average across subjects
     np.fill_diagonal(emp_fc, 0.0)
-    print(f"  SC: {sc.shape}, Dmat: {dmat.shape}, FC: {emp_fc.shape}, subjects: {len(ds.FCs)}")
+    print(f"  SC: {sc.shape}, FC: {emp_fc.shape}, subj: {len(ds.FCs)}")
     print(f"  Dmat range: [{dmat.min():.1f}, {dmat.max():.1f}] mm")
 
     K_values = args.K_sweep or [args.K]
@@ -174,9 +172,7 @@ def main() -> None:
     for K in K_values:
         print(f"\nRunning K={K:.2f}, duration={args.duration}s, mu={args.mu}...")
         t0 = time.perf_counter()
-        bold = run_stuart_landau(
-            sc, K=K, duration=args.duration, mu=args.mu, dmat=dmat
-        )
+        bold = run_stuart_landau(sc, K=K, duration=args.duration, mu=args.mu, dmat=dmat)
         elapsed = time.perf_counter() - t0
         print(f"  Simulation: {elapsed:.1f}s, BOLD shape: {bold.shape}")
 
@@ -188,17 +184,17 @@ def main() -> None:
         result["wall_time_s"] = round(elapsed, 2)
         results.append(result)
 
-        print(f"  FC correlation: r={result['correlation']:.4f} (p={result['p_value']:.2e})")
+        print(f"  FC: r={result['correlation']:.4f} (p={result['p_value']:.2e})")
 
     # Find best K
     best = max(results, key=lambda r: r["correlation"])
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Best: K={best['K']:.2f}, r={best['correlation']:.4f}")
-    print(f"Target: r=0.72 (Deco et al. 2018)")
-    print(f"{'='*60}")
+    print("Target: r=0.72 (Deco et al. 2018)")
+    print(f"{'=' * 60}")
 
     if args.output:
-        with open(args.output, "w") as f:
+        with Path(args.output).open("w") as f:
             json.dump(results, f, indent=2)
         print(f"\nResults saved to {args.output}")
 

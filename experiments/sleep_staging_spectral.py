@@ -23,12 +23,12 @@ Usage:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import mne
 import numpy as np
 from mne.datasets import sleep_physionet
-from scipy.signal import butter, filtfilt, welch
-
+from scipy.signal import welch
 
 STAGE_MAP = {
     "Sleep stage W": "Wake",
@@ -52,8 +52,12 @@ def band_power(epoch: np.ndarray, fs: float, lo: float, hi: float) -> float:
 
 
 def classify_by_spectral_power(
-    delta: float, theta: float, alpha: float,
-    sigma: float, beta: float, gamma: float,
+    delta: float,
+    theta: float,
+    alpha: float,
+    sigma: float,
+    beta: float,
+    gamma: float,
 ) -> str:
     """Classify sleep stage from relative band powers.
 
@@ -116,8 +120,14 @@ def main() -> None:
 
     # Classify each epoch
     spo_stages = []
-    powers = {"delta": [], "theta": [], "alpha": [],
-              "sigma": [], "beta": [], "gamma": []}
+    powers = {
+        "delta": [],
+        "theta": [],
+        "alpha": [],
+        "sigma": [],
+        "beta": [],
+        "gamma": [],
+    }
 
     for e in range(n_epochs):
         epoch = eeg[e * epoch_len : (e + 1) * epoch_len]
@@ -148,7 +158,8 @@ def main() -> None:
     for stage in ["Wake", "N1", "N2", "N3", "REM"]:
         t_count = sum(1 for i in range(n_epochs) if valid[i] and expert[i] == stage)
         c_count = sum(
-            1 for i in range(n_epochs)
+            1
+            for i in range(n_epochs)
             if valid[i] and expert[i] == stage and spo_stages[i] == stage
         )
         per_stage[stage] = {
@@ -163,21 +174,22 @@ def main() -> None:
         confusion[true_s] = {}
         for pred_s in ["Wake", "N1", "N2", "N3", "REM"]:
             confusion[true_s][pred_s] = sum(
-                1 for i in range(n_epochs)
+                1
+                for i in range(n_epochs)
                 if valid[i] and expert[i] == true_s and spo_stages[i] == pred_s
             )
 
-    print(f"\n{'='*60}")
-    print(f"Sleep Staging — Spectral Power (Paper 2 Physics)")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("Sleep Staging — Spectral Power (Paper 2 Physics)")
+    print(f"{'=' * 60}")
     print(f"Total epochs: {n_epochs}, valid: {total_valid}")
     print(f"Overall accuracy: {accuracy:.1%} ({correct}/{total_valid})")
-    print(f"\nPer-stage:")
+    print("\nPer-stage:")
     for stage in ["Wake", "N1", "N2", "N3", "REM"]:
         ps = per_stage[stage]
         print(f"  {stage:>5}: {ps['accuracy']:.1%} ({ps['correct']}/{ps['total']})")
 
-    print(f"\nConfusion matrix:")
+    print("\nConfusion matrix:")
     print(f"{'True/Pred':>10}", end="")
     for s in ["Wake", "N1", "N2", "N3", "REM"]:
         print(f"{s:>6}", end="")
@@ -188,7 +200,7 @@ def main() -> None:
             print(f"{confusion[true_s][pred_s]:>6}", end="")
         print()
 
-    print(f"\nMean band powers:")
+    print("\nMean band powers:")
     for band in ["delta", "theta", "alpha", "sigma", "beta", "gamma"]:
         print(f"  {band:>6}: {np.mean(powers[band]):.4f}")
 
@@ -202,10 +214,10 @@ def main() -> None:
         "mean_powers": {b: round(float(np.mean(v)), 4) for b, v in powers.items()},
     }
 
-    with open("experiments/sleep_staging_spectral_results.json", "w") as f:
+    with Path("experiments/sleep_staging_spectral_results.json").open("w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved to experiments/sleep_staging_spectral_results.json")
-    print(f"\nPrevious (Kuramoto R): 28.0%")
+    print("\nSaved to experiments/sleep_staging_spectral_results.json")
+    print("\nPrevious (Kuramoto R): 28.0%")
     print(f"Current (Spectral power): {accuracy:.1%}")
 
 

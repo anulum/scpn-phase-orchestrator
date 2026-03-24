@@ -81,4 +81,7 @@ if __name__ == "__main__":
     print(f"{'Engine':<30} {'Time(ms)':>10} {'R':>8} {'Steps/s':>10}")
     print("-" * 62)
     for r in run_benchmark():
-        print(f"{r.engine:<30} {r.wall_time_ms:>10.1f} {r.final_R:>8.4f} {r.steps_per_sec:>10.0f}")
+        print(
+            f"{r.engine:<20} {r.wall_time_ms:>8.1f}"
+            f" {r.final_R:>7.4f} {r.steps_per_sec:>9.0f}"
+        )

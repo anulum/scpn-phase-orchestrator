@@ -28,29 +28,41 @@ __all__ = [
 # Source: HolonomicAtlas/src/knm_tools/knm_matrix_calculator.py,
 # Paper 0 (UPDE framework), Paper 4 (synchronization).
 SCPN_LAYER_TIMESCALES: dict[int, float] = {
-    1: 0.1,          # Quantum Biological (~100ms)
-    2: 0.004,         # Neurochemical (~25ms, 40Hz)
-    3: 3600.0,        # Genomic (~1 hour)
-    4: 2.0,           # Synchronization (~2s)
-    5: 1.0,           # Psychoemotional (~1s)
-    6: 86400.0,       # Planetary (~24h)
-    7: 10.0,          # Geometrical-Symbolic (~10s)
-    8: 31557600.0,    # Cosmic Phase Locking (~1 year)
-    9: 3.154e9,       # Memory Imprint (~100 years)
-    10: 1.0,          # Boundary Control (~1s)
-    11: 86400.0,      # Noospheric (~24h)
-    12: 31557600.0,   # Ecological Gaian (~1 year)
-    13: 0.001,        # Source Field (~1ms)
-    14: 1e-20,        # Transdimensional (~Planck)
-    15: 1.0,          # Consilium Oversoul (~1s)
-    16: 1e-30,        # Meta Director (atemporal, placeholder)
+    1: 0.1,  # Quantum Biological (~100ms)
+    2: 0.004,  # Neurochemical (~25ms, 40Hz)
+    3: 3600.0,  # Genomic (~1 hour)
+    4: 2.0,  # Synchronization (~2s)
+    5: 1.0,  # Psychoemotional (~1s)
+    6: 86400.0,  # Planetary (~24h)
+    7: 10.0,  # Geometrical-Symbolic (~10s)
+    8: 31557600.0,  # Cosmic Phase Locking (~1 year)
+    9: 3.154e9,  # Memory Imprint (~100 years)
+    10: 1.0,  # Boundary Control (~1s)
+    11: 86400.0,  # Noospheric (~24h)
+    12: 31557600.0,  # Ecological Gaian (~1 year)
+    13: 0.001,  # Source Field (~1ms)
+    14: 1e-20,  # Transdimensional (~Planck)
+    15: 1.0,  # Consilium Oversoul (~1s)
+    16: 1e-30,  # Meta Director (atemporal, placeholder)
 }
 
 SCPN_LAYER_NAMES: dict[int, str] = {
-    1: "Quantum", 2: "Neural", 3: "Genomic", 4: "Tissue",
-    5: "Psycho", 6: "Planetary", 7: "Symbolic", 8: "Cosmic",
-    9: "Memory", 10: "Boundary", 11: "Noospheric", 12: "Gaian",
-    13: "Source", 14: "Transdim", 15: "Consilium", 16: "Meta",
+    1: "Quantum",
+    2: "Neural",
+    3: "Genomic",
+    4: "Tissue",
+    5: "Psycho",
+    6: "Planetary",
+    7: "Symbolic",
+    8: "Cosmic",
+    9: "Memory",
+    10: "Boundary",
+    11: "Noospheric",
+    12: "Gaian",
+    13: "Source",
+    14: "Transdim",
+    15: "Consilium",
+    16: "Meta",
 }
 
 # Calibration anchors from Paper 0 / HolonomicAtlas.
@@ -152,8 +164,8 @@ class CouplingBuilder:
                 K[m - 1, n - 1] = val
 
         # Cross-hierarchy boosts (Paper 0, Section 5)
-        _set_symmetric(K, 1, 16, max(K[0, 15], 0.05))   # Quantum-Meta
-        _set_symmetric(K, 5, 7, max(K[4, 6], 0.15))     # Psycho-Symbolic
+        _set_symmetric(K, 1, 16, max(K[0, 15], 0.05))  # Quantum-Meta
+        _set_symmetric(K, 5, 7, max(K[4, 6], 0.15))  # Psycho-Symbolic
 
         alpha = np.zeros((16, 16), dtype=np.float64)
         return CouplingState(knm=K, alpha=alpha, active_template="scpn_physics")

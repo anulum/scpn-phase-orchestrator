@@ -22,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import mne
 import numpy as np
@@ -30,7 +31,6 @@ from scipy.signal import butter, filtfilt, hilbert
 
 from scpn_phase_orchestrator.monitor.sleep_staging import classify_sleep_stage
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
 
 STAGE_MAP = {
     "Sleep stage W": "Wake",
@@ -49,9 +49,7 @@ def bandpass(sig: np.ndarray, fs: float, lo: float, hi: float) -> np.ndarray:
     return filtfilt(b, a, sig)
 
 
-def extract_band_phases(
-    eeg: np.ndarray, fs: float
-) -> dict[str, np.ndarray]:
+def extract_band_phases(eeg: np.ndarray, fs: float) -> dict[str, np.ndarray]:
     """Extract instantaneous phases in delta, theta, alpha, sigma, beta bands."""
     bands = {
         "delta": (0.5, 4.0),
@@ -77,9 +75,7 @@ def compute_epoch_R(
     computes R across bands — measuring inter-band coherence.
     """
     mid = epoch_start + epoch_len // 2
-    phase_vector = np.array([
-        band_phases[b][mid] for b in band_phases
-    ])
+    phase_vector = np.array([band_phases[b][mid] for b in band_phases])
     R, _ = compute_order_parameter(phase_vector)
     return float(R)
 
@@ -92,7 +88,7 @@ def main() -> None:
 
     fs = raw.info["sfreq"]
     eeg_data = raw.get_data(picks=["EEG Fpz-Cz"])[0]
-    print(f"  EEG: {len(eeg_data)} samples, {fs} Hz, {len(eeg_data)/fs:.0f}s")
+    print(f"  EEG: {len(eeg_data)} samples, {fs} Hz, {len(eeg_data) / fs:.0f}s")
 
     # Extract band phases
     print("Extracting band phases...")
@@ -134,7 +130,8 @@ def main() -> None:
     valid_mask = [e != "Unknown" for e in expert_stages]
     total_valid = sum(valid_mask)
     correct = sum(
-        1 for i in range(n_epochs)
+        1
+        for i in range(n_epochs)
         if valid_mask[i] and spo_stages[i] == expert_stages[i]
     )
     accuracy = correct / total_valid if total_valid > 0 else 0.0
@@ -150,20 +147,20 @@ def main() -> None:
         if spo_stages[i] == es:
             stage_correct[es] = stage_correct.get(es, 0) + 1
 
-    print(f"\n{'='*60}")
-    print(f"Sleep Staging Results")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("Sleep Staging Results")
+    print(f"{'=' * 60}")
     print(f"Total epochs: {n_epochs}")
     print(f"Valid (expert-scored): {total_valid}")
     print(f"Overall accuracy: {accuracy:.1%} ({correct}/{total_valid})")
-    print(f"\nPer-stage:")
+    print("\nPer-stage:")
     for stage in ["Wake", "N1", "N2", "N3", "REM"]:
         t = stage_total.get(stage, 0)
         c = stage_correct.get(stage, 0)
         acc = c / t if t > 0 else 0.0
         print(f"  {stage:>5}: {acc:.1%} ({c}/{t})")
 
-    print(f"\nR statistics:")
+    print("\nR statistics:")
     print(f"  Mean: {np.mean(R_values):.4f}")
     print(f"  Std:  {np.std(R_values):.4f}")
     print(f"  Range: [{min(R_values):.4f}, {max(R_values):.4f}]")
@@ -186,9 +183,9 @@ def main() -> None:
         "R_std": round(float(np.std(R_values)), 4),
     }
 
-    with open("experiments/sleep_staging_results.json", "w") as f:
+    with Path("experiments/sleep_staging_results.json").open("w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved to experiments/sleep_staging_results.json")
+    print("\nSaved to experiments/sleep_staging_results.json")
 
 
 if __name__ == "__main__":
