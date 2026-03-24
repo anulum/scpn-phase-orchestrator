@@ -21,7 +21,12 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     Transition,
 )
 
-pytestmark = pytest.mark.skipif(not HAS_RUST, reason="spo_kernel not installed")
+_HAS_PETRI = HAS_RUST and hasattr(
+    __import__("spo_kernel") if HAS_RUST else None, "PyPetriNet"
+)
+pytestmark = pytest.mark.skipif(
+    not _HAS_PETRI, reason="spo_kernel.PyPetriNet not available"
+)
 
 
 @pytest.fixture()
