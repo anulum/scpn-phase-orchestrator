@@ -17,7 +17,7 @@ try:
 
     _HAS_REDIS = True
 except ModuleNotFoundError:  # pragma: no cover
-    _redis_mod = None
+    _redis_mod = None  # type: ignore[assignment]
     _HAS_REDIS = False
 
 
