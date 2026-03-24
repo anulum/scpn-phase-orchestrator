@@ -49,3 +49,4 @@ Thumbs.db
 
 # Internal business docs — never commit
 docs/internal/
+experiments/.eeg_cache/
