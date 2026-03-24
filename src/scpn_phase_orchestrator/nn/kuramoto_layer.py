@@ -67,14 +67,10 @@ class KuramotoLayer(eqx.Module):
         Returns:
             (n,) phase angles after n_steps of Kuramoto integration
         """
-        final, _ = kuramoto_forward(
-            phases, self.omegas, self.K, self.dt, self.n_steps
-        )
+        final, _ = kuramoto_forward(phases, self.omegas, self.K, self.dt, self.n_steps)
         return final
 
-    def forward_with_trajectory(
-        self, phases: jax.Array
-    ) -> tuple[jax.Array, jax.Array]:
+    def forward_with_trajectory(self, phases: jax.Array) -> tuple[jax.Array, jax.Array]:
         """Run dynamics and return both final state and full trajectory.
 
         Args:
@@ -83,9 +79,7 @@ class KuramotoLayer(eqx.Module):
         Returns:
             Tuple of (final_phases, trajectory) where trajectory is (n_steps, n)
         """
-        return kuramoto_forward(
-            phases, self.omegas, self.K, self.dt, self.n_steps
-        )
+        return kuramoto_forward(phases, self.omegas, self.K, self.dt, self.n_steps)
 
     def sync_score(self, phases: jax.Array) -> jax.Array:
         """Run dynamics and return final synchronization (order parameter R).
