@@ -23,7 +23,7 @@ try:
 
     HAS_PYMODBUS = True
 except ImportError:
-    ModbusTlsClient = None
+    ModbusTlsClient = None  # type: ignore[assignment,misc]
     HAS_PYMODBUS = False
 
 
