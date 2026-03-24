@@ -4,7 +4,7 @@
   "detected": 4,
   "sensitivity": 1.0,
   "mean_R_change_ictal": 0.0248,
-  "honest_assessment": "Trivially 100%: regime FSM fires ~9 transitions/min throughout the recording (532-542 total in 1h). Any 30s window contains ~4.5 transitions by chance. Pre-ictal detection is not discriminative — specificity is near 0%. R change during seizure (+0.025) is within noise (std=0.16). The FSM thresholds need tuning for EEG dynamics, or a different detection criterion is needed.",
+  "honest_assessment": "Trivially 100%: regime FSM fires ~9 transitions/min throughout the recording (532-542 total in 1h). Any 30s window contains ~4.5 transitions by chance. Pre-ictal detection is not discriminative \u2014 specificity is near 0%. R change during seizure (+0.025) is within noise (std=0.16). The FSM thresholds need tuning for EEG dynamics, or a different detection criterion is needed.",
   "seizures": [
     {
       "file": "chb01_03.edf",
