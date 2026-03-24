@@ -142,6 +142,10 @@ module = [
 ]
 warn_unused_ignores = false
 
+[[tool.mypy.overrides]]
+module = ["scpn_phase_orchestrator.nn.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
@@ -171,6 +175,8 @@ omit = [
     "*/adapters/plasma_control_bridge.py",
     "*/adapters/metrics_exporter.py",
     "*/monitor/stl.py",
+    # JAX/equinox not in standard CI
+    "*/nn/*",
 ]
 
 [tool.coverage.report]
