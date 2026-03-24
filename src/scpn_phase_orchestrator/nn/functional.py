@@ -61,6 +61,7 @@ def kuramoto_rk4_step(
     Returns:
         (N,) updated phases, wrapped to [0, 2pi)
     """
+
     def deriv(p: jax.Array) -> jax.Array:
         diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
         return omegas + jnp.sum(K * jnp.sin(diff), axis=1)
