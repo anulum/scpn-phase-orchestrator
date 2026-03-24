@@ -10,4 +10,4 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 echo "pre-push: running preflight..."
-python "$REPO_ROOT/tools/preflight.py"
+py -3.12 "$REPO_ROOT/tools/preflight.py"
