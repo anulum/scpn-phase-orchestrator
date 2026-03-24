@@ -115,6 +115,9 @@ exclude = ["src/scpn_phase_orchestrator/grpc_gen/spo_pb2.py", "src/scpn_phase_or
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
 ignore = ["S101", "S104", "S310", "S603", "N802", "N803", "N806", "N815", "N816"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/test_kuramoto_layer.py" = ["E402"]
+
 [tool.mypy]
 strict = false
 warn_return_any = true
