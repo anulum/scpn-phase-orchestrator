@@ -36,7 +36,7 @@ __all__ = [
     "KuramotoLayer",
 ]
 
-try:
+import contextlib
+
+with contextlib.suppress(ImportError):
     from .kuramoto_layer import KuramotoLayer
-except ImportError:
-    pass
