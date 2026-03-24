@@ -154,6 +154,14 @@ source = ["scpn_phase_orchestrator"]
 concurrency = ["thread"]
 omit = [
     "*/grpc_gen/*",
+    # External-dependency adapters: require Redis, Modbus, BrainFlow,
+    # or rtamt (Python 3.11 only) — not available in standard CI.
+    "*/adapters/hardware_io.py",
+    "*/adapters/modbus_tls.py",
+    "*/adapters/redis_store.py",
+    "*/adapters/prometheus.py",
+    "*/adapters/snn_bridge.py",
+    "*/monitor/stl.py",
 ]
 
 [tool.coverage.report]
