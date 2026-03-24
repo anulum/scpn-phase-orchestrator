@@ -1,0 +1,79 @@
+[
+  {
+    "K": 1.0,
+    "fc_correlation": -0.4202,
+    "p_value": 2.000211971577223e-135,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 237.9,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  },
+  {
+    "K": 1.5,
+    "fc_correlation": -0.3977,
+    "p_value": 3.0065451209210147e-120,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 221.1,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  },
+  {
+    "K": 2.0,
+    "fc_correlation": -0.441,
+    "p_value": 1.723194142491541e-150,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 231.0,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  },
+  {
+    "K": 2.5,
+    "fc_correlation": -0.4401,
+    "p_value": 8.116574807540026e-150,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 203.4,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  },
+  {
+    "K": 3.0,
+    "fc_correlation": -0.4502,
+    "p_value": 1.4058320717649444e-157,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 255.7,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  },
+  {
+    "K": 4.0,
+    "fc_correlation": -0.4043,
+    "p_value": 1.405951309191765e-124,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 275.3,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  },
+  {
+    "K": 5.0,
+    "fc_correlation": -0.4021,
+    "p_value": 4.0001767551752045e-123,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 262.0,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  }
+]
