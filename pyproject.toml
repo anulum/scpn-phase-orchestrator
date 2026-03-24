@@ -55,6 +55,7 @@ queuewaves = [
     "httpx>=0.27",
     "websockets>=12.0",
 ]
+nn = ["jax>=0.4", "equinox>=0.11"]
 nengo = []  # pure-numpy LIF engine, no external deps
 lava = ["lava-nc>=0.9"]
 otel = ["opentelemetry-api>=1.20", "opentelemetry-sdk>=1.20"]
