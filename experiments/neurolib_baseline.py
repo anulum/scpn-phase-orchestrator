@@ -21,16 +21,18 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from pathlib import Path
 
 import numpy as np
+from neurolib.models.aln import ALNModel
+from neurolib.utils.loadData import Dataset
 from scipy.signal import butter, filtfilt
 from scipy.stats import pearsonr
 
-from neurolib.models.aln import ALNModel
-from neurolib.utils.loadData import Dataset
 
-
-def bandpass_bold(signal: np.ndarray, fs: float, low: float = 0.01, high: float = 0.1) -> np.ndarray:
+def bandpass_bold(
+    signal: np.ndarray, fs: float, low: float = 0.01, high: float = 0.1
+) -> np.ndarray:
     """Bandpass filter to BOLD frequency range."""
     nyq = fs / 2
     b, a = butter(3, [low / nyq, high / nyq], btype="band")
@@ -49,13 +51,24 @@ def compare_fc(sim_fc: np.ndarray, emp_fc: np.ndarray) -> dict:
     n = sim_fc.shape[0]
     triu = np.triu_indices(n, k=1)
     r, p = pearsonr(sim_fc[triu], emp_fc[triu])
-    return {"correlation": round(float(r), 4), "p_value": float(p), "n_pairs": len(triu[0])}
+    return {
+        "correlation": round(float(r), 4),
+        "p_value": float(p),
+        "n_pairs": len(triu[0]),
+    }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--duration", type=int, default=60000, help="Sim duration in ms")
-    parser.add_argument("--coupling", type=float, default=None, help="Global coupling (default: auto-sweep)")
+    parser.add_argument(
+        "--duration", type=int, default=60000, help="Sim duration in ms"
+    )
+    parser.add_argument(
+        "--coupling",
+        type=float,
+        default=None,
+        help="Global coupling (default: auto-sweep)",
+    )
     parser.add_argument("--output", type=str, default=None)
     args = parser.parse_args()
 
@@ -85,7 +98,7 @@ def main() -> None:
         # Extract BOLD-like signal (excitatory rate, downsampled)
         rates = model.rates_exc  # (80, T)
         if rates is None or rates.shape[1] < 100:
-            print(f"  WARNING: rates too short ({rates.shape if rates is not None else 'None'})")
+            print(f"  WARNING: rates too short ({rates.shape})")
             continue
 
         # Downsample to ~1 Hz (BOLD timescale)
@@ -95,7 +108,11 @@ def main() -> None:
         if n_samples < 10:
             print(f"  WARNING: too few samples after downsample ({n_samples})")
             continue
-        bold_ds = rates[:, :n_samples * ds_factor].reshape(80, n_samples, ds_factor).mean(axis=2)
+        bold_ds = (
+            rates[:, : n_samples * ds_factor]
+            .reshape(80, n_samples, ds_factor)
+            .mean(axis=2)
+        )
 
         # Bandpass filter if enough samples
         fs = 1.0  # 1 Hz after downsample
@@ -115,17 +132,17 @@ def main() -> None:
         result["n_timepoints"] = n_samples
         results.append(result)
 
-        print(f"  FC correlation: r={result['correlation']:.4f} (p={result['p_value']:.2e})")
+        print(f"  FC: r={result['correlation']:.4f} (p={result['p_value']:.2e})")
 
     if results:
         best = max(results, key=lambda r: r["correlation"])
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Best: K={best['K']}, r={best['correlation']:.4f}")
-        print(f"Target: r~0.72 (Deco et al. 2018)")
-        print(f"{'='*60}")
+        print("Target: r~0.72 (Deco et al. 2018)")
+        print(f"{'=' * 60}")
 
     if args.output and results:
-        with open(args.output, "w") as f:
+        with Path(args.output).open("w") as f:
             json.dump(results, f, indent=2)
         print(f"\nSaved to {args.output}")
 

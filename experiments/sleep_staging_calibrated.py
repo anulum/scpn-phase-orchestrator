@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import mne
 import numpy as np
@@ -89,7 +90,9 @@ def main() -> None:
         if s == "Unknown":
             continue
         start_e = int(a["onset"] / 30)
-        for e in range(start_e, min(start_e + max(1, int(a["duration"] / 30)), n_epochs)):
+        for e in range(
+            start_e, min(start_e + max(1, int(a["duration"] / 30)), n_epochs)
+        ):
             expert[e] = s
 
     # Extract features for all epochs
@@ -126,24 +129,28 @@ def main() -> None:
         predictions.append(pred)
 
     test_expert = [expert[i] for i in test_idx]
-    correct = sum(1 for p, e in zip(predictions, test_expert) if p == e)
+    correct = sum(1 for p, e in zip(predictions, test_expert, strict=False) if p == e)
     accuracy = correct / len(test_idx) if len(test_idx) > 0 else 0.0
 
     per_stage = {}
     for stage in STAGES:
         t = sum(1 for e in test_expert if e == stage)
-        c = sum(1 for p, e in zip(predictions, test_expert) if e == stage and p == stage)
+        c = sum(
+            1
+            for p, e in zip(predictions, test_expert, strict=False)
+            if e == stage and p == stage
+        )
         per_stage[stage] = {
             "accuracy": round(c / t, 4) if t > 0 else 0.0,
             "correct": c,
             "total": t,
         }
 
-    print(f"\n{'='*60}")
-    print(f"Sleep Staging — Calibrated Nearest Centroid (Train/Test Split)")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("Sleep Staging — Calibrated Nearest Centroid (Train/Test Split)")
+    print(f"{'=' * 60}")
     print(f"Overall accuracy: {accuracy:.1%} ({correct}/{len(test_idx)})")
-    print(f"\nPer-stage:")
+    print("\nPer-stage:")
     for stage in STAGES:
         ps = per_stage[stage]
         print(f"  {stage:>5}: {ps['accuracy']:.1%} ({ps['correct']}/{ps['total']})")
@@ -156,10 +163,12 @@ def main() -> None:
         "per_stage": per_stage,
     }
 
-    with open("experiments/sleep_staging_calibrated_results.json", "w") as f:
+    with Path("experiments/sleep_staging_calibrated_results.json").open("w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved to experiments/sleep_staging_calibrated_results.json")
-    print(f"\nKuramoto R: 28.0% | Spectral (guessed): 9.1% | Calibrated: {accuracy:.1%}")
+    print("\nSaved to experiments/sleep_staging_calibrated_results.json")
+    print(
+        f"\nKuramoto R: 28.0% | Spectral (guessed): 9.1% | Calibrated: {accuracy:.1%}"
+    )
 
 
 if __name__ == "__main__":

@@ -18,12 +18,12 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import numpy as np
-from scipy.stats import pearsonr
-
 from neurolib.models.aln import ALNModel
 from neurolib.utils.loadData import Dataset
+from scipy.stats import pearsonr
 
 from scpn_phase_orchestrator.autotune.pipeline import identify_binding_spec
 
@@ -102,19 +102,22 @@ def main():
         ),
     }
 
-    print(f"\n{'='*60}")
-    print(f"Auto-Tune Results on neurolib ALN")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("Auto-Tune Results on neurolib ALN")
+    print(f"{'=' * 60}")
     print(f"Regions: {n_subset} (of {rates.shape[0]})")
     print(f"K_c estimate: {result.K_c_estimate:.4f}")
-    print(f"Recovered K_nm: mean={np.mean(recovered_knm):.4f}, max={np.max(recovered_knm):.4f}")
+    print(
+        f"Recovered K_nm: mean={np.mean(recovered_knm):.4f}, "
+        f"max={np.max(recovered_knm):.4f}"
+    )
     print(f"SC vs recovered correlation: r={r_sc:.4f} (p={p_sc:.2e})")
     freq_range = (min(result.dominant_freqs), max(result.dominant_freqs))
     print(f"Dominant frequencies: {freq_range[0]:.1f} - {freq_range[1]:.1f} Hz")
 
-    with open("experiments/autotune_on_neurolib_results.json", "w") as f:
+    with Path("experiments/autotune_on_neurolib_results.json").open("w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved to experiments/autotune_on_neurolib_results.json")
+    print("\nSaved to experiments/autotune_on_neurolib_results.json")
 
 
 if __name__ == "__main__":

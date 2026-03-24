@@ -24,16 +24,16 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import numpy as np
-from scipy.signal import hilbert
-
 from neurolib.models.aln import ALNModel
 from neurolib.utils.loadData import Dataset
+from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.events import EventBus
-from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -85,6 +85,7 @@ def run_at_coupling(ds, K: float, duration_ms: int = 10000) -> dict:
         regimes.append(rm.current_regime.value)
 
     from collections import Counter
+
     regime_counts = dict(Counter(regimes))
 
     return {
@@ -107,7 +108,7 @@ def main() -> None:
     # Simulate anesthesia: K from 5.0 (awake) down to 0.1 (deep anesthesia)
     K_values = [5.0, 3.0, 2.0, 1.5, 1.0, 0.5, 0.2, 0.1]
 
-    print(f"\nSimulating anesthesia via coupling reduction...")
+    print("\nSimulating anesthesia via coupling reduction...")
     print(f"{'K':>5} {'R_mean':>8} {'R_min':>8} {'regime':>30} {'transitions':>12}")
     print("-" * 70)
 
@@ -117,13 +118,13 @@ def main() -> None:
         results.append(r)
         regime_str = str(r.get("regime_counts", {}))
         print(
-            f"{K:>5.1f} {r.get('R_mean',0):>8.4f} {r.get('R_min',0):>8.4f} "
-            f"{regime_str:>30} {r.get('n_transitions',0):>12}"
+            f"{K:>5.1f} {r.get('R_mean', 0):>8.4f} {r.get('R_min', 0):>8.4f} "
+            f"{regime_str:>30} {r.get('n_transitions', 0):>12}"
         )
 
-    print(f"\n{'='*70}")
-    print(f"Anesthesia Simulation Summary")
-    print(f"{'='*70}")
+    print(f"\n{'=' * 70}")
+    print("Anesthesia Simulation Summary")
+    print(f"{'=' * 70}")
 
     # Find transition point
     for i in range(len(results) - 1):
@@ -132,16 +133,16 @@ def main() -> None:
         if r1.get("R_mean", 0) > 0.3 and r2.get("R_mean", 0) < 0.3:
             print(
                 f"Consciousness transition between K={r1['K']} "
-                f"(R={r1.get('R_mean',0):.4f}) and K={r2['K']} "
-                f"(R={r2.get('R_mean',0):.4f})"
+                f"(R={r1.get('R_mean', 0):.4f}) and K={r2['K']} "
+                f"(R={r2.get('R_mean', 0):.4f})"
             )
             break
     else:
         print("No clear consciousness transition detected in K range")
 
-    with open("experiments/anesthesia_results.json", "w") as f:
+    with Path("experiments/anesthesia_results.json").open("w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved to experiments/anesthesia_results.json")
+    print("\nSaved to experiments/anesthesia_results.json")
 
 
 if __name__ == "__main__":
