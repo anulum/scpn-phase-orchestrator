@@ -15,5 +15,5 @@
   "sim_duration_ms": 30000,
   "K": 2.0,
   "mpc_horizon": 20,
-  "honest_assessment": "Trivial result: R~0.40 is already below degradation threshold (0.6), so MPC correctly predicts 'degradation continues' in 98% of windows. This is not genuine prediction of transitions — it is recognizing that the system is already degraded. A meaningful MPC test requires a system that crosses the threshold, not one that stays below it."
+  "honest_assessment": "Trivial result: R~0.40 is already below degradation threshold (0.6), so MPC correctly predicts 'degradation continues' in 98% of windows. This is not genuine prediction of transitions \u2014 it is recognizing that the system is already degraded. A meaningful MPC test requires a system that crosses the threshold, not one that stays below it."
 }
