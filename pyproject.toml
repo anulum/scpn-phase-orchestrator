@@ -72,20 +72,20 @@ full = [
     "ripser>=0.6",
 ]
 dev = [
-    "pytest>=7.4",
-    "pytest-asyncio>=0.23",
-    "pytest-cov>=4.1",
-    "hypothesis>=6.82",
-    "coverage[toml]>=7.3",
+    "pytest>=9.0,<10.0",
+    "pytest-asyncio>=0.23,<2.0",
+    "pytest-cov>=4.1,<6.0",
+    "hypothesis>=6.82,<7.0",
+    "coverage[toml]>=7.3,<8.0",
     "ruff==0.15.6",
-    "mypy>=1.8",
-    "types-PyYAML>=6.0",
-    "bandit>=1.7",
-    "mkdocs-material>=9.5",
-    "mkdocstrings[python]>=0.24",
-    "pymdown-extensions>=10.0",
-    "pre-commit>=3.5",
-    "twine>=5.0",
+    "mypy>=1.19.1,<2.0",
+    "types-PyYAML>=6.0,<7.0",
+    "bandit==1.9.4",
+    "mkdocs-material>=9.5,<10.0",
+    "mkdocstrings[python]>=0.24,<1.0",
+    "pymdown-extensions>=10.0,<11.0",
+    "pre-commit>=3.5,<4.0",
+    "twine>=5.0,<6.0",
 ]
 
 [project.scripts]
