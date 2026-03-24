@@ -16,7 +16,13 @@ from scpn_phase_orchestrator._compat import HAS_RUST
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-pytestmark = pytest.mark.skipif(not HAS_RUST, reason="spo_kernel not installed")
+_HAS_STEPPER = HAS_RUST and hasattr(
+    __import__("spo_kernel") if HAS_RUST else None, "PyUPDEStepper"
+)
+pytestmark = pytest.mark.skipif(
+    not _HAS_STEPPER,
+    reason="spo_kernel.PyUPDEStepper not available",
+)
 
 
 @pytest.fixture()

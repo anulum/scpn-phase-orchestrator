@@ -23,7 +23,12 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 from scpn_phase_orchestrator.supervisor.regimes import Regime
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
-pytestmark = pytest.mark.skipif(not HAS_RUST, reason="spo_kernel not installed")
+_HAS_RULE_ENGINE = HAS_RUST and hasattr(
+    __import__("spo_kernel") if HAS_RUST else None, "PyRuleEngine"
+)
+pytestmark = pytest.mark.skipif(
+    not _HAS_RULE_ENGINE, reason="spo_kernel.PyRuleEngine not available"
+)
 
 
 @pytest.fixture()

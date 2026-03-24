@@ -14,7 +14,14 @@ import pytest
 
 from scpn_phase_orchestrator._compat import HAS_RUST
 
-pytestmark = pytest.mark.skipif(not HAS_RUST, reason="spo_kernel not installed")
+_HAS_PAC = HAS_RUST and hasattr(
+    __import__("spo_kernel") if HAS_RUST else None,
+    "pac_modulation_index",
+)
+pytestmark = pytest.mark.skipif(
+    not _HAS_PAC,
+    reason="spo_kernel.pac_modulation_index not available",
+)
 
 
 @pytest.fixture()
