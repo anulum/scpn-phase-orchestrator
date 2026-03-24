@@ -64,6 +64,7 @@ nav:
       - Adapter Bridges: guide/adapters.md
       - Performance Tuning: guide/performance.md
       - Production Deployment: guide/production.md
+      - Differentiable Kuramoto Layer: guide/differentiable_kuramoto.md
   - Specifications:
       - Binding Spec Schema: specs/binding_spec.schema.json
       - Phase Contract: specs/phase_contract.md
@@ -100,6 +101,7 @@ nav:
       - Reporting: reference/api/reporting.md
       - Adapters: reference/api/adapters.md
       - QueueWaves: reference/api/queuewaves.md
+      - "Neural Network (nn)": reference/api/nn.md
       - CLI Reference: reference/cli.md
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md
