@@ -220,7 +220,7 @@ class ModbusAdapter:  # pragma: no cover
 
     def read_holding_registers(self, address: int, count: int = 1) -> NDArray:
         """Read holding registers, return as float64 array."""
-        result = self._client.read_holding_registers(address, count)
+        result = self._client.read_holding_registers(address, count=count)
         if result.isError():
             return np.zeros(count)
         return np.array(result.registers, dtype=np.float64)

@@ -128,6 +128,16 @@ warn_unused_ignores = true
 module = ["scpn_phase_orchestrator.grpc_gen.spo_pb2", "scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc"]
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = [
+    "scpn_phase_orchestrator.adapters.modbus_tls",
+    "scpn_phase_orchestrator.adapters.hardware_io",
+    "scpn_phase_orchestrator.adapters.redis_store",
+    "scpn_phase_orchestrator.coupling.connectome",
+    "scpn_phase_orchestrator.upde.prediction",
+]
+warn_unused_ignores = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
