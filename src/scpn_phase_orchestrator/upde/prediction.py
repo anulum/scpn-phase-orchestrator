@@ -245,7 +245,7 @@ class VariationalPredictor:
         # Gradient descent on F w.r.t. mu:
         # dF/dmu = -precision * error  (since F ~ precision * error^2 / 2)
         # mu_new = mu - lr * dF/dmu = mu + lr * precision * error
-        self._mu = (self._mu + self._lr * self._precision * error) % TWO_PI
+        self._mu = (self._mu + self._lr * self._precision * error) % TWO_PI  # type: ignore[assignment]
 
         # Update precision from error variance (online).
         # Precision = 1/variance. Use EMA of squared error as variance estimate.

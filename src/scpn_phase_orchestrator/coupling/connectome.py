@@ -125,6 +125,6 @@ def load_hcp_connectome(n_regions: int) -> NDArray:
                 knm[hub, other] += _DMN_HUB_BOOST
 
     # Symmetrise and clean diagonal
-    knm = (knm + knm.T) / 2.0
+    knm = (knm + knm.T) / 2.0  # type: ignore[assignment]
     np.fill_diagonal(knm, 0.0)
     return np.clip(knm, 0, None)
