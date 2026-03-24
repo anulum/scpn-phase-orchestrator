@@ -1,0 +1,13 @@
+[
+  {
+    "K": 2.0,
+    "fc_correlation": -0.4184,
+    "p_value": 3.3883514189760014e-134,
+    "n_pairs": 3160,
+    "duration_ms": 300000,
+    "n_bold_timepoints": 146,
+    "tr_s": 2.0,
+    "wall_time_s": 503.7,
+    "method": "Balloon-Windkessel BOLD + bandpass 0.01-0.1 Hz"
+  }
+]

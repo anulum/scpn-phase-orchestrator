@@ -1,0 +1,19 @@
+{
+  "n_windows": 3000,
+  "R_mean": 0.3994,
+  "R_std": 0.0691,
+  "R_min": 0.2681,
+  "R_max": 0.9999,
+  "total_degradation_predictions": 2936,
+  "total_actual_degradations": 2956,
+  "prediction_hits": 2936,
+  "false_alarms": 0,
+  "prediction_misses": 40,
+  "precision": 1.0,
+  "recall": 0.9932,
+  "n_control_actions": 2936,
+  "sim_duration_ms": 30000,
+  "K": 2.0,
+  "mpc_horizon": 20,
+  "honest_assessment": "Trivial result: R~0.40 is already below degradation threshold (0.6), so MPC correctly predicts 'degradation continues' in 98% of windows. This is not genuine prediction of transitions — it is recognizing that the system is already degraded. A meaningful MPC test requires a system that crosses the threshold, not one that stays below it."
+}
