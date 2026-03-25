@@ -14,11 +14,14 @@ jnp = pytest.importorskip("jax.numpy", reason="JAX required for nn/ tests")
 eqx = pytest.importorskip("equinox", reason="equinox required for KuramotoLayer tests")
 
 from scpn_phase_orchestrator.nn.functional import (
+    coupling_laplacian,
     kuramoto_forward,
     kuramoto_rk4_step,
     kuramoto_step,
     order_parameter,
     plv,
+    saf_loss,
+    saf_order_parameter,
     simplicial_forward,
     simplicial_rk4_step,
     simplicial_step,
@@ -433,3 +436,125 @@ class TestSimplicialGradients:
         batched = jax.vmap(simplicial_step, in_axes=(0, None, None, None, None))
         out = batched(batch, omegas, K, DT, SIGMA2)
         assert out.shape == (4, N)
+
+
+# --- Spectral Alignment Function (SAF) ---
+
+
+class TestCouplingLaplacian:
+    def test_shape(self, setup):
+        _, _, K = setup
+        L = coupling_laplacian(jnp.abs(K))
+        assert L.shape == (N, N)
+
+    def test_row_sums_zero(self, setup):
+        _, _, K = setup
+        L = coupling_laplacian(jnp.abs(K))
+        row_sums = jnp.sum(L, axis=1)
+        assert jnp.allclose(row_sums, 0.0, atol=1e-6)
+
+    def test_symmetric(self, setup):
+        _, _, K = setup
+        K_sym = jnp.abs((K + K.T) / 2.0)
+        L = coupling_laplacian(K_sym)
+        assert jnp.allclose(L, L.T, atol=1e-7)
+
+
+class TestSAFOrderParameter:
+    def test_scalar_output(self, setup):
+        _, omegas, K = setup
+        K_pos = jnp.abs(K)
+        r = saf_order_parameter(K_pos, omegas)
+        assert r.shape == ()
+
+    def test_in_range(self, setup):
+        _, omegas, K = setup
+        K_pos = jnp.abs(K)
+        r = saf_order_parameter(K_pos, omegas)
+        assert 0.0 <= float(r) <= 1.0
+
+    def test_strong_coupling_high_r(self, key):
+        omegas = jax.random.normal(key, (N,)) * 0.1
+        K = jnp.ones((N, N)) * 5.0
+        K = K.at[jnp.diag_indices(N)].set(0.0)
+        r = saf_order_parameter(K, omegas)
+        assert float(r) > 0.8
+
+    def test_identical_frequencies_perfect_sync(self, key):
+        omegas = jnp.zeros(N)
+        K = jnp.ones((N, N))
+        K = K.at[jnp.diag_indices(N)].set(0.0)
+        r = saf_order_parameter(K, omegas)
+        assert jnp.isclose(r, 1.0, atol=0.01)
+
+    def test_differentiable_wrt_K(self, setup):
+        _, omegas, K = setup
+        K_pos = jnp.abs(K)
+
+        def loss(K_):
+            return saf_order_parameter(K_, omegas)
+
+        grad_K = jax.grad(loss)(K_pos)
+        assert grad_K.shape == K.shape
+        assert jnp.isfinite(grad_K).all()
+
+    def test_differentiable_wrt_omegas(self, setup):
+        _, omegas, K = setup
+        K_pos = jnp.abs(K)
+
+        def loss(o):
+            return saf_order_parameter(K_pos, o)
+
+        grad_o = jax.grad(loss)(omegas)
+        assert grad_o.shape == omegas.shape
+        assert jnp.isfinite(grad_o).all()
+
+
+class TestSAFLoss:
+    def test_scalar_output(self, setup):
+        _, omegas, K = setup
+        K_pos = jnp.abs(K)
+        loss = saf_loss(K_pos, omegas)
+        assert loss.shape == ()
+
+    def test_budget_penalty(self, setup):
+        _, omegas, K = setup
+        K_pos = jnp.abs(K)
+        loss_no_budget = saf_loss(K_pos, omegas, budget=0.0)
+        loss_tight = saf_loss(K_pos, omegas, budget=0.01, budget_weight=10.0)
+        assert float(loss_tight) > float(loss_no_budget)
+
+    def test_gradient_descent_improves_r(self, key):
+        """Optimizing K via SAF gradient should increase order parameter."""
+        k1, k2 = jax.random.split(key)
+        # Small frequency spread so SAF r starts positive
+        omegas = jax.random.normal(k1, (N,)) * 0.1
+        # Moderate coupling — gives r in (0, 1) range, not clipped
+        raw = jax.random.uniform(k2, (N, N), minval=0.5, maxval=1.5)
+        K = (raw + raw.T) / 2.0
+        K = K.at[jnp.diag_indices(N)].set(0.0)
+
+        r_before = saf_order_parameter(K, omegas)
+        assert float(r_before) > 0.0, "Need r_before > 0 for meaningful test"
+
+        # Unclipped SAF for smooth gradients
+        def raw_saf(K_):
+            N_ = K_.shape[0]
+            L = coupling_laplacian(K_)
+            evals, evecs = jnp.linalg.eigh(L)
+            lam = evals[1:]
+            V = evecs[:, 1:]
+            proj = (V.T @ omegas) ** 2
+            return 1.0 - jnp.sum(proj / (lam**2 + 1e-8)) / (2.0 * N_)
+
+        grad_fn = jax.grad(raw_saf)
+        for _ in range(10):
+            g = grad_fn(K)
+            K = K + 0.05 * g  # ascend to maximize r
+            K = (K + K.T) / 2.0
+            K = jnp.maximum(K, 0.01)
+            K = K.at[jnp.diag_indices(N)].set(0.0)
+
+        r_after = saf_order_parameter(K, omegas)
+        assert jnp.isfinite(r_after)
+        assert float(r_after) >= float(r_before)
