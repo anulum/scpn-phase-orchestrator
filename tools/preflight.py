@@ -54,6 +54,7 @@ PYTHON_GATES: list[tuple[str, list[str], Path]] = [
             "--ignore=tests/test_ude_kuramoto.py",
             "--ignore=tests/test_inverse.py",
             "--ignore=tests/test_oim.py",
+            "--ignore=tests/test_quantum_bridge_live.py",
         ],
         ROOT,
     ),
