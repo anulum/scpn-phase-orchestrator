@@ -50,9 +50,13 @@ __all__ = [
     "plv",
     "KuramotoLayer",
     "StuartLandauLayer",
+    "bold_from_neural",
+    "bold_signal",
 ]
 
 import contextlib
+
+from .bold import bold_from_neural, bold_signal
 
 with contextlib.suppress(ImportError):
     from .kuramoto_layer import KuramotoLayer
