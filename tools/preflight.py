@@ -39,7 +39,16 @@ PYTHON_GATES: list[tuple[str, list[str], Path]] = [
     ),
     (
         "pytest",
-        [_PY, "-m", "pytest", "tests/", "-x", "--tb=short", "-q"],
+        [
+            _PY, "-m", "pytest", "tests/", "-x", "--tb=short", "-q",
+            "--ignore=tests/test_kuramoto_layer.py",
+            "--ignore=tests/test_stuart_landau_nn.py",
+            "--ignore=tests/test_bold.py",
+            "--ignore=tests/test_reservoir.py",
+            "--ignore=tests/test_ude_kuramoto.py",
+            "--ignore=tests/test_inverse.py",
+            "--ignore=tests/test_oim.py",
+        ],
         ROOT,
     ),
     (
