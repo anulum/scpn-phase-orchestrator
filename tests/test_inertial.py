@@ -82,9 +82,7 @@ class TestInertialRun:
 
     def test_balanced_grid_stays_synchronized(self, engine, balanced_grid):
         theta, omega_dot, power, knm, inertia, damping = balanced_grid
-        ft, fo, _, _ = engine.run(
-            theta, omega_dot, power, knm, inertia, damping, 500
-        )
+        ft, fo, _, _ = engine.run(theta, omega_dot, power, knm, inertia, damping, 500)
         R = engine.coherence(ft)
         assert R > 0.9
 
