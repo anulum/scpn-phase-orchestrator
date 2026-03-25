@@ -142,3 +142,34 @@ warnings = sync_warning(R, threshold=0.7)  # crash early warning
 ```
 
 ::: scpn_phase_orchestrator.upde.market
+
+## Swarmalator Dynamics
+
+Agents that are simultaneously self-propelled particles AND phase oscillators.
+Phase modulates spatial attraction; proximity modulates phase coupling.
+
+Five collective states emerge depending on J and K:
+- J > 0, K > 0: static sync (clustered, phase-locked)
+- J > 0, K < 0: static async (clustered, anti-phase)
+- J < 0, K > 0: static phase wave (spatially ordered by phase)
+- J < 0, K < 0: splintered phase wave
+- |J| ≈ 0: active phase wave (rotating)
+
+```python
+from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
+
+engine = SwarmalatorEngine(n=50, dim=2, dt=0.01, A=1.0, B=1.0, J=0.5, K=1.0)
+pos, phases, pos_traj, phase_traj = engine.run(
+    positions0, phases0, omegas, n_steps=5000
+)
+
+# Metrics
+R = engine.phase_coherence(phases)
+compactness = engine.spatial_coherence(pos)
+corr = engine.phase_spatial_correlation(pos, phases)
+```
+
+O'Keeffe, Hong, Strogatz, Nature Communications 2017.
+Experimental: Nature Communications Dec 2025 (colloidal system).
+
+::: scpn_phase_orchestrator.upde.swarmalator
