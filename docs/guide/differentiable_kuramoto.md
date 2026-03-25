@@ -90,6 +90,39 @@ grads = compute_grads(layer)
 # grads.K is (16, 16), grads.omegas is (16,)
 ```
 
+## Stuart-Landau Layer (Phase + Amplitude)
+
+Unlike the phase-only Kuramoto model, Stuart-Landau oscillators have both
+phase (binding) and amplitude (presence/activity). This solves AKOrN's
+limitations: amplitude enables memory, no N>32 degradation.
+
+```python
+from scpn_phase_orchestrator.nn import (
+    stuart_landau_forward,
+    StuartLandauLayer,
+)
+
+# Functional API
+final_phases, final_amps, traj_p, traj_r = stuart_landau_forward(
+    phases, amplitudes, omegas, mu, K, K_r,
+    dt=0.01, n_steps=100,
+)
+
+# Equinox layer with learnable K, K_r, omegas, mu
+layer = StuartLandauLayer(n=16, n_steps=50, dt=0.01, key=key)
+out_phases, out_amplitudes = layer(phases, amplitudes)
+
+# Differentiate through both phase and amplitude dynamics
+@eqx.filter_grad
+def grads(model):
+    return model.sync_score(phases, amplitudes)
+
+g = grads(layer)  # g.K, g.K_r, g.omegas, g.mu all have gradients
+```
+
+Supercritical (mu > 0): amplitudes converge to sqrt(mu) — active oscillators.
+Subcritical (mu < 0): amplitudes decay to 0 — quiescent oscillators.
+
 ## Simplicial (3-Body) Kuramoto
 
 Higher-order interactions beyond pairwise coupling. The 3-body term produces

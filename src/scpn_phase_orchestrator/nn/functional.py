@@ -222,6 +222,145 @@ def simplicial_forward(
     return final, trajectory
 
 
+def _stuart_landau_deriv(
+    phases: jax.Array,
+    amplitudes: jax.Array,
+    omegas: jax.Array,
+    mu: jax.Array,
+    K: jax.Array,
+    K_r: jax.Array,
+    epsilon: float,
+) -> tuple[jax.Array, jax.Array]:
+    """Derivative for Stuart-Landau coupled oscillators.
+
+    Phase: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i)
+    Amplitude: dr_i/dt = (μ_i - r_i²)r_i + ε Σ_j K^r_ij · r_j · cos(θ_j - θ_i)
+    """
+    diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
+    dtheta = omegas + jnp.sum(K * jnp.sin(diff), axis=1)
+
+    r_clamped = jnp.maximum(amplitudes, 0.0)
+    amp_coupling = jnp.sum(K_r * r_clamped[jnp.newaxis, :] * jnp.cos(diff), axis=1)
+    dr = (mu - amplitudes * amplitudes) * amplitudes + epsilon * amp_coupling
+
+    return dtheta, dr
+
+
+def stuart_landau_step(
+    phases: jax.Array,
+    amplitudes: jax.Array,
+    omegas: jax.Array,
+    mu: jax.Array,
+    K: jax.Array,
+    K_r: jax.Array,
+    dt: float,
+    epsilon: float = 1.0,
+) -> tuple[jax.Array, jax.Array]:
+    """Single Euler step of the Stuart-Landau oscillator model.
+
+    Args:
+        phases: (N,) oscillator phases in [0, 2pi)
+        amplitudes: (N,) oscillator amplitudes (r >= 0)
+        omegas: (N,) natural frequencies
+        mu: (N,) bifurcation parameters (supercritical if mu > 0)
+        K: (N, N) phase coupling matrix
+        K_r: (N, N) amplitude coupling matrix
+        dt: integration timestep
+        epsilon: amplitude coupling strength
+
+    Returns:
+        Tuple of (new_phases, new_amplitudes)
+    """
+    dtheta, dr = _stuart_landau_deriv(phases, amplitudes, omegas, mu, K, K_r, epsilon)
+    new_phases = (phases + dt * dtheta) % TWO_PI
+    new_amplitudes = jnp.maximum(amplitudes + dt * dr, 0.0)
+    return new_phases, new_amplitudes
+
+
+def stuart_landau_rk4_step(
+    phases: jax.Array,
+    amplitudes: jax.Array,
+    omegas: jax.Array,
+    mu: jax.Array,
+    K: jax.Array,
+    K_r: jax.Array,
+    dt: float,
+    epsilon: float = 1.0,
+) -> tuple[jax.Array, jax.Array]:
+    """Single RK4 step of the Stuart-Landau oscillator model.
+
+    Args:
+        phases: (N,) oscillator phases in [0, 2pi)
+        amplitudes: (N,) oscillator amplitudes (r >= 0)
+        omegas: (N,) natural frequencies
+        mu: (N,) bifurcation parameters
+        K: (N, N) phase coupling matrix
+        K_r: (N, N) amplitude coupling matrix
+        dt: integration timestep
+        epsilon: amplitude coupling strength
+
+    Returns:
+        Tuple of (new_phases, new_amplitudes)
+    """
+
+    def deriv(p: jax.Array, r: jax.Array) -> tuple[jax.Array, jax.Array]:
+        return _stuart_landau_deriv(p, r, omegas, mu, K, K_r, epsilon)
+
+    k1p, k1r = deriv(phases, amplitudes)
+    k2p, k2r = deriv(phases + 0.5 * dt * k1p, amplitudes + 0.5 * dt * k1r)
+    k3p, k3r = deriv(phases + 0.5 * dt * k2p, amplitudes + 0.5 * dt * k2r)
+    k4p, k4r = deriv(phases + dt * k3p, amplitudes + dt * k3r)
+
+    new_phases = (phases + (dt / 6.0) * (k1p + 2 * k2p + 2 * k3p + k4p)) % TWO_PI
+    new_amps = amplitudes + (dt / 6.0) * (k1r + 2 * k2r + 2 * k3r + k4r)
+    return new_phases, jnp.maximum(new_amps, 0.0)
+
+
+def stuart_landau_forward(
+    phases: jax.Array,
+    amplitudes: jax.Array,
+    omegas: jax.Array,
+    mu: jax.Array,
+    K: jax.Array,
+    K_r: jax.Array,
+    dt: float,
+    n_steps: int,
+    epsilon: float = 1.0,
+    method: str = "rk4",
+) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
+    """Run N Stuart-Landau steps, returning final state and trajectories.
+
+    Args:
+        phases: (N,) initial phases
+        amplitudes: (N,) initial amplitudes
+        omegas: (N,) natural frequencies
+        mu: (N,) bifurcation parameters
+        K: (N, N) phase coupling matrix
+        K_r: (N, N) amplitude coupling matrix
+        dt: integration timestep
+        n_steps: number of steps
+        epsilon: amplitude coupling strength
+        method: "rk4" or "euler"
+
+    Returns:
+        (final_phases, final_amplitudes, phase_traj, amp_traj)
+        where trajectories are (n_steps, N)
+    """
+    step_fn = stuart_landau_rk4_step if method == "rk4" else stuart_landau_step
+
+    def body(
+        carry: tuple[jax.Array, jax.Array], _: None
+    ) -> tuple[tuple[jax.Array, jax.Array], tuple[jax.Array, jax.Array]]:
+        p, r = carry
+        new_p, new_r = step_fn(p, r, omegas, mu, K, K_r, dt, epsilon)
+        return (new_p, new_r), (new_p, new_r)
+
+    (final_p, final_r), (traj_p, traj_r) = jax.lax.scan(
+        body, (phases, amplitudes), None, length=n_steps
+    )
+    return final_p, final_r, traj_p, traj_r
+
+
 def order_parameter(phases: jax.Array) -> jax.Array:
     """Kuramoto order parameter R = |<exp(i*phi)>|.
 

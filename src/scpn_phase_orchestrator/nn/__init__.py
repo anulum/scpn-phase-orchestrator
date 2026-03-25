@@ -5,15 +5,17 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Differentiable neural network module
 
-"""Differentiable Kuramoto dynamics for neural network integration.
+"""Differentiable phase dynamics for neural network integration.
 
 Functional API (jax only):
     kuramoto_step, kuramoto_rk4_step, kuramoto_forward,
     simplicial_step, simplicial_rk4_step, simplicial_forward,
+    stuart_landau_step, stuart_landau_rk4_step, stuart_landau_forward,
     order_parameter, plv
 
 Layer API (jax + equinox):
-    KuramotoLayer — equinox.Module with learnable K and omegas
+    KuramotoLayer — phase-only, learnable K and omegas
+    StuartLandauLayer — phase + amplitude, learnable K, K_r, omegas, mu
 
 Requires: jax>=0.4 for functional API, equinox>=0.11 for layer API.
 """
@@ -29,6 +31,9 @@ from .functional import (
     simplicial_forward,
     simplicial_rk4_step,
     simplicial_step,
+    stuart_landau_forward,
+    stuart_landau_rk4_step,
+    stuart_landau_step,
 )
 
 __all__ = [
@@ -38,12 +43,17 @@ __all__ = [
     "simplicial_step",
     "simplicial_rk4_step",
     "simplicial_forward",
+    "stuart_landau_step",
+    "stuart_landau_rk4_step",
+    "stuart_landau_forward",
     "order_parameter",
     "plv",
     "KuramotoLayer",
+    "StuartLandauLayer",
 ]
 
 import contextlib
 
 with contextlib.suppress(ImportError):
     from .kuramoto_layer import KuramotoLayer
+    from .stuart_landau_layer import StuartLandauLayer

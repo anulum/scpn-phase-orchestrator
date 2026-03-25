@@ -15,3 +15,10 @@ Pure JAX functions — JIT-compilable, vmap-compatible, fully differentiable.
 Equinox module wrapping Kuramoto dynamics as a learnable layer.
 
 ::: scpn_phase_orchestrator.nn.kuramoto_layer
+
+## StuartLandauLayer
+
+Equinox module with phase + amplitude dynamics. Learnable coupling matrices,
+frequencies, and bifurcation parameters.
+
+::: scpn_phase_orchestrator.nn.stuart_landau_layer
