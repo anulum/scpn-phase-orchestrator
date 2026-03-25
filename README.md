@@ -102,8 +102,16 @@ exponent, entropy production, winding number, ITPC, coupling estimation
 |--------|--------|
 | Rust FFI | 12 PyO3 bindings for native-speed core modules |
 | FPGA | 16-oscillator Zynq-7020 kernel, sub-15μs latency |
-| WebAssembly | Browser-based Kuramoto visualization |
+| WebAssembly | Browser-based Kuramoto visualization, no server needed |
 | JAX GPU | Transparent GPU acceleration via XLA |
+
+### Unique Analysis Capabilities
+
+| Module | What it does |
+|--------|-------------|
+| Hodge Decomposition | Splits coupling K into gradient / curl / harmonic components |
+| Transfer Entropy | Directed causal information flow between oscillators |
+| Coupling Estimation | Infer K from data (least-squares + higher harmonics) |
 
 ## Quickstart
 

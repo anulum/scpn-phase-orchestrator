@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Usage guide with code examples for all nn/ modules
 - README capabilities section with full feature inventory
 
+### Added — Rich API Documentation for Pre-existing Modules
+- API reference pages rewritten for: stochastic engine, geometric engine,
+  delay engine, Ott-Antonsen reduction, variational predictor, adjoint
+  gradients, Hodge decomposition, three-factor plasticity, TE adaptive
+  coupling, HCP connectome, MPC supervisor, chimera detection, EVS,
+  PID, Lyapunov, entropy production, winding number, ITPC, transfer entropy
+- Each page includes theory background, equations, usage examples, paper refs
+
 ### Changed
 - Preflight excludes JAX nn/ tests (CPU XLA too slow; tests run on GPU or in CI)
 - `pyproject.toml`: nn extras (`jax>=0.4, equinox>=0.11`), per-file E402 ignores
