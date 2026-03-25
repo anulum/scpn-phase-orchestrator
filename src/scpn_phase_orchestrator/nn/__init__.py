@@ -9,6 +9,7 @@
 
 Functional API (jax only):
     kuramoto_step, kuramoto_rk4_step, kuramoto_forward,
+    simplicial_step, simplicial_rk4_step, simplicial_forward,
     order_parameter, plv
 
 Layer API (jax + equinox):
@@ -25,12 +26,18 @@ from .functional import (
     kuramoto_step,
     order_parameter,
     plv,
+    simplicial_forward,
+    simplicial_rk4_step,
+    simplicial_step,
 )
 
 __all__ = [
     "kuramoto_step",
     "kuramoto_rk4_step",
     "kuramoto_forward",
+    "simplicial_step",
+    "simplicial_rk4_step",
+    "simplicial_forward",
     "order_parameter",
     "plv",
     "KuramotoLayer",

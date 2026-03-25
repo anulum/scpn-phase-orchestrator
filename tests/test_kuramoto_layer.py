@@ -19,6 +19,9 @@ from scpn_phase_orchestrator.nn.functional import (
     kuramoto_step,
     order_parameter,
     plv,
+    simplicial_forward,
+    simplicial_rk4_step,
+    simplicial_step,
 )
 from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 
@@ -324,4 +327,109 @@ class TestKuramotoLayer:
         batch = jax.random.uniform(key, (4, N), maxval=2.0 * jnp.pi)
         batched = jax.vmap(layer)
         out = batched(batch)
+        assert out.shape == (4, N)
+
+
+# --- Simplicial (3-body) Kuramoto ---
+
+
+SIGMA2 = 0.5
+
+
+class TestSimplicialStep:
+    def test_output_shape(self, setup):
+        phases, omegas, K = setup
+        out = simplicial_step(phases, omegas, K, DT, SIGMA2)
+        assert out.shape == (N,)
+
+    def test_phases_in_range(self, setup):
+        phases, omegas, K = setup
+        out = simplicial_step(phases, omegas, K, DT, SIGMA2)
+        assert jnp.all(out >= 0.0)
+        assert jnp.all(out < 2.0 * jnp.pi)
+
+    def test_rk4_output_shape(self, setup):
+        phases, omegas, K = setup
+        out = simplicial_rk4_step(phases, omegas, K, DT, SIGMA2)
+        assert out.shape == (N,)
+
+    def test_sigma2_zero_reduces_to_kuramoto(self, setup):
+        phases, omegas, K = setup
+        std = kuramoto_step(phases, omegas, K, DT)
+        simp = simplicial_step(phases, omegas, K, DT, sigma2=0.0)
+        assert jnp.allclose(std, simp, atol=1e-7)
+
+    def test_sigma2_zero_rk4_reduces_to_kuramoto(self, setup):
+        phases, omegas, K = setup
+        std = kuramoto_rk4_step(phases, omegas, K, DT)
+        simp = simplicial_rk4_step(phases, omegas, K, DT, sigma2=0.0)
+        assert jnp.allclose(std, simp, atol=1e-7)
+
+    def test_nonzero_sigma2_differs_from_standard(self, setup):
+        phases, omegas, K = setup
+        std = kuramoto_step(phases, omegas, K, DT)
+        simp = simplicial_step(phases, omegas, K, DT, sigma2=1.0)
+        assert not jnp.allclose(std, simp)
+
+
+class TestSimplicialForward:
+    def test_trajectory_shape(self, setup):
+        phases, omegas, K = setup
+        final, traj = simplicial_forward(phases, omegas, K, DT, N_STEPS, SIGMA2)
+        assert final.shape == (N,)
+        assert traj.shape == (N_STEPS, N)
+
+    def test_final_matches_last_trajectory(self, setup):
+        phases, omegas, K = setup
+        final, traj = simplicial_forward(phases, omegas, K, DT, N_STEPS, SIGMA2)
+        assert jnp.allclose(final, traj[-1], atol=1e-7)
+
+    def test_euler_method(self, setup):
+        phases, omegas, K = setup
+        final, traj = simplicial_forward(
+            phases, omegas, K, DT, 10, SIGMA2, method="euler"
+        )
+        assert traj.shape == (10, N)
+
+
+class TestSimplicialGradients:
+    def test_grad_through_step(self, setup):
+        phases, omegas, K = setup
+
+        def loss_fn(K_):
+            out = simplicial_step(phases, omegas, K_, DT, SIGMA2)
+            return jnp.sum(out)
+
+        grad_K = jax.grad(loss_fn)(K)
+        assert grad_K.shape == K.shape
+        assert not jnp.all(grad_K == 0.0)
+
+    def test_grad_wrt_sigma2(self, setup):
+        phases, omegas, K = setup
+
+        def loss_fn(s2):
+            final, _ = simplicial_forward(phases, omegas, K, DT, 20, s2)
+            return order_parameter(final)
+
+        grad_s2 = jax.grad(loss_fn)(1.0)
+        assert jnp.isfinite(grad_s2)
+
+    def test_grad_through_forward(self, setup):
+        phases, omegas, K = setup
+
+        def loss_fn(K_):
+            final, _ = simplicial_forward(phases, omegas, K_, DT, N_STEPS, SIGMA2)
+            return order_parameter(final)
+
+        grad_K = jax.grad(loss_fn)(K)
+        assert grad_K.shape == K.shape
+        assert jnp.isfinite(grad_K).all()
+
+    def test_vmap_batched(self, setup):
+        _, omegas, K = setup
+        batch = jax.random.uniform(
+            jax.random.PRNGKey(0), (4, N), minval=0.0, maxval=2.0 * jnp.pi
+        )
+        batched = jax.vmap(simplicial_step, in_axes=(0, None, None, None, None))
+        out = batched(batch, omegas, K, DT, SIGMA2)
         assert out.shape == (4, N)
