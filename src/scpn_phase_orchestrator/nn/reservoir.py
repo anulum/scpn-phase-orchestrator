@@ -68,16 +68,17 @@ def reservoir_drive(
         (T, 2*N + 1) feature matrix for readout training
     """
 
-    def process_sample(carry, u_t):
+    def process_sample(carry: jax.Array, u_t: jax.Array) -> tuple[jax.Array, jax.Array]:
         p = carry
         driven_omegas = omegas + W_in @ u_t
         for _ in range(n_steps):
             p, _ = kuramoto_forward(p, driven_omegas, K, dt, 1)
-        features = reservoir_features(p)
-        return p, features
+        feat = reservoir_features(p)
+        return p, feat
 
-    _, features = jax.lax.scan(process_sample, phases, u)
-    return features
+    _, feat_matrix = jax.lax.scan(process_sample, phases, u)
+    result: jax.Array = feat_matrix
+    return result
 
 
 def ridge_readout(
@@ -99,7 +100,8 @@ def ridge_readout(
     """
     FtF = features.T @ features + alpha * jnp.eye(features.shape[1])
     FtY = features.T @ targets
-    return jnp.linalg.solve(FtF, FtY)
+    result: jax.Array = jnp.linalg.solve(FtF, FtY)
+    return result
 
 
 def reservoir_predict(
@@ -115,4 +117,5 @@ def reservoir_predict(
     Returns:
         (T, D_out) predictions
     """
-    return features @ W_out
+    result: jax.Array = features @ W_out
+    return result
