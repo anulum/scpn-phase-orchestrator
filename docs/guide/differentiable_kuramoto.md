@@ -155,6 +155,31 @@ grad_sigma2 = jax.grad(loss)(0.5)  # gradient of sync w.r.t. 3-body strength
 This is the first differentiable implementation of simplicial Kuramoto dynamics.
 Existing libraries (XGI, HyperGraphX) can simulate but cannot differentiate.
 
+## BOLD Signal Generator (fMRI)
+
+Convert oscillator amplitude dynamics to simulated fMRI BOLD signal via
+the Balloon-Windkessel hemodynamic model (Friston 2000, Stephan 2007).
+
+```python
+from scpn_phase_orchestrator.nn import (
+    stuart_landau_forward,
+    bold_from_neural,
+)
+
+# Run Stuart-Landau dynamics
+_, _, _, amp_trajectory = stuart_landau_forward(
+    phases, amplitudes, omegas, mu, K, K_r,
+    dt=0.001, n_steps=10000,  # 10s at 1kHz
+)
+
+# Convert amplitude envelope to BOLD signal
+bold = bold_from_neural(amp_trajectory, dt=0.001, dt_bold=0.72)  # TR=720ms
+# bold.shape = (T_bold, N_regions)
+```
+
+SPO is the only tool generating both phase-resolved EEG dynamics AND
+predicted fMRI BOLD from the same underlying oscillator model.
+
 ## GPU Acceleration
 
 JAX automatically uses GPU when available. On Linux (or WSL2):

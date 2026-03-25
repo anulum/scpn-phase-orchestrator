@@ -22,3 +22,10 @@ Equinox module with phase + amplitude dynamics. Learnable coupling matrices,
 frequencies, and bifurcation parameters.
 
 ::: scpn_phase_orchestrator.nn.stuart_landau_layer
+
+## BOLD Signal Generator
+
+Balloon-Windkessel hemodynamic model for converting oscillator amplitudes
+to simulated fMRI BOLD signal. Differentiable for gradient-based fMRI fitting.
+
+::: scpn_phase_orchestrator.nn.bold
