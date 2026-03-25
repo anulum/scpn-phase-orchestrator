@@ -119,6 +119,7 @@ nav:
       - Assumptions & Constants: ASSUMPTIONS.md
       - Competitive Analysis: competitive_analysis.md
   - FAQ: faq.md
+  - Pricing: pricing.md
 
 plugins:
   - search
