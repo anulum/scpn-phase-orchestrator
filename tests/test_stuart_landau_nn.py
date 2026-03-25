@@ -105,9 +105,7 @@ class TestStuartLandauForward:
         mu = jnp.array([1.0])
         K = jnp.zeros((1, 1))
         K_r = jnp.zeros((1, 1))
-        _, fr, _, _ = stuart_landau_forward(
-            phases, amps, omegas, mu, K, K_r, 0.02, 500
-        )
+        _, fr, _, _ = stuart_landau_forward(phases, amps, omegas, mu, K, K_r, 0.02, 500)
         assert jnp.isclose(fr, jnp.sqrt(mu[0]), atol=0.1)
 
     def test_subcritical_decay(self):
@@ -118,9 +116,7 @@ class TestStuartLandauForward:
         mu = jnp.array([-1.0])
         K = jnp.zeros((1, 1))
         K_r = jnp.zeros((1, 1))
-        _, fr, _, _ = stuart_landau_forward(
-            phases, amps, omegas, mu, K, K_r, 0.01, 500
-        )
+        _, fr, _, _ = stuart_landau_forward(phases, amps, omegas, mu, K, K_r, 0.01, 500)
         assert fr < 0.05
 
     def test_euler_method(self, setup):
@@ -176,9 +172,7 @@ class TestStuartLandauGradients:
 
     def test_vmap_batched(self, setup):
         _, amps, omegas, mu, K, K_r = setup
-        batch_p = jax.random.uniform(
-            jax.random.PRNGKey(0), (4, N), maxval=2.0 * jnp.pi
-        )
+        batch_p = jax.random.uniform(jax.random.PRNGKey(0), (4, N), maxval=2.0 * jnp.pi)
         batch_r = jax.random.uniform(jax.random.PRNGKey(1), (4, N), maxval=1.0)
 
         def run_one(p, r):
