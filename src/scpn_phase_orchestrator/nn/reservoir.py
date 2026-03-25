@@ -67,6 +67,7 @@ def reservoir_drive(
     Returns:
         (T, 2*N + 1) feature matrix for readout training
     """
+
     def process_sample(carry, u_t):
         p = carry
         driven_omegas = omegas + W_in @ u_t
