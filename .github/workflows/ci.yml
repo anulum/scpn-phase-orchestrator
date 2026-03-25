@@ -112,7 +112,7 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev,full,queuewaves,plot]"
       - run: bandit -r src/ -c pyproject.toml
-      - run: pip install pip-audit && pip-audit
+      - run: pip install pip-audit && pip-audit --ignore-vuln CVE-2026-4539  # pygments transitive dep, no fix available yet
 
   rust-check:
     strategy:
