@@ -98,3 +98,29 @@ Used by the PredictiveSupervisor as a fast forward model for MPC
 (O(1) vs O(N) for full simulation).
 
 ::: scpn_phase_orchestrator.upde.reduction
+
+## Second-Order Inertial Kuramoto (Power Grids)
+
+The swing equation models power grid transient stability:
+
+```
+m_i θ̈_i + d_i θ̇_i = P_i + Σ_j K_ij sin(θ_j - θ_i)
+```
+
+where m_i is rotor inertia, d_i is damping, P_i is power injection
+(positive = generator, negative = load), K_ij is line susceptance.
+
+Desynchronization = cascading blackout (Iberian Peninsula, April 2025).
+
+```python
+from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
+
+engine = InertialKuramotoEngine(n=100, dt=0.01)
+theta, omega, theta_traj, omega_traj = engine.run(
+    theta0, omega0, power, knm, inertia, damping, n_steps=10000
+)
+freq_dev = engine.frequency_deviation(omega)  # Hz deviation
+R = engine.coherence(theta)  # phase coherence
+```
+
+::: scpn_phase_orchestrator.upde.inertial
