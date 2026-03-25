@@ -43,3 +43,10 @@ Physics backbone + learned neural residual. The known sin(Δθ) coupling
 plus a small MLP that handles model mismatch. First Python UDE for oscillators.
 
 ::: scpn_phase_orchestrator.nn.ude
+
+## Inverse Kuramoto
+
+Gradient-based inference of coupling matrix K and frequencies ω from
+observed phase trajectories. Backpropagates through the ODE solver.
+
+::: scpn_phase_orchestrator.nn.inverse

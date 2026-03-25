@@ -227,6 +227,27 @@ W_out = ridge_readout(features, targets, alpha=1e-4)
 predictions = reservoir_predict(features, W_out)
 ```
 
+## Inverse Kuramoto (Data to Model)
+
+Infer coupling matrix K and frequencies ω from observed phase data by
+backpropagating through the Kuramoto ODE solver.
+
+```python
+from scpn_phase_orchestrator.nn import infer_coupling, coupling_correlation
+
+# observed: (T, N) phase trajectory from experiment/EEG/sensors
+K_inferred, omegas_inferred, losses = infer_coupling(
+    observed, dt=0.02, n_epochs=200, lr=0.01, l1_weight=0.001
+)
+
+# Evaluate against ground truth (if available)
+corr = coupling_correlation(K_true, K_inferred)
+```
+
+L1 sparsity penalty discovers network topology (which oscillators are
+actually coupled vs independent). Circular phase-aware loss handles
+the wraparound at 2π.
+
 ## UDE-Kuramoto (Physics + Neural Residual)
 
 Universal Differential Equation approach: known Kuramoto backbone
