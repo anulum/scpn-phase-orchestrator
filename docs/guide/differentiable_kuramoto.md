@@ -248,6 +248,34 @@ L1 sparsity penalty discovers network topology (which oscillators are
 actually coupled vs independent). Circular phase-aware loss handles
 the wraparound at 2π.
 
+## Oscillator Ising Machine (Graph Coloring)
+
+Solve NP-hard combinatorial problems via Kuramoto phase clustering.
+Oscillators connected by graph edges repel from the same phase cluster.
+
+```python
+from scpn_phase_orchestrator.nn import (
+    oim_forward, extract_coloring, coloring_violations, coloring_energy,
+)
+
+# Define graph adjacency matrix
+A = jnp.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]])  # K3
+
+# Run OIM dynamics (3 colors for K3)
+phases0 = jax.random.uniform(key, (3,), maxval=2*jnp.pi)
+final, traj = oim_forward(phases0, A, n_colors=3, dt=0.1, n_steps=500)
+
+# Extract integer coloring
+colors = extract_coloring(final, n_colors=3)
+violations = coloring_violations(colors, A)  # 0 = valid coloring
+
+# Differentiable energy for gradient-based optimization
+energy = coloring_energy(final, A, n_colors=3)
+```
+
+Nature Scientific Reports 2017; Böhm & Schumacher 2020.
+First open-source oscillator Ising machine simulator.
+
 ## UDE-Kuramoto (Physics + Neural Residual)
 
 Universal Differential Equation approach: known Kuramoto backbone

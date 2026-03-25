@@ -61,6 +61,11 @@ __all__ = [
     "infer_coupling",
     "inverse_loss",
     "coupling_correlation",
+    "oim_step",
+    "oim_forward",
+    "extract_coloring",
+    "coloring_violations",
+    "coloring_energy",
     "bold_from_neural",
     "bold_signal",
     "reservoir_drive",
@@ -73,6 +78,13 @@ import contextlib
 
 from .bold import bold_from_neural, bold_signal
 from .inverse import coupling_correlation, infer_coupling, inverse_loss
+from .oim import (
+    coloring_energy,
+    coloring_violations,
+    extract_coloring,
+    oim_forward,
+    oim_step,
+)
 from .reservoir import (
     reservoir_drive,
     reservoir_features,

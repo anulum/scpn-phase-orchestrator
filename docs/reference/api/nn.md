@@ -50,3 +50,10 @@ Gradient-based inference of coupling matrix K and frequencies ω from
 observed phase trajectories. Backpropagates through the ODE solver.
 
 ::: scpn_phase_orchestrator.nn.inverse
+
+## Oscillator Ising Machine (OIM)
+
+Combinatorial optimization via phase clustering. Maps graph coloring,
+max-cut, and QUBO to Kuramoto dynamics. First open-source OIM simulator.
+
+::: scpn_phase_orchestrator.nn.oim
