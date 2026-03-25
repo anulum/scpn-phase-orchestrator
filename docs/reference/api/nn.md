@@ -36,3 +36,10 @@ Kuramoto-based reservoir computing with linear readout. Universal
 approximation near edge-of-bifurcation (arXiv:2407.16172, 2024).
 
 ::: scpn_phase_orchestrator.nn.reservoir
+
+## UDE-Kuramoto (Universal Differential Equation)
+
+Physics backbone + learned neural residual. The known sin(Δθ) coupling
+plus a small MLP that handles model mismatch. First Python UDE for oscillators.
+
+::: scpn_phase_orchestrator.nn.ude

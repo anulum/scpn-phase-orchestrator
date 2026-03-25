@@ -227,6 +227,32 @@ W_out = ridge_readout(features, targets, alpha=1e-4)
 predictions = reservoir_predict(features, W_out)
 ```
 
+## UDE-Kuramoto (Physics + Neural Residual)
+
+Universal Differential Equation approach: known Kuramoto backbone
+`sin(Δθ)` plus a learned MLP residual `NN_φ(Δθ)` that captures model
+mismatch (higher harmonics, asymmetric coupling, nonlinear effects).
+
+```python
+from scpn_phase_orchestrator.nn import UDEKuramotoLayer
+
+# Layer with physics backbone + learned residual
+layer = UDEKuramotoLayer(n=16, n_steps=50, dt=0.01, hidden=16, key=key)
+
+# Forward pass uses sin(Δθ) + NN_φ(Δθ)
+output = layer(phases)
+
+# Train end-to-end: gradients flow through both K and NN_φ
+@eqx.filter_grad
+def loss(model):
+    return model.sync_score(phases)
+
+grads = loss(layer)  # grads.K, grads.omegas, grads.residual all updated
+```
+
+Rackauckas et al. 2020; Frontiers Comp. Neuro. 2025.
+First Python UDE implementation for oscillator networks.
+
 ## GPU Acceleration
 
 JAX automatically uses GPU when available. On Linux (or WSL2):

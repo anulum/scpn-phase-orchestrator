@@ -56,6 +56,8 @@ __all__ = [
     "saf_loss",
     "KuramotoLayer",
     "StuartLandauLayer",
+    "UDEKuramotoLayer",
+    "CouplingResidual",
     "bold_from_neural",
     "bold_signal",
     "reservoir_drive",
@@ -77,3 +79,4 @@ from .reservoir import (
 with contextlib.suppress(ImportError):
     from .kuramoto_layer import KuramotoLayer
     from .stuart_landau_layer import StuartLandauLayer
+    from .ude import CouplingResidual, UDEKuramotoLayer
