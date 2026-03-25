@@ -180,6 +180,31 @@ bold = bold_from_neural(amp_trajectory, dt=0.001, dt_bold=0.72)  # TR=720ms
 SPO is the only tool generating both phase-resolved EEG dynamics AND
 predicted fMRI BOLD from the same underlying oscillator model.
 
+## Reservoir Computing
+
+Use a fixed Kuramoto network as a nonlinear reservoir. Only the readout
+layer is trained. Optimal at edge-of-bifurcation (arXiv:2407.16172).
+
+```python
+from scpn_phase_orchestrator.nn import (
+    reservoir_drive,
+    ridge_readout,
+    reservoir_predict,
+)
+
+# Drive reservoir with input signal
+features = reservoir_drive(
+    phases, omegas, K, W_in, input_signal,
+    dt=0.01, n_steps=5,
+)
+
+# Train readout via ridge regression
+W_out = ridge_readout(features, targets, alpha=1e-4)
+
+# Predict
+predictions = reservoir_predict(features, W_out)
+```
+
 ## GPU Acceleration
 
 JAX automatically uses GPU when available. On Linux (or WSL2):
