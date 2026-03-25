@@ -391,3 +391,89 @@ def plv(trajectory: jax.Array) -> jax.Array:
     # (T, N, 1) - (T, 1, N) -> (T, N, N) phase differences
     diff = trajectory[:, :, jnp.newaxis] - trajectory[:, jnp.newaxis, :]
     return jnp.abs(jnp.mean(jnp.exp(1j * diff), axis=0))
+
+
+# --- Spectral Alignment Function (SAF) ---
+# Skardal & Taylor, SIAM J. Appl. Dyn. Syst. 2016;
+# Song et al. 2025 (arXiv:2509.18279)
+
+
+def coupling_laplacian(K: jax.Array) -> jax.Array:
+    """Compute the graph Laplacian from a coupling matrix.
+
+    L = D - K, where D_ii = sum_j K_ij.
+
+    Args:
+        K: (N, N) symmetric coupling matrix
+
+    Returns:
+        (N, N) Laplacian matrix
+    """
+    D = jnp.diag(jnp.sum(K, axis=1))
+    return D - K
+
+
+def saf_order_parameter(
+    K: jax.Array,
+    omegas: jax.Array,
+    eps: float = 1e-8,
+) -> jax.Array:
+    """Spectral Alignment Function: closed-form order parameter estimate.
+
+    r ≈ 1 - (1/2N) Σ_{j=2}^N λ_j⁻² ⟨v^j, ω⟩²
+
+    where λ_j are Laplacian eigenvalues and v^j are eigenvectors.
+    Valid in the strongly-coupled regime. Differentiable through
+    eigendecomposition for gradient-based topology optimization.
+
+    Args:
+        K: (N, N) symmetric coupling matrix (non-negative)
+        omegas: (N,) natural frequencies
+        eps: regularization for small eigenvalues
+
+    Returns:
+        Scalar estimated order parameter in [0, 1]
+    """
+    N = K.shape[0]
+    L = coupling_laplacian(K)
+    eigenvalues, eigenvectors = jnp.linalg.eigh(L)
+
+    # Skip first eigenvalue (λ_0 = 0 for connected graph)
+    lam = eigenvalues[1:]  # (N-1,)
+    V = eigenvectors[:, 1:]  # (N, N-1)
+
+    # ⟨v^j, ω⟩² for each non-zero eigenvector
+    projections = (V.T @ omegas) ** 2  # (N-1,)
+
+    # r ≈ 1 - (1/2N) Σ λ_j⁻² ⟨v^j, ω⟩²
+    inv_lam_sq = 1.0 / (lam**2 + eps)
+    r = 1.0 - jnp.sum(inv_lam_sq * projections) / (2.0 * N)
+    return jnp.clip(r, 0.0, 1.0)
+
+
+def saf_loss(
+    K: jax.Array,
+    omegas: jax.Array,
+    budget: float = 0.0,
+    budget_weight: float = 0.1,
+) -> jax.Array:
+    """Loss function for coupling topology optimization via SAF.
+
+    Minimizes -r_SAF (maximize synchronization) with optional L1 budget
+    constraint on total coupling strength.
+
+    Args:
+        K: (N, N) symmetric coupling matrix
+        omegas: (N,) natural frequencies
+        budget: target total coupling strength (0 = no constraint)
+        budget_weight: penalty weight for budget violation
+
+    Returns:
+        Scalar loss (lower = better synchronization)
+    """
+    r = saf_order_parameter(K, omegas)
+    loss = -r
+    if budget > 0.0:
+        total_coupling = jnp.sum(jnp.abs(K))
+        loss = loss + budget_weight * jnp.maximum(total_coupling - budget, 0.0)
+    return loss

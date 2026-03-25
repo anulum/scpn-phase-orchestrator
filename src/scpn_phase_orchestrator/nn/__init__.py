@@ -23,11 +23,14 @@ Requires: jax>=0.4 for functional API, equinox>=0.11 for layer API.
 from __future__ import annotations
 
 from .functional import (
+    coupling_laplacian,
     kuramoto_forward,
     kuramoto_rk4_step,
     kuramoto_step,
     order_parameter,
     plv,
+    saf_loss,
+    saf_order_parameter,
     simplicial_forward,
     simplicial_rk4_step,
     simplicial_step,
@@ -48,6 +51,9 @@ __all__ = [
     "stuart_landau_forward",
     "order_parameter",
     "plv",
+    "coupling_laplacian",
+    "saf_order_parameter",
+    "saf_loss",
     "KuramotoLayer",
     "StuartLandauLayer",
     "bold_from_neural",
