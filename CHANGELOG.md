@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Differentiable Phase Dynamics (`nn/` module)
+- `nn/functional.py`: `kuramoto_step`, `kuramoto_rk4_step`, `kuramoto_forward` — JAX differentiable Kuramoto with JIT, vmap, autodiff
+- `nn/functional.py`: `simplicial_step`, `simplicial_rk4_step`, `simplicial_forward` — first differentiable 3-body Kuramoto (Gambuzza 2023)
+- `nn/functional.py`: `stuart_landau_step`, `stuart_landau_rk4_step`, `stuart_landau_forward` — differentiable phase + amplitude dynamics
+- `nn/functional.py`: `saf_order_parameter`, `saf_loss`, `coupling_laplacian` — spectral alignment function for topology optimization (Skardal & Taylor 2016)
+- `nn/kuramoto_layer.py`: `KuramotoLayer` — equinox.Module with learnable K and ω
+- `nn/stuart_landau_layer.py`: `StuartLandauLayer` — equinox.Module with learnable K, K_r, ω, μ
+- `nn/bold.py`: `bold_from_neural`, `bold_signal` — Balloon-Windkessel BOLD generator (Friston 2000)
+- `nn/reservoir.py`: `reservoir_drive`, `ridge_readout`, `reservoir_predict` — Kuramoto reservoir computing
+- `nn/ude.py`: `UDEKuramotoLayer`, `CouplingResidual` — physics backbone + learned neural residual (UDE)
+- `nn/inverse.py`: `infer_coupling`, `inverse_loss`, `coupling_correlation` — gradient-based inverse Kuramoto
+- `nn/oim.py`: `oim_forward`, `extract_coloring`, `coloring_energy` — oscillator Ising machine for graph coloring
+
+### Added — NumPy Dynamics Engines
+- `upde/inertial.py`: `InertialKuramotoEngine` — second-order swing equation for power grids (Filatrella 2008)
+- `upde/market.py`: `extract_phase`, `market_order_parameter`, `detect_regimes`, `sync_warning` — financial market regime detection
+- `upde/swarmalator.py`: `SwarmalatorEngine` — coupled spatial + phase dynamics (O'Keeffe 2017)
+
+### Added — Documentation
+- 4 guide pages: Advanced Dynamics, Control Systems, Analysis Toolkit, Hardware & Deployment
+- API reference page for nn/ module (mkdocstrings)
+- Usage guide with code examples for all nn/ modules
+- README capabilities section with full feature inventory
+
+### Changed
+- Preflight excludes JAX nn/ tests (CPU XLA too slow; tests run on GPU or in CI)
+- `pyproject.toml`: nn extras (`jax>=0.4, equinox>=0.11`), per-file E402 ignores
+- Coverage/mypy: nn/ excluded from CI gate (JAX not available in CI environment)
+- pip-audit: ignore CVE-2026-4539 (pygments transitive dep, no fix available)
+- Ruff bumped 0.15.6 → 0.15.7
+- GitHub Actions bumped: codeql-action 4.34.1, rust-toolchain, actions/cache 5.0.4, action-gh-release 2.6.1
+
 ## [0.5.0] - 2026-03-22
 
 ### Added
