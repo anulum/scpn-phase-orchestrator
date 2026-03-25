@@ -45,6 +45,66 @@ Domain Binder → Oscillator Extractors (P/I/S) → UPDE Engine → Supervisor �
 - **R_good**: Coherence to maintain (actuator ↔ target phase-lock)
 - **R_bad**: Coherence to suppress (harmful mode-locking)
 
+## Capabilities
+
+### Differentiable Phase Dynamics (`nn/` module, JAX)
+
+| Module | What it does |
+|--------|-------------|
+| KuramotoLayer | Phase-only oscillator layer (equinox), learnable K and ω |
+| StuartLandauLayer | Phase + amplitude layer, bifurcation parameter μ |
+| Simplicial Kuramoto | 3-body higher-order coupling (Gambuzza 2023) |
+| BOLD Generator | Balloon-Windkessel hemodynamic model for fMRI |
+| Reservoir Computing | Kuramoto network as nonlinear reservoir + ridge readout |
+| SAF Spectral Loss | Topology optimization via Laplacian eigenstructure |
+| UDE-Kuramoto | Physics backbone sin(Δθ) + learned neural residual |
+| Inverse Pipeline | Infer coupling K and frequencies ω from observed data |
+| OIM Graph Coloring | Oscillator Ising machine for combinatorial optimization |
+
+All functions are JIT-compilable, vmap-compatible, and differentiable.
+Install: `pip install scpn-phase-orchestrator[nn]`
+
+### Advanced Dynamics (`upde/` module, NumPy)
+
+| Module | What it does |
+|--------|-------------|
+| Inertial Kuramoto | Second-order swing equation for power grid stability |
+| Market Kuramoto | Financial regime detection via Hilbert phase + order parameter |
+| Swarmalator | Coupled spatial + phase dynamics (O'Keeffe 2017) |
+| Simplicial Engine | 3-body coupling with explosive transitions |
+| Stuart-Landau Engine | Amplitude dynamics with Hopf bifurcation |
+| Stochastic Engine | Euler-Maruyama with optimal noise (D* auto-tuning) |
+| Geometric Engine | Torus-preserving symplectic integrator |
+| Delay Engine | Time-delayed coupling with circular buffer |
+| Ott-Antonsen | Exact mean-field reduction (O(1) prediction) |
+
+### Closed-Loop Control (unique — no other oscillator library has this)
+
+| Module | What it does |
+|--------|-------------|
+| MPC Supervisor | Predicts R trajectory 10 steps ahead via OA reduction |
+| Regime Manager | FSM with hysteresis (NOMINAL/DEGRADED/CRITICAL) |
+| Petri Net FSM | Formal state machine with guard conditions |
+| Plasticity | Three-factor Hebbian coupling adaptation |
+| TE Adaptive | Transfer entropy-based causal coupling updates |
+| Audit Trail | SHA256-chained JSONL for deterministic replay |
+
+### Analysis Toolkit (12 monitors)
+
+Order parameter, PLV, PAC (cross-frequency coupling), chimera detection,
+EVS (entrainment verification), PID (redundancy/synergy), Lyapunov
+exponent, entropy production, winding number, ITPC, coupling estimation
+(including non-sinusoidal harmonics), HCP connectome generation.
+
+### Hardware Deployment
+
+| Target | Status |
+|--------|--------|
+| Rust FFI | 12 PyO3 bindings for native-speed core modules |
+| FPGA | 16-oscillator Zynq-7020 kernel, sub-15μs latency |
+| WebAssembly | Browser-based Kuramoto visualization |
+| JAX GPU | Transparent GPU acceleration via XLA |
+
 ## Quickstart
 
 ```bash
