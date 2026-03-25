@@ -124,7 +124,10 @@ def bold_from_neural(
     T, n_regions = neural.shape
     subsample = max(1, int(dt_bold / dt))
 
-    def step(carry, x_t):
+    def step(
+        carry: tuple[jax.Array, jax.Array, jax.Array, jax.Array],
+        x_t: jax.Array,
+    ) -> tuple[tuple[jax.Array, jax.Array, jax.Array, jax.Array], jax.Array]:
         s, f, v, q = carry
         new_s, new_f, new_v, new_q = balloon_windkessel_step(
             s, f, v, q, x_t, dt, kappa, gamma, tau, alpha, e0
@@ -138,5 +141,5 @@ def bold_from_neural(
     q0 = jnp.ones(n_regions)
 
     _, bold_full = jax.lax.scan(step, (s0, f0, v0, q0), neural)
-    # Subsample to BOLD temporal resolution
-    return bold_full[::subsample]
+    result: jax.Array = bold_full[::subsample]
+    return result
