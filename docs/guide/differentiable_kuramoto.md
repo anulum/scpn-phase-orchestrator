@@ -90,6 +90,38 @@ grads = compute_grads(layer)
 # grads.K is (16, 16), grads.omegas is (16,)
 ```
 
+## Simplicial (3-Body) Kuramoto
+
+Higher-order interactions beyond pairwise coupling. The 3-body term produces
+explosive (first-order) synchronization transitions (Gambuzza et al. 2023,
+Nature Physics).
+
+```python
+from scpn_phase_orchestrator.nn import (
+    simplicial_step,
+    simplicial_forward,
+    order_parameter,
+)
+
+# sigma2 controls 3-body coupling strength (0 = standard Kuramoto)
+new_phases = simplicial_step(phases, omegas, K, dt=0.01, sigma2=0.5)
+
+# Full trajectory with higher-order dynamics
+final, trajectory = simplicial_forward(
+    phases, omegas, K, dt=0.01, n_steps=100, sigma2=0.5
+)
+
+# Differentiate through 3-body dynamics
+def loss(sigma2):
+    final, _ = simplicial_forward(phases, omegas, K, 0.01, 50, sigma2)
+    return order_parameter(final)
+
+grad_sigma2 = jax.grad(loss)(0.5)  # gradient of sync w.r.t. 3-body strength
+```
+
+This is the first differentiable implementation of simplicial Kuramoto dynamics.
+Existing libraries (XGI, HyperGraphX) can simulate but cannot differentiate.
+
 ## GPU Acceleration
 
 JAX automatically uses GPU when available. On Linux (or WSL2):
