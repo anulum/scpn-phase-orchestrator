@@ -29,3 +29,10 @@ Balloon-Windkessel hemodynamic model for converting oscillator amplitudes
 to simulated fMRI BOLD signal. Differentiable for gradient-based fMRI fitting.
 
 ::: scpn_phase_orchestrator.nn.bold
+
+## Reservoir Computing
+
+Kuramoto-based reservoir computing with linear readout. Universal
+approximation near edge-of-bifurcation (arXiv:2407.16172, 2024).
+
+::: scpn_phase_orchestrator.nn.reservoir
