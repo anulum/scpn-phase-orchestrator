@@ -57,7 +57,8 @@ class CouplingResidual(eqx.Module):
         x = jnp.tanh(self.layers[0](x))
         x = jnp.tanh(self.layers[1](x))
         x = self.layers[2](x)
-        return x[0]
+        result: jax.Array = x[0]
+        return result
 
 
 def _ude_deriv(
