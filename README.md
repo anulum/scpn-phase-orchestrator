@@ -191,6 +191,7 @@ and is built from source via `maturin develop`.
 | `sleep_architecture` | Sleep medicine | AASM sleep staging from R |
 | `musical_acoustics` | Acoustics | Consonance = R, groove = alpha |
 | `brain_connectome` | Neuroscience | HCP-inspired coupling |
+| `identity_coherence` | Consciousness | SSGF identity model (6 layers, 30 oscillators) |
 
 ### Adding a Domain
 
@@ -225,5 +226,14 @@ See [CITATION.cff](CITATION.cff).
 
 ---
 
-© 1996–2026 Miroslav Šotek. All rights reserved.
-Contact: www.anulum.li | protoscience@anulum.li
+<p align="center">
+  <a href="https://www.anulum.li">
+    <img src="docs/assets/anulum_logo_company.jpg" width="180" alt="ANULUM">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.anulum.li">
+    <img src="docs/assets/fortis_studio_logo.jpg" width="180" alt="Fortis Studio">
+  </a>
+  <br>
+  <em>Developed by <a href="https://www.anulum.li">ANULUM</a> / Fortis Studio</em>
+</p>

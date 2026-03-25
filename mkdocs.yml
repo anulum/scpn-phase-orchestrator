@@ -15,6 +15,8 @@ copyright: "© 1996–2026 Miroslav Šotek. All rights reserved."
 
 theme:
   name: material
+  logo: assets/anulum_logo.png
+  favicon: assets/anulum_logo_company.jpg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default

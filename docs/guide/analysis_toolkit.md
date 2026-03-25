@@ -47,6 +47,9 @@ Three-criterion battery for rigorous entrainment validation:
 Distinguishes true entrainment from broadband phase-locking artifacts.
 
 ::: scpn_phase_orchestrator.monitor.evs
+    options:
+      show_root_heading: false
+      members: false
 
 ## Partial Information Decomposition (PID)
 

@@ -4,7 +4,8 @@
 
 SCPN Phase Orchestrator is a domain-agnostic coherence control compiler.
 It transforms hierarchical oscillator systems into phase-locked control
-logic via Kuramoto/UPDE dynamics with a Rust-accelerated kernel.
+logic via Kuramoto/UPDE dynamics with a Rust-accelerated kernel and
+optional JAX differentiable backend.
 
 ## Pipeline
 
@@ -16,56 +17,173 @@ Domain YAML ──► Binding Loader ──► Validator
               Oscillator Extractors (P / I / S)
                      │
                      ▼
-         ┌── UPDE Engine (RK4/RK45) ──┐
-         │   or Stuart-Landau Engine   │
-         │   (phase + amplitude)       │
-         └────────────┬────────────────┘
+         ┌── UPDE Engine (9 variants) ────────────┐
+         │   Kuramoto, Stuart-Landau, Inertial,   │
+         │   Market, Swarmalator, Stochastic,     │
+         │   Geometric, Delay, Simplicial         │
+         │   + Ott-Antonsen mean-field reduction  │
+         └────────────┬───────────────────────────┘
                       │
         ┌─────────────┼─────────────┐
         ▼             ▼             ▼
   Coupling Builder  Imprint Model  Geometry Prior
+  (Hodge, TE,       (history-dep)  (constraints,
+   plasticity)                      spectral)
         │             │             │
         └─────────────┼─────────────┘
                       ▼
-              Boundary Observer
+              Monitor Array (16 observers)
+              ├── Boundary Observer
+              ├── Coherence / Order Parameter
+              ├── Chimera Detection
+              ├── EVS (Entrainment Verification)
+              ├── PID (Redundancy/Synergy)
+              ├── Lyapunov Exponent
+              ├── Entropy Production
+              ├── Winding Number
+              ├── ITPC, PAC, Transfer Entropy
+              ├── Sleep Staging, NPE
+              └── STL Runtime Monitor
                       │
                       ▼
               Regime Manager
-              (Petri net FSM)
+              (Petri net FSM + hysteresis)
                       │
                       ▼
               Supervisor Policy
-              (compound DSL rules)
+              (compound DSL rules + MPC)
                       │
                       ▼
               Actuation Mapper
+              (constraint projection)
                       │
                       ▼
               Audit Logger
-              (SHA256 chain)
+              (SHA256-chained JSONL)
 ```
 
+### Parallel Track: Differentiable Backend (nn/)
+
+```
+JAX/Equinox ─► KuramotoLayer / StuartLandauLayer
+               ├── Simplicial 3-body
+               ├── BOLD hemodynamic model
+               ├── Reservoir computing
+               ├── UDE-Kuramoto (physics + neural residual)
+               ├── Inverse pipeline (data → K, ω)
+               ├── OIM (graph coloring)
+               └── SAF spectral loss
+```
+
+All `nn/` functions are JIT-compilable, vmap-compatible, and fully
+differentiable. GPU acceleration via `jax[cuda12]`.
+
 ## Module Map
+
+### Core Pipeline
 
 | Module | Purpose | Key Types |
 |--------|---------|-----------|
 | `binding/` | YAML/JSON spec loading, validation | `BindingSpec`, `OscillatorFamily` |
 | `oscillators/` | Signal→phase extraction (P/I/S channels) | `PhaseExtractor`, `PhaseState` |
-| `coupling/` | K_nm matrix construction with decay/boosts | `CouplingBuilder`, `CouplingState` |
-| `upde/` | Phase ODE integration (Kuramoto + Stuart-Landau) | `UPDEEngine`, `StuartLandauEngine` |
-| `upde/pac.py` | Phase-amplitude coupling (Tort 2010) | `modulation_index`, `pac_matrix` |
-| `upde/envelope.py` | Modulation envelope extraction | `extract_envelope`, `EnvelopeState` |
-| `imprint/` | History-dependent coupling modulation | `ImprintModel` |
+| `coupling/` | K_nm matrix construction, adaptation, analysis | `CouplingBuilder`, `KnmMatrix` |
+| `upde/` | Phase ODE integration (9 engine variants) | `UPDEEngine`, `StuartLandauEngine` |
+| `imprint/` | History-dependent coupling modulation | `ImprintState`, `ImprintUpdate` |
 | `drivers/` | External forcing (P/I/S channels) | `PhysicalDriver`, `SymbolicDriver` |
-| `monitor/` | Boundary crossing detection | `BoundaryObserver` |
-| `supervisor/` | Regime FSM + policy engine | `RegimeManager`, `SupervisorPolicy` |
-| `supervisor/petri_net.py` | Formal Petri net FSM | `PetriNet`, `Marking`, `Guard` |
-| `supervisor/events.py` | Event bus for regime transitions | `EventBus`, `RegimeEvent` |
-| `actuation/` | Control output mapping | `ActuationMapper` |
+| `monitor/` | 16 dynamical observers | `BoundaryObserver`, `ChimeraDetector` |
+| `supervisor/` | Regime FSM + policy engine + MPC | `RegimeManager`, `SupervisorPolicy` |
+| `actuation/` | Control output mapping with constraints | `ActuationMapper`, `ConstraintProjection` |
 | `audit/` | Deterministic audit trail + replay | `AuditLogger`, `ReplayEngine` |
-| `reporting/` | Matplotlib visualizations | `CoherencePlot` |
-| `adapters/` | Bridge adapters (OTel, SCPN ecosystem) | `OTelExporter`, `FusionCoreBridge` |
-| `apps/queuewaves/` | Cascade failure detector application | `QueueWavesConfig`, `PhaseComputePipeline` |
+
+### UPDE Engines (upde/)
+
+| Engine | Module | Domain |
+|--------|--------|--------|
+| Standard Kuramoto | `engine.py` | General coupled oscillators |
+| Stuart-Landau | `stuart_landau.py` | Phase + amplitude, Hopf bifurcation |
+| Inertial (2nd order) | `inertial.py` | Power grid swing equations |
+| Market | `market.py` | Financial regime detection |
+| Swarmalator | `swarmalator.py` | Spatial + phase coupling |
+| Stochastic | `stochastic.py` | Euler-Maruyama, optimal noise D* |
+| Geometric | `geometric.py` | Torus-preserving symplectic integrator |
+| Delay | `delay.py` | Time-delayed coupling |
+| Simplicial | `simplicial.py` | 3-body higher-order interactions |
+| Ott-Antonsen | `reduction.py` | O(1) mean-field forward model |
+| Variational FEP | `prediction.py` | Free Energy Principle predictor |
+| Adjoint | `adjoint.py` | Gradient computation for K optimization |
+
+Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.py`, `splitting.py`, `jax_engine.py`
+
+### Coupling Subsystem (coupling/)
+
+| Module | Purpose |
+|--------|---------|
+| `knm.py` | K_nm matrix construction |
+| `geometry_constraints.py` | Spatial coupling constraints |
+| `templates.py` | Pre-configured topologies (all-to-all, ring, small-world) |
+| `hodge.py` | Hodge decomposition (gradient/curl/harmonic) |
+| `plasticity.py` | Three-factor Hebbian adaptation |
+| `te_adaptive.py` | Transfer entropy causal coupling |
+| `connectome.py` | HCP-inspired brain coupling matrices |
+| `lags.py` | Phase lag estimation |
+| `spectral.py` | Spectral analysis of coupling |
+| `ei_balance.py` | Excitatory/inhibitory balance |
+| `prior.py` | Coupling priors |
+
+### Monitor Array (monitor/)
+
+| Monitor | Module | Detects |
+|---------|--------|---------|
+| Boundary Observer | `boundaries.py` | Safety/performance limit crossings |
+| Coherence | `coherence.py` | Order parameter R tracking |
+| Chimera Detection | `chimera.py` | Coexistent coherent/incoherent clusters |
+| EVS | `evs.py` | Entrainment verification (3-criterion) |
+| PID | `pid.py` | Information redundancy/synergy |
+| Lyapunov | `lyapunov.py` | Chaos vs stability (λ exponent) |
+| Entropy Production | `entropy_prod.py` | Thermodynamic irreversibility |
+| Winding Number | `winding.py` | Topological phase wrapping |
+| ITPC | `itpc.py` | Inter-trial phase coherence |
+| Transfer Entropy | `transfer_entropy.py` | Directed causal information flow |
+| Sleep Staging | `sleep_staging.py` | AASM sleep stage classification |
+| NPE | `npe.py` | Normalized prediction error |
+| Psychedelic Sim | `psychedelic.py` | Entropy surge simulation |
+| STL Runtime | `stl.py` | Signal Temporal Logic safety monitor |
+| Session Start | `session_start.py` | Startup coherence gate |
+
+### Differentiable Backend (nn/)
+
+| Module | Purpose |
+|--------|---------|
+| `functional.py` | Pure JAX Kuramoto/Stuart-Landau/simplicial functions |
+| `kuramoto_layer.py` | Equinox module, learnable K and ω |
+| `stuart_landau_layer.py` | Phase + amplitude equinox module |
+| `bold.py` | Balloon-Windkessel BOLD generator |
+| `reservoir.py` | Kuramoto reservoir computing |
+| `ude.py` | Physics + neural residual (UDE) |
+| `inverse.py` | Gradient-based coupling inference |
+| `oim.py` | Oscillator Ising machine |
+
+### Extended Modules
+
+| Module | Purpose | Key Types |
+|--------|---------|-----------|
+| `ssgf/` | Self-Stabilizing Gauge Field framework | `CarrierField`, `FreEnergyMinimizer`, `TCBO`, `PGBO` |
+| `autotune/` | Auto-calibration pipeline | `FrequencyID`, `CouplingEstimation` |
+| `visualization/` | D3 network graph, Three.js torus | `NetworkGraph`, `TorusViz` |
+| `reporting/` | Matplotlib coherence plots | `CoherencePlot` |
+| `adapters/` | 12 bridge adapters (OTel, SCPN ecosystem) | `OTelExporter`, `FusionCoreBridge` |
+| `apps/queuewaves/` | Cascade failure detector (FastAPI) | `QueueWavesConfig`, `PhaseComputePipeline` |
+| `grpc_gen/` | Protocol buffer stubs | gRPC streaming service |
+
+### Top-Level Modules
+
+| Module | Purpose |
+|--------|---------|
+| `cli.py` | `spo` command entry point |
+| `server.py` | FastAPI REST endpoints |
+| `server_grpc.py` | Async gRPC streaming service |
+| `exceptions.py` | `SPOError` hierarchy (8 subclasses) |
+| `_compat.py` | Rust/Python compatibility, version constants |
 
 ## Rust Kernel (`spo-kernel/`)
 
@@ -85,10 +203,11 @@ fallback ensures the package works without the native extension.
 1. **Binding**: YAML domainpack parsed → `BindingSpec` validated
 2. **Build**: Coupling matrix K_nm, geometry constraints, imprint model constructed
 3. **Step loop**: `UPDEEngine.step()` integrates phases via RK4/RK45
-4. **Observe**: `BoundaryObserver` checks limit crossings
+4. **Observe**: Monitor array evaluates all active observers
 5. **Decide**: `RegimeManager` transitions regime; `SupervisorPolicy` fires rules
 6. **Act**: `ActuationMapper` maps policy actions to knob adjustments
 7. **Record**: `AuditLogger` appends step to JSONL with SHA256 chain
+8. **Adapt** (optional): Plasticity/TE updates coupling; MPC predicts via OA reduction
 
 ## Three-Channel Model
 
@@ -108,4 +227,8 @@ default algorithm at parse time.
 - **CLI**: `spo run`, `spo validate`, `spo replay`, `spo scaffold`
 - **Library**: `pip install scpn-phase-orchestrator` (pure Python or with Rust extension)
 - **QueueWaves**: `spo queuewaves serve` (FastAPI + WebSocket)
-- **Docker**: `docker build -t spo .`
+- **Docker**: `docker build -t spo .` / Helm chart for Kubernetes
+- **JAX GPU**: `pip install scpn-phase-orchestrator[nn]` + `jax[cuda12]`
+- **FPGA**: Verilog `kuramoto_core.v` targeting Zynq-7020 (16 oscillators, sub-15μs)
+- **WebAssembly**: Browser-based Kuramoto visualization via `spo-wasm` crate
+- **gRPC**: Async streaming service for real-time phase telemetry

@@ -20,7 +20,7 @@ You want to simulate brain oscillations, fit models to EEG/fMRI, detect
 synchronization regimes.
 
 1. **Read:** [System Overview](../concepts/system_overview.md)
-2. **Do:** [Notebook: Minimal Domain](../../notebooks/02_minimal_domain.ipynb)
+2. **Do:** Run `notebooks/02_minimal_domain.ipynb` locally
 3. **Explore:** `neuroscience_eeg` domainpack
 4. **Try:** BOLD generator (fMRI from oscillators), PAC analysis, chimera detection
 
@@ -30,8 +30,8 @@ synchronization regimes.
 
 You want to model grid stability, test control strategies, predict cascading failures.
 
-1. **Read:** [Kuramoto Theory — Inertial Section](../concepts/kuramoto_theory.md#inertial-second-order)
-2. **Do:** [Advanced Dynamics Guide — Power Grids](../guide/advanced_dynamics.md#second-order-inertial-engine-power-grids)
+1. **Read:** [Kuramoto Theory](../concepts/kuramoto_theory.md) — focus on the inertial (second-order) sections
+2. **Do:** [Advanced Dynamics Guide — Power Grids](../guide/advanced_dynamics.md#second-order-inertial-kuramoto-power-grids)
 3. **Explore:** `power_grid` domainpack + `InertialKuramotoEngine`
 4. **Try:** Generator trip scenarios, weak coupling desynchronization tests
 

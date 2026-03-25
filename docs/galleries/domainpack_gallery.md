@@ -15,8 +15,20 @@ simulations.
 | 05 | **manufacturing_spc** | 9 (sensor/machine/line) | Bad-layer suppression, policy rules | `05_manufacturing_spc.ipynb` |
 | 06 | **stuart_landau** | 8 | Phase-amplitude ODE, bifurcation tracking, PAC | `06_stuart_landau_amplitude.ipynb` |
 | 07 | **policy_petri_net** | 8 | Policy DSL, regime FSM, Petri net sequencing | `07_policy_petri_net.ipynb` |
+| 08 | **audit_replay** | 8 | SHA256-chained audit trail, deterministic replay | `08_audit_replay.ipynb` |
+| 09 | **binding_spec** | varies | Binding spec schema walkthrough, validation | `09_binding_spec.ipynb` |
+| 10 | **adapters** | varies | Bridge adapters (fusion, quantum, neurocore) | `10_reporting_adapters.ipynb` |
+| 11 | **identity_coherence** | 30 (6 layers) | SSGF identity model, chimera + plasticity | `11_identity_coherence.ipynb` |
+| 12 | **autotune** | varies | Frequency ID, coupling estimation pipeline | `12_autotune_pipeline.ipynb` |
+| 13 | **ssgf** | varies | SSGF free energy closure | `13_ssgf_closure.ipynb` |
+| 14 | **chimera** | varies | Chimera state identification and visualization | `14_chimera_detection.ipynb` |
+| 15 | **spectral** | varies | Spectral Alignment Function (SAF) optimization | `15_spectral_analysis.ipynb` |
+| 16 | **sleep_architecture** | 8 (4 layers) | EEG sleep stage classification from R | `16_sleep_staging.ipynb` |
+| 17 | **power_grid** | 12 (5 layers) | Inertial Kuramoto, generator trip transients | `17_power_grid_stability.ipynb` |
+| 18 | **financial_markets** | 8 (4 layers) | Hilbert phase, order parameter regime detection | `18_market_regime_detection.ipynb` |
+| 19 | **swarm_robotics** | 8 (3 layers) | Swarmalator spatial + phase coupling | `19_swarmalator_dynamics.ipynb` |
 
-## All 31 Domainpacks
+## All 32 Domainpacks
 
 | Pack | Domain | Layers | Oscillators | Channels |
 |------|--------|--------|-------------|----------|
@@ -32,6 +44,7 @@ simulations.
 | `fusion_equilibrium` | Fusion plasma | 6 | 12 | P/I |
 | `gene_oscillator` | Repressilator + quorum sensing | 3 | 6 | P/I/S |
 | `geometry_walk` | Graph systems | 2 | 8 | S |
+| `identity_coherence` | Consciousness/identity model (SSGF) | 6 | 30 | P/I/S |
 | `laser_array` | Photonics | 3 | 8 | P/I |
 | `manufacturing_spc` | Manufacturing | 3 | 9 | P/I/S |
 | `metaphysics_demo` | P/I/S showcase | 3 | 7 | P/I/S |
@@ -59,7 +72,9 @@ pip install -e ".[dev,plot]"
 jupyter lab notebooks/
 ```
 
-All 7 notebooks are validated in CI via `jupyter nbconvert --execute`.
+19 notebooks total. Notebooks 01--07 are validated in CI via `jupyter nbconvert --execute`;
+the remaining 12 run locally but are excluded from CI due to optional dependencies (JAX,
+Qiskit) or nbconvert performance constraints.
 
 ## Adding a New Domainpack
 

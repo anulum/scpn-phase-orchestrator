@@ -39,12 +39,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PID, Lyapunov, entropy production, winding number, ITPC, transfer entropy
 - Each page includes theory background, equations, usage examples, paper refs
 
+### Added — Documentation Audit (2026-03-25)
+- ARCHITECTURE.md rewritten: 9 UPDE engines, 16 monitors, nn/ module, ssgf/,
+  autotune/, visualization/ — all 14 subpackages + 5 top-level modules documented
+- Competitive analysis updated: JAX GPU, Lyapunov, AKOrN/XGI comparison, 10 use cases
+- FAQ expanded: nn/ module, 9 engines, SSGF, inverse Kuramoto, OIM, stochastic
+  resonance, Ott-Antonsen reduction (8 new entries)
+- docs/index.md: 4 new feature cards (Differentiable, 9 Engines, 16 Monitors, Inverse)
+- Gallery: notebooks table expanded 7 → 19 entries with descriptions
+- Test/domainpack counts corrected across all docs (2100+ Python, 173 Rust, 32 packs)
+- identity_coherence domainpack added to gallery, README, and all count references
+
 ### Changed
 - Preflight excludes JAX nn/ tests (CPU XLA too slow; tests run on GPU or in CI)
+- Preflight excludes test_quantum_bridge_live.py (Qiskit Aer segfault on Windows)
 - `pyproject.toml`: nn extras (`jax>=0.4, equinox>=0.11`), per-file E402 ignores
 - Coverage/mypy: nn/ excluded from CI gate (JAX not available in CI environment)
 - pip-audit: ignore CVE-2026-4539 (pygments transitive dep, no fix available)
 - Ruff bumped 0.15.6 → 0.15.7
+- Pre-commit ruff pinned to v0.15.7 (was v0.15.6, caused CI format divergence)
 - GitHub Actions bumped: codeql-action 4.34.1, rust-toolchain, actions/cache 5.0.4, action-gh-release 2.6.1
 
 ## [0.5.0] - 2026-03-22

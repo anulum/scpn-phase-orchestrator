@@ -15,7 +15,7 @@ hide:
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**1305 Python tests | 203 Rust tests | 100% coverage | 31 domainpacks**
+**2100+ Python tests | 173 Rust tests | 95%+ coverage | 32 domainpacks**
 
 </div>
 
@@ -26,20 +26,20 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 ## Architecture
 
 ```
-Domain Binder ─► Oscillators (P/I/S) ─► UPDE Engine ─► Supervisor ─► Actuation
-     │                  │                     │             │             │
-binding_spec.yaml   3-channel          Kuramoto ODE     Policy DSL   ControlAction
-                    extraction         + Stuart-Landau   + Petri Net   + Projector
-                    (Physical /        + RK4/RK45        + Regime FSM
-                     Informational /   + Rust FFI
-                     Symbolic)
+Domain Binder ─► Oscillators (P/I/S) ─► UPDE Engine (9 variants) ─► Supervisor ─► Actuation
+     │                  │                     │                          │             │
+binding_spec.yaml   3-channel          Kuramoto, Stuart-Landau,     Policy DSL   ControlAction
+                    extraction         Inertial, Market, Swarmalator + Petri Net   + Projector
+                    (Physical /        Stochastic, Geometric, Delay  + Regime FSM
+                     Informational /   Simplicial + Ott-Antonsen     + MPC
+                     Symbolic)         + Rust FFI / JAX GPU
 ```
 
 ## Features
 
 <div class="grid cards" markdown>
 
--   **31 Domainpacks**
+-   **32 Domainpacks**
 
     ---
 
@@ -103,6 +103,38 @@ binding_spec.yaml   3-channel          Kuramoto ODE     Policy DSL   ControlActi
 
     [:octicons-arrow-right-24: Audit Trace Spec](specs/audit_trace.md)
 
+-   **Differentiable (JAX)**
+
+    ---
+
+    `nn/` module: KuramotoLayer, StuartLandauLayer, simplicial 3-body, BOLD, reservoir, UDE, inverse pipeline, OIM. All JIT-compilable, vmap-compatible, GPU-ready.
+
+    [:octicons-arrow-right-24: Differentiable Guide](guide/differentiable_kuramoto.md)
+
+-   **9 ODE Engines**
+
+    ---
+
+    Standard Kuramoto, Stuart-Landau, inertial (power grids), market (finance), swarmalator (robotics), stochastic, geometric, delay, simplicial. Plus Ott-Antonsen mean-field reduction.
+
+    [:octicons-arrow-right-24: Advanced Dynamics](guide/advanced_dynamics.md)
+
+-   **16 Monitors**
+
+    ---
+
+    Chimera detection, EVS entrainment, Lyapunov exponents, entropy production, PAC, PID, transfer entropy, winding numbers, ITPC, sleep staging, STL safety. Beyond R alone.
+
+    [:octicons-arrow-right-24: Analysis Toolkit](guide/analysis_toolkit.md)
+
+-   **Inverse Kuramoto**
+
+    ---
+
+    Infer coupling matrix K and frequencies ω from observed data (EEG, sensors, markets) by backpropagating through the ODE solver. L1 sparsity discovers network topology.
+
+    [:octicons-arrow-right-24: nn/ API](reference/api/nn.md)
+
 </div>
 
 ## Quick Install
@@ -129,16 +161,26 @@ print("OK")
 | [Specifications](specs/binding_spec.schema.json) | Binding schema, UPDE numerics, policy DSL, all contracts |
 | [Tutorials](tutorials/01_new_domain_checklist.md) | New domain checklist, oscillator hunt sheet, Knm templates |
 | [API Reference](reference/api/index.md) | Full Python API docs (mkdocstrings) |
-| [Gallery](galleries/domainpack_gallery.md) | All 31 domainpacks with descriptions |
+| [Gallery](galleries/domainpack_gallery.md) | All 32 domainpacks with descriptions |
 
 ---
 
-<div align="center">
+**Contact:** [protoscience@anulum.li](mailto:protoscience@anulum.li) |
+[GitHub Discussions](https://github.com/anulum/scpn-phase-orchestrator/discussions) |
+[www.anulum.li](https://www.anulum.li)
 
-**License:** AGPL-3.0-or-later | Commercial licensing available
-
-(c) 1998--2026 Miroslav Sotek. All rights reserved.
-
-[www.anulum.li](https://www.anulum.li) | [protoscience@anulum.li](mailto:protoscience@anulum.li)
-
-</div>
+<p align="center">
+  <a href="https://www.anulum.li">
+    <img src="assets/anulum_logo_company.jpg" width="180" alt="ANULUM">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.anulum.li">
+    <img src="assets/fortis_studio_logo.jpg" width="180" alt="Fortis Studio">
+  </a>
+  <br>
+  <em>Developed by <a href="https://www.anulum.li">ANULUM</a> / Fortis Studio</em>
+  <br><br>
+  <strong>License:</strong> AGPL-3.0-or-later | Commercial licensing available
+  <br>
+  © 1996–2026 Miroslav Šotek. All rights reserved.
+</p>

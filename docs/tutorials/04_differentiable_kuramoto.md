@@ -120,7 +120,5 @@ print(f"Loss: {losses[0]:.4f} → {losses[-1]:.4f}")
 
 ## What's Next
 
-- [Stuart-Landau Layer](05_stuart_landau_layer.md) — add amplitude dynamics
-- [Spectral Topology Design](06_spectral_topology.md) — design optimal K without ODE
-- [Reservoir Computing](07_reservoir_computing.md) — use Kuramoto as a computing substrate
-- [Guide: Differentiable Kuramoto](../guide/differentiable_kuramoto.md) — full API reference
+- [Guide: Differentiable Kuramoto](../guide/differentiable_kuramoto.md) — full API reference with Stuart-Landau, reservoir computing, spectral topology, UDE, and OIM
+- [nn/ API Reference](../reference/api/nn.md) — auto-generated API docs for all nn/ modules

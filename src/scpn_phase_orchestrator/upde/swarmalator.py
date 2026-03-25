@@ -17,11 +17,12 @@ Position dynamics:
 Phase dynamics:
     θ̇_i = ω_i + (K/N) Σ_j sin(θ_j - θ_i) / |x_j - x_i|
 
-Parameters:
-    A: spatial attraction strength
-    B: spatial repulsion strength
-    J: phase-dependent spatial modulation (-1 to 1)
-    K: phase coupling strength
+Model parameters:
+
+- A: spatial attraction strength
+- B: spatial repulsion strength
+- J: phase-dependent spatial modulation (-1 to 1)
+- K: phase coupling strength
 
 J > 0: phase-similar agents attract → static sync
 J < 0: phase-similar agents repel → static async

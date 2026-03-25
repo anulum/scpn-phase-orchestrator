@@ -56,12 +56,15 @@ def balloon_windkessel_step(
         q: (N,) deoxyhemoglobin content (normalized, resting=1)
         x: (N,) neural input (amplitude envelope)
         dt: integration timestep (seconds)
-        kappa, gamma, tau, alpha, e0: hemodynamic parameters
+        kappa: signal decay rate (default 0.65)
+        gamma: flow-dependent elimination (default 0.41)
+        tau: hemodynamic transit time (default 0.98)
+        alpha: Grubb's vessel stiffness exponent (default 0.32)
+        e0: resting oxygen extraction fraction (default 0.34)
 
     Returns:
         Tuple of (new_s, new_f, new_v, new_q)
     """
-    # Oxygen extraction: E(f) = 1 - (1 - E0)^(1/f)
     E_f = 1.0 - (1.0 - e0) ** (1.0 / jnp.maximum(f, 0.01))
 
     ds = x - kappa * s - gamma * (f - 1.0)
@@ -116,7 +119,11 @@ def bold_from_neural(
         neural: (T, N) neural activity time series (e.g., amplitude envelope)
         dt: simulation timestep (seconds)
         dt_bold: BOLD sampling period (seconds, default 0.5s = 2Hz)
-        kappa, gamma, tau, alpha, e0: hemodynamic parameters
+        kappa: signal decay rate (default 0.65)
+        gamma: flow-dependent elimination (default 0.41)
+        tau: hemodynamic transit time (default 0.98)
+        alpha: Grubb's vessel stiffness exponent (default 0.32)
+        e0: resting oxygen extraction fraction (default 0.34)
 
     Returns:
         (T_bold, N) BOLD signal, where T_bold = T * dt / dt_bold

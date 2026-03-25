@@ -97,6 +97,86 @@ indicates cross-frequency coupling.
 Policy rules adjust these knobs in response to regime transitions and boundary
 violations.
 
+### What is the nn/ module?
+
+A differentiable Kuramoto backend built on JAX and equinox. It exposes
+oscillator dynamics as learnable neural network layers: `KuramotoLayer`,
+`StuartLandauLayer`, simplicial 3-body coupling, BOLD hemodynamic signal,
+reservoir computing, UDE-Kuramoto (physics + neural residual), inverse
+coupling inference, and an oscillator Ising machine (OIM) for combinatorial
+optimization. All functions are `jax.jit`-compilable and `jax.vmap`-compatible.
+
+Install: `pip install scpn-phase-orchestrator[nn]`
+
+See the [Differentiable Kuramoto guide](guide/differentiable_kuramoto.md).
+
+### What are the 9 UPDE engines?
+
+SPO ships 9 ODE engine variants beyond the standard Kuramoto:
+
+1. **Standard Kuramoto** — first-order phase coupling
+2. **Stuart-Landau** — phase + amplitude with Hopf bifurcation
+3. **Inertial** — second-order swing equation for power grids
+4. **Market** — financial regime detection via Hilbert phase
+5. **Swarmalator** — coupled spatial position + phase (robotics, biology)
+6. **Stochastic** — Euler-Maruyama with optimal noise D*
+7. **Geometric** — torus-preserving symplectic integrator for long simulations
+8. **Delay** — time-delayed coupling with circular buffer
+9. **Simplicial** — 3-body higher-order interactions (Gambuzza 2023)
+
+Plus Ott-Antonsen mean-field reduction for O(1) MPC prediction.
+
+See the [Advanced Dynamics guide](guide/advanced_dynamics.md).
+
+### Can SPO detect market crashes?
+
+The `upde.market` module extracts instantaneous phase from price/return
+time series via Hilbert transform, computes the Kuramoto order parameter
+R(t) across assets, and classifies synchronization regimes. R(t) → 1
+preceding crashes is documented for Black Monday 1987 and the 2008
+financial crisis (arXiv:1109.1167). The `sync_warning()` function flags
+when R crosses a threshold from below.
+
+### What is the SSGF?
+
+The Self-Stabilizing Gauge Field is a free energy framework that maps
+Kuramoto dynamics to Friston's Free Energy Principle. The `ssgf/` module
+implements the carrier field, Langevin noise injection, Boltzmann weighting,
+free energy closure, and the TCBO (Topological Consciousness Boundary
+Observer) and PGBO (Phase Gradient Boundary Observer) constructs from the
+SCPN consciousness model.
+
+### Can SPO solve combinatorial optimization problems?
+
+Yes. The `nn.oim` module implements an Oscillator Ising Machine that maps
+graph coloring, max-cut, and QUBO problems to Kuramoto phase clustering.
+Oscillators connected by graph edges repel from the same phase cluster.
+The dynamics settle into valid colorings. Differentiable via JAX for
+gradient-based energy minimization.
+
+### What is inverse Kuramoto?
+
+Given observed phase trajectories (from EEG, sensors, market data), the
+`nn.inverse` module infers the coupling matrix K and natural frequencies
+ω by backpropagating through the Kuramoto ODE solver. L1 sparsity penalty
+discovers network topology (which oscillators are actually coupled).
+
+### How does stochastic resonance work?
+
+Counter-intuitively, adding noise at the optimal level D* = K·R_det/2
+*increases* synchronization. The `upde.stochastic` engine implements
+Euler-Maruyama integration with automatic D* tuning. The effect is
+explained by the modified Bessel equation in the self-consistency
+condition (Acebrón et al. 2005).
+
+### What is the Ott-Antonsen reduction?
+
+An exact analytical reduction of the N-oscillator Kuramoto system to a
+single complex ODE: dz/dt = -(Δ + iω₀)z + (K/2)(z - |z|²z). Valid for
+globally-coupled oscillators with Lorentzian frequency distribution.
+Used by the `PredictiveSupervisor` as a fast forward model for MPC
+(O(1) computation vs O(N) for full simulation).
+
 ### How do I report a security vulnerability?
 
 Follow the responsible disclosure process in
