@@ -58,6 +58,9 @@ __all__ = [
     "StuartLandauLayer",
     "UDEKuramotoLayer",
     "CouplingResidual",
+    "infer_coupling",
+    "inverse_loss",
+    "coupling_correlation",
     "bold_from_neural",
     "bold_signal",
     "reservoir_drive",
@@ -69,6 +72,7 @@ __all__ = [
 import contextlib
 
 from .bold import bold_from_neural, bold_signal
+from .inverse import coupling_correlation, infer_coupling, inverse_loss
 from .reservoir import (
     reservoir_drive,
     reservoir_features,
