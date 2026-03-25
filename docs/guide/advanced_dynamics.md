@@ -124,3 +124,21 @@ R = engine.coherence(theta)  # phase coherence
 ```
 
 ::: scpn_phase_orchestrator.upde.inertial
+
+## Financial Market Synchronization
+
+Detect market regimes via Kuramoto order parameter on asset price phases.
+R(t) → 1 precedes market crashes (Black Monday 1987, 2008 crisis).
+
+```python
+from scpn_phase_orchestrator.upde.market import (
+    extract_phase, market_order_parameter, detect_regimes, sync_warning,
+)
+
+phases = extract_phase(returns_matrix)  # Hilbert transform
+R = market_order_parameter(phases)       # R(t) across assets
+regimes = detect_regimes(R)              # 0=desync, 1=transition, 2=sync
+warnings = sync_warning(R, threshold=0.7)  # crash early warning
+```
+
+::: scpn_phase_orchestrator.upde.market
