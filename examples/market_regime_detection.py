@@ -32,18 +32,18 @@ def main() -> None:
 
     # Phase 2 (t=200..349): herding — assets begin to correlate
     base_signal = np.sin(np.linspace(0, 8 * np.pi, 150))
-    herding = np.column_stack([
-        base_signal + 0.3 * rng.standard_normal(150) for _ in range(N_ASSETS)
-    ])
+    herding = np.column_stack(
+        [base_signal + 0.3 * rng.standard_normal(150) for _ in range(N_ASSETS)]
+    )
 
     # Phase 3 (t=350..499): crash aftermath — back to noise
     aftermath = rng.standard_normal((150, N_ASSETS))
 
     returns = np.vstack([normal, herding, aftermath])
     print(f"Synthetic market: {T} timesteps, {N_ASSETS} assets")
-    print(f"  t=0-199: normal (independent)")
-    print(f"  t=200-349: herding (correlated)")
-    print(f"  t=350-499: aftermath (independent)")
+    print("  t=0-199: normal (independent)")
+    print("  t=200-349: herding (correlated)")
+    print("  t=350-499: aftermath (independent)")
     print()
 
     # Extract phases and compute order parameter
