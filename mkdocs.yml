@@ -50,6 +50,7 @@ nav:
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
       - "Tutorial: Hello World": getting-started/hello_world.md
+      - Start Here (Learning Path): getting-started/start_here.md
   - Concepts:
       - System Overview: concepts/system_overview.md
       - "Oscillators & PIS": concepts/oscillators_PIS.md
@@ -57,6 +58,7 @@ nav:
       - Memory Imprint: concepts/memory_imprint.md
       - Phase Control Theory: concepts/phase_control_theory.md
       - Domain Utilisation Schemas: concepts/domain_utilisation_schemas.md
+      - Kuramoto Theory: concepts/kuramoto_theory.md
   - Guides:
       - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
       - QueueWaves Cascade Detector: guide/queuewaves.md
@@ -89,6 +91,7 @@ nav:
       - "01 — New Domain Checklist": tutorials/01_new_domain_checklist.md
       - "02 — Oscillator Hunt Sheet": tutorials/02_oscillator_hunt_sheet.md
       - "03 — Build Knm Templates": tutorials/03_build_knm_templates.md
+      - "04 — Differentiable Kuramoto": tutorials/04_differentiable_kuramoto.md
   - API Reference:
       - Overview: reference/api/index.md
       - Core & Exceptions: reference/api/core.md
