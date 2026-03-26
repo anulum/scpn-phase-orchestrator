@@ -10,6 +10,13 @@ from __future__ import annotations
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
+from scpn_phase_orchestrator.monitor.embedding import (
+    EmbeddingResult,
+    auto_embed,
+    delay_embed,
+    optimal_delay,
+    optimal_dimension,
+)
 from scpn_phase_orchestrator.monitor.evs import EVSMonitor, EVSResult
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 from scpn_phase_orchestrator.monitor.lyapunov import (
@@ -44,19 +51,24 @@ __all__ = [
     "CoherenceMonitor",
     "EVSMonitor",
     "EVSResult",
+    "EmbeddingResult",
     "LyapunovGuard",
     "LyapunovState",
     "RQAResult",
     "SessionCoherenceReport",
-    "cross_recurrence_matrix",
-    "cross_rqa",
-    "lyapunov_spectrum",
+    "auto_embed",
     "check_session_start",
     "classify_sleep_stage",
     "compute_itpc",
+    "cross_recurrence_matrix",
+    "cross_rqa",
+    "delay_embed",
     "detect_chimera",
     "entropy_from_phases",
     "itpc_persistence",
+    "lyapunov_spectrum",
+    "optimal_delay",
+    "optimal_dimension",
     "recurrence_matrix",
     "reduce_coupling",
     "rqa",
