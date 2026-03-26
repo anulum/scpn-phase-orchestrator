@@ -89,7 +89,7 @@ Install: `pip install scpn-phase-orchestrator[nn]`
 | TE Adaptive | Transfer entropy-based causal coupling updates |
 | Audit Trail | SHA256-chained JSONL for deterministic replay |
 
-### Analysis Toolkit (12 monitors)
+### Analysis Toolkit (15 monitors)
 
 Order parameter, PLV, PAC (cross-frequency coupling), chimera detection,
 EVS (entrainment verification), PID (redundancy/synergy), Lyapunov

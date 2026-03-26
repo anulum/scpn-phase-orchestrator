@@ -238,11 +238,15 @@ def create_app(cfg: QueueWavesConfig) -> Any:
 
     @app.websocket("/ws/stream")
     async def ws_stream(websocket: WebSocket) -> None:
+        """Read-only observer stream. Incoming messages are ignored (keepalive only)."""
         await websocket.accept()
         ws_clients.add(websocket)
         try:
             while True:
-                await websocket.receive_text()
+                msg = await websocket.receive_text()
+                if len(msg) > 1024:
+                    await websocket.close(code=1009, reason="Message too large")
+                    break
         except WebSocketDisconnect:
             pass
         finally:

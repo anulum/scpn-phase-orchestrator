@@ -110,8 +110,8 @@ jobs:
           path: dist/*.whl
 
   publish-pypi:
-    name: Publish to PyPI
-    needs: [build-wheels, build-sdist, build-fallback-wheel]
+    name: Publish scpn-phase-orchestrator to PyPI
+    needs: [build-sdist, build-fallback-wheel]
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -119,6 +119,13 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
+          name: sdist
           path: dist/
-          merge-multiple: true
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: wheel-fallback
+          path: dist/
       - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b54a752f3a06f5a68aee2013 # release/v1
+
+  # spo-kernel Rust wheels are built and verified but published separately.
+  # The spo-kernel package has its own trusted publisher configuration.

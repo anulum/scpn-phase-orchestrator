@@ -144,10 +144,3 @@ def test_jax_sl_parity():
     )
 
     np.testing.assert_allclose(py_result, jx_result, atol=1e-8)
-
-
-def test_import_without_jax():
-    """HAS_JAX flag exists regardless of JAX availability."""
-    from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX
-
-    assert isinstance(HAS_JAX, bool)

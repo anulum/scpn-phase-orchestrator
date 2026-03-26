@@ -84,6 +84,12 @@ class QueueWavesConfig:
 def load_config(path: Path) -> QueueWavesConfig:
     """Load QueueWavesConfig from a YAML file."""
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        msg = f"QueueWaves config must be a YAML mapping, got {type(raw).__name__}"
+        raise ValueError(msg)
+    if "prometheus_url" not in raw:
+        msg = "QueueWaves config missing required key 'prometheus_url'"
+        raise ValueError(msg)
     services = [
         ServiceDef(
             name=s["name"],

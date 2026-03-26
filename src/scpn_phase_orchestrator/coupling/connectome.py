@@ -66,7 +66,7 @@ _INTER_HEMI_STRENGTH = 0.15
 _DMN_HUB_BOOST = 0.3
 
 
-def load_hcp_connectome(n_regions: int) -> NDArray:
+def load_hcp_connectome(n_regions: int, seed: int = 42) -> NDArray:
     """Generate a synthetic HCP-inspired coupling matrix.
 
     Args:
@@ -79,7 +79,7 @@ def load_hcp_connectome(n_regions: int) -> NDArray:
         msg = f"n_regions must be >= 2, got {n_regions}"
         raise ValueError(msg)
 
-    rng = np.random.default_rng(seed=42)
+    rng = np.random.default_rng(seed=seed)
     knm = np.zeros((n_regions, n_regions), dtype=np.float64)
     half = n_regions // 2
 

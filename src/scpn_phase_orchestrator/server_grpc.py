@@ -17,6 +17,7 @@ with a mocked context.
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Iterator
 from typing import Any
@@ -69,21 +70,25 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
 
     def __init__(self, sim: SimulationState) -> None:
         self._sim = sim
+        self._lock = threading.Lock()
 
     # -- unary RPCs -----------------------------------------------------------
 
     def GetState(self, request: Any, context: Any) -> StateResponse:
-        return _snap_to_response(self._sim.snapshot())
+        with self._lock:
+            return _snap_to_response(self._sim.snapshot())
 
     def Step(self, request: Any, context: Any) -> StateResponse:
         n = getattr(request, "n_steps", 1) or 1
-        for _ in range(n):
-            self._sim.step()
-        return _snap_to_response(self._sim.snapshot())
+        with self._lock:
+            for _ in range(n):
+                self._sim.step()
+            return _snap_to_response(self._sim.snapshot())
 
     def Reset(self, request: Any, context: Any) -> StateResponse:
-        self._sim.reset()
-        return _snap_to_response(self._sim.snapshot())
+        with self._lock:
+            self._sim.reset()
+            return _snap_to_response(self._sim.snapshot())
 
     def GetConfig(self, request: Any, context: Any) -> ConfigResponse:
         spec = self._sim.spec
@@ -99,6 +104,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
     # -- server-streaming RPC -------------------------------------------------
 
     def StreamPhases(self, request: Any, context: Any) -> Iterator[StateResponse]:
+        """Read-only observer: streams snapshots without advancing simulation."""
         max_steps = getattr(request, "max_steps", 100) or 100
         interval = getattr(request, "interval_s", 0.05) or 0.05
         for _ in range(max_steps):
@@ -108,6 +114,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
                 and not context.is_active()
             ):
                 return
-            self._sim.step()
-            yield _snap_to_response(self._sim.snapshot())
+            with self._lock:
+                snap = self._sim.snapshot()
+            yield _snap_to_response(snap)
             time.sleep(interval)

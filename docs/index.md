@@ -15,7 +15,7 @@ hide:
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 
-**2100+ Python tests | 173 Rust tests | 95%+ coverage | 32 domainpacks**
+**2200+ Python tests | 211 Rust tests | 95%+ coverage | 32 domainpacks**
 
 </div>
 
@@ -99,7 +99,7 @@ binding_spec.yaml   3-channel          Kuramoto, Stuart-Landau,     Policy DSL  
 
     ---
 
-    SHA256-chained audit trail in JSONL format. Every simulation step is hash-linked and re-executable. Bit-exact verification of entire runs.
+    SHA256-chained audit trail in JSONL format. Every simulation step is hash-linked and re-executable. Tolerance-based replay verification (atol=1e-6) plus hash-chain integrity check.
 
     [:octicons-arrow-right-24: Audit Trace Spec](specs/audit_trace.md)
 
@@ -119,7 +119,7 @@ binding_spec.yaml   3-channel          Kuramoto, Stuart-Landau,     Policy DSL  
 
     [:octicons-arrow-right-24: Advanced Dynamics](guide/advanced_dynamics.md)
 
--   **16 Monitors**
+-   **15 Monitors**
 
     ---
 

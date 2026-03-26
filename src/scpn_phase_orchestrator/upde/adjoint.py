@@ -42,9 +42,10 @@ def gradient_knm_fd(
     For each K_ij (i≠j), perturbs by ±ε and measures the effect on R
     after n_steps. Returns gradient matrix ∂(1-R)/∂K_ij.
 
-    This is O(N² · n_steps) — the adjoint method via diffrax reduces
-    this to O(n_steps) but requires JAX. This fallback is correct but
-    slow for large N.
+    Complexity: O(N² · N² · n_steps) = O(N⁴ · n_steps) because each of
+    the ~N² off-diagonal entries requires a full N-step simulation that is
+    itself O(N²) per step. Use gradient_knm_jax() for anything beyond N≈16.
+    The adjoint method via diffrax reduces this to O(n_steps) but requires JAX.
     """
     n = knm.shape[0]
     grad = np.zeros((n, n), dtype=np.float64)

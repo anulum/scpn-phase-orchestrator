@@ -11,19 +11,26 @@ Usage:
     spo serve binding_spec.yaml --port 8080
     # Then open http://localhost:8080 in a browser.
 
+    # With API key authentication:
+    SPO_API_KEY=mysecret spo serve binding_spec.yaml --port 8080
+    # Mutable endpoints (step, reset) require X-API-Key header.
+    # When SPO_API_KEY is unset, mutable endpoints are unrestricted
+    # (development mode — do NOT deploy without setting the key).
+
 Endpoints:
     GET  /             HTML dashboard
     GET  /api/state    Current UPDE state (JSON)
-    POST /api/step     Advance one step
-    POST /api/reset    Reset simulation
+    POST /api/step     Advance one step (auth required if SPO_API_KEY set)
+    POST /api/reset    Reset simulation (auth required if SPO_API_KEY set)
     GET  /api/config   Binding spec summary
-    WS   /ws/stream    Real-time WebSocket stream
+    WS   /ws/stream    Real-time WebSocket stream (read-only observer)
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -252,7 +259,9 @@ class SimulationState:
                 ]
             )
         self.step_count = 0
-        self.regime_manager = RegimeManager()
+        self.regime_manager = RegimeManager(event_bus=self.event_bus)
+        if self.imprint_model is not None:
+            self.imprint_state = ImprintState(m_k=np.zeros(self.n_osc), last_update=0.0)
         return self.snapshot()
 
 
@@ -348,7 +357,7 @@ fetchState().then(render);
 def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
-        from fastapi import FastAPI
+        from fastapi import Depends, FastAPI, Header, HTTPException
         from fastapi.responses import HTMLResponse
     except ImportError as exc:
         msg = "fastapi not installed. pip install fastapi uvicorn"
@@ -357,6 +366,14 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
     spec = load_binding_spec(spec_path)
     sim = SimulationState(spec)
     app = FastAPI(title="SPO Dashboard", version="0.5.0")
+
+    _api_key = os.environ.get("SPO_API_KEY")
+
+    async def _require_auth(x_api_key: str | None = Header(None)) -> None:
+        if _api_key is None:
+            return
+        if x_api_key != _api_key:
+            raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
 
     @app.get("/", response_class=HTMLResponse)
     async def dashboard() -> str:
@@ -367,12 +384,12 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
         async with sim._lock:
             return sim.snapshot()
 
-    @app.post("/api/step")
+    @app.post("/api/step", dependencies=[Depends(_require_auth)])
     async def post_step() -> dict:
         async with sim._lock:
             return sim.step()
 
-    @app.post("/api/reset")
+    @app.post("/api/reset", dependencies=[Depends(_require_auth)])
     async def post_reset() -> dict:
         async with sim._lock:
             return sim.reset()
@@ -412,11 +429,12 @@ def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma
 
     @app.websocket("/ws/stream")
     async def ws_stream(websocket: WebSocket) -> None:
+        """Read-only observer: streams snapshots without advancing simulation."""
         await websocket.accept()
         try:
             while True:
                 async with sim._lock:
-                    state = sim.step()
+                    state = sim.snapshot()
                 await websocket.send_text(json.dumps(state))
                 await asyncio.sleep(spec.sample_period_s)
         except WebSocketDisconnect:

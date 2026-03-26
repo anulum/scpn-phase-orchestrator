@@ -56,8 +56,9 @@ oscillation death).
 
 `AuditLogger` writes a SHA256-chained JSONL file. Each line hashes the previous
 line's hash plus the current payload. `ReplayEngine` rebuilds the full engine
-from the header record, re-runs every step, and compares state vectors
-bit-for-bit. A single flipped bit breaks the chain.
+from the header record, re-runs every step, and compares state vectors within
+tolerance (atol=1e-6 by default). The hash chain independently validates log
+integrity — a single tampered byte breaks the chain.
 
 ### What is QueueWaves?
 

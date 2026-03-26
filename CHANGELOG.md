@@ -40,14 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Each page includes theory background, equations, usage examples, paper refs
 
 ### Added — Documentation Audit (2026-03-25)
-- ARCHITECTURE.md rewritten: 9 UPDE engines, 16 monitors, nn/ module, ssgf/,
+- ARCHITECTURE.md rewritten: 9 UPDE engines, 15 monitors, nn/ module, ssgf/,
   autotune/, visualization/ — all 14 subpackages + 5 top-level modules documented
 - Competitive analysis updated: JAX GPU, Lyapunov, AKOrN/XGI comparison, 10 use cases
 - FAQ expanded: nn/ module, 9 engines, SSGF, inverse Kuramoto, OIM, stochastic
   resonance, Ott-Antonsen reduction (8 new entries)
 - docs/index.md: 4 new feature cards (Differentiable, 9 Engines, 16 Monitors, Inverse)
 - Gallery: notebooks table expanded 7 → 19 entries with descriptions
-- Test/domainpack counts corrected across all docs (2100+ Python, 173 Rust, 32 packs)
+- Test/domainpack counts corrected across all docs (2200+ Python, 211 Rust, 32 packs)
 - identity_coherence domainpack added to gallery, README, and all count references
 
 ### Changed
@@ -256,7 +256,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `AuditLogger.log_step()` now records full UPDE inputs (phases, omegas, knm, alpha, zeta, psi)
   - `ReplayEngine.verify_determinism_chained()` replays logged steps and compares output phases
   - `ReplayEngine.build_engine()` reconstructs UPDEEngine from header record
-  - CLI `spo replay --verify` validates bit-for-bit reproducibility
+  - CLI `spo replay --verify` validates reproducibility within tolerance (atol=1e-6)
   - CLI `spo run --seed` makes initial RNG seed configurable and logged
 
 ### Fixed

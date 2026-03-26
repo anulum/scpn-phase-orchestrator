@@ -74,7 +74,7 @@ You want the full mathematical framework.
 After your entry point:
 
 - **Control:** [Control Systems Guide](../guide/control_systems.md) — MPC, regime manager, Petri net
-- **Analysis:** [Analysis Toolkit Guide](../guide/analysis_toolkit.md) — 12 monitors
+- **Analysis:** [Analysis Toolkit Guide](../guide/analysis_toolkit.md) — 15 monitors
 - **Deployment:** [Hardware Guide](../guide/hardware_deployment.md) — Rust FFI, FPGA, WASM, GPU
 - **Domains:** [Domainpack Gallery](../galleries/domainpack_gallery.md) — 32 domains
 - **API:** [Full API Reference](../reference/api/index.md)

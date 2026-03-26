@@ -63,11 +63,6 @@ def _mutual_information_paired(
     return max(0.0, ha + hb - hab)
 
 
-def _group_mean_phase(phases: NDArray, indices: NDArray) -> float:
-    """Mean-field phase of a group: arg(Σ_k e^{iθ_k})."""
-    return float(np.angle(np.mean(np.exp(1j * phases[indices]))))
-
-
 def redundancy(
     phases: NDArray,
     group_a: list[int] | NDArray,

@@ -14,7 +14,7 @@ try:
     import importlib.util
 
     HAS_QC = importlib.util.find_spec("scpn_quantum_control") is not None
-except Exception:
+except (ImportError, ModuleNotFoundError):
     HAS_QC = False
 
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import (

@@ -32,7 +32,7 @@ Domain YAML ──► Binding Loader ──► Validator
         │             │             │
         └─────────────┼─────────────┘
                       ▼
-              Monitor Array (16 observers)
+              Monitor Array (15 observers)
               ├── Boundary Observer
               ├── Coherence / Order Parameter
               ├── Chimera Detection
@@ -90,7 +90,7 @@ differentiable. GPU acceleration via `jax[cuda12]`.
 | `upde/` | Phase ODE integration (9 engine variants) | `UPDEEngine`, `StuartLandauEngine` |
 | `imprint/` | History-dependent coupling modulation | `ImprintState`, `ImprintUpdate` |
 | `drivers/` | External forcing (P/I/S channels) | `PhysicalDriver`, `SymbolicDriver` |
-| `monitor/` | 16 dynamical observers | `BoundaryObserver`, `ChimeraDetector` |
+| `monitor/` | 15 dynamical observers | `BoundaryObserver`, `ChimeraDetector` |
 | `supervisor/` | Regime FSM + policy engine + MPC | `RegimeManager`, `SupervisorPolicy` |
 | `actuation/` | Control output mapping with constraints | `ActuationMapper`, `ConstraintProjection` |
 | `audit/` | Deterministic audit trail + replay | `AuditLogger`, `ReplayEngine` |

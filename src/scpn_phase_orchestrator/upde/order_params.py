@@ -28,7 +28,8 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
 
         r, psi = _rust_order_param(np.ascontiguousarray(phases.ravel()))
         return float(r), float(psi)
-    z = np.mean(np.exp(1j * phases))
+    with np.errstate(invalid="ignore"):
+        z = np.mean(np.exp(1j * phases))
     return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
 

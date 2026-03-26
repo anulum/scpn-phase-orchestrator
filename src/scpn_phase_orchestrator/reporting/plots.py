@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+
 try:
     import matplotlib
-
-    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
 
@@ -20,7 +20,12 @@ try:
 except ImportError:  # pragma: no cover
     _HAS_MPL = False
 
-import numpy as np
+
+def _ensure_agg() -> None:
+    """Switch to Agg backend if running non-interactively (CLI/server)."""
+    if _HAS_MPL and matplotlib.get_backend().lower() not in ("agg", "pdf", "svg"):
+        matplotlib.use("Agg")
+
 
 __all__ = ["CoherencePlot"]
 
@@ -37,6 +42,7 @@ def _require_matplotlib() -> None:
         raise ImportError(
             "matplotlib required: pip install scpn-phase-orchestrator[plot]"
         )
+    _ensure_agg()
 
 
 class CoherencePlot:

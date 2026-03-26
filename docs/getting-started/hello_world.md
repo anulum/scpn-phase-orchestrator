@@ -173,7 +173,7 @@ Final stability: 0.9876
 Determinism verified: 500 transitions OK
 ```
 
-The replay engine re-executes every step from the header seed and verifies bit-exact match against the logged hashes.
+The replay engine re-executes every step from the header seed and verifies each step matches the log within tolerance (atol=1e-6). The SHA256 hash chain independently validates log integrity.
 
 ## 8. Generate a Report
 
