@@ -22,7 +22,7 @@ This document clarifies the positioning.
 | Differentiable (JAX autodiff) | **yes** | no | no | no | no | no | **yes** | no |
 | GPU acceleration (JAX/XLA) | **yes** | partial | partial | yes | no | no | **yes** | no |
 | Inverse Kuramoto (data → K) | **yes** | no | no | no | no | no | no | no |
-| Spiking neuron models | no | **native** | **native** | **native** | no | no | no | no |
+| Spiking neuron models | **bridge** | **native** | **native** | **native** | no | no | no | no |
 | Large-scale spiking (>10^6) | no | yes | **yes** | yes | no | no | no | no |
 | Adaptive ODE solvers | RK45 | varies | no | no | **full** | **full** | no | no |
 | Rust FFI kernel | **yes** | C++ | C++ | no | Fortran | Julia JIT | no | no |
@@ -45,7 +45,10 @@ A **closed-loop phase orchestrator** that:
 
 ## What SPO Is Not
 
-- Not a general-purpose neural simulator (use Brian2/NEST for spiking networks)
+- Not a general neuroscience simulator — Brian2/NEST offer morphological neurons, synaptic
+  plasticity rules, and scale to >10^6 neurons. SPO's NeurocoreBridge targets a different
+  niche: Rust-accelerated LIF ensembles (N=10000, 4ms/100 substeps) coupled directly into
+  the phase-oscillator control loop.
 - Not a general ODE solver (use SciPy for arbitrary dynamical systems)
 - Not optimized for >10^4 oscillators in NumPy mode (compute scales O(N^2) per step;
   JAX GPU mode handles larger N via XLA vectorization)

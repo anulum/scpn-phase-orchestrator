@@ -12,6 +12,8 @@ External system bridges for SCPN ecosystem, observability, and SNN controllers.
 
 ::: scpn_phase_orchestrator.adapters.snn_bridge
 
+::: scpn_phase_orchestrator.adapters.neurocore_bridge
+
 ::: scpn_phase_orchestrator.adapters.opentelemetry
 
 ::: scpn_phase_orchestrator.adapters.prometheus

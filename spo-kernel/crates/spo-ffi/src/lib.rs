@@ -25,6 +25,7 @@ use spo_engine::{
     coupling::{project_knm, CouplingBuilder},
     imprint::ImprintModel,
     lags::LagModel,
+    lif_ensemble::{LIFEnsemble, LIFParams},
     order_params, pac,
     stuart_landau::StuartLandauStepper,
     upde::UPDEStepper,
@@ -1056,6 +1057,85 @@ fn str_to_knob(s: &str) -> PyResult<Knob> {
     }
 }
 
+// ─── PyLIFEnsemble ──────────────────────────────────────────────────
+
+#[pyclass(name = "PyLIFEnsemble")]
+struct PyLIFEnsemble {
+    inner: LIFEnsemble,
+}
+
+#[pymethods]
+impl PyLIFEnsemble {
+    #[new]
+    #[pyo3(signature = (n_layers, neurons_per_layer, noise_std = 0.0))]
+    fn new(n_layers: usize, neurons_per_layer: usize, noise_std: f64) -> PyResult<Self> {
+        let params = LIFParams {
+            noise_std,
+            ..LIFParams::default()
+        };
+        let inner = LIFEnsemble::new(n_layers, neurons_per_layer, params).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        currents: PyReadonlyArray1<'py, f64>,
+        n_substeps: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let currents_slice = currents.as_slice().map_err(|e| {
+            PyValueError::new_err(format!("currents array not contiguous: {e}"))
+        })?;
+        let rates = self.inner.step(currents_slice, n_substeps).map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, rates))
+    }
+
+    fn reset(&mut self) {
+        self.inner.reset();
+    }
+
+    #[getter]
+    fn n_total(&self) -> usize {
+        self.inner.n_total()
+    }
+
+    #[getter]
+    fn n_layers(&self) -> usize {
+        self.inner.n_layers()
+    }
+
+    #[getter]
+    fn neurons_per_layer(&self) -> usize {
+        self.inner.neurons_per_layer()
+    }
+
+    #[getter]
+    fn step_count(&self) -> u64 {
+        self.inner.step_count()
+    }
+
+    fn get_neuron_states(&self, py: Python<'_>) -> PyResult<Vec<Py<PyDict>>> {
+        let mut states = Vec::with_capacity(self.inner.n_total());
+        for i in 0..self.inner.n_total() {
+            if let Some((v, refr)) = self.inner.neuron_state(i) {
+                let d = PyDict::new(py);
+                d.set_item("v", v)?;
+                d.set_item("refractory", refr)?;
+                states.push(d.unbind());
+            }
+        }
+        Ok(states)
+    }
+
+    fn voltages<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f64>> {
+        PyArray1::from_slice(py, self.inner.voltages())
+    }
+
+    fn spike_counts<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<u64>> {
+        PyArray1::from_slice(py, self.inner.spike_counts_slice())
+    }
+}
+
 // ─── Module Registration ────────────────────────────────────────────
 
 #[pymodule]
@@ -1073,6 +1153,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyStuartLandauStepper>()?;
     m.add_class::<PyPetriNet>()?;
     m.add_class::<PyRuleEngine>()?;
+    m.add_class::<PyLIFEnsemble>()?;
     m.add_function(wrap_pyfunction!(pac_modulation_index, m)?)?;
     m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;

@@ -87,6 +87,48 @@ network = bridge.build_numpy_network(n_layers=4, seed=0)
 LIF rate estimate uses Abbott 1999, Eq. 1:
 `rate = 1 / (tau_ref - tau_rc * ln(1 - 1/J))` for J > 1.
 
+### NeurocoreBridge
+
+Live integration with [sc-neurocore](https://github.com/anulum/sc-neurocore)
+`StochasticLIFNeuron` ensembles. Maps UPDE layer coherence R to neuron input
+currents, runs a stochastic LIF ensemble, converts spike rates to coupling
+boost `ControlAction` objects.
+
+Three backends, selected automatically (best available):
+
+| Backend | Implementation | N=10000 × 100 substeps | Speedup |
+|---------|---------------|------------------------|---------|
+| **Rust** (spo_kernel) | `spo-engine::lif_ensemble` via PyO3 | 0.004 s | 325× |
+| **NumPy** | Vectorised Euler-Maruyama | 0.014 s | 93× |
+| **Scalar** | Per-neuron sc-neurocore objects | 1.306 s | 1× |
+
+LIF dynamics match sc-neurocore v3.13.3 defaults exactly (Gerstner & Kistler
+2002: v_rest=0, v_threshold=1, tau_mem=20ms, R=1, dt=1ms, no noise).
+
+```python
+from scpn_phase_orchestrator.adapters import NeurocoreBridge
+
+# Auto-selects Rust if spo_kernel installed, else numpy
+bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=1000, current_scale=2.5)
+print(bridge.backend)  # "rust" or "numpy"
+
+# Step the ensemble — returns per-layer firing rates (Hz)
+rates = bridge.step(upde_state, n_substeps=100)
+
+# Convert rates above threshold to coupling boost actions
+actions = bridge.rates_to_actions(rates)
+
+# Or do both in one call
+actions = bridge.step_and_act(upde_state, n_substeps=100)
+
+# Force a specific backend
+bridge_np = NeurocoreBridge(n_layers=10, neurons_per_layer=1000, backend="numpy")
+bridge_sc = NeurocoreBridge(n_layers=10, neurons_per_layer=100, backend="scalar")
+```
+
+At N=10000 the Rust backend completes 100 substeps in 4ms, enabling real-time
+spiking control loops at ~250 Hz update rate.
+
 ### OTelExporter
 
 OpenTelemetry trace and metric export. Records `spo.r_global` and

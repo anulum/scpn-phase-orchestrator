@@ -60,6 +60,7 @@ in benchmarks to force the Python path.
 | `SupervisorPolicy` | `PySupervisorPolicy` | `decide()` |
 | `PhaseQualityScorer` | `PyPhaseQualityScorer` | `score()`, `is_collapsed()` |
 | `LagModel` | `PyLagModel` | `estimate()` |
+| `NeurocoreBridge` | `PyLIFEnsemble` | `step()` (LIF ensemble, 325x at N=10000) |
 | Physical extractor | `physical_extract` | analytic signal extraction |
 | Symbolic extractors | `ring_phase`, `graph_walk_phase`, `transition_quality` | single call |
 | Informational extractor | `event_phase` | timestamp analysis |
@@ -80,6 +81,21 @@ The speedup saturates at large N because both paths are O(N^2) in coupling
 computation; the Rust advantage comes from avoiding Python interpreter overhead
 and numpy dispatch per operation.
 
+### LIF Ensemble (NeurocoreBridge)
+
+The `PyLIFEnsemble` accelerates the neurocore bridge's spiking neuron
+simulation. Measured on Windows 11, Python 3.12, Rust 1.93.0 release build,
+N=10000 neurons (10 layers × 1000), 100 substeps:
+
+| Backend | Time | ns/neuron/substep | Speedup vs scalar |
+|---------|------|-------------------|-------------------|
+| Rust (`PyLIFEnsemble`) | 0.004 s | 3-6 ns | 325× |
+| NumPy (vectorised) | 0.014 s | 14 ns | 93× |
+| Scalar (sc-neurocore per-neuron) | 1.306 s | 1,306 ns | 1× |
+
+At 4ms per 100 substeps, the Rust backend enables ~250 Hz real-time spiking
+control loops at N=10000 neurons.
+
 ## Crate Structure
 
 ```
@@ -87,7 +103,7 @@ spo-kernel/
   Cargo.toml          # workspace root
   crates/
     spo-types/        # Shared types: UPDEState, LayerState, Regime, Knob, ControlAction
-    spo-engine/       # UPDE stepper, Stuart-Landau stepper, coupling, imprint, lags, PAC
+    spo-engine/       # UPDE stepper, Stuart-Landau stepper, coupling, imprint, lags, PAC, LIF ensemble
     spo-oscillators/  # Physical, informational, symbolic, quality extractors
     spo-supervisor/   # Boundaries, coherence, policy, projector, regime manager
     spo-ffi/          # PyO3 bindings (this is what maturin builds)
