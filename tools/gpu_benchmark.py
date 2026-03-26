@@ -142,16 +142,15 @@ def bench_kuramoto_layer_forward(sizes: list[int] | None = None) -> dict:
             key = jr.PRNGKey(42)
             layer = KuramotoLayer(N, dt=0.01, key=key)
             phases = jr.uniform(key, (N,), minval=0, maxval=2 * jnp.pi)
-            omegas = jr.normal(key, (N,))
 
             # Warmup (JIT compilation)
-            _ = layer(phases, omegas)
+            _ = layer(phases)
 
             # Timed runs
             n_runs = 100
             t0 = time.perf_counter()
             for _ in range(n_runs):
-                phases = layer(phases, omegas)
+                phases = layer(phases)
             jax.block_until_ready(phases)
             elapsed = time.perf_counter() - t0
 
@@ -187,14 +186,13 @@ def bench_stuart_landau_layer_forward(sizes: list[int] | None = None) -> dict:
             layer = StuartLandauLayer(N, dt=0.01, key=key)
             phases = jr.uniform(key, (N,), minval=0, maxval=2 * jnp.pi)
             amplitudes = jnp.ones(N)
-            omegas = jr.normal(key, (N,))
 
-            _ = layer(phases, amplitudes, omegas)
+            _ = layer(phases, amplitudes)
 
             n_runs = 100
             t0 = time.perf_counter()
             for _ in range(n_runs):
-                phases, amplitudes = layer(phases, amplitudes, omegas)
+                phases, amplitudes = layer(phases, amplitudes)
             jax.block_until_ready(phases)
             elapsed = time.perf_counter() - t0
 
@@ -228,7 +226,7 @@ def bench_inverse_coupling(sizes: list[int] | None = None) -> dict:
     for N in sizes:
         try:
             key = jr.PRNGKey(42)
-            k1, k2, k3 = jr.split(key, 3)
+            k1, k2 = jr.split(key, 2)
 
             # Ground truth coupling
             K_true = jr.normal(k1, (N, N)) * 0.3
@@ -237,14 +235,16 @@ def bench_inverse_coupling(sizes: list[int] | None = None) -> dict:
 
             # Generate synthetic phase data
             phases_init = jr.uniform(k2, (N,), minval=0, maxval=2 * jnp.pi)
-            omegas = jr.normal(k3, (N,)) * 0.1
-            alpha = jnp.zeros((N, N))
             dt = 0.01
 
-            trajectory = kuramoto_forward(phases_init, omegas, K_true, alpha, dt, 500)
+            # kuramoto_forward(phases, omegas, K, dt, n_steps)
+            omegas = jnp.zeros(N)
+            final_phases, trajectory = kuramoto_forward(
+                phases_init, omegas, K_true, dt, 500
+            )
 
-            # Infer coupling
-            K_est = infer_coupling(trajectory, omegas, dt, n_steps=200, lr=0.01)
+            # infer_coupling(observed, dt, n_epochs, lr)
+            K_est, omegas_est, losses = infer_coupling(trajectory, dt, n_epochs=200, lr=0.01)
 
             # Correlation between true and estimated
             corr = float(np.corrcoef(
@@ -252,16 +252,15 @@ def bench_inverse_coupling(sizes: list[int] | None = None) -> dict:
                 np.array(K_est).ravel(),
             )[0, 1])
 
-            # RMSE
             rmse = float(jnp.sqrt(jnp.mean((K_true - K_est) ** 2)))
-
-            R_true = float(order_parameter(trajectory[-1]))
+            R_true = float(order_parameter(final_phases))
 
             results[str(N)] = {
                 "n_oscillators": N,
                 "correlation": round(corr, 4),
                 "rmse": round(rmse, 4),
                 "R_final": round(R_true, 4),
+                "final_loss": round(float(losses[-1]), 6) if losses else None,
                 "status": "ok",
             }
             print(f"  Inverse N={N}: corr={corr:.3f}, RMSE={rmse:.4f}")
@@ -287,18 +286,18 @@ def bench_oim_coloring() -> dict:
     for N, n_colors in [(8, 3), (16, 4), (32, 4)]:
         try:
             key = jr.PRNGKey(42)
-            # Random graph (Erdos-Renyi p=0.3)
             k1, k2 = jr.split(key)
             adj = (jr.uniform(k1, (N, N)) < 0.3).astype(jnp.float32)
             adj = (adj + adj.T) / 2
             adj = adj.at[jnp.diag_indices(N)].set(0.0)
 
             phases_init = jr.uniform(k2, (N,), minval=0, maxval=2 * jnp.pi)
-            omegas = jnp.zeros(N)
-            K = -adj  # repulsive coupling for coloring
 
-            trajectory = oim_forward(phases_init, omegas, K, jnp.zeros((N, N)), 0.01, 1000)
-            coloring = extract_coloring(trajectory[-1], n_colors)
+            # oim_forward(phases, adjacency, n_colors, dt, n_steps)
+            final_phases, trajectory = oim_forward(
+                phases_init, adj, n_colors, 0.01, 1000
+            )
+            coloring = extract_coloring(final_phases, n_colors)
             violations = int(coloring_violations(coloring, adj))
             n_edges = int(jnp.sum(adj > 0)) // 2
 
@@ -327,6 +326,8 @@ def bench_jax_engine_scaling() -> dict:
     import jax.random as jr
     import numpy as np
 
+    from scpn_phase_orchestrator.nn.functional import kuramoto_forward
+
     results = {}
     for N in [16, 32, 64, 128, 256, 512]:
         try:
@@ -335,29 +336,25 @@ def bench_jax_engine_scaling() -> dict:
             omegas_jax = jr.normal(key, (N,))
             knm_jax = jnp.ones((N, N)) * 0.5 / N
             knm_jax = knm_jax.at[jnp.diag_indices(N)].set(0.0)
-            alpha_jax = jnp.zeros((N, N))
 
-            from scpn_phase_orchestrator.nn.functional import kuramoto_forward
-
-            # JAX warmup
-            _ = kuramoto_forward(phases_jax, omegas_jax, knm_jax, alpha_jax, 0.01, 10)
+            # JAX warmup — kuramoto_forward(phases, omegas, K, dt, n_steps)
+            _ = kuramoto_forward(phases_jax, omegas_jax, knm_jax, 0.01, 10)
 
             n_steps = 500
             t0 = time.perf_counter()
-            traj = kuramoto_forward(phases_jax, omegas_jax, knm_jax, alpha_jax, 0.01, n_steps)
-            jax.block_until_ready(traj)
+            final, traj = kuramoto_forward(phases_jax, omegas_jax, knm_jax, 0.01, n_steps)
+            jax.block_until_ready(final)
             jax_time = time.perf_counter() - t0
 
             # NumPy comparison
             phases_np = np.array(phases_jax)
             omegas_np = np.array(omegas_jax)
             knm_np = np.array(knm_jax)
-            alpha_np = np.array(alpha_jax)
 
             t0 = time.perf_counter()
             p = phases_np.copy()
             for _ in range(n_steps):
-                diff = p[np.newaxis, :] - p[:, np.newaxis] - alpha_np
+                diff = p[np.newaxis, :] - p[:, np.newaxis]
                 coupling = np.sum(knm_np * np.sin(diff), axis=1)
                 p = p + 0.01 * (omegas_np + coupling)
             numpy_time = time.perf_counter() - t0
@@ -372,7 +369,7 @@ def bench_jax_engine_scaling() -> dict:
                 "speedup": round(speedup, 2),
                 "status": "ok",
             }
-            print(f"  Engine N={N}: JAX={jax_time*1000:.1f}ms NumPy={numpy_time*1000:.1f}ms → {speedup:.1f}x")
+            print(f"  Engine N={N}: JAX={jax_time*1000:.1f}ms NumPy={numpy_time*1000:.1f}ms -> {speedup:.1f}x")
         except Exception as e:
             results[str(N)] = {"n_oscillators": N, "status": "error", "error": str(e)}
             print(f"  Engine N={N}: ERROR {e}")
