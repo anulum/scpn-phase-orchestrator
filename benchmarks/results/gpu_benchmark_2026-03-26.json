@@ -201,10 +201,54 @@
       },
       "_complete": true,
       "_elapsed_s": 5.25
+    },
+    "batched_kuramoto": {
+      "1": {
+        "batch_size": 1,
+        "n_oscillators": 64,
+        "n_steps": 200,
+        "total_ms": 159.99,
+        "per_instance_us": 159985.31,
+        "status": "ok"
+      },
+      "4": {
+        "batch_size": 4,
+        "n_oscillators": 64,
+        "n_steps": 200,
+        "total_ms": 174.77,
+        "per_instance_us": 43691.28,
+        "status": "ok"
+      },
+      "16": {
+        "batch_size": 16,
+        "n_oscillators": 64,
+        "n_steps": 200,
+        "total_ms": 164.14,
+        "per_instance_us": 10258.85,
+        "status": "ok"
+      },
+      "64": {
+        "batch_size": 64,
+        "n_oscillators": 64,
+        "n_steps": 200,
+        "total_ms": 158.79,
+        "per_instance_us": 2481.04,
+        "status": "ok"
+      },
+      "256": {
+        "batch_size": 256,
+        "n_oscillators": 64,
+        "n_steps": 200,
+        "total_ms": 158.86,
+        "per_instance_us": 620.54,
+        "status": "ok"
+      },
+      "_complete": true,
+      "_elapsed_s": 19.01
     }
   },
   "metadata": {
-    "timestamp": "2026-03-26T17:14:35.247773+00:00",
+    "timestamp": "2026-03-26T20:09:46.048634+00:00",
     "python": "3.10.19 (main, Oct 21 2025, 16:43:05) [GCC 11.2.0]",
     "jax_version": "0.6.2",
     "jax_devices": [
@@ -214,6 +258,6 @@
     "gpu_name": "cuda:0",
     "equinox_version": "0.13.6",
     "spo_version": "0.5.0",
-    "disk_free_gb": 317.8
+    "disk_free_gb": 365.8
   }
 }
