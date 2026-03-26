@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 _MAX_HISTORY = 500
 
 
-def create_app(cfg: QueueWavesConfig) -> Any:
+def create_app(cfg: QueueWavesConfig) -> object:
     """Build a FastAPI application wired to the given config."""
     from fastapi import FastAPI, WebSocket, WebSocketDisconnect  # noqa: F811
     from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse

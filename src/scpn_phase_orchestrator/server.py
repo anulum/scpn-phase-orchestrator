@@ -354,7 +354,7 @@ fetchState().then(render);
 </html>"""
 
 
-def create_app(spec_path: str | Path):  # type: ignore[no-untyped-def]  # pragma: no cover
+def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
         from fastapi import Depends, FastAPI, Header, HTTPException
