@@ -12,6 +12,11 @@ from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
 from scpn_phase_orchestrator.monitor.evs import EVSMonitor, EVSResult
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
+from scpn_phase_orchestrator.monitor.lyapunov import (
+    LyapunovGuard,
+    LyapunovState,
+    lyapunov_spectrum,
+)
 from scpn_phase_orchestrator.monitor.psychedelic import (
     entropy_from_phases,
     reduce_coupling,
@@ -32,7 +37,10 @@ __all__ = [
     "CoherenceMonitor",
     "EVSMonitor",
     "EVSResult",
+    "LyapunovGuard",
+    "LyapunovState",
     "SessionCoherenceReport",
+    "lyapunov_spectrum",
     "check_session_start",
     "classify_sleep_stage",
     "compute_itpc",

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["LyapunovGuard", "LyapunovState"]
+__all__ = ["LyapunovGuard", "LyapunovState", "lyapunov_spectrum"]
 
 
 @dataclass
@@ -77,3 +77,85 @@ class LyapunovGuard:
 
     def reset(self) -> None:
         self._prev_V = None
+
+
+def _kuramoto_jacobian(
+    phases: NDArray, omegas: NDArray, knm: NDArray, alpha: NDArray
+) -> NDArray:
+    """Jacobian of the Kuramoto RHS: J_ij = K_ij cos(θ_j - θ_i - α_ij).
+
+    Diagonal: J_ii = -Σ_{j≠i} K_ij cos(θ_j - θ_i - α_ij).
+    """
+    diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
+    J = knm * np.cos(diff)
+    np.fill_diagonal(J, 0.0)
+    np.fill_diagonal(J, -J.sum(axis=1))
+    return J
+
+
+def lyapunov_spectrum(
+    phases_init: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    dt: float = 0.01,
+    n_steps: int = 1000,
+    qr_interval: int = 10,
+    zeta: float = 0.0,
+    psi: float = 0.0,
+) -> NDArray:
+    """Full Lyapunov spectrum (all N exponents) via QR decomposition.
+
+    Evolves N perturbation vectors alongside the Kuramoto ODE. Every
+    qr_interval steps, QR-reorthogonalizes and accumulates growth rates
+    from the diagonal of R.
+
+    Benettin et al. 1980, Meccanica 15:9-20.
+    Shimada & Nagashima 1979, Prog. Theor. Phys. 61:1605-1616.
+
+    Args:
+        phases_init: (N,) initial phases
+        omegas: (N,) natural frequencies
+        knm: (N, N) coupling matrix
+        alpha: (N, N) phase lag matrix
+        dt: integration timestep
+        n_steps: total integration steps
+        qr_interval: steps between QR reorthogonalizations
+        zeta: driver strength
+        psi: target phase
+
+    Returns:
+        (N,) array of Lyapunov exponents, sorted descending.
+    """
+    n = len(phases_init)
+    phases = phases_init.copy()
+    Q = np.eye(n, dtype=np.float64)
+    exponents = np.zeros(n, dtype=np.float64)
+    n_qr = 0
+    total_time = 0.0
+
+    for step in range(n_steps):
+        # Kuramoto Euler step
+        diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
+        coupling = np.sum(knm * np.sin(diff), axis=1)
+        driving = zeta * np.sin(psi - phases) if zeta != 0 else 0.0
+        dtheta = omegas + coupling + driving
+        phases = phases + dt * dtheta
+        total_time += dt
+
+        # Evolve perturbation vectors: dQ/dt = J @ Q
+        J = _kuramoto_jacobian(phases, omegas, knm, alpha)
+        Q = Q + dt * (J @ Q)
+
+        # QR reorthogonalization
+        if (step + 1) % qr_interval == 0:
+            Q, R = np.linalg.qr(Q)
+            diag = np.abs(np.diag(R))
+            diag = np.maximum(diag, 1e-300)
+            exponents += np.log(diag)
+            n_qr += 1
+
+    if n_qr > 0:
+        exponents /= total_time
+
+    return np.sort(exponents)[::-1]

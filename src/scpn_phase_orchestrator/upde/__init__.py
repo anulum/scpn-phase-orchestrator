@@ -7,9 +7,24 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.upde.bifurcation import (
+    BifurcationDiagram,
+    BifurcationPoint,
+    find_critical_coupling,
+    trace_sync_transition,
+)
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.envelope import EnvelopeState
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
-__all__ = ["EnvelopeState", "StuartLandauEngine", "UPDEEngine", "UPDEState"]
+__all__ = [
+    "BifurcationDiagram",
+    "BifurcationPoint",
+    "EnvelopeState",
+    "StuartLandauEngine",
+    "UPDEEngine",
+    "UPDEState",
+    "find_critical_coupling",
+    "trace_sync_transition",
+]

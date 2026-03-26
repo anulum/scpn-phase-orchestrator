@@ -19,15 +19,22 @@ from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.exceptions import SPOError
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 from scpn_phase_orchestrator.supervisor import ControlAction
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
+from scpn_phase_orchestrator.upde.bifurcation import (
+    BifurcationDiagram,
+    find_critical_coupling,
+    trace_sync_transition,
+)
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 __all__ = [
     "AuditLogger",
+    "BifurcationDiagram",
     "BindingSpec",
     "BoundaryObserver",
     "ControlAction",
@@ -39,4 +46,7 @@ __all__ = [
     "StuartLandauEngine",
     "SupervisorPolicy",
     "UPDEEngine",
+    "find_critical_coupling",
+    "lyapunov_spectrum",
+    "trace_sync_transition",
 ]
