@@ -157,3 +157,100 @@ Amplitude envelope extraction and numerical integration utilities
 ::: scpn_phase_orchestrator.upde.envelope
 
 ::: scpn_phase_orchestrator.upde.numerics
+
+## Bifurcation Continuation
+
+Traces the synchronization transition R(K) as a function of coupling
+strength. The incoherent state (R≈0) bifurcates to partial synchronization
+(R>0) at the critical coupling K_c.
+
+**Two interfaces:**
+
+- `trace_sync_transition()`: sweep R(K) over a range of coupling strengths
+- `find_critical_coupling()`: binary search for K_c with configurable precision
+
+**Analytical reference:** K_c = 2/(π g(0)) for Lorentzian g(ω) with half-width
+Δ gives K_c = 2Δ (Kuramoto 1975, Strogatz 2000).
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.upde.bifurcation import (
+    trace_sync_transition, find_critical_coupling,
+)
+
+# Sweep R(K) curve
+diagram = trace_sync_transition(omegas, K_range=(0, 5), n_points=50)
+print(f"K_c ≈ {diagram.K_critical}")
+
+# Precise K_c via binary search
+Kc = find_critical_coupling(omegas, tol=0.05)
+```
+
+::: scpn_phase_orchestrator.upde.bifurcation
+
+## Basin Stability
+
+Monte Carlo estimation of the volume of the basin of attraction for
+the synchronized state. Basin stability S_B is the probability that a
+random initial condition converges to the synchronized attractor.
+
+**Procedure:** Draw n_samples random phase configurations from [0, 2π)^N,
+integrate each to steady state, check if R_final > R_threshold. S_B = fraction
+that converge.
+
+`multi_basin_stability()` classifies outcomes at multiple R thresholds
+to detect multi-stability (chimera states, partial synchronization).
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.upde.basin_stability import (
+    basin_stability, multi_basin_stability,
+)
+
+result = basin_stability(omegas, knm, n_samples=1000)
+print(f"S_B = {result.S_B:.3f} ({result.n_converged}/{result.n_samples})")
+
+# Multi-threshold detection
+results = multi_basin_stability(omegas, knm, R_thresholds=(0.3, 0.6, 0.8))
+```
+
+**References:** Menck et al. 2013, Nature Physics 9:89-92.
+
+::: scpn_phase_orchestrator.upde.basin_stability
+
+## Hypergraph (k-Body) Coupling Engine
+
+Generalized k-body Kuramoto interactions via explicit hyperedge lists.
+Extends beyond the simplicial engine's fixed 3-body coupling to arbitrary
+k-body interactions for any k ≥ 2.
+
+For a k-hyperedge {i₁, ..., iₖ}, the coupling on oscillator iₘ is:
+σₖ · sin(Σ_{j≠m} θ_{iⱼ} - (k-1)·θ_{iₘ})
+
+This generalizes:
+- k=2: sin(θ_j - θ_i) — standard Kuramoto
+- k=3: sin(θ_j + θ_k - 2θ_i) — simplicial
+- k=4: sin(θ_j + θ_k + θ_l - 3θ_i) — quartic interaction
+
+Supports mixed-order interactions: some edges pairwise, some 3-body,
+some 4-body, in the same network.
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
+
+eng = HypergraphEngine(n_oscillators=8, dt=0.01)
+eng.add_all_to_all(order=3, strength=0.5)  # all 3-body edges
+eng.add_edge((0, 1, 2, 3), strength=0.2)   # one 4-body edge
+
+phases = eng.run(phases_init, omegas, n_steps=1000,
+                 pairwise_knm=knm)  # combine with standard coupling
+```
+
+**References:** Tanaka & Aoyagi 2011, Phys. Rev. Lett. 106:224101;
+Bick et al. 2023, Nat. Rev. Physics 5:307-317.
+
+::: scpn_phase_orchestrator.upde.hypergraph

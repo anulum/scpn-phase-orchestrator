@@ -205,3 +205,151 @@ Used by the `te_adaptive` coupling module to adapt K_ij based on
 measured causal information flow (Lizier 2012).
 
 ::: scpn_phase_orchestrator.monitor.transfer_entropy
+
+## Recurrence Quantification Analysis (RQA)
+
+Extracts dynamical invariants from phase trajectories via recurrence
+plots. RQA is powerful because it works on short, non-stationary time
+series where spectral methods fail.
+
+**Eight measures:**
+
+| Measure | Symbol | Meaning |
+|---------|--------|---------|
+| Recurrence rate | RR | Density of recurrence points |
+| Determinism | DET | Fraction forming diagonal lines → deterministic dynamics |
+| Average diagonal | L | Mean diagonal line length → prediction horizon |
+| Max diagonal | L_max | Inversely related to max Lyapunov exponent |
+| Diagonal entropy | ENTR | Complexity of deterministic structure |
+| Laminarity | LAM | Fraction forming vertical lines → laminar states |
+| Trapping time | TT | Mean time in laminar state |
+| Max vertical | V_max | Longest laminar episode |
+
+**Cross-RQA** extends this to detect synchronization between two
+oscillator groups by computing the cross-recurrence matrix.
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.monitor.recurrence import rqa, cross_rqa
+
+# Auto-RQA on a single trajectory
+result = rqa(trajectory, epsilon=0.3, metric="angular")
+print(f"DET={result.determinism:.3f}, LAM={result.laminarity:.3f}")
+
+# Cross-RQA between two oscillator groups
+cr = cross_rqa(traj_a, traj_b, epsilon=0.3)
+print(f"Cross-DET={cr.determinism:.3f}")
+```
+
+**References:** Eckmann, Kamphorst & Ruelle 1987; Zbilut & Webber 1992;
+Marwan et al. 2007, Phys. Reports 438:237-329.
+
+::: scpn_phase_orchestrator.monitor.recurrence
+
+## Delay Embedding (Attractor Reconstruction)
+
+Reconstructs the full state-space attractor from a scalar observable
+using Takens' embedding theorem. This is the prerequisite for computing
+correlation dimension, Lyapunov exponents from scalar data, and
+recurrence analysis on scalar measurements.
+
+**Three-step procedure:**
+
+1. **Optimal delay τ** via first minimum of average mutual information
+   (Fraser & Swinney 1986)
+2. **Optimal dimension m** via False Nearest Neighbors
+   (Kennel, Brown & Abarbanel 1992)
+3. **Embedding** constructs vectors v(t) = [x(t), x(t-τ), ..., x(t-(m-1)τ)]
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.monitor.embedding import auto_embed
+
+# Automatic: determines τ and m, then embeds
+result = auto_embed(signal)
+print(f"τ={result.delay}, m={result.dimension}")
+trajectory = result.trajectory  # (T', m) array
+
+# Manual control
+from scpn_phase_orchestrator.monitor.embedding import (
+    optimal_delay, optimal_dimension, delay_embed,
+)
+tau = optimal_delay(signal, max_lag=100)
+m = optimal_dimension(signal, delay=tau, max_dim=10)
+embedded = delay_embed(signal, delay=tau, dimension=m)
+```
+
+**References:** Takens 1981, Lecture Notes in Mathematics 898:366-381.
+
+::: scpn_phase_orchestrator.monitor.embedding
+
+## Fractal Dimension
+
+Estimates the fractal dimension of attractors from embedded trajectories.
+Two complementary measures:
+
+**Correlation dimension D₂** (Grassberger & Procaccia 1983):
+Counts the fraction of point pairs within distance ε, then extracts
+the power-law exponent C(ε) ~ ε^D₂. The scaling region is
+automatically identified as the range with most stable local slopes.
+
+**Kaplan-Yorke dimension D_KY** (Kaplan & Yorke 1979):
+Computed from the Lyapunov spectrum as D_KY = j + (Σᵢ₌₁ʲ λᵢ)/|λⱼ₊₁|
+where j is the largest index with non-negative cumulative sum.
+The Kaplan-Yorke conjecture equates D_KY to the information dimension.
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.monitor.dimension import (
+    correlation_dimension, kaplan_yorke_dimension,
+)
+
+# From embedded trajectory
+result = correlation_dimension(trajectory, n_epsilons=30)
+print(f"D2={result.D2:.2f}, scaling={result.scaling_range}")
+
+# From Lyapunov spectrum
+from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
+spec = lyapunov_spectrum(phases, omegas, knm, alpha)
+D_KY = kaplan_yorke_dimension(spec)
+print(f"D_KY={D_KY:.2f}")
+```
+
+**References:** Grassberger & Procaccia 1983, Phys. Rev. Lett. 50:346-349;
+Kaplan & Yorke 1979, Lecture Notes in Mathematics 730:228-237.
+
+::: scpn_phase_orchestrator.monitor.dimension
+
+## Poincare Sections
+
+Detects when a trajectory crosses a hyperplane, extracts the crossing
+points (Poincare map), and computes return time statistics. Return time
+regularity distinguishes periodic orbits (constant return time) from
+chaotic ones (fluctuating return times).
+
+**Two interfaces:**
+
+- `poincare_section()`: general hyperplane crossing for any state-space trajectory
+- `phase_poincare()`: specialized for phase oscillators — detects when one
+  oscillator crosses a reference phase value
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.monitor.poincare import (
+    poincare_section, phase_poincare,
+)
+
+# General hyperplane section
+result = poincare_section(trajectory, normal=[1, 0, 0])
+print(f"Mean return time: {result.mean_return_time:.1f}")
+print(f"Return time std: {result.std_return_time:.3f}")
+
+# Phase-specific section
+result = phase_poincare(phases, oscillator_idx=0, section_phase=0.0)
+```
+
+::: scpn_phase_orchestrator.monitor.poincare
