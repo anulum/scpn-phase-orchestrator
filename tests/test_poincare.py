@@ -38,9 +38,7 @@ class TestPoincareSection:
     def test_no_crossings(self):
         """Trajectory that doesn't cross the plane."""
         traj = np.column_stack([np.ones(100), np.linspace(0, 1, 100)])
-        result = poincare_section(
-            traj, normal=np.array([1.0, 0.0]), offset=5.0
-        )
+        result = poincare_section(traj, normal=np.array([1.0, 0.0]), offset=5.0)
         assert len(result.crossings) == 0
         assert result.mean_return_time == 0.0
 
@@ -48,12 +46,8 @@ class TestPoincareSection:
         """direction='both' counts crossings in both directions."""
         t = np.linspace(0, 4 * np.pi, 2000)
         traj = np.column_stack([np.sin(t), np.cos(t)])
-        pos = poincare_section(
-            traj, normal=np.array([1.0, 0.0]), direction="positive"
-        )
-        both = poincare_section(
-            traj, normal=np.array([1.0, 0.0]), direction="both"
-        )
+        pos = poincare_section(traj, normal=np.array([1.0, 0.0]), direction="positive")
+        both = poincare_section(traj, normal=np.array([1.0, 0.0]), direction="both")
         assert len(both.crossings) >= len(pos.crossings)
 
     def test_negative_direction(self):

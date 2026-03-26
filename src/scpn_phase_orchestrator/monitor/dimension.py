@@ -132,9 +132,7 @@ def correlation_dimension(
             scaling_range=(1.0, 1.0),
         )
 
-    epsilons = np.logspace(
-        np.log10(diam * 0.01), np.log10(diam), n_epsilons
-    )
+    epsilons = np.logspace(np.log10(diam * 0.01), np.log10(diam), n_epsilons)
 
     C_eps = correlation_integral(traj, epsilons, max_pairs, seed)
 
