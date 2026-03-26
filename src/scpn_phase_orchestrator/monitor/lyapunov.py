@@ -87,7 +87,7 @@ def _kuramoto_jacobian(
     Diagonal: J_ii = -Σ_{j≠i} K_ij cos(θ_j - θ_i - α_ij).
     """
     diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
-    J = knm * np.cos(diff)
+    J: NDArray = knm * np.cos(diff)
     np.fill_diagonal(J, 0.0)
     np.fill_diagonal(J, -J.sum(axis=1))
     return J

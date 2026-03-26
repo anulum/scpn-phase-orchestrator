@@ -261,4 +261,4 @@ def run_server(config_path: str, host: str = "127.0.0.1", port: int = 8080) -> N
 
     cfg = load_config(Path(config_path))
     app = create_app(cfg)
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info")  # type: ignore[arg-type]

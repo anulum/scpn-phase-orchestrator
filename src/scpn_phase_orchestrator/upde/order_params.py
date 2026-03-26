@@ -25,7 +25,7 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
         return (0.0, 0.0)
     if _HAS_RUST:  # pragma: no cover
         from spo_kernel import (
-            order_parameter as _rust_order_param,  # type: ignore[import-untyped]
+            order_parameter as _rust_order_param,
         )
 
         r, psi = _rust_order_param(np.ascontiguousarray(phases.ravel()))

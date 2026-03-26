@@ -39,8 +39,8 @@ except ImportError:
     HAS_BRAINFLOW = False
 
 try:
-    from pymodbus.client import (
-        ModbusTcpClient,  # type: ignore[import-not-found]  # pragma: no cover
+    from pymodbus.client import (  # type: ignore[import-not-found]
+        ModbusTcpClient,  # pragma: no cover
     )
 
     HAS_MODBUS = True  # pragma: no cover
