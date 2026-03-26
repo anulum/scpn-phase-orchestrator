@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.upde.bifurcation import (
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.envelope import EnvelopeState
+from scpn_phase_orchestrator.upde.hypergraph import Hyperedge, HypergraphEngine
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
@@ -28,6 +29,8 @@ __all__ = [
     "BifurcationDiagram",
     "BifurcationPoint",
     "EnvelopeState",
+    "Hyperedge",
+    "HypergraphEngine",
     "basin_stability",
     "StuartLandauEngine",
     "UPDEEngine",
