@@ -30,6 +30,12 @@ from scpn_phase_orchestrator.monitor.lyapunov import (
     LyapunovState,
     lyapunov_spectrum,
 )
+from scpn_phase_orchestrator.monitor.poincare import (
+    PoincareResult,
+    phase_poincare,
+    poincare_section,
+    return_times,
+)
 from scpn_phase_orchestrator.monitor.psychedelic import (
     entropy_from_phases,
     reduce_coupling,
@@ -62,6 +68,7 @@ __all__ = [
     "EVSResult",
     "EmbeddingResult",
     "LyapunovGuard",
+    "PoincareResult",
     "LyapunovState",
     "RQAResult",
     "SessionCoherenceReport",
@@ -78,9 +85,12 @@ __all__ = [
     "kaplan_yorke_dimension",
     "lyapunov_spectrum",
     "optimal_delay",
+    "phase_poincare",
+    "poincare_section",
     "optimal_dimension",
     "recurrence_matrix",
     "reduce_coupling",
+    "return_times",
     "rqa",
     "simulate_psychedelic_trajectory",
     "ultradian_phase",
