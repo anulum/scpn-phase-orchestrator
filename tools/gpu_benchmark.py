@@ -36,18 +36,19 @@ from pathlib import Path
 
 RESULTS_DIR = Path("benchmarks/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-RESULTS_FILE = RESULTS_DIR / f"gpu_benchmark_{datetime.now(tz=timezone.utc).strftime('%Y-%m-%d')}.json"
+_date_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+RESULTS_FILE = RESULTS_DIR / f"gpu_benchmark_{_date_str}.json"
 
 
 def _load_existing() -> dict:
     if RESULTS_FILE.exists():
-        with open(RESULTS_FILE) as f:
+        with RESULTS_FILE.open() as f:
             return json.load(f)
     return {"benchmarks": {}, "metadata": {}}
 
 
 def _save(data: dict) -> None:
-    with open(RESULTS_FILE, "w") as f:
+    with RESULTS_FILE.open("w") as f:
         json.dump(data, f, indent=2, default=str)
     print(f"  [SAVED] {RESULTS_FILE}")
 
@@ -90,7 +91,9 @@ def validate_environment() -> dict:
 
         metadata["spo_version"] = scpn_phase_orchestrator.__version__
     except ImportError:
-        errors.append("scpn-phase-orchestrator not installed. Run: pip install -e '.[nn]'")
+        errors.append(
+            "scpn-phase-orchestrator not installed. Run: pip install -e '.[nn]'"
+        )
 
     # Check disk space
     import shutil
@@ -160,7 +163,7 @@ def bench_kuramoto_layer_forward(sizes: list[int] | None = None) -> dict:
                 "steps_per_sec": round(n_runs / elapsed, 1),
                 "status": "ok",
             }
-            print(f"  KuramotoLayer N={N}: {elapsed/n_runs*1e6:.1f} us/step")
+            print(f"  KuramotoLayer N={N}: {elapsed / n_runs * 1e6:.1f} us/step")
         except Exception as e:
             results[str(N)] = {"n_oscillators": N, "status": "error", "error": str(e)}
             print(f"  KuramotoLayer N={N}: ERROR {e}")
@@ -202,7 +205,7 @@ def bench_stuart_landau_layer_forward(sizes: list[int] | None = None) -> dict:
                 "steps_per_sec": round(n_runs / elapsed, 1),
                 "status": "ok",
             }
-            print(f"  StuartLandauLayer N={N}: {elapsed/n_runs*1e6:.1f} us/step")
+            print(f"  StuartLandauLayer N={N}: {elapsed / n_runs * 1e6:.1f} us/step")
         except Exception as e:
             results[str(N)] = {"n_oscillators": N, "status": "error", "error": str(e)}
             print(f"  StuartLandauLayer N={N}: ERROR {e}")
@@ -211,7 +214,12 @@ def bench_stuart_landau_layer_forward(sizes: list[int] | None = None) -> dict:
 
 
 def bench_inverse_coupling(sizes: list[int] | None = None) -> dict:
-    """Benchmark coupling inference accuracy."""
+    """Benchmark coupling inference accuracy.
+
+    Uses shorter trajectories (100 steps) for better gradient signal through
+    the ODE solver, more optimisation epochs (500), and no L1 penalty to
+    avoid fighting the reconstruction objective.
+    """
     import jax.numpy as jnp
     import jax.random as jr
     import numpy as np
@@ -228,29 +236,31 @@ def bench_inverse_coupling(sizes: list[int] | None = None) -> dict:
             key = jr.PRNGKey(42)
             k1, k2 = jr.split(key, 2)
 
-            # Ground truth coupling
+            # Ground truth: moderate coupling, zero natural frequencies
             K_true = jr.normal(k1, (N, N)) * 0.3
             K_true = (K_true + K_true.T) / 2
             K_true = K_true.at[jnp.diag_indices(N)].set(0.0)
 
-            # Generate synthetic phase data
             phases_init = jr.uniform(k2, (N,), minval=0, maxval=2 * jnp.pi)
             dt = 0.01
-
-            # kuramoto_forward(phases, omegas, K, dt, n_steps)
             omegas = jnp.zeros(N)
+
+            # Short trajectory (100 steps) — gradients through 500 steps vanish
             final_phases, trajectory = kuramoto_forward(
-                phases_init, omegas, K_true, dt, 500
+                phases_init, omegas, K_true, dt, 100
             )
 
-            # infer_coupling(observed, dt, n_epochs, lr)
-            K_est, omegas_est, losses = infer_coupling(trajectory, dt, n_epochs=200, lr=0.01)
+            # More epochs, lower lr, no L1 penalty for reconstruction
+            K_est, omegas_est, losses = infer_coupling(
+                trajectory, dt, n_epochs=500, lr=0.005, l1_weight=0.0
+            )
 
-            # Correlation between true and estimated
-            corr = float(np.corrcoef(
-                np.array(K_true).ravel(),
-                np.array(K_est).ravel(),
-            )[0, 1])
+            corr = float(
+                np.corrcoef(
+                    np.array(K_true).ravel(),
+                    np.array(K_est).ravel(),
+                )[0, 1]
+            )
 
             rmse = float(jnp.sqrt(jnp.mean((K_true - K_est) ** 2)))
             R_true = float(order_parameter(final_phases))
@@ -329,7 +339,7 @@ def bench_jax_engine_scaling() -> dict:
     from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
     results = {}
-    for N in [16, 32, 64, 128, 256, 512]:
+    for N in [16, 32, 64, 128, 256, 512, 1024, 2048]:
         try:
             key = jr.PRNGKey(42)
             phases_jax = jr.uniform(key, (N,), minval=0, maxval=2 * jnp.pi)
@@ -342,7 +352,13 @@ def bench_jax_engine_scaling() -> dict:
 
             n_steps = 500
             t0 = time.perf_counter()
-            final, traj = kuramoto_forward(phases_jax, omegas_jax, knm_jax, 0.01, n_steps)
+            final, traj = kuramoto_forward(
+                phases_jax,
+                omegas_jax,
+                knm_jax,
+                0.01,
+                n_steps,
+            )
             jax.block_until_ready(final)
             jax_time = time.perf_counter() - t0
 
@@ -369,10 +385,80 @@ def bench_jax_engine_scaling() -> dict:
                 "speedup": round(speedup, 2),
                 "status": "ok",
             }
-            print(f"  Engine N={N}: JAX={jax_time*1000:.1f}ms NumPy={numpy_time*1000:.1f}ms -> {speedup:.1f}x")
+            jms = jax_time * 1000
+            nms = numpy_time * 1000
+            print(
+                f"  Engine N={N}: JAX={jms:.1f}ms NumPy={nms:.1f}ms -> {speedup:.1f}x"
+            )
         except Exception as e:
             results[str(N)] = {"n_oscillators": N, "status": "error", "error": str(e)}
             print(f"  Engine N={N}: ERROR {e}")
+
+    return results
+
+
+def bench_batched_kuramoto() -> dict:
+    """Benchmark vmap-batched Kuramoto forward — where GPU wins.
+
+    Runs B independent initial conditions in parallel via jax.vmap.
+    This amortises kernel launch overhead across the batch.
+    """
+    import jax
+    import jax.numpy as jnp
+    import jax.random as jr
+
+    from scpn_phase_orchestrator.nn.functional import kuramoto_forward
+
+    results = {}
+    N = 64
+    n_steps = 200
+
+    for B in [1, 4, 16, 64, 256]:
+        try:
+            key = jr.PRNGKey(42)
+            keys = jr.split(key, B)
+
+            phases_batch = jax.vmap(
+                lambda k: jr.uniform(k, (N,), minval=0, maxval=2 * jnp.pi)
+            )(keys)
+            omegas = jr.normal(key, (N,))
+            K = jnp.ones((N, N)) * 0.5 / N
+            K = K.at[jnp.diag_indices(N)].set(0.0)
+
+            def run_one(phases, o=omegas, k=K, ns=n_steps):
+                final, _ = kuramoto_forward(phases, o, k, 0.01, ns)
+                return final
+
+            batched_run = jax.vmap(run_one)
+
+            # Warmup
+            _ = batched_run(phases_batch)
+
+            n_runs = 20
+            t0 = time.perf_counter()
+            for _ in range(n_runs):
+                out = batched_run(phases_batch)
+            jax.block_until_ready(out)
+            elapsed = time.perf_counter() - t0
+
+            per_run_ms = elapsed / n_runs * 1000
+            per_instance_us = elapsed / n_runs / B * 1e6
+
+            results[str(B)] = {
+                "batch_size": B,
+                "n_oscillators": N,
+                "n_steps": n_steps,
+                "total_ms": round(per_run_ms, 2),
+                "per_instance_us": round(per_instance_us, 2),
+                "status": "ok",
+            }
+            print(
+                f"  Batched B={B}: {per_run_ms:.1f}ms total, "
+                f"{per_instance_us:.1f}us/instance"
+            )
+        except Exception as e:
+            results[str(B)] = {"batch_size": B, "status": "error", "error": str(e)}
+            print(f"  Batched B={B}: ERROR {e}")
 
     return results
 
@@ -387,6 +473,7 @@ BENCHMARKS = [
     ("inverse_coupling", bench_inverse_coupling),
     ("oim_coloring", bench_oim_coloring),
     ("jax_vs_numpy", bench_jax_engine_scaling),
+    ("batched_kuramoto", bench_batched_kuramoto),
 ]
 
 
@@ -404,7 +491,7 @@ def main() -> int:
 
     for name, func in BENCHMARKS:
         if name in data["benchmarks"] and data["benchmarks"][name].get("_complete"):
-            print(f"[SKIP] {name} (already complete, delete from JSON to re-run)")
+            print(f"[SKIP] {name} (already complete, delete to re-run)")
             continue
 
         # Disk check before each benchmark
@@ -412,7 +499,10 @@ def main() -> int:
 
         free_gb = shutil.disk_usage("/").free / (1024**3)
         if free_gb < 2:
-            print(f"ABORT: Disk nearly full ({free_gb:.1f} GB free). Download results and free space.")
+            print(
+                f"ABORT: Disk nearly full ({free_gb:.1f} GB free). "
+                "Download results and free space."
+            )
             _save(data)
             return 1
 

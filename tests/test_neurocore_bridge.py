@@ -82,5 +82,39 @@ class TestNeurocoreBridge:
         assert np.all(bridge._spike_counts == 0)
 
 
+class TestNeurocoreBridgeScale:
+    """Scale validation: SPO supervisor controls sc-neurocore populations at N=1000+."""
+
+    def test_scale_1000_neurons(self):
+        """1000 neurons across 10 layers — bridge works at scale."""
+        bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=100)
+        assert len(bridge._neurons) == 1000
+        state = _make_state([0.8] * 10)
+        rates = bridge.step(state, n_substeps=20)
+        assert rates.shape == (10,)
+        assert np.all(rates >= 0.0)
+
+    def test_scale_sustained_stepping(self):
+        """Run 500 substeps with 10 layers x 100 neurons (1000 neurons)."""
+        bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=100, current_scale=2.5)
+        state = _make_state([0.9, 0.7, 0.5, 0.3, 0.1, 0.8, 0.6, 0.4, 0.2, 0.95])
+        for _ in range(5):
+            rates = bridge.step(state, n_substeps=100)
+        assert rates.shape == (10,)
+        # High-coherence layers should have higher firing rates
+        assert rates[0] > rates[4]
+
+    def test_scale_actions_at_scale(self):
+        """step_and_act works at 1000 neurons."""
+        bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=100, current_scale=3.0)
+        state = _make_state([0.95] * 10)
+        # Run enough substeps to generate spikes
+        actions = bridge.step_and_act(state, n_substeps=200)
+        assert isinstance(actions, list)
+        for a in actions:
+            assert a.knob == "K"
+            assert a.value > 0
+
+
 def test_has_neurocore_flag():
     assert isinstance(HAS_NEUROCORE, bool)

@@ -110,5 +110,6 @@ class TestKaplanYorkeDimension:
         """Should handle unsorted input."""
         le = np.array([-1.0, 0.5, -0.3])
         d = kaplan_yorke_dimension(le)
-        # Sorted: [0.5, -0.3, -1.0] → j=0, D_KY=1+0.5/0.3=2.67
-        assert abs(d - (1 + 0.5 / 0.3)) < 1e-10
+        # Sorted: [0.5, -0.3, -1.0] → cumsum=[0.5, 0.2, -0.8] → j=1
+        # D_KY = 2 + 0.2/1.0 = 2.2
+        assert abs(d - 2.2) < 1e-10

@@ -27,7 +27,7 @@ This document clarifies the positioning.
 | Adaptive ODE solvers | RK45 | varies | no | no | **full** | **full** | no | no |
 | Rust FFI kernel | **yes** | C++ | C++ | no | Fortran | Julia JIT | no | no |
 | Lyapunov exponents | **yes** | no | no | no | no | **native** | no | no |
-| Recurrence analysis | no | no | no | no | no | **native** | no | no |
+| Recurrence analysis | **yes** | no | no | no | no | **native** | no | no |
 | Hodge decomposition | **yes** | no | no | no | no | no | no | partial |
 | Transfer entropy | **yes** | no | no | no | no | no | no | no |
 | OIM (combinatorial opt.) | **yes** | no | no | no | no | no | no | no |
@@ -86,10 +86,12 @@ and general dynamical systems tools in Julia. It can model Kuramoto networks but
 binding layer, no supervisory control, and no production deployment story.
 
 **SPO advantage:** Domain-agnostic domainpacks, regime supervision, Rust FFI + JAX acceleration.
-SPO now also computes Lyapunov exponents natively.
+SPO now computes full Lyapunov spectrum, recurrence analysis (RQA+CRQA), delay embedding (Takens),
+correlation dimension, Kaplan-Yorke dimension, Poincare sections, basin stability, and
+bifurcation continuation natively.
 
-**DynamicalSystems.jl advantage:** Julia JIT performance, bifurcation continuation,
-full Lyapunov spectrum (SPO computes maximal only), nonlinear dynamics toolkit.
+**DynamicalSystems.jl advantage:** Julia JIT performance, pseudo-arclength continuation
+for codimension-2 bifurcations, more mature nonlinear dynamics ecosystem.
 
 ## Benchmark Evidence
 
@@ -126,11 +128,34 @@ Rust batch API eliminates per-call FFI overhead, achieving 1.7x speedup at N=64.
 Note: N>64 is dominated by O(N^2) coupling computation where Python's NumPy
 BLAS matches Rust. Speedup is largest at small N where FFI overhead dominates.
 
-### JAX GPU (nn/ module)
+### JAX GPU (nn/ module) — L4 GPU, JAX 0.6.2 (measured 2026-03-26)
 
-JAX benchmarks pending dedicated GPU hardware. Expected: 10-100x for N>256 via
-XLA fused kernels. CPU XLA compilation overhead makes JAX slower than NumPy for
-small N on CPU — use NumPy engines for N<128 on CPU.
+**KuramotoLayer forward pass (100 calls, each running 50 internal steps):**
+
+| N | us/call |
+|---|---|
+| 8 | 125,000 |
+| 64 | 150,300 |
+| 256 | 255,200 |
+| 512 | 269,500 |
+
+Per Kuramoto step: 2.5–5.4ms. Dominated by per-call JIT dispatch overhead.
+
+**JAX GPU vs NumPy CPU (500 Kuramoto steps):**
+
+| N | JAX GPU (ms) | NumPy CPU (ms) | Speedup |
+|---|---|---|---|
+| 16 | 142 | 3 | 0.02x |
+| 64 | 165 | 6 | 0.04x |
+| 256 | 270 | 41 | 0.15x |
+| 512 | 288 | 143 | 0.50x |
+
+NumPy is faster at all sizes N<=512. GPU kernel launch overhead (~140ms baseline)
+dominates. The crossover point is estimated at N>1024. GPU wins for large N or
+batched workloads (vmap over multiple initial conditions).
+
+**Guidance:** Use NumPy engines for N<1024 on CPU. Use JAX GPU for large networks
+or when running many independent simulations in parallel via vmap.
 
 ## Target Use Cases
 
