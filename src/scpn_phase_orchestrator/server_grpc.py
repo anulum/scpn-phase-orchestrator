@@ -33,7 +33,7 @@ from scpn_phase_orchestrator.server import SimulationState
 __all__ = ["PhaseStreamServicer", "HAS_GRPC"]
 
 try:
-    import grpc  # pragma: no cover
+    import grpc  # type: ignore[import-untyped]  # pragma: no cover
 
     HAS_GRPC = True  # pragma: no cover
 except ModuleNotFoundError:

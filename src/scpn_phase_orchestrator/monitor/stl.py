@@ -15,7 +15,7 @@ from __future__ import annotations
 __all__ = ["STLMonitor", "HAS_RTAMT"]
 
 try:
-    import rtamt
+    import rtamt  # type: ignore[import-untyped]
 
     HAS_RTAMT = True
 except Exception:  # rtamt's antlr4 dep breaks on Python >=3.12

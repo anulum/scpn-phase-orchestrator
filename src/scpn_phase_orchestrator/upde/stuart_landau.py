@@ -68,7 +68,7 @@ class StuartLandauEngine:
 
         self._use_rust = False
         try:  # pragma: no cover
-            import spo_kernel  # noqa: PLC0415
+            import spo_kernel  # type: ignore[import-untyped]  # noqa: PLC0415
 
             self._rust = spo_kernel.PyStuartLandauStepper(
                 n_oscillators, dt=dt, method=method, n_substeps=1, atol=atol, rtol=rtol

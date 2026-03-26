@@ -8,7 +8,7 @@
 - [ ] `cargo test` passes (if Rust changed)
 - [ ] `ruff check src/ tests/` clean
 - [ ] `ruff format --check src/ tests/` clean
-- [ ] `mypy src/scpn_phase_orchestrator/ --ignore-missing-imports` clean
+- [ ] `mypy src/scpn_phase_orchestrator/` clean
 - [ ] `cargo clippy --workspace -- -D warnings` clean (if Rust changed)
 - [ ] CHANGELOG updated (if user-facing)
 - [ ] `python tools/coverage_guard.py` passes (if tests changed)

@@ -39,7 +39,7 @@ def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
         ValueError: If n_regions < 2 or > 80.
     """
     try:
-        from neurolib.utils.loadData import Dataset
+        from neurolib.utils.loadData import Dataset  # type: ignore[import-untyped]
     except ModuleNotFoundError:
         raise ImportError(
             "neurolib is required for real HCP data: pip install neurolib"

@@ -19,7 +19,7 @@ from pathlib import Path
 __all__ = ["SecureModbusAdapter", "HAS_PYMODBUS"]
 
 try:
-    from pymodbus.client import ModbusTlsClient
+    from pymodbus.client import ModbusTlsClient  # type: ignore[import-not-found]
 
     HAS_PYMODBUS = True
 except ImportError:

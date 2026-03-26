@@ -29,7 +29,7 @@ PYTHON_GATES: list[tuple[str, list[str], Path]] = [
     ("version-sync", [_PY, "tools/check_version_sync.py"], ROOT),
     (
         "mypy",
-        [_PY, "-m", "mypy", _SRC, "--ignore-missing-imports"],
+        [_PY, "-m", "mypy", _SRC],
         ROOT,
     ),
     (

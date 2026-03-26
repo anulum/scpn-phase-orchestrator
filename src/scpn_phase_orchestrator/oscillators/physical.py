@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.signal import hilbert
+from scipy.signal import hilbert  # type: ignore[import-untyped]
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
@@ -32,7 +32,7 @@ class PhysicalExtractor(PhaseExtractor):
         analytic = hilbert(signal)
 
         if _HAS_RUST:  # pragma: no cover
-            from spo_kernel import physical_extract
+            from spo_kernel import physical_extract  # type: ignore[import-untyped]
 
             theta, omega, amplitude, quality = physical_extract(
                 np.ascontiguousarray(np.real(analytic)),

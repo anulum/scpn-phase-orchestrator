@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.special import i0, i1
+from scipy.special import i0, i1  # type: ignore[import-untyped]
 
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter

@@ -22,7 +22,7 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
     if n_bins < 2:
         return 0.0
     try:  # pragma: no cover
-        import spo_kernel  # noqa: PLC0415
+        import spo_kernel  # type: ignore[import-untyped]  # noqa: PLC0415
 
         return float(
             spo_kernel.pac_modulation_index(

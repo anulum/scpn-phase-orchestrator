@@ -64,7 +64,7 @@ def add_PhaseOrchestratorServicer_to_server(
     This fallback version requires grpcio at runtime.
     """
     try:
-        import grpc
+        import grpc  # type: ignore[import-untyped]
     except ImportError as exc:
         msg = "grpcio required to register servicer on a live server"
         raise ImportError(msg) from exc

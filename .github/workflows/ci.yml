@@ -43,7 +43,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev,full,queuewaves,plot]"
-      - run: mypy src/scpn_phase_orchestrator/ --ignore-missing-imports
+      - run: mypy src/scpn_phase_orchestrator/
 
   test:
     runs-on: ubuntu-latest

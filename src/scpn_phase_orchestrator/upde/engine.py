@@ -62,7 +62,7 @@ class UPDEEngine:
 
         self._rust = None
         if _HAS_RUST:  # pragma: no cover
-            from spo_kernel import PyUPDEStepper
+            from spo_kernel import PyUPDEStepper  # type: ignore[import-untyped]
 
             self._rust = PyUPDEStepper(n_oscillators, dt, method, atol=atol, rtol=rtol)
 

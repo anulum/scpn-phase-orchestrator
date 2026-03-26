@@ -125,7 +125,7 @@ class SNNControllerBridge:
 
         Raises ImportError if lava-nc is not installed.
         """
-        from lava.proc.lif.process import LIF
+        from lava.proc.lif.process import LIF  # type: ignore[import-not-found]
 
         return LIF(
             shape=(self.n_neurons,),

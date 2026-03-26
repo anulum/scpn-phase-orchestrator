@@ -29,14 +29,19 @@ __all__ = [
 ]
 
 try:
-    from brainflow.board_shim import BoardShim, BrainFlowInputParams  # pragma: no cover
+    from brainflow.board_shim import (  # type: ignore[import-not-found]  # pragma: no cover
+        BoardShim,
+        BrainFlowInputParams,
+    )
 
     HAS_BRAINFLOW = True  # pragma: no cover
 except ImportError:
     HAS_BRAINFLOW = False
 
 try:
-    from pymodbus.client import ModbusTcpClient  # pragma: no cover
+    from pymodbus.client import (
+        ModbusTcpClient,  # type: ignore[import-not-found]  # pragma: no cover
+    )
 
     HAS_MODBUS = True  # pragma: no cover
 except ImportError:
