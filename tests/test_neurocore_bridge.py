@@ -12,11 +12,11 @@ import time
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator._compat import HAS_RUST
 from scpn_phase_orchestrator.adapters.neurocore_bridge import (
     HAS_NEUROCORE,
     NeurocoreBridge,
 )
-from scpn_phase_orchestrator._compat import HAS_RUST
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
@@ -157,7 +157,7 @@ class TestNeurocoreBridgeRust:
         state = _make_state([0.9, 0.9])
         bridge.step(state, n_substeps=10)
         bridge.reset()
-        # Rust manages its own state — just verify step produces valid output after reset
+        # Rust manages its own state — verify step after reset
         rates = bridge.step(state, n_substeps=10)
         assert rates.shape == (2,)
 
@@ -222,7 +222,11 @@ class TestNeurocoreBridgeScaleTiming:
         [(100, "1k"), (500, "5k"), (1000, "10k")],
     )
     def test_timing_default_backend(self, n_per, label):
-        bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=n_per, current_scale=2.5)
+        bridge = NeurocoreBridge(
+            n_layers=10,
+            neurons_per_layer=n_per,
+            current_scale=2.5,
+        )
         state = _make_state(list(np.linspace(0.1, 0.95, 10)))
         t0 = time.perf_counter()
         rates = bridge.step(state, n_substeps=100)
@@ -232,8 +236,10 @@ class TestNeurocoreBridgeScaleTiming:
         # Just verify it completes and produces valid output
         assert rates.shape == (10,)
         assert np.all(rates >= 0.0)
-        # Print for benchmarking (visible with pytest -s)
-        print(f"\n  [{bridge.backend}] N={n_total}: {elapsed:.4f}s, {ns_per:.0f} ns/neuron/substep")
+        print(
+            f"\n  [{bridge.backend}] N={n_total}: "
+            f"{elapsed:.4f}s, {ns_per:.0f} ns/neuron/substep",
+        )
 
     @pytest.mark.parametrize("backend", ["numpy"])
     def test_timing_numpy_10k(self, backend):
@@ -261,9 +267,7 @@ class TestNeurocoreBridgeScaleTiming:
         print(f"\n  [rust] N=10000: {elapsed:.4f}s")
 
 
-@pytest.mark.skipif(
-    not HAS_NEUROCORE, reason="sc-neurocore not installed"
-)
+@pytest.mark.skipif(not HAS_NEUROCORE, reason="sc-neurocore not installed")
 class TestNeurocoreBridgeScalar:
     """Scalar backend cross-validation against sc-neurocore."""
 

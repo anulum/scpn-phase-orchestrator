@@ -88,10 +88,7 @@ class NeurocoreBridge:
 
         # Resolve backend
         if backend == "auto":
-            if _HAS_RUST:
-                backend = "rust"
-            else:
-                backend = "numpy"
+            backend = "rust" if _HAS_RUST else "numpy"
         self._backend = backend
 
         if backend == "rust":
@@ -111,7 +108,10 @@ class NeurocoreBridge:
             for _ in range(self._n_total):
                 self._neurons.append(StochasticLIFNeuron())
         else:
-            msg = f"Unknown backend {backend!r}, expected 'auto', 'rust', 'numpy', or 'scalar'"
+            msg = (
+                f"Unknown backend {backend!r}, "
+                "expected 'auto', 'rust', 'numpy', or 'scalar'"
+            )
             raise ValueError(msg)
 
         self._spike_counts = np.zeros(self._n_total, dtype=np.int64)
@@ -127,7 +127,7 @@ class NeurocoreBridge:
 
         if self._backend == "rust":
             return self._step_rust(layer_currents, n_substeps)
-        elif self._backend == "numpy":
+        if self._backend == "numpy":
             currents = np.repeat(layer_currents, self._n_per)
             self._step_numpy(currents, n_substeps)
         else:
@@ -138,7 +138,8 @@ class NeurocoreBridge:
         if duration_s == 0:  # pragma: no cover
             return np.zeros(self._n_layers)
 
-        layer_spikes = self._spike_counts.reshape(self._n_layers, self._n_per).sum(axis=1)
+        spikes_2d = self._spike_counts.reshape(self._n_layers, self._n_per)
+        layer_spikes = spikes_2d.sum(axis=1)
         return layer_spikes / (self._n_per * duration_s)
 
     def _step_rust(self, layer_currents: NDArray, n_substeps: int) -> NDArray:
@@ -212,7 +213,7 @@ class NeurocoreBridge:
         """Return voltage/refractory state for all neurons."""
         if self._backend == "rust":
             return self._rust_ensemble.get_neuron_states()
-        elif self._backend == "numpy":
+        if self._backend == "numpy":
             return [
                 {"v": float(self._v[i]), "refractory": int(self._refractory[i])}
                 for i in range(self._n_total)
