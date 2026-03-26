@@ -61,10 +61,10 @@ try:
         WebSocket,
         WebSocketDisconnect,  # pragma: no cover
     )
-except ImportError:
-    Response = None  # type: ignore[assignment,misc]
-    WebSocket = None  # type: ignore[assignment,misc]
-    WebSocketDisconnect = None  # type: ignore[assignment,misc]
+except ImportError:  # pragma: no cover
+    Response = None  # type: ignore[assignment,misc]  # pragma: no cover
+    WebSocket = None  # type: ignore[assignment,misc]  # pragma: no cover
+    WebSocketDisconnect = None  # type: ignore[assignment,misc]  # pragma: no cover
 
 __all__ = ["create_app", "SimulationState"]
 

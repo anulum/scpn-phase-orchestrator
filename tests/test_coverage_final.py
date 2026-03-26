@@ -148,6 +148,30 @@ class TestQueueWavesConfigEdge:
         assert result.alert_sinks[0].format == "slack"
 
 
+# --- server.py line 264: reset() with imprint model ---
+
+
+class TestServerResetImprint:
+    def test_reset_with_imprint(self):
+        from pathlib import Path
+
+        from scpn_phase_orchestrator.binding.loader import load_binding_spec
+        from scpn_phase_orchestrator.server import SimulationState
+
+        spec = load_binding_spec(
+            Path(__file__).parent.parent
+            / "domainpacks"
+            / "metaphysics_demo"
+            / "binding_spec.yaml"
+        )
+        sim = SimulationState(spec)
+        sim.step()
+        sim.step()
+        result = sim.reset()
+        assert result["step"] == 0
+        assert sim.imprint_state is not None
+
+
 # --- server_grpc.py lines 39-41 (grpc=None fallback) ---
 # These lines execute when grpc is not installed. Since grpc IS installed
 # in our test env, we can't easily cover them without mocking the import.
