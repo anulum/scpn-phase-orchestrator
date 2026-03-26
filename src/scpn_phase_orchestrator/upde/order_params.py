@@ -24,7 +24,7 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
     if phases.size == 0:
         return (0.0, 0.0)
     if _HAS_RUST:  # pragma: no cover
-        from spo_kernel import (
+        from spo_kernel import (  # type: ignore[import-untyped]
             order_parameter as _rust_order_param,
         )
 
