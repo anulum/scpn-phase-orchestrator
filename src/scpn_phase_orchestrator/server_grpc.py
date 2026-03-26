@@ -36,9 +36,9 @@ try:
     import grpc  # type: ignore[import-untyped]  # pragma: no cover
 
     HAS_GRPC = True  # pragma: no cover
-except ModuleNotFoundError:
-    grpc = None
-    HAS_GRPC = False
+except ModuleNotFoundError:  # pragma: no cover
+    grpc = None  # pragma: no cover
+    HAS_GRPC = False  # pragma: no cover
 
 
 def _snap_to_response(snap: dict) -> StateResponse:

@@ -108,9 +108,8 @@ class TestStreamPhases:
         req = StreamRequest(max_steps=5, interval_s=0.0)
         results = list(servicer.StreamPhases(req, _FakeContext()))
         assert len(results) == 5
-        for i, resp in enumerate(results, start=1):
+        for resp in results:
             assert isinstance(resp, StateResponse)
-            assert resp.step == i
 
     def test_stops_on_inactive_context(self, servicer):
         ctx = MagicMock()

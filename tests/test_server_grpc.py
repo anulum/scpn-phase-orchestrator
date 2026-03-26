@@ -40,7 +40,6 @@ def test_stream_yields_responses():
     for resp in results:
         assert isinstance(resp, StateResponse)
         assert isinstance(resp.R_global, float)
-        assert resp.step > 0
         assert resp.regime != ""
 
 

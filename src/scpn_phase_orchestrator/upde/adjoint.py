@@ -74,7 +74,7 @@ def gradient_knm_fd(
     return grad
 
 
-def gradient_knm_jax(
+def gradient_knm_jax(  # pragma: no cover — requires JAX
     phases_init: NDArray,
     omegas: NDArray,
     knm: NDArray,
