@@ -61,7 +61,10 @@ def cmd_list():
         print("No running instances.")
         return
     for inst in instances:
-        print(f"  ID={inst.id}  Name={inst.name}  Status={inst.status}  GPU={inst.gpu_type}")
+        print(
+            f"  ID={inst.id}  Name={inst.name}"
+            f"  Status={inst.status}  GPU={inst.gpu_type}"
+        )
 
 
 def cmd_gpu_availability():
