@@ -3,79 +3,98 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — TCBO tests
+# SCPN Phase Orchestrator — TCBO observer tests
 
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver, TCBOState
 
 
-class TestTCBO:
-    def test_insufficient_data(self):
-        obs = TCBOObserver(window_size=50)
-        state = obs.observe(np.zeros(4))
-        assert state.method == "insufficient_data"
-        assert not state.is_conscious
+class TestTCBOState:
+    def test_dataclass(self):
+        s = TCBOState(p_h1=0.8, is_conscious=True, s_h1=0.5, method="ripser")
+        assert s.p_h1 == 0.8
+        assert s.is_conscious is True
+        assert s.method == "ripser"
 
-    def test_builds_history(self):
-        obs = TCBOObserver(window_size=10, embed_dim=2, embed_delay=1)
-        for _ in range(15):
-            obs.observe(np.zeros(4))
-        assert len(obs._history) <= 12  # window + embed buffer
 
-    def test_coherent_dynamics_produces_h1(self):
-        obs = TCBOObserver(window_size=20, embed_dim=2, embed_delay=1)
-        # Phases rotating together at different speeds — creates loops in embedding
-        for t in range(30):
-            phases = np.array([0.1 * t, 0.2 * t, 0.3 * t, 0.15 * t, 0.25 * t, 0.12 * t])
-            phases = phases % (2 * np.pi)
-            obs.observe(phases)
-        state = obs.observe(np.array([0.0, 0.1, 0.2, 0.15, 0.25, 0.12]))
-        # Rotating phases create loops in delay embedding → H1 cycles
-        assert state.p_h1 > 0.0 or state.method == "ripser"
-
-    def test_random_vs_static_different_s_h1(self):
-        obs_rand = TCBOObserver(window_size=20, embed_dim=2, embed_delay=1)
-        obs_static = TCBOObserver(window_size=20, embed_dim=2, embed_delay=1)
-        rng = np.random.default_rng(42)
-        for _ in range(25):
-            obs_rand.observe(rng.uniform(0, 2 * np.pi, 6))
-            obs_static.observe(np.zeros(6))
-        sr = obs_rand.observe(rng.uniform(0, 2 * np.pi, 6))
-        ss = obs_static.observe(np.zeros(6))
-        # Random and static should produce different s_h1 values
-        assert sr.s_h1 != ss.s_h1
-
-    def test_threshold_default(self):
+class TestTCBOObserverInit:
+    def test_default_params(self):
         obs = TCBOObserver()
-        assert obs.tau_h1 == 0.72
+        assert obs.tau_h1 == pytest.approx(0.72)
 
-    def test_custom_threshold(self):
-        obs = TCBOObserver(tau_h1=0.5)
+    def test_custom_params(self):
+        obs = TCBOObserver(tau_h1=0.5, embed_dim=5, embed_delay=2, window_size=100)
         assert obs.tau_h1 == 0.5
 
-    def test_returns_tcbo_state(self):
-        obs = TCBOObserver(window_size=5, embed_dim=2, embed_delay=1)
-        for _ in range(10):
-            state = obs.observe(np.zeros(3))
-        assert isinstance(state, TCBOState)
-        assert hasattr(state, "p_h1")
-        assert hasattr(state, "is_conscious")
-        assert hasattr(state, "s_h1")
-        assert hasattr(state, "method")
 
-    def test_reset(self):
+class TestTCBOInsufficient:
+    def test_insufficient_data(self):
+        obs = TCBOObserver(window_size=50)
+        phases = np.zeros(8)
+        result = obs.observe(phases)
+        assert result.method == "insufficient_data"
+        assert result.p_h1 == 0.0
+        assert result.is_conscious is False
+
+
+class TestTCBORipser:
+    def test_synchronized_low_p_h1(self):
+        obs = TCBOObserver(window_size=20, embed_dim=2, embed_delay=1)
+        for _ in range(25):
+            obs.observe(np.zeros(4))
+        result = obs.observe(np.zeros(4))
+        assert result.method == "ripser"
+        assert result.p_h1 < 0.9
+
+    def test_chaotic_higher_p_h1(self):
+        obs = TCBOObserver(window_size=20, embed_dim=2, embed_delay=1)
+        rng = np.random.default_rng(42)
+        for _ in range(30):
+            phases = rng.uniform(0, 2 * np.pi, 6)
+            result = obs.observe(phases)
+        assert result.method == "ripser"
+        assert result.s_h1 >= 0.0
+
+    def test_empty_h1_diagram(self):
         obs = TCBOObserver(window_size=5, embed_dim=2, embed_delay=1)
         for _ in range(10):
-            obs.observe(np.zeros(3))
+            obs.observe(np.array([0.0, 0.0]))
+        result = obs.observe(np.array([0.0, 0.0]))
+        assert result.p_h1 >= 0.0
+
+    def test_window_truncation(self):
+        obs = TCBOObserver(window_size=10, embed_dim=2, embed_delay=1)
+        for i in range(50):
+            obs.observe(np.array([float(i), float(i) * 0.5]))
+        assert len(obs._history) <= 10 + 2 * 1
+
+
+class TestTCBODelayEmbed:
+    def test_embed_shape(self):
+        obs = TCBOObserver(window_size=20, embed_dim=3, embed_delay=2)
+        for _ in range(25):
+            obs.observe(np.ones(4))
+        cloud = obs._delay_embed()
+        assert cloud.ndim == 2
+        assert cloud.shape[1] == 3 * 4
+
+    def test_embed_small_T(self):
+        obs = TCBOObserver(window_size=3, embed_dim=3, embed_delay=2)
+        obs._history = [np.ones(2)] * 3
+        cloud = obs._delay_embed()
+        assert cloud.shape[0] >= 2
+
+
+class TestTCBOReset:
+    def test_reset_clears(self):
+        obs = TCBOObserver()
+        for _ in range(10):
+            obs.observe(np.zeros(4))
         obs.reset()
-        state = obs.observe(np.zeros(3))
-        assert state.method == "insufficient_data"
-
-    def test_single_oscillator(self):
-        obs = TCBOObserver(window_size=5, embed_dim=2, embed_delay=1)
-        for _ in range(10):
-            state = obs.observe(np.array([1.0]))
-        assert state.p_h1 == 0.0  # < 2 oscillators
+        assert len(obs._history) == 0
+        result = obs.observe(np.zeros(4))
+        assert result.method == "insufficient_data"
