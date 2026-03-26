@@ -67,6 +67,10 @@ pub struct LIFEnsemble {
 }
 
 impl LIFEnsemble {
+    /// # Errors
+    ///
+    /// Returns `InvalidConfig` if `n_layers` or `neurons_per_layer` is 0,
+    /// or if `params.tau_mem` is non-positive.
     pub fn new(
         n_layers: usize,
         neurons_per_layer: usize,
@@ -101,6 +105,10 @@ impl LIFEnsemble {
     ///
     /// `currents` must have length `n_layers`. Returns per-layer spike
     /// rates in Hz (spikes / neuron / second, where 1 step = params.dt ms).
+    ///
+    /// # Errors
+    ///
+    /// Returns `InvalidConfig` if `currents.len() != n_layers`.
     pub fn step(&mut self, currents: &[f64], n_substeps: usize) -> Result<Vec<f64>, SpoError> {
         if currents.len() != self.n_layers {
             return Err(SpoError::InvalidConfig(format!(
@@ -123,21 +131,26 @@ impl LIFEnsemble {
         let dt_over_tau = self.dt_over_tau;
 
         for _ in 0..n_substeps {
-            for i in 0..self.n_total {
-                if self.refractory[i] > 0 {
-                    self.v[i] = v_rest;
-                    self.refractory[i] -= 1;
+            for (((v, refr), sc), &inp) in self
+                .v
+                .iter_mut()
+                .zip(self.refractory.iter_mut())
+                .zip(self.spike_counts.iter_mut())
+                .zip(input_terms.iter())
+            {
+                if *refr > 0 {
+                    *v = v_rest;
+                    *refr -= 1;
                     continue;
                 }
 
                 // Euler-Maruyama LIF step (noise omitted when std=0)
-                let dv = -(self.v[i] - v_rest) * dt_over_tau + input_terms[i];
-                self.v[i] += dv;
+                *v += -(*v - v_rest) * dt_over_tau + inp;
 
-                if self.v[i] >= v_threshold {
-                    self.spike_counts[i] += 1;
-                    self.v[i] = v_reset;
-                    self.refractory[i] = refractory_period;
+                if *v >= v_threshold {
+                    *sc += 1;
+                    *v = v_reset;
+                    *refr = refractory_period;
                 }
             }
             self.step_count += 1;
