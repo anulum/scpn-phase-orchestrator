@@ -244,4 +244,4 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float:
     if denom == 0:
         return float(j + 1)
 
-    return float(j + 1) + float(cumsum[j]) / denom
+    return float(j + 1) + float(cumsum[j]) / float(denom)
