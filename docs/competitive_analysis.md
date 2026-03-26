@@ -160,6 +160,34 @@ batched workloads (vmap over multiple initial conditions).
 **Guidance:** Use NumPy engines for N<1024 on CPU. Use JAX GPU for large networks
 or when running many independent simulations in parallel via vmap.
 
+**Batched Kuramoto (vmap, 64 oscillators, 200 steps):**
+
+| Batch | Total (ms) | Per instance (us) | Speedup vs B=1 |
+|---|---|---|---|
+| 1 | 160 | 160,000 | 1x |
+| 16 | 164 | 10,259 | 16x |
+| 64 | 159 | 2,481 | 64x |
+| 256 | 159 | 621 | 258x |
+
+Batching is where GPU dominates — 256 independent Kuramoto systems
+in the same time as 1. Use `jax.vmap` for parameter sweeps and
+ensemble simulations.
+
+**Inverse Coupling Recovery (Adam + multiple shooting, window=10, 1000 epochs):**
+
+| N | Old corr (SGD) | New corr (Adam+shooting) | Improvement |
+|---|---|---|---|
+| 4 | -0.55 | **0.74** | +1.29 |
+| 8 | 0.19 | **0.61** | +0.42 |
+| 16 | 0.15 | **0.67** | +0.52 |
+| 32 | 0.07 | **0.48** | +0.41 |
+
+Adam optimiser with multiple-shooting windows (10 RK4 steps per window)
+eliminates gradient vanishing through long ODE chains. Correlation
+improvement: 0.19 → 0.61 at N=8 (3.2x). Still not perfect — the inverse
+Kuramoto problem is inherently ill-conditioned at large N due to
+coupling matrix symmetries.
+
 ## Target Use Cases
 
 1. **Fusion plasma control** — phase-coupled MHD mode suppression with boundary monitoring

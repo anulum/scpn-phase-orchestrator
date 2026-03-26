@@ -1,0 +1,44 @@
+{
+  "description": "Inverse coupling tuning: Adam + multiple shooting vs old SGD single-shot",
+  "gpu": "L4 24GB",
+  "jax": "0.6.2",
+  "date": "2026-03-26",
+  "method": "Adam (beta1=0.9, beta2=0.999) + gradient clipping (norm=1.0) + multiple shooting",
+  "trajectory": "200 RK4 steps, dt=0.01, K_true ~ N(0, 0.3) symmetric, omega=0",
+  "old_benchmark": {
+    "method": "vanilla SGD, single-shot 100 steps, lr=0.005, 500 epochs",
+    "4": -0.55,
+    "8": 0.19,
+    "16": 0.15,
+    "32": 0.07
+  },
+  "results": {
+    "4": {
+      "w10_500": {"corr": 0.697, "time_s": 323.0},
+      "w10_1000": {"corr": 0.736, "time_s": 672.9},
+      "w20_500": {"corr": 0.717, "time_s": null}
+    },
+    "8": {
+      "w10_500": {"corr": 0.596, "time_s": 353.0},
+      "w10_1000": {"corr": 0.614, "time_s": 699.5},
+      "w20_500": {"corr": 0.592, "time_s": null}
+    },
+    "16": {
+      "w10_500": {"corr": 0.646, "time_s": 354.8},
+      "w10_1000": {"corr": 0.673, "time_s": 714.4},
+      "w20_500": {"corr": 0.644, "time_s": null}
+    },
+    "32": {
+      "w10_500": {"corr": 0.444, "time_s": 363.3},
+      "w10_1000": {"corr": 0.481, "time_s": 724.8},
+      "w20_500": {"corr": 0.435, "time_s": null}
+    }
+  },
+  "best_config": "window_size=10, lr=0.01, n_epochs=1000, l1_weight=0.0",
+  "improvement_summary": {
+    "4": {"old": -0.55, "new": 0.736, "delta": 1.286},
+    "8": {"old": 0.19, "new": 0.614, "delta": 0.424},
+    "16": {"old": 0.15, "new": 0.673, "delta": 0.523},
+    "32": {"old": 0.07, "new": 0.481, "delta": 0.411}
+  }
+}

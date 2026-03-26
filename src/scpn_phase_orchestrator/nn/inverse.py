@@ -15,6 +15,12 @@ This is the inverse problem: data → model. The forward model is
 differentiable via JAX autodiff, so we backpropagate through the ODE
 solver to learn the parameters that produced the observed dynamics.
 
+Key technique: multiple shooting — the trajectory is split into
+overlapping windows of `window_size` steps. Each window predicts
+forward from the observed state at its start. This keeps the
+gradient chain short (bounded by window_size) and avoids vanishing
+gradients through long ODE integrations.
+
 Requires: jax>=0.4
 """
 
@@ -53,8 +59,6 @@ def inverse_loss(
 
     _, predicted = kuramoto_forward(initial, omegas, K, dt, n_steps)
 
-    # Phase-aware distance: use circular mean squared error
-    # d(a, b) = 1 - cos(a - b), range [0, 2]
     diff = observed[1:] - predicted
     phase_error = jnp.mean(1.0 - jnp.cos(diff))
 
@@ -64,6 +68,64 @@ def inverse_loss(
     return loss
 
 
+def _shooting_loss(
+    K: jax.Array,
+    omegas: jax.Array,
+    starts: jax.Array,
+    targets: jax.Array,
+    dt: float,
+    window_size: int,
+    l1_weight: float = 0.0,
+) -> jax.Array:
+    """Multiple-shooting loss, fully JIT-compatible via vmap.
+
+    Args:
+        K: (N, N) coupling matrix
+        omegas: (N,) natural frequencies
+        starts: (W, N) initial phases for each window
+        targets: (W, window_size, N) target trajectories per window
+        dt: integration timestep
+        window_size: steps per window (fixed for JIT)
+        l1_weight: L1 penalty
+    """
+
+    def window_error(start, target):
+        _, predicted = kuramoto_forward(start, omegas, K, dt, window_size)
+        return jnp.mean(1.0 - jnp.cos(target - predicted))
+
+    errors = jax.vmap(window_error)(starts, targets)
+    loss = jnp.mean(errors)
+    if l1_weight > 0.0:
+        loss = loss + l1_weight * jnp.sum(jnp.abs(K))
+    return loss
+
+
+def _build_windows(
+    observed: jax.Array, window_size: int
+) -> tuple[jax.Array, jax.Array]:
+    """Split trajectory into fixed-size windows for shooting loss.
+
+    Returns (starts, targets) where starts[i] is the initial phase
+    and targets[i] is the next window_size steps.
+    """
+    T = observed.shape[0]
+    n_windows = (T - 1) // window_size
+    starts = observed[jnp.arange(n_windows) * window_size]
+    indices = (
+        jnp.arange(n_windows)[:, None] * window_size
+        + jnp.arange(1, window_size + 1)[None, :]
+    )
+    targets = observed[indices]
+    return starts, targets
+
+
+def _symmetrise_K(K: jax.Array) -> jax.Array:
+    """Enforce symmetric coupling with zero diagonal."""
+    N = K.shape[0]
+    K = (K + K.T) / 2.0
+    return K.at[jnp.diag_indices(N)].set(0.0)
+
+
 def infer_coupling(
     observed: jax.Array,
     dt: float,
@@ -71,19 +133,24 @@ def infer_coupling(
     lr: float = 0.01,
     l1_weight: float = 0.001,
     seed: int = 0,
+    window_size: int = 0,
+    grad_clip: float = 1.0,
 ) -> tuple[jax.Array, jax.Array, list[float]]:
     """Infer coupling matrix K and frequencies ω from observed phases.
 
-    Gradient-based optimization of the forward Kuramoto model parameters
-    to match observed phase trajectories.
+    Uses Adam optimiser with gradient clipping and optional multiple
+    shooting for gradient-stable training through ODE solvers.
 
     Args:
         observed: (T, N) observed phase trajectory
         dt: integration timestep used to generate the data
-        n_epochs: optimization epochs
-        lr: learning rate
+        n_epochs: optimisation epochs
+        lr: learning rate (for Adam)
         l1_weight: L1 sparsity penalty on K
-        seed: random seed for initialization
+        seed: random seed for initialisation
+        window_size: if >0, use multiple shooting with this window size.
+            Recommended: 10-20 steps. 0 = single-shot (original behaviour).
+        grad_clip: maximum gradient norm (0 = no clipping)
 
     Returns:
         Tuple of (K, omegas, losses) where:
@@ -93,22 +160,55 @@ def infer_coupling(
     """
     N = observed.shape[1]
     key = jax.random.PRNGKey(seed)
-    k1, k2 = jax.random.split(key)
+    k1, _ = jax.random.split(key)
 
-    K = jax.random.normal(k1, (N, N)) * 0.1
-    K = (K + K.T) / 2.0
-    K = K.at[jnp.diag_indices(N)].set(0.0)
-    omegas = jax.random.normal(k2, (N,))
+    K = jax.random.normal(k1, (N, N)) * 0.05
+    K = _symmetrise_K(K)
+    omegas = jnp.zeros(N)
 
-    loss_and_grad = jax.value_and_grad(inverse_loss, argnums=(0, 1))
+    # Adam state
+    m_K = jnp.zeros_like(K)
+    v_K = jnp.zeros_like(K)
+    m_o = jnp.zeros_like(omegas)
+    v_o = jnp.zeros_like(omegas)
+    beta1, beta2, eps = 0.9, 0.999, 1e-8
+
+    if window_size > 0:
+        starts, targets = _build_windows(observed, window_size)
+
+        def loss_fn(k, o):
+            return _shooting_loss(k, o, starts, targets, dt, window_size, l1_weight)
+    else:
+
+        def loss_fn(k, o):
+            return inverse_loss(k, o, observed, dt, l1_weight)
+
+    loss_and_grad = jax.value_and_grad(loss_fn, argnums=(0, 1))
     losses: list[float] = []
 
-    for _ in range(n_epochs):
-        loss_val, (grad_K, grad_o) = loss_and_grad(K, omegas, observed, dt, l1_weight)
-        K = K - lr * grad_K
-        K = (K + K.T) / 2.0
-        K = K.at[jnp.diag_indices(N)].set(0.0)
-        omegas = omegas - lr * grad_o
+    for epoch in range(n_epochs):
+        loss_val, (grad_K, grad_o) = loss_and_grad(K, omegas)
+
+        # Gradient clipping
+        if grad_clip > 0:
+            g_norm = jnp.sqrt(jnp.sum(grad_K**2) + jnp.sum(grad_o**2) + 1e-10)
+            scale = jnp.minimum(1.0, grad_clip / g_norm)
+            grad_K = grad_K * scale
+            grad_o = grad_o * scale
+
+        # Adam update
+        t = epoch + 1
+        m_K = beta1 * m_K + (1 - beta1) * grad_K
+        v_K = beta2 * v_K + (1 - beta2) * grad_K**2
+        m_o = beta1 * m_o + (1 - beta1) * grad_o
+        v_o = beta2 * v_o + (1 - beta2) * grad_o**2
+
+        bc1 = 1 - beta1**t
+        bc2 = 1 - beta2**t
+        K = K - lr * (m_K / bc1) / (jnp.sqrt(v_K / bc2) + eps)
+        omegas = omegas - lr * (m_o / bc1) / (jnp.sqrt(v_o / bc2) + eps)
+
+        K = _symmetrise_K(K)
         losses.append(float(loss_val))
 
     return K, omegas, losses
