@@ -7,6 +7,11 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.upde.basin_stability import (
+    BasinStabilityResult,
+    basin_stability,
+    multi_basin_stability,
+)
 from scpn_phase_orchestrator.upde.bifurcation import (
     BifurcationDiagram,
     BifurcationPoint,
@@ -19,12 +24,15 @@ from scpn_phase_orchestrator.upde.metrics import UPDEState
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 __all__ = [
+    "BasinStabilityResult",
     "BifurcationDiagram",
     "BifurcationPoint",
     "EnvelopeState",
+    "basin_stability",
     "StuartLandauEngine",
     "UPDEEngine",
     "UPDEState",
     "find_critical_coupling",
+    "multi_basin_stability",
     "trace_sync_transition",
 ]
