@@ -22,6 +22,13 @@ from scpn_phase_orchestrator.monitor.psychedelic import (
     reduce_coupling,
     simulate_psychedelic_trajectory,
 )
+from scpn_phase_orchestrator.monitor.recurrence import (
+    RQAResult,
+    cross_recurrence_matrix,
+    cross_rqa,
+    recurrence_matrix,
+    rqa,
+)
 from scpn_phase_orchestrator.monitor.session_start import (
     SessionCoherenceReport,
     check_session_start,
@@ -39,7 +46,10 @@ __all__ = [
     "EVSResult",
     "LyapunovGuard",
     "LyapunovState",
+    "RQAResult",
     "SessionCoherenceReport",
+    "cross_recurrence_matrix",
+    "cross_rqa",
     "lyapunov_spectrum",
     "check_session_start",
     "classify_sleep_stage",
@@ -47,7 +57,9 @@ __all__ = [
     "detect_chimera",
     "entropy_from_phases",
     "itpc_persistence",
+    "recurrence_matrix",
     "reduce_coupling",
+    "rqa",
     "simulate_psychedelic_trajectory",
     "ultradian_phase",
 ]
