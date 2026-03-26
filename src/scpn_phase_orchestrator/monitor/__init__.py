@@ -10,6 +10,12 @@ from __future__ import annotations
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
+from scpn_phase_orchestrator.monitor.dimension import (
+    CorrelationDimensionResult,
+    correlation_dimension,
+    correlation_integral,
+    kaplan_yorke_dimension,
+)
 from scpn_phase_orchestrator.monitor.embedding import (
     EmbeddingResult,
     auto_embed,
@@ -49,7 +55,10 @@ __all__ = [
     "BoundaryObserver",
     "ChimeraState",
     "CoherenceMonitor",
+    "CorrelationDimensionResult",
     "EVSMonitor",
+    "correlation_dimension",
+    "correlation_integral",
     "EVSResult",
     "EmbeddingResult",
     "LyapunovGuard",
@@ -66,6 +75,7 @@ __all__ = [
     "detect_chimera",
     "entropy_from_phases",
     "itpc_persistence",
+    "kaplan_yorke_dimension",
     "lyapunov_spectrum",
     "optimal_delay",
     "optimal_dimension",
