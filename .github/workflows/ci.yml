@@ -112,7 +112,7 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev,full,queuewaves,plot]"
       - run: bandit -r src/ -c pyproject.toml
-      - run: pip install pip-audit && pip-audit --ignore-vuln CVE-2026-4539  # pygments transitive dep, no fix available yet
+      - run: pip install pip-audit==2.10.0 && pip-audit --ignore-vuln CVE-2026-4539  # pygments transitive dep, no fix available yet
 
   rust-check:
     strategy:
@@ -164,7 +164,7 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          pip install maturin
+          pip install maturin==1.12.6
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install -e ".[dev,full,queuewaves,plot]"
           pytest tests/ -v --tb=short
@@ -173,7 +173,7 @@ jobs:
         run: |
           python -m venv .venv
           .venv\Scripts\activate
-          pip install maturin
+          pip install maturin==1.12.6
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install -e ".[dev,full,queuewaves,plot]"
           pytest tests/ -v --tb=short

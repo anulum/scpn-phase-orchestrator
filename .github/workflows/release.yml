@@ -30,12 +30,12 @@ jobs:
 
       - name: Build sdist
         run: |
-          pip install build
+          pip install build==1.4.2
           python -m build --sdist
 
       - name: Generate SBOM
         run: |
-          pip install cyclonedx-bom
+          pip install cyclonedx-bom==7.2.2
           pip install -e .
           cyclonedx-py environment -o sbom.json --output-format json
 
