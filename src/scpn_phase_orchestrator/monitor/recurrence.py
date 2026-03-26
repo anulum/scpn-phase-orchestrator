@@ -92,7 +92,8 @@ def recurrence_matrix(
         diff = traj[:, np.newaxis, :] - traj[np.newaxis, :, :]
         dist = np.sqrt(np.sum(diff**2, axis=2))
 
-    return dist <= epsilon
+    result: NDArray = dist <= epsilon
+    return result
 
 
 def _diagonal_lines(R: NDArray, l_min: int = 2) -> list[int]:
@@ -243,7 +244,8 @@ def cross_recurrence_matrix(
         diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
         dist = np.sqrt(np.sum(diff**2, axis=2))
 
-    return dist <= epsilon
+    result: NDArray = dist <= epsilon
+    return result
 
 
 def cross_rqa(
