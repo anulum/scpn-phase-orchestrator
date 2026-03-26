@@ -60,6 +60,59 @@ def test_small_n_raises():
         load_hcp_connectome(1)
 
 
+def test_n_zero_raises():
+    with pytest.raises(ValueError):
+        load_hcp_connectome(0)
+
+
+def test_minimum_n():
+    knm = load_hcp_connectome(2)
+    assert knm.shape == (2, 2)
+    assert knm[0, 0] == 0.0
+    assert knm[1, 1] == 0.0
+
+
+def test_odd_n():
+    knm = load_hcp_connectome(7)
+    assert knm.shape == (7, 7)
+    np.testing.assert_allclose(knm, knm.T, atol=1e-12)
+
+
+def test_seed_parameter():
+    a = load_hcp_connectome(10, seed=0)
+    b = load_hcp_connectome(10, seed=999)
+    assert not np.allclose(a, b)
+
+
+def test_large_n():
+    knm = load_hcp_connectome(100)
+    assert knm.shape == (100, 100)
+    assert np.all(knm >= 0)
+
+
+def test_dmn_hubs_present():
+    knm = load_hcp_connectome(20)
+    half = 10
+    dmn_fracs = [0.15, 0.45, 0.65, 0.85]
+    dmn_left = [int(f * half) for f in dmn_fracs]
+    dmn_right = [h + half for h in dmn_left if h + half < 20]
+    dmn_all = dmn_left + dmn_right
+    dmn_coupling = knm[np.ix_(dmn_all, dmn_all)].mean()
+    non_dmn = [i for i in range(20) if i not in dmn_all]
+    non_dmn_coupling = knm[np.ix_(non_dmn, non_dmn)].mean()
+    assert dmn_coupling > non_dmn_coupling
+
+
+def test_neurolib_import_error():
+    try:
+        import neurolib  # noqa: F401
+
+        pytest.skip("neurolib is installed")
+    except ImportError:
+        with pytest.raises(ImportError, match="neurolib is required"):
+            load_neurolib_hcp()
+
+
 # --- neurolib real HCP ---
 
 neurolib = pytest.importorskip("neurolib")
