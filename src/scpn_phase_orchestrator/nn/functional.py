@@ -109,6 +109,98 @@ def kuramoto_forward(
     return final, trajectory
 
 
+# ──────────────────────────────────────────────────
+# Masked (sparse) coupling variants
+# ──────────────────────────────────────────────────
+
+
+def _kuramoto_deriv_masked(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: jax.Array,
+    mask: jax.Array,
+) -> jax.Array:
+    """Kuramoto derivative with binary mask for sparse coupling."""
+    diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
+    coupling = jnp.sum(K * mask * jnp.sin(diff), axis=1)
+    return omegas + coupling
+
+
+def kuramoto_step_masked(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: jax.Array,
+    mask: jax.Array,
+    dt: float,
+) -> jax.Array:
+    """Single Euler step with masked coupling.
+
+    Args:
+        phases: (N,) oscillator phases in [0, 2pi)
+        omegas: (N,) natural frequencies
+        K: (N, N) coupling weights
+        mask: (N, N) binary mask (1 = edge exists, 0 = no edge)
+        dt: integration timestep
+
+    Returns:
+        (N,) updated phases
+    """
+    dphi = _kuramoto_deriv_masked(phases, omegas, K, mask)
+    return (phases + dt * dphi) % TWO_PI
+
+
+def kuramoto_rk4_step_masked(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: jax.Array,
+    mask: jax.Array,
+    dt: float,
+) -> jax.Array:
+    """Single RK4 step with masked coupling."""
+
+    def deriv(p: jax.Array) -> jax.Array:
+        return _kuramoto_deriv_masked(p, omegas, K, mask)
+
+    k1 = deriv(phases)
+    k2 = deriv(phases + 0.5 * dt * k1)
+    k3 = deriv(phases + 0.5 * dt * k2)
+    k4 = deriv(phases + dt * k3)
+    return (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+
+
+def kuramoto_forward_masked(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: jax.Array,
+    mask: jax.Array,
+    dt: float,
+    n_steps: int,
+    method: str = "rk4",
+) -> tuple[jax.Array, jax.Array]:
+    """Run N Kuramoto steps with masked coupling.
+
+    Args:
+        phases: (N,) initial phases
+        omegas: (N,) natural frequencies
+        K: (N, N) coupling weights
+        mask: (N, N) binary mask
+        dt: timestep
+        n_steps: integration steps
+        method: "rk4" or "euler"
+
+    Returns:
+        (final, trajectory) — same as kuramoto_forward
+    """
+    step_fn = kuramoto_rk4_step_masked if method == "rk4" else kuramoto_step_masked
+
+    def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        p = step_fn(carry, omegas, K, mask, dt)
+        return p, p
+
+    final, trajectory = jax.lax.scan(body, phases, None, length=n_steps)
+    return final, trajectory
+
+
 def _simplicial_deriv(
     phases: jax.Array,
     omegas: jax.Array,
