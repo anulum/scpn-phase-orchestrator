@@ -201,6 +201,97 @@ def kuramoto_forward_masked(
     return final, trajectory
 
 
+# ──────────────────────────────────────────────────
+# Winfree model (Winfree 1967)
+# ──────────────────────────────────────────────────
+
+
+def _winfree_deriv(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: float,
+) -> jax.Array:
+    """Derivative for the Winfree model.
+
+    dθ_i/dt = ω_i + (K/N) · Q(θ_i) · Σ_j P(θ_j)
+
+    P(θ) = (1 + cos(θ)) (pulse), Q(θ) = -sin(θ) (phase response curve).
+    """
+    N = phases.shape[0]
+    P_sum = jnp.sum(1.0 + jnp.cos(phases))  # scalar
+    Q = -jnp.sin(phases)  # (N,)
+    return omegas + (K / N) * Q * P_sum
+
+
+def winfree_step(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: float,
+    dt: float,
+) -> jax.Array:
+    """Single Euler step of the Winfree model.
+
+    Args:
+        phases: (N,) oscillator phases in [0, 2pi)
+        omegas: (N,) natural frequencies
+        K: scalar coupling strength
+        dt: integration timestep
+
+    Returns:
+        (N,) updated phases
+    """
+    return (phases + dt * _winfree_deriv(phases, omegas, K)) % TWO_PI
+
+
+def winfree_rk4_step(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: float,
+    dt: float,
+) -> jax.Array:
+    """Single RK4 step of the Winfree model."""
+
+    def deriv(p: jax.Array) -> jax.Array:
+        return _winfree_deriv(p, omegas, K)
+
+    k1 = deriv(phases)
+    k2 = deriv(phases + 0.5 * dt * k1)
+    k3 = deriv(phases + 0.5 * dt * k2)
+    k4 = deriv(phases + dt * k3)
+    return (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+
+
+def winfree_forward(
+    phases: jax.Array,
+    omegas: jax.Array,
+    K: float,
+    dt: float,
+    n_steps: int,
+    method: str = "rk4",
+) -> tuple[jax.Array, jax.Array]:
+    """Run N steps of Winfree dynamics.
+
+    Args:
+        phases: (N,) initial phases
+        omegas: (N,) natural frequencies
+        K: scalar coupling strength
+        dt: timestep
+        n_steps: integration steps
+        method: "rk4" or "euler"
+
+    Returns:
+        (final, trajectory)
+    """
+    step_fn = winfree_rk4_step if method == "rk4" else winfree_step
+
+    def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        p = step_fn(carry, omegas, K, dt)
+        return p, p
+
+    final, trajectory = jax.lax.scan(body, phases, None, length=n_steps)
+    return final, trajectory
+
+
 def _simplicial_deriv(
     phases: jax.Array,
     omegas: jax.Array,

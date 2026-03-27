@@ -73,6 +73,20 @@ __all__ = [
     "train",
     "generate_kuramoto_data",
     "generate_chimera_data",
+    "winfree_step",
+    "winfree_rk4_step",
+    "winfree_forward",
+    "theta_neuron_step",
+    "theta_neuron_rk4_step",
+    "theta_neuron_forward",
+    "ThetaNeuronLayer",
+    "laplacian_spectrum",
+    "algebraic_connectivity",
+    "eigenratio",
+    "sync_threshold",
+    "local_order_parameter",
+    "chimera_index",
+    "detect_chimera",
 ]
 
 _FUNCTIONAL = {
@@ -93,6 +107,9 @@ _FUNCTIONAL = {
     "coupling_laplacian",
     "saf_order_parameter",
     "saf_loss",
+    "winfree_step",
+    "winfree_rk4_step",
+    "winfree_forward",
 }
 _BOLD = {"bold_from_neural", "bold_signal"}
 _INVERSE = {
@@ -127,6 +144,23 @@ _TRAINING = {
     "train",
     "generate_kuramoto_data",
     "generate_chimera_data",
+}
+_THETA = {
+    "theta_neuron_step",
+    "theta_neuron_rk4_step",
+    "theta_neuron_forward",
+    "ThetaNeuronLayer",
+}
+_SPECTRAL = {
+    "laplacian_spectrum",
+    "algebraic_connectivity",
+    "eigenratio",
+    "sync_threshold",
+}
+_CHIMERA = {
+    "local_order_parameter",
+    "chimera_index",
+    "detect_chimera",
 }
 
 
@@ -171,5 +205,17 @@ def __getattr__(name: str) -> object:  # noqa: ANN204
         from . import training
 
         return getattr(training, name)
+    if name in _THETA:
+        from . import theta_neuron
+
+        return getattr(theta_neuron, name)
+    if name in _SPECTRAL:
+        from . import spectral
+
+        return getattr(spectral, name)
+    if name in _CHIMERA:
+        from . import chimera
+
+        return getattr(chimera, name)
     msg = f"module 'scpn_phase_orchestrator.nn' has no attribute {name!r}"
     raise AttributeError(msg)
