@@ -41,6 +41,7 @@ __all__ = [
     "saf_order_parameter",
     "saf_loss",
     "KuramotoLayer",
+    "SimplicialKuramotoLayer",
     "StuartLandauLayer",
     "UDEKuramotoLayer",
     "CouplingResidual",
@@ -103,7 +104,7 @@ _RESERVOIR = {
     "reservoir_predict",
     "ridge_readout",
 }
-_LAYERS = {"KuramotoLayer", "StuartLandauLayer"}
+_LAYERS = {"KuramotoLayer", "SimplicialKuramotoLayer", "StuartLandauLayer"}
 _UDE = {"UDEKuramotoLayer", "CouplingResidual"}
 
 
@@ -133,6 +134,10 @@ def __getattr__(name: str) -> object:  # noqa: ANN204
             from .kuramoto_layer import KuramotoLayer
 
             return KuramotoLayer
+        if name == "SimplicialKuramotoLayer":
+            from .simplicial_layer import SimplicialKuramotoLayer
+
+            return SimplicialKuramotoLayer
         from .stuart_landau_layer import StuartLandauLayer
 
         return StuartLandauLayer

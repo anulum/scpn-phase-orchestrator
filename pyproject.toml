@@ -123,6 +123,7 @@ ignore = ["S101", "S104", "S310", "S603", "N802", "N803", "N806", "N815", "N816"
 "tests/test_ude_kuramoto.py" = ["E402"]
 "tests/test_inverse.py" = ["E402"]
 "tests/test_oim.py" = ["E402"]
+"tests/test_simplicial_layer.py" = ["E402"]
 
 [tool.mypy]
 strict = false
