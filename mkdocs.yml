@@ -73,6 +73,7 @@ nav:
       - Control Systems: guide/control_systems.md
       - Analysis Toolkit: guide/analysis_toolkit.md
       - Hardware & Deployment: guide/hardware_deployment.md
+      - Testing: guide/testing.md
   - Specifications:
       - Binding Spec Schema: specs/binding_spec.schema.json
       - Phase Contract: specs/phase_contract.md
