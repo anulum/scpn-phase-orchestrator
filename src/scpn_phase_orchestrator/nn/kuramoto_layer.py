@@ -19,7 +19,7 @@ from __future__ import annotations
 import equinox as eqx
 import jax
 
-from .functional import kuramoto_forward, order_parameter
+from .functional import kuramoto_forward, kuramoto_forward_masked, order_parameter
 
 
 class KuramotoLayer(eqx.Module):
@@ -36,6 +36,7 @@ class KuramotoLayer(eqx.Module):
 
     K: jax.Array
     omegas: jax.Array
+    mask: jax.Array | None = eqx.field(static=True, default=None)
     n_steps: int = eqx.field(static=True)
     dt: float = eqx.field(static=True)
     n: int = eqx.field(static=True)
@@ -46,14 +47,15 @@ class KuramotoLayer(eqx.Module):
         n_steps: int = 50,
         dt: float = 0.01,
         K_scale: float = 0.1,
+        mask: jax.Array | None = None,
         *,
         key: jax.Array,
     ) -> None:
         k1, k2 = jax.random.split(key)
-        # Symmetric K initialization (undirected coupling)
         raw = K_scale * jax.random.normal(k1, (n, n))
         self.K = (raw + raw.T) / 2.0
         self.omegas = jax.random.normal(k2, (n,))
+        self.mask = mask
         self.n_steps = n_steps
         self.dt = dt
         self.n = n
@@ -68,7 +70,23 @@ class KuramotoLayer(eqx.Module):
         Returns:
             (n,) phase angles after n_steps of Kuramoto integration
         """
-        final, _ = kuramoto_forward(phases, self.omegas, self.K, self.dt, self.n_steps)
+        if self.mask is not None:
+            final, _ = kuramoto_forward_masked(
+                phases,
+                self.omegas,
+                self.K,
+                self.mask,
+                self.dt,
+                self.n_steps,
+            )
+        else:
+            final, _ = kuramoto_forward(
+                phases,
+                self.omegas,
+                self.K,
+                self.dt,
+                self.n_steps,
+            )
         return final
 
     @eqx.filter_jit
@@ -81,6 +99,15 @@ class KuramotoLayer(eqx.Module):
         Returns:
             Tuple of (final_phases, trajectory) where trajectory is (n_steps, n)
         """
+        if self.mask is not None:
+            return kuramoto_forward_masked(
+                phases,
+                self.omegas,
+                self.K,
+                self.mask,
+                self.dt,
+                self.n_steps,
+            )
         return kuramoto_forward(phases, self.omegas, self.K, self.dt, self.n_steps)
 
     @eqx.filter_jit
