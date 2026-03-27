@@ -1083,10 +1083,13 @@ impl PyLIFEnsemble {
         currents: PyReadonlyArray1<'py, f64>,
         n_substeps: usize,
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let currents_slice = currents.as_slice().map_err(|e| {
-            PyValueError::new_err(format!("currents array not contiguous: {e}"))
-        })?;
-        let rates = self.inner.step(currents_slice, n_substeps).map_err(spo_err)?;
+        let currents_slice = currents
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(format!("currents array not contiguous: {e}")))?;
+        let rates = self
+            .inner
+            .step(currents_slice, n_substeps)
+            .map_err(spo_err)?;
         Ok(PyArray1::from_vec(py, rates))
     }
 
