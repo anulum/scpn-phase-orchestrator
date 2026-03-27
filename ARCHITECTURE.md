@@ -222,6 +222,105 @@ Domainpacks declare `extractor_type` using channel aliases (`physical`,
 `graph`, `wavelet`, `zero_crossing`). The loader resolves aliases to their
 default algorithm at parse time.
 
+## Internal Class Hierarchies
+
+### Oscillator Extractors
+
+```
+PhaseExtractor (ABC)
+├── PhysicalExtractor      # Hilbert, wavelet ridge, zero-crossing
+├── InformationalExtractor # Inter-event interval, queue depth
+└── SymbolicExtractor      # Ring mapping, graph embedding
+```
+
+Each extractor produces `list[PhaseState]` from raw signal + sample rate.
+Quality scoring is per-extractor (SNR-aware for P, regularity-aware for I,
+entropy-aware for S).
+
+### UPDE Engine Family
+
+```
+UPDEEngine              # Standard Kuramoto (Euler/RK4/RK45)
+├── rust: PyUPDEStepper # Rust-accelerated (auto-delegated when available)
+StuartLandauEngine      # Phase + amplitude (Hopf bifurcation)
+├── rust: PyStuartLandauStepper
+InertialKuramotoEngine  # 2nd-order swing equation (RK4)
+SwarmalatorEngine       # Spatial + phase coupling
+SimplicialEngine        # Higher-order 3-body interactions
+TorusEngine             # Geometric integrator on T^N
+DelayEngine             # Time-delayed coupling (ring buffer)
+StochasticInjector      # Euler-Maruyama noise layer (composable)
+OttAntonsenReduction    # O(1) mean-field (not a stepper, a predictor)
+```
+
+All engines share the interface: `step(phases, omegas, knm, ...) → new_phases`.
+The Rust kernel provides drop-in replacements for UPDEEngine and StuartLandauEngine.
+
+### Supervisor Stack
+
+```
+RegimeManager
+├── evaluate(UPDEState, BoundaryState) → Regime
+├── transition(Regime) → Regime  [with cooldown + hysteresis]
+└── force_transition(Regime)     [bypass safety]
+
+SupervisorPolicy
+├── PolicyRule[]                  [condition → action]
+└── PolicyEngine.decide()        [priority-ordered evaluation]
+
+PredictiveSupervisor (MPC)
+├── predict() → Prediction       [OA forward model]
+└── decide() → ControlAction[]   [pre-emptive action]
+
+PetriNetFSM
+├── Place[] + Transition[] + Arc[]
+├── Marking (token state)
+└── fire(transition)              [guarded token flow]
+```
+
+### SSGF Closure Loop
+
+```
+GeometryCarrier
+├── z (latent vector)
+├── decode(z) → W (coupling matrix via softplus decoder)
+└── update(cost, cost_fn) → SSGFState [finite-difference gradient on z]
+
+CyberneticClosure
+├── step(phases) → (W, ClosureState)
+│   1. decode current z → W_before
+│   2. compute SSGF costs (c1_sync, c2_spectral, c3_sparsity, c4_symmetry)
+│   3. gradient descent on z via cost_fn
+│   4. decode new z → W_after
+└── run(phases, n_steps) → (W_final, history)
+```
+
+### Monitor → Supervisor Data Flow
+
+```
+                     ┌─── BoundaryState ───┐
+                     │                     │
+phases, knm ──► Monitor Array             ▼
+                │                   RegimeManager
+                ├── R, psi              │
+                ├── chimera_index       ▼
+                ├── Lyapunov λ    SupervisorPolicy
+                ├── entropy_prod        │
+                ├── winding_num         ▼
+                ├── TE matrix     ControlAction[]
+                ├── NPE                 │
+                ├── ITPC                ▼
+                └── EVS           ActuationMapper
+                                        │
+                    UPDEState ◄──────────┘
+                        │          ActionProjector
+                        ▼          (rate limit + clamp)
+                  Audit Logger            │
+                  (SHA256 chain)          ▼
+                                    knm_new, zeta_new
+                                    (fed back to engine)
+```
+
 ## Deployment Targets
 
 - **CLI**: `spo run`, `spo validate`, `spo replay`, `spo scaffold`

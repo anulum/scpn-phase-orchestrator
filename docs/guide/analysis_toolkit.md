@@ -35,6 +35,10 @@ neighborhood coupling.
 Detects phase transitions that global R misses.
 
 ::: scpn_phase_orchestrator.monitor.chimera
+    options:
+      show_bases: false
+      show_source: false
+      members: false
 
 ## Entrainment Verification Score (EVS)
 
