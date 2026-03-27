@@ -36,10 +36,10 @@ class KuramotoLayer(eqx.Module):
 
     K: jax.Array
     omegas: jax.Array
-    mask: jax.Array | None = eqx.field(static=True, default=None)
     n_steps: int = eqx.field(static=True)
     dt: float = eqx.field(static=True)
     n: int = eqx.field(static=True)
+    mask: jax.Array | None = eqx.field(static=True, default=None)
 
     def __init__(
         self,

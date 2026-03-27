@@ -296,7 +296,7 @@ def _simplicial_deriv(
     phases: jax.Array,
     omegas: jax.Array,
     K: jax.Array,
-    sigma2: float,
+    sigma2: float | jax.Array,
 ) -> jax.Array:
     """Derivative for Kuramoto with pairwise + 3-body simplicial coupling.
 
@@ -320,7 +320,7 @@ def simplicial_step(
     omegas: jax.Array,
     K: jax.Array,
     dt: float,
-    sigma2: float = 0.0,
+    sigma2: float | jax.Array = 0.0,
 ) -> jax.Array:
     """Single Euler step of the simplicial (3-body) Kuramoto model.
 
@@ -346,7 +346,7 @@ def simplicial_rk4_step(
     omegas: jax.Array,
     K: jax.Array,
     dt: float,
-    sigma2: float = 0.0,
+    sigma2: float | jax.Array = 0.0,
 ) -> jax.Array:
     """Single RK4 step of the simplicial (3-body) Kuramoto model.
 
@@ -378,7 +378,7 @@ def simplicial_forward(
     K: jax.Array,
     dt: float,
     n_steps: int,
-    sigma2: float = 0.0,
+    sigma2: float | jax.Array = 0.0,
     method: str = "rk4",
 ) -> tuple[jax.Array, jax.Array]:
     """Run N steps of simplicial Kuramoto, returning final state and trajectory.

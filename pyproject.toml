@@ -150,14 +150,42 @@ module = [
     "scpn_phase_orchestrator.adapters.modbus_tls",
     "scpn_phase_orchestrator.adapters.hardware_io",
     "scpn_phase_orchestrator.adapters.redis_store",
+    "scpn_phase_orchestrator.adapters.opentelemetry",
+    "scpn_phase_orchestrator.adapters.neurocore_bridge",
+    "scpn_phase_orchestrator.adapters.quantum_control_bridge",
     "scpn_phase_orchestrator.coupling.connectome",
+    "scpn_phase_orchestrator.coupling.knm",
+    "scpn_phase_orchestrator.oscillators.physical",
     "scpn_phase_orchestrator.upde.prediction",
+    "scpn_phase_orchestrator.upde.engine",
+    "scpn_phase_orchestrator.upde.pac",
+    "scpn_phase_orchestrator.upde.stuart_landau",
+    "scpn_phase_orchestrator.upde.order_params",
 ]
 warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
+module = [
+    "spo_kernel",
+    "spo_kernel.*",
+    "redis",
+    "redis.*",
+    "opentelemetry",
+    "opentelemetry.*",
+    "sc_neurocore",
+    "sc_neurocore.*",
+    "scpn_quantum_control",
+    "scpn_quantum_control.*",
+    "optax",
+    "optax.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = ["scpn_phase_orchestrator.nn.*"]
 ignore_missing_imports = true
+disallow_untyped_defs = false
+warn_return_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

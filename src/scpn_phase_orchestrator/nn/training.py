@@ -45,7 +45,7 @@ def sync_loss(
     Returns:
         Scalar loss (R - target_R)^2
     """
-    final = model(phases)
+    final = model(phases)  # type: ignore[operator]
     R = order_parameter(final)
     return (R - target_R) ** 2
 
@@ -67,7 +67,7 @@ def trajectory_loss(
     Returns:
         Scalar mean circular distance
     """
-    _, predicted = model.forward_with_trajectory(phases)
+    _, predicted = model.forward_with_trajectory(phases)  # type: ignore[attr-defined]
     T = min(predicted.shape[0], observed.shape[0])
     pred = predicted[:T]
     obs = observed[:T]

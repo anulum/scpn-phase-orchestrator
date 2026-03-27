@@ -139,7 +139,7 @@ class NeurocoreBridge:
             return np.zeros(self._n_layers)
 
         spikes_2d = self._spike_counts.reshape(self._n_layers, self._n_per)
-        layer_spikes = spikes_2d.sum(axis=1)
+        layer_spikes: NDArray = spikes_2d.sum(axis=1)
         return layer_spikes / (self._n_per * duration_s)
 
     def _step_rust(self, layer_currents: NDArray, n_substeps: int) -> NDArray:
@@ -212,7 +212,8 @@ class NeurocoreBridge:
     def get_neuron_states(self) -> list[dict]:
         """Return voltage/refractory state for all neurons."""
         if self._backend == "rust":
-            return self._rust_ensemble.get_neuron_states()
+            states: list[dict] = self._rust_ensemble.get_neuron_states()
+            return states
         if self._backend == "numpy":
             return [
                 {"v": float(self._v[i]), "refractory": int(self._refractory[i])}
