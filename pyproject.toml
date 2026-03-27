@@ -197,6 +197,7 @@ asyncio_mode = "auto"
 markers = [
     "integration: end-to-end integration tests",
     "contract: boundary-contract verification tests",
+    "slow: long-running stress/scale tests (N>1000 or T>10000)",
 ]
 
 [tool.coverage.run]

@@ -24,6 +24,16 @@ NEW_PACKS = [
     "sleep_architecture",
     "musical_acoustics",
     "brain_connectome",
+    "autonomous_vehicles",
+    "chemical_reactor",
+    "circadian_biology",
+    "epidemic_sir",
+    "manufacturing_spc",
+    "network_security",
+    "pll_clock",
+    "satellite_constellation",
+    "swarm_robotics",
+    "traffic_flow",
 ]
 
 
