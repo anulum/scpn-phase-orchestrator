@@ -66,6 +66,13 @@ __all__ = [
     "reservoir_features",
     "reservoir_predict",
     "ridge_readout",
+    "sync_loss",
+    "trajectory_loss",
+    "coupling_sparsity_loss",
+    "train_step",
+    "train",
+    "generate_kuramoto_data",
+    "generate_chimera_data",
 ]
 
 _FUNCTIONAL = {
@@ -112,6 +119,15 @@ _RESERVOIR = {
 }
 _LAYERS = {"KuramotoLayer", "SimplicialKuramotoLayer", "StuartLandauLayer"}
 _UDE = {"UDEKuramotoLayer", "CouplingResidual"}
+_TRAINING = {
+    "sync_loss",
+    "trajectory_loss",
+    "coupling_sparsity_loss",
+    "train_step",
+    "train",
+    "generate_kuramoto_data",
+    "generate_chimera_data",
+}
 
 
 def __getattr__(name: str) -> object:  # noqa: ANN204
@@ -151,5 +167,9 @@ def __getattr__(name: str) -> object:  # noqa: ANN204
         from .ude import CouplingResidual, UDEKuramotoLayer
 
         return UDEKuramotoLayer if name == "UDEKuramotoLayer" else CouplingResidual
+    if name in _TRAINING:
+        from . import training
+
+        return getattr(training, name)
     msg = f"module 'scpn_phase_orchestrator.nn' has no attribute {name!r}"
     raise AttributeError(msg)
