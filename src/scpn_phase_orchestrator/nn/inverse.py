@@ -151,27 +151,34 @@ def analytical_inverse(
     # to handle 2π boundary crossings correctly
     raw_diff = observed[2:] - observed[:-2]
     dtheta_dt = jnp.arctan2(jnp.sin(raw_diff), jnp.cos(raw_diff)) / (2.0 * dt)
-    phases_mid = observed[1:-1]
+    phases_mid = observed[1:-1]  # (T_mid, N)
 
-    K = jnp.zeros((N, N))
-    omegas = jnp.zeros(N)
+    # Build 3D basis: B_all[i, t, j] = sin(θ_j(t) - θ_i(t))
+    # phases_mid[:, :, None] - phases_mid[:, None, :] → (T_mid, N, N)
+    # then transpose to (N, T_mid, N) for per-oscillator solve
+    diff_3d = phases_mid[:, jnp.newaxis, :] - phases_mid[:, :, jnp.newaxis]
+    B_all = jnp.sin(diff_3d).transpose(1, 0, 2)  # (N, T_mid, N)
+    targets = dtheta_dt.T  # (N, T_mid)
 
-    for i in range(N):
-        # Basis matrix: B[t, j] = sin(θ_j(t) - θ_i(t))
-        # Shape: (T_mid, N)
-        B = jnp.sin(phases_mid - phases_mid[:, i : i + 1])
-        target = dtheta_dt[:, i]
+    if alpha > 0:
+        eye_N = jnp.eye(N)
 
-        if alpha > 0:
-            # Tikhonov: (B^T B + α I) K_i = B^T target
-            BtB = B.T @ B + alpha * jnp.eye(N)
+        def _solve_tikhonov(B, target):
+            BtB = B.T @ B + alpha * eye_N
             Bty = B.T @ target
-            K_row = jnp.linalg.solve(BtB, Bty)
-        else:
-            K_row, _, _, _ = jnp.linalg.lstsq(B, target)
+            return jnp.linalg.solve(BtB, Bty)
 
-        K = K.at[i].set(K_row)
-        omegas = omegas.at[i].set(jnp.mean(target - B @ K_row))
+        K = jax.vmap(_solve_tikhonov)(B_all, targets)
+    else:
+
+        def _solve_lstsq(B, target):
+            K_row, _, _, _ = jnp.linalg.lstsq(B, target)
+            return K_row
+
+        K = jax.vmap(_solve_lstsq)(B_all, targets)
+
+    # Residual → natural frequencies
+    omegas = jnp.mean(targets - jnp.einsum("itj,ij->it", B_all, K), axis=1)
 
     K = _symmetrise_K(K)
     return K, omegas
