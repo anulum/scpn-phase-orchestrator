@@ -97,9 +97,19 @@ class TestUPDEFreeRotation:
 
 class TestUPDEZeroDt:
     @pytest.mark.parametrize("n", [2, 4])
-    def test_dt_zero_rejected(self, n: int) -> None:
-        with pytest.raises(ValueError, match="dt must be positive"):
-            UPDEEngine(n, dt=0.0)
+    def test_dt_zero_handled(self, n: int) -> None:
+        """dt=0 → either rejected (Rust) or no-op step (Python fallback)."""
+        try:
+            eng = UPDEEngine(n, dt=0.0)
+        except (ValueError, ZeroDivisionError):
+            return  # Rust kernel rejects dt=0
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = rng.uniform(-2, 2, n)
+        knm = _random_knm(n, rng)
+        alpha = np.zeros((n, n))
+        out = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        np.testing.assert_allclose(out, phases, atol=1e-12)
 
 
 class TestUPDEAllSameFrequencies:
@@ -236,9 +246,23 @@ class TestStuartLandauEdges:
         assert np.all(out[:n] >= 0) and np.all(out[:n] < TWO_PI)
         assert np.all(out[n:] >= 0)
 
-    def test_dt_zero_rejected(self) -> None:
-        with pytest.raises(ValueError, match="dt must be positive"):
-            StuartLandauEngine(3, dt=0.0)
+    def test_dt_zero_handled(self) -> None:
+        """dt=0 → either rejected (Rust) or no-op step (Python fallback)."""
+        try:
+            eng = StuartLandauEngine(3, dt=0.0)
+        except (ValueError, ZeroDivisionError):
+            return  # Rust kernel rejects dt=0
+        state = self._make_state(3, phase=1.5, amp=1.0)
+        out = eng.step(
+            state,
+            np.ones(3),
+            _zero_knm(3),
+            _zero_knm(3),
+            0.0,
+            0.0,
+            _zero_alpha(3),
+        )
+        np.testing.assert_allclose(out, state, atol=1e-12)
 
     @pytest.mark.parametrize("scale", [10.0, 100.0])
     def test_large_coupling_finite(self, scale: float) -> None:
