@@ -68,7 +68,9 @@ class TestEntropyProductionRate:
         assert epr < 1e-10
 
     def test_empty_phases_zero(self) -> None:
-        epr = entropy_production_rate(np.array([]), np.array([]), np.zeros((0, 0)), 1.0, 0.01)
+        epr = entropy_production_rate(
+            np.array([]), np.array([]), np.zeros((0, 0)), 1.0, 0.01
+        )
         assert epr == 0.0
 
     def test_zero_dt_zero(self) -> None:
@@ -231,7 +233,9 @@ class TestTEAdaptCoupling:
         n=st.integers(min_value=2, max_value=5),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_zero_diagonal(self, n: int, seed: int) -> None:
         """Output K_nm must have zero diagonal (no self-coupling)."""
         rng = np.random.default_rng(seed)
@@ -244,7 +248,9 @@ class TestTEAdaptCoupling:
         n=st.integers(min_value=2, max_value=5),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_nonnegative(self, n: int, seed: int) -> None:
         """Output K_nm ≥ 0 (clipped by np.maximum)."""
         rng = np.random.default_rng(seed)
@@ -257,7 +263,9 @@ class TestTEAdaptCoupling:
         n=st.integers(min_value=2, max_value=5),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_shape_preserved(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         knm = _connected_knm(n, seed=seed)
@@ -284,7 +292,9 @@ class TestTEAdaptCoupling:
         assert np.all(updated < 1e-12)
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_finite(self, seed: int) -> None:
         n = 3
         rng = np.random.default_rng(seed)

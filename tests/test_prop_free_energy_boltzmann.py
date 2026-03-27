@@ -12,11 +12,10 @@ effective temperature, Langevin noise, and SSGF cost terms.
 from __future__ import annotations
 
 import numpy as np
-import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
+from scpn_phase_orchestrator.ssgf.costs import compute_ssgf_costs
 from scpn_phase_orchestrator.ssgf.free_energy import (
     add_langevin_noise,
     boltzmann_weight,
@@ -38,7 +37,6 @@ def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
 
 
 class TestBoltzmannWeightInvariants:
-
     @given(
         u=st.floats(min_value=0, max_value=100),
         t=st.floats(min_value=0.01, max_value=100),
@@ -95,7 +93,6 @@ class TestBoltzmannWeightInvariants:
 
 
 class TestEffectiveTemperature:
-
     def test_constant_cost_zero(self) -> None:
         """No fluctuations → T_eff ≈ 0."""
         costs = np.full(50, 3.14)
@@ -135,7 +132,6 @@ class TestEffectiveTemperature:
 
 
 class TestLangevinNoise:
-
     @given(seed=st.integers(min_value=0, max_value=200))
     @settings(max_examples=30, deadline=None)
     def test_shape_preserved(self, seed: int) -> None:
@@ -179,7 +175,6 @@ class TestLangevinNoise:
 
 
 class TestSSGFCostInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),

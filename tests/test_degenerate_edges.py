@@ -29,6 +29,7 @@ TWO_PI = 2.0 * np.pi
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 
+
 def _zero_knm(n: int) -> np.ndarray:
     return np.zeros((n, n))
 
@@ -204,8 +205,14 @@ class TestStuartLandauEdges:
         eng = StuartLandauEngine(1, dt=0.01)
         state = self._make_state(1)
         out = eng.step(
-            state, np.array([1.0]), np.array([1.0]),
-            _zero_knm(1), _zero_knm(1), 0.0, 0.0, _zero_alpha(1),
+            state,
+            np.array([1.0]),
+            np.array([1.0]),
+            _zero_knm(1),
+            _zero_knm(1),
+            0.0,
+            0.0,
+            _zero_alpha(1),
         )
         assert out.shape == (2,)
         assert np.all(np.isfinite(out))
@@ -216,8 +223,14 @@ class TestStuartLandauEdges:
         state = self._make_state(n, amp=0.5)
         mu = np.ones(n) * 2.0
         out = eng.step(
-            state, _uniform_omegas(n), mu,
-            _zero_knm(n), _zero_knm(n), 0.0, 0.0, _zero_alpha(n),
+            state,
+            _uniform_omegas(n),
+            mu,
+            _zero_knm(n),
+            _zero_knm(n),
+            0.0,
+            0.0,
+            _zero_alpha(n),
         )
         assert np.all(np.isfinite(out))
         assert np.all(out[:n] >= 0) and np.all(out[:n] < TWO_PI)
@@ -235,8 +248,14 @@ class TestStuartLandauEdges:
         state = self._make_state(n, phase=1.5, amp=1.0)
         knm = _random_knm(n, rng) * scale
         out = eng.step(
-            state, _uniform_omegas(n), np.ones(n),
-            knm, knm, 0.0, 0.0, _zero_alpha(n),
+            state,
+            _uniform_omegas(n),
+            np.ones(n),
+            knm,
+            knm,
+            0.0,
+            0.0,
+            _zero_alpha(n),
         )
         assert np.all(np.isfinite(out))
 
@@ -283,7 +302,12 @@ class TestSimplicialEdges:
     def test_n1(self) -> None:
         eng = SimplicialEngine(1, dt=0.01, sigma2=1.0)
         out = eng.step(
-            np.array([1.0]), np.array([2.0]), _zero_knm(1), 0.0, 0.0, _zero_alpha(1),
+            np.array([1.0]),
+            np.array([2.0]),
+            _zero_knm(1),
+            0.0,
+            0.0,
+            _zero_alpha(1),
         )
         assert out.shape == (1,)
 
@@ -351,8 +375,12 @@ class TestInertialEdges:
         theta = np.zeros(n)
         omega_dot = np.zeros(n)
         new_theta, new_omega = eng.step(
-            theta, omega_dot, np.zeros(n), _zero_knm(n),
-            np.ones(n), np.ones(n),
+            theta,
+            omega_dot,
+            np.zeros(n),
+            _zero_knm(n),
+            np.ones(n),
+            np.ones(n),
         )
         np.testing.assert_allclose(new_theta, np.zeros(n), atol=1e-12)
         np.testing.assert_allclose(new_omega, np.zeros(n), atol=1e-12)
@@ -365,7 +393,12 @@ class TestInertialEdges:
         omega_dot = np.zeros(n)
         knm = _random_knm(n, rng) * 100.0
         new_theta, new_omega = eng.step(
-            theta, omega_dot, np.zeros(n), knm, np.ones(n), np.ones(n),
+            theta,
+            omega_dot,
+            np.zeros(n),
+            knm,
+            np.ones(n),
+            np.ones(n),
         )
         assert np.all(np.isfinite(new_theta))
         assert np.all(np.isfinite(new_omega))

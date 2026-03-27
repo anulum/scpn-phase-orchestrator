@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling.plasticity import (
@@ -37,7 +37,6 @@ def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
 
 
 class TestEligibilityInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=16),
         seed=st.integers(min_value=0, max_value=200),
@@ -100,7 +99,6 @@ class TestEligibilityInvariants:
 
 
 class TestThreeFactorUpdateInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
@@ -133,7 +131,9 @@ class TestThreeFactorUpdateInvariants:
     def test_shape_preserved(self, n: int, seed: int) -> None:
         knm = _connected_knm(n, seed=seed)
         elig = compute_eligibility(np.random.default_rng(seed).uniform(0, TWO_PI, n))
-        updated = three_factor_update(knm, elig, modulator=1.0, phase_gate=True, lr=0.01)
+        updated = three_factor_update(
+            knm, elig, modulator=1.0, phase_gate=True, lr=0.01
+        )
         assert updated.shape == knm.shape
 
     @given(
@@ -144,7 +144,9 @@ class TestThreeFactorUpdateInvariants:
     def test_finite(self, n: int, seed: int) -> None:
         knm = _connected_knm(n, seed=seed)
         elig = compute_eligibility(np.random.default_rng(seed).uniform(0, TWO_PI, n))
-        updated = three_factor_update(knm, elig, modulator=2.0, phase_gate=True, lr=0.05)
+        updated = three_factor_update(
+            knm, elig, modulator=2.0, phase_gate=True, lr=0.05
+        )
         assert np.all(np.isfinite(updated))
 
     @given(
@@ -164,7 +166,6 @@ class TestThreeFactorUpdateInvariants:
 
 
 class TestStochasticInjectorInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=16),
         seed=st.integers(min_value=0, max_value=200),

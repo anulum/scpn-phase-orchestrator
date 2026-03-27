@@ -56,8 +56,12 @@ TWO_PI = 2.0 * np.pi
 
 
 def _simulate_kuramoto(
-    n: int, knm: np.ndarray, omegas: np.ndarray,
-    n_steps: int = 500, dt: float = 0.01, seed: int = 42,
+    n: int,
+    knm: np.ndarray,
+    omegas: np.ndarray,
+    n_steps: int = 500,
+    dt: float = 0.01,
+    seed: int = 42,
 ) -> np.ndarray:
     """Run Kuramoto and return (n_steps+1, n) phase trajectory."""
     eng = UPDEEngine(n, dt=dt)
@@ -229,9 +233,7 @@ class TestProjectionRoundtrip:
     def test_projection_produces_valid_knm(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         raw = rng.uniform(-1, 2, (n, n))
-        projected = project_knm(
-            raw, [SymmetryConstraint(), NonNegativeConstraint()]
-        )
+        projected = project_knm(raw, [SymmetryConstraint(), NonNegativeConstraint()])
         np.fill_diagonal(projected, 0.0)
         validate_knm(projected)
 
@@ -332,7 +334,9 @@ class TestFreeRotationWinding:
         phases = np.array([0.0])
         traj = [phases.copy()]
         for _ in range(n_steps):
-            phases = eng.step(phases, np.array([omega]), np.zeros((1, 1)), 0.0, 0.0, np.zeros((1, 1)))
+            phases = eng.step(
+                phases, np.array([omega]), np.zeros((1, 1)), 0.0, 0.0, np.zeros((1, 1))
+            )
             traj.append(phases.copy())
         wn = winding_numbers(np.array(traj))
         assert wn[0] == expected

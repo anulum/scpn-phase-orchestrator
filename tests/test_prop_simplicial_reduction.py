@@ -32,12 +32,13 @@ def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
 
 
 class TestSimplicialReductionInvariants:
-
     @given(
         n=st.integers(min_value=3, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=50, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_sigma2_zero_matches_upde(self, n: int, seed: int) -> None:
         """σ₂=0 must produce identical output to standard Kuramoto."""
         rng = np.random.default_rng(seed)
@@ -55,7 +56,9 @@ class TestSimplicialReductionInvariants:
         n=st.integers(min_value=3, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_output_finite(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, TWO_PI, n)
@@ -70,7 +73,9 @@ class TestSimplicialReductionInvariants:
         n=st.integers(min_value=3, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_output_length_n(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, TWO_PI, n)

@@ -56,7 +56,9 @@ class TestLyapunovSpectrumInvariants:
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=60, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=60, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_length_equals_n(self, n: int, seed: int) -> None:
         """Spectrum must have exactly N exponents."""
         rng = np.random.default_rng(seed)
@@ -71,7 +73,9 @@ class TestLyapunovSpectrumInvariants:
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=60, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=60, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_sorted_descending(self, n: int, seed: int) -> None:
         """Spectrum must be returned in descending order."""
         rng = np.random.default_rng(seed)
@@ -87,7 +91,9 @@ class TestLyapunovSpectrumInvariants:
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=60, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=60, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_all_finite(self, n: int, seed: int) -> None:
         """All exponents must be finite."""
         rng = np.random.default_rng(seed)
@@ -99,7 +105,9 @@ class TestLyapunovSpectrumInvariants:
         assert np.all(np.isfinite(spec))
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_zero_coupling_near_zero(self, seed: int) -> None:
         """Zero coupling → free rotation → all exponents ≈ 0."""
         n = 4
@@ -108,11 +116,15 @@ class TestLyapunovSpectrumInvariants:
         omegas = rng.uniform(-2, 2, n)
         knm = np.zeros((n, n))
         alpha = np.zeros((n, n))
-        spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=500, qr_interval=10)
+        spec = lyapunov_spectrum(
+            phases, omegas, knm, alpha, n_steps=500, qr_interval=10
+        )
         assert np.all(np.abs(spec) < 1.0)
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_strong_coupling_has_negative(self, seed: int) -> None:
         """Strong coupling synchronises → at least one negative exponent."""
         n = 4
@@ -121,7 +133,9 @@ class TestLyapunovSpectrumInvariants:
         omegas = rng.uniform(-0.5, 0.5, n)
         knm = _connected_knm(n, strength=10.0, seed=seed)
         alpha = np.zeros((n, n))
-        spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=500, qr_interval=10)
+        spec = lyapunov_spectrum(
+            phases, omegas, knm, alpha, n_steps=500, qr_interval=10
+        )
         assert np.min(spec) < 0.0
 
 
@@ -433,7 +447,9 @@ class TestSpectrumToDKYConsistency:
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, strength=strength)
         alpha = np.zeros((n, n))
-        spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=300, qr_interval=10)
+        spec = lyapunov_spectrum(
+            phases, omegas, knm, alpha, n_steps=300, qr_interval=10
+        )
         dky = kaplan_yorke_dimension(spec)
         assert 0.0 <= dky <= n
         assert np.isfinite(dky)

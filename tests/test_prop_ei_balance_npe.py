@@ -36,7 +36,6 @@ def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
 
 
 class TestPhaseDistanceMatrix:
-
     @given(
         n=st.integers(min_value=2, max_value=16),
         seed=st.integers(min_value=0, max_value=200),
@@ -69,14 +68,13 @@ class TestPhaseDistanceMatrix:
         phases = rng.uniform(0, TWO_PI, n)
         D = phase_distance_matrix(phases)
         assert np.all(D >= -1e-12)
-        assert np.all(D <= np.pi + 1e-12)
+        assert np.all(np.pi + 1e-12 >= D)
 
 
 # ── 2. NPE ──────────────────────────────────────────────────────────────
 
 
 class TestNPEInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=16),
         seed=st.integers(min_value=0, max_value=200),
@@ -122,7 +120,6 @@ class TestNPEInvariants:
 
 
 class TestEIBalanceInvariants:
-
     @given(
         n=st.integers(min_value=4, max_value=12),
         seed=st.integers(min_value=0, max_value=200),

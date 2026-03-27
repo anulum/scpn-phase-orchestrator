@@ -14,8 +14,7 @@ Mathematical invariants from Eckmann et al. 1987, Marwan et al. 2007.
 from __future__ import annotations
 
 import numpy as np
-import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor.recurrence import (
@@ -204,7 +203,6 @@ class TestRQABounds:
 
 
 class TestRQALimits:
-
     def test_constant_trajectory_rr_high(self) -> None:
         """All points identical → RR = 1 (after diagonal exclusion, all recur)."""
         traj = np.ones((10, 2))
@@ -228,7 +226,6 @@ class TestRQALimits:
 
 
 class TestCrossRecurrenceInvariants:
-
     @given(
         t=st.integers(min_value=3, max_value=20),
         seed=st.integers(min_value=0, max_value=200),
@@ -273,7 +270,6 @@ class TestCrossRecurrenceInvariants:
 
 
 class TestCrossRQABounds:
-
     @given(
         t=st.integers(min_value=5, max_value=20),
         seed=st.integers(min_value=0, max_value=200),

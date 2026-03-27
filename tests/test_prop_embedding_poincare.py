@@ -25,12 +25,10 @@ from scpn_phase_orchestrator.monitor.embedding import (
     optimal_dimension,
 )
 
-
 # ── 1. delay_embed shape invariant ──────────────────────────────────────
 
 
 class TestDelayEmbedInvariants:
-
     @given(
         delay=st.integers(min_value=1, max_value=5),
         dim=st.integers(min_value=1, max_value=5),
@@ -81,7 +79,6 @@ class TestDelayEmbedInvariants:
 
 
 class TestOptimalDelay:
-
     @given(seed=st.integers(min_value=0, max_value=200))
     @settings(max_examples=30, deadline=None)
     def test_at_least_one(self, seed: int) -> None:
@@ -118,9 +115,10 @@ class TestOptimalDelay:
 
 
 class TestOptimalDimension:
-
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_at_least_one(self, seed: int) -> None:
         rng = np.random.default_rng(seed)
         signal = rng.standard_normal(200)
@@ -128,7 +126,9 @@ class TestOptimalDimension:
         assert m >= 1
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_at_most_max_dim(self, seed: int) -> None:
         rng = np.random.default_rng(seed)
         signal = rng.standard_normal(200)
@@ -153,9 +153,10 @@ class TestOptimalDimension:
 
 
 class TestAutoEmbed:
-
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=15, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_result_fields(self, seed: int) -> None:
         rng = np.random.default_rng(seed)
         signal = rng.standard_normal(300)
@@ -167,7 +168,9 @@ class TestAutoEmbed:
         assert result.trajectory.shape == (T_eff, result.dimension)
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=15, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=15, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_all_finite(self, seed: int) -> None:
         rng = np.random.default_rng(seed)
         signal = rng.standard_normal(300)

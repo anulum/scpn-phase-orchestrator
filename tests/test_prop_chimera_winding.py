@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.monitor.chimera import ChimeraState, detect_chimera
+from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
 
 TWO_PI = 2.0 * np.pi
@@ -36,7 +36,6 @@ def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
 
 
 class TestChimeraInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=16),
         seed=st.integers(min_value=0, max_value=200),
@@ -136,7 +135,6 @@ class TestChimeraInvariants:
 
 
 class TestWindingNumberInvariants:
-
     @given(
         n=st.integers(min_value=1, max_value=8),
         t=st.integers(min_value=10, max_value=50),

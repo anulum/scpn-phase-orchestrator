@@ -34,12 +34,13 @@ def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
 
 
 class TestSwarmalatorInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_output_finite(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         eng = SwarmalatorEngine(n, dim=2, dt=0.01)
@@ -54,7 +55,9 @@ class TestSwarmalatorInvariants:
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_output_shapes(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         eng = SwarmalatorEngine(n, dim=2, dt=0.01)
@@ -66,7 +69,9 @@ class TestSwarmalatorInvariants:
         assert new_pos.shape == (n, 2)
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_j_zero_phase_independent_of_position(self, seed: int) -> None:
         """J=0 → phase dynamics don't depend on spatial positions."""
         n = 4
@@ -86,12 +91,13 @@ class TestSwarmalatorInvariants:
 
 
 class TestInertialKuramotoInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_output_finite(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         eng = InertialKuramotoEngine(n, dt=0.01)
@@ -109,7 +115,9 @@ class TestInertialKuramotoInvariants:
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_output_shapes(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         eng = InertialKuramotoEngine(n, dt=0.01)
@@ -124,7 +132,9 @@ class TestInertialKuramotoInvariants:
         assert new_omega.shape == (n,)
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_zero_coupling_evolves(self, seed: int) -> None:
         """K=0 → free swing: angles advance under power/damping."""
         n = 3

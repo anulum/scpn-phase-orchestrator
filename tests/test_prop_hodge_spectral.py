@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling.hodge import hodge_decomposition
@@ -202,7 +202,6 @@ class TestFiedlerVectorPartition:
 
 
 class TestSpectralGapInvariants:
-
     @given(
         n=st.integers(min_value=3, max_value=10),
         seed=st.integers(min_value=0, max_value=200),
@@ -239,7 +238,6 @@ class TestSpectralGapInvariants:
 
 
 class TestCriticalCouplingInvariants:
-
     @given(
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
@@ -282,7 +280,6 @@ class TestCriticalCouplingInvariants:
 
 
 class TestSyncConvergenceRate:
-
     @given(
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=200),
@@ -321,7 +318,9 @@ class TestHodgeDecompositionInvariants:
         phases = rng.uniform(0, TWO_PI, n)
         knm = _asymmetric_knm(n, seed=seed)
         res = hodge_decomposition(knm, phases)
-        total = np.sum(knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]), axis=1)
+        total = np.sum(
+            knm * np.cos(phases[np.newaxis, :] - phases[:, np.newaxis]), axis=1
+        )
         np.testing.assert_allclose(
             res.gradient + res.curl + res.harmonic, total, atol=1e-10
         )

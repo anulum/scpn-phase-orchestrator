@@ -46,13 +46,20 @@ class TestBasinStabilityBounds:
         strength=st.floats(min_value=0.0, max_value=10.0),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_sb_in_unit_interval(self, n: int, strength: float, seed: int) -> None:
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, strength=strength, seed=seed)
         result = basin_stability(
-            omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=seed,
+            omegas,
+            knm,
+            n_samples=20,
+            n_transient=100,
+            n_measure=50,
+            seed=seed,
         )
         assert 0.0 <= result.S_B <= 1.0
 
@@ -60,13 +67,20 @@ class TestBasinStabilityBounds:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_n_converged_leq_n_samples(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
         result = basin_stability(
-            omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=seed,
+            omegas,
+            knm,
+            n_samples=20,
+            n_transient=100,
+            n_measure=50,
+            seed=seed,
         )
         assert result.n_converged <= result.n_samples
 
@@ -74,14 +88,21 @@ class TestBasinStabilityBounds:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_sb_equals_ratio(self, n: int, seed: int) -> None:
         """S_B must equal n_converged / n_samples exactly."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
         result = basin_stability(
-            omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=seed,
+            omegas,
+            knm,
+            n_samples=20,
+            n_transient=100,
+            n_measure=50,
+            seed=seed,
         )
         assert abs(result.S_B - result.n_converged / result.n_samples) < 1e-15
 
@@ -89,14 +110,21 @@ class TestBasinStabilityBounds:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_r_final_shape(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
         n_samp = 15
         result = basin_stability(
-            omegas, knm, n_samples=n_samp, n_transient=100, n_measure=50, seed=seed,
+            omegas,
+            knm,
+            n_samples=n_samp,
+            n_transient=100,
+            n_measure=50,
+            seed=seed,
         )
         assert result.R_final.shape == (n_samp,)
 
@@ -104,14 +132,21 @@ class TestBasinStabilityBounds:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_r_final_bounded(self, n: int, seed: int) -> None:
         """R ∈ [0, 1] for all trials."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
         result = basin_stability(
-            omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=seed,
+            omegas,
+            knm,
+            n_samples=20,
+            n_transient=100,
+            n_measure=50,
+            seed=seed,
         )
         assert np.all(result.R_final >= -1e-12)
         assert np.all(result.R_final <= 1.0 + 1e-12)
@@ -129,7 +164,11 @@ class TestBasinStabilityPhysics:
         omegas = np.zeros(n)
         knm = _connected_knm(n, strength=20.0)
         result = basin_stability(
-            omegas, knm, n_samples=30, n_transient=300, n_measure=100,
+            omegas,
+            knm,
+            n_samples=30,
+            n_transient=300,
+            n_measure=100,
         )
         assert result.S_B > 0.8
 
@@ -139,19 +178,30 @@ class TestBasinStabilityPhysics:
         omegas = np.linspace(-3, 3, n)
         knm = np.zeros((n, n))
         result = basin_stability(
-            omegas, knm, n_samples=30, n_transient=200, n_measure=100,
+            omegas,
+            knm,
+            n_samples=30,
+            n_transient=200,
+            n_measure=100,
         )
         assert result.S_B < 0.5
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_identical_freqs_high_sb(self, seed: int) -> None:
         """Identical frequencies always sync (any connected K)."""
         n = 4
         omegas = np.full(n, 2.0)
         knm = _connected_knm(n, strength=5.0, seed=seed)
         result = basin_stability(
-            omegas, knm, n_samples=20, n_transient=200, n_measure=100, seed=seed,
+            omegas,
+            knm,
+            n_samples=20,
+            n_transient=200,
+            n_measure=100,
+            seed=seed,
         )
         assert result.S_B > 0.6
 
@@ -160,8 +210,12 @@ class TestBasinStabilityPhysics:
         n = 4
         omegas = np.array([1.0, 1.5, 2.0, 2.5])
         knm = _connected_knm(n, strength=3.0)
-        r1 = basin_stability(omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=99)
-        r2 = basin_stability(omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=99)
+        r1 = basin_stability(
+            omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=99
+        )
+        r2 = basin_stability(
+            omegas, knm, n_samples=20, n_transient=100, n_measure=50, seed=99
+        )
         np.testing.assert_array_equal(r1.R_final, r2.R_final)
         assert r1.S_B == r2.S_B
 
@@ -178,15 +232,22 @@ class TestMultiBasinMonotonicity:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_monotonic_thresholds(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, strength=3.0, seed=seed)
         thresholds = (0.2, 0.4, 0.6, 0.8, 0.95)
         results = multi_basin_stability(
-            omegas, knm, n_samples=20, n_transient=100, n_measure=50,
-            R_thresholds=thresholds, seed=seed,
+            omegas,
+            knm,
+            n_samples=20,
+            n_transient=100,
+            n_measure=50,
+            R_thresholds=thresholds,
+            seed=seed,
         )
         sb_values = [results[f"R>={t:.2f}"].S_B for t in thresholds]
         for i in range(len(sb_values) - 1):
@@ -196,15 +257,22 @@ class TestMultiBasinMonotonicity:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_multi_returns_all_thresholds(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
         thresholds = (0.3, 0.6, 0.9)
         results = multi_basin_stability(
-            omegas, knm, n_samples=15, n_transient=80, n_measure=40,
-            R_thresholds=thresholds, seed=seed,
+            omegas,
+            knm,
+            n_samples=15,
+            n_transient=80,
+            n_measure=40,
+            R_thresholds=thresholds,
+            seed=seed,
         )
         for t in thresholds:
             key = f"R>={t:.2f}"
@@ -215,13 +283,20 @@ class TestMultiBasinMonotonicity:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_multi_all_sb_bounded(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
         results = multi_basin_stability(
-            omegas, knm, n_samples=15, n_transient=80, n_measure=40, seed=seed,
+            omegas,
+            knm,
+            n_samples=15,
+            n_transient=80,
+            n_measure=40,
+            seed=seed,
         )
         for result in results.values():
             assert 0.0 <= result.S_B <= 1.0
@@ -231,14 +306,21 @@ class TestMultiBasinMonotonicity:
         n=st.integers(min_value=2, max_value=6),
         seed=st.integers(min_value=0, max_value=200),
     )
-    @settings(max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_multi_shared_r_final(self, n: int, seed: int) -> None:
         """All thresholds see the same R_final (same simulation runs)."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
         results = multi_basin_stability(
-            omegas, knm, n_samples=15, n_transient=80, n_measure=40, seed=seed,
+            omegas,
+            knm,
+            n_samples=15,
+            n_transient=80,
+            n_measure=40,
+            seed=seed,
         )
         r_arrays = [r.R_final for r in results.values()]
         for r in r_arrays[1:]:
@@ -257,7 +339,11 @@ class TestCustomThreshold:
         omegas = np.ones(n)
         knm = _connected_knm(n)
         result = basin_stability(
-            omegas, knm, n_samples=10, n_transient=50, n_measure=30,
+            omegas,
+            knm,
+            n_samples=10,
+            n_transient=50,
+            n_measure=30,
             R_threshold=thresh,
         )
         assert result.R_threshold == thresh
@@ -268,11 +354,19 @@ class TestCustomThreshold:
         omegas = np.array([1.0, 1.2, 1.5, 2.0])
         knm = _connected_knm(n, strength=3.0)
         r_low = basin_stability(
-            omegas, knm, n_samples=30, n_transient=200, n_measure=100,
+            omegas,
+            knm,
+            n_samples=30,
+            n_transient=200,
+            n_measure=100,
             R_threshold=0.3,
         )
         r_high = basin_stability(
-            omegas, knm, n_samples=30, n_transient=200, n_measure=100,
+            omegas,
+            knm,
+            n_samples=30,
+            n_transient=200,
+            n_measure=100,
             R_threshold=0.9,
         )
         assert r_low.n_converged >= r_high.n_converged
@@ -290,17 +384,29 @@ class TestPhaseLagEffects:
         omegas = np.array([1.0, 1.5, 2.0, 2.5])
         knm = _connected_knm(n, strength=5.0)
         r_none = basin_stability(
-            omegas, knm, alpha=None, n_samples=20,
-            n_transient=100, n_measure=50, seed=42,
+            omegas,
+            knm,
+            alpha=None,
+            n_samples=20,
+            n_transient=100,
+            n_measure=50,
+            seed=42,
         )
         r_zero = basin_stability(
-            omegas, knm, alpha=np.zeros((n, n)), n_samples=20,
-            n_transient=100, n_measure=50, seed=42,
+            omegas,
+            knm,
+            alpha=np.zeros((n, n)),
+            n_samples=20,
+            n_transient=100,
+            n_measure=50,
+            seed=42,
         )
         np.testing.assert_array_equal(r_none.R_final, r_zero.R_final)
 
     @given(seed=st.integers(min_value=0, max_value=100))
-    @settings(max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+    @settings(
+        max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
+    )
     def test_alpha_results_bounded(self, seed: int) -> None:
         """With arbitrary alpha, S_B still ∈ [0, 1]."""
         n = 3
@@ -309,7 +415,12 @@ class TestPhaseLagEffects:
         knm = _connected_knm(n, seed=seed)
         alpha = rng.uniform(-np.pi, np.pi, (n, n))
         result = basin_stability(
-            omegas, knm, alpha=alpha, n_samples=15,
-            n_transient=80, n_measure=40, seed=seed,
+            omegas,
+            knm,
+            alpha=alpha,
+            n_samples=15,
+            n_transient=80,
+            n_measure=40,
+            seed=seed,
         )
         assert 0.0 <= result.S_B <= 1.0
