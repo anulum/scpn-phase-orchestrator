@@ -146,8 +146,16 @@ def bench_kuramoto_layer_forward(sizes: list[int] | None = None) -> dict:
             layer = KuramotoLayer(N, dt=0.01, key=key)
             phases = jr.uniform(key, (N,), minval=0, maxval=2 * jnp.pi)
 
-            # Warmup (JIT compilation)
-            _ = layer(phases)
+            # JIT compilation timing
+            t_jit0 = time.perf_counter()
+            out = layer(phases)
+            jax.block_until_ready(out)
+            jit_time = time.perf_counter() - t_jit0
+
+            # 4 more warmup calls
+            for _ in range(4):
+                out = layer(phases)
+            jax.block_until_ready(out)
 
             # Timed runs
             n_runs = 100
@@ -159,11 +167,13 @@ def bench_kuramoto_layer_forward(sizes: list[int] | None = None) -> dict:
 
             results[str(N)] = {
                 "n_oscillators": N,
+                "jit_compile_ms": round(jit_time * 1000, 2),
                 "mean_step_us": round(elapsed / n_runs * 1e6, 2),
                 "steps_per_sec": round(n_runs / elapsed, 1),
                 "status": "ok",
             }
-            print(f"  KuramotoLayer N={N}: {elapsed / n_runs * 1e6:.1f} us/step")
+            us = elapsed / n_runs * 1e6
+            print(f"  KuramotoLayer N={N}: JIT={jit_time * 1000:.0f}ms, {us:.1f}us")
         except Exception as e:
             results[str(N)] = {"n_oscillators": N, "status": "error", "error": str(e)}
             print(f"  KuramotoLayer N={N}: ERROR {e}")
@@ -463,6 +473,169 @@ def bench_batched_kuramoto() -> dict:
     return results
 
 
+def bench_analytical_inverse(sizes: list[int] | None = None) -> dict:
+    """Benchmark analytical vs gradient inverse coupling."""
+    import jax
+    import jax.numpy as jnp
+    import jax.random as jr
+
+    from scpn_phase_orchestrator.nn.functional import kuramoto_forward
+    from scpn_phase_orchestrator.nn.inverse import (
+        analytical_inverse,
+        coupling_correlation,
+        infer_coupling,
+    )
+
+    if sizes is None:
+        sizes = [4, 8, 16, 32]
+
+    results = {}
+    for N in sizes:
+        try:
+            key = jr.PRNGKey(42)
+            k1, k2 = jr.split(key, 2)
+            K_true = jr.normal(k1, (N, N)) * 0.3
+            K_true = (K_true + K_true.T) / 2
+            K_true = K_true.at[jnp.diag_indices(N)].set(0.0)
+            omegas_true = jnp.zeros(N)
+            p0 = jr.uniform(k2, (N,), maxval=2 * jnp.pi)
+            _, traj = kuramoto_forward(p0, omegas_true, K_true, 0.01, 200)
+            observed = jnp.concatenate([p0[jnp.newaxis, :], traj], axis=0)
+
+            # Analytical
+            t0 = time.perf_counter()
+            K_a, _ = analytical_inverse(observed, 0.01)
+            jax.block_until_ready(K_a)
+            t_analytical = time.perf_counter() - t0
+            corr_a = float(coupling_correlation(K_true, K_a))
+
+            # Gradient (shorter for speed)
+            t0 = time.perf_counter()
+            K_g, _, _ = infer_coupling(
+                traj,
+                0.01,
+                n_epochs=200,
+                lr=0.005,
+                l1_weight=0.0,
+            )
+            jax.block_until_ready(K_g)
+            t_gradient = time.perf_counter() - t0
+            corr_g = float(coupling_correlation(K_true, K_g))
+
+            results[str(N)] = {
+                "n_oscillators": N,
+                "analytical_corr": round(corr_a, 4),
+                "analytical_time_s": round(t_analytical, 3),
+                "gradient_corr": round(corr_g, 4),
+                "gradient_time_s": round(t_gradient, 3),
+                "speedup": round(t_gradient / max(t_analytical, 0.001), 1),
+                "status": "ok",
+            }
+            print(
+                f"  Inverse N={N}: analytical={corr_a:.3f}/{t_analytical:.2f}s"
+                f" gradient={corr_g:.3f}/{t_gradient:.2f}s"
+            )
+        except Exception as e:
+            results[str(N)] = {"n_oscillators": N, "status": "error", "error": str(e)}
+            print(f"  Inverse N={N}: ERROR {e}")
+
+    return results
+
+
+def bench_oim_solve() -> dict:
+    """Benchmark OIM solver on standard graphs."""
+    import jax.numpy as jnp
+    import jax.random as jr
+
+    from scpn_phase_orchestrator.nn.oim import coloring_violations, oim_solve
+
+    results = {}
+
+    # K3 triangle, 3-color
+    A3 = jnp.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=jnp.float32)
+
+    # K33 bipartite, 2-color
+    A6 = jnp.zeros((6, 6))
+    for i in range(3):
+        for j in range(3, 6):
+            A6 = A6.at[i, j].set(1.0)
+            A6 = A6.at[j, i].set(1.0)
+
+    for label, adj, nc in [("K3_3color", A3, 3), ("K33_2color", A6, 2)]:
+        try:
+            key = jr.PRNGKey(42)
+            t0 = time.perf_counter()
+            colors, _, energy = oim_solve(adj, nc, key=key)
+            elapsed = time.perf_counter() - t0
+            v = int(coloring_violations(colors, adj))
+
+            results[label] = {
+                "n_nodes": int(adj.shape[0]),
+                "n_colors": nc,
+                "violations": v,
+                "energy": round(energy, 4),
+                "time_s": round(elapsed, 3),
+                "status": "ok",
+            }
+            print(f"  OIM {label}: {v} violations in {elapsed:.2f}s")
+        except Exception as e:
+            results[label] = {"status": "error", "error": str(e)}
+            print(f"  OIM {label}: ERROR {e}")
+
+    return results
+
+
+def bench_simplicial_layer(sizes: list[int] | None = None) -> dict:
+    """Benchmark SimplicialKuramotoLayer forward pass."""
+    import jax
+    import jax.numpy as jnp
+    import jax.random as jr
+
+    from scpn_phase_orchestrator.nn.simplicial_layer import SimplicialKuramotoLayer
+
+    if sizes is None:
+        sizes = [8, 16, 32, 64, 128, 256]
+
+    results = {}
+    for N in sizes:
+        try:
+            key = jr.PRNGKey(42)
+            layer = SimplicialKuramotoLayer(N, dt=0.01, sigma2_init=1.0, key=key)
+            phases = jr.uniform(key, (N,), minval=0, maxval=2 * jnp.pi)
+
+            # JIT compile
+            t_jit0 = time.perf_counter()
+            out = layer(phases)
+            jax.block_until_ready(out)
+            jit_time = time.perf_counter() - t_jit0
+
+            for _ in range(4):
+                out = layer(phases)
+            jax.block_until_ready(out)
+
+            n_runs = 100
+            t0 = time.perf_counter()
+            for _ in range(n_runs):
+                phases = layer(phases)
+            jax.block_until_ready(phases)
+            elapsed = time.perf_counter() - t0
+
+            results[str(N)] = {
+                "n_oscillators": N,
+                "jit_compile_ms": round(jit_time * 1000, 2),
+                "mean_step_us": round(elapsed / n_runs * 1e6, 2),
+                "steps_per_sec": round(n_runs / elapsed, 1),
+                "status": "ok",
+            }
+            us = elapsed / n_runs * 1e6
+            print(f"  SimplicialLayer N={N}: JIT={jit_time * 1000:.0f}ms, {us:.1f}us")
+        except Exception as e:
+            results[str(N)] = {"n_oscillators": N, "status": "error", "error": str(e)}
+            print(f"  SimplicialLayer N={N}: ERROR {e}")
+
+    return results
+
+
 # ──────────────────────────────────────────────────
 # Main runner with checkpoint/resume
 # ──────────────────────────────────────────────────
@@ -470,8 +643,11 @@ def bench_batched_kuramoto() -> dict:
 BENCHMARKS = [
     ("kuramoto_forward", bench_kuramoto_layer_forward),
     ("stuart_landau_forward", bench_stuart_landau_layer_forward),
+    ("simplicial_forward", bench_simplicial_layer),
     ("inverse_coupling", bench_inverse_coupling),
+    ("analytical_inverse", bench_analytical_inverse),
     ("oim_coloring", bench_oim_coloring),
+    ("oim_solve", bench_oim_solve),
     ("jax_vs_numpy", bench_jax_engine_scaling),
     ("batched_kuramoto", bench_batched_kuramoto),
 ]
