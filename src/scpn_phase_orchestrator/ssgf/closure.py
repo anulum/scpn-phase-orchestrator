@@ -73,6 +73,7 @@ class CyberneticClosure:
         costs_before = compute_ssgf_costs(W_before, phases, weights=self._weights)
 
         def cost_fn(W: NDArray) -> float:
+            """Total SSGF cost for the given weight matrix and current phases."""
             return compute_ssgf_costs(W, phases, weights=self._weights).u_total
 
         self._carrier.update(cost=costs_before.u_total, cost_fn=cost_fn)

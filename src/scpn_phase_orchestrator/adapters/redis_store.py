@@ -61,4 +61,5 @@ class RedisStateStore:
 
     @property
     def key(self) -> str:
+        """Redis key used for state storage."""
         return self._key

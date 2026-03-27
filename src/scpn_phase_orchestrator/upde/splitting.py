@@ -47,6 +47,7 @@ class SplittingEngine:
         psi: float,
         alpha: NDArray,
     ) -> NDArray:
+        """One Strang-split step: A(dt/2) -> B(dt) -> A(dt/2)."""
         dt = self._dt
         # A(dt/2): exact rotation
         p = (phases + 0.5 * dt * omegas) % TWO_PI
@@ -65,6 +66,7 @@ class SplittingEngine:
         alpha: NDArray,
         n_steps: int,
     ) -> NDArray:
+        """Run n_steps of Strang splitting and return final phases."""
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

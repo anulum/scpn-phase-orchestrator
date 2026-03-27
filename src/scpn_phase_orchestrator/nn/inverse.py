@@ -89,6 +89,7 @@ def _shooting_loss(
     """
 
     def window_error(start, target):
+        """Phase prediction error for a single shooting window."""
         _, predicted = kuramoto_forward(start, omegas, K, dt, window_size)
         return jnp.mean(1.0 - jnp.cos(target - predicted))
 
@@ -217,6 +218,7 @@ def hybrid_inverse(
     starts, targets = _build_windows(observed, window_size)
 
     def loss_fn(k, o):
+        """Shooting loss for refinement step."""
         return _shooting_loss(k, o, starts, targets, dt, window_size, 0.0)
 
     loss_and_grad = jax.value_and_grad(loss_fn, argnums=(0, 1))
@@ -301,10 +303,12 @@ def infer_coupling(
         starts, targets = _build_windows(observed, window_size)
 
         def loss_fn(k, o):
+            """Multiple-shooting loss with L1 penalty."""
             return _shooting_loss(k, o, starts, targets, dt, window_size, l1_weight)
     else:
 
         def loss_fn(k, o):
+            """Single-shot inverse loss with L1 penalty."""
             return inverse_loss(k, o, observed, dt, l1_weight)
 
     loss_and_grad = jax.value_and_grad(loss_fn, argnums=(0, 1))

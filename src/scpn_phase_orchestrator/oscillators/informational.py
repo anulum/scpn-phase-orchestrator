@@ -85,6 +85,7 @@ class InformationalExtractor(PhaseExtractor):
         ]
 
     def quality_score(self, phase_states: list[PhaseState]) -> float:
+        """Mean interval-regularity quality across phase states."""
         if not phase_states:
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))

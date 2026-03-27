@@ -17,6 +17,8 @@ __all__ = ["Anomaly", "AnomalyDetector"]
 
 @dataclass(frozen=True)
 class Anomaly:
+    """A detected anomaly: retry storm, cascade propagation, or chronic degradation."""
+
     type: str  # retry_storm_forming | cascade_propagation | chronic_degradation
     severity: str  # warning | critical
     service: str
@@ -37,6 +39,7 @@ class AnomalyDetector:
         self._t = thresholds
 
     def detect(self, snap: PipelineSnapshot) -> list[Anomaly]:
+        """Run all anomaly checks against a pipeline snapshot."""
         anomalies: list[Anomaly] = []
         anomalies.extend(self._check_retry_storm(snap))
         anomalies.extend(self._check_cascade(snap))

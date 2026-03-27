@@ -34,17 +34,21 @@ class MetricBuffer:
         self._buf: deque[tuple[float, float]] = deque(maxlen=maxlen)
 
     def push(self, timestamp: float, value: float) -> None:
+        """Append a (timestamp, value) pair to the ring buffer."""
         self._buf.append((timestamp, value))
 
     @property
     def ready(self) -> bool:
+        """True when at least 4 samples are buffered (minimum for phase extraction)."""
         return len(self._buf) >= 4
 
     @property
     def full(self) -> bool:
+        """True when the buffer has reached maximum capacity."""
         return len(self._buf) >= self._maxlen
 
     def values_array(self) -> NDArray:
+        """Return buffered values as a float64 array (timestamps excluded)."""
         return np.array([v for _, v in self._buf], dtype=np.float64)
 
     def __len__(self) -> int:
@@ -72,6 +76,7 @@ class PrometheusCollector:
 
     @property
     def buffers(self) -> dict[str, MetricBuffer]:
+        """Per-service metric ring buffers keyed by service name."""
         return self._buffers
 
     async def _get_client(self) -> Any:
@@ -82,6 +87,7 @@ class PrometheusCollector:
         return self._client
 
     async def close(self) -> None:
+        """Close the underlying HTTP client."""
         if self._client is not None:
             await self._client.aclose()
             self._client = None

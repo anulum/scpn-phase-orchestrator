@@ -5,23 +5,26 @@ import grpc
 
 from . import spo_pb2 as spo__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = "1.78.0"
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
 try:
     from grpc._utilities import first_version_is_lower
-    _version_not_supported = first_version_is_lower(GRPC_VERSION, GRPC_GENERATED_VERSION)
+
+    _version_not_supported = first_version_is_lower(
+        GRPC_VERSION, GRPC_GENERATED_VERSION
+    )
 except ImportError:
     _version_not_supported = True
 
 if _version_not_supported:
     raise RuntimeError(
-        f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in spo_pb2_grpc.py depends on'
-        + f' grpcio>={GRPC_GENERATED_VERSION}.'
-        + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
-        + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
+        f"The grpc package installed is at version {GRPC_VERSION},"
+        + " but the generated code in spo_pb2_grpc.py depends on"
+        + f" grpcio>={GRPC_GENERATED_VERSION}."
+        + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
+        + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
     )
 
 
@@ -35,30 +38,35 @@ class PhaseOrchestratorStub:
             channel: A grpc.Channel.
         """
         self.GetState = channel.unary_unary(
-                '/spo.PhaseOrchestrator/GetState',
-                request_serializer=spo__pb2.StateRequest.SerializeToString,
-                response_deserializer=spo__pb2.StateResponse.FromString,
-                _registered_method=True)
+            "/spo.PhaseOrchestrator/GetState",
+            request_serializer=spo__pb2.StateRequest.SerializeToString,
+            response_deserializer=spo__pb2.StateResponse.FromString,
+            _registered_method=True,
+        )
         self.Step = channel.unary_unary(
-                '/spo.PhaseOrchestrator/Step',
-                request_serializer=spo__pb2.StepRequest.SerializeToString,
-                response_deserializer=spo__pb2.StateResponse.FromString,
-                _registered_method=True)
+            "/spo.PhaseOrchestrator/Step",
+            request_serializer=spo__pb2.StepRequest.SerializeToString,
+            response_deserializer=spo__pb2.StateResponse.FromString,
+            _registered_method=True,
+        )
         self.Reset = channel.unary_unary(
-                '/spo.PhaseOrchestrator/Reset',
-                request_serializer=spo__pb2.ResetRequest.SerializeToString,
-                response_deserializer=spo__pb2.StateResponse.FromString,
-                _registered_method=True)
+            "/spo.PhaseOrchestrator/Reset",
+            request_serializer=spo__pb2.ResetRequest.SerializeToString,
+            response_deserializer=spo__pb2.StateResponse.FromString,
+            _registered_method=True,
+        )
         self.StreamPhases = channel.unary_stream(
-                '/spo.PhaseOrchestrator/StreamPhases',
-                request_serializer=spo__pb2.StreamRequest.SerializeToString,
-                response_deserializer=spo__pb2.StateResponse.FromString,
-                _registered_method=True)
+            "/spo.PhaseOrchestrator/StreamPhases",
+            request_serializer=spo__pb2.StreamRequest.SerializeToString,
+            response_deserializer=spo__pb2.StateResponse.FromString,
+            _registered_method=True,
+        )
         self.GetConfig = channel.unary_unary(
-                '/spo.PhaseOrchestrator/GetConfig',
-                request_serializer=spo__pb2.ConfigRequest.SerializeToString,
-                response_deserializer=spo__pb2.ConfigResponse.FromString,
-                _registered_method=True)
+            "/spo.PhaseOrchestrator/GetConfig",
+            request_serializer=spo__pb2.ConfigRequest.SerializeToString,
+            response_deserializer=spo__pb2.ConfigResponse.FromString,
+            _registered_method=True,
+        )
 
 
 class PhaseOrchestratorServicer:
@@ -67,87 +75,92 @@ class PhaseOrchestratorServicer:
     def GetState(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Step(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Reset(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def StreamPhases(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def GetConfig(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
 
 def add_PhaseOrchestratorServicer_to_server(servicer, server):
+    """Register PhaseOrchestrator RPC handlers on a gRPC server."""
     rpc_method_handlers = {
-            'GetState': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetState,
-                    request_deserializer=spo__pb2.StateRequest.FromString,
-                    response_serializer=spo__pb2.StateResponse.SerializeToString,
-            ),
-            'Step': grpc.unary_unary_rpc_method_handler(
-                    servicer.Step,
-                    request_deserializer=spo__pb2.StepRequest.FromString,
-                    response_serializer=spo__pb2.StateResponse.SerializeToString,
-            ),
-            'Reset': grpc.unary_unary_rpc_method_handler(
-                    servicer.Reset,
-                    request_deserializer=spo__pb2.ResetRequest.FromString,
-                    response_serializer=spo__pb2.StateResponse.SerializeToString,
-            ),
-            'StreamPhases': grpc.unary_stream_rpc_method_handler(
-                    servicer.StreamPhases,
-                    request_deserializer=spo__pb2.StreamRequest.FromString,
-                    response_serializer=spo__pb2.StateResponse.SerializeToString,
-            ),
-            'GetConfig': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetConfig,
-                    request_deserializer=spo__pb2.ConfigRequest.FromString,
-                    response_serializer=spo__pb2.ConfigResponse.SerializeToString,
-            ),
+        "GetState": grpc.unary_unary_rpc_method_handler(
+            servicer.GetState,
+            request_deserializer=spo__pb2.StateRequest.FromString,
+            response_serializer=spo__pb2.StateResponse.SerializeToString,
+        ),
+        "Step": grpc.unary_unary_rpc_method_handler(
+            servicer.Step,
+            request_deserializer=spo__pb2.StepRequest.FromString,
+            response_serializer=spo__pb2.StateResponse.SerializeToString,
+        ),
+        "Reset": grpc.unary_unary_rpc_method_handler(
+            servicer.Reset,
+            request_deserializer=spo__pb2.ResetRequest.FromString,
+            response_serializer=spo__pb2.StateResponse.SerializeToString,
+        ),
+        "StreamPhases": grpc.unary_stream_rpc_method_handler(
+            servicer.StreamPhases,
+            request_deserializer=spo__pb2.StreamRequest.FromString,
+            response_serializer=spo__pb2.StateResponse.SerializeToString,
+        ),
+        "GetConfig": grpc.unary_unary_rpc_method_handler(
+            servicer.GetConfig,
+            request_deserializer=spo__pb2.ConfigRequest.FromString,
+            response_serializer=spo__pb2.ConfigResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'spo.PhaseOrchestrator', rpc_method_handlers)
+        "spo.PhaseOrchestrator", rpc_method_handlers
+    )
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('spo.PhaseOrchestrator', rpc_method_handlers)
+    server.add_registered_method_handlers("spo.PhaseOrchestrator", rpc_method_handlers)
 
 
- # This class is part of an EXPERIMENTAL API.
+# This class is part of an EXPERIMENTAL API.
 class PhaseOrchestrator:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetState(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+    def GetState(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        """gRPC call for GetState on PhaseOrchestrator."""
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/spo.PhaseOrchestrator/GetState',
+            "/spo.PhaseOrchestrator/GetState",
             spo__pb2.StateRequest.SerializeToString,
             spo__pb2.StateResponse.FromString,
             options,
@@ -158,23 +171,27 @@ class PhaseOrchestrator:
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True)
+            _registered_method=True,
+        )
 
     @staticmethod
-    def Step(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+    def Step(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        """gRPC call for Step on PhaseOrchestrator."""
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/spo.PhaseOrchestrator/Step',
+            "/spo.PhaseOrchestrator/Step",
             spo__pb2.StepRequest.SerializeToString,
             spo__pb2.StateResponse.FromString,
             options,
@@ -185,23 +202,27 @@ class PhaseOrchestrator:
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True)
+            _registered_method=True,
+        )
 
     @staticmethod
-    def Reset(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+    def Reset(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        """gRPC call for Reset on PhaseOrchestrator."""
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/spo.PhaseOrchestrator/Reset',
+            "/spo.PhaseOrchestrator/Reset",
             spo__pb2.ResetRequest.SerializeToString,
             spo__pb2.StateResponse.FromString,
             options,
@@ -212,23 +233,27 @@ class PhaseOrchestrator:
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True)
+            _registered_method=True,
+        )
 
     @staticmethod
-    def StreamPhases(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+    def StreamPhases(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        """gRPC call for StreamPhases on PhaseOrchestrator."""
         return grpc.experimental.unary_stream(
             request,
             target,
-            '/spo.PhaseOrchestrator/StreamPhases',
+            "/spo.PhaseOrchestrator/StreamPhases",
             spo__pb2.StreamRequest.SerializeToString,
             spo__pb2.StateResponse.FromString,
             options,
@@ -239,23 +264,27 @@ class PhaseOrchestrator:
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True)
+            _registered_method=True,
+        )
 
     @staticmethod
-    def GetConfig(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+    def GetConfig(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        """gRPC call for GetConfig on PhaseOrchestrator."""
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/spo.PhaseOrchestrator/GetConfig',
+            "/spo.PhaseOrchestrator/GetConfig",
             spo__pb2.ConfigRequest.SerializeToString,
             spo__pb2.ConfigResponse.FromString,
             options,
@@ -266,4 +295,5 @@ class PhaseOrchestrator:
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True)
+            _registered_method=True,
+        )

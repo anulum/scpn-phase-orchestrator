@@ -52,10 +52,12 @@ class PetriNetAdapter:
 
     @property
     def marking(self) -> Marking:
+        """Current Petri net marking (token distribution)."""
         return self._marking
 
     @property
     def net(self) -> PetriNet:
+        """The underlying Petri net structure."""
         return self._net
 
     def step(self, ctx: dict[str, float]) -> Regime:

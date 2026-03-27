@@ -91,6 +91,7 @@ class StuartLandauEngine:
 
     @property
     def last_dt(self) -> float:
+        """Last accepted timestep (adapts with RK45)."""
         return self._last_dt
 
     def step(
@@ -137,6 +138,7 @@ class StuartLandauEngine:
         return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
     def compute_mean_amplitude(self, state: NDArray) -> float:
+        """Mean amplitude across all oscillators."""
         return float(np.mean(state[self._n :]))
 
     def _validate(

@@ -76,6 +76,7 @@ class AuditLogger:
         knm_r: NDArray[np.floating] | None = None,
         epsilon: float | None = None,
     ) -> None:
+        """Write one simulation step to the audit log with optional full state."""
         record = {
             "ts": time.time(),
             "step": step,
@@ -114,10 +115,12 @@ class AuditLogger:
         self._write_record(record)
 
     def log_event(self, event_type: str, data: dict) -> None:
+        """Write a named event with arbitrary data to the audit log."""
         record = {"ts": time.time(), "event": event_type, **data}
         self._write_record(record)
 
     def close(self) -> None:
+        """Flush and close the audit log file handle."""
         self._fh.flush()
         self._fh.close()
 

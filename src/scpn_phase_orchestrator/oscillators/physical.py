@@ -25,6 +25,7 @@ class PhysicalExtractor(PhaseExtractor):
         self._node_id = node_id
 
     def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+        """Extract instantaneous phase from a 1-D waveform via Hilbert transform."""
         if signal.ndim != 1 or signal.size < 2:
             raise ValueError(
                 f"signal must be 1-D with >= 2 samples, got shape {signal.shape}"
@@ -62,6 +63,7 @@ class PhysicalExtractor(PhaseExtractor):
         ]
 
     def quality_score(self, phase_states: list[PhaseState]) -> float:
+        """Mean extraction quality across phase states."""
         if not phase_states:
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))

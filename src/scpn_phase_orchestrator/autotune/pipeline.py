@@ -21,6 +21,8 @@ __all__ = ["identify_binding_spec", "AutoTuneResult"]
 
 @dataclass
 class AutoTuneResult:
+    """Output of the auto-tune pipeline: inferred frequencies and coupling."""
+
     omegas: list[float]
     knm: NDArray
     alpha: NDArray

@@ -127,6 +127,7 @@ def ude_kuramoto_forward(
     """
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        """Single scan iteration: UDE-Kuramoto step and record phase."""
         p = ude_kuramoto_step(carry, omegas, K, residual_fn, dt)
         return p, p
 
@@ -178,10 +179,12 @@ class UDEKuramotoLayer(eqx.Module):
 
     @eqx.filter_jit
     def forward_with_trajectory(self, phases: jax.Array) -> tuple[jax.Array, jax.Array]:
+        """Run dynamics and return (final_phases, trajectory)."""
         return ude_kuramoto_forward(
             phases, self.omegas, self.K, self.residual, self.dt, self.n_steps
         )
 
     @eqx.filter_jit
     def sync_score(self, phases: jax.Array) -> jax.Array:
+        """Kuramoto order parameter R after running the layer forward."""
         return order_parameter(self(phases))

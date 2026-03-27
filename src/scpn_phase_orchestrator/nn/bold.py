@@ -135,6 +135,7 @@ def bold_from_neural(
         carry: tuple[jax.Array, jax.Array, jax.Array, jax.Array],
         x_t: jax.Array,
     ) -> tuple[tuple[jax.Array, jax.Array, jax.Array, jax.Array], jax.Array]:
+        """One scan step: advance hemodynamic state and emit BOLD."""
         s, f, v, q = carry
         new_s, new_f, new_v, new_q = balloon_windkessel_step(
             s, f, v, q, x_t, dt, kappa, gamma, tau, alpha, e0

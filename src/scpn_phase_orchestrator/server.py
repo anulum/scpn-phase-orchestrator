@@ -377,25 +377,30 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
 
     @app.get("/", response_class=HTMLResponse)
     async def dashboard() -> str:
+        """Handle GET / — serve the HTML dashboard."""
         return DASHBOARD_HTML
 
     @app.get("/api/state")
     async def get_state() -> dict:
+        """Handle GET /api/state — return current simulation snapshot."""
         async with sim._lock:
             return sim.snapshot()
 
     @app.post("/api/step", dependencies=[Depends(_require_auth)])
     async def post_step() -> dict:
+        """Handle POST /api/step — advance simulation one tick."""
         async with sim._lock:
             return sim.step()
 
     @app.post("/api/reset", dependencies=[Depends(_require_auth)])
     async def post_reset() -> dict:
+        """Handle POST /api/reset — reset simulation to initial state."""
         async with sim._lock:
             return sim.reset()
 
     @app.get("/api/config")
     async def get_config() -> dict:
+        """Handle GET /api/config — return engine configuration."""
         return {
             "name": spec.name,
             "n_oscillators": sim.n_osc,
@@ -407,6 +412,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
 
     @app.get("/api/metrics")
     async def get_metrics() -> Response:  # pragma: no cover
+        """Handle GET /api/metrics — export Prometheus-format metrics."""
         from fastapi.responses import PlainTextResponse
 
         from scpn_phase_orchestrator.adapters.metrics_exporter import (

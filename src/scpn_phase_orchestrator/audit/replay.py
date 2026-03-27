@@ -30,6 +30,7 @@ class ReplayEngine:
         self._log_path = Path(log_path)
 
     def load(self) -> list[dict]:
+        """Read and parse all JSONL entries from the audit log file."""
         entries = []
         with self._log_path.open(encoding="utf-8") as fh:
             for line in fh:

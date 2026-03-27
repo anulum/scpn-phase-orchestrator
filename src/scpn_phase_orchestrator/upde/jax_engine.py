@@ -53,6 +53,7 @@ def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     @jit
     def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
         def deriv(p):  # type: ignore[no-untyped-def]
+            """Kuramoto coupling derivative at given phases."""
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
             return omegas + coupling + zeta * jnp.sin(psi - p)
@@ -75,6 +76,7 @@ def _build_jax_sl_step():  # type: ignore[no-untyped-def]  # pragma: no cover
         n = omegas.shape[0]
 
         def deriv(s):  # type: ignore[no-untyped-def]
+            """Stuart-Landau coupled (phase, amplitude) derivative."""
             th, am = s[:n], s[n:]
             diff = th[jnp.newaxis, :] - th[:, jnp.newaxis]
             phase_coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
@@ -127,6 +129,7 @@ class JaxUPDEEngine:  # pragma: no cover
         psi: float,
         alpha: NDArray,
     ) -> NDArray:
+        """Advance phases by one Kuramoto step on GPU via JIT-compiled JAX."""
         jp = jnp.asarray(phases)
         jo = jnp.asarray(omegas)
         jk = jnp.asarray(knm)
@@ -163,6 +166,7 @@ class JaxStuartLandauEngine:  # pragma: no cover
         alpha: NDArray,
         epsilon: float = 1.0,
     ) -> NDArray:
+        """Advance Stuart-Landau state by one RK4 step via JIT-compiled JAX."""
         js = jnp.asarray(state)
         result = self._sl_rk4(
             js,

@@ -23,6 +23,8 @@ TWO_PI = 2.0 * np.pi
 
 @dataclass
 class SessionCoherenceReport:
+    """Results of the session-start coherence gate check."""
+
     quality_scores: dict[str, float] = field(default_factory=dict)
     initial_r: float = 0.0
     imprint_level: float = 0.0

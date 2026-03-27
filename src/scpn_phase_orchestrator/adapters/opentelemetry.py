@@ -38,13 +38,13 @@ class _NoOpSpan:
     """Minimal stand-in when opentelemetry-api is absent."""
 
     def set_attribute(self, key: str, value: object) -> None:
-        pass
+        """No-op: discard span attribute."""
 
     def set_status(self, status: object) -> None:
-        pass
+        """No-op: discard span status."""
 
     def end(self) -> None:
-        pass
+        """No-op: end span."""
 
     def __enter__(self) -> _NoOpSpan:
         return self
@@ -87,6 +87,7 @@ class OTelExporter:
 
     @property
     def enabled(self) -> bool:
+        """True when opentelemetry-api is installed and active."""
         return self._enabled
 
     @contextmanager

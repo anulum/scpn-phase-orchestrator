@@ -70,6 +70,7 @@ def theta_neuron_rk4_step(
     """Single RK4 step of the theta neuron model."""
 
     def deriv(p: jax.Array) -> jax.Array:
+        """Theta neuron derivative at arbitrary phase."""
         return _theta_deriv(p, eta, K)
 
     k1 = deriv(phases)
@@ -103,6 +104,7 @@ def theta_neuron_forward(
     step_fn = theta_neuron_rk4_step if method == "rk4" else theta_neuron_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
+        """Single scan iteration: step and record phase."""
         p = step_fn(carry, eta, K, dt)
         return p, p
 

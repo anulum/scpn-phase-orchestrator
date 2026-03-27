@@ -39,6 +39,7 @@ class SymbolicExtractor(PhaseExtractor):
         self._mode = mode
 
     def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+        """Map discrete state indices to phases on the unit circle."""
         indices = np.asarray(signal, dtype=np.int64)
         if self._mode == "ring":
             thetas = TWO_PI * indices / self._n_states
@@ -77,6 +78,7 @@ class SymbolicExtractor(PhaseExtractor):
         return states
 
     def quality_score(self, phase_states: list[PhaseState]) -> float:
+        """Mean transition quality across phase states."""
         if not phase_states:
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))

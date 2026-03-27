@@ -114,22 +114,27 @@ class BrainFlowAdapter:  # pragma: no cover
 
     @property
     def sample_rate(self) -> int:
+        """Board sampling rate in Hz."""
         return int(self._sample_rate)
 
     @property
     def eeg_channels(self) -> list[int]:
+        """BrainFlow EEG channel indices for this board."""
         return list(self._eeg_channels)
 
     @property
     def n_channels(self) -> int:
+        """Number of EEG channels."""
         return len(self._eeg_channels)
 
     def start(self) -> None:
+        """Prepare and start the BrainFlow data stream."""
         self._board.prepare_session()
         self._board.start_stream(self._buffer_size)
         self._running = True
 
     def stop(self) -> None:
+        """Stop the stream and release the board session."""
         if self._running:
             self._board.stop_stream()
             self._board.release_session()
@@ -171,26 +176,32 @@ class SimulatedBoardAdapter:
 
     @property
     def sample_rate(self) -> int:
+        """Simulated sampling rate in Hz."""
         return self._sample_rate
 
     @property
     def n_channels(self) -> int:
+        """Number of simulated channels."""
         return self._n_channels
 
     def start(self) -> None:
+        """Reset time counter and begin generating data."""
         self._t = 0.0
         self._running = True
 
     def stop(self) -> None:
+        """Mark the simulated board as stopped."""
         self._running = False
 
     def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> NDArray:
+        """Return synthetic sinusoidal samples for one channel."""
         sr = self._sample_rate
         t = np.arange(n_samples) / sr + self._t
         self._t += n_samples / sr
         return np.asarray(np.sin(2.0 * np.pi * self._freqs[channel_idx] * t))
 
     def get_all_eeg(self, n_samples: int = 256) -> NDArray:
+        """Return synthetic (n_channels, n_samples) sinusoidal data."""
         sr = self._sample_rate
         t = np.arange(n_samples) / sr + self._t
         self._t += n_samples / sr
@@ -215,10 +226,12 @@ class ModbusAdapter:  # pragma: no cover
         self._connected = False
 
     def connect(self) -> None:
+        """Open Modbus TCP connection."""
         self._client.connect()
         self._connected = True
 
     def disconnect(self) -> None:
+        """Close Modbus TCP connection if open."""
         if self._connected:
             self._client.close()
             self._connected = False

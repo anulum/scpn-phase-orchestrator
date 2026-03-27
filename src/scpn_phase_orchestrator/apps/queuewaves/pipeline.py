@@ -39,6 +39,8 @@ TWO_PI = 2.0 * np.pi
 
 @dataclass(frozen=True)
 class ServiceSnapshot:
+    """Per-service phase state at a single pipeline tick."""
+
     name: str
     layer: str
     phase: float
@@ -49,6 +51,8 @@ class ServiceSnapshot:
 
 @dataclass(frozen=True)
 class PipelineSnapshot:
+    """Full pipeline state after one tick: order params, services, anomalies."""
+
     tick: int
     timestamp: float
     r_good: float
@@ -61,6 +65,7 @@ class PipelineSnapshot:
     actions: list[dict]
 
     def to_dict(self) -> dict:
+        """Serialise snapshot to a JSON-compatible dict."""
         return {
             "tick": self.tick,
             "timestamp": self.timestamp,
@@ -135,14 +140,17 @@ class PhaseComputePipeline:
 
     @property
     def tick_count(self) -> int:
+        """Number of pipeline ticks executed so far."""
         return self._tick_count
 
     @property
     def regime(self) -> str:
+        """Current regime label from the regime manager."""
         return self._regime_manager.current_regime.value
 
     @property
     def imprint_levels(self) -> NDArray:
+        """Per-oscillator imprint memory levels."""
         return self._imprint_state.m_k
 
     def tick(self, buffers: dict[str, NDArray]) -> PipelineSnapshot:

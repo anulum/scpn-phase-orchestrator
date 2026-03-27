@@ -18,6 +18,8 @@ __all__ = ["extract_phases", "PhaseResult"]
 
 @dataclass
 class PhaseResult:
+    """Hilbert-transform output: instantaneous phase, amplitude, and frequency."""
+
     phases: NDArray
     amplitudes: NDArray
     instantaneous_freq: NDArray

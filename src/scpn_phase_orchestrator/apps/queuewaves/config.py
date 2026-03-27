@@ -36,6 +36,8 @@ _LAYER_ORDER = {"micro": 0, "meso": 1, "macro": 2}
 
 @dataclass(frozen=True)
 class ServiceDef:
+    """A monitored service: name, PromQL query, hierarchy layer, and channel type."""
+
     name: str
     promql: str
     layer: str  # micro, meso, macro
@@ -44,6 +46,8 @@ class ServiceDef:
 
 @dataclass(frozen=True)
 class ThresholdConfig:
+    """Anomaly detection thresholds for R_bad, PLV cascade, and chronic imprint."""
+
     r_bad_warn: float = 0.50
     r_bad_critical: float = 0.70
     plv_cascade: float = 0.85
@@ -53,24 +57,32 @@ class ThresholdConfig:
 
 @dataclass(frozen=True)
 class CouplingConfig:
+    """Phase coupling strength and decay parameters."""
+
     strength: float = 0.50
     decay: float = 0.25
 
 
 @dataclass(frozen=True)
 class AlertSink:
+    """Webhook endpoint for anomaly alerts."""
+
     url: str
     format: str = "generic"  # "slack" or "generic"
 
 
 @dataclass(frozen=True)
 class ServerConfig:
+    """QueueWaves HTTP server bind address."""
+
     host: str = "127.0.0.1"
     port: int = 8080
 
 
 @dataclass
 class QueueWavesConfig:
+    """Top-level configuration for a QueueWaves deployment."""
+
     prometheus_url: str
     services: list[ServiceDef]
     scrape_interval_s: float = 15.0
@@ -137,6 +149,7 @@ class ConfigCompiler:
     """Converts user-facing QueueWavesConfig into an SPO BindingSpec."""
 
     def compile(self, cfg: QueueWavesConfig) -> BindingSpec:
+        """Translate QueueWavesConfig into an SPO BindingSpec."""
         layers_by_name: dict[str, list[ServiceDef]] = {}
         for svc in cfg.services:
             layers_by_name.setdefault(svc.layer, []).append(svc)

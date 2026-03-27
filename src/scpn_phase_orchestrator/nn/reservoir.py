@@ -69,6 +69,7 @@ def reservoir_drive(
     """
 
     def process_sample(carry: jax.Array, u_t: jax.Array) -> tuple[jax.Array, jax.Array]:
+        """Drive reservoir one input step and extract features."""
         p = carry
         driven_omegas = omegas + W_in @ u_t
         p, _ = kuramoto_forward(p, driven_omegas, K, dt, n_steps)

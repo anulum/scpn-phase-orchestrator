@@ -140,21 +140,25 @@ def create_app(cfg: QueueWavesConfig) -> object:
 
     @app.get("/api/v1/health")
     async def health() -> dict[str, Any]:
+        """Handle GET /api/v1/health — liveness check with tick counter."""
         return {"status": "ok", "tick": pipeline.tick_count}
 
     @app.get("/api/v1/state")
     async def state() -> Any:
+        """Handle GET /api/v1/state — return latest pipeline snapshot."""
         if not history:
             return JSONResponse({"error": "no data yet"}, status_code=503)
         return history[-1].to_dict()  # pragma: no cover — data branch, ASGI thread
 
     @app.get("/api/v1/state/history")
     async def state_history(n: int = 100) -> list[dict[str, Any]]:
+        """Handle GET /api/v1/state/history — return last n snapshots."""
         sliced = list(history)[-n:]
         return [s.to_dict() for s in sliced]
 
     @app.get("/api/v1/anomalies")
     async def anomalies() -> list[dict[str, Any]]:
+        """Handle GET /api/v1/anomalies — return active anomaly list."""
         return [
             {
                 "type": a.type,
@@ -169,6 +173,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
 
     @app.get("/api/v1/services")
     async def services() -> list[dict[str, Any]]:
+        """Handle GET /api/v1/services — return per-service phase state."""
         if not history:
             return []
         snap = history[-1]  # pragma: no cover — data branch, ASGI thread
@@ -185,12 +190,14 @@ def create_app(cfg: QueueWavesConfig) -> object:
 
     @app.get("/api/v1/plv")
     async def plv() -> dict[str, Any]:
+        """Handle GET /api/v1/plv — return cross-layer PLV matrix."""
         if not history:
             return {"matrix": []}
         return {"matrix": history[-1].plv_matrix}  # pragma: no cover
 
     @app.get("/api/v1/metrics/prometheus")
     async def prom_metrics() -> PlainTextResponse:
+        """Handle GET /api/v1/metrics/prometheus — export Prometheus text metrics."""
         lines: list[str] = []
         if history:  # pragma: no cover — data branch, ASGI thread
             snap = history[-1]
@@ -228,6 +235,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
 
     @app.get("/")
     async def root() -> Any:
+        """Handle GET / — serve dashboard index or fallback text."""
         index = static_dir / "index.html"
         if index.exists():
             return FileResponse(str(index))
