@@ -21,7 +21,9 @@ This document clarifies the positioning.
 | Domain-agnostic binding spec | **yes** | no | no | no | no | no | no | no |
 | Differentiable (JAX autodiff) | **yes** | no | no | no | no | no | **yes** | no |
 | GPU acceleration (JAX/XLA) | **yes** | partial | partial | yes | no | no | **yes** | no |
-| Inverse Kuramoto (data → K) | **yes** | no | no | no | no | no | no | no |
+| Inverse Kuramoto (data → K) | **analytical+gradient** | no | no | no | no | no | no | no |
+| Differentiable 3-body layer | **yes** | no | no | no | no | no | no | no |
+| OIM combinatorial solver | **annealing+multi-start** | no | no | no | no | no | no | no |
 | Spiking neuron models | **bridge** | **native** | **native** | **native** | no | no | no | no |
 | Large-scale spiking (>10^6) | no | yes | **yes** | yes | no | no | no | no |
 | Adaptive ODE solvers | RK45 | varies | no | no | **full** | **full** | no | no |
@@ -30,7 +32,6 @@ This document clarifies the positioning.
 | Recurrence analysis | **yes** | no | no | no | no | **native** | no | no |
 | Hodge decomposition | **yes** | no | no | no | no | no | no | partial |
 | Transfer entropy | **yes** | no | no | no | no | no | no | no |
-| OIM (combinatorial opt.) | **yes** | no | no | no | no | no | no | no |
 
 ## What SPO Is
 
@@ -131,62 +132,94 @@ Rust batch API eliminates per-call FFI overhead, achieving 1.7x speedup at N=64.
 Note: N>64 is dominated by O(N^2) coupling computation where Python's NumPy
 BLAS matches Rust. Speedup is largest at small N where FFI overhead dominates.
 
-### JAX GPU (nn/ module) — L4 GPU, JAX 0.6.2 (measured 2026-03-26)
+### JAX GPU (nn/ module) — L40S GPU, JAX 0.9.2 (measured 2026-03-27)
 
-**KuramotoLayer forward pass (100 calls, each running 50 internal steps):**
+All timings use 5 warmup calls + `block_until_ready` before measurement.
+JIT compilation time reported separately from steady-state throughput.
 
-| N | us/call |
-|---|---|
-| 8 | 125,000 |
-| 64 | 150,300 |
-| 256 | 255,200 |
-| 512 | 269,500 |
+**KuramotoLayer forward pass (100 calls, 50 internal steps each):**
 
-Per Kuramoto step: 2.5–5.4ms. Dominated by per-call JIT dispatch overhead.
+| N | JIT (ms) | Steady (us/call) |
+|---|---|---|
+| 8 | 115 | 408 |
+| 16 | 128 | 444 |
+| 32 | 121 | 437 |
+| 64 | 152 | 472 |
+| 128 | 178 | 514 |
+| 256 | 125 | 775 |
+| 512 | 404 | 760 |
+
+Per Kuramoto step: 8–15us. Previous L4 results (125ms/call) were dominated
+by JIT dispatch overhead — `@eqx.filter_jit` eliminated this.
+
+**SimplicialKuramotoLayer forward pass (100 calls, 50 steps, sigma2=1.0):**
+
+| N | JIT (ms) | Steady (us/call) |
+|---|---|---|
+| 8 | 157 | 450 |
+| 16 | 161 | 456 |
+| 32 | 163 | 467 |
+| 64 | 198 | 482 |
+| 128 | 248 | 756 |
+| 256 | 151 | 1015 |
+
+3-body coupling adds ~10% overhead vs pairwise-only KuramotoLayer.
+First differentiable 3-body Kuramoto layer in open source.
 
 **JAX GPU vs NumPy CPU (500 Kuramoto steps):**
 
 | N | JAX GPU (ms) | NumPy CPU (ms) | Speedup |
 |---|---|---|---|
-| 16 | 142 | 3 | 0.02x |
-| 64 | 165 | 6 | 0.04x |
-| 256 | 270 | 41 | 0.15x |
-| 512 | 288 | 143 | 0.50x |
+| 16 | 126 | 2 | 0.02x |
+| 64 | 141 | 4 | 0.03x |
+| 256 | 118 | 24 | 0.20x |
+| 512 | 321 | 89 | 0.28x |
+| 1024 | 220 | 348 | **1.6x** |
+| 2048 | 142 | 1822 | **12.8x** |
 
-NumPy is faster at all sizes N<=512. GPU kernel launch overhead (~140ms baseline)
-dominates. The crossover point is estimated at N>1024. GPU wins for large N or
-batched workloads (vmap over multiple initial conditions).
+GPU crossover at N=1024. At N=2048, JAX is 12.8x faster than NumPy.
 
-**Guidance:** Use NumPy engines for N<1024 on CPU. Use JAX GPU for large networks
-or when running many independent simulations in parallel via vmap.
+**Guidance:** Use NumPy engines for N<1024 on CPU. Use JAX GPU for
+N>=1024 or batched workloads via vmap.
 
 **Batched Kuramoto (vmap, 64 oscillators, 200 steps):**
 
 | Batch | Total (ms) | Per instance (us) | Speedup vs B=1 |
 |---|---|---|---|
-| 1 | 160 | 160,000 | 1x |
-| 16 | 164 | 10,259 | 16x |
-| 64 | 159 | 2,481 | 64x |
-| 256 | 159 | 621 | 258x |
+| 1 | 129 | 128,736 | 1x |
+| 4 | 130 | 32,502 | 4x |
+| 16 | 171 | 10,706 | 12x |
+| 64 | 130 | 2,033 | 63x |
+| 256 | 131 | 513 | **251x** |
 
 Batching is where GPU dominates — 256 independent Kuramoto systems
-in the same time as 1. Use `jax.vmap` for parameter sweeps and
-ensemble simulations.
+in the same wall time as 1. Use `jax.vmap` for parameter sweeps.
 
-**Inverse Coupling Recovery (Adam + multiple shooting, window=10, 1000 epochs):**
+**Analytical vs Gradient Inverse Coupling:**
 
-| N | Old corr (SGD) | New corr (Adam+shooting) | Improvement |
+| N | Analytical corr | Analytical time | Gradient corr | Gradient time | Speedup |
+|---|---|---|---|---|---|
+| 4 | **1.000** | 0.73s | 0.676 | 81.6s | 112x |
+| 8 | **0.959** | 0.55s | 0.564 | 77.6s | 141x |
+| 16 | **0.845** | 0.59s | 0.527 | 84.0s | 142x |
+| 32 | **0.680** | 0.62s | 0.331 | 84.2s | 136x |
+
+Analytical inverse (Pikovsky 2008): O(N^3) linear regression on sin(Dtheta) basis,
+phase-aware finite differences via atan2. Orders of magnitude faster and more
+accurate than gradient descent through ODE. The gradient method's correlation
+degrades at large N due to vanishing gradients through long ODE chains.
+
+**OIM Solver (annealing + multi-start):**
+
+| Graph | n_colors | Violations | Time |
 |---|---|---|---|
-| 4 | -0.55 | **0.74** | +1.29 |
-| 8 | 0.19 | **0.61** | +0.42 |
-| 16 | 0.15 | **0.67** | +0.52 |
-| 32 | 0.07 | **0.48** | +0.41 |
+| K3 (triangle) | 3 | **0** | 7.6s |
+| K_{3,3} (bipartite) | 2 | **0** | 6.8s |
 
-Adam optimiser with multiple-shooting windows (10 RK4 steps per window)
-eliminates gradient vanishing through long ODE chains. Correlation
-improvement: 0.19 → 0.61 at N=8 (3.2x). Still not perfect — the inverse
-Kuramoto problem is inherently ill-conditioned at large N due to
-coupling matrix symmetries.
+OIM solver with coupling annealing (k: 0.1->10), Langevin noise for
+exploration, 10 random restarts, and soft coloring extraction achieves
+zero violations on standard test graphs. Previous raw dynamics had
+11-22% violation rates.
 
 ## Target Use Cases
 
