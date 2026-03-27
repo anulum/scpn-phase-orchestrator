@@ -256,6 +256,7 @@ class TestStuartLandauEdges:
         out = eng.step(
             state,
             np.ones(3),
+            np.ones(3),
             _zero_knm(3),
             _zero_knm(3),
             0.0,
