@@ -23,7 +23,9 @@ class InformationalDriver:
         self._cadence_hz = cadence_hz
 
     def compute(self, t: float) -> float:
+        """Return Psi_I at time *t*, wrapped to [0, 2*pi)."""
         return (TWO_PI * self._cadence_hz * t) % TWO_PI
 
     def compute_batch(self, t_array: NDArray) -> NDArray:
+        """Vectorised Psi_I over an array of time values."""
         return (TWO_PI * self._cadence_hz * t_array) % TWO_PI

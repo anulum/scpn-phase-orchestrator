@@ -35,6 +35,7 @@ class ImprintModel:
         self._saturation = saturation
 
     def update(self, state: ImprintState, exposure: NDArray, dt: float) -> ImprintState:
+        """Decay existing imprint, add new exposure, clip to saturation."""
         decayed = state.m_k * np.exp(-self._decay_rate * dt)
         m_new = np.clip(decayed + exposure * dt, 0.0, self._saturation)
         return ImprintState(

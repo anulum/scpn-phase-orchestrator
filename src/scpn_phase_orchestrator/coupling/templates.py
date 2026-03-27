@@ -16,6 +16,8 @@ __all__ = ["KnmTemplate", "KnmTemplateSet"]
 
 @dataclass(frozen=True)
 class KnmTemplate:
+    """Named K_nm coupling matrix with associated phase-lag matrix."""
+
     name: str
     knm: NDArray
     alpha: NDArray
@@ -23,13 +25,17 @@ class KnmTemplate:
 
 
 class KnmTemplateSet:
+    """Registry of named K_nm templates for runtime switching."""
+
     def __init__(self) -> None:
         self._templates: dict[str, KnmTemplate] = {}
 
     def add(self, template: KnmTemplate) -> None:
+        """Register a template, overwriting any existing one with the same name."""
         self._templates[template.name] = template
 
     def get(self, name: str) -> KnmTemplate:
+        """Retrieve a template by name. Raises KeyError if not found."""
         try:
             return self._templates[name]
         except KeyError:
@@ -38,4 +44,5 @@ class KnmTemplateSet:
             raise KeyError(msg) from None
 
     def list_names(self) -> list[str]:
+        """Return all registered template names."""
         return list(self._templates.keys())

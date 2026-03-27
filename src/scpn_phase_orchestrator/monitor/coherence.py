@@ -22,9 +22,11 @@ class CoherenceMonitor:
         self._bad = bad_layers
 
     def compute_r_good(self, upde_state: UPDEState) -> float:
+        """Mean order parameter R across good (synchronise) layers."""
         return float(self._mean_r(upde_state, self._good))
 
     def compute_r_bad(self, upde_state: UPDEState) -> float:
+        """Mean order parameter R across bad (desynchronise) layers."""
         return float(self._mean_r(upde_state, self._bad))
 
     # PLV lock threshold: Lachaux et al. 1999; see docs/ASSUMPTIONS.md § Quality Gating

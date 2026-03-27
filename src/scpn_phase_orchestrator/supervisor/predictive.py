@@ -27,6 +27,8 @@ _K_BOOST = 0.1
 
 @dataclass
 class Prediction:
+    """Forward model output: predicted R trajectory and degradation flags."""
+
     R_predicted: list[float]
     will_degrade: bool
     will_critical: bool

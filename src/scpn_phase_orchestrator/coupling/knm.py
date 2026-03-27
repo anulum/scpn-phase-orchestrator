@@ -77,6 +77,8 @@ SCPN_CALIBRATION_ANCHORS: dict[tuple[int, int], float] = {
 
 @dataclass(frozen=True)
 class CouplingState:
+    """Immutable snapshot of phase/amplitude coupling matrices and template."""
+
     knm: NDArray
     alpha: NDArray
     active_template: str
@@ -224,6 +226,7 @@ class CouplingBuilder:
         template_name: str,
         templates: dict[str, NDArray],
     ) -> CouplingState:
+        """Replace the active K_nm with a named template matrix."""
         if template_name not in templates:
             raise KeyError(f"Template {template_name!r} not found")
         return CouplingState(

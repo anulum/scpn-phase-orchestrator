@@ -65,6 +65,7 @@ class TorusEngine:
         alpha: NDArray,
         n_steps: int,
     ) -> NDArray:
+        """Run *n_steps* torus integration steps, return final phases."""
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

@@ -17,6 +17,8 @@ __all__ = ["LyapunovGuard", "LyapunovState", "lyapunov_spectrum"]
 
 @dataclass
 class LyapunovState:
+    """Lyapunov function V, dV/dt, basin membership, and max phase diff."""
+
     V: float
     dV_dt: float
     in_basin: bool
@@ -76,6 +78,7 @@ class LyapunovGuard:
         )
 
     def reset(self) -> None:
+        """Clear cached previous V, so next evaluate() reports dV/dt = 0."""
         self._prev_V = None
 
 

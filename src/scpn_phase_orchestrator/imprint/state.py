@@ -16,6 +16,8 @@ __all__ = ["ImprintState"]
 
 @dataclass(frozen=True)
 class ImprintState:
+    """L9 memory imprint per oscillator: accumulation vector, timestamp, attribution."""
+
     m_k: NDArray
     last_update: float
     attribution: dict[str, float] = field(default_factory=dict)

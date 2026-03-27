@@ -25,22 +25,29 @@ _OPS = {
 
 @dataclass(frozen=True)
 class Place:
+    """Named place (state) in the Petri net."""
+
     name: str
 
 
 @dataclass(frozen=True)
 class Arc:
+    """Weighted arc connecting a place to a transition."""
+
     place: str
     weight: int = 1
 
 
 @dataclass(frozen=True)
 class Guard:
+    """Boolean guard condition on a named metric (e.g. 'stability_proxy > 0.6')."""
+
     metric: str
     op: str
     threshold: float
 
     def evaluate(self, ctx: dict[str, float]) -> bool:
+        """Return True if the guard condition is satisfied by *ctx*."""
         val = ctx.get(self.metric)
         if val is None:
             return False
@@ -52,6 +59,8 @@ class Guard:
 
 @dataclass(frozen=True)
 class Transition:
+    """Petri net transition with input/output arcs and optional guard."""
+
     name: str
     inputs: list[Arc]
     outputs: list[Arc]
@@ -60,6 +69,8 @@ class Transition:
 
 @dataclass
 class Marking:
+    """Token distribution across places in a Petri net."""
+
     tokens: dict[str, int] = field(default_factory=dict)
 
     def __getitem__(self, place: str) -> int:
@@ -74,9 +85,11 @@ class Marking:
             self.tokens[place] = count
 
     def active_places(self) -> list[str]:
+        """Return names of places that hold at least one token."""
         return [p for p, n in self.tokens.items() if n > 0]
 
     def copy(self) -> Marking:
+        """Return a shallow copy of this marking."""
         return Marking(tokens=dict(self.tokens))
 
 
@@ -113,13 +126,16 @@ class PetriNet:
 
     @property
     def place_names(self) -> frozenset[str]:
+        """All place names registered in this net."""
         return self._place_names
 
     @property
     def transitions(self) -> list[Transition]:
+        """All transitions in firing-priority order."""
         return list(self._transitions)
 
     def enabled(self, marking: Marking, ctx: dict[str, float]) -> list[Transition]:
+        """Return all transitions whose input arcs and guards are satisfied."""
         result = []
         for t in self._transitions:
             if t.guard is not None and not t.guard.evaluate(ctx):
@@ -129,6 +145,7 @@ class PetriNet:
         return result
 
     def fire(self, marking: Marking, transition: Transition) -> Marking:
+        """Fire *transition*, consuming input tokens and producing output tokens."""
         new = marking.copy()
         for arc in transition.inputs:
             new[arc.place] = new[arc.place] - arc.weight

@@ -32,6 +32,8 @@ except ImportError:  # pragma: no cover
 
 @dataclass
 class TCBOState:
+    """TCBO observation: p_h1 score, consciousness gate, and method."""
+
     p_h1: float
     is_conscious: bool
     s_h1: float
@@ -67,6 +69,7 @@ class TCBOObserver:
 
     @property
     def tau_h1(self) -> float:
+        """Consciousness gate threshold on p_h1."""
         return self._tau_h1
 
     def observe(self, phases: NDArray) -> TCBOState:
@@ -162,4 +165,5 @@ class TCBOObserver:
         return embedded
 
     def reset(self) -> None:
+        """Clear stored phase history."""
         self._history.clear()

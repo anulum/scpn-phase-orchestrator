@@ -43,6 +43,7 @@ class SupervisorPolicy:
         boundary_state: BoundaryState,
         petri_ctx: dict[str, float] | None = None,
     ) -> list[ControlAction]:
+        """Evaluate regime and return control actions for the current state."""
         if self._petri_adapter is not None and petri_ctx is not None:
             proposed = self._petri_adapter.step(petri_ctx)
         else:

@@ -17,6 +17,8 @@ __all__ = ["PhaseState", "PhaseExtractor"]
 
 @dataclass
 class PhaseState:
+    """Extracted phase, frequency, amplitude, and quality for one oscillator."""
+
     theta: float  # radians [0, 2*pi)
     omega: float  # instantaneous frequency, rad/s
     amplitude: float
@@ -26,8 +28,14 @@ class PhaseState:
 
 
 class PhaseExtractor(ABC):
-    @abstractmethod
-    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]: ...
+    """Abstract base for signal-to-phase extraction algorithms."""
 
     @abstractmethod
-    def quality_score(self, phase_states: list[PhaseState]) -> float: ...
+    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+        """Extract phase states from a raw signal at the given sample rate."""
+        ...
+
+    @abstractmethod
+    def quality_score(self, phase_states: list[PhaseState]) -> float:
+        """Aggregate quality metric (0..1) over a set of extracted phase states."""
+        ...

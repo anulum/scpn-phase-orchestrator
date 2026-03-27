@@ -16,6 +16,8 @@ __all__ = ["LockSignature", "LayerState", "UPDEState"]
 
 @dataclass(frozen=True)
 class LockSignature:
+    """Phase-locking value and mean lag between two layers."""
+
     source_layer: int
     target_layer: int
     plv: float
@@ -24,6 +26,8 @@ class LockSignature:
 
 @dataclass(frozen=True)
 class LayerState:
+    """Per-layer diagnostics: order parameter R, mean phase, amplitude stats."""
+
     R: float
     psi: float
     lock_signatures: dict[str, LockSignature] = field(default_factory=dict)
@@ -33,6 +37,8 @@ class LayerState:
 
 @dataclass(frozen=True)
 class UPDEState:
+    """Full UPDE diagnostic snapshot: per-layer states and aggregates."""
+
     layers: list[LayerState]
     cross_layer_alignment: NDArray
     stability_proxy: float

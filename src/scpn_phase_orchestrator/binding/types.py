@@ -36,6 +36,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class HierarchyLayer:
+    """Single layer in the SCPN oscillator hierarchy."""
+
     name: str
     index: int
     oscillator_ids: list[str]
@@ -45,6 +47,8 @@ class HierarchyLayer:
 
 @dataclass(frozen=True)
 class OscillatorFamily:
+    """Phase extraction configuration for one oscillator group (P/I/S channel)."""
+
     channel: str  # "P", "I", or "S"
     extractor_type: str
     config: dict
@@ -52,6 +56,8 @@ class OscillatorFamily:
 
 @dataclass(frozen=True)
 class CouplingSpec:
+    """Parameters for K_nm coupling matrix construction."""
+
     base_strength: float
     decay_alpha: float
     templates: dict[str, str]
@@ -59,6 +65,8 @@ class CouplingSpec:
 
 @dataclass(frozen=True)
 class DriverSpec:
+    """Configuration for P/I/S external driver channels."""
+
     physical: dict
     informational: dict
     symbolic: dict
@@ -66,6 +74,8 @@ class DriverSpec:
 
 @dataclass(frozen=True)
 class ObjectivePartition:
+    """Partition of layers into good (synchronise) and bad (desynchronise) subsets."""
+
     good_layers: list[int]
     bad_layers: list[int]
     good_weight: float = 1.0
@@ -74,6 +84,8 @@ class ObjectivePartition:
 
 @dataclass(frozen=True)
 class BoundaryDef:
+    """Defines a soft or hard boundary on a monitored variable."""
+
     name: str
     variable: str
     lower: float | None
@@ -95,6 +107,8 @@ class BoundaryDef:
 
 @dataclass(frozen=True)
 class ActuatorMapping:
+    """Maps a control knob to a named actuator with scope and limits."""
+
     name: str
     knob: str
     scope: str
@@ -103,6 +117,8 @@ class ActuatorMapping:
 
 @dataclass(frozen=True)
 class ImprintSpec:
+    """Parameters for the L9 memory imprint model."""
+
     decay_rate: float
     saturation: float
     modulates: list[str]
@@ -110,12 +126,16 @@ class ImprintSpec:
 
 @dataclass(frozen=True)
 class GeometrySpec:
+    """Geometry constraint type and parameters for K_nm projection."""
+
     constraint_type: str
     params: dict
 
 
 @dataclass(frozen=True)
 class ProtocolTransitionSpec:
+    """One transition in the Petri net protocol specification."""
+
     name: str
     inputs: list[dict]
     outputs: list[dict]
@@ -124,6 +144,8 @@ class ProtocolTransitionSpec:
 
 @dataclass(frozen=True)
 class ProtocolNetSpec:
+    """Full Petri net specification: places, initial marking, and transitions."""
+
     places: list[str]
     initial: dict[str, int]
     place_regime: dict[str, str]
@@ -132,6 +154,8 @@ class ProtocolNetSpec:
 
 @dataclass(frozen=True)
 class AmplitudeSpec:
+    """Amplitude dynamics parameters (Stuart-Landau bifurcation)."""
+
     mu: float
     epsilon: float
     amp_coupling_strength: float = 0.0
@@ -170,6 +194,8 @@ def resolve_extractor_type(raw: str) -> str:
 
 @dataclass
 class BindingSpec:
+    """Complete domainpack binding: layers, coupling, drivers, and actuators."""
+
     name: str
     version: str
     safety_tier: str

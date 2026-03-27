@@ -16,6 +16,8 @@ __all__ = ["ControlAction", "ActuationMapper"]
 
 @dataclass
 class ControlAction:
+    """A single control command targeting a specific knob and scope."""
+
     knob: str  # K, alpha, zeta, or Psi
     scope: str  # "global" or "layer_{n}"
     value: float
@@ -32,6 +34,7 @@ class ActuationMapper:
             self._by_knob.setdefault(am.knob, []).append(am)
 
     def map_actions(self, actions: list[ControlAction]) -> list[dict]:
+        """Convert ControlActions into actuator command dicts, clamping to limits."""
         commands = []
         for action in actions:
             mappings = self._by_knob.get(action.knob, [])
@@ -49,6 +52,7 @@ class ActuationMapper:
         return commands
 
     def validate_action(self, action: ControlAction) -> bool:
+        """Return True if knob is valid and value is within limits."""
         if action.knob not in VALID_KNOBS:
             return False
         mappings = self._by_knob.get(action.knob, [])

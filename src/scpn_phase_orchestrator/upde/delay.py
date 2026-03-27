@@ -32,6 +32,7 @@ class DelayBuffer:
         self._buffer: deque[NDArray] = deque(maxlen=max_delay_steps)
 
     def push(self, phases: NDArray) -> None:
+        """Append a phase snapshot to the buffer."""
         self._buffer.append(phases.copy())
 
     def get_delayed(self, delay_steps: int) -> NDArray | None:
@@ -42,9 +43,11 @@ class DelayBuffer:
 
     @property
     def length(self) -> int:
+        """Number of snapshots currently stored."""
         return len(self._buffer)
 
     def clear(self) -> None:
+        """Discard all stored phase snapshots."""
         self._buffer.clear()
 
 
@@ -71,6 +74,7 @@ class DelayedEngine:
 
     @property
     def delay_steps(self) -> int:
+        """Number of timesteps of delay applied to coupling."""
         return self._delay_steps
 
     def step(
@@ -82,6 +86,7 @@ class DelayedEngine:
         psi: float,
         alpha: NDArray,
     ) -> NDArray:
+        """Advance one Euler step with time-delayed coupling. Returns new phases."""
         delayed = self._buffer.get_delayed(self._delay_steps)
         self._buffer.push(phases)
         coupling_phases = phases if delayed is None else delayed
@@ -107,6 +112,7 @@ class DelayedEngine:
         alpha: NDArray,
         n_steps: int,
     ) -> NDArray:
+        """Run *n_steps* delayed Euler steps, return final phases."""
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

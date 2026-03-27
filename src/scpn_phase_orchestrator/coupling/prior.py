@@ -23,6 +23,8 @@ _DECAY_ALPHA_STD = 0.07
 
 @dataclass
 class CouplingPrior:
+    """Coupling configuration: base strength, decay, and K_c estimate."""
+
     K_base: float
     decay_alpha: float
     K_c_estimate: float

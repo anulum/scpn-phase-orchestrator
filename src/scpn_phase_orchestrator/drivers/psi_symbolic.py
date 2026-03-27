@@ -23,8 +23,10 @@ class SymbolicDriver:
         self._n = len(sequence)
 
     def compute(self, step: int) -> float:
+        """Return symbolic phase at discrete *step* (cyclic)."""
         return float(self._sequence[step % self._n])
 
     def compute_batch(self, steps: NDArray) -> NDArray:
+        """Vectorised symbolic phase lookup over an array of step indices."""
         result: NDArray = self._sequence[steps.astype(int) % self._n]
         return result

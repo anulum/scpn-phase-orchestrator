@@ -33,6 +33,8 @@ __all__ = [
 
 @dataclass
 class PredictionState:
+    """Snapshot of the forward prediction model after one update step."""
+
     predicted_phases: NDArray
     prediction_error: NDArray
     mean_error: float
@@ -69,10 +71,12 @@ class PredictionModel:
 
     @property
     def weights(self) -> NDArray:
+        """Copy of the current learned weight matrix W."""
         return self._W.copy()
 
     @property
     def error_gain(self) -> float:
+        """Scaling factor applied to prediction error before injection."""
         return self._error_gain
 
     def predict(self, phases: NDArray, omegas: NDArray, dt: float) -> NDArray:
@@ -136,6 +140,7 @@ class PredictionModel:
         return out
 
     def reset(self) -> None:
+        """Zero the weight matrix and clear phase history."""
         self._W[:] = 0.0
         self._prev_phases = None
         self._prev_predicted = None
@@ -143,6 +148,8 @@ class PredictionModel:
 
 @dataclass
 class VariationalState:
+    """Snapshot of the variational predictor after one update step."""
+
     predicted_phases: NDArray
     error: NDArray
     free_energy: float
@@ -196,6 +203,7 @@ class VariationalPredictor:
 
     @property
     def precision(self) -> NDArray:
+        """Copy of the current per-oscillator precision vector."""
         return self._precision.copy()
 
     def free_energy(
@@ -280,6 +288,7 @@ class VariationalPredictor:
         return np.diag(self._precision)
 
     def reset(self) -> None:
+        """Reset precision to prior, zero sufficient statistics, clear history."""
         self._precision[:] = self._prior_precision
         self._mu[:] = 0.0
         self._omegas = None

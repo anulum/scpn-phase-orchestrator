@@ -19,6 +19,8 @@ __all__ = ["CyberneticClosure", "ClosureState"]
 
 @dataclass
 class ClosureState:
+    """One L16 closure cycle result: cost before/after and convergence."""
+
     ssgf_state_step: int
     cost_before: float
     cost_after: float
@@ -58,6 +60,7 @@ class CyberneticClosure:
 
     @property
     def carrier(self) -> GeometryCarrier:
+        """The geometry carrier whose latent vector z is updated by the closure."""
         return self._carrier
 
     def step(self, phases: NDArray) -> tuple[NDArray, ClosureState]:
@@ -98,5 +101,6 @@ class CyberneticClosure:
         return W, states
 
     def reset(self) -> None:
+        """Reset step counter and cached cost."""
         self._step = 0
         self._prev_cost = None

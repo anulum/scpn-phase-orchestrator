@@ -15,6 +15,8 @@ __all__ = ["IntegrationConfig", "check_stability"]
 
 @dataclass(frozen=True)
 class IntegrationConfig:
+    """Numerical integration parameters for the phase ODE solver."""
+
     dt: float
     substeps: int = 1
     method: str = "euler"

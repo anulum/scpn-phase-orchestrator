@@ -25,6 +25,8 @@ VALID_EVENT_KINDS = frozenset(
 
 @dataclass(frozen=True)
 class RegimeEvent:
+    """Immutable event emitted on regime transitions or boundary breaches."""
+
     kind: str
     step: int
     detail: str = ""
@@ -45,23 +47,29 @@ class EventBus:
         self._history: deque[RegimeEvent] = deque(maxlen=maxlen)
 
     def subscribe(self, callback: object) -> None:
+        """Register a callback to receive future events."""
         self._subscribers.append(callback)
 
     def unsubscribe(self, callback: object) -> None:
+        """Remove a previously registered callback."""
         self._subscribers = [s for s in self._subscribers if s != callback]
 
     def post(self, event: RegimeEvent) -> None:
+        """Record *event* in history and notify all subscribers."""
         self._history.append(event)
         for cb in self._subscribers:
             cb(event)
 
     @property
     def history(self) -> list[RegimeEvent]:
+        """Chronological list of all posted events."""
         return list(self._history)
 
     @property
     def count(self) -> int:
+        """Number of events in history."""
         return len(self._history)
 
     def clear(self) -> None:
+        """Discard all recorded events."""
         self._history.clear()

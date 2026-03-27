@@ -21,6 +21,8 @@ _R_DEGRADED = 0.6  # Acebrón et al. 2005 §2.3 — partial sync threshold
 
 
 class Regime(Enum):
+    """Operational regime of the SCPN supervisor."""
+
     NOMINAL = "nominal"
     DEGRADED = "degraded"
     CRITICAL = "critical"
@@ -28,6 +30,8 @@ class Regime(Enum):
 
 
 class RegimeManager:
+    """Classify system state into regimes with hysteresis and cooldown."""
+
     def __init__(
         self,
         hysteresis: float = 0.05,
@@ -47,9 +51,11 @@ class RegimeManager:
 
     @property
     def current_regime(self) -> Regime:
+        """The regime established after the most recent transition."""
         return self._current
 
     def evaluate(self, upde_state: UPDEState, boundary_state: BoundaryState) -> Regime:
+        """Propose a regime based on current R values and boundary state."""
         if boundary_state.hard_violations:
             return Regime.CRITICAL
 
@@ -76,6 +82,7 @@ class RegimeManager:
         return Regime.NOMINAL
 
     def transition(self, proposed: Regime) -> Regime:
+        """Apply cooldown/hysteresis logic and commit the regime transition."""
         self._step_counter += 1
 
         if proposed == self._current:

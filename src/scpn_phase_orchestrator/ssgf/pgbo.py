@@ -20,6 +20,8 @@ __all__ = ["PGBO", "PGBOSnapshot"]
 
 @dataclass
 class PGBOSnapshot:
+    """Observation from the Phase-Geometry Bidirectional Observer at one timestep."""
+
     R: float
     psi: float
     costs: SSGFCosts
@@ -45,6 +47,7 @@ class PGBO:
         self._history: list[PGBOSnapshot] = []
 
     def observe(self, phases: NDArray, W: NDArray) -> PGBOSnapshot:
+        """Compute coherence, SSGF costs, and phase-geometry alignment."""
         self._step += 1
         R, psi = compute_order_parameter(phases)
         costs = compute_ssgf_costs(W, phases, weights=self._weights)
@@ -79,6 +82,7 @@ class PGBO:
 
     @property
     def history(self) -> list[PGBOSnapshot]:
+        """All snapshots recorded so far."""
         return list(self._history)
 
     def alignment_trend(self, window: int = 10) -> float:
@@ -89,5 +93,6 @@ class PGBO:
         return float(np.mean([s.phase_geometry_alignment for s in recent]))
 
     def reset(self) -> None:
+        """Clear step counter and observation history."""
         self._step = 0
         self._history.clear()

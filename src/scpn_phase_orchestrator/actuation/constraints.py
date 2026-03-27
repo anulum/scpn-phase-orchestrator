@@ -29,6 +29,7 @@ class ActionProjector:
         self._value_bounds = value_bounds
 
     def project(self, action: ControlAction, previous_value: float) -> ControlAction:
+        """Clamp action value to bounds and rate limit relative to *previous_value*."""
         lo, hi = self._value_bounds.get(action.knob, (float("-inf"), float("inf")))
         clamped = max(lo, min(action.value, hi))
 

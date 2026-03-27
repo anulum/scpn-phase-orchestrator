@@ -25,8 +25,10 @@ class PhysicalDriver:
         self._amplitude = amplitude
 
     def compute(self, t: float) -> float:
+        """Return Psi_P at time *t*."""
         return float(self._amplitude * np.sin(TWO_PI * self._frequency * t))
 
     def compute_batch(self, t_array: NDArray) -> NDArray:
+        """Vectorised Psi_P over an array of time values."""
         result: NDArray = self._amplitude * np.sin(TWO_PI * self._frequency * t_array)
         return result

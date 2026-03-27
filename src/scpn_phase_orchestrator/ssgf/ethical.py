@@ -30,6 +30,8 @@ __all__ = ["EthicalCost", "compute_ethical_cost"]
 
 @dataclass
 class EthicalCost:
+    """C15_sec ethical cost: SEC functional, CBF penalties, violations."""
+
     J_sec: float
     phi_ethics: float
     c15_sec: float

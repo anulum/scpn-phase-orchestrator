@@ -23,6 +23,8 @@ __all__ = ["BoundaryState", "BoundaryObserver"]
 
 @dataclass
 class BoundaryState:
+    """Snapshot of boundary violations partitioned by severity."""
+
     violations: list[str] = field(default_factory=list)
     soft_violations: list[str] = field(default_factory=list)
     hard_violations: list[str] = field(default_factory=list)
@@ -37,11 +39,13 @@ class BoundaryObserver:
         self._step = 0
 
     def set_event_bus(self, event_bus: EventBus) -> None:
+        """Attach an event bus for posting boundary_breach events."""
         self._event_bus = event_bus
 
     def observe(
         self, values: dict[str, float], *, step: int | None = None
     ) -> BoundaryState:
+        """Check *values* against all boundary definitions, return violations."""
         if step is not None:
             self._step = step
         state = BoundaryState()

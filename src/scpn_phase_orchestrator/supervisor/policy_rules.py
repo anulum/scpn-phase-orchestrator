@@ -55,6 +55,8 @@ class CompoundCondition:
 
 @dataclass(frozen=True)
 class PolicyAction:
+    """Action emitted by a policy rule: knob, scope, target value, and TTL."""
+
     knob: str
     scope: str
     value: float
@@ -63,6 +65,8 @@ class PolicyAction:
 
 @dataclass(frozen=True)
 class PolicyRule:
+    """Named rule: fires actions when regime and condition match."""
+
     name: str
     regimes: list[str]
     condition: PolicyCondition | CompoundCondition
@@ -81,6 +85,7 @@ class PolicyEngine:
         self._clock: float = 0.0
 
     def advance_clock(self, dt: float) -> None:
+        """Advance the internal clock used for cooldown tracking."""
         self._clock += dt
 
     def evaluate(
@@ -90,6 +95,7 @@ class PolicyEngine:
         good_layers: list[int],
         bad_layers: list[int],
     ) -> list[ControlAction]:
+        """Evaluate all rules against current state and return triggered actions."""
         actions: list[ControlAction] = []
         for rule in self._rules:
             if regime.value.upper() not in rule.regimes:

@@ -21,6 +21,8 @@ _INCOHERENT_THRESHOLD = 0.3
 
 @dataclass(frozen=True)
 class ChimeraState:
+    """Chimera detection result: coherent/incoherent oscillator partitions and index."""
+
     coherent_indices: list[int] = field(default_factory=list)
     incoherent_indices: list[int] = field(default_factory=list)
     chimera_index: float = 0.0
