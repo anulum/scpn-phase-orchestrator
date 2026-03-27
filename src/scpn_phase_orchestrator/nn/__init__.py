@@ -44,12 +44,16 @@ __all__ = [
     "StuartLandauLayer",
     "UDEKuramotoLayer",
     "CouplingResidual",
+    "analytical_inverse",
+    "hybrid_inverse",
     "infer_coupling",
     "inverse_loss",
     "coupling_correlation",
     "oim_step",
     "oim_forward",
+    "oim_solve",
     "extract_coloring",
+    "extract_coloring_soft",
     "coloring_violations",
     "coloring_energy",
     "bold_from_neural",
@@ -77,11 +81,19 @@ _FUNCTIONAL = {
     "saf_loss",
 }
 _BOLD = {"bold_from_neural", "bold_signal"}
-_INVERSE = {"infer_coupling", "inverse_loss", "coupling_correlation"}
+_INVERSE = {
+    "analytical_inverse",
+    "hybrid_inverse",
+    "infer_coupling",
+    "inverse_loss",
+    "coupling_correlation",
+}
 _OIM = {
     "oim_step",
     "oim_forward",
+    "oim_solve",
     "extract_coloring",
+    "extract_coloring_soft",
     "coloring_violations",
     "coloring_energy",
 }

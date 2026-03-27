@@ -118,6 +118,114 @@ def extract_coloring(phases: jax.Array, n_colors: int) -> jax.Array:
     return result
 
 
+def extract_coloring_soft(phases: jax.Array, n_colors: int) -> jax.Array:
+    """Extract color assignment using circular distance to cluster centres.
+
+    More accurate than floor bucketing when phases sit near bucket
+    boundaries. Assigns each oscillator to the nearest of the n_colors
+    equidistant cluster centres.
+
+    Args:
+        phases: (N,) oscillator phases in [0, 2π)
+        n_colors: number of colors
+
+    Returns:
+        (N,) integer color labels in {0, 1, ..., n_colors-1}
+    """
+    centres = jnp.linspace(0, TWO_PI, n_colors, endpoint=False)
+    # Circular distance: |angle_diff| wrapped to [-π, π]
+    diff = phases[:, jnp.newaxis] - centres[jnp.newaxis, :]
+    circ_dist = jnp.abs(jnp.arctan2(jnp.sin(diff), jnp.cos(diff)))
+    result: jax.Array = jnp.argmin(circ_dist, axis=1).astype(jnp.int32)
+    return result
+
+
+def oim_solve(
+    adjacency: jax.Array,
+    n_colors: int,
+    *,
+    key: jax.Array,
+    dt: float = 0.05,
+    k_min: float = 0.1,
+    k_max: float = 10.0,
+    n_anneal: int = 1000,
+    n_refine: int = 500,
+    n_restarts: int = 10,
+    patience: int = 50,
+) -> tuple[jax.Array, jax.Array, float]:
+    """Solve graph coloring via OIM with annealing and multi-start.
+
+    Ramps coupling_strength from k_min to k_max over n_anneal steps,
+    then holds at k_max for n_refine steps. Repeats n_restarts times
+    with different random initialisations, returns the best result.
+
+    Args:
+        adjacency: (N, N) graph adjacency matrix
+        n_colors: number of colors
+        key: PRNG key
+        dt: integration timestep
+        k_min: initial coupling strength (low = exploration)
+        k_max: final coupling strength (high = exploitation)
+        n_anneal: ramp-up steps
+        n_refine: hold steps after annealing
+        n_restarts: number of random restarts
+        patience: early stopping patience during refinement
+
+    Returns:
+        (best_colors, best_phases, best_energy)
+    """
+    N = adjacency.shape[0]
+    best_energy = float("inf")
+    best_violations = N * N  # worse than any real result
+    best_phases = jnp.zeros(N)
+    best_colors = jnp.zeros(N, dtype=jnp.int32)
+
+    for _i in range(n_restarts):
+        key, subkey, noise_key = jax.random.split(key, 3)
+        phases = jax.random.uniform(subkey, (N,), maxval=TWO_PI)
+
+        # For 2-coloring, sin(2*Δθ) equilibrium is at π/2 (between
+        # cluster centres), so use sin(Δθ) coupling (anti-phase at π).
+        coupling_n = 1 if n_colors == 2 else n_colors
+
+        # Annealing: linear ramp k_min→k_max + decaying noise
+        for step in range(n_anneal):
+            frac = step / max(n_anneal - 1, 1)
+            k = k_min + (k_max - k_min) * frac
+            phases = oim_step(phases, adjacency, coupling_n, dt, k)
+            # Langevin noise: high early (exploration), decays to zero
+            noise_scale = 0.1 * (1.0 - frac)
+            noise_key, nk = jax.random.split(noise_key)
+            phases = (phases + noise_scale * jax.random.normal(nk, (N,))) % TWO_PI
+
+        # Refinement at k_max with early stopping
+        prev_energy = float(coloring_energy(phases, adjacency, coupling_n))
+        stale = 0
+        for step in range(n_refine):
+            phases = oim_step(phases, adjacency, coupling_n, dt, k_max)
+            if step % 10 == 0:
+                e = float(coloring_energy(phases, adjacency, coupling_n))
+                if abs(e - prev_energy) < 1e-6:
+                    stale += 10
+                    if stale >= patience:
+                        break
+                else:
+                    stale = 0
+                prev_energy = e
+
+        # Select best restart by violation count, break ties by energy
+        colors = extract_coloring_soft(phases, n_colors)
+        v = int(coloring_violations(colors, adjacency))
+        e_final = float(coloring_energy(phases, adjacency, coupling_n))
+        if v < best_violations or (v == best_violations and e_final < best_energy):
+            best_violations = v
+            best_energy = e_final
+            best_phases = phases
+            best_colors = colors
+
+    return best_colors, best_phases, best_energy
+
+
 def coloring_violations(
     colors: jax.Array,
     adjacency: jax.Array,

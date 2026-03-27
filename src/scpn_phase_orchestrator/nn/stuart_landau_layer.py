@@ -72,6 +72,7 @@ class StuartLandauLayer(eqx.Module):
         self.epsilon = epsilon
         self.n = n
 
+    @eqx.filter_jit
     def __call__(
         self, phases: jax.Array, amplitudes: jax.Array
     ) -> tuple[jax.Array, jax.Array]:
@@ -97,6 +98,7 @@ class StuartLandauLayer(eqx.Module):
         )
         return fp, fr
 
+    @eqx.filter_jit
     def forward_with_trajectory(
         self, phases: jax.Array, amplitudes: jax.Array
     ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
@@ -117,6 +119,7 @@ class StuartLandauLayer(eqx.Module):
             self.epsilon,
         )
 
+    @eqx.filter_jit
     def sync_score(self, phases: jax.Array, amplitudes: jax.Array) -> jax.Array:
         """Run dynamics and return final synchronization (order parameter R).
 
@@ -130,6 +133,7 @@ class StuartLandauLayer(eqx.Module):
         fp, _ = self(phases, amplitudes)
         return order_parameter(fp)
 
+    @eqx.filter_jit
     def mean_amplitude(self, phases: jax.Array, amplitudes: jax.Array) -> jax.Array:
         """Run dynamics and return mean final amplitude.
 

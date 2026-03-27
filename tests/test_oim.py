@@ -16,7 +16,9 @@ from scpn_phase_orchestrator.nn.oim import (
     coloring_energy,
     coloring_violations,
     extract_coloring,
+    extract_coloring_soft,
     oim_forward,
+    oim_solve,
     oim_step,
 )
 
@@ -137,25 +139,69 @@ class TestColoringEnergy:
         assert float(e_after) <= float(e_before)
 
 
-class TestEndToEnd:
-    @pytest.mark.xfail(reason="OIM convergence needs GPU — too slow on CPU XLA")
+class TestExtractColoringSoft:
+    def test_output_shape(self):
+        phases = jnp.array([0.0, 2.1, 4.2])
+        colors = extract_coloring_soft(phases, 3)
+        assert colors.shape == (3,)
+
+    def test_correct_assignment(self):
+        phases = jnp.array([0.1, 2.2, 4.3])
+        colors = extract_coloring_soft(phases, 3)
+        assert int(colors[0]) == 0
+        assert int(colors[1]) == 1
+        assert int(colors[2]) == 2
+
+    def test_boundary_phase_goes_to_nearest(self):
+        # Phase just below bucket boundary — soft should handle correctly
+        bucket = 2.0 * jnp.pi / 3.0
+        phases = jnp.array([bucket - 0.01, bucket + 0.01])
+        colors = extract_coloring_soft(phases, 3)
+        assert int(colors[0]) == 1
+        assert int(colors[1]) == 1
+
+
+class TestOIMSolve:
     def test_triangle_3coloring(self, key, triangle_graph):
-        """K3 should be 3-colorable after sufficient OIM dynamics."""
-        phases = jax.random.uniform(key, (3,), maxval=2.0 * jnp.pi)
-        final, _ = oim_forward(
-            phases, triangle_graph, 3, 0.05, 2000, coupling_strength=5.0
-        )
-        colors = extract_coloring(final, 3)
+        colors, phases, energy = oim_solve(triangle_graph, 3, key=key)
         v = coloring_violations(colors, triangle_graph)
         assert int(v) == 0
 
-    @pytest.mark.xfail(reason="OIM convergence needs GPU — too slow on CPU XLA")
     def test_bipartite_2coloring(self, key, bipartite_graph):
-        """K_{3,3} should be 2-colorable after sufficient OIM dynamics."""
-        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
-        final, _ = oim_forward(
-            phases, bipartite_graph, 2, 0.05, 2000, coupling_strength=5.0
+        colors, phases, energy = oim_solve(bipartite_graph, 2, key=key)
+        v = coloring_violations(colors, bipartite_graph)
+        assert int(v) == 0
+
+    def test_returns_correct_shapes(self, key, bipartite_graph):
+        colors, phases, energy = oim_solve(
+            bipartite_graph,
+            2,
+            key=key,
+            n_restarts=1,
         )
-        colors = extract_coloring(final, 2)
+        assert colors.shape == (N,)
+        assert phases.shape == (N,)
+        assert isinstance(energy, float)
+
+    def test_energy_lower_than_random(self, key, bipartite_graph):
+        _, _, e_solved = oim_solve(bipartite_graph, 2, key=key)
+        # Random phases have ~0 expected energy
+        random_phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        from scpn_phase_orchestrator.nn.oim import coloring_energy
+
+        e_random = float(coloring_energy(random_phases, bipartite_graph, 2))
+        assert e_solved <= e_random
+
+
+class TestEndToEnd:
+    def test_triangle_3coloring(self, key, triangle_graph):
+        """K3 should be 3-colorable via oim_solve."""
+        colors, _, _ = oim_solve(triangle_graph, 3, key=key)
+        v = coloring_violations(colors, triangle_graph)
+        assert int(v) == 0
+
+    def test_bipartite_2coloring(self, key, bipartite_graph):
+        """K_{3,3} should be 2-colorable via oim_solve."""
+        colors, _, _ = oim_solve(bipartite_graph, 2, key=key)
         v = coloring_violations(colors, bipartite_graph)
         assert int(v) == 0

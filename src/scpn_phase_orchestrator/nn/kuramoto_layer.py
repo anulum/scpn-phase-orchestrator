@@ -58,6 +58,7 @@ class KuramotoLayer(eqx.Module):
         self.dt = dt
         self.n = n
 
+    @eqx.filter_jit
     def __call__(self, phases: jax.Array) -> jax.Array:
         """Run Kuramoto dynamics on input phases.
 
@@ -70,6 +71,7 @@ class KuramotoLayer(eqx.Module):
         final, _ = kuramoto_forward(phases, self.omegas, self.K, self.dt, self.n_steps)
         return final
 
+    @eqx.filter_jit
     def forward_with_trajectory(self, phases: jax.Array) -> tuple[jax.Array, jax.Array]:
         """Run dynamics and return both final state and full trajectory.
 
@@ -81,6 +83,7 @@ class KuramotoLayer(eqx.Module):
         """
         return kuramoto_forward(phases, self.omegas, self.K, self.dt, self.n_steps)
 
+    @eqx.filter_jit
     def sync_score(self, phases: jax.Array) -> jax.Array:
         """Run dynamics and return final synchronization (order parameter R).
 
