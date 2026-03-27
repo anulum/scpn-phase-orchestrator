@@ -144,3 +144,21 @@ class TestCrossRecurrence:
         b = rng.normal(0, 1, (80, 2))
         result = cross_rqa(a, b, epsilon=0.3)
         assert result.determinism < 0.5
+
+    def test_cross_recurrence_angular_metric(self):
+        """Angular metric in cross_recurrence_matrix."""
+        rng = np.random.default_rng(42)
+        a = rng.uniform(0, 2 * np.pi, (20, 2))
+        b = rng.uniform(0, 2 * np.pi, (20, 2))
+        CR = cross_recurrence_matrix(a, b, epsilon=1.0, metric="angular")
+        assert CR.shape == (20, 20)
+        assert CR.dtype == bool
+
+    def test_cross_rqa_angular_metric(self):
+        """Angular metric in cross_rqa."""
+        t = np.linspace(0, 4 * np.pi, 50)
+        a = np.column_stack([np.sin(t), np.cos(t)])
+        b = np.column_stack([np.sin(t + 0.1), np.cos(t + 0.1)])
+        result = cross_rqa(a, b, epsilon=1.0, metric="angular")
+        assert isinstance(result, RQAResult)
+        assert 0.0 <= result.recurrence_rate <= 1.0

@@ -104,3 +104,23 @@ class TestAutoEmbed:
         # Check it spans both axes (not degenerate)
         assert np.std(emb[:, 0]) > 0.3
         assert np.std(emb[:, 1]) > 0.3
+
+
+class TestEmbeddingCoverage:
+    def test_optimal_dimension_short_signal(self):
+        """Signal too short for higher m → returns early."""
+        signal = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        m = optimal_dimension(signal, delay=3, max_dim=10)
+        assert 1 <= m <= 10
+
+    def test_optimal_dimension_repeated_values(self):
+        """Repeated values → d=0 → skip in FNN loop."""
+        signal = np.array([1.0, 1.0, 2.0, 2.0, 3.0, 3.0] * 5)
+        m = optimal_dimension(signal, delay=1, max_dim=5)
+        assert 1 <= m <= 5
+
+    def test_optimal_delay_lag_exceeds_signal(self):
+        """max_lag > T/2 → clamped internally."""
+        signal = np.sin(np.linspace(0, 4 * np.pi, 20))
+        tau = optimal_delay(signal, max_lag=100)
+        assert tau >= 1

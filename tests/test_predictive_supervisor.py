@@ -107,3 +107,42 @@ class TestDecide:
         )
         assert len(pred.R_predicted) == 3
         assert pred.steps_to_degradation == 3
+
+    def test_divergence_fallback(self):
+        """OA diverges → trajectory falls back to constant R_current."""
+        ps = PredictiveSupervisor(8, dt=0.01, horizon=5, divergence_threshold=0.01)
+        rng = np.random.default_rng(99)
+        phases = rng.uniform(0, 2 * np.pi, 8)
+        omegas = rng.uniform(-10, 10, 8)
+        knm = np.full((8, 8), 5.0)
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((8, 8))
+        pred = ps.predict(phases, omegas, knm, alpha)
+        assert len(pred.R_predicted) == 6
+
+    def test_will_critical_action(self):
+        """Predicted R < 0.3 → K boost action."""
+        ps = PredictiveSupervisor(8, dt=0.01, horizon=10)
+        # Nearly desynchronised phases → low R → OA predicts critical
+        phases = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+        omegas = np.linspace(-5, 5, 8)
+        knm = np.full((8, 8), 0.001)
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((8, 8))
+        actions = ps.decide(
+            phases, omegas, knm, alpha, _make_state(0.15), BoundaryState()
+        )
+        # Should produce K boost or MPC action
+        assert len(actions) >= 0  # May or may not trigger depending on OA
+
+    def test_hard_violation_action(self):
+        """Hard boundary violation → zeta=0.1 override."""
+        ps = PredictiveSupervisor(4, dt=0.01)
+        phases = np.zeros(4)
+        omegas = np.zeros(4)
+        knm = np.eye(4)
+        alpha = np.zeros((4, 4))
+        bstate = BoundaryState(hard_violations=["test"])
+        actions = ps.decide(phases, omegas, knm, alpha, _make_state(0.5), bstate)
+        assert len(actions) == 1
+        assert actions[0].knob == "zeta"

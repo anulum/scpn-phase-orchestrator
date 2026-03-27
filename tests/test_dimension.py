@@ -113,3 +113,32 @@ class TestKaplanYorkeDimension:
         # Sorted: [0.5, -0.3, -1.0] → cumsum=[0.5, 0.2, -0.8] → j=1
         # D_KY = 2 + 0.2/1.0 = 2.2
         assert abs(d - 2.2) < 1e-10
+
+    def test_zero_denominator(self):
+        """λ_{j+1} = 0 → D_KY = j + 1."""
+        le = np.array([1.0, 0.0, -1.0])
+        d = kaplan_yorke_dimension(le)
+        # cumsum = [1.0, 1.0, 0.0] → j=2, but j+1=3 >= len → returns 3
+        # Actually: j=2 (0-indexed cumsum[2]=0.0 ≥ 0), j+1=3 ≥ 3 → returns 3.0
+        assert d == 3.0
+
+
+class TestCorrelationDimensionEdgeCases:
+    def test_few_valid_c_eps(self):
+        """Trajectory with very few valid C(ε) → D2=0."""
+        # Two points very close together → only small ε gives C>0
+        traj = np.array([[0.0, 0.0], [1e-15, 1e-15], [0.0, 0.0]])
+        result = correlation_dimension(traj, n_epsilons=5)
+        assert result.D2 >= 0.0
+
+    def test_single_point_trajectory(self):
+        """T=1 → diameter=0 → D2=0."""
+        traj = np.array([[1.0, 2.0]])
+        result = correlation_dimension(traj)
+        assert result.D2 == 0.0
+
+    def test_short_slope_window(self):
+        """Very few epsilons → window < 2 branch."""
+        traj = np.array([[0.0], [1.0], [2.0], [3.0]])
+        result = correlation_dimension(traj, n_epsilons=3)
+        assert isinstance(result.D2, float)
