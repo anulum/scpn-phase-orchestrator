@@ -115,10 +115,13 @@ class HypergraphEngine:
 
             # For each node m in the hyperedge:
             # coupling_m = σ * sin(Σ_{j∈edge, j≠m} θ_j - (k-1)*θ_m)
+            # Total phase of all nodes in this hyperedge
             phase_sum = sum(theta[j] for j in nodes)
 
             for m in nodes:
-                arg = phase_sum - k * theta[m]  # = Σ_{j≠m} θ_j - (k-1)*θ_m
+                # Tanaka & Aoyagi 2011, Eq. 2: argument is
+                # Σ_{j≠m} θ_j - (k-1)θ_m = (Σ_all θ) - k·θ_m
+                arg = phase_sum - k * theta[m]
                 dtheta[m] += sigma * np.sin(arg)
 
         if zeta != 0.0:

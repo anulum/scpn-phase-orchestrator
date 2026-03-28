@@ -16,6 +16,7 @@ __all__ = ["compute_npe", "phase_distance_matrix"]
 def phase_distance_matrix(phases: NDArray) -> NDArray:
     """Pairwise circular distance matrix in [0, π]."""
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
+    # Geodesic distance on S¹ via atan2 (handles wraparound correctly)
     dist: NDArray = np.abs(np.arctan2(np.sin(diff), np.cos(diff)))
     return dist
 
@@ -39,9 +40,9 @@ def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
 
     dist = phase_distance_matrix(phases)
 
-    # Single-linkage: equivalent to H0 persistence via minimum spanning tree
-    # Kruskal's algorithm gives birth=0, death=merge_distance for each component
-    # The H0 lifetimes are the MST edge weights
+    # H0 persistence via MST: each edge merges two components, so
+    # birth=0, death=edge_weight for the dying component.
+    # The n-1 MST edge weights ARE the H0 barcode lifetimes.
     if max_radius is None:
         max_radius = np.pi
 
@@ -55,6 +56,7 @@ def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
     rank = [0] * n
 
     def find(x: int) -> int:
+        # Union-Find with path compression (halving variant)
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
@@ -68,8 +70,9 @@ def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
             break
         ri, rj = find(i), find(j)
         if ri != rj:
-            # Merge: component dies at distance d, born at 0 → lifetime = d
+            # Kruskal step: merge two components; H0 bar dies at d
             lifetimes.append(d)
+            # Union by rank keeps tree balanced → near O(α(n)) find
             if rank[ri] < rank[rj]:
                 parent[ri] = rj
             elif rank[ri] > rank[rj]:
@@ -85,9 +88,12 @@ def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
     if total < 1e-15:
         return 0.0
 
+    # p_i = lifetime_i / Σ lifetimes (persistence probability)
     probs = np.array(lifetimes) / total
     probs = probs[probs > 0]
+    # Shannon entropy of the persistence diagram
     entropy = -float(np.sum(probs * np.log(probs)))
+    # Normalise by log(n-1) so NPE ∈ [0,1]; max when all bars equal
     max_entropy = np.log(len(probs)) if len(probs) > 1 else 1.0
 
     if max_entropy < 1e-15:  # pragma: no cover — log(n) > 0 for n >= 2

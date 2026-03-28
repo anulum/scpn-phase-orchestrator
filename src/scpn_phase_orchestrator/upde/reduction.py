@@ -59,6 +59,9 @@ class OttAntonsenReduction:
         dt = self._dt
 
         def f(zz: complex) -> complex:
+            # OA manifold ODE: -(Δ+iω₀)z damps/rotates the mean field;
+            # (K/2)(z - |z|²z) is the cubic self-coupling from the
+            # Lorentzian g(ω) closure (Ott & Antonsen 2008, Eq. 9)
             return -(self._delta + 1j * self._omega_0) * zz + (self._K / 2.0) * (
                 zz - abs(zz) ** 2 * zz
             )
@@ -83,10 +86,13 @@ class OttAntonsenReduction:
 
         Uses median as ω₀ and IQR-based Δ estimate.
         """
+        # Fit Lorentzian: median → centre ω₀, IQR/2 → half-width Δ
+        # (IQR of a Lorentzian equals 2Δ, so IQR/2 ≈ Δ)
         omega_0 = float(np.median(omegas))
         q75, q25 = np.percentile(omegas, [75, 25])
         delta = (q75 - q25) / 2.0 if q75 > q25 else 0.01
 
         reducer = OttAntonsenReduction(omega_0, delta, K, dt=self._dt)
+        # Small seed breaks symmetry; integrate ~10 time units to steady state
         z0 = complex(0.01, 0.0)
         return reducer.run(z0, n_steps=int(10.0 / self._dt))

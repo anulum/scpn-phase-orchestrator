@@ -30,7 +30,7 @@ class StuartLandauEngine:
         dr_i/dt = (μ_i - r_i²)·r_i + ε Σ_j K^r_ij · r_j · cos(θ_j - θ_i - α_ij)
     """
 
-    # Dormand-Prince RK45 Butcher tableau
+    # Dormand-Prince (1980) Butcher tableau — same as UPDEEngine
     _DP_A = np.array(
         [
             [0, 0, 0, 0, 0, 0, 0],
@@ -195,6 +195,7 @@ class StuartLandauEngine:
             out=self._phase_diff,
         )
 
+        # Phase coupling: Sakaguchi-Kuramoto dθ/dt term
         np.sin(self._phase_diff - alpha, out=self._sin_diff)
         np.sum(knm * self._sin_diff, axis=1, out=self._scratch_dtheta)
         self._scratch_dtheta += omegas
@@ -205,6 +206,8 @@ class StuartLandauEngine:
         # negative amplitudes that flip the coupling sign (P1-1 audit fix).
         r_clamped = np.maximum(r, 0.0)
 
+        # Amplitude coupling: ε Σ K^r_ij r_j cos(θ_j - θ_i - α_ij)
+        # cos term: in-phase neighbours amplify, anti-phase suppress
         np.cos(self._phase_diff - alpha, out=self._cos_diff)
         np.sum(
             knm_r * self._cos_diff * r_clamped[np.newaxis, :],
@@ -212,6 +215,8 @@ class StuartLandauEngine:
             out=self._scratch_dr,
         )
         self._scratch_dr *= epsilon
+        # Stuart-Landau normal form: (μ - r²)r is the Hopf term
+        # μ > 0 → supercritical bifurcation, stable limit cycle r=√μ
         self._scratch_dr += (mu - r * r) * r
 
         self._scratch_deriv[:n] = self._scratch_dtheta
@@ -220,8 +225,8 @@ class StuartLandauEngine:
 
     def _post_step(self, state: NDArray) -> NDArray:
         n = self._n
-        state[:n] %= TWO_PI
-        np.maximum(state[n:], 0.0, out=state[n:])
+        state[:n] %= TWO_PI  # Phase on S¹
+        np.maximum(state[n:], 0.0, out=state[n:])  # r >= 0 (physical amplitude)
         return state
 
     def _euler_step(self, state: NDArray, p: _Params) -> NDArray:
@@ -259,6 +264,7 @@ class StuartLandauEngine:
             err_norm = float(np.max(self._err_buf / scale))
 
             if err_norm <= 1.0:
+                # PI controller: exponent -1/5 for 5th-order method
                 factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
                 self._last_dt = min(dt * factor, self._dt * 10.0)
                 return self._post_step(y5.copy())

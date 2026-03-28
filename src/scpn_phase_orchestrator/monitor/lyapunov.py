@@ -49,7 +49,9 @@ class LyapunovGuard:
         diff = phases[:, np.newaxis] - phases[np.newaxis, :]
         cos_diff = np.cos(diff)
 
+        # Lyapunov fn for Kuramoto gradient system
         # V(θ) = -(1/2N) Σ K_ij cos(θ_i - θ_j)
+        # van Hemmen & Wreszinski 1993, Eq. 2.3
         V = -0.5 * float(np.sum(knm * cos_diff)) / n
 
         # Numerical dV/dt from consecutive calls
@@ -58,11 +60,12 @@ class LyapunovGuard:
             dV_dt = V - self._prev_V
         self._prev_V = V
 
-        # Basin check: max phase difference between connected pairs
+        # Basin of attraction: all connected pairs within π/2 of each other
+        # (sufficient condition for gradient convergence)
         connected = knm > 0
         if np.any(connected):
             abs_diff = np.abs(diff)
-            # Wrap to [-π, π]
+            # Geodesic distance on S¹: min(|Δ|, 2π-|Δ|)
             abs_diff = np.minimum(abs_diff, 2 * np.pi - abs_diff)
             max_diff = float(np.max(abs_diff[connected]))
         else:
@@ -89,9 +92,11 @@ def _kuramoto_jacobian(
 
     Diagonal: J_ii = -Σ_{j≠i} K_ij cos(θ_j - θ_i - α_ij).
     """
+    # Off-diagonal: ∂f_i/∂θ_j = K_ij cos(θ_j - θ_i - α_ij)
     diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
     J: NDArray = knm * np.cos(diff)
     np.fill_diagonal(J, 0.0)
+    # Diagonal: ∂f_i/∂θ_i = -Σ_{j≠i} K_ij cos(θ_j - θ_i - α_ij)
     np.fill_diagonal(J, -J.sum(axis=1))
     return J
 
@@ -132,6 +137,7 @@ def lyapunov_spectrum(
     """
     n = len(phases_init)
     phases = phases_init.copy()
+    # Q holds N orthonormal perturbation vectors (Benettin 1980)
     Q = np.eye(n, dtype=np.float64)
     exponents = np.zeros(n, dtype=np.float64)
     n_qr = 0
@@ -146,19 +152,24 @@ def lyapunov_spectrum(
         phases = phases + dt * dtheta
         total_time += dt
 
-        # Evolve perturbation vectors: dQ/dt = J @ Q
+        # Tangent-space evolution: dQ/dt = J·Q (variational equation)
         J = _kuramoto_jacobian(phases, omegas, knm, alpha)
         Q = Q + dt * (J @ Q)
 
-        # QR reorthogonalization
+        # Benettin 1980: QR reorthogonalise to prevent collapse
+        # onto the most expanding direction
         if (step + 1) % qr_interval == 0:
             Q, R = np.linalg.qr(Q)
             diag = np.abs(np.diag(R))
+            # Floor to avoid log(0); diag(R) = stretching factors
             diag = np.maximum(diag, 1e-300)
+            # Accumulate log-stretching; λ_i = (1/T) Σ log|R_ii|
             exponents += np.log(diag)
             n_qr += 1
 
     if n_qr > 0:
+        # Normalise by total elapsed time → Lyapunov exponents in 1/time
         exponents /= total_time
 
+    # Convention: largest exponent first (λ_1 ≥ λ_2 ≥ ... ≥ λ_N)
     return np.sort(exponents)[::-1]

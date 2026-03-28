@@ -24,7 +24,8 @@ class UPDEEngine:
                   + zeta sin(Psi - theta_i)
     """
 
-    # Dormand-Prince RK45 Butcher tableau coefficients
+    # Dormand-Prince (1980) Butcher tableau — 7-stage, FSAL property
+    # Coefficients from Table 5.2 of Hairer, Norsett & Wanner, vol. I
     _DP_A = np.array(
         [
             [0, 0, 0, 0, 0, 0, 0],
@@ -36,10 +37,13 @@ class UPDEEngine:
             [35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0],
         ]
     )
+    # B4: 4th-order weights for error estimation (embedded pair)
     _DP_B4 = np.array(
         [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 2100, 1 / 40]
     )
+    # B5: 5th-order weights — the accepted solution
     _DP_B5 = np.array([35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0])
+    # C: stage time fractions c_i, row sums of A
     _DP_C = np.array([0, 1 / 5, 3 / 10, 4 / 5, 8 / 9, 1, 1])
 
     def __init__(
@@ -168,12 +172,12 @@ class UPDEEngine:
         psi: float,
         alpha: NDArray,
     ) -> NDArray:
-        # theta_j - theta_i - alpha_ij via outer subtraction
+        # Sakaguchi-Kuramoto coupling: K_ij sin(θ_j - θ_i - α_ij)
+        # α_ij is the Sakaguchi phase-lag (Sakaguchi & Kuramoto 1986)
         np.subtract(theta[np.newaxis, :], theta[:, np.newaxis], out=self._phase_diff)
         self._phase_diff -= alpha
         np.sin(self._phase_diff, out=self._sin_diff)
 
-        # sum_j K_ij sin(theta_j - theta_i - alpha_ij)
         np.sum(knm * self._sin_diff, axis=1, out=self._scratch_dtheta)
         self._scratch_dtheta += omegas
 
@@ -193,6 +197,7 @@ class UPDEEngine:
         alpha: NDArray,
     ) -> NDArray:
         dtheta = self._derivative(phases, omegas, knm, zeta, psi, alpha)
+        # Mod 2π keeps phases on S¹ (circle topology)
         result: NDArray = (phases + self._dt * dtheta) % TWO_PI
         return result
 
@@ -205,6 +210,7 @@ class UPDEEngine:
         psi: float,
         alpha: NDArray,
     ) -> NDArray:
+        # Classic RK4: 4th-order Runge-Kutta (1/6, 1/3, 1/3, 1/6 weights)
         dt = self._dt
         k1 = self._derivative(phases, omegas, knm, zeta, psi, alpha).copy()
         k2 = self._derivative(
@@ -234,27 +240,34 @@ class UPDEEngine:
         max_reject = 3
 
         for _ in range(max_reject + 1):
+            # Evaluate all 7 Dormand-Prince stages
             ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
             for i in range(1, 7):
+                # y_stage = y_n + h Σ a_ij k_j (Butcher row i)
                 stage = phases + dt * np.dot(A[i, :i], np.array(ks[:i]))
                 ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
 
             ks_arr = np.array(ks)
+            # 5th-order solution (accepted) and 4th-order (for error)
             y5 = phases + dt * np.dot(self._DP_B5, ks_arr)
             y4 = phases + dt * np.dot(self._DP_B4, ks_arr)
 
+            # Local error estimate: |y5 - y4| / (atol + rtol*max(|y|,|y5|))
+            # Hairer & Wanner mixed tolerance scaling
             np.subtract(y5, y4, out=self._err_buf)
             np.abs(self._err_buf, out=self._err_buf)
             scale = self._atol + self._rtol * np.maximum(np.abs(phases), np.abs(y5))
             err_norm = float(np.max(self._err_buf / scale))
 
             if err_norm <= 1.0:
+                # PI step-size control: h_new = 0.9 * h * err^(-1/p)
+                # p=5 for acceptance → exponent -0.2
                 factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
                 self._last_dt = min(dt * factor, self._dt * 10.0)
                 result: NDArray = y5 % TWO_PI
                 return result
 
-            # Reject — shrink dt and retry
+            # Reject — shrink with safety factor, exponent -1/4 (order p+1)
             factor = max(0.2, 0.9 * err_norm ** (-0.25))  # pragma: no cover
             dt = dt * factor  # pragma: no cover
 

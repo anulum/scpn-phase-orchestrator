@@ -77,7 +77,7 @@ def correlation_integral(
     epsilons = np.sort(epsilons)
 
     if total_pairs <= max_pairs:
-        # Compute all pairwise distances
+        # All T(T-1)/2 unique pairs; Heaviside counting below
         idx_i, idx_j = np.triu_indices(T, k=1)
         diffs = traj[idx_i] - traj[idx_j]
         dists = np.sqrt(np.sum(diffs**2, axis=1))
@@ -92,6 +92,8 @@ def correlation_integral(
         diffs = traj[idx_i] - traj[idx_j]
         dists = np.sqrt(np.sum(diffs**2, axis=1))
 
+    # C(ε) = (2 / N(N-1)) Σ Θ(ε - ||x_i - x_j||)
+    # Grassberger & Procaccia 1983, Eq. 1
     n_pairs_actual = len(dists)
     return np.array([np.sum(dists < eps) / n_pairs_actual for eps in epsilons])
 
@@ -147,6 +149,7 @@ def correlation_dimension(
             scaling_range=(float(epsilons[0]), float(epsilons[-1])),
         )
 
+    # D2 = lim_{ε→0} d log C(ε) / d log ε (GP83 power-law scaling)
     log_eps = np.log(epsilons[valid])
     log_C = np.log(C_eps[valid])
     slopes = np.diff(log_C) / np.diff(log_eps)
@@ -163,6 +166,7 @@ def correlation_dimension(
             scaling_range=(float(epsilons[0]), float(epsilons[-1])),
         )
 
+    # Scaling region: window with lowest slope variance (plateau)
     best_var = np.inf
     best_start = 0
     for i in range(len(slopes) - window + 1):
@@ -171,6 +175,7 @@ def correlation_dimension(
             best_var = v
             best_start = i
 
+    # D2 is the mean slope in the identified scaling region
     D2 = float(np.mean(slopes[best_start : best_start + window]))
     eps_valid = epsilons[valid]
     scaling_lo = float(eps_valid[best_start])
@@ -224,12 +229,15 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float:
         D_KY. Returns 0.0 if the largest exponent is negative (stable
         fixed point, zero-dimensional attractor).
     """
+    # Sort descending: λ_1 ≥ λ_2 ≥ ... ≥ λ_N
     le = np.sort(lyapunov_exponents)[::-1]
     cumsum = np.cumsum(le)
 
+    # All exponents negative → stable fixed point → D_KY = 0
     if cumsum[0] < 0:
         return 0.0
 
+    # Find j: largest index where Σ_{i=1}^{j} λ_i ≥ 0
     j = 0
     for i in range(len(cumsum)):
         if cumsum[i] >= 0:
@@ -237,6 +245,7 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float:
         else:
             break
 
+    # All exponents non-negative → volume-expanding in all directions
     if j + 1 >= len(le):
         return float(len(le))
 
@@ -244,4 +253,6 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float:
     if denom == 0:
         return float(j + 1)
 
+    # D_KY = j + (Σ_{i=1}^{j} λ_i) / |λ_{j+1}|
+    # Kaplan & Yorke 1979; interpolates between integer dimensions
     return float(j + 1) + float(cumsum[j]) / float(denom)
