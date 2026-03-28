@@ -50,7 +50,7 @@ WORKDIR /app
 USER spo
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD ["python", "-c", "import scpn_phase_orchestrator; print('ok')"]
+    CMD ["python", "-c", "import urllib.request as u; r=u.urlopen('http://localhost:8000/api/health'); assert b'healthy' in r.read()"]
 
 ENTRYPOINT ["spo"]
 CMD ["--help"]

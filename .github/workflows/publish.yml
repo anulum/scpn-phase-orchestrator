@@ -127,5 +127,57 @@ jobs:
           path: dist/
       - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b54a752f3a06f5a68aee2013 # release/v1
 
+  build-container:
+    name: Build, scan, and push container image
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@1f401f745bf57e30b3a2800ad308a87d2ebdf14b # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version tag
+        id: meta
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build container image
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947e0f18c8ea7e3fd4d # v0.28.0
+        with:
+          image-ref: ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }}
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+
+      - name: Push to GHCR
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }}
+            ghcr.io/anulum/scpn-phase-orchestrator:latest
+          cache-from: type=gha
+
   # spo-kernel Rust wheels are built and verified but published separately.
   # The spo-kernel package has its own trusted publisher configuration.

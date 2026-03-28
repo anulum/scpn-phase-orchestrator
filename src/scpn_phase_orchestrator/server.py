@@ -433,6 +433,23 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         text = exporter.export(upde_state, snap["regime"], 0.0)
         return PlainTextResponse(text, media_type="text/plain")
 
+    @app.get("/api/health")
+    async def health() -> dict:
+        """Deep health check — verifies engine, monitor, and regime subsystems."""
+        checks: dict[str, str] = {}
+        try:
+            async with sim._lock:
+                snap = sim.snapshot()
+            checks["engine"] = "ok" if snap.get("step", -1) >= 0 else "degraded"
+            r_val = snap.get("R_global", float("nan"))
+            checks["R_finite"] = "ok" if np.isfinite(r_val) else "error"
+            checks["regime"] = "ok" if snap.get("regime") else "unknown"
+        except Exception as exc:
+            checks["engine"] = f"error: {exc}"
+
+        healthy = all(v == "ok" for v in checks.values())
+        return {"status": "healthy" if healthy else "degraded", "checks": checks}
+
     @app.websocket("/ws/stream")
     async def ws_stream(websocket: WebSocket) -> None:
         """Read-only observer: streams snapshots without advancing simulation."""
