@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Infrastructure Hardening
+- `/api/health` deep health endpoint (engine + R + regime checks)
+- `test_grpc_integration.py`: 6 in-process gRPC servicer tests (GetState, Step, Reset, GetConfig, layers)
+- Trivy container security scanning in publish pipeline (blocks on CRITICAL/HIGH)
+- GHCR image push (`ghcr.io/anulum/scpn-phase-orchestrator`) with version + latest tags
+- Dockerfile HEALTHCHECK upgraded from import-only to `/api/health`
+- Production guide: health check docs, GHCR registry, Trivy scanning, updated Dockerfile examples
+
 ### Added — Mutation Testing & Killer Tests
 - `test_mutation_killers.py`: 32 tests targeting mutants that survived mutmut analysis (order_params.py: 16 survivors killed, numerics.py: 5 survivors killed)
 - Mutation testing pipeline on Kaggle (mutmut 2.4.5, kernel: anulum/spo-mutmut-v2)

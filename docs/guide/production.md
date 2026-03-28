@@ -2,37 +2,20 @@
 
 ## Docker
 
-Build a multi-stage image:
+The repository includes a production-ready `Dockerfile` with three stages:
 
-```dockerfile
-FROM python:3.12-slim AS base
-WORKDIR /app
-COPY pyproject.toml .
-RUN pip install --no-cache-dir .
-
-FROM base AS runtime
-COPY src/ src/
-COPY domainpacks/ domainpacks/
-ENTRYPOINT ["spo"]
-```
+1. **Rust builder** (`rust:1.83-slim`) — builds spo-kernel via maturin
+2. **Python builder** (`python:3.12-slim`) — installs SPO + Rust wheel
+3. **Production** (`python:3.12-slim`) — minimal image, non-root user
 
 ```bash
 docker build -t spo .
 docker run --rm spo run domainpacks/queuewaves/binding_spec.yaml --steps 1000
 ```
 
-For Rust acceleration, add a Rust build stage:
-
-```dockerfile
-FROM rust:1.75-slim AS rust-build
-WORKDIR /build
-COPY spo-kernel/ spo-kernel/
-RUN cd spo-kernel && cargo build --release -p spo-ffi
-
-FROM python:3.12-slim AS runtime
-COPY --from=rust-build /build/spo-kernel/target/release/libspo_ffi.so /usr/local/lib/
-# ... install Python package ...
-```
+The image runs as non-root user `spo` (UID 1000) and includes a deep
+HEALTHCHECK against `/api/health`. Base images are pinned by SHA digest
+for reproducible builds.
 
 ## QueueWaves Server
 
@@ -159,8 +142,42 @@ storage.
 
 ## Health Checks
 
-QueueWaves `/api/v1/health` returns 200 with `{"status": "ok", "tick": N}`.
-Use as a Kubernetes liveness probe:
+### Core API (`/api/health`)
+
+The core REST API exposes a deep health endpoint that checks engine state,
+R finiteness, and regime subsystem:
+
+```json
+GET /api/health → 200
+{
+  "status": "healthy",
+  "checks": {
+    "engine": "ok",
+    "R_finite": "ok",
+    "regime": "ok"
+  }
+}
+```
+
+If any subsystem degrades, `status` changes to `"degraded"` with the
+failing check identified. Use as a Kubernetes readiness probe:
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 15
+```
+
+The Dockerfile HEALTHCHECK uses this endpoint to verify the server
+is genuinely functional, not just importable.
+
+### QueueWaves (`/api/v1/health`)
+
+QueueWaves has its own health endpoint returning `{"status": "ok", "tick": N}`.
+Use as a liveness probe:
 
 ```yaml
 livenessProbe:
@@ -172,6 +189,27 @@ livenessProbe:
 ```
 
 For batch `spo run`, health is indicated by the exit code (0 = success).
+
+## Container Registry (GHCR)
+
+Tagged releases are built, scanned, and pushed to GitHub Container Registry:
+
+```bash
+# Pull the latest release
+docker pull ghcr.io/anulum/scpn-phase-orchestrator:latest
+
+# Pull a specific version
+docker pull ghcr.io/anulum/scpn-phase-orchestrator:0.5.0
+```
+
+The publish pipeline (`.github/workflows/publish.yml`) performs:
+
+1. **Build** — multi-stage Dockerfile with Rust FFI + Python
+2. **Scan** — Trivy checks for CRITICAL/HIGH CVEs (blocks publish on failure)
+3. **Push** — tagged version + `latest` to `ghcr.io/anulum/`
+
+Container images include the Rust kernel for maximum performance.
+The pure-Python fallback wheel is published separately to PyPI.
 
 ## Security
 
