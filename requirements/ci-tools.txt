@@ -1,0 +1,4 @@
+# CI tool dependencies with hash pins (OpenSSF Scorecard compliance)
+# Regenerate: pip-compile --generate-hashes requirements/ci-tools.in
+maturin==1.12.6 \
+    --hash=sha256:6892b4176992fcc143f9d1c1c874a816e9a041248eef46433db87b0f0aff4278

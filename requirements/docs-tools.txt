@@ -1,0 +1,7 @@
+# Docs tool dependencies with hash pins (OpenSSF Scorecard compliance)
+mkdocs-material==9.7.6 \
+    --hash=sha256:71b84353921b8ea1ba84fe11c50912cc512da8fe0881038fcc9a0761c0e635ba
+mkdocstrings==1.0.3 \
+    --hash=sha256:0d66d18430c2201dc7fe85134277382baaa15e6b30979f3f3bdbabd6dbdb6046
+pymdown-extensions==10.21 \
+    --hash=sha256:91b879f9f864d49794c2d9534372b10150e6141096c3908a455e45ca72ad9d3f
