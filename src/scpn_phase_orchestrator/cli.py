@@ -691,3 +691,56 @@ def scaffold(domain_name: str) -> None:
     if not readme.exists():
         readme.write_text(f"# {domain_name} domainpack\n", encoding="utf-8")
     click.echo(f"Scaffolded domainpack at {base}")
+
+
+@main.command()
+@click.option(
+    "--domain",
+    default="minimal_domain",
+    help="Domainpack to demo (default: minimal_domain).",
+)
+@click.option("--steps", default=100, help="Number of simulation steps.")
+@click.option("--port", default=8000, help="Server port.")
+def demo(domain: str, steps: int, port: int) -> None:
+    """Run a self-contained demo: simulate + print live coherence."""
+    domainpack_dir = Path(__file__).parent.parent.parent / "domainpacks"
+    spec_path = domainpack_dir / domain / "binding_spec.yaml"
+    if not spec_path.exists():
+        # Try relative to cwd
+        spec_path = Path("domainpacks") / domain / "binding_spec.yaml"
+    if not spec_path.exists():
+        available = sorted(
+            d.name
+            for d in (
+                domainpack_dir if domainpack_dir.exists() else Path("domainpacks")
+            ).iterdir()
+            if d.is_dir() and (d / "binding_spec.yaml").exists()
+        )
+        click.echo(f"Domainpack '{domain}' not found.", err=True)
+        click.echo(f"Available: {', '.join(available)}", err=True)
+        raise SystemExit(1)
+
+    spec = load_binding_spec(spec_path)
+    click.echo(f"SPO Demo — {spec.name}")
+    click.echo(f"  Oscillators: {sum(ly.n_oscillators for ly in spec.layers)}")
+    click.echo(f"  Layers: {len(spec.layers)}")
+    click.echo(f"  Steps: {steps}")
+    click.echo("-" * 40)
+
+    from scpn_phase_orchestrator.server import SimulationState
+
+    sim = SimulationState(spec)
+    for step in range(1, steps + 1):
+        state = sim.step()
+        if step % max(1, steps // 10) == 0 or step == steps:
+            R = state["R_global"]
+            regime = state["regime"]
+            click.echo(f"  Step {step:>5d}: R={R:.3f} [{regime}]")
+
+    click.echo("-" * 40)
+    click.echo(f"Final R={state['R_global']:.3f}, regime={state['regime']}")
+    click.echo("\nTo serve with full stack:")
+    click.echo("  cd deploy && docker compose up")
+    click.echo("  Open http://localhost:8000 (dashboard)")
+    click.echo("  Open http://localhost:3000 (Grafana)")
+    click.echo("  Open http://localhost:9090 (Prometheus)")
