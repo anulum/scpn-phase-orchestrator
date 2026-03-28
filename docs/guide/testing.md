@@ -172,4 +172,25 @@ Dedicated comprehensive validation for auxiliary engines:
 
 CI runs the full suite on Python 3.10 (without Rust kernel) and Python 3.12 (with Rust kernel). The Python fallback uses pure-NumPy integrators; the Rust path uses `spo-kernel` via PyO3. Tests handle both paths — see `test_degenerate_edges.py::TestUPDEZeroDt` for the pattern.
 
-Coverage gate: **95% minimum**, currently at **99.33%**.
+Coverage gate: **95% minimum**, currently at **99%+**.
+
+## Convergence & Topology Tests (`test_convergence_topology.py`)
+
+Numerical and graph-theoretic proofs:
+
+- **Convergence order**: Euler and RK4 exact on free rotation (linear ODE);
+  coupled case: RK4 more accurate than Euler at same dt
+- **Topology dynamics**: all-to-all fastest sync; star hub entrains spokes;
+  ring λ₂ > chain λ₂ (algebraic connectivity proof); disconnected → no sync
+- **Delay τ→0 limit**: delay_steps=1 converges like standard UPDE;
+  large delay (50 steps) destabilises sync
+- **Benchmark baseline**: 1000 steps at N=32 in <5s; order parameter <1ms at N=256
+
+## Mutation Testing
+
+mutmut requires WSL on Windows. Run in WSL or cloud:
+
+```bash
+mutmut run --paths-to-mutate src/scpn_phase_orchestrator/upde/order_params.py \
+  --tests-dir tests/ --runner "pytest tests/ -x -q --tb=no"
+```
