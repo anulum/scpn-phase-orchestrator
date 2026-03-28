@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Interactive Tools & Media
+- `tools/spo_studio.py`: Streamlit GUI — browse 32 domainpacks, tune K/ζ/Ψ knobs, live R(t) chart, regime timeline, per-layer breakdown (`streamlit run tools/spo_studio.py`)
+- `docs/demo/index.html`: WASM interactive demo — 66KB Rust→WebAssembly Kuramoto in browser, real-time R(t) + phase portrait, sliders for N/K/spread/dt
+- `docs/video_scripts.md`: 7 × 60-second demo scripts with voiceover text for Loom/OBS recording
+
 ### Added — Showcase Examples (12 → 17)
 - `supervisor_advantage.py`: open-loop vs closed-loop coherence, quantified % improvement
 - `failure_recovery.py`: inject coupling fault, detect R drop, boost remaining links, recover
