@@ -66,7 +66,7 @@ class RemanentiaBridge:
 
     def __init__(
         self,
-        remanentia_url: str = "http://localhost:8001",
+        remanentia_url: str = "http://localhost:8002",
         timeout: float = 5.0,
     ):
         self._url = remanentia_url.rstrip("/")
