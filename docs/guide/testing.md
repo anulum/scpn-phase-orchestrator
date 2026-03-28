@@ -186,11 +186,48 @@ Numerical and graph-theoretic proofs:
   large delay (50 steps) destabilises sync
 - **Benchmark baseline**: 1000 steps at N=32 in <5s; order parameter <1ms at N=256
 
-## Mutation Testing
+## Mutation Testing (`test_mutation_killers.py`)
 
-mutmut requires WSL on Windows. Run in WSL or cloud:
+Mutation testing injects small bugs (mutants) into source code and checks
+whether the test suite catches them. A *survived* mutant means the tests
+have a blind spot. We use [mutmut](https://github.com/boxed/mutmut) v2.4.5
+running on Kaggle (Linux kernel) since mutmut does not support Windows natively.
+
+### Results (2026-03-28)
+
+| Module | Mutants | Survived | Killed by new tests |
+|--------|---------|----------|---------------------|
+| `upde/order_params.py` | 28 | 16 | 22 killer tests |
+| `upde/numerics.py` | 10 | 5 | 10 killer tests |
+
+All 21 real survivors are now covered by dedicated tests in
+`test_mutation_killers.py`. The tests target specific operator
+and value mutations that the existing suite missed:
+
+- **Boundary returns**: `phases.size == 0` → `(0.0, 0.0)` (exact zeros, not just "small")
+- **Imaginary unit**: `exp(1j * theta)` — verify `1j` not mutated to `1`
+- **Operator semantics**: `max_omega + max_coupling` (sum, not max)
+- **Exact defaults**: every `IntegrationConfig` default value asserted exactly
+- **PLV edge cases**: empty arrays, size mismatch, anti-phase locking
+
+### Running mutation tests
+
+mutmut requires Linux. On Kaggle or WSL:
 
 ```bash
-mutmut run --paths-to-mutate src/scpn_phase_orchestrator/upde/order_params.py \
-  --tests-dir tests/ --runner "pytest tests/ -x -q --tb=no"
+# Install mutmut v2 (v3 changed the CLI)
+pip install mutmut==2.4.5
+
+# Run on a single module with targeted fast tests
+mutmut run \
+  --paths-to-mutate src/scpn_phase_orchestrator/upde/order_params.py \
+  --tests-dir tests/ \
+  --runner "python -m pytest tests/test_mutation_killers.py -x -q --tb=no" \
+  --no-progress
+
+# Show survivors
+mutmut results
 ```
+
+The Kaggle kernel `anulum/spo-mutmut-v2` is configured for batch
+mutation testing across multiple modules.

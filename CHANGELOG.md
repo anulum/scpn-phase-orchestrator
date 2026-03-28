@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Mutation Testing & Killer Tests
+- `test_mutation_killers.py`: 32 tests targeting mutants that survived mutmut analysis (order_params.py: 16 survivors killed, numerics.py: 5 survivors killed)
+- Mutation testing pipeline on Kaggle (mutmut 2.4.5, kernel: anulum/spo-mutmut-v2)
+- Testing guide: mutation testing results, methodology, Kaggle/WSL instructions
+
 ### Added — Domain Examples (3 → 10)
 - `examples/neuroscience_eeg.py`: 8-electrode EEG alpha-band synchronization with chimera detection
 - `examples/cardiac_rhythm.py`: SA node pacemaker, AV block scenario, external drive recovery
