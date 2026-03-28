@@ -112,3 +112,48 @@ class TestRemanentiaBridge:
         bad = RemanentiaBridge(remanentia_url="file:///etc/passwd")
         with pytest.raises(ValueError, match="Refusing non-HTTP"):
             bad._get("/health")
+
+    def test_entity_count_offline(self) -> None:
+        bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        assert bad.get_entity_count() == 0
+
+    def test_consolidation_offline(self) -> None:
+        bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        assert bad.trigger_consolidation() is False
+
+    def test_snapshot_offline(self) -> None:
+        bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        bad._last_R = 0.3
+        bad._last_regime = "drift"
+        snap = bad.snapshot()
+        assert snap.R_global == 0.3
+        assert snap.n_entities == 0
+        assert snap.n_memories == 0
+
+
+class _EmptyRecallHandler(BaseHTTPRequestHandler):
+    """Returns empty recall results."""
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        self.rfile.read(length)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"results": []}).encode())
+
+    def log_message(self, *_a):
+        pass
+
+
+class TestNoveltyEmpty:
+    def test_empty_recall_returns_one(self) -> None:
+        server = HTTPServer(("127.0.0.1", 0), _EmptyRecallHandler)
+        port = server.server_address[1]
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        bridge = RemanentiaBridge(
+            remanentia_url=f"http://127.0.0.1:{port}", timeout=2.0
+        )
+        assert bridge.get_novelty_score("unknown topic") == 1.0
+        server.shutdown()

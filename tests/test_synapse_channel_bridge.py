@@ -7,7 +7,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
+from unittest.mock import AsyncMock, patch
+
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.adapters.synapse_channel_bridge import (
     SynapseChannelBridge,
@@ -152,3 +157,73 @@ class TestSynapseChannelBridge:
                 }
             )
         assert len(bridge._states["Claude"].task_events) <= 20
+
+
+class TestSynapseChannelBridgeAsync:
+    def _make_bridge(self) -> SynapseChannelBridge:
+        return SynapseChannelBridge(
+            agents=["Claude", "Codex"],
+        )
+
+    @pytest.mark.asyncio
+    async def test_connect(self) -> None:
+        bridge = self._make_bridge()
+        fake_ws = AsyncMock()
+        with patch("websockets.connect", new_callable=AsyncMock, return_value=fake_ws):
+            await bridge.connect()
+        assert bridge._running is True
+        assert bridge._ws is fake_ws
+        fake_ws.send.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_connect_import_error(self) -> None:
+        bridge = self._make_bridge()
+        with (
+            patch.dict("sys.modules", {"websockets": None}),
+            pytest.raises(ImportError, match="websockets required"),
+        ):
+            await bridge.connect()
+
+    @pytest.mark.asyncio
+    async def test_listen_once_no_ws(self) -> None:
+        bridge = self._make_bridge()
+        await bridge.listen_once()  # should return immediately
+
+    @pytest.mark.asyncio
+    async def test_listen_once_message(self) -> None:
+        bridge = self._make_bridge()
+        msg = json.dumps({"sender": "Claude", "type": "chat"})
+        bridge._ws = AsyncMock()
+        bridge._ws.recv = AsyncMock(return_value=msg)
+        await bridge.listen_once()
+        assert bridge._states["Claude"].message_count == 1
+
+    @pytest.mark.asyncio
+    async def test_listen_once_timeout(self) -> None:
+        bridge = self._make_bridge()
+        bridge._ws = AsyncMock()
+        bridge._ws.recv = AsyncMock(side_effect=asyncio.TimeoutError)
+        await bridge.listen_once()  # should not raise
+
+    @pytest.mark.asyncio
+    async def test_listen_once_connection_error(self) -> None:
+        bridge = self._make_bridge()
+        bridge._ws = AsyncMock()
+        bridge._ws.recv = AsyncMock(side_effect=ConnectionError("lost"))
+        await bridge.listen_once()  # should not raise
+
+    @pytest.mark.asyncio
+    async def test_close(self) -> None:
+        bridge = self._make_bridge()
+        bridge._ws = AsyncMock()
+        bridge._running = True
+        await bridge.close()
+        assert bridge._running is False
+        bridge._ws.close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_close_no_ws(self) -> None:
+        bridge = self._make_bridge()
+        bridge._running = True
+        await bridge.close()
+        assert bridge._running is False
