@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Deep Physics Examples (17 → 23)
+- `plasticity_learning.py`: Hebbian eligibility + TE-adaptive coupling evolving over time
+- `ssgf_closure_loop.py`: geometry → dynamics → cost → gradient → geometry self-organisation
+- `hodge_decomposition.py`: gradient vs curl vs harmonic coupling flow (3 cases)
+- `stochastic_resonance.py`: noise improves synchronisation at optimal D*
+- `multi_engine_comparison.py`: UPDE Euler/RK4 vs TorusEngine vs SplittingEngine
+- `audit_replay_demo.py`: SHA-256 chain, deterministic replay, tamper detection
+
 ### Added — Interactive Tools & Media
 - `tools/spo_studio.py`: Streamlit GUI — browse 32 domainpacks, tune K/ζ/Ψ knobs, live R(t) chart, regime timeline, per-layer breakdown (`streamlit run tools/spo_studio.py`)
 - `docs/demo/index.html`: WASM interactive demo — 66KB Rust→WebAssembly Kuramoto in browser, real-time R(t) + phase portrait, sliders for N/K/spread/dt
