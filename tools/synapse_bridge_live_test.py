@@ -96,12 +96,16 @@ async def main() -> None:
     bridge = LightweightBridge(online)
 
     # Send announcement
-    await ws.send(json.dumps({
-        "type": "chat",
-        "sender": "SPO-Bridge",
-        "target": "all",
-        "payload": "SPO coherence bridge monitoring started",
-    }))
+    await ws.send(
+        json.dumps(
+            {
+                "type": "chat",
+                "sender": "SPO-Bridge",
+                "target": "all",
+                "payload": "SPO coherence bridge monitoring started",
+            }
+        )
+    )
 
     print(f"\nMonitoring {bridge.n} agents for 30 seconds...\n")
     print(f"{'Time':>6s}  {'R':>6s}  {'Msgs':>5s}  {'Active':>7s}")

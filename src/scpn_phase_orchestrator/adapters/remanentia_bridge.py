@@ -74,11 +74,17 @@ class RemanentiaBridge:
         self._last_R = 0.0
         self._last_regime = "unknown"
 
+    def _open(self, req: urllib.request.Request) -> dict:
+        """Execute a urllib request, enforcing http(s) scheme."""
+        url = req.full_url
+        if not url.startswith(("http://", "https://")):
+            raise ValueError(f"Refusing non-HTTP URL: {url}")
+        with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
+            return json.loads(resp.read())
+
     def _get(self, path: str) -> dict:
         """GET request to Remanentia API."""
-        req = urllib.request.Request(f"{self._url}{path}")
-        with urllib.request.urlopen(req, timeout=self._timeout) as resp:
-            return json.loads(resp.read())
+        return self._open(urllib.request.Request(f"{self._url}{path}"))
 
     def _post(self, path: str, data: dict) -> dict:
         """POST request to Remanentia API."""
@@ -88,8 +94,7 @@ class RemanentiaBridge:
             data=body,
             headers={"Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=self._timeout) as resp:
-            return json.loads(resp.read())
+        return self._open(req)
 
     def health_check(self) -> bool:
         """Check if Remanentia is running."""

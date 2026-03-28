@@ -86,18 +86,20 @@ class SynapseChannelBridge:
         try:
             import websockets
         except ImportError:
-            raise ImportError(
-                "websockets required: pip install websockets"
-            ) from None
+            raise ImportError("websockets required: pip install websockets") from None
 
         self._ws = await websockets.connect(self._uri)
         # Register as observer
-        await self._ws.send(json.dumps({
-            "type": "chat",
-            "sender": "SPO-Bridge",
-            "target": "all",
-            "payload": "SPO coherence bridge connected",
-        }))
+        await self._ws.send(
+            json.dumps(
+                {
+                    "type": "chat",
+                    "sender": "SPO-Bridge",
+                    "target": "all",
+                    "payload": "SPO coherence bridge connected",
+                }
+            )
+        )
         self._running = True
 
     async def listen_once(self) -> None:

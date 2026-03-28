@@ -3,97 +3,112 @@ version: "0.1.0"
 safety_tier: research
 sample_period_s: 1.0
 control_period_s: 5.0
-description: >
-  Multi-agent AI coordination as a synchronisation problem.
-  Each AI agent (Claude, Codex, Gemini, human) is an oscillator.
-  Synchronisation = agents working in harmony (no conflicts).
-  Desynchronisation = task overlap, merge conflicts, wasted work.
 
-  Three channels map agent activity to phase dynamics:
-  - P (Physical): heartbeat/ping interval regularity
-  - I (Informational): task claim/release event cadence
-  - S (Symbolic): message topic coherence (are agents on same page?)
-
-  Coupling: agents working on related files couple strongly.
-  Drive: shared deadlines/milestones as external forcing.
-  Supervisor: detect desync (R drops) → redistribute tasks.
+# Multi-agent AI coordination as a synchronisation problem.
+# Each AI agent (Claude, Codex, Gemini, human) is an oscillator.
+# Synchronisation = agents working in harmony (no conflicts).
+# Desynchronisation = task overlap, merge conflicts, wasted work.
 
 layers:
   - name: heartbeat
+    index: 0
+    oscillator_ids: [claude_hb, codex_hb, gemini_hb, human_hb]
+    omegas: [0.1, 0.1, 0.1, 0.05]
+    family: agent_liveness
+  - name: task_flow
+    index: 1
+    oscillator_ids: [claude_tasks, codex_tasks, gemini_tasks, human_tasks]
+    omegas: [0.01, 0.01, 0.01, 0.005]
+    family: task_cadence
+  - name: topic_coherence
+    index: 2
+    oscillator_ids: [claude_topic, codex_topic, gemini_topic, human_topic]
+    omegas: [0.005, 0.005, 0.005, 0.005]
+    family: topic_alignment
+
+oscillator_families:
+  agent_liveness:
     channel: P
     extractor_type: physical
-    frequency_range: [0.01, 1.0]
-    oscillator_ids: [claude_hb, codex_hb, gemini_hb, human_hb]
-    description: Agent liveness — regular heartbeats indicate active work
-
-  - name: task_flow
+    config: {}
+  task_cadence:
     channel: I
     extractor_type: event
-    frequency_range: [0.001, 0.1]
-    oscillator_ids: [claude_tasks, codex_tasks, gemini_tasks, human_tasks]
-    description: Task claim/release cadence — synchronised = balanced workload
-
-  - name: topic_coherence
+    config: {}
+  topic_alignment:
     channel: S
     extractor_type: ring
-    frequency_range: [0.001, 0.05]
-    oscillator_ids: [claude_topic, codex_topic, gemini_topic, human_topic]
-    description: Message topic alignment — are agents discussing the same thing?
+    config:
+      n_states: 4
 
 coupling:
-  template: distance_decay
-  K_base: 0.5
+  # Agent coupling: shared files/tasks create synchronisation pressure.
+  base_strength: 0.5
   decay_alpha: 0.1
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.05
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.01
+
+objectives:
+  # Heartbeat + task flow = healthy coordination.
+  # Topic desync = agents talking past each other.
+  good_layers: [0, 1]
+  bad_layers: [2]
+  good_weight: 1.0
+  bad_weight: 1.5
 
 boundaries:
   - name: conflict_detector
-    type: hard
-    condition: "R_global < 0.2"
-    description: Two agents working on same file without claim lock
-
+    variable: R
+    lower: 0.2
+    upper: null
+    severity: hard
   - name: idle_detector
-    type: soft
-    condition: "layer_R('heartbeat') < 0.3"
-    description: Agent not sending heartbeats — may have crashed
+    variable: R_0
+    lower: 0.3
+    upper: null
+    severity: soft
 
 actuators:
   - name: task_redistributor
     knob: K
     scope: global
     limits: [0.0, 5.0]
-
   - name: deadline_drive
     knob: zeta
     scope: global
     limits: [0.0, 3.0]
 
-imprint:
+imprint_model:
   decay_rate: 0.01
   saturation: 5.0
-
-geometry_prior:
-  K_base: 0.5
-  decay_alpha: 0.1
+  modulates: ["K"]
 
 protocol_net:
-  places:
-    - {name: idle, tokens: 4}
-    - {name: claimed, tokens: 0}
-    - {name: merging, tokens: 0}
+  places: [idle, claimed, merging]
+  initial: {idle: 4, claimed: 0, merging: 0}
+  place_regime: {}
   transitions:
     - name: claim_task
-      guard: "idle.tokens > 0"
-      pre: {idle: 1}
-      post: {claimed: 1}
+      inputs: [idle]
+      outputs: [claimed]
+      guard: "idle > 0"
     - name: release_task
-      guard: "claimed.tokens > 0"
-      pre: {claimed: 1}
-      post: {idle: 1}
+      inputs: [claimed]
+      outputs: [idle]
+      guard: "claimed > 0"
     - name: start_merge
-      guard: "claimed.tokens > 0 and merging.tokens == 0"
-      pre: {claimed: 1}
-      post: {merging: 1}
+      inputs: [claimed]
+      outputs: [merging]
+      guard: "claimed > 0 and merging == 0"
     - name: finish_merge
-      guard: "merging.tokens > 0"
-      pre: {merging: 1}
-      post: {idle: 1}
+      inputs: [merging]
+      outputs: [idle]
+      guard: "merging > 0"
