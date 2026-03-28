@@ -119,6 +119,15 @@ nav:
   - Reference:
       - Assumptions & Constants: ASSUMPTIONS.md
       - Competitive Analysis: competitive_analysis.md
+  - Papers:
+      - "JOSS: Phase Dynamics Compiler": papers/JOSS_DRAFT.md
+      - "Dual R+p_h1 Consciousness Criterion": papers/DUAL_R_PH1_DRAFT.md
+      - "SSGF Sextuple Identity": papers/SSGF_IDENTITY_DRAFT.md
+      - "Safety Certification Analysis": papers/SAFETY_CERT_DRAFT.md
+      - "FEP Correspondence": papers/FEP_CORRESPONDENCE.md
+  - Validation:
+      - "V&V Report": VALIDATION_REPORT.md
+      - "Clinical Study Protocol": VALIDATION_STUDY_PROTOCOL.md
   - FAQ: faq.md
   - Pricing: pricing.md
 
