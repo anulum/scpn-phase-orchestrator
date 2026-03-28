@@ -115,7 +115,7 @@ integration (10x faster).
 
 ## Inverse Problem
 
-Given observed phases θ_i(t), infer K and ω by minimizing:
+Given observed phases θ_i(t), infer K and ω by minimising:
 
 ```
 L(K, ω) = Σ_t (1 - cos(θ_predicted(t) - θ_observed(t))) + λ·‖K‖₁

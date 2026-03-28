@@ -40,7 +40,7 @@ A **closed-loop phase orchestrator** that:
 1. Integrates Kuramoto/Stuart-Landau ODEs (Euler, RK4, RK45) across 9 engine variants
 2. Monitors coherence via 16 dynamical observers (chimera, EVS, Lyapunov, PAC, TE, ...)
 3. Adapts coupling parameters in real time via supervisor policy and MPC
-4. Supports domain-agnostic binding specs (32 domainpacks across 10+ disciplines)
+4. Supports domain-agnostic binding specs (33 domainpacks across 10+ disciplines)
 5. Provides deterministic audit replay for reproducibility
 6. Offers a differentiable JAX backend for gradient-based coupling optimization
 
@@ -78,7 +78,7 @@ It can model simplicial Kuramoto but cannot differentiate through the dynamics,
 has no supervisor, and no domain binding layer.
 
 **SPO advantage**: Differentiable simplicial Kuramoto via JAX, supervisory control,
-32 domainpacks.
+33 domainpacks.
 
 **XGI advantage**: Richer hypergraph combinatorics, larger research community for
 pure higher-order network science.

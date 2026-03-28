@@ -32,7 +32,7 @@ cost functions through YAML-based *domainpacks*, and the compiler maps
 these declarations onto a phase dynamics substrate that runs under a
 three-regime finite state machine (Nominal, Recovery, Critical).
 
-SPO ships with 32 domainpacks spanning power grid synchronization, plasma
+SPO ships with 33 domainpacks spanning power grid synchronisation, plasma
 control, cardiac rhythm analysis, neuroscience EEG, financial markets,
 swarm robotics, satellite constellations, and 25 other domains. Each
 domainpack binds domain observables to oscillator natural frequencies,
@@ -93,7 +93,7 @@ configuration.
 
 - **3-tier acceleration.** Pure Python (development), Rust via PyO3
   (production, ~40x speedup on Kuramoto step), and JAX (GPU batches).
-- **32 domainpacks** covering physical, biological, engineering, and
+- **33 domainpacks** covering physical, biological, engineering, and
   financial systems.
 - **TCBO (Topological Consciousness Boundary Observable).** H1 persistent
   homology of delay-embedded phase signals, gating a consciousness

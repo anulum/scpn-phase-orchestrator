@@ -145,7 +145,7 @@ commercial licenses for proprietary integration.
 <div class="pricing-savings">&nbsp;</div>
 <ul class="pricing-features">
 <li>9 ODE engines (Kuramoto, Stuart-Landau, inertial, market, swarmalator, ...)</li>
-<li>32 domainpacks (plasma, power grid, neuroscience, finance, robotics, ...)</li>
+<li>33 domainpacks (plasma, power grid, neuroscience, finance, robotics, ...)</li>
 <li>16 dynamical monitors (chimera, EVS, Lyapunov, PAC, transfer entropy, ...)</li>
 <li>Differentiable JAX backend (nn/ module)</li>
 <li>Rust FFI acceleration (spo-kernel)</li>
@@ -250,7 +250,7 @@ coupling optimization, inverse Kuramoto (infer K from data), reservoir
 computing, UDE-Kuramoto (physics + neural residual), oscillator Ising
 machine. JIT-compilable, vmap-compatible, GPU-ready.
 
-### 32 Domainpacks — Plug and Play
+### 33 Domainpacks — Plug and Play
 
 Plasma, power grids, neuroscience, finance, robotics, manufacturing,
 aerospace, quantum, traffic, cardiac, circadian, sleep, epidemiology,
@@ -264,7 +264,7 @@ Run `spo scaffold <name>` to create your own.
 | Feature | Community | Professional | Enterprise |
 |---------|:---------:|:------------:|:----------:|
 | 9 ODE engines + Rust kernel | Yes | Yes | Yes |
-| 32 domainpacks | Yes | Yes | Yes |
+| 33 domainpacks | Yes | Yes | Yes |
 | 16 dynamical monitors | Yes | Yes | Yes |
 | Differentiable JAX backend (nn/) | Yes | Yes | Yes |
 | QueueWaves cascade detector | Yes | Yes | Yes |
@@ -324,7 +324,7 @@ Yes, as long as your modifications are released under AGPL-3.0.
 If you need proprietary code, choose Professional.
 
 **What domains does SPO support?**
-32 domainpacks ship out of the box. Professional includes 2 custom
+33 domainpacks ship out of the box. Professional includes 2 custom
 domainpacks per year. Enterprise includes unlimited custom development.
 
 **What is the early adopter program?**

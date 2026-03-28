@@ -136,7 +136,7 @@ without.
 
 ## 3. Results
 
-**Placeholder.** Empirical results will require:
+**Planned experiments (not yet conducted).** Empirical validation will require:
 
 1. Synthetic Kuramoto networks with controlled modular structure, varying
    N (50-1000), modularity Q, and inter-module coupling strength. Expected

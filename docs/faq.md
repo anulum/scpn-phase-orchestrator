@@ -33,8 +33,8 @@ Run `spo scaffold <name>` to generate starter files, then follow the
 Dual-objective coherence control. `R_good` is the order parameter for
 oscillators that should synchronize (e.g., EEG gamma band). `R_bad` is the
 order parameter for oscillators that should remain desynchronized (e.g.,
-pathological seizure coupling). The supervisor tries to maximize `R_good` while
-minimizing `R_bad`.
+pathological seizure coupling). The supervisor tries to maximise `R_good` while
+minimising `R_bad`.
 
 ### How does the Petri net relate to regimes?
 
@@ -153,7 +153,7 @@ Yes. The `nn.oim` module implements an Oscillator Ising Machine that maps
 graph coloring, max-cut, and QUBO problems to Kuramoto phase clustering.
 Oscillators connected by graph edges repel from the same phase cluster.
 The dynamics settle into valid colorings. Differentiable via JAX for
-gradient-based energy minimization.
+gradient-based energy minimisation.
 
 ### What is inverse Kuramoto?
 

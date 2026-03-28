@@ -105,7 +105,7 @@ Neuroscience: EEG alpha-band coherence.
 The binding spec YAML is the only thing that changes. The engine,
 supervisor, monitors, and actuation layer are universal.
 
-32 domainpacks ship out of the box. Create your own with
+33 domainpacks ship out of the box. Create your own with
 spo scaffold."
 ```
 

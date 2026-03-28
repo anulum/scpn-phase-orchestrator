@@ -149,7 +149,7 @@ invariants. 350+ hypothesis tests across 14 files prove:
 | CI hash pinning | --require-hashes | All tool installs hash-verified |
 | Container scanning | Trivy CRITICAL/HIGH | Blocks publish on vulnerabilities |
 | Audit chain | SHA256 JSONL | Tamper detection + deterministic replay |
-| 32/32 domainpacks | Load + simulate | All produce valid R ∈ [0,1] |
+| 33/33 domainpacks | Load + simulate | All produce valid R ∈ [0,1] |
 
 ## 9. Known Limitations
 

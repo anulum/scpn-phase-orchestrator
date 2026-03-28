@@ -28,10 +28,11 @@ simulations.
 | 18 | **financial_markets** | 8 (4 layers) | Hilbert phase, order parameter regime detection | `18_market_regime_detection.ipynb` |
 | 19 | **swarm_robotics** | 8 (3 layers) | Swarmalator spatial + phase coupling | `19_swarmalator_dynamics.ipynb` |
 
-## All 32 Domainpacks
+## All 33 Domainpacks
 
 | Pack | Domain | Layers | Oscillators | Channels |
 |------|--------|--------|-------------|----------|
+| `agent_coordination` | Multi-agent AI coordination | 3 | 12 | I |
 | `autonomous_vehicles` | Vehicle platoons | 3 | 8 | P/I |
 | `bio_stub` | Multi-scale biology | 4 | 16 | P/I/S |
 | `brain_connectome` | HCP-inspired structural connectivity | 4 | 12 | P/I/S |
@@ -67,11 +68,12 @@ simulations.
 
 ## Benchmark Results (Measured 2026-03-28)
 
-All 32 domainpacks tested via `spo demo --steps 20` on Kaggle (Linux, Python 3.12,
+All 33 domainpacks tested via `spo demo --steps 20` on Kaggle (Linux, Python 3.12,
 NumPy fallback — no Rust kernel). Zero failures.
 
 | Domainpack | Oscillators | Layers | R (20 steps) | Regime |
 |------------|-------------|--------|--------------|--------|
+| agent_coordination | 12 | 3 | 0.402 | degraded |
 | autonomous_vehicles | 8 | 3 | 0.394 | degraded |
 | bio_stub | 16 | 4 | 0.274 | degraded |
 | brain_connectome | 12 | 4 | 0.375 | degraded |

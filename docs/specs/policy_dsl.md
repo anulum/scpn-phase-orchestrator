@@ -7,7 +7,7 @@ YAML-based rule engine for declarative supervisor behaviour.
 **Implemented** in `supervisor/policy_rules.py` (`PolicyEngine` + `load_policy_rules`).
 The hardcoded `SupervisorPolicy` provides default regime-driven actions;
 `PolicyEngine` extends it with domainpack-specific YAML rules evaluated
-per step.  All 31 domainpacks ship with `policy.yaml` files.
+per step.  All 33 domainpacks ship with `policy.yaml` files.
 
 ## Syntax (v0.1 — single condition, single action)
 

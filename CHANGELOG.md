@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `audit_replay_demo.py`: SHA-256 chain, deterministic replay, tamper detection
 
 ### Added — Interactive Tools & Media
-- `tools/spo_studio.py`: Streamlit GUI — browse 32 domainpacks, tune K/ζ/Ψ knobs, live R(t) chart, regime timeline, per-layer breakdown (`streamlit run tools/spo_studio.py`)
+- `tools/spo_studio.py`: Streamlit GUI — browse 33 domainpacks, tune K/ζ/Ψ knobs, live R(t) chart, regime timeline, per-layer breakdown (`streamlit run tools/spo_studio.py`)
 - `docs/demo/index.html`: WASM interactive demo — 66KB Rust→WebAssembly Kuramoto in browser, real-time R(t) + phase portrait, sliders for N/K/spread/dt
 - `docs/video_scripts.md`: 7 × 60-second demo scripts with voiceover text for Loom/OBS recording
 

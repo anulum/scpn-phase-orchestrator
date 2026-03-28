@@ -18,7 +18,7 @@ Opens at `http://localhost:8501`.
 
 ### Features
 
-- **Domainpack browser** — select any of the 32 domainpacks from a dropdown
+- **Domainpack browser** — select any of the 33 domainpacks from a dropdown
 - **Universal knobs** — slide K (coupling strength), ζ (drive strength),
   Ψ frequency to see immediate effects on synchronisation
 - **Live R(t) chart** — order parameter plotted over simulation steps
@@ -86,4 +86,4 @@ spo demo --domain cardiac_rhythm --steps 50
 
 Lists available domainpacks if the specified domain is not found.
 See the [domainpack gallery](../galleries/domainpack_gallery.md) for
-benchmark results across all 32 domains.
+benchmark results across all 33 domains.

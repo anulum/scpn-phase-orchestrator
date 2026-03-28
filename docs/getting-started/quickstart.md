@@ -124,4 +124,4 @@ print(f"Amplitudes: {amplitudes.round(3)}")
 - [Tutorial: Hello World](hello_world.md) -- build a custom 4-oscillator domain from scratch
 - [Concepts: System Overview](../concepts/system_overview.md) -- full pipeline architecture
 - [API Reference](../reference/api/index.md) -- complete Python API
-- [Domainpack Gallery](../galleries/domainpack_gallery.md) -- all 31 domainpacks
+- [Domainpack Gallery](../galleries/domainpack_gallery.md) -- all 33 domainpacks

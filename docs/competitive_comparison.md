@@ -26,7 +26,7 @@ detect degradation → decide action → execute → verify.
 **SPO compiles any domain. Others are domain-locked.**
 
 SPO treats the domain as a YAML binding spec. The engine, monitors,
-supervisor, and actuation layer are universal. 32 domainpacks ship
+supervisor, and actuation layer are universal. 33 domainpacks ship
 out of the box.
 
 No other library has this abstraction. Brian2 is for neurons. TVB

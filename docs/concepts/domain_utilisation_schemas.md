@@ -1,6 +1,6 @@
 # Domain Utilisation Schemas
 
-Cross-domain comparison of all 21 SPO domainpacks, showing how Kuramoto/UPDE
+Cross-domain comparison of all 33 SPO domainpacks, showing how Kuramoto/UPDE
 phase dynamics map to diverse physical, biological, and engineered systems.
 
 ## Master Domainpack Table
@@ -207,7 +207,7 @@ PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 | Plasma | Transport barrier, current | Turbulence, sawteeth |
 | Manufacturing | Machine, line | Sensor (drift = bad) |
 | Queue | Throughput (macro) | Retry burst (micro) |
-| Circadian | SCN core, peripheral | Behavioral desync (jet lag) |
+| Circadian | SCN core, peripheral | Behavioural desync (jet lag) |
 | Traffic | Corridor (green wave) | Intersection (gridlock), demand |
 | Epidemic | Intervention coordination | Infection wave, mobility |
 | Biology | Tissue, organ, systemic | (none defined) |
