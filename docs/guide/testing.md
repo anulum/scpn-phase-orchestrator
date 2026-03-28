@@ -158,7 +158,7 @@ Run slow tests explicitly: `py -3.12 -m pytest -m slow`
 
 ## Engine Rigor Tests (`test_engine_rigor.py`)
 
-Dedicated comprehensive validation for auxiliary engines:
+Dedicated validation for auxiliary engines:
 
 | Engine | Tests | Key invariants |
 |--------|-------|----------------|

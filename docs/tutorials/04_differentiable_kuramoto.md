@@ -56,10 +56,10 @@ print(f"R: {float(R_initial):.3f} → {float(R_final):.3f}")
 ## Step 3: Differentiate Through the Dynamics
 
 The key feature: you can compute gradients of R with respect to K.
-This means you can OPTIMIZE the coupling matrix to maximize synchronization.
+This means you can OPTIMISE the coupling matrix to maximise synchronisation.
 
 ```python
-# Define loss: minimize negative R (= maximize sync)
+# Define loss: minimise negative R (= maximise sync)
 def sync_loss(K):
     final, _ = kuramoto_forward(phases, omegas, K, dt=0.01, n_steps=100)
     return -order_parameter(final)

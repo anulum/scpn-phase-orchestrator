@@ -86,7 +86,7 @@ using only local Kuramoto coupling.
 
 The $K_{nm}$ matrix models social-media echo chambers, predicting how
 information avalanches and societal polarization emerge from individual
-stochastic interactions (aligned with the Noospheric modeling of Layer 11).
+stochastic interactions (aligned with the Noospheric modelling of Layer 11).
 
 ### Closed-loop neurofeedback
 
@@ -101,11 +101,11 @@ verified per-session by the EVS (Entrainment Verification Score).
 The `spo-kernel` Rust backend is engineered for bare-metal multi-threading and
 SIMD vectorization. While it scales on a laptop, it targets cluster deployment.
 
-### Massive agent-based modeling ($N = 10^6$)
+### Massive agent-based modelling ($N = 10^6$)
 
 !!! info "Scenario"
 
-    Real-time modeling of national-level traffic grids or epidemiological
+    Real-time modelling of national-level traffic grids or epidemiological
     transmission vectors. Every node is a human agent interacting via the
     Kuramoto equation.
 

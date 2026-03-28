@@ -391,7 +391,7 @@ coupled dynamical system and acts on the coupling structure.
 ### 7.2 MPC: Domain-Specific, Computationally Expensive
 
 Model Predictive Control solves an optimisation problem at each
-timestep using a plant model.  It is powerful but:
+timestep using a plant model.  It has three key limitations:
 
 - Requires a domain-specific model (cannot reuse across domains)
 - Scales poorly with state dimension (quadratic or worse in N)

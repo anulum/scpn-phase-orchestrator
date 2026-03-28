@@ -1,4 +1,10 @@
-# QueueWaves example configuration
+# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — QueueWaves Example Configuration
+#
 # Monitors 6 microservices across 3 hierarchy layers.
 # micro-layer sync = bad (retry storms), macro-layer sync = good (coordinated throughput).
 

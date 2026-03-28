@@ -51,7 +51,7 @@ A **closed-loop phase orchestrator** that:
   niche: Rust-accelerated LIF ensembles (N=10000, 4ms/100 substeps) coupled directly into
   the phase-oscillator control loop.
 - Not a general ODE solver (use SciPy for arbitrary dynamical systems)
-- Not optimized for >10^4 oscillators in NumPy mode (compute scales O(N^2) per step;
+- Not optimised for >10^4 oscillators in NumPy mode (compute scales O(N^2) per step;
   JAX GPU mode handles larger N via XLA vectorization)
 
 ## Competitor Deep Dives

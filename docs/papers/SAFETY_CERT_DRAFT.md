@@ -36,7 +36,7 @@ dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j − θ_i)
 Originally a theoretical tool for studying synchronization transitions
 (Acebrón et al., 2005; Strogatz, 2000), it has been applied to power
 grid frequency regulation (Dörfler & Bullo, 2014), cardiac pacemaker
-modeling (Michaels et al., 1987), and neural synchrony (Breakspear et
+modelling (Michaels et al., 1987), and neural synchrony (Breakspear et
 al., 2010). The SCPN Phase Orchestrator (SPO) generalizes this by
 treating the Kuramoto equation as a control substrate: domain-specific
 problems are compiled into oscillator networks, and synchronization state

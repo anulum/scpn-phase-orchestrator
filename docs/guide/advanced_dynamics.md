@@ -6,7 +6,7 @@ that no other oscillator library offers.
 ## Variational Free Energy Predictor
 
 Implementation of Friston's Free Energy Principle mapped to Kuramoto dynamics.
-The system minimizes its own prediction error as a coupling objective.
+The system minimises its own prediction error as a coupling objective.
 
 - Precision-weighted prediction error (maps to coupling K_ij)
 - KL complexity term on precision
