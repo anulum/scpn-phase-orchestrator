@@ -82,10 +82,10 @@ class SynapseCouplingBridge:
         self._gap_scale = gap_scale
         self._ca_scale = ca_scale
 
-        self._stdp_weights = np.zeros((n_oscillators, n_oscillators))
-        self._prev_weights = np.zeros((n_oscillators, n_oscillators))
-        self._gap_conductances = np.zeros((n_oscillators, n_oscillators))
-        self._ca_levels = np.zeros(n_oscillators)
+        self._stdp_weights: NDArray = np.zeros((n_oscillators, n_oscillators))
+        self._prev_weights: NDArray = np.zeros((n_oscillators, n_oscillators))
+        self._gap_conductances: NDArray = np.zeros((n_oscillators, n_oscillators))
+        self._ca_levels: NDArray = np.zeros(n_oscillators)
 
     def update_stdp_weights(self, weights: NDArray) -> None:
         """Feed current STDP weight matrix from sc-neurocore.
@@ -110,7 +110,7 @@ class SynapseCouplingBridge:
 
         High Ca²⁺ → strong imprint modulation (facilitates learning).
         """
-        self._ca_levels = np.asarray(ca_levels, dtype=np.float64)
+        self._ca_levels = np.asarray(ca_levels, dtype=np.float64).ravel()
 
     def snapshot(self) -> SynapseSnapshot:
         """Compute SPO coupling parameters from current synapse state."""

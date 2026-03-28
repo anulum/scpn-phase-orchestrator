@@ -34,6 +34,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -73,7 +74,7 @@ class SynapseChannelBridge:
         self._states: dict[str, AgentState] = {
             name: AgentState() for name in self._agents
         }
-        self._ws = None
+        self._ws: Any = None
         self._running = False
         self._n = len(self._agents)
 
@@ -160,7 +161,7 @@ class SynapseChannelBridge:
 
             # P: heartbeat regularity → phase
             if state.heartbeat_intervals:
-                mean_interval = np.mean(state.heartbeat_intervals[-5:])
+                mean_interval = float(np.mean(state.heartbeat_intervals[-5:]))
                 freq = 1.0 / max(mean_interval, 0.1)
                 state.phase_p = (state.phase_p + TWO_PI * freq * 1.0) % TWO_PI
             phases[idx] = state.phase_p

@@ -80,7 +80,8 @@ class RemanentiaBridge:
         if not url.startswith(("http://", "https://")):
             raise ValueError(f"Refusing non-HTTP URL: {url}")
         with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
-            return json.loads(resp.read())
+            result: dict = json.loads(resp.read())
+            return result
 
     def _get(self, path: str) -> dict:
         """GET request to Remanentia API."""
@@ -143,7 +144,7 @@ class RemanentiaBridge:
                 return 1.0  # fully novel — no relevant memories
             # Novelty = 1 - mean relevance score
             scores = [r.get("score", 0.0) for r in results]
-            return max(0.0, 1.0 - np.mean(scores))
+            return float(max(0.0, 1.0 - float(np.mean(scores))))
         except Exception:
             return 0.5  # unknown — conservative default
 
@@ -151,7 +152,7 @@ class RemanentiaBridge:
         """Get number of entities in Remanentia's knowledge graph."""
         try:
             resp = self._get("/status")
-            return resp.get("entities", 0)
+            return int(resp.get("entities", 0))
         except Exception:
             return 0
 
