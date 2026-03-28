@@ -722,7 +722,7 @@ def demo(domain: str, steps: int, port: int) -> None:
 
     spec = load_binding_spec(spec_path)
     click.echo(f"SPO Demo — {spec.name}")
-    click.echo(f"  Oscillators: {sum(ly.n_oscillators for ly in spec.layers)}")
+    click.echo(f"  Oscillators: {sum(len(ly.oscillator_ids) for ly in spec.layers)}")
     click.echo(f"  Layers: {len(spec.layers)}")
     click.echo(f"  Steps: {steps}")
     click.echo("-" * 40)
