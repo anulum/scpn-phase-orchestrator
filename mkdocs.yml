@@ -73,6 +73,8 @@ nav:
       - Control Systems: guide/control_systems.md
       - Analysis Toolkit: guide/analysis_toolkit.md
       - Hardware & Deployment: guide/hardware_deployment.md
+      - Digital Twin Pattern: guide/digital_twin.md
+      - "Notebook → Production": guide/notebook_to_production.md
       - Interactive Tools: guide/interactive_tools.md
       - Testing: guide/testing.md
       - Video Scripts: video_scripts.md
@@ -121,6 +123,7 @@ nav:
   - Reference:
       - Assumptions & Constants: ASSUMPTIONS.md
       - Competitive Analysis: competitive_analysis.md
+      - "What SPO Does That No One Else Can": competitive_comparison.md
   - Papers:
       - "JOSS: Phase Dynamics Compiler": papers/JOSS_DRAFT.md
       - "Dual R+p_h1 Consciousness Criterion": papers/DUAL_R_PH1_DRAFT.md

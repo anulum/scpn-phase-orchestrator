@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Final Examples + Strategic Docs (23 → 25)
+- `imprint_memory.py`: coupling that remembers past synchronisation (Hebbian memory)
+- `petri_policy_demo.py`: Petri net FSM regime transitions + event bus
+- `docs/guide/digital_twin.md`: how SPO fits into digital twin architectures
+- `docs/guide/notebook_to_production.md`: exploration → deployment lifecycle
+- `docs/competitive_comparison.md`: capability comparison table vs Brian2/TVB/neurolib/pyDSTool
+
 ### Added — Deep Physics Examples (17 → 23)
 - `plasticity_learning.py`: Hebbian eligibility + TE-adaptive coupling evolving over time
 - `ssgf_closure_loop.py`: geometry → dynamics → cost → gradient → geometry self-organisation
