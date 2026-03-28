@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Domain Examples (3 → 10)
+- `examples/neuroscience_eeg.py`: 8-electrode EEG alpha-band synchronization with chimera detection
+- `examples/cardiac_rhythm.py`: SA node pacemaker, AV block scenario, external drive recovery
+- `examples/plasma_control.py`: tokamak MHD mode locking with Lyapunov guard
+- `examples/traffic_flow.py`: 8-intersection green wave, link failure, coupling boost recovery
+- `examples/epidemic_sir.py`: 6-region epidemic synchronization with transfer entropy causality
+- `examples/swarmalator_dynamics.py`: phase-spatial coupling sweep (J=0 to J=2)
+- `examples/stuart_landau_bifurcation.py`: Hopf bifurcation μ sweep, r → √μ analytical comparison
+
+### Added — Cross-Engine Parity & Analytical Validation
+- `test_engine_parity.py`: UPDE vs TorusEngine vs SplittingEngine vs Simplicial equivalence matrix; free rotation exact match across 3 engines; spectral K_c vs bifurcation simulation; Stuart-Landau r → √μ property-based proof
+- `test_engine_rigor.py`: 27 dedicated tests for HypergraphEngine, market module, envelope solver, adjoint gradients, DelayBuffer/DelayedEngine
+- `test_stress_scale.py`: N=1000 oscillators, T=50000 steps, OA analytical validation (K_c = 2Δ, R_ss formula, OA vs UPDE on Lorentzian)
+
 ### Added — Property-Based Test Suite (680+ new tests)
 - 14 property-based test files (`test_prop_*.py`) proving mathematical invariants via hypothesis: Lyapunov spectrum bounds, Kaplan-Yorke dimension, basin stability, transfer entropy, Hodge decomposition, spectral graph theory, recurrence/RQA, chimera detection, winding numbers, Boltzmann weights, SSGF costs, delay embedding, EI balance, NPE, simplicial reduction, swarmalator/inertial dynamics, plasticity, stochastic injection
 - `test_degenerate_edges.py`: 98 boundary tests (N=1, dt=0, zero coupling) across all 5 engine types

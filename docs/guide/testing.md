@@ -1,6 +1,6 @@
 # Testing Guide
 
-SCPN Phase Orchestrator ships with **3,000+ tests** at 99%+ line coverage. The suite includes unit tests, integration tests, and — critically — **hypothesis-driven property-based tests** that prove mathematical invariants hold across hundreds of random inputs per test.
+SCPN Phase Orchestrator ships with **3,100+ tests** at 99%+ line coverage. The suite includes unit tests, integration tests, and — critically — **hypothesis-driven property-based tests** that prove mathematical invariants hold across hundreds of random inputs per test.
 
 ## Running Tests
 
@@ -121,6 +121,52 @@ def test_zero_coupling_free_rotation(self, n: int) -> None:
     eng = UPDEEngine(n, dt=0.01)
     # ... verify analytical prediction under extreme conditions
 ```
+
+## Cross-Engine Parity Tests (`test_engine_parity.py`)
+
+The parity matrix verifies that engines which should agree on a given
+scenario actually produce the same result:
+
+| Engine A | Engine B | Scenario | Tolerance |
+|----------|----------|----------|-----------|
+| UPDE Euler | TorusEngine | Single step, small dt | 1e-4 |
+| UPDE Euler | SplittingEngine | Single step, small dt | 1e-3 |
+| UPDE Euler | RK4 | 500-step converged R | 0.05 |
+| Simplicial σ₂=0 | UPDE Euler | Any input (hypothesis) | 1e-10 |
+| UPDE / Torus / Splitting | Analytical | Free rotation θ = ωt | 1e-6 |
+
+Plus analytical validation:
+
+- **Spectral K_c**: K > 2K_c → sync, K < K_c/10 → no sync
+- **Stuart-Landau**: r → √μ (property-based, μ ∈ [0.1, 5.0])
+- **OA vs UPDE**: Lorentzian g(ω), above and below K_c
+
+## Stress / Scale Tests (`test_stress_scale.py`)
+
+Production-scale validation marked with `@pytest.mark.slow`:
+
+| Test | Scale | Verifies |
+|------|-------|----------|
+| N=1000 identical sync | 1000 oscillators | R > 0.90 after 1000 steps |
+| N=1000 random R | 1000 oscillators | R < 0.15 (≈ 1/√N) |
+| N=1000 NPE | 1000 oscillators | Finite, no OOM |
+| N=512 Laplacian | 512×512 matrix | PSD, Fiedler > 0 |
+| 10k steps no drift | 16 osc, 10000 steps | All finite, R ∈ [0,1] |
+| 50k steps stable | 8 osc, 50000 steps | R variance < 0.1 |
+
+Run slow tests explicitly: `py -3.12 -m pytest -m slow`
+
+## Engine Rigor Tests (`test_engine_rigor.py`)
+
+Dedicated comprehensive validation for auxiliary engines:
+
+| Engine | Tests | Key invariants |
+|--------|-------|----------------|
+| HypergraphEngine | 5 | k-body coupling, free rotation, output bounds |
+| Market module | 5 | Hilbert phase extraction, R shape, regime detection |
+| Envelope solver | 6 | Shape, non-negative, modulation depth ∈ [0,1] |
+| Adjoint gradient | 4 | cost_R bounds, gradient shape, zero diagonal |
+| DelayBuffer/Engine | 7 | Push/get, early access, delay=1 ≈ standard |
 
 ## CI Integration
 
