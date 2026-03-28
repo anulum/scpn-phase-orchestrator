@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Showcase Examples (12 → 17)
+- `supervisor_advantage.py`: open-loop vs closed-loop coherence, quantified % improvement
+- `failure_recovery.py`: inject coupling fault, detect R drop, boost remaining links, recover
+- `cross_domain_universality.py`: same 4-line pattern across plasma, cardiac, power, traffic, neuro
+- `scaling_showcase.py`: N=4 to N=1000 with wall-clock timing per step
+- `inverse_coupling_demo.py`: learn hidden coupling matrix from observed phase trajectories
+
+### Added — Adoption & Ecosystem
+- `spo demo` CLI command: one-command full-stack demo for any domainpack
+- 32-domainpack benchmark table in domainpack gallery (measured R values, Kaggle Linux)
+- Kaggle reproducibility scripts: `tools/kaggle_demo_all32.py`, `tools/kaggle_mutation_test.py`
+- 5 papers + 2 validation docs published on mkdocs site
+- `.github/FUNDING.yml`: Polar.sh added for sponsorship
+- 3 good first issues created (#27 OPC-UA, #28 ROS2, #29 theta neuron Equinox)
+- Real-data ingestion examples: EEG file → Hilbert → phases, Prometheus → QueueWaves
+
 ### Added — Infrastructure Hardening
 - `/api/health` deep health endpoint (engine + R + regime checks)
 - `test_grpc_integration.py`: 6 in-process gRPC servicer tests (GetState, Step, Reset, GetConfig, layers)
