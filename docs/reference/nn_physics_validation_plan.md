@@ -151,7 +151,14 @@ distribution. This should be documented prominently.
 | P11 (V121–V132) | 13 | 12 | 1 | Critical slowing metric (#13) |
 | P12 (V133–V142) | 10 | 9 | 1 | Entropy formula (#14). Community, prediction, generalisation, basin confirmed. |
 | P13 (V143–V152) | 16 | 15 | 0+1skip | None. Serialisation, error handling, multi-timescale, spectrum all pass. |
-| **Total** | **194** | **182** | **11+1skip** | **14 findings** |
+| **Total** | **194** | **183** | **10+1skip** | **14 findings** |
+
+### Full-Suite Verification (2026-03-29)
+
+Complete re-run of all 194 tests in two batches:
+- P1-P6, P8-P13: 180 collected, 171 passed, 8 xfail, 1 skip — 13m14s
+- P7 (FIM): 14 collected, 12 passed, 2 xfail — 32m11s
+- **Total: 194 collected, 183 passed, 10 xfail, 1 skip, 0 failed — 45m25s**
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
