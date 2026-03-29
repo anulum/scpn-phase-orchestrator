@@ -117,6 +117,7 @@ nav:
       - QueueWaves: reference/api/queuewaves.md
       - "Neural Network (nn)": reference/api/nn.md
       - "nn/ Module — Full Reference": reference/nn.md
+      - "nn/ Physics Validation": reference/nn_physics_validation_plan.md
       - CLI Reference: reference/cli.md
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md

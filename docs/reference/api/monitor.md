@@ -34,13 +34,13 @@ from acting on transient startup dynamics.
 ## Chimera State Detection
 
 Detects chimera states: the coexistence of coherent (phase-locked) and
-incoherent (desynchronized) clusters within the same network. This is a
+incoherent (desynchronised) clusters within the same network. This is a
 fundamentally different phenomenon from uniform synchronization or
 uniform incoherence — it requires spatially resolved analysis.
 
 **Theory:** Kuramoto & Battogtokh 2002 discovered that identical
 oscillators with identical coupling can spontaneously split into
-synchronized and desynchronized subpopulations. This was later confirmed
+synchronised and desynchronised subpopulations. This was later confirmed
 experimentally in chemical oscillators and electronic circuits.
 
 **Algorithm:**
@@ -57,7 +57,7 @@ from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 
 state = detect_chimera(phases, knm)
 # state.coherent_indices: list of phase-locked oscillators
-# state.incoherent_indices: list of desynchronized oscillators
+# state.incoherent_indices: list of desynchronised oscillators
 # state.chimera_index: 0.0 = pure state, >0 = chimera
 ```
 
@@ -151,7 +151,7 @@ current synchronization state.
 **Theory:** For Kuramoto dynamics, entropy production rate is
 proportional to the mean squared coupling torque. A system at
 thermal equilibrium (detailed balance) has zero entropy production;
-a synchronized Kuramoto network actively maintained by coupling
+a synchronised Kuramoto network actively maintained by coupling
 has positive entropy production.
 
 ::: scpn_phase_orchestrator.monitor.entropy_prod

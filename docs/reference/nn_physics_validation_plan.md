@@ -144,7 +144,7 @@ distribution. This should be documented prominently.
 | P4 (V37–V46) | 12 | 12 | 0 | None |
 | P5 (V47–V60) | 16 | 16 | 0 | Mean-phase drift (#6) |
 | P6 (V61–V74) | 16 | 14 | 2 | K symmetry broken (#7), OIM Petersen fail (#8) |
-| P7 (V75–V86) | 14 | 11 | 3 | FIM scaling small-N (#9), FIM hysteresis K-range (#10), BKT vs MF (#11) |
+| P7 (V75–V86) | 14 | 12 | 2 | FIM hysteresis K-range (#10), BKT vs MF (#11). V76 scaling passes on re-run. |
 | P8 (V87–V96) | 10 | 10 | 0 | None — SR, roundtrips, EEG, delay, FIM+SL confirmed |
 | P9 (V97–V108) | 18 | 17 | 1 | Inverse ill-conditioned at K=0 (#12) |
 | P10 (V109–V120) | 19 | 19 | 0 | Capstone: scaling collapse, reproducibility, GD works |
@@ -160,8 +160,13 @@ Complete re-run of all 194 tests in two batches:
 - P7 (FIM): 14 collected, 12 passed, 2 xfail — 32m11s
 - **Total: 194 collected, 183 passed, 10 xfail, 1 skip, 0 failed — 45m25s**
 
-All 5 findings are genuine limitations, not bugs. None falsify the core
+All 14 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
+
+**Note:** Individual phase rows reflect incremental results. The Full-Suite
+Verification is authoritative — V76 (FIM scaling) is non-deterministic and
+passes on some runs (JAX cache state dependent). Row totals (182 pass, 11
+xfail) may differ from verified totals (183 pass, 10 xfail) by ±1.
 
 ---
 

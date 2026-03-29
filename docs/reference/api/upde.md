@@ -51,7 +51,7 @@ Filatrella et al. 2008; Dörfler & Bullo 2014.
 
 Extracts instantaneous phase from price/return time series via Hilbert
 transform, computes Kuramoto order parameter R(t) across assets, classifies
-synchronization regimes (desync/transition/synchronized), and detects
+synchronization regimes (desync/transition/synchronised), and detects
 crash early warning signals (R crossing threshold from below).
 
 R(t) → 1 preceding market crashes documented for Black Monday 1987 and
@@ -192,8 +192,8 @@ Kc = find_critical_coupling(omegas, tol=0.05)
 ## Basin Stability
 
 Monte Carlo estimation of the volume of the basin of attraction for
-the synchronized state. Basin stability S_B is the probability that a
-random initial condition converges to the synchronized attractor.
+the synchronised state. Basin stability S_B is the probability that a
+random initial condition converges to the synchronised attractor.
 
 **Procedure:** Draw n_samples random phase configurations from [0, 2π)^N,
 integrate each to steady state, check if R_final > R_threshold. S_B = fraction

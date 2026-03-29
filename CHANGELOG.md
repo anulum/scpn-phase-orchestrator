@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — nn/ Physics Validation Suite (194 tests, 13 phases)
+- `tests/test_nn_physics_validation.py` through `_p13.py`: 194 automated physics tests validating the JAX nn/ module against analytical results
+- `docs/reference/nn.md`: complete 677-line API reference for nn/ module (16 source files, 90+ symbols)
+- `docs/reference/nn_physics_validation_plan.md`: validation plan with results, 14 findings register, full-suite verification
+- `docs/guide/differentiable_kuramoto.md`: 7 new sections (Winfree, theta neuron, chimera, spectral, analytical inverse, training loop, GPU benchmarks)
+- `benchmarks/results/gpu_benchmark_2026-03-29.json`: first local GPU validation (GTX 1060 6GB, JAX 0.9.2)
+- 14 findings documented: K symmetry broken by training (#7, HIGH, confirmed by 3 codebases), UDE extrapolation NaN (#4, HIGH), BKT vs mean-field topology-dependent (#11, CRITICAL), inverse ill-conditioned at K=0 (#12), and 10 more
+- First automated FIM (strange loop) validation: sync at K=0, gradient trainable, Lyapunov function V = -ΣK cos(Δθ) - λR²
+- Cross-project sync with scpn-quantum-control (NB37-43) and sc-neurocore (v3.14.0)
+
 ### Added — Final Examples + Strategic Docs (23 → 25)
 - `imprint_memory.py`: coupling that remembers past synchronisation (Hebbian memory)
 - `petri_policy_demo.py`: Petri net FSM regime transitions + event bus
