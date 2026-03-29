@@ -675,4 +675,3 @@ the functional API.
 - Gambuzza, L.V. et al. (2023). Stability of synchronization in simplicial complexes. *Nature Physics* 17(7):1093–1098.
 - Dorfler, F. & Bullo, F. (2014). Synchronization in complex networks of phase oscillators: A survey. *Automatica* 50(6):1539–1564.
 - Böhm, F. & Schumacher, J. (2020). Graph coloring with physics-inspired graph neural networks. *arXiv:2009.00490*.
-
