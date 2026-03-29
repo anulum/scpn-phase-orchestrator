@@ -147,7 +147,8 @@ distribution. This should be documented prominently.
 | P7 (V75–V86) | 14 | 11 | 3 | FIM scaling small-N (#9), FIM hysteresis K-range (#10), BKT vs MF (#11) |
 | P8 (V87–V96) | 10 | 10 | 0 | None — SR, roundtrips, EEG, delay, FIM+SL confirmed |
 | P9 (V97–V108) | 18 | 17 | 1 | Inverse ill-conditioned at K=0 (#12) |
-| **Total** | **136** | **127** | **9** | **12 findings** |
+| P10 (V109–V120) | 19 | 19 | 0 | None — clean sweep. Capstone: scaling collapse, reproducibility, GD works. |
+| **Total** | **155** | **146** | **9** | **12 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -360,6 +361,7 @@ algebraically structured hard instances. This should be documented.
 - Phase 7: `tests/test_nn_physics_validation_p7.py` (14 tests, ~2900s — FIM Python loops)
 - Phase 8: `tests/test_nn_physics_validation_p8.py` (10 tests, ~185s)
 - Phase 9: `tests/test_nn_physics_validation_p9.py` (18 tests, ~54s)
+- Phase 10: `tests/test_nn_physics_validation_p10.py` (19 tests, ~216s)
 
 GPU optional — all tests run on CPU.
 
