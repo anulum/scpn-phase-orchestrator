@@ -148,8 +148,9 @@ distribution. This should be documented prominently.
 | P8 (V87–V96) | 10 | 10 | 0 | None — SR, roundtrips, EEG, delay, FIM+SL confirmed |
 | P9 (V97–V108) | 18 | 17 | 1 | Inverse ill-conditioned at K=0 (#12) |
 | P10 (V109–V120) | 19 | 19 | 0 | Capstone: scaling collapse, reproducibility, GD works |
-| P11 (V121–V132) | 13 | 12 | 1 | Critical slowing metric (#13). Dynamics, causality, boundedness confirmed. |
-| **Total** | **168** | **158** | **10** | **13 findings** |
+| P11 (V121–V132) | 13 | 12 | 1 | Critical slowing metric (#13) |
+| P12 (V133–V142) | 10 | 9 | 1 | Entropy formula (#14). Community, prediction, generalisation, basin confirmed. |
+| **Total** | **178** | **167** | **11** | **14 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -173,6 +174,7 @@ physics. The framework is sound.
 | 11 | BKT universality contradicts V52 mean-field β=1/2 | **Critical** | cross-project | V52 confirmed β=1/2 for all-to-all uniform K (mean-field). NB43 found β→0 (BKT) for heterogeneous K_nm coupling. The universality class depends on TOPOLOGY, not on FIM. All-to-all = mean-field, structured = BKT. | Document that critical exponents are topology-dependent; add heterogeneous-K test to V52 | Open investigation |
 | 12 | analytical_inverse ill-conditioned at K=0 | Medium | `inverse.py` | Without coupling, ω-driven phase drift produces sin(Δθ) basis correlations that lstsq misinterprets as coupling. ‖K_est‖ = 51.6 for true K=0. | Add ridge regularisation (alpha > 0) as default; or check condition number before returning result. Document that inverse requires actual coupling to work. | Fix needed |
 | 13 | Critical slowing down metric measures wrong thing | Low | test design | Std-based "time to stability" captures approach to ANY stable state (including low-R desync). Near K_c, low-R state is reached quickly. Far above K_c, high-R sync takes longer. True critical slowing = divergence of perturbation relaxation time (Jacobian eigenvalue), already captured by V59/V71. | Use perturbation decay rate instead of std-stability metric for critical slowing tests. | Test design insight |
+| 14 | Entropy production formula incorrect | Medium | test design | σ = Σ coupling·dθ/dt is NOT the thermodynamic entropy production. The correct Risken overdamped Langevin formalism gives σ = Σ (dθ/dt)²/(2T) which requires noise temperature T. Without stochastic noise, deterministic Kuramoto has no well-defined entropy production. | Implement stochastic Kuramoto with noise term; then compute σ correctly via Jarzynski/Crooks. | Theoretical gap |
 
 ### Finding #1 — Detail
 
@@ -365,6 +367,7 @@ algebraically structured hard instances. This should be documented.
 - Phase 9: `tests/test_nn_physics_validation_p9.py` (18 tests, ~54s)
 - Phase 10: `tests/test_nn_physics_validation_p10.py` (19 tests, ~216s)
 - Phase 11: `tests/test_nn_physics_validation_p11.py` (13 tests, ~51s)
+- Phase 12: `tests/test_nn_physics_validation_p12.py` (10 tests, ~137s)
 
 GPU optional — all tests run on CPU.
 
