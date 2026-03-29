@@ -145,8 +145,9 @@ distribution. This should be documented prominently.
 | P5 (V47–V60) | 16 | 16 | 0 | Mean-phase drift (#6) |
 | P6 (V61–V74) | 16 | 14 | 2 | K symmetry broken (#7), OIM Petersen fail (#8) |
 | P7 (V75–V86) | 14 | 11 | 3 | FIM scaling small-N (#9), FIM hysteresis K-range (#10), BKT vs MF (#11) |
-| P8 (V87–V96) | 10 | 10 | 0 | None — clean sweep. SR, roundtrips, EEG, delay, FIM+SL all confirmed. |
-| **Total** | **118** | **110** | **8** | **11 findings** |
+| P8 (V87–V96) | 10 | 10 | 0 | None — SR, roundtrips, EEG, delay, FIM+SL confirmed |
+| P9 (V97–V108) | 18 | 17 | 1 | Inverse ill-conditioned at K=0 (#12) |
+| **Total** | **136** | **127** | **9** | **12 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -168,6 +169,7 @@ physics. The framework is sound.
 | 9 | FIM λ_c scaling breaks at small N | Medium | test-local FIM | N=4 syncs at near-zero λ (finite-size effect). Scaling law λ_c∝N holds only for N≥8. NB25 used stronger omega spread (Cauchy 0.5 vs our Normal 0.5). | Test scaling at N≥32; match NB25 frequency distribution exactly | Known limitation |
 | 10 | FIM hysteresis invisible at λ=3, K∈[0,5] | Low | test-local FIM | FIM at λ=3 is strong enough that N=16 reaches R≈0.998 from BOTH directions in K∈[0,5]. NB27 used K∈[0,20] and saw hysteresis in K=4-10 range. | Widen K sweep range to [0,20]; or reduce λ to ~1.5 | Test parameter mismatch |
 | 11 | BKT universality contradicts V52 mean-field β=1/2 | **Critical** | cross-project | V52 confirmed β=1/2 for all-to-all uniform K (mean-field). NB43 found β→0 (BKT) for heterogeneous K_nm coupling. The universality class depends on TOPOLOGY, not on FIM. All-to-all = mean-field, structured = BKT. | Document that critical exponents are topology-dependent; add heterogeneous-K test to V52 | Open investigation |
+| 12 | analytical_inverse ill-conditioned at K=0 | Medium | `inverse.py` | Without coupling, ω-driven phase drift produces sin(Δθ) basis correlations that lstsq misinterprets as coupling. ‖K_est‖ = 51.6 for true K=0. | Add ridge regularisation (alpha > 0) as default; or check condition number before returning result. Document that inverse requires actual coupling to work. | Fix needed |
 
 ### Finding #1 — Detail
 
@@ -357,6 +359,7 @@ algebraically structured hard instances. This should be documented.
 - Phase 6: `tests/test_nn_physics_validation_p6.py` (16 tests, ~130s)
 - Phase 7: `tests/test_nn_physics_validation_p7.py` (14 tests, ~2900s — FIM Python loops)
 - Phase 8: `tests/test_nn_physics_validation_p8.py` (10 tests, ~185s)
+- Phase 9: `tests/test_nn_physics_validation_p9.py` (18 tests, ~54s)
 
 GPU optional — all tests run on CPU.
 
