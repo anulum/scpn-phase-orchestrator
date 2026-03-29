@@ -150,7 +150,8 @@ distribution. This should be documented prominently.
 | P10 (V109–V120) | 19 | 19 | 0 | Capstone: scaling collapse, reproducibility, GD works |
 | P11 (V121–V132) | 13 | 12 | 1 | Critical slowing metric (#13) |
 | P12 (V133–V142) | 10 | 9 | 1 | Entropy formula (#14). Community, prediction, generalisation, basin confirmed. |
-| **Total** | **178** | **167** | **11** | **14 findings** |
+| P13 (V143–V152) | 16 | 15 | 0+1skip | None. Serialisation, error handling, multi-timescale, spectrum all pass. |
+| **Total** | **194** | **182** | **11+1skip** | **14 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -368,6 +369,7 @@ algebraically structured hard instances. This should be documented.
 - Phase 10: `tests/test_nn_physics_validation_p10.py` (19 tests, ~216s)
 - Phase 11: `tests/test_nn_physics_validation_p11.py` (13 tests, ~51s)
 - Phase 12: `tests/test_nn_physics_validation_p12.py` (10 tests, ~137s)
+- Phase 13: `tests/test_nn_physics_validation_p13.py` (16 tests, ~39s)
 
 GPU optional — all tests run on CPU.
 
