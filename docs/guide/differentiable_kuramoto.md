@@ -302,9 +302,153 @@ grads = loss(layer)  # grads.K, grads.omegas, grads.residual all updated
 Rackauckas et al. 2020; Frontiers Comp. Neuro. 2025.
 First Python UDE implementation for oscillator networks.
 
+## Winfree Model (Pulse-Coupled)
+
+The Winfree model (1967) uses separate pulse and phase response functions
+instead of sinusoidal coupling. Scalar coupling strength (all-to-all).
+
+```python
+from scpn_phase_orchestrator.nn import (
+    winfree_step,
+    winfree_forward,
+)
+
+# K is a scalar, not a matrix
+final, trajectory = winfree_forward(
+    phases, omegas, K=0.5, dt=0.01, n_steps=200
+)
+```
+
+## Theta Neuron (Excitable Systems)
+
+The canonical model for Type I neuronal excitability (Ermentrout & Kopell
+1986). Unlike Kuramoto oscillators which always oscillate, theta neurons
+can be **excitable** (eta < 0) — they fire only when driven by sufficient
+synaptic input.
+
+```python
+from scpn_phase_orchestrator.nn import (
+    theta_neuron_forward,
+    ThetaNeuronLayer,
+)
+
+# Functional API
+eta = jnp.full(N, -0.5)  # excitable regime
+K = jnp.ones((N, N)) * 0.1
+final, trajectory = theta_neuron_forward(phases, eta, K, dt=0.01, n_steps=500)
+
+# Equinox layer with learnable K and eta
+layer = ThetaNeuronLayer(n=16, n_steps=100, eta_mean=-0.5, key=key)
+output = layer(phases)
+```
+
+## Chimera State Detection
+
+Detect chimera states — coexistence of synchronised and incoherent domains
+(Kuramoto & Battogtokh 2002). All functions are differentiable.
+
+```python
+from scpn_phase_orchestrator.nn import (
+    local_order_parameter,
+    chimera_index,
+    detect_chimera,
+    generate_chimera_data,
+)
+
+# Generate chimera-producing data on a ring
+K, phases0, trajectory = generate_chimera_data(
+    N=64, T=2000, coupling_strength=0.5, coupling_range=4, key=key
+)
+
+# Detect chimera at final timestep
+R_local = local_order_parameter(trajectory[-1], K)   # (N,) per-oscillator R
+chi = chimera_index(trajectory[-1], K)                # scalar: high = chimera
+coherent, incoherent = detect_chimera(trajectory[-1], K)  # boolean masks
+
+# Gradient-based search for chimera-producing coupling
+grad_K = jax.grad(lambda K: chimera_index(trajectory[-1], K))(K)
+```
+
+## Spectral Analysis (Topology Metrics)
+
+Differentiable spectral metrics for coupling matrix analysis. Gradient
+flows through `jnp.linalg.eigh` for topology optimisation.
+
+```python
+from scpn_phase_orchestrator.nn import (
+    laplacian_spectrum,
+    algebraic_connectivity,
+    eigenratio,
+    sync_threshold,
+)
+
+eigs = laplacian_spectrum(K)              # (N,) sorted eigenvalues
+lambda2 = algebraic_connectivity(K)       # Fiedler value (0 = disconnected)
+ratio = eigenratio(K)                     # lambda_N / lambda_2 (lower = better)
+Kc = sync_threshold(K, omegas)            # critical coupling estimate
+
+# Optimise topology: minimise eigenratio (maximise synchronisability)
+grad_K = jax.grad(eigenratio)(K)
+```
+
+## Analytical Inverse (Pikovsky 2008)
+
+Faster and more accurate than gradient-based inverse. O(N^3) linear
+regression on sin(Delta_theta) basis, no ODE backprop.
+
+```python
+from scpn_phase_orchestrator.nn import (
+    analytical_inverse,
+    hybrid_inverse,
+    coupling_correlation,
+)
+
+# Analytical: exact for noiseless Kuramoto, seconds not minutes
+K_est, omegas_est = analytical_inverse(observed, dt=0.01)
+corr = coupling_correlation(K_true, K_est)  # typically > 0.95
+
+# Hybrid: analytical init + gradient refinement for noisy data
+K_est, omegas_est, losses = hybrid_inverse(
+    observed, dt=0.01, n_refine=50, lr=0.005, window_size=10
+)
+```
+
+## Training Loop
+
+End-to-end training with optax optimisers:
+
+```python
+import optax
+from scpn_phase_orchestrator.nn import (
+    KuramotoLayer,
+    sync_loss,
+    trajectory_loss,
+    train,
+)
+
+layer = KuramotoLayer(n=16, n_steps=50, dt=0.01, key=key)
+
+# Train to maximise synchronisation
+def loss_fn(model):
+    return sync_loss(model, phases, target_R=1.0)
+
+trained_layer, losses = train(
+    layer,
+    loss_fn,
+    optax.adam(1e-3),
+    n_epochs=200,
+)
+
+# Or fit to observed data
+def data_loss(model):
+    return trajectory_loss(model, phases, observed_trajectory)
+
+trained_layer, losses = train(layer, data_loss, optax.adam(1e-3), 100)
+```
+
 ## GPU Acceleration
 
-JAX automatically uses GPU when available. On Linux (or WSL2):
+JAX automatically uses GPU when available. On Linux:
 
 ```bash
 pip install jax[cuda12]
@@ -312,3 +456,16 @@ pip install jax[cuda12]
 
 No code changes needed — the same functions run on GPU transparently.
 XLA compilation happens once per function signature, then runs at native speed.
+
+### Local benchmark (GTX 1060 6GB, 2026-03-29)
+
+| N | JAX GPU (ms) | NumPy CPU (ms) | Speedup |
+|---|---|---|---|
+| 512 | 517 | 460 | 0.9x |
+| 1024 | 593 | 3,039 | **5.1x** |
+| 2048 | 873 | 16,902 | **19.4x** |
+
+Crossover at N ~ 512–1024. For N > 1024, always use JAX GPU.
+
+For the complete API reference with mathematical formulations,
+see [nn/ Module Reference](../reference/nn.md).
