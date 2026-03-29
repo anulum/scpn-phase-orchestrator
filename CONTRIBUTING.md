@@ -1,10 +1,10 @@
 <!--
-SCPN Phase Orchestrator
-Copyright concepts (c) 1996-2026 Miroslav Sotek. All rights reserved.
-Copyright code (c) 2026 Miroslav Sotek. All rights reserved.
-ORCID: https://orcid.org/0009-0009-3560-0851
+SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+© Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+© Code 2020–2026 Miroslav Šotek. All rights reserved.
+ORCID: 0009-0009-3560-0851
 Contact: www.anulum.li | protoscience@anulum.li
-License: GNU AGPL v3 | Commercial licensing available
+SCPN Phase Orchestrator — Contributing Guide
 -->
 
 # Contributing
@@ -113,10 +113,32 @@ python tools/preflight.py --coverage # full + coverage guard
 ## Running Tests
 
 ```bash
-pytest
+pytest                                         # core test suite
 ruff check src/ tests/
 ruff format --check src/ tests/
 ```
+
+### nn/ Module Physics Validation (requires JAX)
+
+The nn/ module has a dedicated 194-test physics validation suite that
+verifies the JAX backend against known analytical results. Requires
+`pip install -e ".[nn]"` (installs JAX + equinox + optax).
+
+```bash
+# All phases except P7 (~13 min)
+pytest tests/test_nn_physics_validation.py \
+       tests/test_nn_physics_validation_p{2..6}.py \
+       tests/test_nn_physics_validation_p{8..13}.py
+
+# Phase 7 FIM validation (~32 min, Python loops)
+pytest tests/test_nn_physics_validation_p7.py
+
+# Single phase (fast)
+pytest tests/test_nn_physics_validation_p4.py -v
+```
+
+See `docs/reference/nn_physics_validation_plan.md` for the full test
+matrix, results, and 14 documented findings.
 
 ## Commit Style
 

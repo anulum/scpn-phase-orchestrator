@@ -63,6 +63,11 @@
 - ~~Expand domainpack channel coverage (target: all 3 channels in 12+ packs)~~ (10/24 done)
 - ~~Async test infrastructure: pytest-asyncio + httpx.AsyncClient for QueueWaves~~ (done)
 - ~~Tutorial notebooks for binding, audit replay, reporting, adapter bridges~~ (done)
+- ~~nn/ module physics validation: 194 tests across 13 phases (183 pass, 10 xfail, 1 skip), 14 findings~~ (done)
+- ~~nn/ module documentation: complete API reference (677 lines), updated guide (7 new sections)~~ (done)
+- ~~Local GPU validation: GTX 1060, all 9 benchmark suites, JAX 0.9.2~~ (done)
+- ~~First automated FIM (strange loop) validation: V75-V86~~ (done)
+- ~~Cross-project sync: bidirectional findings exchange with scpn-quantum-control and sc-neurocore~~ (done)
 - Petri net + PolicyEngine Rust port (spo-supervisor crate)
 
 ## v1.0

@@ -22,8 +22,9 @@ run on every commit. No aspirational language — only measured reality.
 
 | Metric | Measured value | Gate |
 |--------|---------------|------|
-| Total Python tests | 3,130+ | — |
+| Total Python tests | 3,130+ (core) + 194 (nn/ physics validation) | — |
 | Total Rust tests | 211 | — |
+| nn/ physics validation | 194 tests, 183 pass, 10 xfail, 1 skip | 0 hard failures |
 | Line coverage | 99%+ | 95% minimum |
 | Docstring coverage | 100% (0 missing) | — |
 | Domainpack coverage | 32/32 (100%) | — |

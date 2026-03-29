@@ -163,6 +163,11 @@ Complete re-run of all 194 tests in two batches:
 All 14 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
 
+**Test count:** 194 pytest-collected items from 181 test methods. The
+difference comes from `@pytest.mark.parametrize`: P1 has 6 parametrised
+methods (V2×3 K_val, V5×3 mu_val supercritical, V5×3 mu_val subcritical,
+V9×3 N), P10 has 2 (V113×5 seed, V114×4 seed) = 12 extra items.
+
 **Note:** Individual phase rows reflect incremental results. The Full-Suite
 Verification is authoritative — V76 (FIM scaling) is non-deterministic and
 passes on some runs (JAX cache state dependent). Row totals (182 pass, 11
