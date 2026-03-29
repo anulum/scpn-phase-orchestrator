@@ -144,7 +144,8 @@ distribution. This should be documented prominently.
 | P4 (V37–V46) | 12 | 12 | 0 | None |
 | P5 (V47–V60) | 16 | 16 | 0 | Mean-phase drift (#6) |
 | P6 (V61–V74) | 16 | 14 | 2 | K symmetry broken (#7), OIM Petersen fail (#8) |
-| **Total** | **94** | **89** | **5** | **8 findings** |
+| P7 (V75–V86) | 14 | 11 | 3 | FIM scaling small-N (#9), FIM hysteresis K-range (#10), BKT vs MF (#11) |
+| **Total** | **108** | **100** | **8** | **11 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -163,6 +164,9 @@ physics. The framework is sound.
 | 6 | Mean phase Ψ drifts ~0.13 over 1000 steps | Low | `functional.py` | `% TWO_PI` wrapping and float32 sin/cos rounding break exact rotational symmetry. Rate: ~1.3e-4 per step. | Use float64 for precision-critical work; or track Ψ explicitly and correct | Known limitation |
 | 7 | K loses symmetry after gradient training | High | `training.py` | `jax.grad` of loss w.r.t. symmetric K produces non-symmetric gradient. optax.adam updates K with non-symmetric step → K drifts asymmetric. | Add `K = (K + K.T) / 2` after each update in training loop; or use Cholesky parameterisation `K = L·L^T` | Fix needed |
 | 8 | OIM fails on Petersen graph (chi=3) | Medium | `oim.py` | Petersen graph is 3-regular with girth 5 — hard for annealing heuristics. 30 restarts insufficient. OIM coupling `sin(3·Δθ)` may have local minima for this topology. | Increase n_restarts (100+), adjust annealing schedule, or use `oim_solve` with custom k_max/n_anneal for hard instances | Known limitation |
+| 9 | FIM λ_c scaling breaks at small N | Medium | test-local FIM | N=4 syncs at near-zero λ (finite-size effect). Scaling law λ_c∝N holds only for N≥8. NB25 used stronger omega spread (Cauchy 0.5 vs our Normal 0.5). | Test scaling at N≥32; match NB25 frequency distribution exactly | Known limitation |
+| 10 | FIM hysteresis invisible at λ=3, K∈[0,5] | Low | test-local FIM | FIM at λ=3 is strong enough that N=16 reaches R≈0.998 from BOTH directions in K∈[0,5]. NB27 used K∈[0,20] and saw hysteresis in K=4-10 range. | Widen K sweep range to [0,20]; or reduce λ to ~1.5 | Test parameter mismatch |
+| 11 | BKT universality contradicts V52 mean-field β=1/2 | **Critical** | cross-project | V52 confirmed β=1/2 for all-to-all uniform K (mean-field). NB43 found β→0 (BKT) for heterogeneous K_nm coupling. The universality class depends on TOPOLOGY, not on FIM. All-to-all = mean-field, structured = BKT. | Document that critical exponents are topology-dependent; add heterogeneous-K test to V52 | Open investigation |
 
 ### Finding #1 — Detail
 
@@ -350,6 +354,7 @@ algebraically structured hard instances. This should be documented.
 - Phase 4: `tests/test_nn_physics_validation_p4.py` (12 tests, ~98s)
 - Phase 5: `tests/test_nn_physics_validation_p5.py` (16 tests, ~175s)
 - Phase 6: `tests/test_nn_physics_validation_p6.py` (16 tests, ~130s)
+- Phase 7: `tests/test_nn_physics_validation_p7.py` (14 tests, ~2900s — FIM Python loops)
 
 GPU optional — all tests run on CPU.
 
