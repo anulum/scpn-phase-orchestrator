@@ -77,12 +77,14 @@ class TestV143Serialization:
 
         # Parameters should be identical
         np.testing.assert_array_equal(
-            np.array(layer.K), np.array(loaded.K),
-            err_msg="K changed after serialization"
+            np.array(layer.K),
+            np.array(loaded.K),
+            err_msg="K changed after serialization",
         )
 
-        import os
-        os.unlink(path)
+        from pathlib import Path as _Path
+
+        _Path(path).unlink()
 
     def test_stuart_landau_serialization(self):
         import tempfile
@@ -102,15 +104,12 @@ class TestV143Serialization:
         skeleton = StuartLandauLayer(n=N, n_steps=20, dt=0.01, key=jr.PRNGKey(1))
         loaded = eqx.tree_deserialise_leaves(path, skeleton)
 
-        np.testing.assert_array_equal(
-            np.array(layer.K), np.array(loaded.K)
-        )
-        np.testing.assert_array_equal(
-            np.array(layer.mu), np.array(loaded.mu)
-        )
+        np.testing.assert_array_equal(np.array(layer.K), np.array(loaded.K))
+        np.testing.assert_array_equal(np.array(layer.mu), np.array(loaded.mu))
 
-        import os
-        os.unlink(path)
+        from pathlib import Path as _Path
+
+        _Path(path).unlink()
 
 
 # ──────────────────────────────────────────────────
@@ -227,8 +226,7 @@ class TestV146MemoryScaling:
                 f"Final shape wrong: {final.shape}, expected ({N},)"
             )
             assert traj.shape == (n_steps, N), (
-                f"Trajectory shape wrong: {traj.shape}, "
-                f"expected ({n_steps}, {N})"
+                f"Trajectory shape wrong: {traj.shape}, expected ({n_steps}, {N})"
             )
 
     def test_memory_bytes_estimate(self):
@@ -289,7 +287,8 @@ class TestV147RustJAXParity:
             jnp.array(phases_np, jnp.float32),
             jnp.array(omegas_np, jnp.float32),
             jnp.array(K_np, jnp.float32),
-            0.01, 500,
+            0.01,
+            500,
         )
         R_jax = float(order_parameter(final_jax))
 
@@ -315,7 +314,6 @@ class TestV148ConditionNumber:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
-            coupling_correlation,
         )
 
         N = 6
@@ -335,7 +333,7 @@ class TestV148ConditionNumber:
         K_clean, _ = analytical_inverse(observed, 0.01)
         K_noisy, _ = analytical_inverse(observed + noise, 0.01)
 
-        input_change = float(jnp.sqrt(jnp.sum(noise ** 2)))
+        input_change = float(jnp.sqrt(jnp.sum(noise**2)))
         output_change = float(jnp.sqrt(jnp.sum((K_clean - K_noisy) ** 2)))
 
         condition_estimate = output_change / max(input_change, 1e-10)
@@ -473,9 +471,7 @@ class TestV151EigenvalueSpectrum:
         # Expected: [0, N, N, ..., N]
         assert abs(eigs[0]) < 1e-4, f"First eigenvalue not 0: {eigs[0]}"
         for i in range(1, N):
-            assert abs(eigs[i] - N) < 1e-3, (
-                f"Eigenvalue {i} = {eigs[i]}, expected {N}"
-            )
+            assert abs(eigs[i] - N) < 1e-3, f"Eigenvalue {i} = {eigs[i]}, expected {N}"
 
     def test_ring_spectrum(self):
         from scpn_phase_orchestrator.nn.spectral import laplacian_spectrum
@@ -491,8 +487,9 @@ class TestV151EigenvalueSpectrum:
         # Expected: 2 - 2cos(2πk/N) for k=0,...,N-1
         expected = np.sort([2.0 - 2.0 * np.cos(2 * np.pi * k / N) for k in range(N)])
 
-        np.testing.assert_allclose(eigs, expected, atol=1e-4,
-                                   err_msg="Ring spectrum mismatch")
+        np.testing.assert_allclose(
+            eigs, expected, atol=1e-4, err_msg="Ring spectrum mismatch"
+        )
 
 
 # ──────────────────────────────────────────────────
@@ -512,7 +509,6 @@ class TestV152PsiField:
     def test_psi_field_attracts(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
-            order_parameter,
         )
 
         N = 16
@@ -533,6 +529,5 @@ class TestV152PsiField:
             deviations = np.abs(np.sin(np.array(final) - Psi))
             max_dev = np.max(deviations)
             assert max_dev < 0.3, (
-                f"Phases not clustered around Ψ={Psi:.3f}: "
-                f"max deviation={max_dev:.3f}"
+                f"Phases not clustered around Ψ={Psi:.3f}: max deviation={max_dev:.3f}"
             )

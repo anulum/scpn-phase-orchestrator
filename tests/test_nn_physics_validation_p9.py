@@ -74,8 +74,7 @@ class TestV97MutationDetection:
 
         # Correct should sync (R high), wrong should desync (R low)
         assert R_correct > R_wrong + 0.1, (
-            f"Mutation not detected: R_correct={R_correct:.3f}, "
-            f"R_wrong={R_wrong:.3f}"
+            f"Mutation not detected: R_correct={R_correct:.3f}, R_wrong={R_wrong:.3f}"
         )
 
     def test_missing_coupling_detected(self):
@@ -130,8 +129,7 @@ class TestV97MutationDetection:
 
         # Over-coupled should sync much faster (R_w ≈ 1)
         assert abs(R_c - R_w) > 0.05, (
-            f"Wrong normalisation not detected: "
-            f"R_correct={R_c:.3f}, R_wrong={R_w:.3f}"
+            f"Wrong normalisation not detected: R_correct={R_c:.3f}, R_wrong={R_w:.3f}"
         )
 
 
@@ -227,12 +225,8 @@ class TestV99OrderParameterBound:
         _, traj = kuramoto_forward(phases0, omegas, K, 0.01, 2000)
         R_all = np.array(jax.vmap(order_parameter)(traj))
 
-        assert np.all(R_all <= 1.0 + 1e-6), (
-            f"R exceeded 1: max={R_all.max():.8f}"
-        )
-        assert np.all(R_all >= 0.0 - 1e-6), (
-            f"R went negative: min={R_all.min():.8f}"
-        )
+        assert np.all(R_all <= 1.0 + 1e-6), f"R exceeded 1: max={R_all.max():.8f}"
+        assert np.all(R_all >= 0.0 - 1e-6), f"R went negative: min={R_all.min():.8f}"
 
 
 # ──────────────────────────────────────────────────
@@ -259,12 +253,12 @@ class TestV100CompositionDepth:
 
             def chained_loss(*ls):
                 p = phases
-                for l in ls:
-                    p = l(p)
+                for layer in ls:
+                    p = layer(p)
                 return order_parameter(p)
 
             grads = jax.grad(chained_loss, argnums=tuple(range(depth)))(*layers)
-            total_norm = sum(float(jnp.sum(g.K ** 2)) for g in grads)
+            total_norm = sum(float(jnp.sum(g.K**2)) for g in grads)
             grad_norms[depth] = total_norm
 
         # Gradient should not vanish catastrophically
@@ -306,9 +300,7 @@ class TestV101IntegratorStability:
                 stable_dts.append(dt)
 
         # RK4 should be stable at least up to dt=0.1 for this K
-        assert 0.1 in stable_dts, (
-            f"RK4 unstable at dt=0.1. Stable dts: {stable_dts}"
-        )
+        assert 0.1 in stable_dts, f"RK4 unstable at dt=0.1. Stable dts: {stable_dts}"
 
 
 # ──────────────────────────────────────────────────
@@ -350,7 +342,7 @@ class TestV102MutualInformation:
 
             # Joint and marginal histograms
             joint = np.zeros((n_bins, n_bins))
-            for xi, yi in zip(x, y):
+            for xi, yi in zip(x, y, strict=False):
                 joint[xi, yi] += 1
             joint /= joint.sum()
 
@@ -408,8 +400,9 @@ class TestV103PhaseConjugation:
         R_conj = np.array(jax.vmap(order_parameter)(traj_conj))
 
         # R trajectories should be identical
-        np.testing.assert_allclose(R_orig, R_conj, atol=1e-4,
-                                   err_msg="Phase conjugation breaks R symmetry")
+        np.testing.assert_allclose(
+            R_orig, R_conj, atol=1e-4, err_msg="Phase conjugation breaks R symmetry"
+        )
 
 
 # ──────────────────────────────────────────────────
@@ -484,7 +477,7 @@ class TestV105SLHamiltonianConservation:
         )
 
         def energy(r):
-            return jnp.sum(-mu_val * r ** 2 + r ** 4 / 2.0)
+            return jnp.sum(-mu_val * r**2 + r**4 / 2.0)
 
         E_traj = np.array(jax.vmap(energy)(amp_traj))
 
@@ -511,7 +504,6 @@ class TestV106ZeroCouplingBaseline:
     def test_independent_evolution(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
-            order_parameter,
             plv,
         )
 
@@ -527,9 +519,7 @@ class TestV106ZeroCouplingBaseline:
         P = np.array(plv(traj))
         offdiag = P[~np.eye(N, dtype=bool)]
         mean_plv = np.mean(offdiag)
-        assert mean_plv < 0.5, (
-            f"K=0 but mean PLV={mean_plv:.3f}, expected < 0.5"
-        )
+        assert mean_plv < 0.5, f"K=0 but mean PLV={mean_plv:.3f}, expected < 0.5"
 
     def test_inverse_returns_near_zero(self):
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
@@ -545,7 +535,7 @@ class TestV106ZeroCouplingBaseline:
         observed = jnp.concatenate([phases0[jnp.newaxis], traj])
 
         K_est, _ = analytical_inverse(observed, 0.01)
-        K_norm = float(jnp.sqrt(jnp.sum(K_est ** 2)))
+        K_norm = float(jnp.sqrt(jnp.sum(K_est**2)))
 
         # FINDING #12: analytical_inverse returns large K for uncoupled data.
         # Without coupling, phase differences evolve as Δω·t. The sin(Δθ)

@@ -86,8 +86,7 @@ class TestV87StochasticResonance:
         # Stochastic resonance: moderate noise should help
         # (or at least not dramatically hurt compared to no noise)
         assert R_optimal >= R_no_noise - 0.1, (
-            f"Moderate noise hurt: R(σ=0)={R_no_noise:.3f}, "
-            f"R(σ=0.3)={R_optimal:.3f}"
+            f"Moderate noise hurt: R(σ=0)={R_no_noise:.3f}, R(σ=0.3)={R_optimal:.3f}"
         )
         # Too much noise should hurt
         assert R_too_much < R_optimal + 0.05 or R_too_much < R_no_noise, (
@@ -113,9 +112,9 @@ class TestV88TrainingRoundtrip:
 
     def test_roundtrip_recovers_coupling(self):
         import optax
+
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
-            order_parameter,
         )
         from scpn_phase_orchestrator.nn.inverse import coupling_correlation
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
@@ -154,8 +153,7 @@ class TestV88TrainingRoundtrip:
 
         # Correlation: even moderate is meaningful (training is short)
         assert corr > 0.0, (
-            f"Roundtrip correlation={corr:.3f}. "
-            f"Final loss={losses[-1]:.4f}"
+            f"Roundtrip correlation={corr:.3f}. Final loss={losses[-1]:.4f}"
         )
 
 
@@ -180,16 +178,33 @@ class TestV89MultiFrequencyEEG:
 
         # 4 oscillators per band, 4 bands = 16 total
         N = 16
-        omegas = jnp.array([
-            # Delta (0.5-4 Hz, in rad/s)
-            1.0, 2.0, 3.0, 3.5,
-            # Theta (4-8 Hz)
-            5.0, 6.0, 7.0, 7.5,
-            # Alpha (8-13 Hz)
-            9.0, 10.0, 11.0, 12.0,
-            # Beta (13-30 Hz)
-            15.0, 20.0, 25.0, 28.0,
-        ]) * TWO_PI  # Convert to rad/s
+        omegas = (
+            jnp.array(
+                [
+                    # Delta (0.5-4 Hz, in rad/s)
+                    1.0,
+                    2.0,
+                    3.0,
+                    3.5,
+                    # Theta (4-8 Hz)
+                    5.0,
+                    6.0,
+                    7.0,
+                    7.5,
+                    # Alpha (8-13 Hz)
+                    9.0,
+                    10.0,
+                    11.0,
+                    12.0,
+                    # Beta (13-30 Hz)
+                    15.0,
+                    20.0,
+                    25.0,
+                    28.0,
+                ]
+            )
+            * TWO_PI
+        )  # Convert to rad/s
 
         key = jr.PRNGKey(0)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
@@ -207,7 +222,7 @@ class TestV89MultiFrequencyEEG:
         R_beta = float(order_parameter(final[12:]))
         R_global = float(order_parameter(final))
 
-        intra_mean = np.mean([R_delta, R_theta, R_alpha, R_beta])
+        np.mean([R_delta, R_theta, R_alpha, R_beta])
 
         # At least some intra-band R should exceed global
         assert max(R_delta, R_theta, R_alpha, R_beta) > R_global, (
@@ -350,8 +365,7 @@ class TestV92CrossFrequencyPLV:
         cross = np.mean(P[:4, 4:])
 
         assert intra_mean > cross, (
-            f"Same-band PLV ({intra_mean:.3f}) not higher than "
-            f"cross-band ({cross:.3f})"
+            f"Same-band PLV ({intra_mean:.3f}) not higher than cross-band ({cross:.3f})"
         )
 
 
@@ -395,8 +409,7 @@ class TestV93OttAntonsenDataExport:
 
         # Monotonicity (with tolerance for fluctuations)
         violations = sum(
-            1 for i in range(len(R_data) - 2)
-            if R_data[i + 2] < R_data[i] - 0.1
+            1 for i in range(len(R_data) - 2) if R_data[i + 2] < R_data[i] - 0.1
         )
         assert violations < 3, (
             f"R(K) not approximately monotone: {violations} violations"
@@ -463,8 +476,7 @@ class TestV94DelayedCoupling:
 
         # Delay should reduce or not improve sync
         assert R_delayed <= R_no_delay + 0.05, (
-            f"Delay improved sync? R_no={R_no_delay:.3f}, "
-            f"R_delayed={R_delayed:.3f}"
+            f"Delay improved sync? R_no={R_no_delay:.3f}, R_delayed={R_delayed:.3f}"
         )
 
 
@@ -526,6 +538,7 @@ class TestV96BimodalFIM:
 
         # Without FIM
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
+
         final_no, _ = kuramoto_forward(phases0, omegas, K, 0.01, 3000)
         R_no = float(order_parameter(final_no))
 

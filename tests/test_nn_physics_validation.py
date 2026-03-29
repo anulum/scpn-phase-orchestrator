@@ -177,7 +177,7 @@ class TestV3LyapunovMonotonicity:
         # Allow tiny numerical increases (1e-6 tolerance)
         violations = np.sum(np.diff(V) > 1e-6)
         assert violations == 0, (
-            f"{violations} Lyapunov violations out of {len(V)-1} steps. "
+            f"{violations} Lyapunov violations out of {len(V) - 1} steps. "
             f"Max increase: {np.max(np.diff(V)):.2e}"
         )
 
@@ -211,9 +211,7 @@ class TestV4OttAntonsenTransition:
 
         max_error = 0.0
         for K_scalar in K_values:
-            R_theory = (
-                np.sqrt(1.0 - K_c / K_scalar) if K_scalar > K_c else 0.0
-            )
+            R_theory = np.sqrt(1.0 - K_c / K_scalar) if K_scalar > K_c else 0.0
             R_measurements = []
 
             for seed in range(n_realisations):
@@ -259,7 +257,6 @@ class TestV5StuartLandauBifurcation:
     def test_supercritical(self, mu_val):
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
-        N = 1
         phases0 = jnp.array([0.0])
         amps0 = jnp.array([0.1])
         omegas = jnp.array([1.0])
@@ -280,7 +277,6 @@ class TestV5StuartLandauBifurcation:
     def test_subcritical(self, mu_val):
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
-        N = 1
         phases0 = jnp.array([0.0])
         amps0 = jnp.array([1.0])
         omegas = jnp.array([1.0])
@@ -393,8 +389,9 @@ class TestV6GradientCorrectness:
         key = jr.PRNGKey(2)
         N = 4
         phases = jr.uniform(key, (N,), maxval=TWO_PI)
-        A = jnp.array([[0, 1, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 1, 0]],
-                       dtype=jnp.float32)
+        A = jnp.array(
+            [[0, 1, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 1, 0]], dtype=jnp.float32
+        )
 
         def f_jax(x):
             p = phases.at[0].set(x)
@@ -460,21 +457,19 @@ class TestV7SimplicialHysteresis:
         diff = np.mean(R_down[mid - 2 : mid + 2]) - np.mean(R_up[mid - 2 : mid + 2])
 
         # Record even if no hysteresis — this is informative
-        assert diff > 0.05 or True, (
+        assert True, (
             f"Hysteresis gap at mid-K: {diff:.3f}. "
-            f"R_up_mid={np.mean(R_up[mid-2:mid+2]):.3f}, "
-            f"R_down_mid={np.mean(R_down[mid-2:mid+2]):.3f}"
+            f"R_up_mid={np.mean(R_up[mid - 2 : mid + 2]):.3f}, "
+            f"R_down_mid={np.mean(R_down[mid - 2 : mid + 2]):.3f}"
         )
         # The real assertion: R_down > R_up at some intermediate K
         # If this fails, sigma2 term is not producing explosive sync
         has_hysteresis = any(
-            R_down[i] - R_up[i] > 0.1
-            for i in range(2, len(K_values) - 2)
+            R_down[i] - R_up[i] > 0.1 for i in range(2, len(K_values) - 2)
         )
         if not has_hysteresis:
             pytest.xfail(
-                f"No hysteresis detected (gap={diff:.3f}). "
-                "May need larger sigma2 or N."
+                f"No hysteresis detected (gap={diff:.3f}). May need larger sigma2 or N."
             )
 
 
@@ -505,9 +500,7 @@ class TestV8BOLDImpulseResponse:
 
         # HRF peak: Stephan 2007 params produce peak at ~3-6s
         # (varies with parameter set; canonical SPM HRF peaks at ~5s)
-        assert 2.0 < peak_time < 8.0, (
-            f"HRF peak at {peak_time:.1f}s, expected 2-8s"
-        )
+        assert 2.0 < peak_time < 8.0, f"HRF peak at {peak_time:.1f}s, expected 2-8s"
 
         # Should return near baseline by 25s
         late = bold_np[int(25.0 / dt) :]
@@ -585,9 +578,7 @@ class TestV10GradientStability:
         for n_steps in [10, 50, 100, 500, 1000]:
             g = jax.grad(loss)(1.0, n_steps)
             g_val = float(g)
-            assert np.isfinite(g_val), (
-                f"Gradient is {g_val} at n_steps={n_steps}"
-            )
+            assert np.isfinite(g_val), f"Gradient is {g_val} at n_steps={n_steps}"
 
 
 # ──────────────────────────────────────────────────
@@ -629,7 +620,7 @@ class TestV11WinfreeKuramotoEquivalence:
         # Both should give similar R in weak coupling
         assert abs(R_w - R_k) < 0.15, (
             f"Winfree R={R_w:.3f}, Kuramoto R={R_k:.3f}, "
-            f"diff={abs(R_w-R_k):.3f}, expected < 0.15 in weak limit"
+            f"diff={abs(R_w - R_k):.3f}, expected < 0.15 in weak limit"
         )
 
 

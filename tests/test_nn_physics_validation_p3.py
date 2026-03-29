@@ -38,6 +38,7 @@ class TestV25StuartLandauTraining:
 
     def test_sl_loss_decreases(self):
         import optax
+
         from scpn_phase_orchestrator.nn.stuart_landau_layer import StuartLandauLayer
         from scpn_phase_orchestrator.nn.training import train
 
@@ -51,6 +52,7 @@ class TestV25StuartLandauTraining:
         def loss_fn(model):
             fp, _ = model(phases, amps)
             from scpn_phase_orchestrator.nn.functional import order_parameter
+
             return (1.0 - order_parameter(fp)) ** 2
 
         _, losses = train(layer, loss_fn, optax.adam(1e-2), 40)
@@ -144,7 +146,7 @@ class TestV27OIMEnergyDescent:
         # Allow tiny numerical increases (1e-4)
         violations = np.sum(np.diff(energies) > 1e-4)
         assert violations < 5, (
-            f"{violations} energy violations out of {len(energies)-1} steps. "
+            f"{violations} energy violations out of {len(energies) - 1} steps. "
             f"Max increase: {np.max(np.diff(energies)):.2e}"
         )
 
@@ -191,8 +193,7 @@ class TestV28MultipleShootingInverse:
 
         # Shooting should be at least comparable
         assert corr_multi > corr_single - 0.2, (
-            f"Shooting corr={corr_multi:.3f} much worse than "
-            f"single={corr_single:.3f}"
+            f"Shooting corr={corr_multi:.3f} much worse than single={corr_single:.3f}"
         )
 
 
@@ -257,17 +258,19 @@ class TestV30SimplicialZeroEquivalence:
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
         final_k, traj_k = kuramoto_forward(phases0, omegas, K, 0.01, 200)
-        final_s, traj_s = simplicial_forward(
-            phases0, omegas, K, 0.01, 200, sigma2=0.0
-        )
+        final_s, traj_s = simplicial_forward(phases0, omegas, K, 0.01, 200, sigma2=0.0)
 
         np.testing.assert_allclose(
-            np.array(final_k), np.array(final_s), atol=1e-5,
-            err_msg="Simplicial(sigma2=0) ≠ Kuramoto"
+            np.array(final_k),
+            np.array(final_s),
+            atol=1e-5,
+            err_msg="Simplicial(sigma2=0) ≠ Kuramoto",
         )
         np.testing.assert_allclose(
-            np.array(traj_k), np.array(traj_s), atol=1e-5,
-            err_msg="Trajectory mismatch at sigma2=0"
+            np.array(traj_k),
+            np.array(traj_s),
+            atol=1e-5,
+            err_msg="Trajectory mismatch at sigma2=0",
         )
 
 
@@ -365,9 +368,7 @@ class TestV33ThetaExcitableSilence:
         # Check: number of 0→2pi wraps
         diffs = np.diff(traj_np)
         wraps = np.sum(diffs < -np.pi)  # phase wrap-around events
-        assert wraps < 3, (
-            f"Excitable neuron spiked {wraps} times with no input"
-        )
+        assert wraps < 3, f"Excitable neuron spiked {wraps} times with no input"
 
 
 # ──────────────────────────────────────────────────
@@ -403,18 +404,16 @@ class TestV34MaskedLayerConsistency:
         phases = jr.uniform(key, (N,), maxval=TWO_PI)
 
         # Masked forward
-        final_masked, _ = kuramoto_forward_masked(
-            phases, omegas, K, mask, 0.01, 50
-        )
+        final_masked, _ = kuramoto_forward_masked(phases, omegas, K, mask, 0.01, 50)
 
         # Pre-multiplied K, no mask
-        final_premul, _ = kuramoto_forward(
-            phases, omegas, K * mask, 0.01, 50
-        )
+        final_premul, _ = kuramoto_forward(phases, omegas, K * mask, 0.01, 50)
 
         np.testing.assert_allclose(
-            np.array(final_masked), np.array(final_premul), atol=1e-5,
-            err_msg="kuramoto_forward_masked ≠ kuramoto_forward(K*mask)"
+            np.array(final_masked),
+            np.array(final_premul),
+            atol=1e-5,
+            err_msg="kuramoto_forward_masked ≠ kuramoto_forward(K*mask)",
         )
 
 
@@ -488,8 +487,7 @@ class TestV36SLPhaseFrequency:
             TWO_PI - abs(actual_phase - expected_phase),
         )
         assert diff < 0.02, (
-            f"Phase={actual_phase:.4f}, expected={expected_phase:.4f}, "
-            f"error={diff:.4f}"
+            f"Phase={actual_phase:.4f}, expected={expected_phase:.4f}, error={diff:.4f}"
         )
 
         # Amplitude should stay at sqrt(mu) = 1.0

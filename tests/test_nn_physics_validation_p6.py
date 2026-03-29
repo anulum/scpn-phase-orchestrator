@@ -46,7 +46,6 @@ class TestV61PermutationEquivariance:
     def test_permuted_dynamics_identical(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
-            order_parameter,
         )
 
         N = 8
@@ -71,9 +70,7 @@ class TestV61PermutationEquivariance:
         # Unpermute and compare
         final_perm_unp = final_perm[inv_perm]
         err = float(jnp.max(jnp.abs(jnp.sin(final_orig - final_perm_unp))))
-        assert err < 1e-4, (
-            f"Permutation equivariance broken: max|sin(Δ)|={err:.2e}"
-        )
+        assert err < 1e-4, f"Permutation equivariance broken: max|sin(Δ)|={err:.2e}"
 
 
 # ──────────────────────────────────────────────────
@@ -166,9 +163,7 @@ class TestV63RFluctuationScaling:
 
         # var(R) should decrease as N increases
         vars_list = [var_by_N[n] for n in [32, 128, 512]]
-        assert vars_list[-1] < vars_list[0], (
-            f"var(R) not decreasing with N: {var_by_N}"
-        )
+        assert vars_list[-1] < vars_list[0], f"var(R) not decreasing with N: {var_by_N}"
 
 
 # ──────────────────────────────────────────────────
@@ -196,8 +191,10 @@ class TestV64GradientScalingWithN:
             K = jnp.ones((N, N)) * (1.0 / N)
             K = K.at[jnp.diag_indices(N)].set(0.0)
 
-            def loss(k_scale):
-                final, _ = kuramoto_forward(phases, omegas, K * k_scale, 0.01, 50)
+            _phases, _omegas, _K = phases, omegas, K
+
+            def loss(k_scale, p=_phases, o=_omegas, k=_K):
+                final, _ = kuramoto_forward(p, o, k * k_scale, 0.01, 50)
                 return order_parameter(final)
 
             g = float(jax.grad(loss)(1.0))
@@ -251,14 +248,13 @@ class TestV65InverseNoiseBreakdown:
 
         # Correlation should decrease with noise
         assert correlations[0] > correlations[-1], (
-            f"Correlation not decreasing with noise: {list(zip(noise_levels, correlations))}"
+            f"Correlation not decreasing with noise: "
+            f"{list(zip(noise_levels, correlations, strict=False))}"
         )
 
         # Record the breakdown point (where corr < 0.5)
-        breakdown = None
-        for sigma, corr in zip(noise_levels, correlations):
-            if corr < 0.5:
-                breakdown = sigma
+        for _sigma, _corr in zip(noise_levels, correlations, strict=False):
+            if _corr < 0.5:
                 break
 
         # Just verify we measured it — the exact value is informative
@@ -304,7 +300,7 @@ class TestV66AmplitudeDeath:
 
         # With strong diffusive coupling and spread omegas, amplitudes
         # should be significantly suppressed (not necessarily zero)
-        mean_initial = float(jnp.mean(amps0))
+        float(jnp.mean(amps0))
         # Just verify the test runs and amplitudes change
         assert np.isfinite(mean_final_amp), (
             f"Amplitude death test: final mean amp = {mean_final_amp}"
@@ -327,6 +323,7 @@ class TestV67KSymmetryUnderTraining:
 
     def test_K_stays_symmetric(self):
         import optax
+
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
         from scpn_phase_orchestrator.nn.training import sync_loss, train
 
@@ -373,7 +370,6 @@ class TestV68LayerCompositionality:
     """
 
     def test_chained_layers_differentiable(self):
-        import equinox as eqx
         from scpn_phase_orchestrator.nn.functional import order_parameter
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 
@@ -394,8 +390,8 @@ class TestV68LayerCompositionality:
         grad_l1, grad_l2 = jax.grad(chained_loss, argnums=(0, 1))(layer1, layer2)
 
         # Both should have finite, non-zero gradients on K
-        g1_norm = float(jnp.sum(grad_l1.K ** 2))
-        g2_norm = float(jnp.sum(grad_l2.K ** 2))
+        g1_norm = float(jnp.sum(grad_l1.K**2))
+        g2_norm = float(jnp.sum(grad_l2.K**2))
 
         assert np.isfinite(g1_norm) and g1_norm > 1e-10, (
             f"Layer 1 gradient vanished: |∇K1|²={g1_norm:.2e}"
@@ -457,7 +453,7 @@ class TestV69SAFvsSimNonTrivialTopology:
         assert 0.0 <= R_saf <= 1.0, f"SAF out of range: {R_saf}"
 
         # Record the disagreement
-        saf_err = abs(R_saf - R_sim)
+        abs(R_saf - R_sim)
         # Both are informative, no strict pass/fail
 
 
@@ -553,7 +549,7 @@ class TestV71LyapunovExponentSign:
             phases_ref = kuramoto_rk4_step(phases_ref, omegas, K, 0.01)
             phases_pert = kuramoto_rk4_step(phases_pert, omegas, K, 0.01)
             diff = jnp.sin(phases_pert - phases_ref)
-            sep = float(jnp.sqrt(jnp.sum(diff ** 2)))
+            sep = float(jnp.sqrt(jnp.sum(diff**2)))
             separations.append(sep)
 
         # In sync state, separation should decrease (negative Lyapunov)
@@ -583,7 +579,7 @@ class TestV71LyapunovExponentSign:
             phases_pert = kuramoto_rk4_step(phases_pert, omegas, K, 0.01)
 
         diff = jnp.sin(phases_pert - phases_ref)
-        final_sep = float(jnp.sqrt(jnp.sum(diff ** 2)))
+        final_sep = float(jnp.sqrt(jnp.sum(diff**2)))
 
         # Below K_c, perturbation should grow or stay (not decay)
         assert final_sep > eps * 0.1, (
@@ -625,7 +621,7 @@ class TestV72MultiTimescaleBOLD:
         high_freq_mask = freqs > 0.5
         if np.sum(high_freq_mask) > 0:
             high_power = np.mean(bold_fft[high_freq_mask] ** 2)
-            total_power = np.mean(bold_fft ** 2)
+            total_power = np.mean(bold_fft**2)
             ratio = high_power / max(total_power, 1e-10)
             assert ratio < 0.3, (
                 f"BOLD has too much high-frequency content: ratio={ratio:.3f}. "
@@ -648,9 +644,21 @@ class TestV73OIMOptimality:
 
         # Petersen graph adjacency (10 nodes, chi=3)
         edges = [
-            (0, 1), (1, 2), (2, 3), (3, 4), (4, 0),  # outer pentagon
-            (0, 5), (1, 6), (2, 7), (3, 8), (4, 9),  # spokes
-            (5, 7), (7, 9), (9, 6), (6, 8), (8, 5),  # inner pentagram
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 4),
+            (4, 0),  # outer pentagon
+            (0, 5),
+            (1, 6),
+            (2, 7),
+            (3, 8),
+            (4, 9),  # spokes
+            (5, 7),
+            (7, 9),
+            (9, 6),
+            (6, 8),
+            (8, 5),  # inner pentagram
         ]
         A = jnp.zeros((10, 10))
         for i, j in edges:

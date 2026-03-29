@@ -129,9 +129,7 @@ class TestV122CriticalSlowingDown:
         delta = 0.5
         K_c = 2.0 * delta
         key = jr.PRNGKey(42)
-        omegas = jnp.array(
-            np.random.default_rng(42).standard_cauchy(N) * delta
-        )
+        omegas = jnp.array(np.random.default_rng(42).standard_cauchy(N) * delta)
         omegas = jnp.clip(omegas, -10.0, 10.0)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
 
@@ -142,12 +140,12 @@ class TestV122CriticalSlowingDown:
             R_traj = np.array(jax.vmap(order_parameter)(traj))
             # Time until R stops changing by more than threshold
             for i in range(100, len(R_traj)):
-                if np.std(R_traj[max(0, i - 100):i]) < threshold:
+                if np.std(R_traj[max(0, i - 100) : i]) < threshold:
                     return i
             return 3000
 
-        t_near = time_to_stable(K_c * 1.1)   # just above K_c
-        t_far = time_to_stable(K_c * 3.0)    # well above K_c
+        t_near = time_to_stable(K_c * 1.1)  # just above K_c
+        t_far = time_to_stable(K_c * 3.0)  # well above K_c
 
         # FINDING #13: Critical slowing down is about RELAXATION TIME
         # (eigenvalue of Jacobian near fixed point), not time-to-stability.
@@ -271,9 +269,7 @@ class TestV125InverseVsTrajectoryLength:
             K_est, _ = analytical_inverse(full_obs[:T], 0.01)
             corrs[T] = float(coupling_correlation(K_true, K_est))
 
-        assert corrs[1000] > corrs[50] - 0.1, (
-            f"Longer trajectory not better: {corrs}"
-        )
+        assert corrs[1000] > corrs[50] - 0.1, f"Longer trajectory not better: {corrs}"
 
 
 # ──────────────────────────────────────────────────
@@ -291,7 +287,8 @@ class TestV126FIMCriticalLine:
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             coupling = jnp.sum(K * jnp.sin(diff), axis=1)
             z = jnp.mean(jnp.exp(1j * p))
-            return (p + dt * (o + coupling + lam * jnp.abs(z) * jnp.sin(jnp.angle(z) - p))) % TWO_PI
+            fim = lam * jnp.abs(z) * jnp.sin(jnp.angle(z) - p)
+            return (p + dt * (o + coupling + fim)) % TWO_PI
 
         N = 32
         key = jr.PRNGKey(0)
@@ -394,8 +391,10 @@ class TestV128Causality:
         _, traj_short = kuramoto_forward(phases0, omegas, K, 0.01, 300)
 
         np.testing.assert_allclose(
-            np.array(traj_full[:300]), np.array(traj_short), atol=1e-5,
-            err_msg="Trajectory prefix changed — causality violated"
+            np.array(traj_full[:300]),
+            np.array(traj_short),
+            atol=1e-5,
+            err_msg="Trajectory prefix changed — causality violated",
         )
 
 

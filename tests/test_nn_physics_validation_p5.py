@@ -68,8 +68,9 @@ class TestV47GaugeInvariance:
         # R must be identical (R depends only on phase differences)
         R_orig = np.array(jax.vmap(order_parameter)(traj_orig))
         R_shift = np.array(jax.vmap(order_parameter)(traj_shift))
-        np.testing.assert_allclose(R_orig, R_shift, atol=1e-5,
-                                   err_msg="R not gauge-invariant")
+        np.testing.assert_allclose(
+            R_orig, R_shift, atol=1e-5, err_msg="R not gauge-invariant"
+        )
 
         # Phase differences must be identical
         diff_orig = np.array(traj_orig[:, 1:] - traj_orig[:, :1])
@@ -156,7 +157,6 @@ class TestV49DimensionalScaling:
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
         alpha = 2.0
-        T = 5.0  # total time — long enough to reach steady state
 
         # Original: dt=0.01, n_steps = T/dt = 500
         final_1, _ = kuramoto_forward(phases0, omegas, K, 0.01, 500)
@@ -168,12 +168,10 @@ class TestV49DimensionalScaling:
 
         # Exact phase match fails because RK4 truncation error depends on dt.
         # Instead compare R (intensive, robust to small phase errors).
-        from scpn_phase_orchestrator.nn.functional import order_parameter
         R1 = float(order_parameter(final_1))
         R2 = float(order_parameter(final_2))
         assert abs(R1 - R2) < 0.05, (
-            f"Dimensional scaling: |R1-R2|={abs(R1-R2):.4f}. "
-            f"R1={R1:.4f}, R2={R2:.4f}"
+            f"Dimensional scaling: |R1-R2|={abs(R1 - R2):.4f}. R1={R1:.4f}, R2={R2:.4f}"
         )
 
 
@@ -265,9 +263,7 @@ class TestV51Extensivity:
         # R should not vary by more than 0.15 across N values
         R_vals = list(R_by_N.values())
         spread = max(R_vals) - min(R_vals)
-        assert spread < 0.15, (
-            f"R varies too much with N: {R_by_N}, spread={spread:.3f}"
-        )
+        assert spread < 0.15, f"R varies too much with N: {R_by_N}, spread={spread:.3f}"
 
 
 # ──────────────────────────────────────────────────
@@ -317,14 +313,14 @@ class TestV52CriticalExponent:
         K_arr = np.array(K_values)
 
         # If β = 1/2, then R² should be linear in (K - K_c)
-        R_sq = R_arr ** 2
+        R_sq = R_arr**2
         x = K_arr - K_c
 
         # Linear fit: R² = a*(K-K_c) + b
         coeffs = np.polyfit(x, R_sq, 1)
         R_sq_fit = np.polyval(coeffs, x)
         residuals = R_sq - R_sq_fit
-        r_squared = 1.0 - np.sum(residuals ** 2) / np.sum((R_sq - R_sq.mean()) ** 2)
+        r_squared = 1.0 - np.sum(residuals**2) / np.sum((R_sq - R_sq.mean()) ** 2)
 
         assert r_squared > 0.8, (
             f"R² vs (K-K_c) linearity: R²={r_squared:.3f}. "
@@ -451,7 +447,7 @@ class TestV55PhaseResponseCurve:
             p_free = kuramoto_step(p_free, jnp.array([omega]), jnp.zeros((1, 1)), dt)
 
             # Phase advance with brief coupling to reference at 0
-            p_kick = jnp.array([theta0])
+            jnp.array([theta0])
             K_brief = jnp.array([[0.0, kick_strength], [0.0, 0.0]])
             both = jnp.array([theta0, 0.0])
             both_omegas = jnp.array([omega, 0.0])
@@ -501,7 +497,7 @@ class TestV56QuasiPeriodicSpectrum:
         # Power spectrum
         fft = np.fft.rfft(signal)
         power = np.abs(fft) ** 2
-        freqs = np.fft.rfftfreq(len(signal), d=0.01)
+        np.fft.rfftfreq(len(signal), d=0.01)
 
         # Find peaks: top 3 frequencies should contain most power
         sorted_idx = np.argsort(power)[::-1]
@@ -592,8 +588,8 @@ class TestV58AdiabaticTracking:
         # R should generally increase with K (adiabatic tracking)
         R_vals = [r for _, r in R_adiabatic]
         # Compare first third vs last third
-        early_R = np.mean(R_vals[:len(R_vals) // 3])
-        late_R = np.mean(R_vals[-len(R_vals) // 3:])
+        early_R = np.mean(R_vals[: len(R_vals) // 3])
+        late_R = np.mean(R_vals[-len(R_vals) // 3 :])
         assert late_R > early_R, (
             f"R not tracking K adiabatically: early={early_R:.3f}, late={late_R:.3f}"
         )
@@ -679,15 +675,12 @@ class TestV60Float32Divergence:
         R_32 = float(order_parameter(final_32))
 
         # For synchronised states, R should be reliable in float32
-        assert R_32 > 0.9, (
-            f"Synchronised state R={R_32:.4f} in float32, expected > 0.9"
-        )
+        assert R_32 > 0.9, f"Synchronised state R={R_32:.4f} in float32, expected > 0.9"
 
     def test_desync_diverges_faster(self):
         """Below K_c, trajectories are more sensitive to precision."""
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
-            order_parameter,
         )
 
         N = 16

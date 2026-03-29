@@ -74,7 +74,7 @@ class TestV37ArnoldTongue:
 
         diffs = traj_np[:, 1] - traj_np[:, 0]
         # Phase difference should grow (drift)
-        early_range = np.ptp(np.sin(diffs[:500]))
+        np.ptp(np.sin(diffs[:500]))
         late_range = np.ptp(np.sin(diffs[-500:]))
         # Both should show full-range oscillation (drift through 2pi)
         assert late_range > 1.0, (
@@ -112,7 +112,7 @@ class TestV38PhaseDiffusion:
             z = np.exp(1j * phases_t)
             return 1.0 - np.abs(np.mean(z))
 
-        var_early = np.mean([circ_var(traj_np[t]) for t in range(100, 200)])
+        np.mean([circ_var(traj_np[t]) for t in range(100, 200)])
         var_late = np.mean([circ_var(traj_np[t]) for t in range(1800, 2000)])
 
         # Below K_c: variance should stay high or increase (no sync)
@@ -246,8 +246,10 @@ class TestV41VmapCorrectness:
         vmap_stack = jax.vmap(run_one)(batch_phases)
 
         np.testing.assert_allclose(
-            np.array(seq_stack), np.array(vmap_stack), atol=1e-5,
-            err_msg="vmap results differ from sequential"
+            np.array(seq_stack),
+            np.array(vmap_stack),
+            atol=1e-5,
+            err_msg="vmap results differ from sequential",
         )
 
 
@@ -292,12 +294,16 @@ class TestV42ScanLoopEquivalence:
         traj_loop = jnp.stack(traj_loop)
 
         np.testing.assert_allclose(
-            np.array(final_scan), np.array(final_loop), atol=1e-5,
-            err_msg="scan final ≠ loop final"
+            np.array(final_scan),
+            np.array(final_loop),
+            atol=1e-5,
+            err_msg="scan final ≠ loop final",
         )
         np.testing.assert_allclose(
-            np.array(traj_scan), np.array(traj_loop), atol=1e-5,
-            err_msg="scan trajectory ≠ loop trajectory"
+            np.array(traj_scan),
+            np.array(traj_loop),
+            atol=1e-5,
+            err_msg="scan trajectory ≠ loop trajectory",
         )
 
 

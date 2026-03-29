@@ -49,7 +49,7 @@ def _fim_kuramoto_step(phases, omegas, K, lam, dt):
 
     dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i) + λ·R·sin(Ψ - θ_i)
     """
-    N = phases.shape[0]
+    phases.shape[0]
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
     coupling = jnp.sum(K * jnp.sin(diff), axis=1)
 
@@ -131,9 +131,7 @@ class TestV75FIMSyncAtZeroCoupling:
         final, _ = _fim_kuramoto_forward(phases0, omegas, K, 0.0, 0.01, 5000)
         R_final = _order_parameter(final)
 
-        assert R_final < 0.5, (
-            f"No FIM, no coupling: R={R_final:.3f}, expected < 0.5"
-        )
+        assert R_final < 0.5, f"No FIM, no coupling: R={R_final:.3f}, expected < 0.5"
 
 
 # ──────────────────────────────────────────────────
@@ -171,9 +169,7 @@ class TestV76FIMScalingLaw:
 
         # λ_c should increase with N
         lc = lambda_c_by_N
-        assert lc[16] > lc[4], (
-            f"λ_c not increasing with N: {lc}"
-        )
+        assert lc[16] > lc[4], f"λ_c not increasing with N: {lc}"
 
         # Small-N deviations: N=4 syncs at nearly any λ (few oscillators,
         # strong finite-size effects). NB25 used stronger omega spread.
@@ -235,8 +231,7 @@ class TestV77FIMGradient:
         if abs(g_fd) > 1e-8:
             rel_err = abs(g_jax - g_fd) / abs(g_fd)
             assert rel_err < 0.1, (
-                f"FIM gradient: jax={g_jax:.6e}, fd={g_fd:.6e}, "
-                f"rel_err={rel_err:.3f}"
+                f"FIM gradient: jax={g_jax:.6e}, fd={g_fd:.6e}, rel_err={rel_err:.3f}"
             )
 
 
@@ -273,13 +268,15 @@ class TestV78FIMHysteresis:
         for K_val in reversed(K_values):
             K = jnp.ones((N, N)) * (K_val / N)
             K = K.at[jnp.diag_indices(N)].set(0.0)
-            phases_down, _ = _fim_kuramoto_forward(phases_down, omegas, K, lam, 0.01, 1000)
+            phases_down, _ = _fim_kuramoto_forward(
+                phases_down, omegas, K, lam, 0.01, 1000
+            )
             R_down.append(_order_parameter(phases_down))
         R_down = list(reversed(R_down))
 
         # FIM at λ=3 should show hysteresis: R_down > R_up at some mid-K
         mid = len(K_values) // 2
-        gap = np.mean(R_down[mid - 1:mid + 2]) - np.mean(R_up[mid - 1:mid + 2])
+        np.mean(R_down[mid - 1 : mid + 2]) - np.mean(R_up[mid - 1 : mid + 2])
 
         # NB27 showed hysteresis at λ=3, K range 0-20, N=16.
         # Our K range 0-5 with λ=3 may over-sync both directions.
@@ -292,7 +289,7 @@ class TestV78FIMHysteresis:
         if not has_hysteresis:
             pytest.xfail(
                 f"FIM hysteresis not visible at λ=3, K∈[0,5]: both directions "
-                f"reach R≈{np.mean(R_up[mid-1:mid+2]):.3f}. "
+                f"reach R≈{np.mean(R_up[mid - 1 : mid + 2]):.3f}. "
                 "NB27 used K∈[0,20] — need wider K range."
             )
 
@@ -348,15 +345,11 @@ class TestV79FIMTopologyUniversality:
 
         # FIM should help on all topologies
         for name, imp in improvements.items():
-            assert imp > -0.05, (
-                f"FIM hurt {name}: ΔR={imp:.3f}"
-            )
+            assert imp > -0.05, f"FIM hurt {name}: ΔR={imp:.3f}"
 
         # At least one topology should show clear improvement
         best = max(improvements.values())
-        assert best > 0.05, (
-            f"FIM didn't help any topology: {improvements}"
-        )
+        assert best > 0.05, f"FIM didn't help any topology: {improvements}"
 
 
 # ──────────────────────────────────────────────────
@@ -405,13 +398,12 @@ class TestV80FIMMeanFieldValidation:
             results.append((K_scalar, lam, R_sim, R_mf))
 
         # At least qualitative agreement: both predict sync/desync correctly
-        for K_s, l, R_s, R_m in results:
+        for K_s, _lam_v, R_s, R_m in results:
             # If simulation says sync (R > 0.5), MF should too (or vice versa)
             # Allow 0.3 tolerance for finite-N + mean-field approximation
             if R_s > 0.7:
                 assert R_m > 0.3, (
-                    f"K={K_s}, λ={l}: sim R={R_s:.3f} (sync) but "
-                    f"MF R={R_m:.3f} (desync)"
+                    f"K={K_s}: sim R={R_s:.3f} (sync) but MF R={R_m:.3f} (desync)"
                 )
 
 
@@ -446,26 +438,22 @@ class TestV81FIMThermodynamicCost:
                 R = float(jnp.abs(z))
                 Psi = float(jnp.angle(z))
                 fim_force = lam * R * jnp.sin(Psi - phases)
-                total_power += float(jnp.mean(fim_force ** 2))
+                total_power += float(jnp.mean(fim_force**2))
                 phases = _fim_kuramoto_rk4_step(phases, omegas, K, lam, 0.01)
 
             powers[lam] = total_power / n_measure
 
         # Power should increase with λ
-        p_vals = [powers[l] for l in sorted(powers)]
-        assert p_vals[-1] > p_vals[0], (
-            f"Power not increasing with λ: {powers}"
-        )
+        p_vals = [powers[k] for k in sorted(powers)]
+        assert p_vals[-1] > p_vals[0], f"Power not increasing with λ: {powers}"
 
         # Check approximate linearity: P/λ should be roughly constant
-        ratios = {l: powers[l] / l for l in powers}
+        ratios = {k: powers[k] / k for k in powers}
         vals = list(ratios.values())
         if min(vals) > 1e-8:
             spread = max(vals) / min(vals)
             # Allow factor 5 for transient effects
-            assert spread < 10.0, (
-                f"P/λ not roughly constant: {ratios}"
-            )
+            assert spread < 10.0, f"P/λ not roughly constant: {ratios}"
 
 
 # ──────────────────────────────────────────────────
@@ -504,8 +492,7 @@ class TestV82FIMNoiseRobustness:
         R_with_fim = _order_parameter(phases_yes)
 
         assert R_with_fim > R_no_fim, (
-            f"FIM didn't help with noise: R_fim={R_with_fim:.3f}, "
-            f"R_no={R_no_fim:.3f}"
+            f"FIM didn't help with noise: R_fim={R_with_fim:.3f}, R_no={R_no_fim:.3f}"
         )
 
 
@@ -632,7 +619,7 @@ class TestV85FIMLyapunov:
             V_coupling = -jnp.sum(K * jnp.cos(diff))
             z = jnp.mean(jnp.exp(1j * p))
             R = jnp.abs(z)
-            V_fim = -lam * R ** 2
+            V_fim = -lam * R**2
             return V_coupling + V_fim
 
         p = phases0
@@ -680,6 +667,5 @@ class TestV86FIMGaugeInvariance:
         R_shift = _order_parameter(final_shift)
 
         assert abs(R_orig - R_shift) < 0.01, (
-            f"FIM breaks gauge invariance: R_orig={R_orig:.4f}, "
-            f"R_shift={R_shift:.4f}"
+            f"FIM breaks gauge invariance: R_orig={R_orig:.4f}, R_shift={R_shift:.4f}"
         )

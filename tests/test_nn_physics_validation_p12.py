@@ -163,7 +163,8 @@ class TestV135NetworkRobustness:
 
         R_by_density = {}
         for frac in [1.0, 0.75, 0.5, 0.25]:
-            mask = (jr.uniform(jr.PRNGKey(int(frac * 100)), (N, N)) < frac).astype(jnp.float32)
+            rk = jr.PRNGKey(int(frac * 100))
+            mask = (jr.uniform(rk, (N, N)) < frac).astype(jnp.float32)
             mask = jnp.clip(mask + mask.T, 0.0, 1.0)
             mask = mask.at[jnp.diag_indices(N)].set(0.0)
             K = K_full * mask
@@ -191,7 +192,6 @@ class TestV136PredictionHorizon:
     def test_prediction_accuracy(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
-            order_parameter,
         )
         from scpn_phase_orchestrator.nn.inverse import analytical_inverse
 
@@ -242,6 +242,7 @@ class TestV137Generalisation:
 
     def test_generalises_to_nearby_K(self):
         import optax
+
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
         from scpn_phase_orchestrator.nn.training import train
@@ -443,9 +444,7 @@ class TestV141SyncBasinVolume:
             basins[K_scale] = count_sync / n_trials
 
         # Basin should grow with K
-        assert basins[3.0] >= basins[0.1], (
-            f"Basin not growing: {basins}"
-        )
+        assert basins[3.0] >= basins[0.1], f"Basin not growing: {basins}"
 
 
 # ──────────────────────────────────────────────────
@@ -497,6 +496,5 @@ class TestV142TransitionWidthScaling:
 
         # Width should decrease (or at least not increase dramatically)
         assert w_large <= w_small + 0.5, (
-            f"Transition not narrowing: w(N=32)={w_small:.2f}, "
-            f"w(N=128)={w_large:.2f}"
+            f"Transition not narrowing: w(N=32)={w_small:.2f}, w(N=128)={w_large:.2f}"
         )

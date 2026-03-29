@@ -66,13 +66,16 @@ class TestV13ThetaNeuronPeriod:
         for i in range(len(periods) - 1):
             assert periods[i] > periods[i + 1] * 0.8, (
                 f"Period not decreasing: eta={eta_values[i]}→T={periods[i]:.3f}, "
-                f"eta={eta_values[i+1]}→T={periods[i+1]:.3f}"
+                f"eta={eta_values[i + 1]}→T={periods[i + 1]:.3f}"
             )
 
         # Approximate scaling: T ~ pi/sqrt(eta)
         # Check that ratio T*sqrt(eta) is roughly constant
-        products = [p * np.sqrt(e) for p, e in zip(periods, eta_values)
-                    if np.isfinite(p)]
+        products = [
+            p * np.sqrt(e)
+            for p, e in zip(periods, eta_values, strict=False)
+            if np.isfinite(p)
+        ]
         if len(products) >= 2:
             spread = max(products) / min(products)
             assert spread < 3.0, (
@@ -122,7 +125,8 @@ class TestV14SAFAccuracyBoundary:
 
         # SAF error should decrease at stronger coupling
         assert errors[-1] < errors[0] + 0.1, (
-            f"SAF error not decreasing with K: {list(zip(K_scales, errors))}"
+            "SAF error not decreasing with K: "
+            f"{list(zip(K_scales, errors, strict=False))}"
         )
 
 
@@ -235,6 +239,7 @@ class TestV17UDEOverfitting:
 
     def test_ude_does_not_overfit(self):
         import optax
+
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.training import train
         from scpn_phase_orchestrator.nn.ude import UDEKuramotoLayer
@@ -248,9 +253,7 @@ class TestV17UDEOverfitting:
         K_true = (K_true + K_true.T) / 2.0
         K_true = K_true.at[jnp.diag_indices(N)].set(0.0)
         phases0 = jr.uniform(k2, (N,), maxval=TWO_PI)
-        _, traj_clean = kuramoto_forward(
-            phases0, jnp.zeros(N), K_true, 0.01, 100
-        )
+        _, traj_clean = kuramoto_forward(phases0, jnp.zeros(N), K_true, 0.01, 100)
 
         # Add noise
         noise = jr.normal(k3, traj_clean.shape) * 0.1
@@ -328,14 +331,11 @@ class TestV18BackendParity:
         phases_jax = jnp.array(phases_np, dtype=jnp.float32)
         omegas_jax = jnp.array(omegas_np, dtype=jnp.float32)
         K_jax = jnp.array(K_np, dtype=jnp.float32)
-        final_jax, _ = kuramoto_forward(
-            phases_jax, omegas_jax, K_jax, 0.01, 500
-        )
+        final_jax, _ = kuramoto_forward(phases_jax, omegas_jax, K_jax, 0.01, 500)
         R_jax = float(order_parameter(final_jax))
 
         assert abs(R_np - R_jax) < 0.05, (
-            f"R_numpy={R_np:.4f}, R_jax={R_jax:.4f}, "
-            f"diff={abs(R_np - R_jax):.4f}"
+            f"R_numpy={R_np:.4f}, R_jax={R_jax:.4f}, diff={abs(R_np - R_jax):.4f}"
         )
 
 
@@ -372,9 +372,7 @@ class TestV19MaskedTopology:
         key = jr.PRNGKey(0)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
 
-        final, _ = kuramoto_forward_masked(
-            phases0, omegas, K, mask, 0.01, 2000
-        )
+        final, _ = kuramoto_forward_masked(phases0, omegas, K, mask, 0.01, 2000)
 
         # Each group should sync internally
         R_A = float(order_parameter(final[:4]))
@@ -414,13 +412,9 @@ class TestV21ChimeraOnRing:
         chi = float(chimera_index(trajectory[-1], K))
 
         # Chimera: 0 < R < 1 and chimera_index > 0
-        assert 0.05 < R_final < 0.95, (
-            f"R={R_final:.3f}, not in chimera range"
-        )
+        assert 0.05 < R_final < 0.95, f"R={R_final:.3f}, not in chimera range"
         # chimera_index can be very small; just check it's positive
-        assert chi > 1e-6 or True, (
-            f"chimera_index={chi:.6f}, expected > 0 for chimera"
-        )
+        assert True, f"chimera_index={chi:.6f}, expected > 0 for chimera"
 
 
 # ──────────────────────────────────────────────────
@@ -435,6 +429,7 @@ class TestV22TrainingConvergence:
 
     def test_loss_decreases(self):
         import optax
+
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
         from scpn_phase_orchestrator.nn.training import sync_loss, train
 
@@ -451,9 +446,7 @@ class TestV22TrainingConvergence:
         # First 10 losses should be higher than last 10
         early = np.mean(losses[:10])
         late = np.mean(losses[-10:])
-        assert late < early, (
-            f"Loss not decreasing: early={early:.4f}, late={late:.4f}"
-        )
+        assert late < early, f"Loss not decreasing: early={early:.4f}, late={late:.4f}"
 
 
 # ──────────────────────────────────────────────────

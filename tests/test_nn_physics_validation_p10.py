@@ -135,12 +135,12 @@ class TestV110Reproducibility:
         final_2, traj_2 = kuramoto_forward(phases0, omegas, K, 0.01, 500)
 
         np.testing.assert_array_equal(
-            np.array(final_1), np.array(final_2),
-            err_msg="Non-deterministic: same inputs give different outputs"
+            np.array(final_1),
+            np.array(final_2),
+            err_msg="Non-deterministic: same inputs give different outputs",
         )
         np.testing.assert_array_equal(
-            np.array(traj_1), np.array(traj_2),
-            err_msg="Non-deterministic trajectories"
+            np.array(traj_1), np.array(traj_2), err_msg="Non-deterministic trajectories"
         )
 
 
@@ -160,6 +160,7 @@ class TestV111FindingInteraction:
 
     def test_trained_layer_inverse_roundtrip(self):
         import optax
+
         from scpn_phase_orchestrator.nn.functional import order_parameter
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -173,7 +174,7 @@ class TestV111FindingInteraction:
         phases = jr.uniform(key, (N,), maxval=TWO_PI)
 
         layer = KuramotoLayer(n=N, n_steps=50, dt=0.01, key=key)
-        K_init = (layer.K + layer.K.T) / 2.0  # symmetrised initial
+        (layer.K + layer.K.T) / 2.0  # symmetrised initial
 
         def loss_fn(model):
             final = model(phases)
@@ -233,7 +234,7 @@ class TestV112GradientMeaning:
 
         K0_flat = K0.ravel()
         g = jax.grad(loss)(K0_flat)
-        g_np = np.array(g)
+        np.array(g)
 
         # Step in negative gradient direction (gradient descent)
         lr = 0.001
@@ -361,9 +362,7 @@ class TestV115TopologyUniversality:
 
         # Ring transition should be broader (or at higher K)
         # At minimum, they should differ
-        assert w_ring != w_all or True, (
-            f"All-to-all width={w_all:.2f}, ring width={w_ring:.2f}"
-        )
+        assert True, f"All-to-all width={w_all:.2f}, ring width={w_ring:.2f}"
 
 
 # ──────────────────────────────────────────────────
@@ -398,8 +397,7 @@ class TestV116MultiSeedRobustness:
 
         std_R = np.std(R_samples)
         assert std_R < 0.15, (
-            f"R too variable across seeds: std={std_R:.3f}, "
-            f"values={R_samples}"
+            f"R too variable across seeds: std={std_R:.3f}, values={R_samples}"
         )
 
 
@@ -448,9 +446,7 @@ class TestV117FIMThreshold:
         # Find steepest gradient (sharpest transition)
         dR = np.diff(R_arr)
         max_jump = np.max(dR)
-        assert max_jump > 0.05, (
-            f"No sharp jump in R(λ): max ΔR={max_jump:.3f}"
-        )
+        assert max_jump > 0.05, f"No sharp jump in R(λ): max ΔR={max_jump:.3f}"
 
 
 # ──────────────────────────────────────────────────
@@ -526,9 +522,9 @@ class TestV119BackwardCompat:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         configs = [
-            (8, 0.3, 0.01, 500),   # small N, moderate K
+            (8, 0.3, 0.01, 500),  # small N, moderate K
             (16, 1.0, 0.01, 300),  # medium N, strong K
-            (4, 0.1, 0.005, 1000), # small N, weak K, fine dt
+            (4, 0.1, 0.005, 1000),  # small N, weak K, fine dt
         ]
 
         for N, K_scale, dt, n_steps in configs:
@@ -550,13 +546,13 @@ class TestV119BackwardCompat:
                 jnp.array(phases_np, jnp.float32),
                 jnp.array(omegas_np, jnp.float32),
                 jnp.array(K_np, jnp.float32),
-                dt, n_steps,
+                dt,
+                n_steps,
             )
             R_jax = float(order_parameter(final))
 
             assert abs(R_np - R_jax) < 0.1, (
-                f"N={N},K={K_scale},dt={dt}: "
-                f"R_np={R_np:.4f}, R_jax={R_jax:.4f}"
+                f"N={N},K={K_scale},dt={dt}: R_np={R_np:.4f}, R_jax={R_jax:.4f}"
             )
 
 
