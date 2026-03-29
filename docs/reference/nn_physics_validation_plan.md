@@ -141,16 +141,124 @@ distribution. This should be documented prominently.
 | P1 (V1–V12) | 26 | 25 | 1 | SAF eigh NaN, simplicial hysteresis absent, BOLD peak 3.1s |
 | P2 (V13–V24) | 11 | 10 | 1 | UDE extrapolation NaN |
 | P3 (V25–V36) | 13 | 12 | 1 | Reservoir needs K_c tuning |
-| **Total** | **50** | **47** | **3** | **5 findings** |
+| P4 (V37–V46) | 12 | 12 | 0 | None — clean sweep |
+| **Total** | **62** | **59** | **3** | **5 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
+
+---
+
+## Findings Register
+
+| # | Finding | Severity | Module | Root cause | Workaround | Status |
+|---|---|---|---|---|---|---|
+| 1 | SAF eigh gradient NaN for uniform K | Medium | `functional.py` | JAX `eigh` backward pass undefined at repeated eigenvalues | Use non-uniform K or add small perturbation before differentiating | Known limitation |
+| 2 | Simplicial hysteresis absent at sigma2=3, N=64 | High | `functional.py` | Mean-field factorisation `2·S·C/N²` may weaken 3-body effect vs explicit triplet sums | Investigate with N=256+, sigma2=10+ | Open investigation |
+| 3 | BOLD HRF peak at 3.1s, not canonical 5s | Low | `bold.py` | Stephan 2007 params differ from SPM canonical (Friston 2003). Both are correct for their parameter sets. | Document parameter-dependence; provide SPM parameter preset | Documentation needed |
+| 4 | UDE extrapolation NaN beyond training window | High | `ude.py` | `CouplingResidual` MLP (tanh activations) is unbounded at large inputs; ODE integration amplifies residual divergence | Add output clamping `jnp.clip(residual, -1, 1)` or enforce Lipschitz constraint via spectral normalisation | Fix needed |
+| 5 | Reservoir random K gives negative correlation | Medium | `reservoir.py` | Operating point not at edge-of-bifurcation (K ≈ K_c). Random K overshoots or undershoots K_c. | Document that K must be tuned to K_c = 2·Δ for Lorentzian ω distribution; provide `auto_tune_K` helper | Documentation needed |
+
+### Finding #1 — Detail
+
+**Reproduced by:** V6 `test_saf_order_parameter_grad` with `K = ones * 0.5`.
+**Mechanism:** Uniform K produces a Laplacian `L = D - K` with (N-1)-fold
+degenerate eigenvalue. The `eigh` backward pass divides by eigenvalue gaps
+`1/(λ_i - λ_j)`, which is `1/0` at degeneracies. JAX returns NaN silently.
+**Impact:** Cannot gradient-optimise SAF loss starting from uniform coupling.
+Must initialise with non-uniform K (e.g., random perturbation).
+**Scope:** Only affects `saf_order_parameter` and `saf_loss` under `jax.grad`.
+Forward evaluation always works.
+
+### Finding #2 — Detail
+
+**Reproduced by:** V7 `test_hysteresis_present` with sigma2=3, N=64.
+**Mechanism:** The 3-body term in `_simplicial_deriv` uses mean-field
+factorisation: `Σ_{j,k} sin(Δθ_j + Δθ_k) ≈ 2·S_i·C_i` where
+`S_i = Σ sin(Δθ_j)`, `C_i = Σ cos(Δθ_j)`. This is exact for the full
+3-body sum but the normalisation `σ₂/N²` may be too aggressive for N=64.
+Gambuzza et al. 2023 used N=500+ in their simulations.
+**Open question:** Does the implementation actually reproduce Fig. 2 of
+Gambuzza et al.? This requires N≥256 and careful parameter matching.
+
+### Finding #3 — Detail
+
+**Reproduced by:** V8 `test_hrf_peak_timing`.
+**Mechanism:** Default parameters are Stephan et al. 2007: κ=0.65, γ=0.41,
+τ=0.98, α=0.32. SPM12 uses Friston et al. 2003 with κ=0.65, γ=0.41 but
+different τ and α, plus a second derivative term that shifts the peak.
+**Impact:** Users comparing SPO BOLD output against SPM will see a timing
+mismatch. Both parameter sets are physically valid.
+
+### Finding #4 — Detail
+
+**Reproduced by:** V17 `test_ude_does_not_overfit`. UDE trained on 60 steps,
+evaluated at steps 60–100 → NaN.
+**Mechanism:** `CouplingResidual` maps Δθ → correction via 3-layer MLP with
+tanh activations. At training time, Δθ stays in a bounded range. At test
+time, if phases diverge slightly from the training distribution, the MLP
+outputs grow, which causes larger phase errors, which cause larger Δθ
+inputs to the MLP — a positive feedback loop → divergence → NaN.
+**Fix:** Clamp MLP output: `return jnp.clip(x[0], -1.0, 1.0)` in
+`CouplingResidual.__call__`. This bounds the correction to ±1 (same order
+as sin(Δθ)), preventing runaway. Alternatively, use spectral normalisation
+to enforce a Lipschitz constant on the MLP.
+
+### Finding #5 — Detail
+
+**Reproduced by:** V26 `test_reservoir_recovers_signal`. Random K with
+N=12, signal = sin(t).
+**Mechanism:** Kuramoto reservoir theory (arXiv:2407.16172) predicts that
+computational capacity peaks at K = K_c (critical coupling). Below K_c,
+oscillators are incoherent — reservoir has rich dynamics but weak signal
+amplification. Above K_c, oscillators lock — reservoir loses computational
+diversity. Random K is unlikely to hit the sweet spot.
+**Impact:** The `reservoir_drive` + `ridge_readout` pipeline is correct but
+useless without K_c tuning. Users need guidance: compute K_c from their
+frequency distribution, then set K ≈ K_c.
+
+---
+
+## Phase 4 Results (2026-03-29)
+
+**12 passed, 0 failed, 0 xfail.** File: `tests/test_nn_physics_validation_p4.py`
+
+| # | Test | Result | Detail |
+|---|---|---|---|
+| V37 | Arnold tongue | **PASS** | Locking at K=0.8 > Δω/2=0.5. Drift at K=0.2 < Δω/2. |
+| V38 | Phase diffusion below K_c | **PASS** | circ_var > 0.5 after 2000 steps with K ≪ K_c. |
+| V39 | Time reversal | **PASS** | Forward+reverse error < 0.1 (gradient flow reversible). |
+| V40 | Hybrid inverse noisy | **PASS** | corr_hybrid ≥ corr_analytical - 0.15 on noisy data. |
+| V41 | vmap correctness | **PASS** | vmap output identical to sequential within 1e-5. |
+| V42 | scan = manual loop | **PASS** | Final state and full trajectory match within 1e-5. |
+| V43 | SL amplitude consensus | **PASS** | Spread decreased >50% with amplitude coupling. |
+| V44 | Chimera index boundaries | **PASS** | chi < 0.01 for sync, chi < 0.05 for uniform spread. |
+| V45 | OIM bipartite K_{3,3} | **PASS** | 0 violations with 2 colours. |
+| V46 | PLV correlates with R | **PASS** | Mean PLV increases monotonically with coupling K. |
+
+No new findings. All structural properties confirmed.
+
+## Phase 4 Test Matrix
+
+| # | Test | Falsifies | Priority | Analytical reference |
+|---|---|---|---|---|
+| V37 | Arnold tongue (frequency locking) | Coupling-detuning relationship | P0 | Locking when K > Δω/2 for N=2 |
+| V38 | Phase diffusion below K_c | Sub-critical dynamics | P1 | Unbounded phase drift |
+| V39 | Time reversal (gradient flow) | Reversibility of potential dynamics | P1 | Forward ≈ reversed trajectory |
+| V40 | hybrid_inverse improves on analytical | Hybrid method value | P1 | corr_hybrid >= corr_analytical for noisy data |
+| V41 | vmap correctness | Batched execution | P0 | vmap(f)(batch) = stack([f(x) for x in batch]) |
+| V42 | scan = manual loop | Internal consistency | P0 | kuramoto_forward = manual step loop |
+| V43 | SL amplitude consensus | Amplitude coupling | P1 | Spread decreases with epsilon |
+| V44 | Chimera index = 0 for uniform states | Chimera metric boundary | P1 | Sync → 0, desync → 0 |
+| V45 | OIM bipartite 2-colour perfect | Easy graph benchmark | P1 | 0 violations |
+| V46 | PLV correlates with R | Metric consistency | P1 | High R → high mean PLV |
 
 ## Implementation
 
 - Phase 1: `tests/test_nn_physics_validation.py` (26 tests, ~80s)
 - Phase 2: `tests/test_nn_physics_validation_p2.py` (11 tests, ~60s)
 - Phase 3: `tests/test_nn_physics_validation_p3.py` (13 tests, ~590s)
+- Phase 4: `tests/test_nn_physics_validation_p4.py` (12 tests, ~98s)
 
 GPU optional — all tests run on CPU.
 
