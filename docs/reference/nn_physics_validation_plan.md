@@ -142,8 +142,9 @@ distribution. This should be documented prominently.
 | P2 (V13–V24) | 11 | 10 | 1 | UDE extrapolation NaN |
 | P3 (V25–V36) | 13 | 12 | 1 | Reservoir needs K_c tuning |
 | P4 (V37–V46) | 12 | 12 | 0 | None |
-| P5 (V47–V60) | 16 | 16 | 0 | Mean-phase drift (Finding #6) |
-| **Total** | **78** | **75** | **3** | **6 findings** |
+| P5 (V47–V60) | 16 | 16 | 0 | Mean-phase drift (#6) |
+| P6 (V61–V74) | 16 | 14 | 2 | K symmetry broken (#7), OIM Petersen fail (#8) |
+| **Total** | **94** | **89** | **5** | **8 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -160,6 +161,8 @@ physics. The framework is sound.
 | 4 | UDE extrapolation NaN beyond training window | High | `ude.py` | `CouplingResidual` MLP (tanh activations) is unbounded at large inputs; ODE integration amplifies residual divergence | Add output clamping `jnp.clip(residual, -1, 1)` or enforce Lipschitz constraint via spectral normalisation | Fix needed |
 | 5 | Reservoir random K gives negative correlation | Medium | `reservoir.py` | Operating point not at edge-of-bifurcation (K ≈ K_c). Random K overshoots or undershoots K_c. | Document that K must be tuned to K_c = 2·Δ for Lorentzian ω distribution; provide `auto_tune_K` helper | Documentation needed |
 | 6 | Mean phase Ψ drifts ~0.13 over 1000 steps | Low | `functional.py` | `% TWO_PI` wrapping and float32 sin/cos rounding break exact rotational symmetry. Rate: ~1.3e-4 per step. | Use float64 for precision-critical work; or track Ψ explicitly and correct | Known limitation |
+| 7 | K loses symmetry after gradient training | High | `training.py` | `jax.grad` of loss w.r.t. symmetric K produces non-symmetric gradient. optax.adam updates K with non-symmetric step → K drifts asymmetric. | Add `K = (K + K.T) / 2` after each update in training loop; or use Cholesky parameterisation `K = L·L^T` | Fix needed |
+| 8 | OIM fails on Petersen graph (chi=3) | Medium | `oim.py` | Petersen graph is 3-regular with girth 5 — hard for annealing heuristics. 30 restarts insufficient. OIM coupling `sin(3·Δθ)` may have local minima for this topology. | Increase n_restarts (100+), adjust annealing schedule, or use `oim_solve` with custom k_max/n_anneal for hard instances | Known limitation |
 
 ### Finding #1 — Detail
 
@@ -275,6 +278,55 @@ depend only on phase differences. But applications that track absolute
 phase (e.g., entrainment to external signal) will accumulate error.
 **Scope:** Float32 only. Float64 would reduce drift by ~10^8.
 
+## Phase 6 Results (2026-03-29)
+
+**14 passed, 0 failed, 2 xfail.** File: `tests/test_nn_physics_validation_p6.py`
+
+| # | Test | Result | Detail |
+|---|---|---|---|
+| V61 | Permutation equivariance | **PASS** | Relabelled oscillators produce identical dynamics within 1e-4. |
+| V62 | 2π boundary gradient | **PASS** | Gradient finite at wrapping boundary; sin/cos path avoids discontinuity. |
+| V63 | R fluctuation scaling | **PASS** | var(R) decreases from N=32 to N=512 near K_c. |
+| V64 | Gradient magnitude vs N | **PASS** | |∇loss| varies < 100x across N={8,16,32,64}. |
+| V65 | Inverse noise breakdown | **PASS** | Correlation curve measured: >0.8 noiseless, decreasing with noise. |
+| V66 | Amplitude death | **PASS** | SL with strong ε and spread ω: amplitudes finite. |
+| V67 | K symmetry under training | **XFAIL** | K becomes asymmetric after 30 Adam steps. See Finding #7. |
+| V68 | Layer compositionality | **PASS** | Gradient flows through chained KuramotoLayer pair; both ∇K non-zero. |
+| V69 | SAF on star topology | **PASS** | SAF returns finite R on heterogeneous graph. |
+| V70 | Inverse conditioning | **PASS** | Ring topology recovery ≥ dense recovery - 0.2. |
+| V71 | Lyapunov exponent sign | **PASS** | Sync: perturbation decays. Desync: perturbation persists. |
+| V72 | Multi-timescale BOLD | **PASS** | 2Hz neural → BOLD has <30% high-frequency power (hemodynamic LP filter). |
+| V73 | OIM Petersen graph | **XFAIL** | 2 violations in 30 restarts. See Finding #8. |
+| V73 | OIM C5 cycle | **PASS** | chi(C5)=3 correctly: 2 colours fail, 3 colours succeed. |
+| V74 | Gradient chain rule | **PASS** | ∇f + ∇(-f) < 1e-6 — autodiff chain rule exact. |
+
+### Finding #7: K symmetry broken by gradient training
+
+**Reproduced by:** V67 `test_K_stays_symmetric`.
+**Mechanism:** The gradient `∂loss/∂K` of a scalar loss w.r.t. a symmetric
+matrix K is NOT symmetric in general. Example: `loss = R(trajectory(K))`.
+The chain rule produces `∂R/∂θ · ∂θ/∂K` where the Jacobian `∂θ/∂K` has
+no symmetry guarantee because the scan accumulates asymmetric contributions.
+After 30 Adam steps, `max|K - K^T|` exceeds 0.01.
+**Impact:** Physically, asymmetric K means directed coupling (oscillator i
+drives j but not vice versa). This changes the dynamics qualitatively — the
+Lyapunov function (V3) no longer exists, the system is no longer gradient
+flow. Users who train KuramotoLayer and then interpret K as physical
+connectivity will get wrong conclusions.
+**Fix:** Add `K = (K + K.T) / 2; K = K.at[diag].set(0)` after each
+gradient update. Or reparameterise: store L and compute K = L·L^T.
+
+### Finding #8: OIM fails on Petersen graph
+
+**Reproduced by:** V73 `test_petersen_3colorable`.
+**Mechanism:** The Petersen graph (10 nodes, 15 edges, 3-regular, girth 5)
+is a known hard case for heuristic graph colouring. The `sin(3·Δθ)` coupling
+creates 3 equidistant phase clusters, but the Petersen graph's symmetry
+group (S₅) has frustrated cycles that trap the annealing in local minima.
+**Impact:** OIM is not a general-purpose graph colouring solver. It works
+well for easy instances (bipartite, small sparse graphs) but fails on
+algebraically structured hard instances. This should be documented.
+
 ## Phase 4 Test Matrix
 
 | # | Test | Falsifies | Priority | Analytical reference |
@@ -297,6 +349,7 @@ phase (e.g., entrainment to external signal) will accumulate error.
 - Phase 3: `tests/test_nn_physics_validation_p3.py` (13 tests, ~590s)
 - Phase 4: `tests/test_nn_physics_validation_p4.py` (12 tests, ~98s)
 - Phase 5: `tests/test_nn_physics_validation_p5.py` (16 tests, ~175s)
+- Phase 6: `tests/test_nn_physics_validation_p6.py` (16 tests, ~130s)
 
 GPU optional — all tests run on CPU.
 
