@@ -118,6 +118,7 @@ nav:
       - "Neural Network (nn)": reference/api/nn.md
       - "nn/ Module — Full Reference": reference/nn.md
       - "nn/ Physics Validation": reference/nn_physics_validation_plan.md
+      - "End-to-End Wiring Audit": reference/end_to_end_wiring_audit.md
       - CLI Reference: reference/cli.md
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md
