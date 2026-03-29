@@ -145,7 +145,8 @@ distribution. This should be documented prominently.
 | P5 (V47–V60) | 16 | 16 | 0 | Mean-phase drift (#6) |
 | P6 (V61–V74) | 16 | 14 | 2 | K symmetry broken (#7), OIM Petersen fail (#8) |
 | P7 (V75–V86) | 14 | 11 | 3 | FIM scaling small-N (#9), FIM hysteresis K-range (#10), BKT vs MF (#11) |
-| **Total** | **108** | **100** | **8** | **11 findings** |
+| P8 (V87–V96) | 10 | 10 | 0 | None — clean sweep. SR, roundtrips, EEG, delay, FIM+SL all confirmed. |
+| **Total** | **118** | **110** | **8** | **11 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -355,6 +356,7 @@ algebraically structured hard instances. This should be documented.
 - Phase 5: `tests/test_nn_physics_validation_p5.py` (16 tests, ~175s)
 - Phase 6: `tests/test_nn_physics_validation_p6.py` (16 tests, ~130s)
 - Phase 7: `tests/test_nn_physics_validation_p7.py` (14 tests, ~2900s — FIM Python loops)
+- Phase 8: `tests/test_nn_physics_validation_p8.py` (10 tests, ~185s)
 
 GPU optional — all tests run on CPU.
 
