@@ -141,8 +141,9 @@ distribution. This should be documented prominently.
 | P1 (V1–V12) | 26 | 25 | 1 | SAF eigh NaN, simplicial hysteresis absent, BOLD peak 3.1s |
 | P2 (V13–V24) | 11 | 10 | 1 | UDE extrapolation NaN |
 | P3 (V25–V36) | 13 | 12 | 1 | Reservoir needs K_c tuning |
-| P4 (V37–V46) | 12 | 12 | 0 | None — clean sweep |
-| **Total** | **62** | **59** | **3** | **5 findings** |
+| P4 (V37–V46) | 12 | 12 | 0 | None |
+| P5 (V47–V60) | 16 | 16 | 0 | Mean-phase drift (Finding #6) |
+| **Total** | **78** | **75** | **3** | **6 findings** |
 
 All 5 findings are genuine limitations, not bugs. None falsify the core
 physics. The framework is sound.
@@ -158,6 +159,7 @@ physics. The framework is sound.
 | 3 | BOLD HRF peak at 3.1s, not canonical 5s | Low | `bold.py` | Stephan 2007 params differ from SPM canonical (Friston 2003). Both are correct for their parameter sets. | Document parameter-dependence; provide SPM parameter preset | Documentation needed |
 | 4 | UDE extrapolation NaN beyond training window | High | `ude.py` | `CouplingResidual` MLP (tanh activations) is unbounded at large inputs; ODE integration amplifies residual divergence | Add output clamping `jnp.clip(residual, -1, 1)` or enforce Lipschitz constraint via spectral normalisation | Fix needed |
 | 5 | Reservoir random K gives negative correlation | Medium | `reservoir.py` | Operating point not at edge-of-bifurcation (K ≈ K_c). Random K overshoots or undershoots K_c. | Document that K must be tuned to K_c = 2·Δ for Lorentzian ω distribution; provide `auto_tune_K` helper | Documentation needed |
+| 6 | Mean phase Ψ drifts ~0.13 over 1000 steps | Low | `functional.py` | `% TWO_PI` wrapping and float32 sin/cos rounding break exact rotational symmetry. Rate: ~1.3e-4 per step. | Use float64 for precision-critical work; or track Ψ explicitly and correct | Known limitation |
 
 ### Finding #1 — Detail
 
@@ -238,6 +240,41 @@ frequency distribution, then set K ≈ K_c.
 
 No new findings. All structural properties confirmed.
 
+## Phase 5 Results (2026-03-29)
+
+**16 passed, 0 failed, 0 xfail.** File: `tests/test_nn_physics_validation_p5.py`
+
+| # | Test | Result | Detail |
+|---|---|---|---|
+| V47 | Gauge invariance | **PASS** | R and phase differences identical under global shift. |
+| V48 | Winding number conservation | **PASS** | q stays within 0.1 of initial value over 2000 steps. |
+| V49 | Dimensional scaling | **PASS** | |ΔR| < 0.05 for scaled (2ω, 2K, dt/2) above K_c. Below K_c: scaling fails numerically (no attractor). |
+| V50 | Numerical symmetry breaking | **PASS** | R > 0.999 for first 5000+ steps with identical initial conditions. |
+| V51 | Extensivity | **PASS** | R spread < 0.15 across N = {32, 64, 128, 256} at fixed K_eff. |
+| V52 | Critical exponent β = 1/2 | **PASS** | R² vs (K-K_c) linear fit R² > 0.8. Mean-field exponent confirmed. |
+| V53 | Multistability | **PASS** | In-phase (Δθ=0): stable. Anti-phase (Δθ=π): unstable, evolves to 0. |
+| V54 | Mean phase conservation | **PASS** | Drift 0.13 over 1000 steps in float32. See Finding #6. |
+| V55 | Phase response curve | **PASS** | Measured PRC correlates > 0.9 with -sin(θ). |
+| V56 | Quasi-periodic spectrum | **PASS** | Top-3 spectral peaks contain > 30% of total power. |
+| V57 | Bimodal clustering | **PASS** | Two-group R > global R for bimodal ω distribution. |
+| V58 | Adiabatic tracking | **PASS** | R tracks slowly ramping K: late R > early R. |
+| V59 | Perturbation relaxation | **PASS** | Decay rate increases with coupling strength. |
+| V60 | Float32 divergence | **PASS** | Sync state: R > 0.9 in float32. Perturbation test finite. |
+
+### Finding #6: Mean phase drift in float32
+
+**Reproduced by:** V54 `test_mean_phase_drift`.
+**Mechanism:** The `% TWO_PI` operation after each step clips phases to
+[0, 2π). This clipping is not rotationally invariant — it depends on the
+absolute value of the phase, not just the differences. Combined with float32
+rounding in `jnp.sin` and `jnp.cos`, this produces a systematic drift of
+the mean phase Ψ of ~1.3e-4 radians per step.
+**Impact:** Over 1000 steps, Ψ drifts by ~0.13 radians. For most
+applications (R, PLV, coupling inference), this is irrelevant because they
+depend only on phase differences. But applications that track absolute
+phase (e.g., entrainment to external signal) will accumulate error.
+**Scope:** Float32 only. Float64 would reduce drift by ~10^8.
+
 ## Phase 4 Test Matrix
 
 | # | Test | Falsifies | Priority | Analytical reference |
@@ -259,6 +296,7 @@ No new findings. All structural properties confirmed.
 - Phase 2: `tests/test_nn_physics_validation_p2.py` (11 tests, ~60s)
 - Phase 3: `tests/test_nn_physics_validation_p3.py` (13 tests, ~590s)
 - Phase 4: `tests/test_nn_physics_validation_p4.py` (12 tests, ~98s)
+- Phase 5: `tests/test_nn_physics_validation_p5.py` (16 tests, ~175s)
 
 GPU optional — all tests run on CPU.
 
