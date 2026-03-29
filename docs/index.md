@@ -10,10 +10,16 @@ hide:
 ![Synchronization Manifold](assets/synchronization_manifold.png){ width="720" }
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/scorecard.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/scorecard.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12193/badge)](https://www.bestpractices.dev/projects/12193)
 [![PyPI](https://img.shields.io/pypi/v/scpn-phase-orchestrator)](https://pypi.org/project/scpn-phase-orchestrator/)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://anulum.github.io/scpn-phase-orchestrator/)
+[![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)](https://github.com/anulum/scpn-phase-orchestrator)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![Rust FFI](https://img.shields.io/badge/Rust-spo--kernel-orange)](https://github.com/anulum/scpn-phase-orchestrator/tree/main/spo-kernel)
+[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
+[![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
 
 **3191 Python tests | 221 Rust tests | 99%+ coverage | 33 domainpacks | 27 examples**
 

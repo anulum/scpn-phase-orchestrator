@@ -7,27 +7,39 @@ phase dynamics map to diverse physical, biological, and engineered systems.
 
 | Pack | Layers | Osc | Safety Tier | Pipeline | Key Innovation |
 |------|--------|-----|-------------|----------|---------------|
+| agent_coordination | 3 | 12 | research | full | Multi-agent AI sync (heartbeat, task, topic) |
+| autonomous_vehicles | 3 | 8 | research | full | Vehicle platoon phase-locking |
 | bio_stub | 4 | 16 | research | full | Multi-scale biological oscillators |
+| brain_connectome | 4 | 12 | research | full | HCP-inspired structural connectivity |
 | cardiac_rhythm | 4 | 10 | clinical | full | Gap-junction coupling, arrhythmia |
 | chemical_reactor | 4 | 10 | production | full | Hopf bifurcation, Semenov limit |
 | circadian_biology | 4 | 10 | research | full | SCN clock-gene coupled oscillators |
 | epidemic_sir | 3 | 8 | research | full | Epidemic wave synchronisation |
+| financial_markets | 4 | 8 | research | full | Hilbert phase, crash regime detection |
 | firefly_swarm | 2 | 8 | research | full | Mirollo-Strogatz flash synchronisation |
 | fusion_equilibrium | 6 | 12 | research | full | MHD equilibrium + FusionCoreBridge |
+| gene_oscillator | 3 | 6 | research | full | Repressilator + quorum sensing |
 | geometry_walk | 2 | 8 | research | full | Random walk on graphs |
+| identity_coherence | 6 | 35 | research | full | SSGF identity model, chimera + plasticity |
 | laser_array | 3 | 8 | research | full | Evanescent-coupled laser phase-locking |
 | manufacturing_spc | 3 | 9 | consumer | full | SPC process drift detection |
 | metaphysics_demo | 3 | 7 | research | full | P/I/S + imprint + geometry |
 | minimal_domain | 2 | 4 | research | full | Minimal-but-complete pipeline example |
+| musical_acoustics | 3 | 9 | research | full | Consonance and groove via harmonic sync |
+| network_security | 3 | 8 | research | full | DDoS detection via traffic sync anomaly |
 | neuroscience_eeg | 6 | 14 | research | full | EEG band->phase, seizure detection |
 | plasma_control | 8 | 16 | research | adapter | Full tokamak layer hierarchy (PlasmaControlBridge) |
 | pll_clock | 3 | 8 | production | full | PLL network clock sync (ITU-T G.811) |
 | power_grid | 5 | 12 | production | full | Swing equation = Kuramoto (exact) |
 | quantum_simulation | 3 | 8 | research | adapter | Quantum gate phase tracking (QuantumControlBridge) |
 | queuewaves | 3 | 6 | consumer | full | Service queue oscillations |
+| robotic_cpg | 4 | 8 | consumer | full | Quadruped CPG locomotion gait patterns |
 | rotating_machinery | 4 | 10 | consumer | full | Vibration harmonics, ISO 10816 |
+| satellite_constellation | 3 | 8 | research | full | Orbital slot + comms link sync |
+| sleep_architecture | 4 | 8 | research | full | AASM sleep staging from R values |
 | swarm_robotics | 3 | 8 | consumer | full | Vicsek collective motion/formation |
 | traffic_flow | 4 | 10 | consumer | full | Signal coordination = phase sync |
+| vortex_shedding | 3 | 9 | research | full | Wake dynamics (Stuart-Landau amplitude) |
 
 **Pipeline types**: *full* = BoundaryObserver + RegimeManager + SupervisorPolicy + PolicyEngine + ImprintModel (where applicable).  *adapter* = uses a specialised bridge class (FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge) as an alternative architecture.
 
@@ -172,6 +184,94 @@ plus noise — is a discrete-time Kuramoto model on a proximity graph.
 Heading phase = oscillator phase; alignment = coupling.  Vicsek et al.,
 PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 
+### Autonomous Vehicles
+
+Vehicle platoons maintain fixed headway via adaptive cruise control.
+Each vehicle's position oscillates around the desired following distance
+— a phase-coupled system where synchronisation = stable platoon and
+desynchronisation = collision risk or string instability.  Dey et al.,
+IEEE Trans Intell Transp Syst 17(5), 2016.
+
+### Brain Connectome
+
+HCP-derived structural connectivity matrices define coupling topology
+between cortical regions.  Each region oscillates at characteristic
+frequencies; the connectome determines which regions phase-lock.
+Bullmore & Sporns, Nature Reviews Neuroscience 10, 2009.
+
+### Financial Markets
+
+Asset returns exhibit collective synchronisation preceding crashes.
+Hilbert-transformed price series yield instantaneous phases; the
+Kuramoto order parameter R(t) → 1 signals herding behaviour.
+Harmon et al., PLoS ONE 6(4), 2011.
+
+### Gene Oscillator
+
+The repressilator (Elowitz & Leibler, Nature 403, 2000) is a synthetic
+three-gene oscillatory circuit.  Quorum sensing couples repressilators
+across cells — structurally identical to Kuramoto coupling with
+chemical diffusion as the coupling channel.
+
+### Identity Coherence
+
+The SSGF identity model treats cognitive traits (working style,
+reasoning patterns, values) as oscillators whose synchronisation
+defines coherent identity.  Chimera states (partial coherence) model
+cognitive dissonance.  An application of the SCPN consciousness
+framework to AI self-modelling.
+
+### Musical Acoustics
+
+Harmonic modes of musical instruments (fundamental, overtones) form
+coupled oscillators.  Consonance = integer frequency ratios = specific
+phase relationships.  Rhythmic groove emerges from synchronised beat
+subdivisions.  Large & Palmer, Ecological Psychology 14(1-2), 2002.
+
+### Network Security
+
+Normal network traffic oscillates with diurnal and weekly periods.
+DDoS attacks disrupt these patterns — anomalous synchronisation in
+packet arrivals signals coordinated attack traffic.  Phase-based
+detection complements rate-based methods.
+
+### Robotic CPG
+
+Central Pattern Generators produce rhythmic locomotion via coupled
+oscillators.  Quadruped gaits (walk, trot, gallop) correspond to
+specific phase relationships between leg CPGs — exactly Kuramoto with
+discrete symmetry-breaking modes.  Ijspeert, Neural Networks 21(4),
+2008.
+
+### Satellite Constellation
+
+Satellites in constellation maintain orbital slot phasing and
+inter-satellite link timing.  Orbital mechanics produces oscillatory
+relative motion; communication link synchronisation requires phase
+coordination across the constellation.
+
+### Sleep Architecture
+
+EEG power in delta, theta, alpha, and beta bands defines AASM sleep
+stages.  The order parameter R computed per band tracks transitions
+between wake, N1, N2, N3, and REM — a natural Kuramoto hierarchy with
+sleep stage = regime.
+
+### Vortex Shedding
+
+Karman vortex streets behind bluff bodies produce periodic lift and
+drag oscillations at the Strouhal frequency.  Multiple cylinders
+interact via wake coupling — Stuart-Landau amplitude dynamics capture
+lock-in and vortex-induced vibration.  Williamson & Govardhan, Annual
+Review of Fluid Mechanics 36, 2004.
+
+### Agent Coordination
+
+Multiple AI agents (Claude, Codex, Gemini, human) working on a shared
+codebase exhibit oscillatory task patterns — heartbeat liveness checks,
+task flow cycles, topic focus shifts.  Synchronisation = coordinated
+parallel work; desynchronisation = merge conflicts and wasted effort.
+
 ## Phase Extraction Rationale
 
 | Domain | Source Signal | Extraction | Phase = |
@@ -194,6 +294,18 @@ PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 | PLL clock | VCO output | Phase detector | VCO phase |
 | Firefly | Flash events | Inter-flash interval | Flash phase |
 | Swarm | IMU heading | Compass reading | Heading angle |
+| Autonomous vehicles | Headway distance | Detrend + Hilbert | Following phase |
+| Brain connectome | fMRI BOLD / EEG | Bandpass + Hilbert | Regional phase |
+| Financial markets | Price returns | Hilbert transform | Asset phase |
+| Gene oscillator | Fluorescence reporter | Peak detection | Expression phase |
+| Identity coherence | Trait activation signals | Inter-event frequency | Trait phase |
+| Musical acoustics | Audio waveform | FFT harmonic tracking | Harmonic phase |
+| Network security | Packet timestamps | Inter-arrival frequency | Traffic phase |
+| Robotic CPG | Joint angle encoders | Direct measurement | Joint phase |
+| Satellite constellation | Orbital position | Kepler elements | Orbital phase |
+| Sleep architecture | EEG band power | Bandpass + Hilbert | Band phase |
+| Vortex shedding | Pressure/force transducer | Detrend + Hilbert | Shedding phase |
+| Agent coordination | Heartbeat timestamps | Inter-event frequency | Agent liveness phase |
 
 ## Good/Bad Layer Partition
 
@@ -218,6 +330,18 @@ PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 | PLL clock | VCO lock, network PLL | Stratum hierarchy (holdover) |
 | Firefly | Individual flash, swarm | (none defined) |
 | Swarm | Heading alignment, flock direction | Formation breakup |
+| Autonomous vehicles | Leader-follower platoon | String instability |
+| Brain connectome | Visual, auditory, DMN sync | Hypersync (seizure) |
+| Financial markets | Sector diversification | Cross-asset herding (crash) |
+| Gene oscillator | Repressilator rhythm | Quorum desync |
+| Identity coherence | Working style, values | Cognitive dissonance (chimera) |
+| Musical acoustics | Harmonic consonance, groove | Dissonance, tempo drift |
+| Network security | Normal traffic rhythm | Attack synchronisation |
+| Robotic CPG | Gait phase coordination | Leg collision, stumble |
+| Satellite constellation | Orbital slot, comms link | Constellation breakup |
+| Sleep architecture | Delta (N3), alpha (wake) | Beta excess (insomnia) |
+| Vortex shedding | Upstream wake coherence | Lock-in (structural fatigue) |
+| Agent coordination | Task flow, topic alignment | Merge conflicts, duplicated work |
 
 ## Boundary Sources
 
@@ -239,6 +363,18 @@ PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 | PLL clock | Phase error < 100 ns, drift < 10 ppm | IEEE 1588, ITU-T G.811 |
 | Firefly | Flash variance < 0.5 s | Observational ecology |
 | Swarm | Formation error < 2 m, collision > 0.5 m | Safety standards |
+| Autonomous vehicles | Headway > 1.5 s, speed delta < 10 km/h | SAE J3016, ISO 22839 |
+| Brain connectome | Global sync < 0.9 | Lehnertz (2009) |
+| Financial markets | Drawdown < 5%, VIX < 30 | Risk management |
+| Gene oscillator | Expression ratio 0.1-10x | Elowitz & Leibler (2000) |
+| Identity coherence | R_identity > 0.3 | SSGF threshold |
+| Musical acoustics | Intonation < 20 cents, tempo drift < 5% | Perceptual thresholds |
+| Network security | Packet rate < 10x baseline | IDS thresholds |
+| Robotic CPG | Joint angle limits, torque < max | Actuator specs |
+| Satellite constellation | Slot drift < 0.1 deg, link margin > 3 dB | ITU Radio Regulations |
+| Sleep architecture | Stage duration within AASM norms | AASM manual v3 |
+| Vortex shedding | Amplitude < fatigue limit, St = 0.2 +/- 0.05 | ASME PTC 19.3 |
+| Agent coordination | Heartbeat interval < 60 s, conflict rate < 0.1 | Operational SLA |
 
 ## Actuator Mapping
 
@@ -263,6 +399,18 @@ PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 | PLL clock | Loop bandwidth | Frequency trim | Reference drive | Phase target |
 | Firefly | Visual coupling | -- | Environmental light | Flash target |
 | Swarm | Alignment coupling | Obstacle avoidance | Formation drive | Target heading |
+| Autonomous vehicles | Platoon coupling | Headway lag | ACC setpoint | Leader speed |
+| Brain connectome | Connectivity strength | Propagation delay | Stimulation | Target region |
+| Financial markets | Portfolio correlation | Sector rotation lag | Hedging | Risk target |
+| Gene oscillator | Quorum coupling | Diffusion delay | Inducer concentration | -- |
+| Identity coherence | Trait coupling | Cognitive lag | External feedback | Value target |
+| Musical acoustics | Ensemble coupling | Tempo offset | Conductor beat | Pitch target |
+| Network security | Traffic coupling | Routing lag | Rate limiting | Baseline pattern |
+| Robotic CPG | Inter-leg coupling | Gait phase offset | Speed command | Gait target |
+| Satellite constellation | Orbital coupling | Propagation delay | Thrust manoeuvre | Slot target |
+| Sleep architecture | Inter-band coupling | Band transition lag | Light/sound stim | Sleep stage |
+| Vortex shedding | Wake coupling | Convective delay | Flow speed | -- |
+| Agent coordination | Task coupling | Communication lag | Priority signal | Coordination target |
 
 ## Coupling Topology Rationale
 
@@ -287,6 +435,18 @@ PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 | PLL clock | Hierarchical decay | Stratum hierarchy (cascaded PLLs) |
 | Firefly | Distance-decayed | Line-of-sight visual range |
 | Swarm | Distance-decayed | Proximity-based communication range |
+| Autonomous vehicles | Distance-decayed | V2V range limited by proximity |
+| Brain connectome | HCP-weighted | Structural connectivity from diffusion MRI |
+| Financial markets | Correlation-based | Asset return correlation matrix |
+| Gene oscillator | Dense intra-layer | Same-cell gene products diffuse freely |
+| Identity coherence | Hierarchical decay | Trait layers separated by abstraction level |
+| Musical acoustics | Strong intra-layer | Harmonics of same instrument tightly coupled |
+| Network security | Distance-decayed | Network topology determines traffic paths |
+| Robotic CPG | Strong nearest-neighbour | Adjacent legs mechanically coupled |
+| Satellite constellation | Distance-decayed | Inter-satellite link range |
+| Sleep architecture | Hierarchical decay | Timescale separation between EEG bands |
+| Vortex shedding | Distance-decayed | Wake interaction decays with cylinder spacing |
+| Agent coordination | Weak cross-layer | Agents coupled only via shared repo |
 
 ## Imprint Semantics
 
@@ -311,6 +471,18 @@ PRL 75(6), 1995; Cucker & Smale, IEEE TAC 2007.
 | Epidemic | Waning immunity (Antia et al. 2018) | Months | K |
 | Geometry | (none) | -- | -- |
 | Minimal | (none) | -- | -- |
+| Autonomous vehicles | Tyre wear, brake fade | Hours-days | K |
+| Brain connectome | Synaptic plasticity (LTP/LTD) | Days-weeks | K, alpha |
+| Financial markets | Regime memory (bull/bear momentum) | Weeks-months | K |
+| Gene oscillator | Epigenetic modification | Days-weeks | K |
+| Identity coherence | Trait reinforcement / habit formation | Weeks-months | K, alpha |
+| Musical acoustics | Ensemble rehearsal (muscle memory) | Days-weeks | K |
+| Network security | Baseline drift (traffic pattern evolution) | Days | K |
+| Robotic CPG | Joint wear, actuator fatigue | Weeks-months | K |
+| Satellite constellation | Orbital decay, component aging | Months-years | K |
+| Sleep architecture | Chronic sleep debt | Days-weeks | K, alpha |
+| Vortex shedding | Structural fatigue accumulation | Months | K |
+| Agent coordination | (none — stateless coordination) | -- | -- |
 
 ## Adding a New Domain
 
