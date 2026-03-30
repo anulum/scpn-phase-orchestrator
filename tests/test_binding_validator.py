@@ -120,3 +120,66 @@ def test_empty_objectives_error(sample_binding_spec):
     bad = replace(sample_binding_spec, objectives=bad_obj)
     errors = validate_binding_spec(bad)
     assert any("at least one good or bad layer" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Discriminatory: valid values must NOT produce errors
+# ---------------------------------------------------------------------------
+
+
+def test_all_valid_safety_tiers_accepted(sample_binding_spec):
+    """Every valid safety_tier must produce zero tier-related errors."""
+    for tier in ["research", "clinical", "production", "consumer"]:
+        spec = replace(sample_binding_spec, safety_tier=tier)
+        errors = validate_binding_spec(spec)
+        tier_errors = [e for e in errors if "safety_tier" in e]
+        assert tier_errors == [], f"tier={tier!r} should be valid, got: {tier_errors}"
+
+
+def test_valid_channels_accepted(sample_binding_spec):
+    """Channels P, I, S must all pass validation."""
+    for ch in ["P", "I", "S"]:
+        families = {
+            "f": OscillatorFamily(channel=ch, extractor_type="hilbert", config={}),
+        }
+        spec = replace(sample_binding_spec, oscillator_families=families)
+        errors = validate_binding_spec(spec)
+        ch_errors = [e for e in errors if "channel" in e]
+        assert ch_errors == [], f"channel={ch!r} should be valid, got: {ch_errors}"
+
+
+def test_valid_knobs_accepted(sample_binding_spec):
+    """All valid knobs (K, alpha, zeta, Psi) must pass validation."""
+    for knob in ["K", "alpha", "zeta", "Psi"]:
+        actuators = [
+            ActuatorMapping(name=f"{knob}_g", knob=knob, scope="global", limits=(0.0, 1.0)),
+        ]
+        spec = replace(sample_binding_spec, actuators=actuators)
+        errors = validate_binding_spec(spec)
+        knob_errors = [e for e in errors if "knob" in e]
+        assert knob_errors == [], f"knob={knob!r} should be valid, got: {knob_errors}"
+
+
+def test_multiple_errors_all_reported(sample_binding_spec):
+    """Multiple simultaneous violations must all be reported (not fail-fast)."""
+    from scpn_phase_orchestrator.binding.types import ObjectivePartition
+
+    bad = replace(
+        sample_binding_spec,
+        name="",
+        version="bad",
+        safety_tier="military",
+        sample_period_s=-1.0,
+        objectives=ObjectivePartition(good_layers=[], bad_layers=[]),
+    )
+    errors = validate_binding_spec(bad)
+    assert len(errors) >= 4, f"Should report ≥4 errors, got {len(errors)}: {errors}"
+
+
+def test_valid_version_formats(sample_binding_spec):
+    """Semver versions with all-numeric parts must pass."""
+    for v in ["0.0.1", "1.0.0", "10.20.30"]:
+        spec = replace(sample_binding_spec, version=v)
+        errors = validate_binding_spec(spec)
+        ver_errors = [e for e in errors if "version" in e]
+        assert ver_errors == [], f"version={v!r} should be valid, got: {ver_errors}"
