@@ -41,28 +41,28 @@ class TestV1RK4ConvergenceOrder:
         from scpn_phase_orchestrator.nn.functional import kuramoto_rk4_step
 
         # Use float64 to avoid float32 precision floor
-        prev_x64 = jax.config.jax_enable_x64
         jax.config.update("jax_enable_x64", True)
-        try:
-            key = jr.PRNGKey(0)
-            N = 8
-            phases0 = jr.uniform(key, (N,), maxval=TWO_PI).astype(jnp.float64)
-            omegas = (jr.normal(key, (N,)) * 0.5).astype(jnp.float64)
-            K = (jnp.ones((N, N)) * 0.3 / N).astype(jnp.float64)
-            K = K.at[jnp.diag_indices(N)].set(0.0)
+        test_arr = jnp.array(1.0, dtype=jnp.float64)
+        if test_arr.dtype != jnp.float64:
+            pytest.skip("JAX x64 mode not available on this platform")
 
-            def run(dt, n_steps):
-                p = phases0
-                for _ in range(n_steps):
-                    p = kuramoto_rk4_step(p, omegas, K, dt)
-                return p
+        key = jr.PRNGKey(0)
+        N = 8
+        phases0 = jr.uniform(key, (N,), maxval=TWO_PI).astype(jnp.float64)
+        omegas = (jr.normal(key, (N,)) * 0.5).astype(jnp.float64)
+        K = (jnp.ones((N, N)) * 0.3 / N).astype(jnp.float64)
+        K = K.at[jnp.diag_indices(N)].set(0.0)
 
-            T = 1.0
-            ref = run(T / 1600, 1600)
-            coarse = run(T / 50, 50)
-            fine = run(T / 100, 100)
-        finally:
-            jax.config.update("jax_enable_x64", prev_x64)
+        def run(dt, n_steps):
+            p = phases0
+            for _ in range(n_steps):
+                p = kuramoto_rk4_step(p, omegas, K, dt)
+            return p
+
+        T = 1.0
+        ref = run(T / 1600, 1600)
+        coarse = run(T / 50, 50)
+        fine = run(T / 100, 100)
 
         err_coarse = float(jnp.max(jnp.abs(jnp.sin(coarse - ref))))
         err_fine = float(jnp.max(jnp.abs(jnp.sin(fine - ref))))
