@@ -41,7 +41,9 @@ class TestV1RK4ConvergenceOrder:
         from scpn_phase_orchestrator.nn.functional import kuramoto_rk4_step
 
         # Use float64 to avoid float32 precision floor
-        with jax.enable_x64():
+        prev_x64 = jax.config.jax_enable_x64
+        jax.config.update("jax_enable_x64", True)
+        try:
             key = jr.PRNGKey(0)
             N = 8
             phases0 = jr.uniform(key, (N,), maxval=TWO_PI).astype(jnp.float64)
@@ -59,6 +61,8 @@ class TestV1RK4ConvergenceOrder:
             ref = run(T / 1600, 1600)
             coarse = run(T / 50, 50)
             fine = run(T / 100, 100)
+        finally:
+            jax.config.update("jax_enable_x64", prev_x64)
 
         err_coarse = float(jnp.max(jnp.abs(jnp.sin(coarse - ref))))
         err_fine = float(jnp.max(jnp.abs(jnp.sin(fine - ref))))
