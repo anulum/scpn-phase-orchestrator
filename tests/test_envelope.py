@@ -55,6 +55,46 @@ class TestExtractEnvelope:
         env = extract_envelope(amp, window=1)
         np.testing.assert_allclose(env, np.abs(amp))
 
+    def test_am_signal_envelope_tracks_modulation(self) -> None:
+        """Amplitude-modulated sinusoid: envelope must track the modulation
+        curve, not the carrier. This is the core use case."""
+        t = np.linspace(0, 2 * np.pi, 1000)
+        carrier = np.sin(50 * t)
+        modulation = 1.0 + 0.5 * np.sin(t)  # slow AM envelope
+        signal = carrier * modulation
+        env = extract_envelope(signal, window=20)
+        # RMS envelope should correlate with the modulation curve
+        # Use correlation coefficient as a discriminatory check
+        # (skip front padding region)
+        env_core = env[50:-50]
+        mod_core = modulation[50:-50]
+        corr = float(np.corrcoef(env_core, mod_core)[0, 1])
+        assert corr > 0.9, (
+            f"Envelope should track AM modulation (corr={corr:.3f}, expected >0.9)"
+        )
+
+    def test_2d_per_column_independent(self) -> None:
+        """2D envelope must process each column independently:
+        constant column stays flat, varying column has non-trivial envelope."""
+        n_t, n_osc = 100, 3
+        amp = np.ones((n_t, n_osc))
+        amp[:, 1] = np.linspace(0.1, 2.0, n_t)  # ramp
+        amp[:, 2] = np.sin(np.linspace(0, 4 * np.pi, n_t))
+        env = extract_envelope(amp, window=5)
+        assert env.shape == (n_t, n_osc)
+        # Column 0 (constant) must be flat
+        np.testing.assert_allclose(env[:, 0], 1.0, atol=1e-10)
+        # Column 1 (ramp) must increase
+        assert env[-1, 1] > env[10, 1], "Ramp envelope should increase"
+
+    def test_window_larger_than_signal(self) -> None:
+        """Window > signal length: must still return valid output without crashing.
+        Output length = max(window-1, 0) + max(len-window+1, 0) padding."""
+        amp = np.array([1.0, 2.0, 3.0])
+        env = extract_envelope(amp, window=10)
+        assert np.all(np.isfinite(env))
+        assert env.size > 0
+
 
 class TestEnvelopeModulationDepth:
     def test_constant_returns_zero(self) -> None:
