@@ -3,7 +3,7 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# Coverage gap tests — exercise remaining uncovered branches
+# Behavioural tests for edge cases across modules
 
 from __future__ import annotations
 
@@ -23,14 +23,15 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
 )
 
+
 # ---------------------------------------------------------------------------
-# Item 6: audit/replay.py — SL replay warning + amplitude paths
+# Stuart-Landau replay determinism with amplitude tracking
 # ---------------------------------------------------------------------------
 
 
-class TestStuartLandauReplayPaths:
-    """Cover verify_determinism_sl_chained branches: amplitude concat,
-    legacy mu format, and missing-field warning skip."""
+class TestStuartLandauReplayDeterminism:
+    """Verify that SL replay engine reproduces exact state trajectories,
+    including amplitude fields, under both new and legacy log formats."""
 
     @pytest.fixture()
     def replay_engine(self, tmp_path):
@@ -46,305 +47,386 @@ class TestStuartLandauReplayPaths:
 
         return StuartLandauEngine(n_oscillators=2, dt=0.01)
 
-    def _make_sl_step(self, engine, state, omegas, mu, knm, knm_r, alpha):
-        return engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
-
-    def test_amplitude_field_path(self, replay_engine, sl_engine):
-        """Cover lines 157-160 (amplitudes in curr) and 193-196 (amplitudes in nxt)."""
+    def test_amplitude_replay_matches_forward_step(self, replay_engine, sl_engine):
+        """Chained SL replay with amplitude fields must reproduce the engine's
+        forward integration to machine precision."""
         n = 2
-        omegas = [1.0, 1.0]
-        mu = [0.5, 0.5]
-        knm = np.zeros((n, n)).tolist()
-        knm_r = np.zeros((n, n)).tolist()
-        alpha = np.zeros((n, n)).tolist()
-        phases0 = [0.1, 0.2]
-        amps0 = [0.7, 0.8]
+        omegas = [1.0, 2.0]
+        mu = [0.5, 0.3]
+        knm = np.array([[0.0, 0.1], [0.1, 0.0]])
+        knm_r = np.array([[0.0, 0.05], [0.05, 0.0]])
+        alpha = np.zeros((n, n))
+        phases0 = [0.1, 0.8]
+        amps0 = [0.7, 0.5]
         state0 = np.array(phases0 + amps0)
+
         nxt_state = sl_engine.step(
-            state0,
-            np.array(omegas),
-            np.array(mu),
-            np.array(knm).reshape(n, n),
-            np.array(knm_r).reshape(n, n),
-            0.0,
-            0.0,
-            np.array(alpha).reshape(n, n),
+            state0, np.array(omegas), np.array(mu),
+            knm, knm_r, 0.0, 0.0, alpha,
         )
+
         entries = [
             {
-                "phases": phases0,
-                "amplitudes": amps0,
-                "omegas": omegas,
-                "mu": mu,
-                "knm": np.array(knm).ravel().tolist(),
-                "knm_r": np.array(knm_r).ravel().tolist(),
-                "alpha": np.array(alpha).ravel().tolist(),
+                "phases": phases0, "amplitudes": amps0,
+                "omegas": omegas, "mu": mu,
+                "knm": knm.ravel().tolist(),
+                "knm_r": knm_r.ravel().tolist(),
+                "alpha": alpha.ravel().tolist(),
             },
             {
                 "phases": nxt_state[:n].tolist(),
                 "amplitudes": nxt_state[n:].tolist(),
-                "omegas": omegas,
-                "mu": mu,
-                "knm": np.array(knm).ravel().tolist(),
-                "knm_r": np.array(knm_r).ravel().tolist(),
-                "alpha": np.array(alpha).ravel().tolist(),
+                "omegas": omegas, "mu": mu,
+                "knm": knm.ravel().tolist(),
+                "knm_r": knm_r.ravel().tolist(),
+                "alpha": alpha.ravel().tolist(),
             },
         ]
-        ok, verified = replay_engine.verify_determinism_sl_chained(
-            sl_engine,
-            entries,
-        )
-        assert ok
-        assert verified == 1
 
-    def test_missing_amplitude_fields_skips(self, replay_engine, sl_engine, caplog):
-        """Cover lines 165-166: warning + continue when neither amplitudes nor mu."""
+        ok, verified = replay_engine.verify_determinism_sl_chained(sl_engine, entries)
+        assert ok, "Replay must match forward integration exactly"
+        assert verified == 1, "Exactly one transition should be verified"
+
+        # Cross-validate: amplitudes must evolve toward sqrt(mu) under subcritical
+        amps_next = nxt_state[n:]
+        for i in range(n):
+            equilibrium = np.sqrt(max(mu[i], 0.0))
+            dist_before = abs(amps0[i] - equilibrium)
+            dist_after = abs(amps_next[i] - equilibrium)
+            assert dist_after <= dist_before + 1e-10, (
+                f"Oscillator {i}: amplitude should converge toward sqrt(mu)={equilibrium:.3f}, "
+                f"but distance grew from {dist_before:.4f} to {dist_after:.4f}"
+            )
+
+    def test_missing_amplitude_fields_warns_and_skips(
+        self, replay_engine, sl_engine, caplog,
+    ):
+        """Entries without amplitude or mu fields must emit a warning and
+        skip verification — not silently pass or crash."""
         entries = [
-            {
-                "phases": [0.1, 0.2],
-                "omegas": [1.0, 1.0],
-                "knm": [0.0] * 4,
-                "alpha": [0.0] * 4,
-            },
-            {
-                "phases": [0.3, 0.4],
-                "omegas": [1.0, 1.0],
-                "knm": [0.0] * 4,
-                "alpha": [0.0] * 4,
-            },
+            {"phases": [0.1, 0.2], "omegas": [1.0, 1.0],
+             "knm": [0.0] * 4, "alpha": [0.0] * 4},
+            {"phases": [0.3, 0.4], "omegas": [1.0, 1.0],
+             "knm": [0.0] * 4, "alpha": [0.0] * 4},
         ]
         with caplog.at_level(logging.WARNING):
             ok, verified = replay_engine.verify_determinism_sl_chained(
-                sl_engine,
-                entries,
+                sl_engine, entries,
             )
-        assert ok
-        assert verified == 0
+        assert ok, "Should pass (nothing to fail on)"
+        assert verified == 0, "No steps should be verified when fields are missing"
+        assert any("missing" in msg.lower() for msg in caplog.messages), (
+            "Must log a warning about missing amplitude fields"
+        )
 
-    def test_next_entry_without_amplitudes(self, replay_engine, sl_engine):
-        """Cover line 194 branch: nxt has no 'amplitudes' key (legacy)."""
+    def test_legacy_format_without_separate_amplitudes(
+        self, replay_engine, sl_engine,
+    ):
+        """Legacy logs store full SL state [θ; r] in 'phases' with 'mu' present
+        but no 'amplitudes' key. Verify replay handles this format correctly."""
         n = 2
         omegas = [1.0, 1.0]
+        mu_val = [0.5, 0.5]
         phases0 = [0.1, 0.2]
         amps0 = [0.7, 0.8]
-        np.zeros((n, n)).tolist()
-        np.zeros((n, n)).tolist()
-        np.zeros((n, n)).tolist()
-        mu_val = [0.5, 0.5]
         state0 = np.array(phases0 + amps0)
         nxt_state = sl_engine.step(
-            state0,
-            np.array(omegas),
-            np.array(mu_val),
-            np.zeros((n, n)),
-            np.zeros((n, n)),
-            0.0,
-            0.0,
-            np.zeros((n, n)),
+            state0, np.array(omegas), np.array(mu_val),
+            np.zeros((n, n)), np.zeros((n, n)), 0.0, 0.0, np.zeros((n, n)),
         )
         entries = [
             {
-                "phases": phases0,
-                "amplitudes": amps0,
-                "omegas": omegas,
-                "mu": mu_val,
-                "knm": np.zeros(n * n).tolist(),
-                "knm_r": np.zeros(n * n).tolist(),
-                "alpha": np.zeros(n * n).tolist(),
+                "phases": phases0, "amplitudes": amps0,
+                "omegas": omegas, "mu": mu_val,
+                "knm": [0.0] * (n * n), "knm_r": [0.0] * (n * n),
+                "alpha": [0.0] * (n * n),
             },
             {
+                # Legacy: no 'amplitudes' key, full state in 'phases'
                 "phases": nxt_state.tolist(),
-                "omegas": omegas,
-                "mu": mu_val,
-                "knm": np.zeros(n * n).tolist(),
-                "alpha": np.zeros(n * n).tolist(),
+                "omegas": omegas, "mu": mu_val,
+                "knm": [0.0] * (n * n), "alpha": [0.0] * (n * n),
             },
         ]
-        ok, verified = replay_engine.verify_determinism_sl_chained(
-            sl_engine,
-            entries,
-        )
-        assert verified == 1
+        ok, verified = replay_engine.verify_determinism_sl_chained(sl_engine, entries)
+        assert verified == 1, "Legacy format must be replayed successfully"
+        assert ok, "Legacy replay must match forward integration"
+
+    def test_multi_step_chain_accumulates_correctly(self, replay_engine, sl_engine):
+        """Chain 5 consecutive steps and verify all are deterministically replayed.
+        This catches off-by-one errors in state handoff between steps."""
+        n = 2
+        omegas = np.array([1.5, 0.8])
+        mu = np.array([0.4, 0.6])
+        knm = np.array([[0.0, 0.2], [0.2, 0.0]])
+        knm_r = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        state = np.array([0.0, np.pi, 0.5, 0.5])
+        entries = []
+
+        for _ in range(6):
+            entries.append({
+                "phases": state[:n].tolist(),
+                "amplitudes": state[n:].tolist(),
+                "omegas": omegas.tolist(), "mu": mu.tolist(),
+                "knm": knm.ravel().tolist(), "knm_r": knm_r.ravel().tolist(),
+                "alpha": alpha.ravel().tolist(),
+            })
+            state = sl_engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
+
+        ok, verified = replay_engine.verify_determinism_sl_chained(sl_engine, entries)
+        assert ok, "All 5 transitions must replay deterministically"
+        assert verified == 5, f"Expected 5 verified steps, got {verified}"
 
 
 # ---------------------------------------------------------------------------
-# Item 7: binding/types.py — get_omegas ValueError on length mismatch
+# BindingSpec omega validation
 # ---------------------------------------------------------------------------
 
 
-class TestGetOmegasLengthMismatch:
-    def test_omegas_length_mismatch_raises(self):
-        spec = BindingSpec(
-            name="test",
-            version="1.0.0",
-            safety_tier="research",
-            sample_period_s=0.01,
-            control_period_s=0.1,
-            layers=[
-                HierarchyLayer(
-                    name="L1",
-                    index=0,
-                    oscillator_ids=["o1", "o2"],
-                    omegas=[1.0],  # length 1, but 2 oscillators
-                ),
-            ],
+class TestBindingSpecOmegaValidation:
+    """Verify that BindingSpec.get_omegas() enforces length consistency
+    between declared oscillator_ids and explicit omega lists."""
+
+    def _make_spec(self, oscillator_ids, omegas=None):
+        return BindingSpec(
+            name="test", version="1.0.0", safety_tier="research",
+            sample_period_s=0.01, control_period_s=0.1,
+            layers=[HierarchyLayer(
+                name="L1", index=0,
+                oscillator_ids=oscillator_ids,
+                omegas=omegas,
+            )],
             oscillator_families={},
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
             drivers=DriverSpec(physical={}, informational={}, symbolic={}),
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
-            boundaries=[],
-            actuators=[],
+            boundaries=[], actuators=[],
         )
-        with pytest.raises(ValueError, match="omegas length 1 != oscillator count 2"):
+
+    def test_length_mismatch_raises_with_exact_counts(self):
+        """Error message must report both the omegas length and oscillator count."""
+        spec = self._make_spec(["o1", "o2", "o3"], omegas=[1.0])
+        with pytest.raises(ValueError, match="omegas length 1 != oscillator count 3"):
             spec.get_omegas()
 
+    def test_matching_lengths_returns_correct_array(self):
+        """Happy path: omegas length matches oscillator count."""
+        spec = self._make_spec(["o1", "o2"], omegas=[3.14, 2.71])
+        result = spec.get_omegas()
+        np.testing.assert_allclose(result, [3.14, 2.71])
+
+    def test_no_omegas_returns_default(self):
+        """When no omegas are specified, get_omegas returns default (1.0) per oscillator."""
+        spec = self._make_spec(["o1", "o2", "o3"])
+        result = spec.get_omegas()
+        assert len(result) == 3
+
 
 # ---------------------------------------------------------------------------
-# Item 8: binding/validator.py:82 — boundary lower > upper
+# Boundary validator: inverted limits detection
 # ---------------------------------------------------------------------------
 
 
-class TestValidatorBoundaryInverted:
-    def test_boundary_lower_gt_upper(self):
-        from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+class TestBoundaryInvertedLimitsValidation:
+    """Verify that the binding validator catches inverted boundary limits
+    and related constraint violations."""
 
-        # BoundaryDef.__post_init__ prevents lower >= upper at construction,
-        # so bypass it via object.__setattr__ on a frozen dataclass.
+    def _make_spec_with_boundary(self, lower, upper, severity="hard"):
         bdef = BoundaryDef(
-            name="bad_bound",
-            variable="R",
-            lower=0.2,
-            upper=0.8,
-            severity="hard",
+            name="test_bound", variable="R",
+            lower=min(lower, upper), upper=max(lower, upper),
+            severity=severity,
         )
-        object.__setattr__(bdef, "lower", 0.8)
-        object.__setattr__(bdef, "upper", 0.2)
-        spec = BindingSpec(
-            name="test",
-            version="1.0.0",
-            safety_tier="research",
-            sample_period_s=0.01,
-            control_period_s=0.1,
-            layers=[
-                HierarchyLayer(name="L1", index=0, oscillator_ids=["o1"]),
-            ],
+        # Force inversion via frozen dataclass bypass
+        if lower > upper:
+            object.__setattr__(bdef, "lower", lower)
+            object.__setattr__(bdef, "upper", upper)
+        return BindingSpec(
+            name="test", version="1.0.0", safety_tier="research",
+            sample_period_s=0.01, control_period_s=0.1,
+            layers=[HierarchyLayer(name="L1", index=0, oscillator_ids=["o1"])],
             oscillator_families={},
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
             drivers=DriverSpec(physical={}, informational={}, symbolic={}),
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
-            boundaries=[bdef],
-            actuators=[],
+            boundaries=[bdef], actuators=[],
         )
+
+    def test_inverted_boundary_reports_error(self):
+        """lower > upper must produce a validation error with both values reported."""
+        from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+
+        spec = self._make_spec_with_boundary(lower=0.8, upper=0.2)
         errors = validate_binding_spec(spec)
-        assert any("lower (0.8)" in e and "must be <= upper (0.2)" in e for e in errors)
+        assert any("lower (0.8)" in e and "must be <= upper (0.2)" in e for e in errors), (
+            f"Expected inverted-limits error, got: {errors}"
+        )
+
+    def test_valid_boundary_no_errors(self):
+        """Correct boundaries produce no validation errors related to limits."""
+        from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+
+        spec = self._make_spec_with_boundary(lower=0.2, upper=0.8)
+        errors = validate_binding_spec(spec)
+        limit_errors = [e for e in errors if "lower" in e and "upper" in e]
+        assert len(limit_errors) == 0, f"Valid boundary should not produce errors: {limit_errors}"
 
 
 # ---------------------------------------------------------------------------
-# Item 9: monitor/session_start.py:87 — low initial coherence warning
+# Session start coherence check
 # ---------------------------------------------------------------------------
 
 
-class TestSessionStartLowCoherence:
-    def test_low_coherence_warning(self):
+class TestSessionStartCoherenceAnalysis:
+    """Verify that session_start checks correctly identify low vs high
+    initial coherence and produce appropriate warnings."""
+
+    def _run_check(self, phases):
         from scpn_phase_orchestrator.imprint.state import ImprintState
         from scpn_phase_orchestrator.monitor.session_start import check_session_start
 
-        n_osc = 4
-        # Widely spread phases → low R
-        phases = np.array([0.0, np.pi / 2, np.pi, 3 * np.pi / 2])
-        imprint = ImprintState(m_k=np.ones(n_osc), last_update=0.0)
-        report = check_session_start([], phases, imprint, n_osc)
+        n = len(phases)
+        imprint = ImprintState(m_k=np.ones(n), last_update=0.0)
+        return check_session_start([], np.array(phases), imprint, n)
+
+    def test_near_chaos_phases_produce_low_coherence_warning(self):
+        """Uniformly spread phases (R ≈ 0) must trigger the warning."""
+        phases = [0.0, np.pi / 2, np.pi, 3 * np.pi / 2]
+        report = self._run_check(phases)
         assert any("Low initial coherence" in w for w in report.warnings)
-
-
-# ---------------------------------------------------------------------------
-# Item 10: oscillators/init_phases.py — channel fallback paths
-# ---------------------------------------------------------------------------
-
-
-class TestInitPhasesFallbacks:
-    def test_unknown_channel_random_fallback(self):
-        """Cover line 75: channel not P/I/S → random uniform."""
-        from scpn_phase_orchestrator.oscillators.init_phases import (
-            extract_initial_phases,
+        assert report.initial_r < 0.05, (
+            f"R={report.initial_r:.4f} should be near 0 for uniformly spread phases"
         )
 
-        spec = BindingSpec(
-            name="test",
-            version="1.0.0",
-            safety_tier="research",
-            sample_period_s=0.01,
-            control_period_s=0.1,
-            layers=[
-                HierarchyLayer(
-                    name="L1",
-                    index=0,
-                    oscillator_ids=["o1"],
-                    family="exotic",
-                ),
-            ],
+    def test_synchronised_phases_no_warning(self):
+        """Nearly identical phases (R ≈ 1) must NOT trigger the warning."""
+        phases = [0.01, 0.02, 0.015, 0.005]
+        report = self._run_check(phases)
+        assert not any("Low initial coherence" in w for w in report.warnings), (
+            f"Synchronised phases should not produce coherence warning: {report.warnings}"
+        )
+        assert report.initial_r > 0.99, (
+            f"R={report.initial_r:.4f} should be near 1 for nearly identical phases"
+        )
+
+    def test_moderate_coherence_no_warning(self):
+        """R just above 0.05 threshold must not trigger the warning."""
+        # Two clusters: [0, 0.1] and [0.3, 0.4] — R well above 0.05
+        phases = [0.0, 0.1, 0.3, 0.4]
+        report = self._run_check(phases)
+        assert report.initial_r > 0.05
+        assert not any("Low initial coherence" in w for w in report.warnings)
+
+    def test_imprint_size_mismatch_error(self):
+        """If imprint dimension doesn't match oscillator count, report error."""
+        from scpn_phase_orchestrator.imprint.state import ImprintState
+        from scpn_phase_orchestrator.monitor.session_start import check_session_start
+
+        phases = np.array([0.1, 0.2, 0.3])
+        imprint = ImprintState(m_k=np.ones(5), last_update=0.0)  # 5 != 3
+        report = check_session_start([], phases, imprint, 3)
+        assert not report.passed
+        assert any("mismatch" in e.lower() for e in report.errors)
+
+
+# ---------------------------------------------------------------------------
+# Initial phase extraction: channel fallback behaviour
+# ---------------------------------------------------------------------------
+
+
+class TestInitPhasesChannelResolution:
+    """Verify that initial phase extraction correctly resolves channels
+    and falls back to uniform random for unknown channels."""
+
+    def _make_spec(self, channel, family_name="test_fam"):
+        return BindingSpec(
+            name="test", version="1.0.0", safety_tier="research",
+            sample_period_s=0.01, control_period_s=0.1,
+            layers=[HierarchyLayer(
+                name="L1", index=0, oscillator_ids=["o1", "o2"],
+                family=family_name,
+            )],
             oscillator_families={
-                "exotic": OscillatorFamily(
-                    channel="X",
-                    extractor_type="hilbert",
-                    config={},
+                family_name: OscillatorFamily(
+                    channel=channel, extractor_type="hilbert", config={},
                 ),
             },
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
             drivers=DriverSpec(physical={}, informational={}, symbolic={}),
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
-            boundaries=[],
-            actuators=[],
+            boundaries=[], actuators=[],
         )
-        omegas = np.array([1.0])
-        phases = extract_initial_phases(spec, omegas)
-        assert phases.shape == (1,)
-        assert 0.0 <= phases[0] < 2 * np.pi
 
-    def test_resolve_channel_no_families(self):
-        """Cover line 96: empty families → default 'P'."""
+    def test_unknown_channel_falls_back_to_uniform(self):
+        """Channel 'X' (not P/I/S) must produce phases in [0, 2π)."""
+        from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+
+        spec = self._make_spec("X")
+        phases = extract_initial_phases(spec, np.array([1.0, 1.0]))
+        assert phases.shape == (2,)
+        assert np.all(phases >= 0.0) and np.all(phases < 2 * np.pi), (
+            f"Phases must be in [0, 2π), got {phases}"
+        )
+
+    def test_physical_channel_produces_valid_phases(self):
+        """Channel 'P' must produce phases in [0, 2π)."""
+        from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+
+        spec = self._make_spec("P")
+        phases = extract_initial_phases(spec, np.array([5.0, 5.0]))
+        assert phases.shape == (2,)
+        assert np.all(phases >= 0.0) and np.all(phases < 2 * np.pi)
+
+    def test_resolve_channel_empty_families_defaults_to_P(self):
+        """With no families defined, channel resolution must default to 'P'."""
         from scpn_phase_orchestrator.oscillators.init_phases import _resolve_channel
 
         assert _resolve_channel(None, {}, 0) == "P"
+        assert _resolve_channel(None, {}, 5) == "P"
 
-    def test_get_n_states_no_symbolic(self):
-        """Cover line 106: no symbolic family → default 4."""
+    def test_get_n_states_no_symbolic_family_defaults_to_4(self):
+        """Without any symbolic family, n_states must default to 4."""
         from scpn_phase_orchestrator.oscillators.init_phases import _get_n_states
 
         families = {
-            "phys": OscillatorFamily(
-                channel="P",
-                extractor_type="hilbert",
-                config={},
-            ),
+            "phys": OscillatorFamily(channel="P", extractor_type="hilbert", config={}),
         }
         assert _get_n_states(families) == 4
 
+    def test_get_n_states_from_symbolic_config(self):
+        """Symbolic family with explicit n_states must use that value."""
+        from scpn_phase_orchestrator.oscillators.init_phases import _get_n_states
+
+        families = {
+            "sym": OscillatorFamily(
+                channel="S", extractor_type="symbolic",
+                config={"n_states": 8},
+            ),
+        }
+        assert _get_n_states(families) == 8
+
 
 # ---------------------------------------------------------------------------
-# Item 11: server.py:113 — non-amplitude-mode step path
+# SimulationState: non-amplitude (Kuramoto-only) step
 # ---------------------------------------------------------------------------
 
 
-class TestServerNonAmplitudeStep:
-    def test_step_without_amplitude_mode(self):
-        """Cover line 113: the else branch when amplitude_mode is False."""
+class TestSimulationStateKuramotoStep:
+    """Verify that SimulationState in non-amplitude mode (pure Kuramoto)
+    produces physically correct phase evolution."""
+
+    @pytest.fixture()
+    def sim(self):
         from scpn_phase_orchestrator.server import SimulationState
 
         spec = BindingSpec(
-            name="test",
-            version="1.0.0",
-            safety_tier="research",
-            sample_period_s=0.01,
-            control_period_s=0.1,
-            layers=[
-                HierarchyLayer(name="L1", index=0, oscillator_ids=["o1", "o2"]),
-            ],
+            name="test", version="1.0.0", safety_tier="research",
+            sample_period_s=0.01, control_period_s=0.1,
+            layers=[HierarchyLayer(name="L1", index=0, oscillator_ids=["o1", "o2"])],
             oscillator_families={
                 "phys": OscillatorFamily(
-                    channel="P",
-                    extractor_type="hilbert",
-                    config={},
+                    channel="P", extractor_type="hilbert", config={},
                 ),
             },
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
@@ -352,44 +434,77 @@ class TestServerNonAmplitudeStep:
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
             boundaries=[],
             actuators=[
-                ActuatorMapping(
-                    name="K_g",
-                    knob="K",
-                    scope="global",
-                    limits=(0.0, 1.0),
-                ),
+                ActuatorMapping(name="K_g", knob="K", scope="global", limits=(0.0, 1.0)),
             ],
         )
-        sim = SimulationState(spec)
+        return SimulationState(spec)
+
+    def test_non_amplitude_mode_flag(self, sim):
+        """Non-amplitude spec must produce Kuramoto mode, not Stuart-Landau."""
         assert not sim.amplitude_mode
+
+    def test_step_returns_valid_state(self, sim):
+        """Single step must return step counter and R_global in [0, 1]."""
         result = sim.step()
         assert result["step"] == 1
         assert "R_global" in result
+        assert 0.0 <= result["R_global"] <= 1.0
+
+    def test_multi_step_advances_phase(self, sim):
+        """10 consecutive steps must advance the state — R should vary,
+        step counter must increment monotonically."""
+        results = [sim.step() for _ in range(10)]
+        steps = [r["step"] for r in results]
+        assert steps == list(range(1, 11)), "Step counter must increment by 1 each call"
+        r_values = [r["R_global"] for r in results]
+        # With coupling, R should not be exactly constant (phases evolve)
+        assert not all(r == r_values[0] for r in r_values), (
+            "R_global should vary across steps under coupling"
+        )
+
+    def test_step_r_bounded(self, sim):
+        """R must stay in [0, 1] across 50 integration steps."""
+        for _ in range(50):
+            result = sim.step()
+            assert 0.0 <= result["R_global"] <= 1.0, (
+                f"R_global={result['R_global']:.4f} out of [0, 1] at step {result['step']}"
+            )
 
 
 # ---------------------------------------------------------------------------
-# Item 12: upde/engine.py — NaN validation + RK45 exhaust-retry path
+# UPDE engine: NaN validation and RK45 edge cases
 # ---------------------------------------------------------------------------
 
 
-class TestUPDEEngineEdges:
-    def test_alpha_nan_raises(self):
-        """Cover line 110: alpha contains NaN/Inf."""
+class TestUPDEEngineInputValidation:
+    """Verify that UPDEEngine rejects invalid inputs with clear error messages
+    and that RK45 handles extreme conditions gracefully."""
+
+    def test_alpha_nan_raises_with_message(self):
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         eng = UPDEEngine(2, dt=0.01)
-        phases = np.array([0.1, 0.2])
-        omegas = np.array([1.0, 1.0])
-        knm = np.zeros((2, 2))
-        alpha = np.array([[0.0, float("nan")], [0.0, 0.0]])
         with pytest.raises(ValueError, match="alpha contains NaN"):
-            eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            eng.step(
+                np.array([0.1, 0.2]), np.array([1.0, 1.0]),
+                np.zeros((2, 2)), 0.0, 0.0,
+                np.array([[0.0, float("nan")], [0.0, 0.0]]),
+            )
 
-    def test_rk45_exhaust_retries(self):
-        """Cover lines 258-264: RK45 exhausting max_reject iterations.
+    def test_alpha_inf_also_rejected(self):
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
-        Use extreme coupling to force large error norms on every retry.
-        """
+        eng = UPDEEngine(2, dt=0.01)
+        with pytest.raises(ValueError, match="alpha contains NaN"):
+            eng.step(
+                np.array([0.1, 0.2]), np.array([1.0, 1.0]),
+                np.zeros((2, 2)), 0.0, 0.0,
+                np.array([[0.0, float("inf")], [0.0, 0.0]]),
+            )
+
+    def test_rk45_extreme_coupling_remains_finite(self):
+        """RK45 with extremely tight tolerances and large coupling must
+        exhaust retries gracefully (fallback to Euler) and return finite phases."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         eng = UPDEEngine(4, dt=1.0, method="rk45", atol=1e-15, rtol=1e-15)
@@ -398,165 +513,162 @@ class TestUPDEEngineEdges:
         knm = np.full((4, 4), 1000.0)
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((4, 4))
+
         result = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         assert result.shape == (4,)
-        assert np.all(np.isfinite(result))
+        assert np.all(np.isfinite(result)), f"RK45 fallback must return finite phases: {result}"
+        # Phases must have changed (omegas are non-zero)
+        assert not np.allclose(result, phases), "Extreme conditions should still advance phases"
 
 
 # ---------------------------------------------------------------------------
-# Item 14: upde/order_params.py — empty array guards
+# Order parameters: empty and degenerate input guards
 # ---------------------------------------------------------------------------
 
 
-class TestOrderParamsEmptyGuards:
-    def test_order_parameter_empty(self):
-        """Cover line 25: empty phases → (0.0, 0.0)."""
+class TestOrderParameterEdgeCases:
+    """Verify order parameter functions handle edge cases with defined behaviour,
+    not just "doesn't crash"."""
+
+    def test_empty_phases_returns_zero_r_and_psi(self):
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         r, psi = compute_order_parameter(np.array([]))
-        assert r == 0.0
-        assert psi == 0.0
+        assert r == 0.0 and psi == 0.0, "Empty phases must give R=0, Ψ=0"
 
-    def test_plv_empty(self):
-        """Cover line 44: empty arrays → 0.0."""
+    def test_single_phase_returns_r_one(self):
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        r, psi = compute_order_parameter(np.array([1.23]))
+        assert abs(r - 1.0) < 1e-10, "Single oscillator must have R=1"
+        assert abs(psi - 1.23) < 1e-10, "Single oscillator Ψ must equal its phase"
+
+    def test_plv_empty_either_side_returns_zero(self):
         from scpn_phase_orchestrator.upde.order_params import compute_plv
 
         assert compute_plv(np.array([]), np.array([1.0])) == 0.0
         assert compute_plv(np.array([1.0]), np.array([])) == 0.0
 
+    def test_plv_identical_phases_returns_one(self):
+        from scpn_phase_orchestrator.upde.order_params import compute_plv
+
+        phases = np.array([0.5, 0.5, 0.5, 0.5])
+        plv = compute_plv(phases, phases)
+        assert abs(plv - 1.0) < 1e-10, "PLV of identical phases must be 1"
+
+    def test_plv_anti_phase_returns_one(self):
+        """PLV measures consistency of phase difference, not alignment.
+        Anti-phase (π offset) has a consistent difference → PLV = 1."""
+        from scpn_phase_orchestrator.upde.order_params import compute_plv
+
+        a = np.array([0.0, 0.5, 1.0, 1.5])
+        b = a + np.pi
+        plv = compute_plv(a, b)
+        assert abs(plv - 1.0) < 1e-10, f"Anti-phase PLV should be 1, got {plv:.4f}"
+
 
 # ---------------------------------------------------------------------------
-# Item 15: upde/pac.py:23 — n_bins < 2 guard
+# PAC modulation index: n_bins guard and value range
 # ---------------------------------------------------------------------------
 
 
-class TestPACGuard:
-    def test_modulation_index_nbins_lt_2(self):
-        """Cover line 23: n_bins < 2 → 0.0."""
+class TestPACModulationIndexGuards:
+    """Verify PAC modulation_index rejects invalid n_bins and produces
+    bounded results for valid inputs."""
+
+    def test_nbins_below_2_returns_zero(self):
         from scpn_phase_orchestrator.upde.pac import modulation_index
 
-        theta = np.array([0.1, 0.2, 0.3])
-        amp = np.array([1.0, 2.0, 3.0])
+        theta = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+        amp = np.array([1.0, 2.0, 3.0, 2.0, 1.0])
         assert modulation_index(theta, amp, n_bins=1) == 0.0
         assert modulation_index(theta, amp, n_bins=0) == 0.0
 
+    def test_uniform_amplitude_gives_low_mi(self):
+        """Constant amplitude across all phases → no modulation → MI near 0."""
+        from scpn_phase_orchestrator.upde.pac import modulation_index
+
+        theta = np.linspace(0, 2 * np.pi, 200, endpoint=False)
+        amp = np.ones(200)
+        mi = modulation_index(theta, amp, n_bins=18)
+        assert mi < 0.1, f"Uniform amplitude should give MI near 0, got {mi:.4f}"
+
+    def test_mi_in_unit_interval(self):
+        """MI must always be in [0, 1] regardless of input."""
+        from scpn_phase_orchestrator.upde.pac import modulation_index
+
+        rng = np.random.default_rng(42)
+        theta = rng.uniform(0, 2 * np.pi, 500)
+        amp = rng.exponential(1.0, 500)
+        mi = modulation_index(theta, amp, n_bins=18)
+        assert 0.0 <= mi <= 1.0, f"MI must be in [0, 1], got {mi:.4f}"
+
 
 # ---------------------------------------------------------------------------
-# Item 16: upde/stuart_landau.py — NaN validation + RK45 exhaust
+# Stuart-Landau engine: comprehensive input validation
 # ---------------------------------------------------------------------------
 
 
-class TestStuartLandauEdges:
-    def test_state_nan_raises(self):
-        """Cover line 170: state contains NaN."""
+class TestStuartLandauInputValidation:
+    """Verify that StuartLandauEngine rejects every type of invalid input
+    with the correct error message and field name."""
+
+    @pytest.fixture()
+    def engine(self):
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
-        eng = StuartLandauEngine(2, dt=0.01)
-        state = np.array([0.1, 0.2, float("nan"), 0.8])
-        omegas = np.array([1.0, 1.0])
-        mu = np.array([0.5, 0.5])
-        knm = np.zeros((2, 2))
-        knm_r = np.zeros((2, 2))
-        alpha = np.zeros((2, 2))
-        with pytest.raises(ValueError, match="state contains NaN"):
-            eng.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
+        return StuartLandauEngine(2, dt=0.01)
 
-    def test_omegas_nan_raises(self):
-        """Cover line 172."""
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+    @pytest.fixture()
+    def valid_args(self):
+        return {
+            "state": np.array([0.1, 0.2, 0.7, 0.8]),
+            "omegas": np.array([1.0, 1.0]),
+            "mu": np.array([0.5, 0.5]),
+            "knm": np.zeros((2, 2)),
+            "knm_r": np.zeros((2, 2)),
+            "zeta": 0.0,
+            "psi": 0.0,
+            "alpha": np.zeros((2, 2)),
+        }
 
-        eng = StuartLandauEngine(2, dt=0.01)
-        state = np.array([0.1, 0.2, 0.7, 0.8])
-        omegas = np.array([float("nan"), 1.0])
-        mu = np.array([0.5, 0.5])
-        knm = np.zeros((2, 2))
-        knm_r = np.zeros((2, 2))
-        alpha = np.zeros((2, 2))
-        with pytest.raises(ValueError, match="omegas contain NaN"):
-            eng.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
+    @pytest.mark.parametrize(
+        "field,bad_value,error_pattern",
+        [
+            ("state", np.array([0.1, 0.2, float("nan"), 0.8]), "state contains NaN"),
+            ("omegas", np.array([float("nan"), 1.0]), "omegas contain NaN"),
+            ("mu", np.array([float("inf"), 0.5]), "mu contains NaN"),
+            ("knm", np.array([[0.0, float("nan")], [0.0, 0.0]]), "knm contains NaN"),
+            ("knm_r", np.array([[0.0, float("inf")], [0.0, 0.0]]), "knm_r contains NaN"),
+            ("alpha", np.array([[0.0, float("nan")], [0.0, 0.0]]), "alpha contains NaN"),
+        ],
+    )
+    def test_nan_in_field_raises_valueerror(self, engine, valid_args, field, bad_value, error_pattern):
+        """Each numeric input field must be validated for NaN/Inf."""
+        args = dict(valid_args)
+        args[field] = bad_value
+        with pytest.raises(ValueError, match=error_pattern):
+            engine.step(**args)
 
-    def test_mu_nan_raises(self):
-        """Cover line 174."""
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-
-        eng = StuartLandauEngine(2, dt=0.01)
-        state = np.array([0.1, 0.2, 0.7, 0.8])
-        omegas = np.array([1.0, 1.0])
-        mu = np.array([float("inf"), 0.5])
-        knm = np.zeros((2, 2))
-        knm_r = np.zeros((2, 2))
-        alpha = np.zeros((2, 2))
-        with pytest.raises(ValueError, match="mu contains NaN"):
-            eng.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
-
-    def test_knm_nan_raises(self):
-        """Cover line 176."""
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-
-        eng = StuartLandauEngine(2, dt=0.01)
-        state = np.array([0.1, 0.2, 0.7, 0.8])
-        omegas = np.array([1.0, 1.0])
-        mu = np.array([0.5, 0.5])
-        knm = np.array([[0.0, float("nan")], [0.0, 0.0]])
-        knm_r = np.zeros((2, 2))
-        alpha = np.zeros((2, 2))
-        with pytest.raises(ValueError, match="knm contains NaN"):
-            eng.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
-
-    def test_knm_r_nan_raises(self):
-        """Cover line 178."""
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-
-        eng = StuartLandauEngine(2, dt=0.01)
-        state = np.array([0.1, 0.2, 0.7, 0.8])
-        omegas = np.array([1.0, 1.0])
-        mu = np.array([0.5, 0.5])
-        knm = np.zeros((2, 2))
-        knm_r = np.array([[0.0, float("inf")], [0.0, 0.0]])
-        alpha = np.zeros((2, 2))
-        with pytest.raises(ValueError, match="knm_r contains NaN"):
-            eng.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
-
-    def test_alpha_nan_raises(self):
-        """Cover line 180."""
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-
-        eng = StuartLandauEngine(2, dt=0.01)
-        state = np.array([0.1, 0.2, 0.7, 0.8])
-        omegas = np.array([1.0, 1.0])
-        mu = np.array([0.5, 0.5])
-        knm = np.zeros((2, 2))
-        knm_r = np.zeros((2, 2))
-        alpha = np.array([[0.0, float("nan")], [0.0, 0.0]])
-        with pytest.raises(ValueError, match="alpha contains NaN"):
-            eng.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
-
-    def test_epsilon_nan_raises(self):
-        """Cover line 182."""
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-
-        eng = StuartLandauEngine(2, dt=0.01)
-        state = np.array([0.1, 0.2, 0.7, 0.8])
-        omegas = np.array([1.0, 1.0])
-        mu = np.array([0.5, 0.5])
-        knm = np.zeros((2, 2))
-        knm_r = np.zeros((2, 2))
-        alpha = np.zeros((2, 2))
+    def test_epsilon_nan_raises(self, engine, valid_args):
+        """Non-finite epsilon must be rejected."""
         with pytest.raises(ValueError, match="epsilon must be finite"):
-            eng.step(
-                state,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                0.0,
-                0.0,
-                alpha,
-                epsilon=float("nan"),
-            )
+            engine.step(**valid_args, epsilon=float("nan"))
 
-    def test_rk45_exhaust_retries(self):
-        """Cover lines 264-268: SL RK45 exhausting max_reject iterations."""
+    def test_epsilon_inf_raises(self, engine, valid_args):
+        """Infinite epsilon must also be rejected."""
+        with pytest.raises(ValueError, match="epsilon must be finite"):
+            engine.step(**valid_args, epsilon=float("inf"))
+
+    def test_valid_inputs_produce_finite_output(self, engine, valid_args):
+        """Sanity check: valid inputs must produce finite state vector of correct size."""
+        result = engine.step(**valid_args)
+        assert result.shape == (4,), f"SL state should be 2*N=4, got {result.shape}"
+        assert np.all(np.isfinite(result)), f"Valid inputs should give finite output: {result}"
+
+    def test_rk45_extreme_parameters_stays_finite(self):
+        """SL RK45 with extreme coupling that exhausts retry budget must
+        still return finite results via Euler fallback."""
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
         eng = StuartLandauEngine(4, dt=1.0, method="rk45", atol=1e-15, rtol=1e-15)
@@ -568,5 +680,12 @@ class TestStuartLandauEdges:
         knm_r = np.full((4, 4), 1000.0)
         np.fill_diagonal(knm_r, 0.0)
         alpha = np.zeros((4, 4))
+
         result = eng.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
         assert result.shape == (8,)
+        assert np.all(np.isfinite(result)), "Fallback must produce finite state"
+        # Amplitudes must remain non-negative (physical constraint for Stuart-Landau)
+        amplitudes = result[4:]
+        assert np.all(amplitudes >= -1e-10), (
+            f"SL amplitudes must be non-negative, got {amplitudes}"
+        )
