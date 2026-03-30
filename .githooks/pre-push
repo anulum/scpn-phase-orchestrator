@@ -10,4 +10,14 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 echo "pre-push: running preflight..."
-py -3.12 "$REPO_ROOT/tools/preflight.py"
+
+# Activate project venv if available (Linux or Windows)
+if [ -f "$REPO_ROOT/.venv-linux/bin/activate" ]; then
+    # shellcheck disable=SC1091
+    source "$REPO_ROOT/.venv-linux/bin/activate"
+elif [ -f "$REPO_ROOT/.venv/bin/activate" ]; then
+    # shellcheck disable=SC1091
+    source "$REPO_ROOT/.venv/bin/activate"
+fi
+
+python3 "$REPO_ROOT/tools/preflight.py"
