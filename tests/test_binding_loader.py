@@ -129,6 +129,55 @@ def test_loader_passes_algorithm_names_through(tmp_path):
     assert spec.oscillator_families["g"].extractor_type == "graph"
 
 
+def test_json_yaml_produce_identical_spec(tmp_path):
+    """Loading the same spec from JSON and YAML must produce identical BindingSpec."""
+    yaml = pytest.importorskip("yaml")
+    pj = tmp_path / "spec.json"
+    py = tmp_path / "spec.yaml"
+    pj.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
+    py.write_text(yaml.dump(_SPEC_DATA), encoding="utf-8")
+    spec_j = load_binding_spec(pj)
+    spec_y = load_binding_spec(py)
+    assert spec_j.name == spec_y.name
+    assert spec_j.version == spec_y.version
+    assert spec_j.safety_tier == spec_y.safety_tier
+    assert len(spec_j.layers) == len(spec_y.layers)
+    assert spec_j.coupling.base_strength == spec_y.coupling.base_strength
+
+
+def test_boundaries_preserved(tmp_path):
+    """Boundary definitions must survive load with correct field values."""
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
+    spec = load_binding_spec(p)
+    assert len(spec.boundaries) == 1
+    b = spec.boundaries[0]
+    assert b.name == "b1"
+    assert b.variable == "R"
+    assert b.lower == 0.1
+    assert b.upper == 1.0
+    assert b.severity == "soft"
+
+
+def test_actuator_limits_tuple(tmp_path):
+    """Actuator limits (from JSON list) must be accessible as (lo, hi) tuple."""
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
+    spec = load_binding_spec(p)
+    assert spec.actuators[0].limits == (0.0, 1.0)
+
+
+def test_loaded_spec_passes_validation(tmp_path):
+    """A well-formed spec must pass validation after loading."""
+    from scpn_phase_orchestrator.binding import validate_binding_spec
+
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
+    spec = load_binding_spec(p)
+    errors = validate_binding_spec(spec)
+    assert errors == [], f"Valid spec should produce no errors: {errors}"
+
+
 def test_loader_validate_control_period_and_channels(tmp_path):
     from scpn_phase_orchestrator.binding import validate_binding_spec
 

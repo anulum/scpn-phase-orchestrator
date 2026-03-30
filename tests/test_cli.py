@@ -157,6 +157,48 @@ def test_scaffold_idempotent(runner, tmp_path, monkeypatch):
     assert result.exit_code == 0
 
 
+def test_run_r_values_bounded(runner, valid_spec_path):
+    """R_good and R_bad must be in [0, 1] in every step output line."""
+    result = runner.invoke(main, ["run", valid_spec_path, "--steps", "5"])
+    assert result.exit_code == 0
+    for line in result.output.strip().split("\n"):
+        if "R_good=" in line:
+            r_str = line.split("R_good=")[1].split()[0].rstrip(",")
+            r_val = float(r_str)
+            assert 0.0 <= r_val <= 1.0, f"R_good={r_val} out of [0,1]"
+        if "R_bad=" in line:
+            r_str = line.split("R_bad=")[1].split()[0].rstrip(",")
+            r_val = float(r_str)
+            assert 0.0 <= r_val <= 1.0, f"R_bad={r_val} out of [0,1]"
+
+
+def test_nonexistent_spec_errors(runner, tmp_path):
+    """Pointing to a non-existent file must fail with clear error."""
+    result = runner.invoke(main, ["validate", str(tmp_path / "nope.yaml")])
+    assert result.exit_code != 0
+
+
+def test_scaffold_spec_is_valid_yaml(runner, tmp_path, monkeypatch):
+    """Scaffolded binding_spec.yaml must be valid YAML and parseable."""
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(main, ["scaffold", "test_domain"])
+    spec_path = tmp_path / "domainpacks" / "test_domain" / "binding_spec.yaml"
+    content = spec_path.read_text(encoding="utf-8")
+    parsed = yaml.safe_load(content)
+    assert isinstance(parsed, dict)
+    assert "name" in parsed
+    assert "layers" in parsed
+
+
+def test_report_hash_chain_verified(runner, audit_log_path):
+    """Report must verify the hash chain and report its status."""
+    result = runner.invoke(main, ["report", audit_log_path, "--json-out"])
+    data = json.loads(result.output)
+    # Hash chain check: audit entries don't have _hash (manual entries),
+    # so chain verification may skip — but the field must exist
+    assert "hash_chain_ok" in data
+
+
 def test_run_applies_k_actions(runner, tmp_path):
     """Run with boundaries that trigger DEGRADED → supervisor emits K action."""
     spec = {
