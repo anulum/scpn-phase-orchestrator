@@ -212,3 +212,76 @@ def test_guard_all_ops():
     ]:
         g = Guard("x", op_str, threshold)
         assert g.evaluate({"x": val}) == expected, f"{op_str} failed"
+
+
+def test_token_conservation_unweighted():
+    """Firing an unweighted transition conserves total tokens:
+    consumed from input places, produced at output places."""
+    net = _simple_net()
+    m = Marking(tokens={"warmup": 1})
+    total_before = sum(m.tokens.values())
+    m2 = net.fire(m, net.transitions[0])  # start: warmup→nominal
+    total_after = sum(m2.tokens.values())
+    assert total_after == total_before, (
+        f"Unweighted 1:1 arc must conserve tokens: {total_before} → {total_after}"
+    )
+
+
+def test_weighted_token_transformation():
+    """Weighted arcs: 2 tokens consumed, 3 produced → net +1."""
+    net = PetriNet(
+        [Place("a"), Place("b")],
+        [Transition("t", inputs=[Arc("a", weight=2)], outputs=[Arc("b", weight=3)])],
+    )
+    m = Marking(tokens={"a": 5})
+    m2, t = net.step(m, {})
+    assert t is not None
+    assert m2["a"] == 3, "Should consume 2 from a (5-2=3)"
+    assert m2["b"] == 3, "Should produce 3 at b"
+
+
+def test_priority_deterministic():
+    """When multiple transitions are enabled, step fires the first one
+    (deterministic ordering). This is critical for reproducibility."""
+    net = PetriNet(
+        [Place("p"), Place("q1"), Place("q2")],
+        [
+            Transition("t1", inputs=[Arc("p")], outputs=[Arc("q1")]),
+            Transition("t2", inputs=[Arc("p")], outputs=[Arc("q2")]),
+        ],
+    )
+    m = Marking(tokens={"p": 1})
+    m2, fired = net.step(m, {})
+    assert fired.name == "t1", "First-declared transition must fire first"
+    assert m2["q1"] == 1
+
+
+def test_multi_step_protocol_token_tracking():
+    """Run the full 3-step protocol and verify token accounting at each stage."""
+    net = _simple_net()
+    m = Marking(tokens={"warmup": 1})
+
+    # Step 1: warmup → nominal
+    m, t = net.step(m, {"stability_proxy": 0.8, "R_0": 0.5})
+    assert m.active_places() == ["nominal"]
+
+    # Step 2: nominal → cooldown
+    m, t = net.step(m, {"stability_proxy": 0.8, "R_0": 0.2})
+    assert m.active_places() == ["cooldown"]
+
+    # Step 3: cooldown → done
+    m, t = net.step(m, {})
+    assert m.active_places() == ["done"]
+
+    # No more transitions possible
+    m, t = net.step(m, {"stability_proxy": 0.9, "R_0": 0.9})
+    assert t is None, "All transitions exhausted"
+
+
+def test_parse_guard_all_operators():
+    """parse_guard must handle all 5 operators: > >= < <= =="""
+    for op in [">", ">=", "<", "<=", "=="]:
+        g = parse_guard(f"metric {op} 0.5")
+        assert g.op == op
+        assert g.metric == "metric"
+        assert g.threshold == 0.5
