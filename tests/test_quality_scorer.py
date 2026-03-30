@@ -15,51 +15,146 @@ from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 
 def _ps(quality: float, amplitude: float = 1.0) -> PhaseState:
     return PhaseState(
-        theta=0.0,
-        omega=1.0,
-        amplitude=amplitude,
-        quality=quality,
-        channel="P",
-        node_id="test",
+        theta=0.0, omega=1.0, amplitude=amplitude,
+        quality=quality, channel="P", node_id="test",
     )
 
 
-def test_score_empty_returns_zero():
-    assert PhaseQualityScorer().score([]) == 0.0
+# ---------------------------------------------------------------------------
+# Weighted quality score
+# ---------------------------------------------------------------------------
 
 
-def test_score_uniform_quality():
-    states = [_ps(0.8), _ps(0.8), _ps(0.8)]
-    np.testing.assert_allclose(PhaseQualityScorer().score(states), 0.8, atol=1e-12)
+class TestQualityScore:
+    """Verify amplitude-weighted quality aggregation. High-amplitude oscillators
+    should dominate the score, matching how strong signals are more trustworthy."""
+
+    def test_empty_returns_zero(self):
+        assert PhaseQualityScorer().score([]) == 0.0
+
+    def test_uniform_quality_returns_exact(self):
+        states = [_ps(0.8), _ps(0.8), _ps(0.8)]
+        np.testing.assert_allclose(PhaseQualityScorer().score(states), 0.8, atol=1e-12)
+
+    def test_high_amplitude_dominates(self):
+        """Oscillator with amplitude=10 and quality=1.0 should dominate
+        over oscillator with amplitude≈0 and quality=0."""
+        states = [_ps(1.0, amplitude=10.0), _ps(0.0, amplitude=1e-15)]
+        score = PhaseQualityScorer().score(states)
+        assert score > 0.99, f"High-amplitude oscillator should dominate, got {score:.4f}"
+
+    def test_equal_amplitude_is_simple_average(self):
+        """With equal amplitudes, score must be arithmetic mean of qualities."""
+        states = [_ps(0.2), _ps(0.8)]
+        score = PhaseQualityScorer().score(states)
+        np.testing.assert_allclose(score, 0.5, atol=1e-12)
+
+    def test_score_in_unit_interval(self):
+        """Score must always be in [0, 1] for valid qualities."""
+        states = [_ps(0.0, amplitude=5.0), _ps(1.0, amplitude=0.001),
+                  _ps(0.5, amplitude=1.0)]
+        score = PhaseQualityScorer().score(states)
+        assert 0.0 <= score <= 1.0
+
+    def test_single_oscillator_returns_its_quality(self):
+        assert PhaseQualityScorer().score([_ps(0.73)]) == 0.73
+
+    def test_weighted_formula_exact(self):
+        """Verify against manual weighted average:
+        score = (q1*a1 + q2*a2) / (a1 + a2) = (0.6*3 + 0.9*1) / 4 = 2.7/4 = 0.675."""
+        states = [_ps(0.6, amplitude=3.0), _ps(0.9, amplitude=1.0)]
+        score = PhaseQualityScorer().score(states)
+        np.testing.assert_allclose(score, 0.675, atol=1e-12)
 
 
-def test_score_weighted_by_amplitude():
-    states = [_ps(1.0, amplitude=10.0), _ps(0.0, amplitude=1e-15)]
-    assert PhaseQualityScorer().score(states) > 0.9
+# ---------------------------------------------------------------------------
+# Collapse detection
+# ---------------------------------------------------------------------------
 
 
-def test_collapse_empty_is_true():
-    assert PhaseQualityScorer().detect_collapse([]) is True
+class TestCollapseDetection:
+    """Verify that collapse detection correctly identifies when the majority
+    of oscillators have lost signal quality."""
+
+    def test_empty_is_collapsed(self):
+        """No oscillators → collapsed (defensive)."""
+        assert PhaseQualityScorer().detect_collapse([]) is True
+
+    def test_all_high_quality_no_collapse(self):
+        states = [_ps(0.9), _ps(0.8), _ps(0.7)]
+        assert PhaseQualityScorer().detect_collapse(states, threshold=0.1) is False
+
+    def test_majority_low_is_collapsed(self):
+        """2/3 below threshold → collapsed."""
+        states = [_ps(0.01), _ps(0.02), _ps(0.9)]
+        assert PhaseQualityScorer().detect_collapse(states, threshold=0.1) is True
+
+    def test_minority_low_not_collapsed(self):
+        """1/3 below threshold → not collapsed (minority failure tolerated)."""
+        states = [_ps(0.01), _ps(0.5), _ps(0.9)]
+        assert PhaseQualityScorer().detect_collapse(states, threshold=0.1) is False
+
+    def test_exactly_half_not_collapsed(self):
+        """Exactly 50% below threshold → not collapsed (strict majority required)."""
+        states = [_ps(0.01), _ps(0.01), _ps(0.5), _ps(0.9)]
+        # 2/4 = 50% below, but > requires strict majority
+        assert PhaseQualityScorer().detect_collapse(states, threshold=0.1) is False
+
+    def test_threshold_boundary(self):
+        """Quality exactly at threshold → NOT below threshold → not collapsed."""
+        states = [_ps(0.1), _ps(0.1), _ps(0.1)]
+        assert PhaseQualityScorer().detect_collapse(states, threshold=0.1) is False
+
+    def test_custom_threshold(self):
+        """Higher threshold → more oscillators qualify as low quality."""
+        states = [_ps(0.3), _ps(0.4), _ps(0.9)]
+        assert PhaseQualityScorer().detect_collapse(states, threshold=0.5) is True
+        assert PhaseQualityScorer().detect_collapse(states, threshold=0.2) is False
 
 
-def test_collapse_all_high_quality():
-    states = [_ps(0.9), _ps(0.8), _ps(0.7)]
-    assert PhaseQualityScorer().detect_collapse(states, threshold=0.1) is False
+# ---------------------------------------------------------------------------
+# Downweight mask
+# ---------------------------------------------------------------------------
 
 
-def test_collapse_majority_low():
-    states = [_ps(0.01), _ps(0.02), _ps(0.9)]
-    assert PhaseQualityScorer().detect_collapse(states, threshold=0.1) is True
+class TestDownweightMask:
+    """Verify the quality gating mask that filters low-quality oscillators
+    from coupling computations."""
 
+    def test_empty_returns_empty(self):
+        mask = PhaseQualityScorer().downweight_mask([])
+        assert len(mask) == 0
 
-def test_downweight_mask_empty():
-    mask = PhaseQualityScorer().downweight_mask([])
-    assert len(mask) == 0
+    def test_below_threshold_zeroed(self):
+        states = [_ps(0.5), _ps(0.1), _ps(0.8)]
+        mask = PhaseQualityScorer().downweight_mask(states, min_quality=0.3)
+        assert mask[0] > 0.0, "Quality 0.5 >= 0.3, should pass"
+        assert mask[1] == 0.0, "Quality 0.1 < 0.3, should be zeroed"
+        assert mask[2] > 0.0, "Quality 0.8 >= 0.3, should pass"
 
+    def test_mask_values_equal_quality(self):
+        """Non-zero mask values must equal the original quality (not just 1.0)."""
+        states = [_ps(0.5), _ps(0.8)]
+        mask = PhaseQualityScorer().downweight_mask(states, min_quality=0.3)
+        np.testing.assert_allclose(mask, [0.5, 0.8])
 
-def test_downweight_mask_zeros_below_threshold():
-    states = [_ps(0.5), _ps(0.1), _ps(0.8)]
-    mask = PhaseQualityScorer().downweight_mask(states, min_quality=0.3)
-    assert mask[0] > 0.0
-    assert mask[1] == 0.0
-    assert mask[2] > 0.0
+    def test_all_above_threshold_all_nonzero(self):
+        states = [_ps(0.9), _ps(0.7), _ps(0.5)]
+        mask = PhaseQualityScorer().downweight_mask(states, min_quality=0.3)
+        assert np.all(mask > 0.0)
+
+    def test_all_below_threshold_all_zero(self):
+        states = [_ps(0.1), _ps(0.05), _ps(0.2)]
+        mask = PhaseQualityScorer().downweight_mask(states, min_quality=0.3)
+        np.testing.assert_array_equal(mask, [0.0, 0.0, 0.0])
+
+    def test_mask_dtype_float64(self):
+        states = [_ps(0.5)]
+        mask = PhaseQualityScorer().downweight_mask(states)
+        assert mask.dtype == np.float64
+
+    def test_exactly_at_threshold_passes(self):
+        """Quality exactly at min_quality should pass (>= not >)."""
+        states = [_ps(0.3)]
+        mask = PhaseQualityScorer().downweight_mask(states, min_quality=0.3)
+        assert mask[0] == 0.3
