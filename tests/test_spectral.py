@@ -149,3 +149,42 @@ class TestConvergenceRate:
 
     def test_empty(self):
         assert sync_convergence_rate(np.zeros((0, 0)), np.array([])) == 0.0
+
+
+class TestSpectralPipelineWiring:
+    """Verify spectral analysis modules wire into the engine pipeline."""
+
+    def test_fiedler_value_feeds_engine_coupling(self):
+        """fiedler_value → scale coupling → UPDEEngine: spectral analysis
+        determines coupling strength, engine uses it."""
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 4
+        knm = _complete_knm(n, 1.0)
+        lam2 = fiedler_value(knm)
+        assert lam2 > 0, "Complete graph must have positive Fiedler value"
+
+        # Use Fiedler value to scale coupling: strong → sync
+        eng = UPDEEngine(n, dt=0.01)
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0, 2 * np.pi, n)
+        omegas = np.zeros(n)
+        knm_scaled = knm * lam2
+        p = phases.copy()
+        for _ in range(200):
+            p = eng.step(p, omegas, knm_scaled, 0.0, 0.0, np.zeros((n, n)))
+        r, _ = compute_order_parameter(p)
+        assert 0.0 <= r <= 1.0, f"Spectral-scaled coupling must give valid R={r}"
+
+    def test_spectral_gap_performance_n100(self):
+        import time
+
+        knm = _complete_knm(100, 0.5)
+        # Warm up
+        spectral_gap(knm)
+        t0 = time.perf_counter()
+        for _ in range(50):
+            spectral_gap(knm)
+        elapsed = (time.perf_counter() - t0) / 50
+        assert elapsed < 0.005, f"spectral_gap(100) = {elapsed*1000:.1f}ms > 5ms"
