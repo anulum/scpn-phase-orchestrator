@@ -87,24 +87,30 @@ def test_ultradian_empty_input():
     assert ultradian_phase(np.array([]), []) == 0.0
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSleepStagingPipelineWiring:
+    """Pipeline wiring: engine R → sleep stage classification."""
 
-    def test_wires_into_pipeline(self):
+    def test_engine_r_to_sleep_stage(self):
+        """UPDEEngine → R → classify_sleep_stage: high R → N3."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        # Synchronised initial conditions → high R
+        phases = np.zeros(n)
+        omegas = np.zeros(n)
+        knm = 2.0 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        stage = classify_sleep_stage(r)
+        assert stage in ("N3", "N2", "N1", "REM", "Wake")
+        if r > 0.65:
+            assert stage == "N3"
