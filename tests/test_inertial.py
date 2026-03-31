@@ -148,24 +148,28 @@ class TestPowerGridScenarios:
         assert R < 0.9
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestInertialPipelineWiring:
+    """Pipeline: InertialKuramotoEngine → coherence → R."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+    def test_inertial_engine_to_coherence(self):
+        """InertialKuramotoEngine.run → coherence R∈[0,1]."""
+        n = 4
+        eng = InertialKuramotoEngine(n, dt=0.01)
+        theta = np.zeros(n)
+        omega_dot = np.zeros(n)
+        power = np.array([1.0, -0.5, 0.3, -0.8])
+        knm = np.ones((n, n)) * 0.5
         np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        inertia = np.ones(n) * 2.0
+        damping = np.ones(n) * 0.5
+        ft, _, _, _ = eng.run(
+            theta,
+            omega_dot,
+            power,
+            knm,
+            inertia,
+            damping,
+            200,
+        )
+        R = eng.coherence(ft)
+        assert 0.0 <= R <= 1.0
