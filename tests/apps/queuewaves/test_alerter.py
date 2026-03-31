@@ -79,6 +79,35 @@ def test_different_anomaly_types_not_deduped() -> None:
     assert len(sent) == 2
 
 
+def test_format_generic_all_fields_present() -> None:
+    """Generic payload must contain all anomaly fields for downstream parsing."""
+    payload = _format_generic(_anomaly())
+    for field in ["type", "severity", "service", "value", "threshold", "message"]:
+        assert field in payload, f"Generic payload missing {field!r}"
+
+
+def test_format_slack_color_maps_severity() -> None:
+    """Warning severity → yellow/orange, not red or grey."""
+    payload = _format_slack(_anomaly())
+    color = payload["attachments"][0]["color"]
+    assert color != "#FF0000", "Warning should not be red (that's critical)"
+    assert color != "#808080", "Warning should not be grey (that's unknown)"
+
+
+def test_dedup_state_persists_across_calls() -> None:
+    """After first send, alerter's dedup state must remember the key."""
+    alerter = WebhookAlerter([], cooldown_seconds=300.0)
+    a = _anomaly()
+    sent1 = alerter.send_sync([a])
+    assert len(sent1) == 1
+    # Second send of same anomaly should be suppressed
+    sent2 = alerter.send_sync([a])
+    assert len(sent2) == 0
+    # Third send still suppressed
+    sent3 = alerter.send_sync([a])
+    assert len(sent3) == 0
+
+
 _HAS_HTTPX = importlib.util.find_spec("httpx") is not None
 
 
