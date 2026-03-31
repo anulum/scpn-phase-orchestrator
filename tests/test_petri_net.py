@@ -311,42 +311,46 @@ class TestPetriNetPipelineEndToEnd:
         phases = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=300)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
-        # Build simple PetriNet: nominal → degraded when R < 0.6
+        # Build PetriNet: nominal → degraded when R < 0.6
+        # Uses correct Transition(name, inputs, outputs, guard=) signature
         places = [Place("nominal"), Place("degraded")]
-        guard = Guard(metric="R", op="<", threshold=0.6)
-        t1 = Transition("degrade", guards=[guard])
-        arcs = [
-            Arc(source="nominal", target="degrade", weight=1),
-            Arc(source="degrade", target="degraded", weight=1),
-        ]
-        pn = PetriNet(places=places, transitions=[t1], arcs=arcs)
-        marking = Marking({"nominal": 1, "degraded": 0})
+        t_degrade = Transition(
+            name="degrade",
+            inputs=[Arc("nominal")],
+            outputs=[Arc("degraded")],
+            guard=Guard("R", "<", 0.6),
+        )
+        pn = PetriNet(places, [t_degrade])
+        marking = Marking({"nominal": 1})
         ctx = {"R": r}
-        enabled = pn.enabled_transitions(marking, ctx)
+        enabled = pn.enabled(marking, ctx)
         # Guard evaluation is the pipeline connection point
         if r < 0.6:
             assert "degrade" in [t.name for t in enabled]
+        else:
+            assert len(enabled) == 0
 
-    def test_performance_enabled_transitions_under_10us(self):
-        """PetriNet.enabled_transitions() < 10μs for simple net."""
+    def test_performance_enabled_under_10us(self):
+        """PetriNet.enabled() < 10μs for simple net."""
         import time
 
         places = [Place("a"), Place("b")]
-        t1 = Transition("t1", guards=[Guard(metric="x", op=">", threshold=0.5)])
-        arcs = [
-            Arc(source="a", target="t1", weight=1),
-            Arc(source="t1", target="b", weight=1),
-        ]
-        pn = PetriNet(places=places, transitions=[t1], arcs=arcs)
-        marking = Marking({"a": 1, "b": 0})
+        t1 = Transition(
+            name="t1",
+            inputs=[Arc("a")],
+            outputs=[Arc("b")],
+            guard=Guard("x", ">", 0.5),
+        )
+        pn = PetriNet(places, [t1])
+        marking = Marking({"a": 1})
         ctx = {"x": 0.8}
-        pn.enabled_transitions(marking, ctx)  # warm-up
+        pn.enabled(marking, ctx)  # warm-up
         t0 = time.perf_counter()
         for _ in range(100000):
-            pn.enabled_transitions(marking, ctx)
+            pn.enabled(marking, ctx)
         elapsed = (time.perf_counter() - t0) / 100000
-        assert elapsed < 1e-5, f"enabled_transitions took {elapsed * 1e6:.1f}μs"
+        assert elapsed < 1e-5, f"enabled() took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: PetriNet tested via UPDEEngine → R → Guard evaluation
-# → enabled_transitions. Supervisor FSM component. Performance: <10μs.
+# → enabled(). Supervisor FSM component. Performance: <10μs.

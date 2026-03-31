@@ -334,7 +334,12 @@ class TestStuartLandauPipelineEndToEnd:
         for _ in range(300):
             state = eng.step(state, omegas, mu, cs.knm, cs.knm, 0.0, 0.0, cs.alpha)
         R, psi = eng.compute_order_parameter(state)
-        assert 0.0 <= R <= 1.0
+        # SL compute_order_parameter is amplitude-weighted:
+        # Z = mean(r_i · exp(i·θ_i)), so R = |Z| ≤ mean(r_i).
+        # When amplitudes r_i > 1 (μ > 1 or coupling drives them up),
+        # R can legitimately exceed 1.0.
+        assert R >= 0.0
+        assert np.isfinite(R)
         assert np.all(state[n:] >= 0.0)  # amplitudes nonneg
         mean_amp = eng.compute_mean_amplitude(state)
         layer = LayerState(R=R, psi=psi, mean_amplitude=mean_amp)

@@ -116,15 +116,22 @@ class TestNoiseScaling:
     """Stochastic diffusion coefficient scaling properties."""
 
     def test_noise_variance_scales_with_D(self):
-        """Variance of injected noise ∝ D · dt."""
+        """Circular variance of injected noise ∝ D · dt.
+
+        Raw variance of mod-2π output is non-monotonic because phase
+        wrapping creates a bimodal distribution at intermediate D.
+        Use unwrapped (circular) differences to measure true noise spread.
+        """
         phases = np.zeros(10000)
         dt = 0.01
         variances = {}
         for D in [0.1, 1.0, 10.0]:
             inj = StochasticInjector(D=D, seed=42)
             result = inj.inject(phases, dt=dt)
-            variances[D] = np.var(result)
-        # Variance should increase monotonically with D
+            # Circular difference: unwrap to [-π, π)
+            diff = (result - phases + np.pi) % (2 * np.pi) - np.pi
+            variances[D] = np.var(diff)
+        # Circular variance scales monotonically with D
         assert variances[0.1] < variances[1.0] < variances[10.0]
 
     def test_noise_mean_near_zero(self):

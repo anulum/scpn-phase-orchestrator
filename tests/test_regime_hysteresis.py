@@ -237,22 +237,30 @@ class TestRegimeHysteresisPipelineEndToEnd:
         assert regime_low in {Regime.DEGRADED, Regime.CRITICAL, Regime.RECOVERY}
 
     def test_hysteresis_prevents_oscillation_in_live_sim(self):
-        """Fluctuating R near boundary with hysteresis → stable regime."""
+        """Fluctuating R near boundary with hysteresis → stable regime.
+
+        evaluate() is pure — must feed result into transition() to commit
+        state changes and activate cooldown + hysteresis band logic.
+        """
         mgr = RegimeManager(cooldown_steps=5, hysteresis=0.05)
-        # Simulate R near NOMINAL/DEGRADED boundary
         regimes = []
         for r in [0.62, 0.58, 0.63, 0.57, 0.61, 0.59, 0.64]:
             state = _make_state([r])
-            regime = mgr.evaluate(state, _clean_boundary())
-            regimes.append(regime)
-        # With cooldown=5, should not oscillate every step
+            proposed = mgr.evaluate(state, _clean_boundary())
+            mgr.transition(proposed)
+            regimes.append(mgr.current_regime)
+        # Hysteresis band (0.65) + cooldown(5) prevent oscillation
         transitions = sum(
             1 for i in range(1, len(regimes)) if regimes[i] != regimes[i - 1]
         )
         assert transitions <= 3, f"Too many transitions: {transitions}"
 
     def test_event_bus_captures_engine_driven_transitions(self):
-        """EventBus records transitions driven by engine R trajectory."""
+        """EventBus records transitions driven by engine R trajectory.
+
+        evaluate() is pure and does NOT emit events. Must call
+        transition() to commit regime change and emit to EventBus.
+        """
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -268,10 +276,12 @@ class TestRegimeHysteresisPipelineEndToEnd:
         alpha = np.zeros((n, n))
         phases_sync = eng.run(phases_sync, omegas, knm, 0.0, 0.0, alpha, n_steps=100)
         r_high, _ = compute_order_parameter(phases_sync)
-        mgr.evaluate(_make_state([r_high]), _clean_boundary())
+        proposed = mgr.evaluate(_make_state([r_high]), _clean_boundary())
+        mgr.transition(proposed)
         initial_count = bus.count
-        # Force hard violation → CRITICAL (event emitted)
-        mgr.evaluate(_make_state([0.1]), _hard_violation())
+        # Force hard violation → CRITICAL (transition emits event)
+        proposed = mgr.evaluate(_make_state([0.1]), _hard_violation())
+        mgr.transition(proposed)
         assert bus.count > initial_count
 
     def test_performance_evaluate_under_10us(self):
