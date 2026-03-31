@@ -171,24 +171,38 @@ class TestMetricsDataclasses:
         assert state.boundary_violation_count == 0
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestDriversOscillatorsPipelineWiring:
+    """Pipeline: driver Ψ → engine zeta/psi → R."""
 
-    def test_wires_into_pipeline(self):
+    def test_physical_driver_feeds_engine(self):
+        """PhysicalDriver.compute → psi_drive → engine.step → R∈[0,1]."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        n = 4
+        driver = PhysicalDriver(frequency=5.0, amplitude=0.3)
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = 0.5 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+        for step in range(200):
+            t = step * 0.01
+            psi = driver.compute(t)
+            phases = eng.step(
+                phases,
+                omegas,
+                knm,
+                0.3,
+                psi,
+                alpha,
+            )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
