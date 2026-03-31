@@ -62,24 +62,37 @@ class TestModulateMu:
         np.testing.assert_allclose(mu, mu_copy)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSLImprintPipelineWiring:
+    """Pipeline: imprint → modulate_mu → SL engine."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_modulated_mu_drives_sl_engine(self):
+        """modulate_mu → boosted mu → StuartLandauEngine → amplitudes.
+        Proves imprint-modulated bifurcation feeds SL dynamics."""
+        from scpn_phase_orchestrator.upde.stuart_landau import (
+            StuartLandauEngine,
+        )
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        n = 4
+        model = ImprintModel(decay_rate=0.0, saturation=5.0)
+        mu_base = np.array([0.3, 0.3, 0.3, 0.3])
+        imprint = ImprintState(m_k=np.array([0.0, 1.0, 2.0, 3.0]), last_update=0.0)
+        mu_modulated = model.modulate_mu(mu_base, imprint)
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
+        eng = StuartLandauEngine(n, dt=0.01)
+        state = np.concatenate([np.zeros(n), np.full(n, 0.1)])
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        knm = np.zeros((n, n))
+        for _ in range(300):
+            state = eng.step(
+                state,
+                omegas,
+                mu_modulated,
+                knm,
+                knm,
+                0.0,
+                0.0,
+                np.zeros((n, n)),
+            )
+        # Higher modulated mu → larger amplitude
+        amps = state[n:]
+        assert amps[3] > amps[0], f"Higher imprint should give larger amp: {amps}"
