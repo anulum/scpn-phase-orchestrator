@@ -140,24 +140,21 @@ def test_lava_process_with_mock():
     mock_lif_cls.assert_called_once()
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSNNPipelineWiring:
+    """Pipeline: UPDEState → SNN currents → LIF rates → actions."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_upde_state_to_snn_roundtrip(self):
+        """UPDEState → upde_state_to_input_current → lif_rate_estimate →
+        spike_rates_to_actions. Full neuro-feedback loop."""
+        state = _make_state([0.3, 0.5, 0.7, 0.9])
+        bridge = SNNControllerBridge(n_neurons=100)
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        currents = bridge.upde_state_to_input_current(state)
+        assert currents.shape == (4,)
+        assert np.all(np.isfinite(currents))
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        rates = bridge.lif_rate_estimate(currents)
+        assert np.all(rates >= 0.0)
+
+        actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 1, 2, 3])
+        assert isinstance(actions, list)
