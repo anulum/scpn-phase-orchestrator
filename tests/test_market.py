@@ -134,24 +134,26 @@ class TestSyncWarning:
         assert not np.any(w)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestMarketPipelineWiring:
+    """Pipeline: market returns → extract_phase → R → regime detection."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_returns_to_sync_regime(self):
+        """extract_phase → market_order_parameter → detect_regimes:
+        proves the market module processes real-like data end-to-end."""
+        rng = np.random.default_rng(42)
+        T, N = 200, 5
+        # Correlated returns (sync regime)
+        base = np.sin(np.linspace(0, 4 * np.pi, T))
+        returns = np.column_stack(
+            [base + 0.05 * rng.standard_normal(T) for _ in range(N)]
+        )
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        phases = np.column_stack([extract_phase(returns[:, i]) for i in range(N)])
+        R = market_order_parameter(phases)
+        assert R.shape == (T,)
+        assert np.all(R >= 0.0) and np.all(R <= 1.0)
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        regimes = detect_regimes(R)
+        assert len(regimes) == T
+        # detect_regimes returns integer labels
+        assert all(isinstance(r, (int, np.integer)) for r in regimes)
