@@ -19,7 +19,6 @@ from scpn_phase_orchestrator.upde.metrics import (
     UPDEState,
 )
 
-
 # ---------------------------------------------------------------------------
 # LockSignature: cross-layer phase locking
 # ---------------------------------------------------------------------------
@@ -66,9 +65,7 @@ class TestLayerState:
         assert 0.0 <= ls.R <= 1.0
 
     def test_with_lock_signatures(self):
-        sig = LockSignature(
-            source_layer=0, target_layer=1, plv=0.88, mean_lag=0.01
-        )
+        sig = LockSignature(source_layer=0, target_layer=1, plv=0.88, mean_lag=0.01)
         ls = LayerState(R=0.5, psi=0.0, lock_signatures={"0_1": sig})
         assert "0_1" in ls.lock_signatures
         assert ls.lock_signatures["0_1"].plv == 0.88
@@ -183,6 +180,4 @@ class TestMetricsPipelineWiring:
                 regime_id="nominal",
             )
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.001, (
-            f"UPDEState(16 layers): {elapsed * 1000:.2f}ms > 1ms"
-        )
+        assert elapsed < 0.001, f"UPDEState(16 layers): {elapsed * 1000:.2f}ms > 1ms"
