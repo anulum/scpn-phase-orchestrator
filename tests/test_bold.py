@@ -128,3 +128,29 @@ class TestBOLDFromNeural:
         bold_2hz = bold_from_neural(impulse, DT, dt_bold=0.5)
         bold_1hz = bold_from_neural(impulse, DT, dt_bold=1.0)
         assert bold_2hz.shape[0] == 2 * bold_1hz.shape[0]
+
+
+class TestBOLDPipelineWiring:
+    """Verify BOLD generator wires into the Kuramoto→BOLD pipeline:
+    Kuramoto phases → neural activity → BOLD signal."""
+
+    def test_kuramoto_to_bold_pipeline(self):
+        """KuramotoLayer → phases → cos(phases) as neural → BOLD.
+        Proves the BOLD module accepts Kuramoto output."""
+        from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
+
+        key = jax.random.PRNGKey(0)
+        k1, k2 = jax.random.split(key)
+        layer = KuramotoLayer(N, n_steps=100, dt=0.01, key=k1)
+        phases = jax.random.uniform(k2, (N,), maxval=2.0 * jnp.pi)
+
+        # Generate phase trajectory
+        _, traj = layer.forward_with_trajectory(phases)
+        # Convert phases to neural activity: cos(phase) as proxy
+        neural = jnp.cos(traj)  # (100, N)
+
+        # Generate BOLD signal
+        bold = bold_from_neural(neural, dt=0.01, dt_bold=0.5)
+        assert bold.shape[1] == N
+        assert bold.shape[0] > 0
+        assert jnp.all(jnp.isfinite(bold))
