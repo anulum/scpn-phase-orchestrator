@@ -75,24 +75,36 @@ class TestSTLMonitor:
         assert rob >= 5.0 - 1e-6
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSTLPipelineWiring:
+    """Pipeline: engine R trajectory → STL monitor → robustness."""
 
-    def test_wires_into_pipeline(self):
+    @needs_rtamt
+    def test_engine_r_trajectory_to_stl_monitor(self):
+        """Engine → R time series → STLMonitor.evaluate → robustness.
+        Proves STL monitoring consumes engine output."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = 0.5 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
+
+        r_trace = []
+        for _ in range(50):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+            r, _ = compute_order_parameter(phases)
+            r_trace.append(r)
+
+        mon = STLMonitor(STLMonitor.SYNC_THRESHOLD)
+        rob = mon.evaluate({"R": r_trace})
+        assert isinstance(rob, float)
+        assert np.isfinite(rob)
