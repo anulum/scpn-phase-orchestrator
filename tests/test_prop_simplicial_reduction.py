@@ -102,5 +102,4 @@ class TestSimplicialReductionInvariants:
         assert not np.allclose(out_simp, out_upde, atol=1e-6)
 
 
-
 # Pipeline wiring: simplicial reduction tests use SimplicialEngine directly.

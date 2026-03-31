@@ -88,12 +88,15 @@ class TestCouplingBuilderAlgebraic:
     def test_switch_template_preserves_shape(self):
         builder = CouplingBuilder()
         state = builder.build(4, 0.5, 0.1)
-        ring = np.array([
-            [0, 1, 0, 1],
-            [1, 0, 1, 0],
-            [0, 1, 0, 1],
-            [1, 0, 1, 0],
-        ], dtype=np.float64)
+        ring = np.array(
+            [
+                [0, 1, 0, 1],
+                [1, 0, 1, 0],
+                [0, 1, 0, 1],
+                [1, 0, 1, 0],
+            ],
+            dtype=np.float64,
+        )
         new = builder.switch_template(state, "ring", {"ring": ring})
         assert new.knm.shape == state.knm.shape
         assert new.active_template == "ring"
@@ -152,11 +155,21 @@ class TestCouplingKnmPipelineEndToEnd:
         p0 = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
         p_all = eng.run(
-            p0.copy(), omegas, cs_all.knm, 0.0, 0.0, cs_all.alpha,
+            p0.copy(),
+            omegas,
+            cs_all.knm,
+            0.0,
+            0.0,
+            cs_all.alpha,
             n_steps=300,
         )
         p_ring = eng.run(
-            p0.copy(), omegas, cs_ring.knm, 0.0, 0.0, cs_ring.alpha,
+            p0.copy(),
+            omegas,
+            cs_ring.knm,
+            0.0,
+            0.0,
+            cs_ring.alpha,
             n_steps=300,
         )
         r_all, _ = compute_order_parameter(p_all)
@@ -167,24 +180,26 @@ class TestCouplingKnmPipelineEndToEnd:
     def test_performance_build_100_under_10ms(self):
         """CouplingBuilder.build(100) < 10ms budget."""
         import time
+
         builder = CouplingBuilder()
         builder.build(100, 0.45, 0.3)  # warm-up
         t0 = time.perf_counter()
         for _ in range(100):
             builder.build(100, 0.45, 0.3)
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.01, f"build(100) took {elapsed*1e3:.2f}ms"
+        assert elapsed < 0.01, f"build(100) took {elapsed * 1e3:.2f}ms"
 
     def test_performance_build_scpn_physics_under_5ms(self):
         """build_scpn_physics() < 5ms budget."""
         import time
+
         builder = CouplingBuilder()
         builder.build_scpn_physics()  # warm-up
         t0 = time.perf_counter()
         for _ in range(100):
             builder.build_scpn_physics()
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.005, f"build_scpn_physics() took {elapsed*1e3:.2f}ms"
+        assert elapsed < 0.005, f"build_scpn_physics() took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: CouplingBuilder → build/build_scpn_physics → UPDEEngine(RK4)

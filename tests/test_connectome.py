@@ -198,12 +198,13 @@ class TestConnectomePipelineEndToEnd:
     def test_performance_load_hcp_80_under_10ms(self):
         """load_hcp_connectome(80) < 10ms."""
         import time
+
         load_hcp_connectome(80)  # warm-up
         t0 = time.perf_counter()
         for _ in range(100):
             load_hcp_connectome(80)
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.01, f"load_hcp(80) took {elapsed*1e3:.1f}ms"
+        assert elapsed < 0.01, f"load_hcp(80) took {elapsed * 1e3:.1f}ms"
 
 
 # Pipeline wiring: load_hcp_connectome/load_neurolib_hcp → K_nm → UPDEEngine(RK4)

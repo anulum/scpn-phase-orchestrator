@@ -206,12 +206,13 @@ class TestNumericsPipelineEndToEnd:
     def test_performance_check_stability_under_1us(self):
         """check_stability() < 1μs per call."""
         import time
+
         check_stability(0.01, 5.0, 3.0)  # warm-up
         t0 = time.perf_counter()
         for _ in range(100000):
             check_stability(0.01, 5.0, 3.0)
         elapsed = (time.perf_counter() - t0) / 100000
-        assert elapsed < 1e-6, f"check_stability took {elapsed*1e9:.0f}ns"
+        assert elapsed < 1e-6, f"check_stability took {elapsed * 1e9:.0f}ns"
 
 
 # Pipeline wiring: numerics module tested via check_stability → IntegrationConfig

@@ -400,6 +400,5 @@ class TestHodgeDecompositionInvariants:
         np.testing.assert_allclose(res.harmonic, 0.0, atol=1e-15)
 
 
-
 # Pipeline wiring: hypothesis-driven algebraic invariant proofs for Hodge
 # decomposition and spectral analysis exercise the coupling pipeline.

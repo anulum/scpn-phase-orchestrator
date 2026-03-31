@@ -175,7 +175,7 @@ class TestOrderParamsPipelineEndToEnd:
         assert 0.0 <= plv_01 <= 1.0
         # Layer coherence on first half
         mask = np.zeros(n, dtype=bool)
-        mask[:n // 2] = True
+        mask[: n // 2] = True
         r_layer = compute_layer_coherence(phases, mask)
         assert 0.0 <= r_layer <= 1.0 + 1e-12
         # Feed R into RegimeManager
@@ -215,6 +215,7 @@ class TestOrderParamsPipelineEndToEnd:
     def test_performance_R_256_under_100us(self):
         """compute_order_parameter(256) < 100μs budget."""
         import time
+
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, TWO_PI, 256)
         compute_order_parameter(phases)
@@ -222,11 +223,12 @@ class TestOrderParamsPipelineEndToEnd:
         for _ in range(1000):
             compute_order_parameter(phases)
         elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 1e-4, f"R(256) took {elapsed*1e6:.1f}μs"
+        assert elapsed < 1e-4, f"R(256) took {elapsed * 1e6:.1f}μs"
 
     def test_performance_plv_1000_under_500us(self):
         """compute_plv(1000 samples) < 500μs budget."""
         import time
+
         rng = np.random.default_rng(0)
         a = rng.uniform(0, TWO_PI, 1000)
         b = rng.uniform(0, TWO_PI, 1000)
@@ -235,7 +237,7 @@ class TestOrderParamsPipelineEndToEnd:
         for _ in range(1000):
             compute_plv(a, b)
         elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 5e-4, f"PLV(1000) took {elapsed*1e6:.1f}μs"
+        assert elapsed < 5e-4, f"PLV(1000) took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: order_params tests exercise compute_order_parameter,

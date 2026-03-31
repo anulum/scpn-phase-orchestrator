@@ -219,6 +219,5 @@ class TestWindingNumberInvariants:
         assert np.all(np.isfinite(wn))
 
 
-
 # Pipeline wiring: hypothesis-driven chimera + winding tests exercise
 # detect_chimera and winding_numbers on engine-generated trajectories.

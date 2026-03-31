@@ -181,12 +181,14 @@ class TestPhysicalExtractorPipelineEndToEnd:
             assert states[0].quality > 0.0
             all_phases.append(states[0].theta)
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
         r, _ = compute_order_parameter(np.array(all_phases))
         assert 0.0 <= r <= 1.0
 
     def test_performance_extract_1s_1kHz_under_5ms(self):
         """PhysicalExtractor.extract(1s @ 1kHz) < 5ms."""
         import time
+
         fs = 1000.0
         t = np.arange(0, 1.0, 1.0 / fs)
         signal = np.sin(TWO_PI * 10.0 * t)
@@ -196,7 +198,7 @@ class TestPhysicalExtractorPipelineEndToEnd:
         for _ in range(100):
             extractor.extract(signal, fs)
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.005, f"extract(1s) took {elapsed*1e3:.2f}ms"
+        assert elapsed < 0.005, f"extract(1s) took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: PhysicalExtractor → theta/omega → UPDEEngine(RK4)

@@ -177,13 +177,19 @@ class TestActuationMapperPipelineEndToEnd:
         eng = UPDEEngine(n, dt=0.01)
         rm = RegimeManager(cooldown_steps=0)
         pol = SupervisorPolicy(rm)
-        mapper = ActuationMapper([
-            ActuatorMapping(name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)),
-            ActuatorMapping(
-                name="zeta_glob", knob="zeta", scope="global",
-                limits=(0.0, 0.5),
-            ),
-        ])
+        mapper = ActuationMapper(
+            [
+                ActuatorMapping(
+                    name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)
+                ),
+                ActuatorMapping(
+                    name="zeta_glob",
+                    knob="zeta",
+                    scope="global",
+                    limits=(0.0, 0.5),
+                ),
+            ]
+        )
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = rng.uniform(0.5, 1.5, n)
@@ -209,16 +215,21 @@ class TestActuationMapperPipelineEndToEnd:
     def test_performance_map_actions_under_10us(self):
         """ActuationMapper.map_actions() < 10μs per call."""
         import time
-        mapper = ActuationMapper([
-            ActuatorMapping(name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)),
-        ])
+
+        mapper = ActuationMapper(
+            [
+                ActuatorMapping(
+                    name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)
+                ),
+            ]
+        )
         actions = [_action("K", "global", 0.5)]
         mapper.map_actions(actions)  # warm-up
         t0 = time.perf_counter()
         for _ in range(100000):
             mapper.map_actions(actions)
         elapsed = (time.perf_counter() - t0) / 100000
-        assert elapsed < 1e-5, f"map_actions took {elapsed*1e6:.1f}μs"
+        assert elapsed < 1e-5, f"map_actions took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: ActuationMapper tested via UPDEEngine → R → SupervisorPolicy

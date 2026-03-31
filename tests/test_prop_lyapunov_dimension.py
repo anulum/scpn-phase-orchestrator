@@ -455,6 +455,5 @@ class TestSpectrumToDKYConsistency:
         assert np.isfinite(dky)
 
 
-
 # Pipeline wiring: hypothesis-driven Lyapunov dimension proofs exercise
 # the engine + lyapunov_spectrum pipeline.

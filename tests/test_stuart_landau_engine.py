@@ -389,6 +389,7 @@ class TestStuartLandauPipelineEndToEnd:
     def test_performance_sl_step_32_under_2ms(self):
         """StuartLandauEngine.step(32 oscillators) < 2ms budget."""
         import time
+
         n = 32
         eng = _make_engine(n, dt=0.01)
         state = _make_state(n, r_init=1.0)
@@ -402,7 +403,7 @@ class TestStuartLandauPipelineEndToEnd:
         for _ in range(500):
             eng.step(state, omegas, mu, knm, knm, 0.0, 0.0, alpha)
         elapsed = (time.perf_counter() - t0) / 500
-        assert elapsed < 2e-3, f"SL.step(32) took {elapsed*1e3:.2f}ms"
+        assert elapsed < 2e-3, f"SL.step(32) took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: StuartLandauEngine tested via CouplingBuilder → SL engine

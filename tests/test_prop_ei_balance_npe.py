@@ -175,5 +175,4 @@ class TestEIBalanceInvariants:
         assert adjusted.shape == knm.shape
 
 
-
 # Pipeline wiring: hypothesis-driven invariant proofs exercise the pipeline.

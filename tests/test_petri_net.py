@@ -330,6 +330,7 @@ class TestPetriNetPipelineEndToEnd:
     def test_performance_enabled_transitions_under_10us(self):
         """PetriNet.enabled_transitions() < 10μs for simple net."""
         import time
+
         places = [Place("a"), Place("b")]
         t1 = Transition("t1", guards=[Guard(metric="x", op=">", threshold=0.5)])
         arcs = [
@@ -344,7 +345,7 @@ class TestPetriNetPipelineEndToEnd:
         for _ in range(100000):
             pn.enabled_transitions(marking, ctx)
         elapsed = (time.perf_counter() - t0) / 100000
-        assert elapsed < 1e-5, f"enabled_transitions took {elapsed*1e6:.1f}μs"
+        assert elapsed < 1e-5, f"enabled_transitions took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: PetriNet tested via UPDEEngine → R → Guard evaluation

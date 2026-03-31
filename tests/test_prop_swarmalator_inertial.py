@@ -165,5 +165,4 @@ class TestInertialKuramotoInvariants:
         assert np.all(new_theta < TWO_PI + 1e-10)
 
 
-
 # Pipeline wiring: swarmalator + inertial property tests use engine variants.

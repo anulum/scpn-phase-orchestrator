@@ -247,8 +247,7 @@ class TestRegimeHysteresisPipelineEndToEnd:
             regimes.append(regime)
         # With cooldown=5, should not oscillate every step
         transitions = sum(
-            1 for i in range(1, len(regimes))
-            if regimes[i] != regimes[i - 1]
+            1 for i in range(1, len(regimes)) if regimes[i] != regimes[i - 1]
         )
         assert transitions <= 3, f"Too many transitions: {transitions}"
 
@@ -278,6 +277,7 @@ class TestRegimeHysteresisPipelineEndToEnd:
     def test_performance_evaluate_under_10us(self):
         """RegimeManager.evaluate() < 10μs per call."""
         import time
+
         mgr = RegimeManager(cooldown_steps=0)
         state = _make_state([0.8, 0.75])
         boundary = _clean_boundary()
@@ -286,7 +286,7 @@ class TestRegimeHysteresisPipelineEndToEnd:
         for _ in range(10000):
             mgr.evaluate(state, boundary)
         elapsed = (time.perf_counter() - t0) / 10000
-        assert elapsed < 1e-5, f"evaluate() took {elapsed*1e6:.1f}μs"
+        assert elapsed < 1e-5, f"evaluate() took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: RegimeManager tested via CouplingBuilder → UPDEEngine(RK4)

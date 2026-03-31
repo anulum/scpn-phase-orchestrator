@@ -221,7 +221,11 @@ class TestStochasticPipelineEndToEnd:
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         profile = find_optimal_noise(
-            engine, phases, omegas, knm, alpha,
+            engine,
+            phases,
+            omegas,
+            knm,
+            alpha,
             D_range=np.array([0.0, 0.05, 0.1, 0.5, 1.0]),
             n_steps=100,
         )
@@ -232,6 +236,7 @@ class TestStochasticPipelineEndToEnd:
     def test_performance_inject_1000_under_100us(self):
         """StochasticInjector.inject(1000 oscillators) < 100μs."""
         import time
+
         inj = StochasticInjector(D=1.0, seed=0)
         phases = np.zeros(1000)
         inj.inject(phases, dt=0.01)
@@ -239,7 +244,7 @@ class TestStochasticPipelineEndToEnd:
         for _ in range(1000):
             inj.inject(phases, dt=0.01)
         elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 1e-4, f"inject(1000) took {elapsed*1e6:.1f}μs"
+        assert elapsed < 1e-4, f"inject(1000) took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: stochastic tests exercise StochasticInjector + UPDEEngine

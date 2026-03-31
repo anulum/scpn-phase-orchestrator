@@ -115,7 +115,6 @@ class TestWinfreePhysics:
         assert 0.0 <= r <= 1.0
 
 
-
 # Pipeline wiring: Winfree tests exercise winfree_forward →
 # order_parameter (test_pipeline_to_order_parameter,
 # test_strong_coupling_synchronises). JAX grad + Euler/RK4.

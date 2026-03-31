@@ -129,12 +129,14 @@ class TestCouplingModulesPipelineEndToEnd:
 
         n = 4
         # Lag model: estimate alpha from distances
-        distances = np.array([
-            [0.0, 1.0, 2.0, 3.0],
-            [1.0, 0.0, 1.0, 2.0],
-            [2.0, 1.0, 0.0, 1.0],
-            [3.0, 2.0, 1.0, 0.0],
-        ])
+        distances = np.array(
+            [
+                [0.0, 1.0, 2.0, 3.0],
+                [1.0, 0.0, 1.0, 2.0],
+                [2.0, 1.0, 0.0, 1.0],
+                [3.0, 2.0, 1.0, 0.0],
+            ]
+        )
         alpha = LagModel.estimate_from_distances(distances, speed=1.0)
         np.testing.assert_allclose(alpha, -alpha.T, atol=1e-12)
 
@@ -184,14 +186,25 @@ class TestCouplingModulesPipelineEndToEnd:
         eng = UPDEEngine(n, dt=0.01)
         # Zero alpha
         p_zero = eng.run(
-            p0.copy(), omegas, knm, 0.0, 0.0, np.zeros((n, n)),
+            p0.copy(),
+            omegas,
+            knm,
+            0.0,
+            0.0,
+            np.zeros((n, n)),
             n_steps=200,
         )
         r_zero, _ = compute_order_parameter(p_zero)
         # Non-zero alpha from distances
-        distances = np.array([
-            [0, 1, 3, 5], [1, 0, 2, 4], [3, 2, 0, 2], [5, 4, 2, 0],
-        ], dtype=float)
+        distances = np.array(
+            [
+                [0, 1, 3, 5],
+                [1, 0, 2, 4],
+                [3, 2, 0, 2],
+                [5, 4, 2, 0],
+            ],
+            dtype=float,
+        )
         alpha = LagModel.estimate_from_distances(distances, speed=1.0)
         p_lag = eng.run(p0.copy(), omegas, knm, 0.0, 0.0, alpha, n_steps=200)
         r_lag, _ = compute_order_parameter(p_lag)
@@ -215,6 +228,7 @@ class TestCouplingModulesPipelineEndToEnd:
     def test_performance_estimate_from_distances_64_under_1ms(self):
         """LagModel.estimate_from_distances(64×64) < 1ms."""
         import time
+
         rng = np.random.default_rng(0)
         dist = rng.uniform(0, 10, (64, 64))
         dist = (dist + dist.T) / 2
@@ -224,7 +238,7 @@ class TestCouplingModulesPipelineEndToEnd:
         for _ in range(1000):
             LagModel.estimate_from_distances(dist, speed=1.0)
         elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 1e-3, f"estimate_from_distances(64) took {elapsed*1e3:.2f}ms"
+        assert elapsed < 1e-3, f"estimate_from_distances(64) took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: coupling modules (LagModel + UniversalPrior + KnmTemplateSet)

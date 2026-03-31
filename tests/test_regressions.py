@@ -278,8 +278,15 @@ class TestRegressionPipelineEndToEnd:
         mu = np.full(n, -1.5)  # subcritical
         for _ in range(500):
             state = engine.step(
-                state, omegas, mu, cs.knm, cs.knm,
-                0.0, 0.0, cs.alpha, 1.0,
+                state,
+                omegas,
+                mu,
+                cs.knm,
+                cs.knm,
+                0.0,
+                0.0,
+                cs.alpha,
+                1.0,
             )
             assert np.all(state[n:] >= 0.0), "sign-flip regression reoccurred"
         R, psi = compute_order_parameter(state[:n])

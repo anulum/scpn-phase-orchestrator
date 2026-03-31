@@ -426,6 +426,5 @@ class TestPhaseLagEffects:
         assert 0.0 <= result.S_B <= 1.0
 
 
-
 # Pipeline wiring: property-based tests use UPDEEngine + basin_stability
 # internally — hypothesis-driven invariant proofs exercise the pipeline.

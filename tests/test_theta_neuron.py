@@ -174,7 +174,6 @@ class TestThetaNeuronPhysics:
         assert 0.0 <= r <= 1.0, f"R={r} must be in [0,1]"
 
 
-
 # Pipeline wiring: theta neuron tests exercise ThetaNeuronLayer → order_parameter
 # (TestThetaNeuronPhysics.test_pipeline_layer_to_order_parameter,
 # test_coupling_increases_sync). Differentiable via JAX grad. Euler/RK4 parity.

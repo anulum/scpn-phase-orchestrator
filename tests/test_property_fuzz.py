@@ -241,6 +241,5 @@ def test_lag_proportional_to_distance(n: int, speed: float) -> None:
             assert abs(alpha[i, j] - expected) < 1e-12
 
 
-
 # Pipeline wiring: property fuzzing tests use UPDEEngine + order_parameter
 # with hypothesis-generated inputs.

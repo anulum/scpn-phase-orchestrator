@@ -194,6 +194,7 @@ class TestEnvelopePipelineEndToEnd:
     def test_performance_extract_envelope_256_under_50us(self):
         """extract_envelope(256 amplitudes) < 50μs."""
         import time
+
         rng = np.random.default_rng(0)
         amps = np.abs(rng.standard_normal(256)) + 0.01
         extract_envelope(amps)  # warm-up
@@ -201,7 +202,7 @@ class TestEnvelopePipelineEndToEnd:
         for _ in range(10000):
             extract_envelope(amps)
         elapsed = (time.perf_counter() - t0) / 10000
-        assert elapsed < 5e-5, f"extract_envelope(256) took {elapsed*1e6:.0f}μs"
+        assert elapsed < 5e-5, f"extract_envelope(256) took {elapsed * 1e6:.0f}μs"
 
 
 # Pipeline wiring: envelope module tested via StuartLandauEngine amplitudes →

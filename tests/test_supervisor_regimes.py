@@ -236,6 +236,7 @@ class TestRegimesPipelineEndToEnd:
     def test_performance_evaluate_transition_under_10us(self):
         """evaluate + transition combined < 10μs."""
         import time
+
         rm = RegimeManager(cooldown_steps=0)
         s = _state(0.5)
         rm.evaluate(s, _NO_VIOLATIONS)
@@ -244,7 +245,7 @@ class TestRegimesPipelineEndToEnd:
             regime = rm.evaluate(s, _NO_VIOLATIONS)
             rm.transition(regime)
         elapsed = (time.perf_counter() - t0) / 10000
-        assert elapsed < 1e-5, f"evaluate+transition took {elapsed*1e6:.1f}μs"
+        assert elapsed < 1e-5, f"evaluate+transition took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: RegimeManager tested via CouplingBuilder → UPDEEngine(RK4)

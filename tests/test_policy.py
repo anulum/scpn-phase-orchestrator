@@ -248,6 +248,7 @@ class TestPolicyPipelineEndToEnd:
     def test_performance_decide_under_50us(self):
         """SupervisorPolicy.decide() < 50μs per call."""
         import time
+
         pol = SupervisorPolicy(RegimeManager(cooldown_steps=0))
         state = _make_upde([0.4, 0.5, 0.6])
         boundary = BoundaryState()
@@ -256,7 +257,7 @@ class TestPolicyPipelineEndToEnd:
         for _ in range(10000):
             pol.decide(state, boundary)
         elapsed = (time.perf_counter() - t0) / 10000
-        assert elapsed < 5e-5, f"decide() took {elapsed*1e6:.1f}μs"
+        assert elapsed < 5e-5, f"decide() took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: SupervisorPolicy tested via CouplingBuilder → UPDEEngine(RK4)

@@ -164,7 +164,6 @@ class TestFastAPIEndpoints:
         assert "n_oscillators" in data
 
 
-
 # Pipeline wiring: SimulationState wraps the full pipeline (binding → engine →
 # order_parameter → policy). TestSimulationState exercises step/status/reset
 # via FastAPI client. TestServerDomainpacks verifies all registered domainpacks.

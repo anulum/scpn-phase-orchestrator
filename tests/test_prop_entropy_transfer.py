@@ -304,5 +304,4 @@ class TestTEAdaptCoupling:
         assert np.all(np.isfinite(updated))
 
 
-
 # Pipeline wiring: hypothesis-driven invariant proofs exercise the pipeline.

@@ -226,6 +226,7 @@ class TestDelayedEnginePipelineEndToEnd:
     def test_performance_delayed_step_32_under_1ms(self):
         """DelayedEngine.step(32 oscillators, delay=5) < 1ms."""
         import time
+
         n = 32
         eng = DelayedEngine(n, dt=0.01, delay_steps=5)
         rng = np.random.default_rng(0)
@@ -240,7 +241,7 @@ class TestDelayedEnginePipelineEndToEnd:
         for _ in range(500):
             eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         elapsed = (time.perf_counter() - t0) / 500
-        assert elapsed < 1e-3, f"delayed.step(32) took {elapsed*1e3:.2f}ms"
+        assert elapsed < 1e-3, f"delayed.step(32) took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: delay tests exercise DelayBuffer + DelayedEngine →

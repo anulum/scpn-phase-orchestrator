@@ -237,6 +237,5 @@ class TestStochasticInjectorInvariants:
         assert spread_hi > spread_lo
 
 
-
 # Pipeline wiring: hypothesis-driven plasticity + stochastic proofs exercise
 # the three_factor_update + engine pipeline.

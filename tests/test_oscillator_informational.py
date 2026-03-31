@@ -209,6 +209,7 @@ class TestInformationalPipelineEndToEnd:
     def test_performance_extract_100_timestamps_under_500us(self):
         """InformationalExtractor.extract(100 timestamps) < 500μs."""
         import time
+
         ts = np.arange(0.0, 10.0, 0.1)
         ext = InformationalExtractor()
         ext.extract(ts, sample_rate=0.0)  # warm-up
@@ -216,7 +217,7 @@ class TestInformationalPipelineEndToEnd:
         for _ in range(1000):
             ext.extract(ts, sample_rate=0.0)
         elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 5e-4, f"extract(100) took {elapsed*1e6:.0f}μs"
+        assert elapsed < 5e-4, f"extract(100) took {elapsed * 1e6:.0f}μs"
 
 
 # Pipeline wiring: InformationalExtractor → theta/omega → UPDEEngine

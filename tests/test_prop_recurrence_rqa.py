@@ -307,5 +307,4 @@ class TestCrossRQABounds:
         assert 0.0 <= result.laminarity <= 1.0
 
 
-
 # Pipeline wiring: hypothesis-driven recurrence/RQA proofs exercise the pipeline.

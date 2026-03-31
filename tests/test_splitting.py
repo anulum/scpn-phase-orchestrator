@@ -202,6 +202,7 @@ class TestSplittingPipelineEndToEnd:
     def test_performance_splitting_step_64_under_1ms(self):
         """SplittingEngine.step(64 oscillators) < 1ms budget."""
         import time
+
         n = 64
         eng = SplittingEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
@@ -214,7 +215,7 @@ class TestSplittingPipelineEndToEnd:
         for _ in range(500):
             eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         elapsed = (time.perf_counter() - t0) / 500
-        assert elapsed < 1e-3, f"split.step(64) took {elapsed*1e3:.2f}ms"
+        assert elapsed < 1e-3, f"split.step(64) took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: SplittingEngine tests exercise full pipeline

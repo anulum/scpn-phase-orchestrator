@@ -97,13 +97,14 @@ class TestFreqIdPipelineEndToEnd:
     def test_performance_identify_2s_200hz_under_50ms(self):
         """identify_frequencies(2s @ 200Hz) < 50ms."""
         import time
+
         signal = _multi_sine([5.0, 10.0], fs=200.0, duration=2.0)
         identify_frequencies(signal, fs=200.0)  # warm-up
         t0 = time.perf_counter()
         for _ in range(20):
             identify_frequencies(signal, fs=200.0)
         elapsed = (time.perf_counter() - t0) / 20
-        assert elapsed < 0.05, f"identify_frequencies took {elapsed*1e3:.1f}ms"
+        assert elapsed < 0.05, f"identify_frequencies took {elapsed * 1e3:.1f}ms"
 
 
 # Pipeline wiring: identify_frequencies → omegas → UPDEEngine(RK4)

@@ -178,5 +178,4 @@ class TestAutoEmbed:
         assert np.all(np.isfinite(result.trajectory))
 
 
-
 # Pipeline wiring: hypothesis-driven invariant proofs exercise the pipeline.

@@ -261,5 +261,4 @@ class TestSSGFCostInvariants:
         assert abs(costs.u_total) < 1e-15
 
 
-
 # Pipeline wiring: hypothesis-driven invariant proofs exercise the pipeline.

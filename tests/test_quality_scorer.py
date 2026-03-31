@@ -203,6 +203,7 @@ class TestQualityScorerPipelineEndToEnd:
     def test_performance_downweight_mask_100_under_50us(self):
         """PhaseQualityScorer.downweight_mask(100 states) < 50μs."""
         import time
+
         states = [_ps(np.random.default_rng(i).uniform(0, 1)) for i in range(100)]
         scorer = PhaseQualityScorer()
         scorer.downweight_mask(states)  # warm-up
@@ -210,7 +211,7 @@ class TestQualityScorerPipelineEndToEnd:
         for _ in range(10000):
             scorer.downweight_mask(states)
         elapsed = (time.perf_counter() - t0) / 10000
-        assert elapsed < 5e-5, f"downweight_mask(100) took {elapsed*1e6:.0f}μs"
+        assert elapsed < 5e-5, f"downweight_mask(100) took {elapsed * 1e6:.0f}μs"
 
 
 # Pipeline wiring: PhaseQualityScorer → downweight_mask → K_nm modulation
