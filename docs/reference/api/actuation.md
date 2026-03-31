@@ -225,6 +225,50 @@ for _ in range(1000):
 
 ---
 
+## Output protocols
+
+The actuation subsystem can drive multiple output protocols:
+
+| Protocol | Adapter | Use case |
+|----------|---------|----------|
+| Modbus/TLS | `modbus_tls` | Industrial controllers (PLC, DCS) |
+| gRPC | `grpc_service` | Distributed SPO nodes |
+| HTTP/REST | `server` | Web dashboard, external APIs |
+| Redis | `redis_store` | State persistence, pub/sub |
+| Direct | In-process | Same-process engine feedback |
+
+For in-process use (most common), the actuation output feeds
+directly back into the next `UPDEEngine.step()` call without
+any serialisation overhead.
+
+## TTL (time-to-live) semantics
+
+Each `ControlAction` carries a `ttl_s` field. The actuation layer
+tracks active actions and expires them after TTL elapses. This
+prevents stale control commands from persisting indefinitely if
+the supervisor stops producing updates.
+
+| TTL | Meaning |
+|-----|---------|
+| 1.0 s | Short-lived corrective action |
+| 5.0 s | Standard policy action |
+| 30.0 s | Sustained regime response |
+| ∞ | Permanent override (not recommended) |
+
+## Safety invariants
+
+The actuation subsystem guarantees:
+
+1. **Bounded output:** every actuated value is within [lo, hi]
+2. **Bounded rate:** |Δv| ≤ rate_limit per step
+3. **Monotonic convergence:** consecutive project() calls converge
+   toward the proposed value at the rate limit
+4. **No side effects:** project() is pure — same inputs → same output
+5. **Metadata preservation:** project() only modifies `value`,
+   all other ControlAction fields are immutable
+
+---
+
 ## Performance summary
 
 | Operation | Budget | Notes |
@@ -232,3 +276,27 @@ for _ in range(1000):
 | `ActuationMapper.map_actions()` | < 10 μs | Dict construction |
 | `ActionProjector.project()` | < 10 μs | Two clamp operations |
 | Full closed-loop overhead | < 70 μs | decide + project + map |
+
+## CFL stability interaction
+
+The ActionProjector's rate limits interact with the CFL stability
+condition `dt × (max_ω + max_K) < π`:
+
+- If `rate_limit_K` is too large, a single step could violate CFL
+- The recommended rate limit is `rate_limit_K ≤ π/(dt × N) - max_ω/N`
+- The numerics module's `check_stability()` should be called after
+  applying actuation to verify the new K_nm is stable
+
+This is **not** enforced automatically — the rate limits in the binding
+spec must be chosen to be CFL-compatible. The `docs/ASSUMPTIONS.md`
+file documents the derivation.
+
+## Relationship to other subsystems
+
+| Subsystem | Interaction |
+|-----------|-------------|
+| Supervisor | Produces ControlAction list |
+| Binding | Declares ActuatorMapping list |
+| Numerics | CFL check after actuation |
+| Audit | Logs every actuation command |
+| Engine | Consumes modified K_nm, ζ, Ψ |

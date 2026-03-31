@@ -241,11 +241,79 @@ dynamics. Only oscillators with quality ≥ min_quality participate.
 
 ---
 
+## Cross-channel composition
+
+A domain can use multiple channels simultaneously. The binding spec
+declares which channels are active and how they map to oscillator
+indices:
+
+```yaml
+layers:
+  - name: voltage
+    channel: P
+    indices: [0, 1, 2, 3]
+  - name: event_rate
+    channel: I
+    indices: [4, 5]
+  - name: protocol_state
+    channel: S
+    indices: [6, 7]
+```
+
+All channels produce `PhaseState` with the same fields, so the engine
+treats them uniformly. The `channel` field enables channel-aware
+analysis (e.g., computing R separately for P and I oscillators).
+
+## Rust FFI acceleration
+
+`PhysicalExtractor` uses `spo_kernel.physical_extract()` when the
+Rust extension is installed. The Rust path computes the Hilbert
+transform and phase extraction in a single pass, avoiding Python/NumPy
+overhead for large signals.
+
+Parity is verified in `tests/test_oscillator_physical.py::test_rust_python_parity`
+with tolerance atol=1e-10 for phase, rtol=0.01 for frequency.
+
+---
+
 ## Performance summary
 
-| Operation | Budget | Notes |
-|-----------|--------|-------|
-| `PhysicalExtractor.extract(1s @ 1kHz)` | < 5 ms | scipy Hilbert, Rust optional |
-| `InformationalExtractor.extract(100 ts)` | < 500 μs | numpy operations |
-| `SymbolicExtractor.extract(1000 states)` | < 1 ms | ring mapping |
-| `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | array comparison |
+| Operation | Budget | Rust | Notes |
+|-----------|--------|------|-------|
+| `PhysicalExtractor.extract(1s @ 1kHz)` | < 5 ms | < 1 ms | Hilbert transform |
+| `InformationalExtractor.extract(100 ts)` | < 500 μs | — | numpy operations |
+| `SymbolicExtractor.extract(1000 states)` | < 1 ms | — | ring mapping |
+| `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | — | array comparison |
+
+## Domain examples
+
+### Neuroscience (EEG)
+
+```python
+# 64-channel EEG → 64 P-channel oscillators
+extractor = PhysicalExtractor(node_id="eeg")
+for ch in range(64):
+    states = extractor.extract(eeg_data[ch], fs=256.0)
+    phases[ch] = states[0].theta
+    omegas[ch] = states[0].omega
+```
+
+### Microservices (queue depths)
+
+```python
+# 12 services → 12 I-channel oscillators
+extractor = InformationalExtractor(node_id="svc")
+for svc in services:
+    timestamps = svc.request_timestamps()
+    states = extractor.extract(timestamps, sample_rate=0.0)
+    phases[svc.id] = states[0].theta
+```
+
+### Genomic sequences
+
+```python
+# DNA codons → S-channel oscillators
+extractor = SymbolicExtractor(n_states=64, mode="ring")
+codon_indices = encode_codons(sequence)
+states = extractor.extract(codon_indices, sample_rate=1.0)
+```
