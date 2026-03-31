@@ -116,11 +116,10 @@ PrometheusAdapter(endpoint: str, timeout: float = 5.0)
 Industrial control interface for power grids, HVAC, and manufacturing.
 Translates ControlAction to Modbus register writes over TLS.
 
-::: scpn_phase_orchestrator.adapters.modbus
+::: scpn_phase_orchestrator.adapters.modbus_tls
 
-### gRPC
+### Hardware I/O
 
-High-performance RPC interface for distributed SPO deployments.
-Supports streaming phase trajectories and bidirectional control.
+Generic hardware I/O abstraction for digital/analogue outputs.
 
-::: scpn_phase_orchestrator.adapters.grpc
+::: scpn_phase_orchestrator.adapters.hardware_io
