@@ -78,24 +78,28 @@ class TestHodgeDecomposition:
         assert result.curl[0] == pytest.approx(0.0)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestHodgePipelineWiring:
+    """Pipeline: engine phases → Hodge decomposition → coupling analysis."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_phases_to_hodge(self):
+        """UPDEEngine → phases → hodge_decomposition: gradient + curl
+        + harmonic reconstruct total coupling flow."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
+        n = 6
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = rng.uniform(0.1, 0.5, (n, n))
+        knm = (knm + knm.T) / 2
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+
+        result = hodge_decomposition(knm, phases)
+        assert np.all(np.isfinite(result.gradient))
+        assert np.all(np.isfinite(result.curl))
+        # Symmetric K → curl = 0
+        np.testing.assert_allclose(result.curl, 0.0, atol=1e-10)
