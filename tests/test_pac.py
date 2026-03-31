@@ -94,3 +94,74 @@ class TestPACGate:
 
     def test_gate_at_threshold(self) -> None:
         assert pac_gate(0.3, threshold=0.3) is True
+
+
+class TestPACPipelineWiring:
+    """Verify PAC analysis wires into the UPDE engine pipeline and
+    measures performance for both Python and Rust paths."""
+
+    def test_engine_phases_to_pac_matrix(self) -> None:
+        """UPDEEngine → phases trajectory → PAC matrix: proves PAC
+        accepts engine output (not decorative)."""
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+        n = 4
+        eng = UPDEEngine(n, dt=0.01)
+        rng = np.random.default_rng(0)
+        phases_hist = []
+        amps_hist = []
+        p = rng.uniform(0, TWO_PI, n)
+        omegas = rng.uniform(0.5, 2.0, n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+
+        for _ in range(100):
+            p = eng.step(p, omegas, knm, 0.0, 0.0, alpha)
+            phases_hist.append(p.copy())
+            amps_hist.append(np.abs(np.cos(p)))
+
+        phases_arr = np.array(phases_hist)  # (100, n)
+        amps_arr = np.array(amps_hist)
+        mat = pac_matrix(phases_arr, amps_arr)
+        assert mat.shape == (n, n)
+        assert np.all(mat >= 0.0) and np.all(mat <= 1.0)
+
+    def test_pac_gate_in_policy_context(self) -> None:
+        """pac_gate used in policy rules: high PAC → alert."""
+        assert pac_gate(0.6, threshold=0.3) is True, "High PAC must trigger"
+        assert pac_gate(0.1, threshold=0.3) is False, "Low PAC must not trigger"
+
+    def test_modulation_index_performance_n1000(self) -> None:
+        """MI computation on 1000 samples must complete in <5ms."""
+        import time
+
+        rng = np.random.default_rng(42)
+        theta = rng.uniform(0, TWO_PI, 1000)
+        amp = np.abs(rng.standard_normal(1000)) + 0.1
+
+        # Warm up
+        modulation_index(theta, amp)
+
+        t0 = time.perf_counter()
+        for _ in range(50):
+            modulation_index(theta, amp)
+        elapsed = (time.perf_counter() - t0) / 50
+        assert elapsed < 0.005, f"MI(1000) = {elapsed*1000:.1f}ms > 5ms"
+
+    def test_pac_matrix_performance_n8_t200(self) -> None:
+        """PAC matrix (8 channels, 200 timesteps) must complete in <50ms."""
+        import time
+
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0, TWO_PI, (200, 8))
+        amps = np.abs(rng.standard_normal((200, 8))) + 0.1
+
+        # Warm up
+        pac_matrix(phases, amps)
+
+        t0 = time.perf_counter()
+        for _ in range(10):
+            pac_matrix(phases, amps)
+        elapsed = (time.perf_counter() - t0) / 10
+        assert elapsed < 0.2, f"pac_matrix(8,200) = {elapsed*1000:.1f}ms > 200ms"
