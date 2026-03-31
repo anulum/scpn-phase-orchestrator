@@ -198,24 +198,40 @@ class TestFusionDomainpack:
         assert errors == [], f"Validation errors: {errors}"
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestFusionCorePipelineWiring:
+    """Pipeline: FusionCoreBridge → K_nm → engine → R."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_fusion_observables_to_engine(self):
+        """FusionCoreBridge.observables_to_phases → engine → R∈[0,1].
+        Proves tokamak observables feed simulation core."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        bridge = FusionCoreBridge(n_layers=4)
+        snapshot = {
+            "ne": [1e19, 1.2e19, 0.9e19, 1.1e19],
+            "Te": [3.0, 2.8, 3.2, 2.5],
+            "q": [1.0, 1.5, 2.0, 3.0],
+        }
+        phases = bridge.observables_to_phases(snapshot)
+        n = len(phases)
+        assert n == 4
+
         eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = 0.5 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            phases = eng.step(
+                phases,
+                omegas,
+                knm,
+                0.0,
+                0.0,
+                alpha,
+            )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0

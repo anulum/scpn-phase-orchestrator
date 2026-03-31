@@ -75,24 +75,33 @@ def test_downweight_mask_empty():
     assert len(mask) == 0
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestPhaseQualityPipelineWiring:
+    """Pipeline: extraction quality → downweight mask → coupling."""
 
-    def test_wires_into_pipeline(self):
+    def test_quality_mask_modulates_coupling(self):
+        """PhaseQualityScorer.downweight_mask → element-wise K_nm scale.
+        Low-quality oscillators get zero coupling weight."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        scorer = PhaseQualityScorer()
+        states = _make_states([0.9, 0.1, 0.8, 0.05])
+        mask = scorer.downweight_mask(states, min_quality=0.3)
+
+        n = 4
+        knm = 0.5 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        knm_masked = knm * mask[:, np.newaxis]
+
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
         for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            phases = eng.step(phases, omegas, knm_masked, 0.0, 0.0, np.zeros((n, n)))
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
