@@ -54,14 +54,14 @@ class TestRustPythonParity:
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
 
-        py_result = self._python_engine(n).step(
-            phases, omegas, knm, 0.0, 0.0, alpha
-        )
+        py_result = self._python_engine(n).step(phases, omegas, knm, 0.0, 0.0, alpha)
         default_result = self._default_engine(n).step(
             phases, omegas, knm, 0.0, 0.0, alpha
         )
         np.testing.assert_allclose(
-            py_result, default_result, atol=1e-10,
+            py_result,
+            default_result,
+            atol=1e-10,
             err_msg="Python/Rust Euler step disagreement",
         )
 
@@ -95,7 +95,9 @@ class TestRustPythonParity:
         cs_def = knm_mod.CouplingBuilder().build(8, 0.5, 0.3)
 
         np.testing.assert_allclose(
-            cs_py.knm, cs_def.knm, atol=1e-10,
+            cs_py.knm,
+            cs_def.knm,
+            atol=1e-10,
             err_msg="Python/Rust CouplingBuilder disagreement",
         )
 
@@ -134,9 +136,7 @@ class TestPerformanceBudgets:
             lambda: eng.step(phases, omegas, knm, 0.0, 0.0, alpha),
         )
         print(f"  Python step(64): {elapsed * 1000:.2f}ms")
-        assert elapsed < 0.002, (
-            f"Python step(64) = {elapsed * 1000:.2f}ms > 2ms"
-        )
+        assert elapsed < 0.002, f"Python step(64) = {elapsed * 1000:.2f}ms > 2ms"
 
     @pytest.mark.skipif(not HAS_RUST, reason="Rust FFI not available")
     def test_rust_engine_step_n64(self):
@@ -156,9 +156,7 @@ class TestPerformanceBudgets:
             lambda: eng.step(phases, omegas, knm, 0.0, 0.0, alpha),
         )
         print(f"  Rust step(64): {elapsed * 1000:.2f}ms")
-        assert elapsed < 0.0005, (
-            f"Rust step(64) = {elapsed * 1000:.2f}ms > 0.5ms"
-        )
+        assert elapsed < 0.0005, f"Rust step(64) = {elapsed * 1000:.2f}ms > 0.5ms"
 
     def test_python_order_parameter_n256(self):
         """Python order_parameter(N=256): budget < 200μs."""
@@ -222,9 +220,7 @@ class TestPerformanceBudgets:
             f"  Rust speedup: {speedup:.1f}× "
             f"(Python={t_py * 1000:.2f}ms, Rust={t_rs * 1000:.2f}ms)"
         )
-        assert speedup > 2.0, (
-            f"Rust should be ≥2× faster: speedup={speedup:.1f}×"
-        )
+        assert speedup > 2.0, f"Rust should be ≥2× faster: speedup={speedup:.1f}×"
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +253,12 @@ class TestRustPipelineIntegration:
 
         for _ in range(200):
             phases = eng.step(
-                phases, omegas, cs.knm, 0.0, 0.0, cs.alpha,
+                phases,
+                omegas,
+                cs.knm,
+                0.0,
+                0.0,
+                cs.alpha,
             )
 
         r, psi = compute_order_parameter(phases)

@@ -120,7 +120,7 @@ class TestEventBusPipelineWiring:
         import numpy as np
 
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
-        from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+        from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
         bus = EventBus()
@@ -137,11 +137,13 @@ class TestEventBusPipelineWiring:
         )
         regime = mgr.evaluate(state, BoundaryState())
         new_regime = mgr.transition(regime)
-        bus.post(RegimeEvent(
-            kind="regime_transition",
-            step=0,
-            detail=f"→{new_regime.value}",
-        ))
+        bus.post(
+            RegimeEvent(
+                kind="regime_transition",
+                step=0,
+                detail=f"→{new_regime.value}",
+            )
+        )
 
         assert len(received) == 1
         assert received[0].kind == "regime_transition"
