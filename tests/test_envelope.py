@@ -150,46 +150,48 @@ class TestEnvelopePipelineEndToEnd:
     Proves envelope module is wired into the pipeline.
     """
 
-    def test_sl_amplitudes_to_envelope_state(self):
-        """SL engine produces amplitudes → extract_envelope → valid EnvelopeState."""
+    def test_sl_amplitude_trajectory_to_envelope(self):
+        """SL engine amplitude trajectory → extract_envelope → NDArray."""
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
-        n = 8
+        n = 4
         eng = StuartLandauEngine(n, dt=0.01, method="rk4")
         state = np.zeros(2 * n)
-        state[n:] = 0.5  # initial amplitudes
+        state[n:] = 0.5
         omegas = np.ones(n)
         mu = np.ones(n)
         knm = 0.2 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
+        amp_history = []
         for _ in range(200):
             state = eng.step(state, omegas, mu, knm, knm, 0.0, 0.0, alpha)
-        amplitudes = state[n:]
-        env_state = extract_envelope(amplitudes)
-        assert isinstance(env_state, EnvelopeState)
-        assert env_state.mean_amplitude >= 0.0
-        assert env_state.amplitude_spread >= 0.0
-        assert 0.0 <= env_state.modulation_depth <= 1.0
+            amp_history.append(state[n:].copy())
+        amp_arr = np.array(amp_history)  # (200, n)
+        env = extract_envelope(amp_arr, window=10)
+        assert env.shape == amp_arr.shape
+        assert np.all(np.isfinite(env))
+        assert np.all(env >= 0.0)
 
-    def test_subcritical_detection_through_engine(self):
-        """Subcritical μ → amplitudes → envelope → subcritical_count > 0."""
+    def test_modulation_depth_from_engine_trajectory(self):
+        """Engine trajectory amplitudes → modulation_depth in [0, 1]."""
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
-        n = 4
+        n = 2
         eng = StuartLandauEngine(n, dt=0.01)
         state = np.zeros(2 * n)
         state[n:] = 0.5
         omegas = np.ones(n)
-        mu = np.full(n, -1.0)  # subcritical
+        mu = np.ones(n)
         knm = np.zeros((n, n))
         alpha = np.zeros((n, n))
-        for _ in range(500):
+        amp_history = []
+        for _ in range(100):
             state = eng.step(state, omegas, mu, knm, knm, 0.0, 0.0, alpha)
-        amplitudes = state[n:]
-        env_state = extract_envelope(amplitudes)
-        # Subcritical: amplitudes → 0, so subcritical_count should be > 0
-        assert env_state.subcritical_count >= 0
+            amp_history.append(np.mean(state[n:]))
+        env = extract_envelope(np.array(amp_history), window=5)
+        depth = envelope_modulation_depth(env)
+        assert 0.0 <= depth <= 1.0
 
     def test_performance_extract_envelope_256_under_50us(self):
         """extract_envelope(256 amplitudes) < 50μs."""
