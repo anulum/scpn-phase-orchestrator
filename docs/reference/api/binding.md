@@ -84,9 +84,34 @@ enforced by the validator at load time.
 
 Core type definitions shared across the binding subsystem.
 
-`ActuatorMapping` — maps a control knob to a named actuator with scope and limits.
-`ChannelSpec` — declares a P/I/S channel with extractor type and parameters.
-`VALID_KNOBS` — the set of control knobs recognised by the actuation layer (`K`, `alpha`, `zeta`, `Psi`).
+### BindingSpec (dataclass)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | yes | Domainpack name |
+| `version` | `str` | yes | Spec version |
+| `safety_tier` | `str` | yes | Safety classification |
+| `sample_period_s` | `float` | yes | Input sampling interval |
+| `control_period_s` | `float` | yes | Control loop interval |
+| `layers` | `list[HierarchyLayer]` | yes | Oscillator layers |
+| `oscillator_families` | `dict[str, OscillatorFamily]` | yes | P/I/S families |
+| `coupling` | `CouplingSpec` | yes | K_nm parameters |
+| `drivers` | `DriverSpec` | yes | External drive config |
+| `objectives` | `ObjectivePartition` | yes | Optimisation targets |
+| `boundaries` | `list[BoundaryDef]` | yes | Safety boundaries |
+| `actuators` | `list[ActuatorMapping]` | yes | Output actuators |
+| `imprint_model` | `ImprintSpec \| None` | no | Memory dynamics |
+| `geometry_prior` | `GeometrySpec \| None` | no | Spatial constraints |
+| `protocol_net` | `ProtocolNetSpec \| None` | no | Petri net FSM |
+| `amplitude` | `AmplitudeSpec \| None` | no | Stuart-Landau params |
+
+### Other types
+
+- `ActuatorMapping` — maps a control knob to a named actuator
+  with scope and limits
+- `HierarchyLayer` — declares a layer with channel, extractor, and
+  frequency range
+- `VALID_KNOBS` — recognised control knobs: `K`, `alpha`, `zeta`, `Psi`
 
 ::: scpn_phase_orchestrator.binding.types
 
