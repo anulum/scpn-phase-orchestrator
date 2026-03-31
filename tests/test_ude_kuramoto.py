@@ -150,3 +150,27 @@ class TestUDEKuramotoLayer:
         l1 = UDEKuramotoLayer(N, key=jax.random.PRNGKey(99))
         l2 = UDEKuramotoLayer(N, key=jax.random.PRNGKey(99))
         assert jnp.allclose(l1.K, l2.K)
+
+
+class TestUDEPipelineWiring:
+    """Verify UDE Kuramoto wires into analysis pipeline."""
+
+    def test_ude_to_order_parameter(self, key):
+        from scpn_phase_orchestrator.nn.functional import order_parameter
+
+        layer = UDEKuramotoLayer(N, n_steps=50, dt=DT, key=key)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        final = layer(phases)
+        r = float(order_parameter(final))
+        assert 0.0 <= r <= 1.0, f"UDE output must give valid R, got {r}"
+
+    def test_residual_bounded(self, key):
+        """CouplingResidual output should be bounded (no explosion)."""
+        residual = CouplingResidual(hidden=8, key=key)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        # CouplingResidual maps phase differences → corrections
+        # Feed pairwise differences
+        diff = phases[:, None] - phases[None, :]
+        correction = jax.vmap(jax.vmap(residual))(diff)
+        assert jnp.all(jnp.isfinite(correction))
+        assert jnp.all(jnp.abs(correction) < 10.0)

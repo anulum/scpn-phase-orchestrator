@@ -260,3 +260,36 @@ class TestStuartLandauLayer:
         out_p, out_r = jax.vmap(run_one)(batch_p, batch_r)
         assert out_p.shape == (4, N)
         assert out_r.shape == (4, N)
+
+
+class TestSLNNPipelineWiring:
+    """Verify SL nn/ module wires into the full pipeline."""
+
+    def test_sl_layer_to_order_parameter(self, key):
+        from scpn_phase_orchestrator.nn.functional import order_parameter
+
+        k1, k2 = jax.random.split(key)
+        layer = StuartLandauLayer(N, n_steps=50, dt=DT, key=k1)
+        phases = jax.random.uniform(k2, (N,), maxval=2.0 * jnp.pi)
+        amps = 0.5 * jnp.ones(N)
+        final_p, final_r = layer(phases, amps)
+        r = float(order_parameter(final_p))
+        assert 0.0 <= r <= 1.0
+        assert jnp.all(final_r >= 0.0), "SL amplitudes must be non-negative"
+
+    def test_sl_amplitudes_move_toward_sqrt_mu(self, key):
+        """Under zero coupling, amplitudes should move toward sqrt(mu)."""
+        layer = StuartLandauLayer(N, n_steps=500, dt=DT, key=key)
+        layer = eqx.tree_at(lambda m: m.K, layer, jnp.zeros((N, N)))
+        layer = eqx.tree_at(lambda m: m.K_r, layer, jnp.zeros((N, N)))
+        phases = jnp.zeros(N)
+        amps_init = 0.1 * jnp.ones(N)
+        _, final_r = layer(phases, amps_init)
+        expected = jnp.sqrt(jnp.maximum(layer.mu, 0.0))
+        # Amplitudes should be closer to sqrt(mu) than initial
+        dist_init = float(jnp.mean(jnp.abs(amps_init - expected)))
+        dist_final = float(jnp.mean(jnp.abs(final_r - expected)))
+        assert dist_final < dist_init, (
+            f"Amplitudes should converge toward sqrt(mu): "
+            f"initial dist={dist_init:.3f}, final dist={dist_final:.3f}"
+        )
