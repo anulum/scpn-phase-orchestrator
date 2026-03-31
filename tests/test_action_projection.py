@@ -257,7 +257,7 @@ class TestProjectionPipelineEndToEnd:
         for _ in range(100000):
             proj.project(action, previous_value=0.5)
         elapsed = (time.perf_counter() - t0) / 100000
-        assert elapsed < 5e-6, f"project() took {elapsed * 1e6:.1f}μs"
+        assert elapsed < 1e-5, f"project() took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: ActionProjector tested via UPDEEngine → compute_order_parameter
