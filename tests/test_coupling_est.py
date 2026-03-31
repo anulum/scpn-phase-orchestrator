@@ -113,24 +113,28 @@ class TestHarmonicCoupling:
         assert "cos_3" in result
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestCouplingEstPipelineWiring:
+    """Pipeline: engine trajectory → estimate_coupling → recovered K_nm."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
+    def test_engine_trajectory_recovers_coupling(self):
+        """UPDEEngine with known K_nm → trajectory → estimate_coupling
+        should recover coupling structure (non-zero off-diagonal)."""
+        n = 4
         rng = np.random.default_rng(0)
+        knm_true = 0.5 * np.ones((n, n))
+        np.fill_diagonal(knm_true, 0.0)
+        eng = UPDEEngine(n, dt=0.01)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+
+        trajectory = []
+        for _ in range(300):
+            phases = eng.step(phases, omegas, knm_true, 0.0, 0.0, alpha)
+            trajectory.append(phases.copy())
+        traj = np.array(trajectory).T  # (n, T)
+
+        knm_est = estimate_coupling(traj, omegas, dt=0.01)
+        assert knm_est.shape == (n, n)
+        np.testing.assert_array_equal(np.diag(knm_est), 0.0)
+        assert np.any(knm_est != 0.0), "Estimated K must be non-zero"
