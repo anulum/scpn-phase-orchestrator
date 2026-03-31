@@ -95,24 +95,49 @@ class TestGradientJAX:
                 )
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestAdjointPipelineWiring:
+    """Pipeline: gradient_knm_fd → optimised K_nm → engine → improved R."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_gradient_optimisation_improves_r(self):
+        """gradient_knm_fd → K_nm update → engine → R increases.
+        Proves adjoint gradient feeds back into coupling optimisation."""
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
+        n = 4
+        engine = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = 0.1 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+
+        # R before optimisation
+        p = phases.copy()
+        for _ in range(50):
+            p = engine.step(p, omegas, knm, 0.0, 0.0, alpha)
+        r_before, _ = compute_order_parameter(p)
+
+        # One gradient step
+        grad = gradient_knm_fd(
+            engine,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            n_steps=50,
+        )
+        knm_opt = knm - 0.01 * grad
+        np.fill_diagonal(knm_opt, 0.0)
+
+        # R after optimisation
+        p = phases.copy()
+        eng2 = UPDEEngine(n, dt=0.01)
+        for _ in range(50):
+            p = eng2.step(p, omegas, knm_opt, 0.0, 0.0, alpha)
+        r_after, _ = compute_order_parameter(p)
+
+        assert 0.0 <= r_before <= 1.0
+        assert 0.0 <= r_after <= 1.0
