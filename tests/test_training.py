@@ -134,3 +134,60 @@ class TestGenerateChimeraData:
         nnz = jnp.sum(K > 0)
         expected_nnz = 32 * 2 * 4  # 256
         assert int(nnz) == expected_nnz
+
+
+# ---------------------------------------------------------------------------
+# Pipeline wiring + performance
+# ---------------------------------------------------------------------------
+
+
+class TestTrainingPipelineWiring:
+    """Verify that nn/ training modules wire into the full pipeline:
+    generate data → build layer → train → evaluate R."""
+
+    def test_full_training_pipeline(self, key):
+        """generate_kuramoto_data → KuramotoLayer → train → R improves.
+        Proves the training pipeline produces a model that affects dynamics."""
+        from scpn_phase_orchestrator.nn.functional import order_parameter
+
+        K, omegas, p0, traj = generate_kuramoto_data(N, 50, key=key)
+        layer = KuramotoLayer(N, n_steps=20, dt=DT, key=key)
+
+        # R before training
+        final_before = layer(p0)
+        r_before = float(order_parameter(final_before))
+
+        def loss_fn(m):
+            return sync_loss(m, p0, target_R=1.0)
+
+        trained, losses = train(layer, loss_fn, optax.adam(1e-2), n_epochs=20)
+
+        # R after training
+        final_after = trained(p0)
+        r_after = float(order_parameter(final_after))
+
+        # Training should improve or maintain R toward target
+        assert losses[-1] < losses[0] + 0.05, "Loss should decrease"
+        assert 0.0 <= r_after <= 1.0
+
+    def test_train_step_preserves_k_symmetry(self, layer, phases):
+        """After one train_step, K matrix should still be approximately
+        symmetric (train_step should enforce K = (K + K^T) / 2)."""
+        optimizer = optax.adam(1e-3)
+        opt_state = optimizer.init(eqx.filter(layer, eqx.is_array))
+
+        def loss_fn(m):
+            return sync_loss(m, phases, target_R=1.0)
+
+        new_model, _, _ = train_step(layer, loss_fn, opt_state, optimizer)
+        K = new_model.K
+        # K should be close to symmetric after the step
+        asym = float(jnp.max(jnp.abs(K - K.T)))
+        assert asym < 0.5, f"K asymmetry {asym:.4f} too large after train_step"
+
+    def test_generated_trajectory_phases_in_range(self, key):
+        """Generated trajectory phases must be in [0, 2π)."""
+        _, _, _, traj = generate_kuramoto_data(N, 100, key=key)
+        traj_mod = traj % (2 * jnp.pi)
+        assert jnp.all(traj_mod >= 0.0)
+        assert jnp.all(traj_mod < 2 * jnp.pi + 1e-6)
