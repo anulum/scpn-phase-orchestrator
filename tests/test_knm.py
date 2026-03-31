@@ -77,24 +77,31 @@ def test_coupling_state_frozen():
         cs.active_template = "other"
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestKnmPipelineWiring:
+    """Pipeline: CouplingBuilder → K_nm → engine → R."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_built_knm_drives_engine(self):
+        """CouplingBuilder.build → K_nm → engine → R∈[0,1].
+        Proves builder output feeds the simulation core."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
         n = 8
+        cs = CouplingBuilder().build(n, 0.5, 0.3)
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        for _ in range(200):
+            phases = eng.step(
+                phases,
+                omegas,
+                cs.knm,
+                0.0,
+                0.0,
+                cs.alpha,
+            )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
