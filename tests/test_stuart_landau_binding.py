@@ -190,24 +190,49 @@ class TestValidatorAmplitude:
         assert errors == []
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSLBindingPipelineWiring:
+    """Pipeline: load SL domainpack → StuartLandauEngine → amplitudes."""
 
-    def test_wires_into_pipeline(self):
+    def test_cardiac_domainpack_sl_pipeline(self):
+        """Load cardiac_rhythm → build SL engine → run → amplitudes≥0."""
         import numpy as np
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.coupling import CouplingBuilder
+        from scpn_phase_orchestrator.upde.stuart_landau import (
+            StuartLandauEngine,
+        )
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
+        spec = load_binding_spec(
+            Path(__file__).parent.parent
+            / "domainpacks"
+            / "cardiac_rhythm"
+            / "binding_spec.yaml"
+        )
+        assert spec.amplitude is not None
+        n = sum(len(ly.oscillator_ids) for ly in spec.layers)
+        cs = CouplingBuilder().build(
+            n, spec.coupling.base_strength, spec.coupling.decay_alpha
+        )
+        eng = StuartLandauEngine(n, dt=spec.sample_period_s)
         rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        state = np.concatenate(
+            [
+                rng.uniform(0, 2 * np.pi, n),
+                rng.uniform(0.5, 1.5, n),
+            ]
+        )
+        mu = np.full(n, spec.amplitude.mu)
+        for _ in range(200):
+            state = eng.step(
+                state,
+                np.ones(n),
+                mu,
+                cs.knm,
+                cs.knm * spec.amplitude.amp_coupling_strength,
+                0.0,
+                0.0,
+                cs.alpha,
+                epsilon=spec.amplitude.epsilon,
+            )
+        assert np.all(state[n:] >= 0.0), "SL amplitudes must be≥0"
+        assert np.all(np.isfinite(state))
