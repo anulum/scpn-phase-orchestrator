@@ -558,3 +558,63 @@ class TestSAFLoss:
         r_after = saf_order_parameter(K, omegas)
         assert jnp.isfinite(r_after)
         assert float(r_after) >= float(r_before)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline wiring + performance
+# ---------------------------------------------------------------------------
+
+
+class TestKuramotoPipelineWiring:
+    """Verify that nn/ Kuramoto modules wire into the full analysis pipeline
+    and meet performance targets — proving they are not decorative."""
+
+    def test_layer_to_order_parameter_pipeline(self, key):
+        """KuramotoLayer → order_parameter → R∈[0,1].
+        Proves the layer output is valid input for analysis."""
+        k1, k2 = jax.random.split(key)
+        layer = KuramotoLayer(8, n_steps=50, dt=0.01, key=k1)
+        phases = jax.random.uniform(k2, (8,), maxval=2.0 * jnp.pi)
+        final = layer(phases)
+        r = float(order_parameter(final))
+        assert 0.0 <= r <= 1.0, f"R={r} must be in [0,1]"
+
+    def test_layer_to_plv_pipeline(self, key):
+        """KuramotoLayer → PLV matrix: trajectory feeds PLV analysis."""
+        k1, k2 = jax.random.split(key)
+        layer = KuramotoLayer(8, n_steps=50, dt=0.01, key=k1)
+        phases = jax.random.uniform(k2, (8,), maxval=2.0 * jnp.pi)
+        _, traj = layer.forward_with_trajectory(phases)
+        plv_mat = plv(traj)
+        assert plv_mat.shape == (8, 8)
+        assert jnp.all(plv_mat >= 0.0) and jnp.all(plv_mat <= 1.0 + 1e-6)
+
+    def test_step_performance_n64(self, key):
+        """kuramoto_step(N=64) must complete in under 1ms (regression guard)."""
+        import time
+
+        phases = jax.random.uniform(key, (64,), maxval=2.0 * jnp.pi)
+        omegas = jnp.ones(64)
+        K = 0.3 * jnp.ones((64, 64))
+        K = K.at[jnp.diag_indices(64)].set(0.0)
+
+        # Warm up JIT
+        kuramoto_step(phases, omegas, K, 0.01)
+
+        t0 = time.perf_counter()
+        for _ in range(100):
+            kuramoto_step(phases, omegas, K, 0.01)
+        elapsed = (time.perf_counter() - t0) / 100
+        assert elapsed < 0.001, f"kuramoto_step(64) took {elapsed*1000:.2f}ms, limit 1ms"
+
+    def test_forward_trajectory_feeds_training(self, key):
+        """forward_with_trajectory output wires into trajectory_loss."""
+        from scpn_phase_orchestrator.nn.training import trajectory_loss
+
+        k1, k2 = jax.random.split(key)
+        layer = KuramotoLayer(8, n_steps=30, dt=0.01, key=k1)
+        phases = jax.random.uniform(k2, (8,), maxval=2.0 * jnp.pi)
+        _, traj = layer.forward_with_trajectory(phases)
+        loss = trajectory_loss(layer, phases, traj)
+        assert jnp.isfinite(loss)
+        assert float(loss) < 1e-4, "Own trajectory should give near-zero loss"
