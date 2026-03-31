@@ -113,3 +113,70 @@ psi = driver.compute(step=0)
 ```
 
 ::: scpn_phase_orchestrator.drivers.psi_symbolic
+
+---
+
+## API summary
+
+All drivers share the same interface:
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `compute` | `(t: float) → float` or `(step: int) → float` | Single evaluation |
+| `compute_batch` | `(array) → NDArray` | Vectorised evaluation |
+
+### Input validation
+
+| Driver | Validation | Raises |
+|--------|-----------|--------|
+| PhysicalDriver | `frequency > 0` | `ValueError` |
+| InformationalDriver | `cadence_hz > 0` | `ValueError` |
+| SymbolicDriver | `len(sequence) > 0` | `ValueError` |
+
+### Output ranges
+
+| Driver | Output range |
+|--------|-------------|
+| PhysicalDriver | [-amplitude, +amplitude] |
+| InformationalDriver | [0, 2π) |
+| SymbolicDriver | values from input sequence |
+
+---
+
+## Integration example
+
+```python
+from scpn_phase_orchestrator.drivers.psi_physical import PhysicalDriver
+from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+driver = PhysicalDriver(frequency=1.0, amplitude=0.5)
+eng = UPDEEngine(n=8, dt=0.01)
+
+for step_i in range(1000):
+    t = step_i * 0.01
+    psi = driver.compute(t)       # Ψ(t)
+    zeta = 0.3                    # from supervisor
+    phases = eng.step(phases, omegas, knm, zeta, psi, alpha)
+```
+
+The `compute_batch` method is useful when pre-computing an
+entire Ψ trajectory:
+
+```python
+import numpy as np
+t_array = np.arange(0, 10.0, 0.01)
+psi_trajectory = driver.compute_batch(t_array)
+```
+
+---
+
+## Choosing a driver
+
+| Domain | Driver | Rationale |
+|--------|--------|-----------|
+| Power grid (50 Hz) | PhysicalDriver(50.0) | Reference frequency |
+| Cardiac pacemaker | PhysicalDriver(1.2) | Heart rate |
+| API monitoring (100 Hz) | InformationalDriver(100.0) | Polling cadence |
+| Protocol FSM | SymbolicDriver([0, π/2, π, 3π/2]) | State sequence |
+| Music sync | SymbolicDriver(beat_phases) | Rhythm pattern |
+| No external drive | Set ζ = 0 | Third term vanishes |
