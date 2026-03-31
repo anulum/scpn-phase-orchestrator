@@ -145,9 +145,9 @@ class TestEnvelopeState:
 
 
 class TestEnvelopePipelineEndToEnd:
-    """Full pipeline: StuartLandauEngine → amplitudes → extract_envelope → EnvelopeState.
+    """StuartLandauEngine → amplitudes → extract_envelope.
 
-    Proves envelope module is wired into the amplitude analysis pipeline.
+    Proves envelope module is wired into the pipeline.
     """
 
     def test_sl_amplitudes_to_envelope_state(self):

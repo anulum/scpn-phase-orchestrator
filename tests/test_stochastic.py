@@ -212,8 +212,6 @@ class TestStochasticPipelineEndToEnd:
 
     def test_find_optimal_noise_coherent_with_pipeline(self):
         """find_optimal_noise returns a D that, when applied, gives R ≈ R_achieved."""
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
         n = 6
         engine = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(42)

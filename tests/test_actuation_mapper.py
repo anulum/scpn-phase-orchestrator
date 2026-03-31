@@ -179,7 +179,10 @@ class TestActuationMapperPipelineEndToEnd:
         pol = SupervisorPolicy(rm)
         mapper = ActuationMapper([
             ActuatorMapping(name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)),
-            ActuatorMapping(name="zeta_glob", knob="zeta", scope="global", limits=(0.0, 0.5)),
+            ActuatorMapping(
+                name="zeta_glob", knob="zeta", scope="global",
+                limits=(0.0, 0.5),
+            ),
         ])
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, n)

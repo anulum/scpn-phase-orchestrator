@@ -158,7 +158,7 @@ class TestInformationalMetadata:
 
 
 class TestInformationalPipelineEndToEnd:
-    """Full pipeline: event timestamps → InformationalExtractor → theta/omega → Engine → R.
+    """InformationalExtractor → theta/omega → Engine → R.
 
     Proves InformationalExtractor is a functional input adapter.
     """

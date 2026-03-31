@@ -332,7 +332,10 @@ class TestPetriNetPipelineEndToEnd:
         import time
         places = [Place("a"), Place("b")]
         t1 = Transition("t1", guards=[Guard(metric="x", op=">", threshold=0.5)])
-        arcs = [Arc(source="a", target="t1", weight=1), Arc(source="t1", target="b", weight=1)]
+        arcs = [
+            Arc(source="a", target="t1", weight=1),
+            Arc(source="t1", target="b", weight=1),
+        ]
         pn = PetriNet(places=places, transitions=[t1], arcs=arcs)
         marking = Marking({"a": 1, "b": 0})
         ctx = {"x": 0.8}

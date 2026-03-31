@@ -183,7 +183,10 @@ class TestCouplingModulesPipelineEndToEnd:
 
         eng = UPDEEngine(n, dt=0.01)
         # Zero alpha
-        p_zero = eng.run(p0.copy(), omegas, knm, 0.0, 0.0, np.zeros((n, n)), n_steps=200)
+        p_zero = eng.run(
+            p0.copy(), omegas, knm, 0.0, 0.0, np.zeros((n, n)),
+            n_steps=200,
+        )
         r_zero, _ = compute_order_parameter(p_zero)
         # Non-zero alpha from distances
         distances = np.array([

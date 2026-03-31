@@ -336,7 +336,8 @@ class TestStuartLandauPipelineEndToEnd:
         R, psi = eng.compute_order_parameter(state)
         assert 0.0 <= R <= 1.0
         assert np.all(state[n:] >= 0.0)  # amplitudes nonneg
-        layer = LayerState(R=R, psi=psi, mean_amplitude=eng.compute_mean_amplitude(state))
+        mean_amp = eng.compute_mean_amplitude(state)
+        layer = LayerState(R=R, psi=psi, mean_amplitude=mean_amp)
         upde_state = UPDEState(
             layers=[layer],
             cross_layer_alignment=np.array([R]),

@@ -246,7 +246,10 @@ class TestRegimeHysteresisPipelineEndToEnd:
             regime = mgr.evaluate(state, _clean_boundary())
             regimes.append(regime)
         # With cooldown=5, should not oscillate every step
-        transitions = sum(1 for i in range(1, len(regimes)) if regimes[i] != regimes[i - 1])
+        transitions = sum(
+            1 for i in range(1, len(regimes))
+            if regimes[i] != regimes[i - 1]
+        )
         assert transitions <= 3, f"Too many transitions: {transitions}"
 
     def test_event_bus_captures_engine_driven_transitions(self):

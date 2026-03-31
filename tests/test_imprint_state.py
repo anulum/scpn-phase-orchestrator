@@ -236,7 +236,7 @@ class TestPipelineWiring:
         model = ImprintModel(decay_rate=0.1, saturation=5.0)
         imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
 
-        for step in range(200):
+        for _step in range(200):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
             # Use absolute phase values as exposure proxy
             exposure = np.abs(phases) / (2 * np.pi)

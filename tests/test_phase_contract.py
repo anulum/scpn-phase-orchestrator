@@ -240,9 +240,9 @@ class TestPhaseContractPipelineEndToEnd:
     def test_coupling_engine_order_param_regime(self):
         """Build K_nm → run engine → compute R → feed RegimeManager."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 
         n = 16
         cb = CouplingBuilder()

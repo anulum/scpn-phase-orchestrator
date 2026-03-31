@@ -116,6 +116,6 @@ class TestWinfreePhysics:
 
 
 
-# Pipeline wiring: Winfree tests exercise winfree_forward → order_parameter
-# (TestWinfreePhysics.test_pipeline_to_order_parameter, test_strong_coupling_synchronises).
-# Differentiable via JAX grad. Euler/RK4 cross-validation.
+# Pipeline wiring: Winfree tests exercise winfree_forward →
+# order_parameter (test_pipeline_to_order_parameter,
+# test_strong_coupling_synchronises). JAX grad + Euler/RK4.

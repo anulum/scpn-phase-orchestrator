@@ -263,4 +263,3 @@ class TestSSGFCostInvariants:
 
 
 # Pipeline wiring: hypothesis-driven invariant proofs exercise the pipeline.
-        assert 0.0 <= r <= 1.0

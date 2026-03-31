@@ -151,8 +151,14 @@ class TestCouplingKnmPipelineEndToEnd:
         rng = np.random.default_rng(42)
         p0 = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        p_all = eng.run(p0.copy(), omegas, cs_all.knm, 0.0, 0.0, cs_all.alpha, n_steps=300)
-        p_ring = eng.run(p0.copy(), omegas, cs_ring.knm, 0.0, 0.0, cs_ring.alpha, n_steps=300)
+        p_all = eng.run(
+            p0.copy(), omegas, cs_all.knm, 0.0, 0.0, cs_all.alpha,
+            n_steps=300,
+        )
+        p_ring = eng.run(
+            p0.copy(), omegas, cs_ring.knm, 0.0, 0.0, cs_ring.alpha,
+            n_steps=300,
+        )
         r_all, _ = compute_order_parameter(p_all)
         r_ring, _ = compute_order_parameter(p_ring)
         # Stronger coupling → higher R
