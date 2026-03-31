@@ -23,7 +23,6 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
 )
 
-
 # ---------------------------------------------------------------------------
 # Stuart-Landau replay determinism with amplitude tracking
 # ---------------------------------------------------------------------------
@@ -61,14 +60,22 @@ class TestStuartLandauReplayDeterminism:
         state0 = np.array(phases0 + amps0)
 
         nxt_state = sl_engine.step(
-            state0, np.array(omegas), np.array(mu),
-            knm, knm_r, 0.0, 0.0, alpha,
+            state0,
+            np.array(omegas),
+            np.array(mu),
+            knm,
+            knm_r,
+            0.0,
+            0.0,
+            alpha,
         )
 
         entries = [
             {
-                "phases": phases0, "amplitudes": amps0,
-                "omegas": omegas, "mu": mu,
+                "phases": phases0,
+                "amplitudes": amps0,
+                "omegas": omegas,
+                "mu": mu,
                 "knm": knm.ravel().tolist(),
                 "knm_r": knm_r.ravel().tolist(),
                 "alpha": alpha.ravel().tolist(),
@@ -76,7 +83,8 @@ class TestStuartLandauReplayDeterminism:
             {
                 "phases": nxt_state[:n].tolist(),
                 "amplitudes": nxt_state[n:].tolist(),
-                "omegas": omegas, "mu": mu,
+                "omegas": omegas,
+                "mu": mu,
                 "knm": knm.ravel().tolist(),
                 "knm_r": knm_r.ravel().tolist(),
                 "alpha": alpha.ravel().tolist(),
@@ -94,24 +102,37 @@ class TestStuartLandauReplayDeterminism:
             dist_before = abs(amps0[i] - equilibrium)
             dist_after = abs(amps_next[i] - equilibrium)
             assert dist_after <= dist_before + 1e-10, (
-                f"Oscillator {i}: amplitude should converge toward sqrt(mu)={equilibrium:.3f}, "
-                f"but distance grew from {dist_before:.4f} to {dist_after:.4f}"
+                f"Osc {i}: should converge toward "
+                f"sqrt(mu)={equilibrium:.3f}, "
+                f"dist {dist_before:.4f}→{dist_after:.4f}"
             )
 
     def test_missing_amplitude_fields_warns_and_skips(
-        self, replay_engine, sl_engine, caplog,
+        self,
+        replay_engine,
+        sl_engine,
+        caplog,
     ):
         """Entries without amplitude or mu fields must emit a warning and
         skip verification — not silently pass or crash."""
         entries = [
-            {"phases": [0.1, 0.2], "omegas": [1.0, 1.0],
-             "knm": [0.0] * 4, "alpha": [0.0] * 4},
-            {"phases": [0.3, 0.4], "omegas": [1.0, 1.0],
-             "knm": [0.0] * 4, "alpha": [0.0] * 4},
+            {
+                "phases": [0.1, 0.2],
+                "omegas": [1.0, 1.0],
+                "knm": [0.0] * 4,
+                "alpha": [0.0] * 4,
+            },
+            {
+                "phases": [0.3, 0.4],
+                "omegas": [1.0, 1.0],
+                "knm": [0.0] * 4,
+                "alpha": [0.0] * 4,
+            },
         ]
         with caplog.at_level(logging.WARNING):
             ok, verified = replay_engine.verify_determinism_sl_chained(
-                sl_engine, entries,
+                sl_engine,
+                entries,
             )
         assert ok, "Should pass (nothing to fail on)"
         assert verified == 0, "No steps should be verified when fields are missing"
@@ -120,7 +141,9 @@ class TestStuartLandauReplayDeterminism:
         )
 
     def test_legacy_format_without_separate_amplitudes(
-        self, replay_engine, sl_engine,
+        self,
+        replay_engine,
+        sl_engine,
     ):
         """Legacy logs store full SL state [θ; r] in 'phases' with 'mu' present
         but no 'amplitudes' key. Verify replay handles this format correctly."""
@@ -131,21 +154,32 @@ class TestStuartLandauReplayDeterminism:
         amps0 = [0.7, 0.8]
         state0 = np.array(phases0 + amps0)
         nxt_state = sl_engine.step(
-            state0, np.array(omegas), np.array(mu_val),
-            np.zeros((n, n)), np.zeros((n, n)), 0.0, 0.0, np.zeros((n, n)),
+            state0,
+            np.array(omegas),
+            np.array(mu_val),
+            np.zeros((n, n)),
+            np.zeros((n, n)),
+            0.0,
+            0.0,
+            np.zeros((n, n)),
         )
         entries = [
             {
-                "phases": phases0, "amplitudes": amps0,
-                "omegas": omegas, "mu": mu_val,
-                "knm": [0.0] * (n * n), "knm_r": [0.0] * (n * n),
+                "phases": phases0,
+                "amplitudes": amps0,
+                "omegas": omegas,
+                "mu": mu_val,
+                "knm": [0.0] * (n * n),
+                "knm_r": [0.0] * (n * n),
                 "alpha": [0.0] * (n * n),
             },
             {
                 # Legacy: no 'amplitudes' key, full state in 'phases'
                 "phases": nxt_state.tolist(),
-                "omegas": omegas, "mu": mu_val,
-                "knm": [0.0] * (n * n), "alpha": [0.0] * (n * n),
+                "omegas": omegas,
+                "mu": mu_val,
+                "knm": [0.0] * (n * n),
+                "alpha": [0.0] * (n * n),
             },
         ]
         ok, verified = replay_engine.verify_determinism_sl_chained(sl_engine, entries)
@@ -165,13 +199,17 @@ class TestStuartLandauReplayDeterminism:
         entries = []
 
         for _ in range(6):
-            entries.append({
-                "phases": state[:n].tolist(),
-                "amplitudes": state[n:].tolist(),
-                "omegas": omegas.tolist(), "mu": mu.tolist(),
-                "knm": knm.ravel().tolist(), "knm_r": knm_r.ravel().tolist(),
-                "alpha": alpha.ravel().tolist(),
-            })
+            entries.append(
+                {
+                    "phases": state[:n].tolist(),
+                    "amplitudes": state[n:].tolist(),
+                    "omegas": omegas.tolist(),
+                    "mu": mu.tolist(),
+                    "knm": knm.ravel().tolist(),
+                    "knm_r": knm_r.ravel().tolist(),
+                    "alpha": alpha.ravel().tolist(),
+                }
+            )
             state = sl_engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
 
         ok, verified = replay_engine.verify_determinism_sl_chained(sl_engine, entries)
@@ -190,18 +228,25 @@ class TestBindingSpecOmegaValidation:
 
     def _make_spec(self, oscillator_ids, omegas=None):
         return BindingSpec(
-            name="test", version="1.0.0", safety_tier="research",
-            sample_period_s=0.01, control_period_s=0.1,
-            layers=[HierarchyLayer(
-                name="L1", index=0,
-                oscillator_ids=oscillator_ids,
-                omegas=omegas,
-            )],
+            name="test",
+            version="1.0.0",
+            safety_tier="research",
+            sample_period_s=0.01,
+            control_period_s=0.1,
+            layers=[
+                HierarchyLayer(
+                    name="L1",
+                    index=0,
+                    oscillator_ids=oscillator_ids,
+                    omegas=omegas,
+                )
+            ],
             oscillator_families={},
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
             drivers=DriverSpec(physical={}, informational={}, symbolic={}),
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
-            boundaries=[], actuators=[],
+            boundaries=[],
+            actuators=[],
         )
 
     def test_length_mismatch_raises_with_exact_counts(self):
@@ -217,7 +262,7 @@ class TestBindingSpecOmegaValidation:
         np.testing.assert_allclose(result, [3.14, 2.71])
 
     def test_no_omegas_returns_default(self):
-        """When no omegas are specified, get_omegas returns default (1.0) per oscillator."""
+        """No omegas specified → returns default per oscillator."""
         spec = self._make_spec(["o1", "o2", "o3"])
         result = spec.get_omegas()
         assert len(result) == 3
@@ -234,8 +279,10 @@ class TestBoundaryInvertedLimitsValidation:
 
     def _make_spec_with_boundary(self, lower, upper, severity="hard"):
         bdef = BoundaryDef(
-            name="test_bound", variable="R",
-            lower=min(lower, upper), upper=max(lower, upper),
+            name="test_bound",
+            variable="R",
+            lower=min(lower, upper),
+            upper=max(lower, upper),
             severity=severity,
         )
         # Force inversion via frozen dataclass bypass
@@ -243,14 +290,18 @@ class TestBoundaryInvertedLimitsValidation:
             object.__setattr__(bdef, "lower", lower)
             object.__setattr__(bdef, "upper", upper)
         return BindingSpec(
-            name="test", version="1.0.0", safety_tier="research",
-            sample_period_s=0.01, control_period_s=0.1,
+            name="test",
+            version="1.0.0",
+            safety_tier="research",
+            sample_period_s=0.01,
+            control_period_s=0.1,
             layers=[HierarchyLayer(name="L1", index=0, oscillator_ids=["o1"])],
             oscillator_families={},
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
             drivers=DriverSpec(physical={}, informational={}, symbolic={}),
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
-            boundaries=[bdef], actuators=[],
+            boundaries=[bdef],
+            actuators=[],
         )
 
     def test_inverted_boundary_reports_error(self):
@@ -259,9 +310,9 @@ class TestBoundaryInvertedLimitsValidation:
 
         spec = self._make_spec_with_boundary(lower=0.8, upper=0.2)
         errors = validate_binding_spec(spec)
-        assert any("lower (0.8)" in e and "must be <= upper (0.2)" in e for e in errors), (
-            f"Expected inverted-limits error, got: {errors}"
-        )
+        assert any(
+            "lower (0.8)" in e and "must be <= upper (0.2)" in e for e in errors
+        ), f"Expected inverted-limits error, got: {errors}"
 
     def test_valid_boundary_no_errors(self):
         """Correct boundaries produce no validation errors related to limits."""
@@ -270,7 +321,9 @@ class TestBoundaryInvertedLimitsValidation:
         spec = self._make_spec_with_boundary(lower=0.2, upper=0.8)
         errors = validate_binding_spec(spec)
         limit_errors = [e for e in errors if "lower" in e and "upper" in e]
-        assert len(limit_errors) == 0, f"Valid boundary should not produce errors: {limit_errors}"
+        assert len(limit_errors) == 0, (
+            f"Valid boundary should not produce errors: {limit_errors}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -303,9 +356,8 @@ class TestSessionStartCoherenceAnalysis:
         """Nearly identical phases (R ≈ 1) must NOT trigger the warning."""
         phases = [0.01, 0.02, 0.015, 0.005]
         report = self._run_check(phases)
-        assert not any("Low initial coherence" in w for w in report.warnings), (
-            f"Synchronised phases should not produce coherence warning: {report.warnings}"
-        )
+        low_coh = [w for w in report.warnings if "Low initial" in w]
+        assert low_coh == [], f"Sync phases → no warning: {low_coh}"
         assert report.initial_r > 0.99, (
             f"R={report.initial_r:.4f} should be near 1 for nearly identical phases"
         )
@@ -341,26 +393,38 @@ class TestInitPhasesChannelResolution:
 
     def _make_spec(self, channel, family_name="test_fam"):
         return BindingSpec(
-            name="test", version="1.0.0", safety_tier="research",
-            sample_period_s=0.01, control_period_s=0.1,
-            layers=[HierarchyLayer(
-                name="L1", index=0, oscillator_ids=["o1", "o2"],
-                family=family_name,
-            )],
+            name="test",
+            version="1.0.0",
+            safety_tier="research",
+            sample_period_s=0.01,
+            control_period_s=0.1,
+            layers=[
+                HierarchyLayer(
+                    name="L1",
+                    index=0,
+                    oscillator_ids=["o1", "o2"],
+                    family=family_name,
+                )
+            ],
             oscillator_families={
                 family_name: OscillatorFamily(
-                    channel=channel, extractor_type="hilbert", config={},
+                    channel=channel,
+                    extractor_type="hilbert",
+                    config={},
                 ),
             },
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
             drivers=DriverSpec(physical={}, informational={}, symbolic={}),
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
-            boundaries=[], actuators=[],
+            boundaries=[],
+            actuators=[],
         )
 
     def test_unknown_channel_falls_back_to_uniform(self):
         """Channel 'X' (not P/I/S) must produce phases in [0, 2π)."""
-        from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+        from scpn_phase_orchestrator.oscillators.init_phases import (
+            extract_initial_phases,
+        )
 
         spec = self._make_spec("X")
         phases = extract_initial_phases(spec, np.array([1.0, 1.0]))
@@ -371,7 +435,9 @@ class TestInitPhasesChannelResolution:
 
     def test_physical_channel_produces_valid_phases(self):
         """Channel 'P' must produce phases in [0, 2π)."""
-        from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+        from scpn_phase_orchestrator.oscillators.init_phases import (
+            extract_initial_phases,
+        )
 
         spec = self._make_spec("P")
         phases = extract_initial_phases(spec, np.array([5.0, 5.0]))
@@ -400,7 +466,8 @@ class TestInitPhasesChannelResolution:
 
         families = {
             "sym": OscillatorFamily(
-                channel="S", extractor_type="symbolic",
+                channel="S",
+                extractor_type="symbolic",
                 config={"n_states": 8},
             ),
         }
@@ -421,12 +488,17 @@ class TestSimulationStateKuramotoStep:
         from scpn_phase_orchestrator.server import SimulationState
 
         spec = BindingSpec(
-            name="test", version="1.0.0", safety_tier="research",
-            sample_period_s=0.01, control_period_s=0.1,
+            name="test",
+            version="1.0.0",
+            safety_tier="research",
+            sample_period_s=0.01,
+            control_period_s=0.1,
             layers=[HierarchyLayer(name="L1", index=0, oscillator_ids=["o1", "o2"])],
             oscillator_families={
                 "phys": OscillatorFamily(
-                    channel="P", extractor_type="hilbert", config={},
+                    channel="P",
+                    extractor_type="hilbert",
+                    config={},
                 ),
             },
             coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
@@ -434,7 +506,9 @@ class TestSimulationStateKuramotoStep:
             objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
             boundaries=[],
             actuators=[
-                ActuatorMapping(name="K_g", knob="K", scope="global", limits=(0.0, 1.0)),
+                ActuatorMapping(
+                    name="K_g", knob="K", scope="global", limits=(0.0, 1.0)
+                ),
             ],
         )
         return SimulationState(spec)
@@ -466,9 +540,9 @@ class TestSimulationStateKuramotoStep:
         """R must stay in [0, 1] across 50 integration steps."""
         for _ in range(50):
             result = sim.step()
-            assert 0.0 <= result["R_global"] <= 1.0, (
-                f"R_global={result['R_global']:.4f} out of [0, 1] at step {result['step']}"
-            )
+            r = result["R_global"]
+            s = result["step"]
+            assert 0.0 <= r <= 1.0, f"R={r:.4f} at step {s}"
 
 
 # ---------------------------------------------------------------------------
@@ -486,8 +560,11 @@ class TestUPDEEngineInputValidation:
         eng = UPDEEngine(2, dt=0.01)
         with pytest.raises(ValueError, match="alpha contains NaN"):
             eng.step(
-                np.array([0.1, 0.2]), np.array([1.0, 1.0]),
-                np.zeros((2, 2)), 0.0, 0.0,
+                np.array([0.1, 0.2]),
+                np.array([1.0, 1.0]),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
                 np.array([[0.0, float("nan")], [0.0, 0.0]]),
             )
 
@@ -497,8 +574,11 @@ class TestUPDEEngineInputValidation:
         eng = UPDEEngine(2, dt=0.01)
         with pytest.raises(ValueError, match="alpha contains NaN"):
             eng.step(
-                np.array([0.1, 0.2]), np.array([1.0, 1.0]),
-                np.zeros((2, 2)), 0.0, 0.0,
+                np.array([0.1, 0.2]),
+                np.array([1.0, 1.0]),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
                 np.array([[0.0, float("inf")], [0.0, 0.0]]),
             )
 
@@ -516,9 +596,13 @@ class TestUPDEEngineInputValidation:
 
         result = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         assert result.shape == (4,)
-        assert np.all(np.isfinite(result)), f"RK45 fallback must return finite phases: {result}"
+        assert np.all(np.isfinite(result)), (
+            f"RK45 fallback must return finite phases: {result}"
+        )
         # Phases must have changed (omegas are non-zero)
-        assert not np.allclose(result, phases), "Extreme conditions should still advance phases"
+        assert not np.allclose(result, phases), (
+            "Extreme conditions should still advance phases"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -639,11 +723,21 @@ class TestStuartLandauInputValidation:
             ("omegas", np.array([float("nan"), 1.0]), "omegas contain NaN"),
             ("mu", np.array([float("inf"), 0.5]), "mu contains NaN"),
             ("knm", np.array([[0.0, float("nan")], [0.0, 0.0]]), "knm contains NaN"),
-            ("knm_r", np.array([[0.0, float("inf")], [0.0, 0.0]]), "knm_r contains NaN"),
-            ("alpha", np.array([[0.0, float("nan")], [0.0, 0.0]]), "alpha contains NaN"),
+            (
+                "knm_r",
+                np.array([[0.0, float("inf")], [0.0, 0.0]]),
+                "knm_r contains NaN",
+            ),
+            (
+                "alpha",
+                np.array([[0.0, float("nan")], [0.0, 0.0]]),
+                "alpha contains NaN",
+            ),
         ],
     )
-    def test_nan_in_field_raises_valueerror(self, engine, valid_args, field, bad_value, error_pattern):
+    def test_nan_in_field_raises_valueerror(
+        self, engine, valid_args, field, bad_value, error_pattern
+    ):
         """Each numeric input field must be validated for NaN/Inf."""
         args = dict(valid_args)
         args[field] = bad_value
@@ -661,10 +755,12 @@ class TestStuartLandauInputValidation:
             engine.step(**valid_args, epsilon=float("inf"))
 
     def test_valid_inputs_produce_finite_output(self, engine, valid_args):
-        """Sanity check: valid inputs must produce finite state vector of correct size."""
+        """Valid inputs → finite state vector of correct size."""
         result = engine.step(**valid_args)
         assert result.shape == (4,), f"SL state should be 2*N=4, got {result.shape}"
-        assert np.all(np.isfinite(result)), f"Valid inputs should give finite output: {result}"
+        assert np.all(np.isfinite(result)), (
+            f"Valid inputs should give finite output: {result}"
+        )
 
     def test_rk45_extreme_parameters_stays_finite(self):
         """SL RK45 with extreme coupling that exhausts retry budget must

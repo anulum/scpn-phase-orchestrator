@@ -187,4 +187,4 @@ class TestSpectralPipelineWiring:
         for _ in range(50):
             spectral_gap(knm)
         elapsed = (time.perf_counter() - t0) / 50
-        assert elapsed < 0.005, f"spectral_gap(100) = {elapsed*1000:.1f}ms > 5ms"
+        assert elapsed < 0.005, f"spectral_gap(100) = {elapsed * 1000:.1f}ms > 5ms"

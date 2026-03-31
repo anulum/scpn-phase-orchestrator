@@ -14,17 +14,22 @@ from scpn_phase_orchestrator.binding.types import ActuatorMapping
 
 
 def _action(knob, scope, value):
-    return ControlAction(knob=knob, scope=scope, value=value,
-                         ttl_s=5.0, justification="test")
+    return ControlAction(
+        knob=knob, scope=scope, value=value, ttl_s=5.0, justification="test"
+    )
 
 
 @pytest.fixture()
 def mapper():
-    return ActuationMapper([
-        ActuatorMapping(name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)),
-        ActuatorMapping(name="zeta_glob", knob="zeta", scope="global", limits=(0.0, 0.5)),
-        ActuatorMapping(name="K_L0", knob="K", scope="layer_0", limits=(0.0, 2.0)),
-    ])
+    return ActuationMapper(
+        [
+            ActuatorMapping(name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)),
+            ActuatorMapping(
+                name="zeta_glob", knob="zeta", scope="global", limits=(0.0, 0.5)
+            ),
+            ActuatorMapping(name="K_L0", knob="K", scope="layer_0", limits=(0.0, 2.0)),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------

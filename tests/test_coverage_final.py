@@ -8,8 +8,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # PID: circular entropy and mutual information
@@ -40,7 +38,7 @@ class TestPIDInformationTheory:
         h_uniform = _circular_entropy(uniform)
         h_clustered = _circular_entropy(clustered)
         assert h_uniform > h_clustered, (
-            f"Uniform entropy ({h_uniform:.3f}) should exceed clustered ({h_clustered:.3f})"
+            f"H_uniform={h_uniform:.3f} should > H_clustered={h_clustered:.3f}"
         )
 
     def test_joint_entropy_empty_is_zero(self):
@@ -83,7 +81,10 @@ class TestEVSBehavioural:
         m = EVSMonitor()
         phases = np.random.default_rng(0).uniform(0, 2 * np.pi, (1, 100))
         result = m.evaluate(
-            phases, pause_indices=[50], target_freq=10.0, control_freq=20.0,
+            phases,
+            pause_indices=[50],
+            target_freq=10.0,
+            control_freq=20.0,
         )
         assert hasattr(result, "is_entrained")
         assert isinstance(result.is_entrained, bool)
@@ -94,7 +95,10 @@ class TestEVSBehavioural:
         m = EVSMonitor()
         phases = np.random.default_rng(1).uniform(0, 2 * np.pi, (5, 200))
         result = m.evaluate(
-            phases, pause_indices=[100], target_freq=10.0, control_freq=20.0,
+            phases,
+            pause_indices=[100],
+            target_freq=10.0,
+            control_freq=20.0,
         )
         assert hasattr(result, "is_entrained")
 
@@ -147,7 +151,10 @@ class TestPredictiveSupervisorBehavioural:
         from scpn_phase_orchestrator.supervisor.predictive import PredictiveSupervisor
 
         return PredictiveSupervisor(
-            n_oscillators=n, dt=0.01, horizon=5, divergence_threshold=0.01,
+            n_oscillators=n,
+            dt=0.01,
+            horizon=5,
+            divergence_threshold=0.01,
         )
 
     def test_prediction_has_required_fields(self):
@@ -272,7 +279,9 @@ class TestServerResetWithImprint:
 
         spec = load_binding_spec(
             Path(__file__).parent.parent
-            / "domainpacks" / "metaphysics_demo" / "binding_spec.yaml"
+            / "domainpacks"
+            / "metaphysics_demo"
+            / "binding_spec.yaml"
         )
         sim = SimulationState(spec)
         sim.step()
@@ -290,7 +299,9 @@ class TestServerResetWithImprint:
 
         spec = load_binding_spec(
             Path(__file__).parent.parent
-            / "domainpacks" / "metaphysics_demo" / "binding_spec.yaml"
+            / "domainpacks"
+            / "metaphysics_demo"
+            / "binding_spec.yaml"
         )
         sim = SimulationState(spec)
         for _ in range(10):

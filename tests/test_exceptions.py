@@ -23,8 +23,14 @@ from scpn_phase_orchestrator.exceptions import (
 )
 
 # All exception classes for parametrised tests
-ALL_SUBTYPES = [BindingError, ValidationError, ExtractorError,
-                EngineError, PolicyError, AuditError]
+ALL_SUBTYPES = [
+    BindingError,
+    ValidationError,
+    ExtractorError,
+    EngineError,
+    PolicyError,
+    AuditError,
+]
 
 VALUE_ERROR_SUBTYPES = [BindingError, ValidationError, PolicyError]
 RUNTIME_ERROR_SUBTYPES = [ExtractorError, EngineError, AuditError]
@@ -143,12 +149,12 @@ class TestExceptionsRaisedByRealCode:
         state = UPDEState(
             layers=[LayerState(R=0.8, psi=0.5)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.7, regime_id="nominal",
+            stability_proxy=0.7,
+            regime_id="nominal",
         )
         log_path = tmp_path / "audit.jsonl"
-        with AuditLogger(log_path) as logger:
-            with pytest.raises(AuditError):
-                logger.log_step(0, state, [], phases=np.array([0.1]))
+        with AuditLogger(log_path) as logger, pytest.raises(AuditError):
+            logger.log_step(0, state, [], phases=np.array([0.1]))
 
     def test_engine_error_or_valueerror_on_nan_input(self):
         """UPDEEngine must reject NaN input — verifying the error is catchable
@@ -160,7 +166,10 @@ class TestExceptionsRaisedByRealCode:
             eng.step(
                 np.array([float("nan"), 0.2]),
                 np.array([1.0, 1.0]),
-                np.zeros((2, 2)), 0.0, 0.0, np.zeros((2, 2)),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.zeros((2, 2)),
             )
 
     def test_binding_error_on_invalid_file(self, tmp_path):
@@ -179,7 +188,8 @@ class TestExceptionsRaisedByRealCode:
         state = UPDEState(
             layers=[LayerState(R=0.8, psi=0.5)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.7, regime_id="nominal",
+            stability_proxy=0.7,
+            regime_id="nominal",
         )
         log_path = tmp_path / "audit.jsonl"
         caught = False

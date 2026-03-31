@@ -17,7 +17,6 @@ import pytest
 
 from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 from scpn_phase_orchestrator.monitor.npe import compute_npe
-from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 from scpn_phase_orchestrator.ssgf.pgbo import PGBO
 from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver
 
@@ -188,7 +187,9 @@ class TestTCBOBehavioural:
         for _ in range(15):
             obs.observe(np.array([0.1, 0.2, 0.3]))
         mock_result = {"dgms": [np.array([[0, 1]]), np.array([]).reshape(0, 2)]}
-        with patch("scpn_phase_orchestrator.ssgf.tcbo._ripser", return_value=mock_result):
+        with patch(
+            "scpn_phase_orchestrator.ssgf.tcbo._ripser", return_value=mock_result
+        ):
             state = obs.observe(np.array([0.1, 0.2, 0.3]))
         assert state.p_h1 == 0.0
         assert state.method == "ripser"
@@ -200,7 +201,9 @@ class TestTCBOBehavioural:
             obs.observe(np.array([0.1, 0.2, 0.3]))
         h1 = np.array([[0.0, np.inf], [0.5, np.inf]])
         mock_result = {"dgms": [np.array([[0, 1]]), h1]}
-        with patch("scpn_phase_orchestrator.ssgf.tcbo._ripser", return_value=mock_result):
+        with patch(
+            "scpn_phase_orchestrator.ssgf.tcbo._ripser", return_value=mock_result
+        ):
             state = obs.observe(np.array([0.1, 0.2, 0.3]))
         assert state.p_h1 == 0.0
 
@@ -226,14 +229,17 @@ class TestPolicyMetricExtraction:
         return UPDEState(**defaults)
 
     def test_boundary_violation_count_triggers_action(self):
-        """Rule targeting boundary_violation_count > 0 must produce actions when count=2."""
+        """boundary_violation_count > 0 → actions when count=2."""
         from scpn_phase_orchestrator.supervisor.policy_rules import PolicyAction
 
         rule = PolicyRule(
             name="test_boundary",
             regimes=["NOMINAL"],
             condition=PolicyCondition(
-                metric="boundary_violation_count", layer=None, op=">", threshold=0.0,
+                metric="boundary_violation_count",
+                layer=None,
+                op=">",
+                threshold=0.0,
             ),
             actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
         )
@@ -249,7 +255,10 @@ class TestPolicyMetricExtraction:
             name="test_boundary",
             regimes=["NOMINAL"],
             condition=PolicyCondition(
-                metric="boundary_violation_count", layer=None, op=">", threshold=0.0,
+                metric="boundary_violation_count",
+                layer=None,
+                op=">",
+                threshold=0.0,
             ),
             actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
         )
@@ -265,7 +274,10 @@ class TestPolicyMetricExtraction:
             name="test_imprint",
             regimes=["NOMINAL"],
             condition=PolicyCondition(
-                metric="imprint_mean", layer=None, op=">", threshold=0.5,
+                metric="imprint_mean",
+                layer=None,
+                op=">",
+                threshold=0.5,
             ),
             actions=[PolicyAction(knob="zeta", scope="global", value=0.05, ttl_s=5.0)],
         )
@@ -310,7 +322,9 @@ class TestEngineVariantsPipelineWiring:
         alpha = np.zeros((n, n))
         result = eng.step(phases, omegas, knm, 1.0, 1.0, alpha)
         naive = (phases + 0.01 * omegas) % (2 * np.pi)
-        assert not np.allclose(result, naive), "Zeta must alter dynamics beyond pure Euler"
+        assert not np.allclose(result, naive), (
+            "Zeta must alter dynamics beyond pure Euler"
+        )
         r, _ = compute_order_parameter(result)
         assert 0.0 <= r <= 1.0
 
@@ -346,9 +360,7 @@ class TestStochasticSelfConsistency:
         """Stronger coupling → higher R (monotonicity)."""
         R_weak = _self_consistency_R(1.5, 1.0)
         R_strong = _self_consistency_R(5.0, 1.0)
-        assert R_strong > R_weak, (
-            f"Stronger coupling should give higher R: weak={R_weak:.3f}, strong={R_strong:.3f}"
-        )
+        assert R_strong > R_weak, f"K↑ → R↑: weak={R_weak:.3f}, strong={R_strong:.3f}"
 
     def test_find_optimal_noise_returns_nonnegative_d(self):
         n = 4
@@ -359,7 +371,13 @@ class TestStochasticSelfConsistency:
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         result = find_optimal_noise(
-            engine, phases, omegas, knm, alpha, D_range=None, n_steps=20,
+            engine,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            D_range=None,
+            n_steps=20,
         )
         assert result.D >= 0.0
         assert hasattr(result, "R_achieved")

@@ -18,7 +18,6 @@ from scpn_phase_orchestrator.adapters.hardware_io import (
     SimulatedBoardAdapter,
 )
 
-
 # ---------------------------------------------------------------------------
 # SampleBuffer: ring buffer for streaming acquisition
 # ---------------------------------------------------------------------------
@@ -106,7 +105,9 @@ class TestSimulatedBoard:
         """FFT of simulated signal must peak at the configured frequency."""
         freq = 10.0
         board = SimulatedBoardAdapter(
-            n_channels=1, sample_rate=256, frequencies=np.array([freq]),
+            n_channels=1,
+            sample_rate=256,
+            frequencies=np.array([freq]),
         )
         board.start()
         data = board.get_channel_data(0, n_samples=256)
@@ -120,7 +121,8 @@ class TestSimulatedBoard:
     def test_different_channels_have_different_signals(self):
         """Each channel must have a distinct signal (not all identical)."""
         board = SimulatedBoardAdapter(
-            n_channels=3, sample_rate=256,
+            n_channels=3,
+            sample_rate=256,
             frequencies=np.array([5.0, 10.0, 20.0]),
         )
         board.start()
@@ -136,7 +138,9 @@ class TestSimulatedBoard:
         from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 
         board = SimulatedBoardAdapter(
-            n_channels=1, sample_rate=256, frequencies=np.array([10.0]),
+            n_channels=1,
+            sample_rate=256,
+            frequencies=np.array([10.0]),
         )
         board.start()
         signal = board.get_channel_data(0, n_samples=256)
@@ -161,8 +165,8 @@ class TestHardwareFlags:
 
     def test_has_brainflow_matches_importlib(self):
         expected = importlib.util.find_spec("brainflow") is not None
-        assert HAS_BRAINFLOW == expected
+        assert expected == HAS_BRAINFLOW
 
     def test_has_modbus_matches_importlib(self):
         expected = importlib.util.find_spec("pymodbus") is not None
-        assert HAS_MODBUS == expected
+        assert expected == HAS_MODBUS

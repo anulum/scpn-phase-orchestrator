@@ -26,7 +26,7 @@ class TestJaxEngineImportGuard:
         from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX
 
         jax_available = importlib.util.find_spec("jax") is not None
-        assert HAS_JAX == jax_available
+        assert jax_available == HAS_JAX
 
     def test_jax_engine_usable_when_available(self):
         """If JAX is installed, JaxUPDEEngine must produce valid output."""
@@ -59,7 +59,9 @@ class TestJaxEngineImportGuard:
             np.array([0.0, 0.5, 1.0, 1.5]),
             np.ones(4),
             np.ones((4, 4)) * 0.3,
-            0.0, 0.0, np.zeros((4, 4)),
+            0.0,
+            0.0,
+            np.zeros((4, 4)),
         )
         assert np.all(np.isfinite(result))
 
@@ -78,7 +80,9 @@ class TestNNModuleImportGuard:
         import scpn_phase_orchestrator.nn as nn_mod
 
         for name in nn_mod.__all__:
-            assert hasattr(nn_mod, name), f"nn.__all__ lists {name!r} but it's not accessible"
+            assert hasattr(nn_mod, name), (
+                f"nn.__all__ lists {name!r} but it's not accessible"
+            )
 
 
 class TestPipelineWiring:

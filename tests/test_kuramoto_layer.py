@@ -605,7 +605,9 @@ class TestKuramotoPipelineWiring:
         for _ in range(100):
             kuramoto_step(phases, omegas, K, 0.01)
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.001, f"kuramoto_step(64) took {elapsed*1000:.2f}ms, limit 1ms"
+        assert elapsed < 0.001, (
+            f"kuramoto_step(64) took {elapsed * 1000:.2f}ms, limit 1ms"
+        )
 
     def test_forward_trajectory_feeds_training(self, key):
         """forward_with_trajectory output wires into trajectory_loss."""

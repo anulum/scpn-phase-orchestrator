@@ -147,7 +147,7 @@ class TestPACPipelineWiring:
         for _ in range(50):
             modulation_index(theta, amp)
         elapsed = (time.perf_counter() - t0) / 50
-        assert elapsed < 0.005, f"MI(1000) = {elapsed*1000:.1f}ms > 5ms"
+        assert elapsed < 0.005, f"MI(1000) = {elapsed * 1000:.1f}ms > 5ms"
 
     def test_pac_matrix_performance_n8_t200(self) -> None:
         """PAC matrix (8 channels, 200 timesteps) must complete in <50ms."""
@@ -164,4 +164,4 @@ class TestPACPipelineWiring:
         for _ in range(10):
             pac_matrix(phases, amps)
         elapsed = (time.perf_counter() - t0) / 10
-        assert elapsed < 0.2, f"pac_matrix(8,200) = {elapsed*1000:.1f}ms > 200ms"
+        assert elapsed < 0.2, f"pac_matrix(8,200) = {elapsed * 1000:.1f}ms > 200ms"

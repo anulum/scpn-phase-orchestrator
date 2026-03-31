@@ -171,8 +171,9 @@ class TestModuleToOrderParameterWiring:
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         for _ in range(100):
-            state = eng.step(state, np.ones(n), mu, knm, np.zeros((n, n)),
-                             0.0, 0.0, np.zeros((n, n)))
+            state = eng.step(
+                state, np.ones(n), mu, knm, np.zeros((n, n)), 0.0, 0.0, np.zeros((n, n))
+            )
         r, _ = compute_order_parameter(state[:n])
         assert 0.0 <= r <= 1.0
 
@@ -199,7 +200,9 @@ class TestPipelinePerformance:
 
         builder = CouplingBuilder()
         elapsed = self._time_fn(lambda: builder.build(100, 0.5, 0.3))
-        assert elapsed < 0.01, f"CouplingBuilder.build(100) = {elapsed*1000:.1f}ms > 10ms"
+        assert elapsed < 0.01, (
+            f"CouplingBuilder.build(100) = {elapsed * 1000:.1f}ms > 10ms"
+        )
 
     def test_engine_step_n64_under_1ms(self):
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -214,14 +217,14 @@ class TestPipelinePerformance:
         elapsed = self._time_fn(
             lambda: eng.step(phases, omegas, knm, 0.0, 0.0, alpha),
         )
-        assert elapsed < 0.001, f"UPDEEngine.step(64) = {elapsed*1000:.2f}ms > 1ms"
+        assert elapsed < 0.001, f"UPDEEngine.step(64) = {elapsed * 1000:.2f}ms > 1ms"
 
     def test_order_parameter_n256_under_100us(self):
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         phases = np.random.default_rng(0).uniform(0, TWO_PI, 256)
         elapsed = self._time_fn(lambda: compute_order_parameter(phases))
-        assert elapsed < 0.0001, f"order_parameter(256) = {elapsed*1e6:.0f}μs > 100μs"
+        assert elapsed < 0.0001, f"order_parameter(256) = {elapsed * 1e6:.0f}μs > 100μs"
 
     def test_regime_evaluate_under_100us(self):
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -236,7 +239,9 @@ class TestPipelinePerformance:
             regime_id="nominal",
         )
         elapsed = self._time_fn(lambda: mgr.evaluate(state, BoundaryState()))
-        assert elapsed < 0.0001, f"RegimeManager.evaluate = {elapsed*1e6:.0f}μs > 100μs"
+        assert elapsed < 0.0001, (
+            f"RegimeManager.evaluate = {elapsed * 1e6:.0f}μs > 100μs"
+        )
 
     def test_full_loop_n8_200steps_under_50ms(self):
         """Full pipeline loop (coupling+200 engine steps+R+regime+policy)
@@ -262,14 +267,17 @@ class TestPipelinePerformance:
             state = UPDEState(
                 layers=[LayerState(R=r, psi=psi)],
                 cross_layer_alignment=np.eye(1),
-                stability_proxy=r, regime_id="nominal",
+                stability_proxy=r,
+                regime_id="nominal",
             )
             mgr = RegimeManager(cooldown_steps=0)
             policy = SupervisorPolicy(mgr)
             policy.decide(state, BoundaryState())
 
         elapsed = self._time_fn(run_loop, n_warmup=2, n_measure=10)
-        assert elapsed < 0.05, f"Full loop(N=8, 200 steps) = {elapsed*1000:.1f}ms > 50ms"
+        assert elapsed < 0.05, (
+            f"Full loop(N=8, 200 steps) = {elapsed * 1000:.1f}ms > 50ms"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +327,8 @@ class TestAdapterWiring:
         state = UPDEState(
             layers=[LayerState(R=0.8, psi=0.5)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.8, regime_id="nominal",
+            stability_proxy=0.8,
+            regime_id="nominal",
         )
         log = tmp_path / "audit.jsonl"
         with AuditLogger(log) as logger:

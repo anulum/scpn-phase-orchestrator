@@ -44,8 +44,9 @@ class TestKnmTemplateIntegrity:
             tpl.description = "changed"
 
     def test_metadata_preserved(self):
-        tpl = KnmTemplate("cortical_ring", np.eye(2), np.zeros((2, 2)),
-                           "Ring topology from Paper 12")
+        tpl = KnmTemplate(
+            "cortical_ring", np.eye(2), np.zeros((2, 2)), "Ring topology from Paper 12"
+        )
         assert tpl.name == "cortical_ring"
         assert tpl.description == "Ring topology from Paper 12"
 
@@ -62,7 +63,9 @@ class TestKnmTemplateSetRegistry:
     def test_add_and_retrieve_roundtrip(self):
         ts = KnmTemplateSet()
         knm = np.array([[0.0, 0.5], [0.5, 0.0]])
-        tpl = KnmTemplate("sym", knm=knm, alpha=np.zeros((2, 2)), description="symmetric")
+        tpl = KnmTemplate(
+            "sym", knm=knm, alpha=np.zeros((2, 2)), description="symmetric"
+        )
         ts.add(tpl)
         retrieved = ts.get("sym")
         np.testing.assert_array_equal(retrieved.knm, knm)
@@ -165,7 +168,9 @@ class TestTemplatePhysicsIntegration:
         strong_tpl = ts.get("strong")
 
         result_weak = eng.step(phases, omegas, weak_tpl.knm, 0.0, 0.0, weak_tpl.alpha)
-        result_strong = eng.step(phases, omegas, strong_tpl.knm, 0.0, 0.0, strong_tpl.alpha)
+        result_strong = eng.step(
+            phases, omegas, strong_tpl.knm, 0.0, 0.0, strong_tpl.alpha
+        )
 
         # Strong coupling must produce larger phase corrections
         diff_weak = np.max(np.abs(result_weak - phases))

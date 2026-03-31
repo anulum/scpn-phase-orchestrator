@@ -155,7 +155,7 @@ class TestTrainingPipelineWiring:
 
         # R before training
         final_before = layer(p0)
-        r_before = float(order_parameter(final_before))
+        float(order_parameter(final_before))
 
         def loss_fn(m):
             return sync_loss(m, p0, target_R=1.0)

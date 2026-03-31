@@ -16,7 +16,6 @@ import numpy as np
 
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 
-
 # ---------------------------------------------------------------------------
 # K_nm^r: amplitude coupling matrix contracts
 # ---------------------------------------------------------------------------
@@ -44,7 +43,7 @@ class TestAmplitudeCouplingContracts:
         """K_{0,1}^r > K_{0,4}^r: closer oscillators couple more strongly."""
         cs = CouplingBuilder().build_with_amplitude(8, 0.5, 0.3, 0.5, 0.3)
         assert cs.knm_r[0, 1] >= cs.knm_r[0, 4], (
-            f"K_01^r={cs.knm_r[0,1]:.4f} should >= K_04^r={cs.knm_r[0,4]:.4f}"
+            f"K_01^r={cs.knm_r[0, 1]:.4f} should >= K_04^r={cs.knm_r[0, 4]:.4f}"
         )
 
     def test_knm_r_independent_of_phase_coupling(self):
@@ -136,9 +135,14 @@ class TestStuartLandauCouplingPipeline:
         state1 = np.concatenate([phases0, amps0])
         for _ in range(200):
             state1 = eng1.step(
-                state1, omegas, mu, cs_no_amp.knm,
+                state1,
+                omegas,
+                mu,
+                cs_no_amp.knm,
                 np.zeros((n, n)),  # no knm_r
-                0.0, 0.0, alpha,
+                0.0,
+                0.0,
+                alpha,
             )
 
         # Run with amplitude coupling
@@ -146,9 +150,14 @@ class TestStuartLandauCouplingPipeline:
         state2 = np.concatenate([phases0, amps0])
         for _ in range(200):
             state2 = eng2.step(
-                state2, omegas, mu, cs_with_amp.knm,
+                state2,
+                omegas,
+                mu,
+                cs_with_amp.knm,
                 cs_with_amp.knm_r,
-                0.0, 0.0, alpha,
+                0.0,
+                0.0,
+                alpha,
             )
 
         # Amplitude coupling should produce different final amplitudes
@@ -172,4 +181,6 @@ class TestStuartLandauCouplingPipeline:
         for _ in range(10):
             builder.build_with_amplitude(100, 0.5, 0.3, 0.3, 0.3)
         elapsed = (time.perf_counter() - t0) / 10
-        assert elapsed < 0.05, f"build_with_amplitude(100) took {elapsed*1000:.1f}ms, limit 50ms"
+        assert elapsed < 0.05, (
+            f"build_with_amplitude(100) took {elapsed * 1000:.1f}ms, limit 50ms"
+        )

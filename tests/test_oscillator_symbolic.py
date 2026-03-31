@@ -29,7 +29,9 @@ class TestRingPhaseMapping:
         ext = SymbolicExtractor(n_states=4, mode="ring")
         states = ext.extract(np.array([0, 1, 2, 3]), sample_rate=1.0)
         thetas = [s.theta for s in states]
-        np.testing.assert_allclose(thetas, [0.0, np.pi / 2, np.pi, 3 * np.pi / 2], atol=1e-12)
+        np.testing.assert_allclose(
+            thetas, [0.0, np.pi / 2, np.pi, 3 * np.pi / 2], atol=1e-12
+        )
 
     def test_equispaced_phases(self):
         """N states must produce equispaced phases with gap = 2π/N."""
@@ -39,8 +41,9 @@ class TestRingPhaseMapping:
             thetas = np.array([s.theta for s in states])
             gaps = np.diff(thetas)
             expected_gap = TWO_PI / n
-            np.testing.assert_allclose(gaps, expected_gap, atol=1e-12,
-                                       err_msg=f"N={n}: gaps not equispaced")
+            np.testing.assert_allclose(
+                gaps, expected_gap, atol=1e-12, err_msg=f"N={n}: gaps not equispaced"
+            )
 
     def test_phase_wraps_at_2pi(self):
         """State index ≥ N must wrap via modulo."""

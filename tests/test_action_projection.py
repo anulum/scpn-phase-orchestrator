@@ -134,7 +134,7 @@ class TestRateLimitEnforcement:
         )
 
     def test_consecutive_steps_max_change(self):
-        """Simulating 5 consecutive steps: each step must change by at most rate_limit."""
+        """5 consecutive steps: each must change by at most rate_limit."""
         proj = _projector()
         prev = 0.5
         for _ in range(5):
@@ -175,7 +175,11 @@ class TestActionMetadataPreservation:
     def test_non_value_fields_unchanged(self):
         proj = _projector()
         action = ControlAction(
-            knob="K", scope="layer_0", value=5.0, ttl_s=3.5, justification="boost K",
+            knob="K",
+            scope="layer_0",
+            value=5.0,
+            ttl_s=3.5,
+            justification="boost K",
         )
         result = proj.project(action, previous_value=0.5)
         assert result.knob == "K"

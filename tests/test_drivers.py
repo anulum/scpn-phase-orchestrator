@@ -14,7 +14,6 @@ from scpn_phase_orchestrator.drivers.psi_informational import InformationalDrive
 from scpn_phase_orchestrator.drivers.psi_physical import PhysicalDriver
 from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
 
-
 # ---------------------------------------------------------------------------
 # PhysicalDriver: sinusoidal external drive Ψ_P(t) = A·sin(2πft)
 # ---------------------------------------------------------------------------
@@ -100,9 +99,7 @@ class TestInformationalDriver:
         drv = InformationalDriver(cadence_hz=1.0)
         for t in [0.0, 0.3, 0.5, 0.99, 1.5, 10.0]:
             val = drv.compute(t)
-            assert 0.0 <= val < 2.0 * np.pi, (
-                f"t={t}: output {val:.4f} outside [0, 2π)"
-            )
+            assert 0.0 <= val < 2.0 * np.pi, f"t={t}: output {val:.4f} outside [0, 2π)"
 
     def test_batch_output_range(self):
         drv = InformationalDriver(cadence_hz=2.0)
@@ -178,7 +175,8 @@ class TestSymbolicDriver:
         out = drv.compute_batch(steps)
         for i in range(len(seq)):
             np.testing.assert_array_equal(
-                out[i::len(seq)], seq[i],
+                out[i :: len(seq)],
+                seq[i],
                 err_msg=f"Periodicity broken at offset {i}",
             )
 

@@ -14,7 +14,6 @@ import pytest
 
 from scpn_phase_orchestrator.upde.numerics import IntegrationConfig, check_stability
 
-
 # ---------------------------------------------------------------------------
 # IntegrationConfig: defaults and constraints
 # ---------------------------------------------------------------------------
@@ -85,7 +84,10 @@ class TestStabilityCheck:
     def test_exact_pi_boundary(self):
         """dt * deriv = π exactly → unstable (strict inequality)."""
         # Construct exact boundary: dt=1, omega+coupling = π
-        assert check_stability(dt=1.0, max_omega=math.pi / 2, max_coupling=math.pi / 2) is False
+        assert (
+            check_stability(dt=1.0, max_omega=math.pi / 2, max_coupling=math.pi / 2)
+            is False
+        )
 
     def test_coupling_only_no_omega(self):
         """Pure coupling (ω=0) can still cause instability."""

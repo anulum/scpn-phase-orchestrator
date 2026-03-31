@@ -45,6 +45,6 @@ def test_lazy_imported_classes_are_callable() -> None:
 
 def test_lazy_import_consistency() -> None:
     """Importing the same name twice must return the same object (no re-exec)."""
-    a = getattr(qw, "PrometheusCollector")
-    b = getattr(qw, "PrometheusCollector")
+    a = qw.PrometheusCollector
+    b = qw.PrometheusCollector
     assert a is b

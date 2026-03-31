@@ -119,6 +119,7 @@ ignore = ["S101", "S104", "S310", "S603", "N802", "N803", "N806", "N815", "N816"
 
 [tool.ruff.lint.per-file-ignores]
 "tools/kaggle_*.py" = ["S607", "PTH110", "PTH112", "PTH208"]
+"tests/test_exceptions.py" = ["S301"]  # pickle round-trip is the test subject
 "tests/test_kuramoto_layer.py" = ["E402"]
 "tests/test_stuart_landau_nn.py" = ["E402"]
 "tests/test_bold.py" = ["E402"]

@@ -30,7 +30,7 @@ class TestInformationalPhaseExtraction:
         states = InformationalExtractor().extract(timestamps, sample_rate=0.0)
         expected_omega = TWO_PI * 10.0
         assert states[0].omega == pytest.approx(expected_omega, rel=0.01), (
-            f"10 Hz events should give ω≈{expected_omega:.1f}, got {states[0].omega:.1f}"
+            f"ω={states[0].omega:.1f}, expected ≈{expected_omega:.1f}"
         )
 
     def test_theta_from_cumulative_phase(self):
@@ -70,9 +70,8 @@ class TestInformationalQuality:
         """Perfectly regular 10 Hz: CV=0 → quality = 1/(1+0) = 1.0."""
         ts = np.arange(0.0, 1.0, 0.1)
         states = InformationalExtractor().extract(ts, sample_rate=0.0)
-        assert states[0].quality > 0.99, (
-            f"Perfectly regular events should give quality≈1.0, got {states[0].quality:.4f}"
-        )
+        q = states[0].quality
+        assert q > 0.99, f"Regular events → q≈1.0, got {q:.4f}"
 
     def test_irregular_events_lower_quality(self):
         """Random timestamps → higher CV → quality < 1."""

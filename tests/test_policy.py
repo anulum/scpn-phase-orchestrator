@@ -78,9 +78,8 @@ class TestRegimeActionMapping:
         state = _make_upde([0.25, 0.1, 0.2])  # Layer 1 is worst (R=0.1)
         actions = policy.decide(state, BoundaryState())
         k_actions = [a for a in actions if a.knob == "K"]
-        assert any(a.scope == "layer_1" for a in k_actions), (
-            f"Should target layer_1 (lowest R), got scopes: {[a.scope for a in k_actions]}"
-        )
+        scopes = [a.scope for a in k_actions]
+        assert "layer_1" in scopes, f"Expected layer_1: {scopes}"
 
     def test_critical_zeta_value_is_0_1(self, policy):
         state = _make_upde([0.05, 0.1])

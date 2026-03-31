@@ -15,8 +15,12 @@ from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 
 def _ps(quality: float, amplitude: float = 1.0) -> PhaseState:
     return PhaseState(
-        theta=0.0, omega=1.0, amplitude=amplitude,
-        quality=quality, channel="P", node_id="test",
+        theta=0.0,
+        omega=1.0,
+        amplitude=amplitude,
+        quality=quality,
+        channel="P",
+        node_id="test",
     )
 
 
@@ -41,7 +45,9 @@ class TestQualityScore:
         over oscillator with amplitude≈0 and quality=0."""
         states = [_ps(1.0, amplitude=10.0), _ps(0.0, amplitude=1e-15)]
         score = PhaseQualityScorer().score(states)
-        assert score > 0.99, f"High-amplitude oscillator should dominate, got {score:.4f}"
+        assert score > 0.99, (
+            f"High-amplitude oscillator should dominate, got {score:.4f}"
+        )
 
     def test_equal_amplitude_is_simple_average(self):
         """With equal amplitudes, score must be arithmetic mean of qualities."""
@@ -51,8 +57,11 @@ class TestQualityScore:
 
     def test_score_in_unit_interval(self):
         """Score must always be in [0, 1] for valid qualities."""
-        states = [_ps(0.0, amplitude=5.0), _ps(1.0, amplitude=0.001),
-                  _ps(0.5, amplitude=1.0)]
+        states = [
+            _ps(0.0, amplitude=5.0),
+            _ps(1.0, amplitude=0.001),
+            _ps(0.5, amplitude=1.0),
+        ]
         score = PhaseQualityScorer().score(states)
         assert 0.0 <= score <= 1.0
 

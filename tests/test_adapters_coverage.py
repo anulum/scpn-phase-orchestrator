@@ -281,7 +281,7 @@ class TestSNNControllerBridge:
         for i in range(len(rates) - 1):
             assert rates[i + 1] >= rates[i] - 1e-10, (
                 f"LIF rate not monotonic: I={currents[i]:.1f}→{rates[i]:.1f}, "
-                f"I={currents[i+1]:.1f}→{rates[i+1]:.1f}"
+                f"I={currents[i + 1]:.1f}→{rates[i + 1]:.1f}"
             )
 
     def test_build_numpy_network_returns_valid_object(self):

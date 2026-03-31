@@ -315,7 +315,6 @@ class TestPipelineWiring:
     """Pipeline wiring: proves this module is not decorative."""
 
     def test_wires_into_pipeline(self):
-        import time
 
         import numpy as np
 

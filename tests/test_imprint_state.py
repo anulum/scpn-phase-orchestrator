@@ -15,7 +15,6 @@ import pytest
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 
-
 # ---------------------------------------------------------------------------
 # ImprintState: immutability and data contracts
 # ---------------------------------------------------------------------------
@@ -52,7 +51,8 @@ class TestImprintStateContracts:
 
     def test_attribution_preserves_layer_contributions(self):
         state = ImprintState(
-            m_k=np.zeros(4), last_update=1.0,
+            m_k=np.zeros(4),
+            last_update=1.0,
             attribution={"layer_0": 0.5, "layer_1": 0.3, "layer_2": 0.2},
         )
         assert state.attribution["layer_0"] == 0.5
@@ -120,7 +120,8 @@ class TestImprintModelDynamics:
     def test_attribution_preserved_through_update(self, model):
         """Attribution dict must be copied through updates unchanged."""
         state = ImprintState(
-            m_k=np.array([0.1, 0.2]), last_update=0.0,
+            m_k=np.array([0.1, 0.2]),
+            last_update=0.0,
             attribution={"src": 0.7},
         )
         result = model.update(state, exposure=np.ones(2), dt=0.1)

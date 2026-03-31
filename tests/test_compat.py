@@ -14,7 +14,6 @@ import numpy as np
 
 from scpn_phase_orchestrator._compat import HAS_RUST, TWO_PI
 
-
 # ---------------------------------------------------------------------------
 # TWO_PI: mathematical contract
 # ---------------------------------------------------------------------------
@@ -26,7 +25,7 @@ class TestTwoPiConstant:
 
     def test_matches_numpy_two_pi(self):
         """Must equal 2*np.pi exactly (same source)."""
-        assert TWO_PI == 2.0 * np.pi
+        assert 2.0 * np.pi == TWO_PI
 
     def test_matches_stdlib_two_pi(self):
         """Must agree with math.pi to float64 precision."""
@@ -70,7 +69,7 @@ class TestHasRustDetection:
     def test_matches_importlib_detection(self):
         """Must agree with importlib.util.find_spec — the authoritative check."""
         spec_found = importlib.util.find_spec("spo_kernel") is not None
-        assert HAS_RUST == spec_found, (
+        assert spec_found == HAS_RUST, (
             f"HAS_RUST={HAS_RUST} but find_spec says {spec_found}"
         )
 
@@ -82,7 +81,10 @@ class TestHasRustDetection:
         else:
             try:
                 import spo_kernel  # noqa: F401, F811
-                assert False, "HAS_RUST is False but spo_kernel imports successfully"
+
+                raise AssertionError(
+                    "HAS_RUST is False but spo_kernel imports successfully"
+                )
             except ImportError:
                 pass  # Expected
 

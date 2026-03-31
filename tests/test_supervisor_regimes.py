@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
@@ -81,8 +80,10 @@ class TestRegimeEvaluation:
     def test_empty_layers_critical(self):
         rm = RegimeManager()
         empty = UPDEState(
-            layers=[], cross_layer_alignment=np.zeros((0, 0)),
-            stability_proxy=0.0, regime_id="test",
+            layers=[],
+            cross_layer_alignment=np.zeros((0, 0)),
+            stability_proxy=0.0,
+            regime_id="test",
         )
         assert rm.evaluate(empty, _NO_VIOLATIONS) == Regime.CRITICAL
 
@@ -169,7 +170,7 @@ class TestFSMTransitions:
         r1 = rm.transition(Regime.NOMINAL)
         assert r1 == Regime.DEGRADED
         # Step 2: cooldown expires
-        r2 = rm.transition(Regime.NOMINAL)
+        rm.transition(Regime.NOMINAL)
         # Either still cooling or now NOMINAL
         r3 = rm.transition(Regime.NOMINAL)
         # After enough attempts, cooldown must have expired

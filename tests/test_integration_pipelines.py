@@ -115,9 +115,16 @@ class TestImprintCouplingUPDEPipeline:
         init_state = np.array([0.0, 0.5, 1.0, 1.5, 0.1, 0.1, 0.1, 0.1])
         result = init_state.copy()
         for _ in range(500):
-            result = eng.step(result, np.ones(n), mu_boosted,
-                              np.zeros((n, n)), np.zeros((n, n)),
-                              0.0, 0.0, np.zeros((n, n)))
+            result = eng.step(
+                result,
+                np.ones(n),
+                mu_boosted,
+                np.zeros((n, n)),
+                np.zeros((n, n)),
+                0.0,
+                0.0,
+                np.zeros((n, n)),
+            )
         amplitudes = result[n:]
         # Oscillator 3 (mu=1.8) should have larger amplitude than oscillator 0 (mu=0.3)
         assert amplitudes[3] > amplitudes[0], (
@@ -138,8 +145,10 @@ class TestAuditLoggerReplayRoundTrip:
         log_file = tmp_path / "audit.jsonl"
         layers = [LayerState(R=0.85, psi=1.23), LayerState(R=0.42, psi=3.14)]
         state = UPDEState(
-            layers=layers, cross_layer_alignment=np.zeros((2, 2)),
-            stability_proxy=0.77, regime_id="degraded",
+            layers=layers,
+            cross_layer_alignment=np.zeros((2, 2)),
+            stability_proxy=0.77,
+            regime_id="degraded",
         )
         with AuditLogger(log_file) as logger:
             logger.log_step(step=0, upde_state=state, actions=[])
@@ -171,7 +180,8 @@ class TestAuditLoggerReplayRoundTrip:
         state = UPDEState(
             layers=[LayerState(R=0.65, psi=2.0)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.5, regime_id="nominal",
+            stability_proxy=0.5,
+            regime_id="nominal",
         )
         with AuditLogger(log_file) as logger:
             logger.log_step(0, state, [])
@@ -179,7 +189,7 @@ class TestAuditLoggerReplayRoundTrip:
         replay = ReplayEngine(log_file)
         entries = replay.load()
         reconstructed = replay.replay_step(entries[0])
-        assert reconstructed.layers[0].R == pytest.approx(0.65)
+        assert pytest.approx(0.65) == reconstructed.layers[0].R
         assert reconstructed.regime_id == "nominal"
 
     def test_multi_step_hash_chain_survives_round_trip(self, tmp_path):
@@ -188,7 +198,8 @@ class TestAuditLoggerReplayRoundTrip:
         state = UPDEState(
             layers=[LayerState(R=0.5, psi=0.0)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.6, regime_id="nominal",
+            stability_proxy=0.6,
+            regime_id="nominal",
         )
         with AuditLogger(log_file) as logger:
             for i in range(5):
@@ -215,10 +226,14 @@ class TestAuditLoggerReplayRoundTrip:
 
         phases = np.array([0.0, 0.5, 1.0, 1.5])
         omegas = np.array([1.0, 1.5, 0.5, 2.0])
-        knm = np.array([[0.0, 0.3, 0.1, 0.0],
-                         [0.3, 0.0, 0.0, 0.2],
-                         [0.1, 0.0, 0.0, 0.1],
-                         [0.0, 0.2, 0.1, 0.0]])
+        knm = np.array(
+            [
+                [0.0, 0.3, 0.1, 0.0],
+                [0.3, 0.0, 0.0, 0.2],
+                [0.1, 0.0, 0.0, 0.1],
+                [0.0, 0.2, 0.1, 0.0],
+            ]
+        )
         alpha = np.zeros((n, n))
 
         next_phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
@@ -226,19 +241,23 @@ class TestAuditLoggerReplayRoundTrip:
         state0 = UPDEState(
             layers=[LayerState(R=0.5, psi=0.0)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.5, regime_id="nominal",
+            stability_proxy=0.5,
+            regime_id="nominal",
         )
         state1 = UPDEState(
             layers=[LayerState(R=0.6, psi=0.1)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.5, regime_id="nominal",
+            stability_proxy=0.5,
+            regime_id="nominal",
         )
 
         with AuditLogger(log_file) as logger:
-            logger.log_step(0, state0, [], phases=phases, omegas=omegas,
-                            knm=knm, alpha=alpha)
-            logger.log_step(1, state1, [], phases=next_phases, omegas=omegas,
-                            knm=knm, alpha=alpha)
+            logger.log_step(
+                0, state0, [], phases=phases, omegas=omegas, knm=knm, alpha=alpha
+            )
+            logger.log_step(
+                1, state1, [], phases=next_phases, omegas=omegas, knm=knm, alpha=alpha
+            )
 
         replay = ReplayEngine(log_file)
         entries = replay.load()
@@ -251,13 +270,15 @@ class TestAuditLoggerReplayRoundTrip:
         """ControlActions must survive the log→replay cycle."""
         log_file = tmp_path / "audit.jsonl"
         actions = [
-            ControlAction(knob="K", scope="global", value=0.3,
-                          ttl_s=5.0, justification="boost"),
+            ControlAction(
+                knob="K", scope="global", value=0.3, ttl_s=5.0, justification="boost"
+            ),
         ]
         state = UPDEState(
             layers=[LayerState(R=0.8, psi=0.0)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.9, regime_id="nominal",
+            stability_proxy=0.9,
+            regime_id="nominal",
         )
         with AuditLogger(log_file) as logger:
             logger.log_step(0, state, actions)

@@ -200,7 +200,9 @@ class TestUPDEEnginePythonPath:
         knm = np.zeros((n, n))
         alpha = np.zeros((n, n))
         r_euler = _py_engine(n, dt=0.01).run(phases, omegas, knm, 0.0, 0.0, alpha, 50)
-        r_rk4 = _py_engine(n, dt=0.01, method="rk4").run(phases, omegas, knm, 0.0, 0.0, alpha, 50)
+        r_rk4 = _py_engine(n, dt=0.01, method="rk4").run(
+            phases, omegas, knm, 0.0, 0.0, alpha, 50
+        )
         np.testing.assert_allclose(r_euler, r_rk4, atol=1e-6)
 
 
@@ -416,7 +418,9 @@ class TestCouplingBuilderPythonPath:
         builder = CouplingBuilder()
         state = builder.build(4, 0.5, 0.3)
         assert state.knm.shape == (4, 4)
-        assert np.all(np.diag(state.knm) == 0.0), "Diagonal must be zero (no self-coupling)"
+        assert np.all(np.diag(state.knm) == 0.0), (
+            "Diagonal must be zero (no self-coupling)"
+        )
         assert state.active_template == "default"
         # Symmetry contract
         np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)

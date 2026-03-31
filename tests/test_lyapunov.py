@@ -113,7 +113,6 @@ class TestLyapunovPipelineWiring:
     def test_engine_to_lyapunov_guard(self):
         """Run UPDEEngine 200 steps → feed phases to LyapunovGuard.
         Proves the Lyapunov monitor accepts engine output."""
-        import time
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -149,4 +148,4 @@ class TestLyapunovPipelineWiring:
         for _ in range(100):
             guard.evaluate(phases, knm)
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.001, f"evaluate(64) took {elapsed*1000:.2f}ms, limit 1ms"
+        assert elapsed < 0.001, f"evaluate(64) took {elapsed * 1000:.2f}ms, limit 1ms"

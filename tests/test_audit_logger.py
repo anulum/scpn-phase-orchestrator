@@ -115,8 +115,11 @@ class TestAuditDataIntegrity:
         and timestamp — all with correct values."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
-            logger.log_step(42, _sample_state(r0=0.85, r1=0.55, regime="degraded"),
-                            _sample_actions())
+            logger.log_step(
+                42,
+                _sample_state(r0=0.85, r1=0.55, regime="degraded"),
+                _sample_actions(),
+            )
 
         record = json.loads(log_path.read_text().strip())
         assert record["step"] == 42
@@ -135,7 +138,9 @@ class TestAuditDataIntegrity:
         """Event records must preserve the event type and all data fields."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
-            logger.log_event("regime_change", {"from": "nominal", "to": "critical", "step": 99})
+            logger.log_event(
+                "regime_change", {"from": "nominal", "to": "critical", "step": 99}
+            )
 
         record = json.loads(log_path.read_text().strip())
         assert record["event"] == "regime_change"
@@ -155,11 +160,21 @@ class TestAuditDataIntegrity:
         state = UPDEState(
             layers=[LayerState(R=0.9, psi=0.1)],
             cross_layer_alignment=np.eye(1),
-            stability_proxy=0.8, regime_id="nominal",
+            stability_proxy=0.8,
+            regime_id="nominal",
         )
         with AuditLogger(log_path) as logger:
-            logger.log_step(0, state, [], phases=phases, omegas=omegas,
-                            knm=knm, alpha=alpha, zeta=0.1, psi_drive=0.5)
+            logger.log_step(
+                0,
+                state,
+                [],
+                phases=phases,
+                omegas=omegas,
+                knm=knm,
+                alpha=alpha,
+                zeta=0.1,
+                psi_drive=0.5,
+            )
 
         record = json.loads(log_path.read_text().strip())
         np.testing.assert_allclose(record["phases"], [0.1, 0.2, 0.3])
@@ -174,10 +189,11 @@ class TestAuditDataIntegrity:
         """Providing phases without omegas/knm/alpha must raise AuditError,
         because the log would be un-replayable."""
         log_path = tmp_path / "audit.jsonl"
-        with AuditLogger(log_path) as logger:
-            with pytest.raises(AuditError, match="omegas, knm, alpha required"):
-                logger.log_step(0, _sample_state(), [],
-                                phases=np.array([0.1, 0.2]))
+        with (
+            AuditLogger(log_path) as logger,
+            pytest.raises(AuditError, match="omegas, knm, alpha required"),
+        ):
+            logger.log_step(0, _sample_state(), [], phases=np.array([0.1, 0.2]))
 
     def test_amplitude_and_mu_fields_preserved(self, tmp_path):
         """Stuart-Landau specific fields (amplitudes, mu, knm_r, epsilon)
@@ -190,12 +206,17 @@ class TestAuditDataIntegrity:
 
         with AuditLogger(log_path) as logger:
             logger.log_step(
-                0, state, [],
+                0,
+                state,
+                [],
                 phases=np.array([0.1, 0.2]),
                 omegas=np.array([1.0, 1.0]),
                 knm=np.zeros((2, 2)),
                 alpha=np.zeros((2, 2)),
-                amplitudes=amps, mu=mu, knm_r=knm_r, epsilon=0.95,
+                amplitudes=amps,
+                mu=mu,
+                knm_r=knm_r,
+                epsilon=0.95,
             )
 
         record = json.loads(log_path.read_text().strip())

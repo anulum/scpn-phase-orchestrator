@@ -152,7 +152,9 @@ def test_valid_knobs_accepted(sample_binding_spec):
     """All valid knobs (K, alpha, zeta, Psi) must pass validation."""
     for knob in ["K", "alpha", "zeta", "Psi"]:
         actuators = [
-            ActuatorMapping(name=f"{knob}_g", knob=knob, scope="global", limits=(0.0, 1.0)),
+            ActuatorMapping(
+                name=f"{knob}_g", knob=knob, scope="global", limits=(0.0, 1.0)
+            ),
         ]
         spec = replace(sample_binding_spec, actuators=actuators)
         errors = validate_binding_spec(spec)
