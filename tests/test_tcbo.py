@@ -100,24 +100,26 @@ class TestTCBOReset:
         assert result.method == "insufficient_data"
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestTCBOPipelineWiring:
+    """Pipeline: engine phases → TCBO → topological complexity."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_phases_to_tcbo(self):
+        """UPDEEngine → phases → TCBOObserver.observe → p_h1∈[0,1]."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
+        n = 4
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
+        omegas = np.array([1.0, 1.5, 2.0, 0.5])
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
+
+        obs = TCBOObserver(window_size=10, embed_dim=2, embed_delay=1)
+        for _ in range(15):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+            state = obs.observe(phases)
+
+        assert isinstance(state, TCBOState)
+        assert 0.0 <= state.p_h1 <= 1.0
