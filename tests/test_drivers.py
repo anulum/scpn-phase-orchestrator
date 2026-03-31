@@ -193,7 +193,7 @@ class TestDriversPipelineEndToEnd:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         n = 4
-        driver = PhysicalDriver(amplitude=0.5, frequency=1.0)
+        driver = PhysicalDriver(frequency=1.0, amplitude=0.5)
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, n)
@@ -203,21 +203,19 @@ class TestDriversPipelineEndToEnd:
         alpha = np.zeros((n, n))
         for step_i in range(200):
             t = step_i * 0.01
-            psi = driver.evaluate(t)
+            psi = driver.compute(t)
             phases = eng.step(phases, omegas, knm, 0.5, psi, alpha)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
 
     def test_all_drivers_produce_valid_psi(self):
         """All driver types produce finite float psi values."""
-        drivers = [
-            PhysicalDriver(amplitude=1.0, frequency=5.0),
-            SymbolicDriver(n_states=8, rate=2.0),
-            InformationalDriver(base_rate=10.0),
-        ]
-        for drv in drivers:
-            psi = drv.evaluate(0.5)
-            assert np.isfinite(psi), f"{drv.__class__.__name__} non-finite psi"
+        phys = PhysicalDriver(frequency=5.0, amplitude=1.0)
+        symb = SymbolicDriver(sequence=[0.1, 0.5, 0.9])
+        info = InformationalDriver(cadence_hz=10.0)
+        assert np.isfinite(phys.compute(0.5))
+        assert np.isfinite(symb.compute(0))
+        assert np.isfinite(info.compute(0.5))
 
 
 # Pipeline wiring: PhysicalDriver/SymbolicDriver/InformationalDriver → psi
