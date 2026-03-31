@@ -148,24 +148,38 @@ class TestDecide:
         assert actions[0].knob == "zeta"
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestPredictiveSupervisorPipelineWiring:
+    """Pipeline: engine → phases → predictive supervisor → MPC actions."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_phases_to_predictive_actions(self):
+        """UPDEEngine → phases → PredictiveSupervisor.decide →
+        actions based on OA prediction. Full MPC feedback loop."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
+        omegas = rng.normal(1.0, 0.5, n)
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
+
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
+
+        ps = PredictiveSupervisor(n, dt=0.01, horizon=5)
+        actions = ps.decide(
+            phases,
+            omegas,
+            knm,
+            alpha,
+            _make_state(r),
+            BoundaryState(),
+        )
+        assert isinstance(actions, list)
         assert 0.0 <= r <= 1.0
