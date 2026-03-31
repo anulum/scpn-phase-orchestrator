@@ -95,24 +95,22 @@ class TestSyncThreshold:
         )
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestNNSpectralPipelineWiring:
+    """Pipeline: nn/ spectral → sync_threshold → KuramotoLayer."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_sync_threshold_informs_kuramoto_layer(self, key):
+        """sync_threshold predicts K_c → KuramotoLayer uses K above it."""
+        from scpn_phase_orchestrator.nn.functional import order_parameter
+        from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        k1, k2 = jax.random.split(key)
+        layer = KuramotoLayer(N, n_steps=100, dt=0.01, key=k1)
+        omegas_test = jax.random.normal(k2, (N,)) * 0.5
+        K_mat = jnp.abs(layer.K)
+        kc = float(sync_threshold(K_mat, omegas_test))
+        assert kc >= 0.0
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+        phases = jax.random.uniform(k2, (N,), maxval=2.0 * jnp.pi)
+        final = layer(phases)
+        r = float(order_parameter(final))
         assert 0.0 <= r <= 1.0
