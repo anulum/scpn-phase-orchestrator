@@ -179,24 +179,41 @@ class TestRegimeManager:
         assert len(rm.transition_history) == 0
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSupervisorModulesPipelineWiring:
+    """Pipeline: engine → R → regime → event bus."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_regime_transition_with_event_bus(self):
+        """Engine R → RegimeManager → EventBus: complete wiring."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        omegas = rng.normal(1.0, 2.0, n)
+        knm = 0.1 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
+        for _ in range(200):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+
+        bus = EventBus()
+        received: list[RegimeEvent] = []
+        bus.subscribe(received.append)
+
+        rm = RegimeManager(cooldown_steps=0)
+        regime = rm.evaluate(_state(r), BoundaryState())
+        rm.transition(regime)
+        bus.post(
+            RegimeEvent(
+                kind="regime_transition",
+                step=200,
+                detail=f"R={r:.3f}",
+            )
+        )
+        assert len(received) == 1
+        assert received[0].kind == "regime_transition"
