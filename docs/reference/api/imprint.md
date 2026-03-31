@@ -122,12 +122,24 @@ UPDEEngine.step() ──→ phases ──→ compute_exposure()
               UPDEEngine.step(K_nm', ..., α', ...)  ← next cycle
 ```
 
-## ImprintState (dataclass)
+## ImprintState (frozen dataclass)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `m_k` | `NDArray` | Imprint values per oscillator |
-| `last_update` | `float` | Timestamp of last update |
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `m_k` | `NDArray` | required | Imprint values per oscillator |
+| `last_update` | `float` | required | Timestamp of last update |
+| `attribution` | `dict[str, float]` | `{}` | Source attribution weights |
+
+The `attribution` dict tracks which input sources contributed to the
+imprint (e.g., `{"eeg_alpha": 0.6, "emg_burst": 0.4}`). This supports
+explainability: when the imprint modulates coupling, the attribution
+records which signals caused the modulation.
+
+### Validation
+
+`ImprintModel.__init__` validates:
+- `decay_rate >= 0` (non-negative; 0 = permanent memory)
+- `saturation > 0` (positive; prevents runaway accumulation)
 
 ## ImprintModel
 
