@@ -118,24 +118,42 @@ class TestEffectiveTemperature:
         assert effective_temperature(costs) == pytest.approx(0.0)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestFreeEnergyPipelineWiring:
+    """Pipeline: SSGF cost history → effective temperature → Langevin."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_ssgf_cost_history_to_temperature(self):
+        """GeometryCarrier runs → cost history → effective_temperature
+        measures thermodynamic fluctuations of the SSGF loop."""
+        from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 
+        gc = GeometryCarrier(4, z_dim=3, lr=0.05, seed=42)
+
+        def cost_fn(W):
+            return float(np.sum((W - 0.5) ** 2))
+
+        costs = []
+        for _ in range(30):
+            W = gc.decode()
+            c = cost_fn(W)
+            costs.append(c)
+            gc.update(cost=c, cost_fn=cost_fn)
+
+        t_eff = effective_temperature(np.array(costs))
+        assert t_eff >= 0.0
+
+    def test_langevin_noise_on_engine_phases(self):
+        """add_langevin_noise on engine-produced phases."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
+        n = 4
         eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
+        phases = np.zeros(n)
         omegas = np.ones(n)
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        for _ in range(50):
+            phases = eng.step(phases, omegas, knm, 0.0, 0.0, np.zeros((n, n)))
+
+        noisy = add_langevin_noise(phases, temperature=0.1, dt=0.01)
+        assert noisy.shape == phases.shape
+        assert not np.allclose(noisy, phases), "Noise must perturb"
