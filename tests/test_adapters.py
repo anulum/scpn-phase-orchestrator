@@ -246,7 +246,7 @@ class TestAdaptersPipelineEndToEnd:
         # update() would push to remote — just verify construction
         assert prom is not None
         # Bridge
-        bridge = SCPNControlBridge()
+        bridge = SCPNControlBridge({})
         out = bridge.export_state(state)
         assert out["regime"] == "nominal"
         assert 0.0 <= r <= 1.0
