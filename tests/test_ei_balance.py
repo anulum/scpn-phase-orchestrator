@@ -93,24 +93,42 @@ class TestAdjustEIRatio:
         assert abs(bal.ratio - 2.0) < 0.1
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestEIBalancePipelineWiring:
+    """Pipeline: adjust_ei_ratio → balanced K_nm → engine."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_ei_balanced_knm_drives_engine(self):
+        """adjust_ei_ratio → balanced K_nm → UPDEEngine → R∈[0,1].
+        Proves EI balance feeds valid coupling into simulation."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        n = 6
+        knm = _uniform_knm(n)
+        knm[:3, :] *= 2.0  # excitatory stronger
+        balanced = adjust_ei_ratio(
+            knm,
+            [0, 1, 2],
+            [3, 4, 5],
+            target_ratio=1.0,
+        )
+        bal = compute_ei_balance(balanced, [0, 1, 2], [3, 4, 5])
+        assert abs(bal.ratio - 1.0) < 0.2
+
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            phases = eng.step(
+                phases,
+                omegas,
+                balanced,
+                0.0,
+                0.0,
+                alpha,
+            )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
