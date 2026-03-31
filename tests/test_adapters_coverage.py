@@ -268,17 +268,46 @@ class TestSNNControllerBridge:
         actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 1, 2, 3])
         assert len(actions) > 0
 
-    def test_lif_rate_estimate(self):
+    def test_lif_rate_estimate_monotonic(self):
+        """Higher input current → higher firing rate (LIF model property)."""
         from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
 
         bridge = SNNControllerBridge()
         currents = np.array([0.5, 1.0, 1.5, 2.0])
         rates = bridge.lif_rate_estimate(currents)
         assert rates.shape == (4,)
+        assert np.all(rates >= 0.0), "Firing rates must be non-negative"
+        # Monotonicity: higher current → higher or equal rate
+        for i in range(len(rates) - 1):
+            assert rates[i + 1] >= rates[i] - 1e-10, (
+                f"LIF rate not monotonic: I={currents[i]:.1f}→{rates[i]:.1f}, "
+                f"I={currents[i+1]:.1f}→{rates[i+1]:.1f}"
+            )
 
-    def test_build_numpy_network(self):
+    def test_build_numpy_network_returns_valid_object(self):
         from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
 
         bridge = SNNControllerBridge()
         net = bridge.build_numpy_network(4)
         assert net is not None
+
+    def test_snn_bridge_pipeline_wiring(self):
+        """End-to-end: UPDEState → SNN currents → rates → actions.
+        Verifies the full adapter pipeline, not just individual methods."""
+        from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+        bridge = SNNControllerBridge(n_neurons=100)
+        state = UPDEState(
+            layers=[LayerState(R=0.3, psi=i * 0.5) for i in range(4)],
+            cross_layer_alignment=np.eye(4),
+            stability_proxy=0.3,
+            regime_id="degraded",
+        )
+        currents = bridge.upde_state_to_input_current(state)
+        rates = bridge.lif_rate_estimate(currents)
+        actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 1, 2, 3])
+        # Pipeline must produce finite currents, non-negative rates, and ≥0 actions
+        assert np.all(np.isfinite(currents))
+        assert np.all(rates >= 0.0)
+        assert isinstance(actions, list)
