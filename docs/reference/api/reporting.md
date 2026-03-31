@@ -55,4 +55,65 @@ plt.savefig("sync_analysis.png", dpi=150)
 - **Phase portrait**: oscillators coloured by channel (P=blue, I=green, S=orange)
 - **Coupling heatmap**: sequential colourmap (viridis), zero diagonal masked
 
+## Pipeline integration
+
+```
+UPDEEngine ──→ phases, R(t) ──→ plot_order_parameter()
+                                 plot_phase_portrait()
+                                 plot_sync_dashboard()
+
+CouplingBuilder ──→ K_nm ──→ plot_coupling_matrix()
+
+bifurcation ──→ R(K) curve ──→ plot_bifurcation_diagram()
+
+embedding ──→ recurrence matrix ──→ plot_recurrence()
+```
+
+All plots consume engine output directly — no intermediate
+transformation. This ensures the visualisation always reflects
+the actual pipeline state.
+
+## Plot gallery
+
+### Order parameter time series
+
+```python
+plot_order_parameter(R_history, dt=0.01, ax=ax)
+```
+
+Shows R(t) with coloured background bands:
+- Green: NOMINAL (R > 0.6)
+- Yellow: DEGRADED (0.3 < R < 0.6)
+- Red: CRITICAL (R < 0.3)
+
+Vertical dashed lines mark regime transitions.
+
+### Phase portrait
+
+```python
+plot_phase_portrait(phases, ax=ax)
+```
+
+Plots oscillator phases on the unit circle with the mean-field
+vector (R, ψ) as a bold arrow. Oscillators coloured by channel
+(P=blue, I=green, S=orange).
+
+### Coupling heatmap
+
+```python
+plot_coupling_matrix(knm, ax=ax)
+```
+
+Heatmap of K_nm with viridis colourmap, zero diagonal masked.
+Annotated with Fiedler value λ₂ and mean coupling strength.
+
+### Sync dashboard
+
+```python
+plot_sync_dashboard(R_history, phases, knm, plv_matrix, ax=axes)
+```
+
+Multi-panel figure combining R(t), phase portrait, K_nm heatmap,
+and PLV matrix in a single publication-ready layout.
+
 ::: scpn_phase_orchestrator.reporting.plots

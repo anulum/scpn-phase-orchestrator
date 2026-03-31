@@ -1,10 +1,70 @@
 # UPDE Engine
 
 The Unified Phase Dynamics Engine (UPDE) is SPO's core integrator subsystem.
-It provides 9 ODE engine variants covering standard Kuramoto, amplitude
+It provides 14 ODE engine variants covering standard Kuramoto, amplitude
 dynamics (Stuart-Landau), higher-order interactions (simplicial), inertial
 systems (power grids), stochastic resonance, geometric integration, time
-delays, financial markets, and spatial-phase coupling (swarmalators).
+delays, financial markets, spatial-phase coupling (swarmalators),
+hypergraph k-body coupling, mean-field reduction, variational prediction,
+adjoint gradients, and bifurcation continuation.
+
+## Pipeline position
+
+```
+CouplingBuilder.build() ──→ K_nm, α
+                                │
+Oscillators.extract() ──→ θ, ω │
+                                │
+Drivers.compute() ──→ Ψ        │
+                                ↓
+              ┌─────── UPDEEngine.step(θ, ω, K, ζ, Ψ, α) ───────┐
+              │                                                    │
+              │    Euler / RK4 / RK45 (adaptive)                   │
+              │    Optional: Rust FFI via spo_kernel                │
+              │                                                    │
+              └────────────── θ_new ∈ [0, 2π)^N ─────────────────┘
+                                │
+                                ↓
+                     compute_order_parameter(θ) → R, ψ
+                                │
+                                ↓
+                     RegimeManager.evaluate() → Regime
+```
+
+The engine is the **computational core** of SPO. Every subsystem
+feeds into it (coupling, oscillators, drivers) or consumes its
+output (order parameters, monitors, supervisor).
+
+### Engine variants
+
+| Engine | State | ODE | Use case |
+|--------|-------|-----|----------|
+| UPDEEngine | θ ∈ [0,2π)^N | Kuramoto | General synchronisation |
+| StuartLandauEngine | [θ,r] ∈ R^{2N} | Stuart-Landau | Amplitude dynamics |
+| SimplicialEngine | θ ∈ [0,2π)^N | 3-body Kuramoto | Explosive sync |
+| InertialEngine | [θ,ω̇] ∈ R^{2N} | Swing equation | Power grids |
+| SwarmalatorEngine | [x,θ] ∈ R^{(D+1)N} | Position + phase | Swarm robotics |
+| StochasticInjector | θ ∈ [0,2π)^N | Euler-Maruyama | Noise resonance |
+| GeometricEngine | z ∈ C^N | SO(2) exponential | Long simulations |
+| DelayedEngine | θ + buffer | Delayed Kuramoto | Transport delays |
+| MarketEngine | θ from Hilbert | Price → phase | Financial markets |
+| SplittingEngine | θ ∈ [0,2π)^N | Symplectic split | Energy-preserving |
+| HypergraphEngine | θ ∈ [0,2π)^N | k-body coupling | Mixed-order |
+| OttAntosenReduction | z ∈ C | Mean-field ODE | Fast prediction |
+| PredictionModel | θ ∈ [0,2π)^N | Error injection | FEP-Kuramoto |
+| AdjointGradient | ∂R/∂K | Finite diff / JAX | Optimisation |
+
+### Performance budgets
+
+| Operation | N | Budget | Rust path |
+|-----------|---|--------|-----------|
+| `UPDEEngine.step()` | 8 | < 50 μs | ~ 30 μs |
+| `UPDEEngine.step()` | 64 | < 1 ms | ~ 0.3 ms |
+| `UPDEEngine.step()` | 128 | < 5 ms | ~ 1 ms |
+| `compute_order_parameter()` | 256 | < 100 μs | ~ 2 μs |
+| `StuartLandauEngine.step()` | 32 | < 2 ms | — |
+| `SplittingEngine.step()` | 64 | < 1 ms | — |
+| `DelayedEngine.step()` | 32 | < 1 ms | — |
 
 ## Core Kuramoto Engine
 

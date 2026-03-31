@@ -49,3 +49,34 @@ conditional imports for optional dependencies:
   that fall back gracefully when the dependency is not installed
 
 ::: scpn_phase_orchestrator._compat
+
+## Optional dependency detection
+
+SPO uses conditional imports to support optional features:
+
+| Package | Feature | Import guard |
+|---------|---------|--------------|
+| `jax` | nn/ module, JAX engine | `_HAS_JAX` |
+| `equinox` | Learnable layers | `_HAS_EQUINOX` |
+| `optax` | Training utilities | `_HAS_OPTAX` |
+| `redis` | State persistence | `_HAS_REDIS` |
+| `opentelemetry` | OTel adapter | `_HAS_OTEL` |
+| `spo_kernel` | Rust FFI acceleration | `_HAS_RUST` |
+| `grpcio` | gRPC service | `_HAS_GRPC` |
+| `matplotlib` | Plotting | `_HAS_MATPLOTLIB` |
+
+When an optional dependency is missing, the corresponding subsystem
+raises `ImportError` with a message specifying which extra to install
+(e.g., `pip install scpn-phase-orchestrator[nn]`).
+
+## Error handling philosophy
+
+SPO follows a fail-fast strategy at system boundaries:
+
+- **Input validation:** `ValueError` for invalid shapes, NaN, etc.
+- **Engine divergence:** `EngineError` with step number and divergence magnitude
+- **Binding errors:** `BindingError` with field path and expected type
+- **Audit tampering:** `AuditError` with chain break location
+
+Internal code trusts validated data — no redundant checks on hot paths.
+This keeps engine step latency under 1 ms for N ≤ 64.
