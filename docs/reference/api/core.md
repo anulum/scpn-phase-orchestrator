@@ -52,22 +52,25 @@ conditional imports for optional dependencies:
 
 ## Optional dependency detection
 
-SPO uses conditional imports to support optional features:
+`_compat.py` exports two values:
 
-| Package | Feature | Import guard |
-|---------|---------|--------------|
-| `jax` | nn/ module, JAX engine | `_HAS_JAX` |
-| `equinox` | Learnable layers | `_HAS_EQUINOX` |
-| `optax` | Training utilities | `_HAS_OPTAX` |
-| `redis` | State persistence | `_HAS_REDIS` |
-| `opentelemetry` | OTel adapter | `_HAS_OTEL` |
-| `spo_kernel` | Rust FFI acceleration | `_HAS_RUST` |
-| `grpcio` | gRPC service | `_HAS_GRPC` |
-| `matplotlib` | Plotting | `_HAS_MATPLOTLIB` |
+- `TWO_PI` — 2π as float64
+- `HAS_RUST` — `True` when `spo_kernel` Rust extension is importable
+
+Individual modules handle their own optional imports locally:
+
+| Module | Guard | Package |
+|--------|-------|---------|
+| `nn/` | `pytest.importorskip("jax")` | jax, equinox, optax |
+| `reporting/plots.py` | `_HAS_MPL` | matplotlib |
+| `ssgf/tcbo.py` | `_HAS_RIPSER` | ripser |
+| `upde/engine.py` | `_HAS_RUST` (from _compat) | spo_kernel |
+| `coupling/knm.py` | `_HAS_RUST` (from _compat) | spo_kernel |
+| `oscillators/physical.py` | `_HAS_RUST` (from _compat) | spo_kernel |
 
 When an optional dependency is missing, the corresponding subsystem
-raises `ImportError` with a message specifying which extra to install
-(e.g., `pip install scpn-phase-orchestrator[nn]`).
+either skips the optimised path (Rust → Python fallback) or raises
+`ImportError` with install instructions.
 
 ## Error handling philosophy
 
