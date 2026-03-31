@@ -240,8 +240,7 @@ class TestAdaptersPipelineEndToEnd:
         )
         # OTel
         otel = OTelExporter()
-        record = otel.export(state)
-        assert "R" in record or "layers" in record or isinstance(record, dict)
+        otel.record_step(state, step_idx=0)
         # Prometheus
         prom = PrometheusAdapter()
         prom.update(state)
