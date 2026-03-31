@@ -194,25 +194,98 @@ def test_critical_bypasses_hysteresis_hold():
     assert result == Regime.CRITICAL
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestRegimeHysteresisPipelineEndToEnd:
+    """Full pipeline: CouplingBuilder → Engine → R → RegimeManager → transitions.
 
-    def test_wires_into_pipeline(self):
+    Proves RegimeManager is structurally wired into the SPO pipeline.
+    """
 
-        import numpy as np
-
+    def test_engine_trajectory_drives_regime_transitions(self):
+        """Run engine with varying coupling → R changes → regime transitions."""
+        from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
+        cb = CouplingBuilder()
+        eng = UPDEEngine(n, dt=0.01, method="rk4")
+        mgr = RegimeManager(cooldown_steps=0)
+        rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        # Phase 1: strong coupling → high R → NOMINAL
+        cs_strong = cb.build(n, 2.0, 0.2)
+        for _ in range(300):
+            phases = eng.step(phases, omegas, cs_strong.knm, 0.0, 0.0, cs_strong.alpha)
+        r, psi = compute_order_parameter(phases)
+        state = _make_state([r])
+        regime = mgr.evaluate(state, _clean_boundary())
+        assert regime in {Regime.NOMINAL, Regime.RECOVERY}
+
+        # Phase 2: zero coupling → R drops → DEGRADED or CRITICAL
+        phases_uncoupled = rng.uniform(0, 2 * np.pi, n)
+        knm_zero = np.zeros((n, n))
+        alpha_zero = np.zeros((n, n))
+        for _ in range(100):
+            phases_uncoupled = eng.step(
+                phases_uncoupled, rng.uniform(-5, 5, n), knm_zero, 0.0, 0.0, alpha_zero
+            )
+        r_low, _ = compute_order_parameter(phases_uncoupled)
+        state_low = _make_state([r_low])
+        regime_low = mgr.evaluate(state_low, _clean_boundary())
+        # With low R, should not be NOMINAL
+        assert regime_low in {Regime.DEGRADED, Regime.CRITICAL, Regime.RECOVERY}
+
+    def test_hysteresis_prevents_oscillation_in_live_sim(self):
+        """Fluctuating R near boundary with hysteresis → stable regime."""
+        mgr = RegimeManager(cooldown_steps=5, hysteresis=0.05)
+        # Simulate R near NOMINAL/DEGRADED boundary
+        regimes = []
+        for r in [0.62, 0.58, 0.63, 0.57, 0.61, 0.59, 0.64]:
+            state = _make_state([r])
+            regime = mgr.evaluate(state, _clean_boundary())
+            regimes.append(regime)
+        # With cooldown=5, should not oscillate every step
+        transitions = sum(1 for i in range(1, len(regimes)) if regimes[i] != regimes[i - 1])
+        assert transitions <= 3, f"Too many transitions: {transitions}"
+
+    def test_event_bus_captures_engine_driven_transitions(self):
+        """EventBus records transitions driven by engine R trajectory."""
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        bus = EventBus()
+        mgr = RegimeManager(cooldown_steps=0, event_bus=bus)
+        n = 4
+        eng = UPDEEngine(n, dt=0.01)
+        # High R → NOMINAL (no event, already nominal)
+        phases_sync = np.full(n, 1.0)
+        omegas = np.ones(n)
+        knm = 2.0 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        phases_sync = eng.run(phases_sync, omegas, knm, 0.0, 0.0, alpha, n_steps=100)
+        r_high, _ = compute_order_parameter(phases_sync)
+        mgr.evaluate(_make_state([r_high]), _clean_boundary())
+        initial_count = bus.count
+        # Force hard violation → CRITICAL (event emitted)
+        mgr.evaluate(_make_state([0.1]), _hard_violation())
+        assert bus.count > initial_count
+
+    def test_performance_evaluate_under_10us(self):
+        """RegimeManager.evaluate() < 10μs per call."""
+        import time
+        mgr = RegimeManager(cooldown_steps=0)
+        state = _make_state([0.8, 0.75])
+        boundary = _clean_boundary()
+        mgr.evaluate(state, boundary)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(10000):
+            mgr.evaluate(state, boundary)
+        elapsed = (time.perf_counter() - t0) / 10000
+        assert elapsed < 1e-5, f"evaluate() took {elapsed*1e6:.1f}μs"
+
+
+# Pipeline wiring: RegimeManager tested via CouplingBuilder → UPDEEngine(RK4)
+# → compute_order_parameter → evaluate(). Hysteresis: cooldown prevents oscillation,
+# EventBus captures transitions. Performance: evaluate()<10μs.

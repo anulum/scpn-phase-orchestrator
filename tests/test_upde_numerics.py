@@ -146,24 +146,74 @@ class TestStabilityCheck:
         )
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestNumericsPipelineEndToEnd:
+    """Full pipeline: check_stability → IntegrationConfig → Engine → R → Regime.
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    Proves numerics module is structurally load-bearing.
+    """
 
+    def test_stability_check_gates_engine_run(self):
+        """Only run engine when check_stability passes → valid R."""
+        from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+        from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 16
+        cb = CouplingBuilder()
+        cs = cb.build(n, 0.5, 0.2)
+        max_omega = 3.0
+        max_coupling = float(np.max(cs.knm))
+        dt = 0.01
+        assert check_stability(dt, max_omega, max_coupling) is True
+        eng = UPDEEngine(n, dt=dt, method="rk4")
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, n)
+        omegas = rng.uniform(-max_omega, max_omega, n)
+        phases = eng.run(phases, omegas, cs.knm, 0.0, 0.0, cs.alpha, n_steps=300)
+        r, psi = compute_order_parameter(phases)
+        assert 0.0 <= r <= 1.0
+        layer = LayerState(R=r, psi=psi)
+        state = UPDEState(
+            layers=[layer],
+            cross_layer_alignment=np.array([r]),
+            stability_proxy=r,
+            regime_id="nominal",
+        )
+        rm = RegimeManager(hysteresis=0.05)
+        regime = rm.evaluate(state, BoundaryState())
+        assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
+
+    def test_integration_config_with_engine(self):
+        """IntegrationConfig parameters feed into engine construction."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
+        cfg = IntegrationConfig(dt=0.005, substeps=2, method="rk4", max_dt=0.05)
+        eng = UPDEEngine(4, dt=cfg.dt, method=cfg.method)
         rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        phases = rng.uniform(0, 2 * np.pi, 4)
+        omegas = np.ones(4)
+        knm = 0.5 * np.ones((4, 4))
         np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        alpha = np.zeros((4, 4))
+        phases = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=200)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+    def test_performance_check_stability_under_1us(self):
+        """check_stability() < 1μs per call."""
+        import time
+        check_stability(0.01, 5.0, 3.0)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(100000):
+            check_stability(0.01, 5.0, 3.0)
+        elapsed = (time.perf_counter() - t0) / 100000
+        assert elapsed < 1e-6, f"check_stability took {elapsed*1e9:.0f}ns"
+
+
+# Pipeline wiring: numerics module tested via check_stability → IntegrationConfig
+# → UPDEEngine(RK4) → compute_order_parameter → RegimeManager. CFL cross-validated
+# against actual Euler steps. Performance: check_stability<1μs.

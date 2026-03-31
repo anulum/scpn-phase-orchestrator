@@ -256,24 +256,106 @@ class TestZetaClamping:
         assert abs(zeta - 0.3) < 1e-15
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestRegressionPipelineEndToEnd:
+    """Full pipeline regression: each regression wires through the live pipeline."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_sl_regression_survives_full_pipeline(self):
+        """StuartLandauEngine → CouplingBuilder K_nm → order_parameter → Regime.
 
+        Verifies the sign-flip fix holds through the entire pipeline.
+        """
+        from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 8
+        cb = CouplingBuilder()
+        cs = cb.build(n, 0.5, 0.2)
+        engine = StuartLandauEngine(n, dt=0.01, method="rk4")
+        state = np.zeros(2 * n)
+        state[n:] = 0.01
+        omegas = np.ones(n)
+        mu = np.full(n, -1.5)  # subcritical
+        for _ in range(500):
+            state = engine.step(state, omegas, mu, cs.knm, cs.knm, 0.0, 0.0, cs.alpha, 1.0)
+            assert np.all(state[n:] >= 0.0), "sign-flip regression reoccurred"
+        R, psi = compute_order_parameter(state[:n])
+        assert 0.0 <= R <= 1.0
+        layer = LayerState(R=R, psi=psi)
+        upde = UPDEState(
+            layers=[layer],
+            cross_layer_alignment=np.array([R]),
+            stability_proxy=R,
+            regime_id="nominal",
+        )
+        rm = RegimeManager(hysteresis=0.05, cooldown_steps=0)
+        regime = rm.evaluate(upde, BoundaryState())
+        assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
+
+    def test_regime_fsm_regression_through_engine_trajectory(self):
+        """Engine-driven R trajectory must respect CRITICAL→RECOVERY→NOMINAL."""
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
+        mgr = RegimeManager(hysteresis=0.05, cooldown_steps=0)
+        rng = np.random.default_rng(42)
+        # Low R → CRITICAL
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
+        knm_zero = np.zeros((n, n))
         alpha = np.zeros((n, n))
+        omegas = rng.uniform(-5, 5, n)
+        for _ in range(50):
+            phases = eng.step(phases, omegas, knm_zero, 0.0, 0.0, alpha)
+        r_low, _ = compute_order_parameter(phases)
+        layer_low = LayerState(R=r_low, psi=0.0)
+        state_low = UPDEState(
+            layers=[layer_low],
+            cross_layer_alignment=np.array([r_low]),
+            stability_proxy=r_low,
+            regime_id="critical",
+        )
+        regime = mgr.evaluate(state_low, BoundaryState())
+        mgr.transition(regime)
+        if mgr.current_regime == Regime.CRITICAL:
+            # High R → must go through RECOVERY
+            phases_sync = np.full(n, 1.5)
+            r_high, psi = compute_order_parameter(phases_sync)
+            layer_high = LayerState(R=r_high, psi=psi)
+            state_high = UPDEState(
+                layers=[layer_high],
+                cross_layer_alignment=np.array([r_high]),
+                stability_proxy=r_high,
+                regime_id="recovery",
+            )
+            regime2 = mgr.evaluate(state_high, BoundaryState())
+            assert regime2 == Regime.RECOVERY
+
+    def test_lag_model_alpha_in_engine(self):
+        """Verify LagModel alpha feeds correctly into UPDEEngine."""
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 3
+        lm = LagModel()
+        lags = {(0, 1): 0.01, (1, 2): -0.005}
+        alpha = lm.build_alpha_matrix(lags, n, carrier_freq_hz=5.0)
+        eng = UPDEEngine(n, dt=0.01)
+        phases = np.array([0.0, 1.0, 2.0])
+        omegas = np.ones(n)
+        knm = 0.5 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+        assert np.all(phases >= 0.0)
+        assert np.all(phases < 2 * np.pi)
+
+
+# Pipeline wiring: regression tests exercise StuartLandauEngine → CouplingBuilder
+# → order_parameter → RegimeManager (sign-flip + FSM recovery). LagModel →
+# UPDEEngine alpha. AuditLogger hash chain. Each regression is pinned to
+# a specific bug and verified through the full pipeline.

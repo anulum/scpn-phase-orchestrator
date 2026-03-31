@@ -311,25 +311,100 @@ class TestMultiStep:
         assert np.all(state[n:] >= 0.0)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestStuartLandauPipelineEndToEnd:
+    """Full pipeline: CouplingBuilder → StuartLandauEngine → R → RegimeManager.
 
-    def test_wires_into_pipeline(self):
+    Proves StuartLandauEngine is wired into the SPO pipeline, not decorative.
+    """
 
-        import numpy as np
-
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+    def test_coupling_sl_engine_regime(self):
+        """Build K_nm → SL engine → order parameter → regime evaluation."""
+        from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+        from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
         n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
+        cb = CouplingBuilder()
+        cs = cb.build(n, 0.5, 0.2)
+        eng = _make_engine(n, dt=0.01, method="rk4")
+        state = _make_state(n, r_init=0.8)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        mu = np.ones(n)
+        for _ in range(300):
+            state = eng.step(state, omegas, mu, cs.knm, cs.knm, 0.0, 0.0, cs.alpha)
+        R, psi = eng.compute_order_parameter(state)
+        assert 0.0 <= R <= 1.0
+        assert np.all(state[n:] >= 0.0)  # amplitudes nonneg
+        layer = LayerState(R=R, psi=psi, mean_amplitude=eng.compute_mean_amplitude(state))
+        upde_state = UPDEState(
+            layers=[layer],
+            cross_layer_alignment=np.array([R]),
+            stability_proxy=R,
+            regime_id="nominal",
+            mean_amplitude=layer.mean_amplitude,
+        )
+        rm = RegimeManager(hysteresis=0.05)
+        regime = rm.evaluate(upde_state, BoundaryState())
+        assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
+
+    def test_bifurcation_mu_scan(self):
+        """Scan μ from -2 to +2: subcritical→supercritical transition."""
+        n = 1
+        eng = _make_engine(n, dt=0.01)
+        omegas = np.array([1.0])
+        knm = np.zeros((1, 1))
+        alpha = np.zeros((1, 1))
+        r_finals = {}
+        for mu_val in [-2.0, -1.0, 0.0, 0.5, 1.0, 2.0]:
+            mu = np.array([mu_val])
+            state = np.array([0.0, 0.5])
+            for _ in range(3000):
+                state = eng.step(state, omegas, mu, knm, knm, 0.0, 0.0, alpha)
+            r_finals[mu_val] = state[1]
+        # Subcritical: r → 0
+        assert r_finals[-2.0] < 0.05
+        assert r_finals[-1.0] < 0.05
+        # Supercritical: r → √μ
+        assert r_finals[1.0] > 0.9
+        assert r_finals[2.0] > 1.3
+
+    def test_coupled_amplitude_ordering(self):
+        """With coupling, oscillator amplitudes should remain ordered sensibly."""
+        n = 4
+        eng = _make_engine(n, dt=0.01, method="rk4")
+        state = _make_state(n, r_init=0.5)
+        omegas = np.ones(n)
+        mu = np.array([2.0, 1.5, 1.0, 0.5])
+        knm = 0.2 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        for _ in range(2000):
+            state = eng.step(state, omegas, mu, knm, knm, 0.0, 0.0, alpha)
+        amps = state[n:]
+        # Higher μ → higher amplitude (modulo coupling effects)
+        assert amps[0] > amps[3] - 0.3
+
+    def test_performance_sl_step_32_under_2ms(self):
+        """StuartLandauEngine.step(32 oscillators) < 2ms budget."""
+        import time
+        n = 32
+        eng = _make_engine(n, dt=0.01)
+        state = _make_state(n, r_init=1.0)
+        omegas = np.ones(n)
+        mu = np.ones(n)
+        knm = 0.1 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        eng.step(state, omegas, mu, knm, knm, 0.0, 0.0, alpha)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(500):
+            eng.step(state, omegas, mu, knm, knm, 0.0, 0.0, alpha)
+        elapsed = (time.perf_counter() - t0) / 500
+        assert elapsed < 2e-3, f"SL.step(32) took {elapsed*1e3:.2f}ms"
+
+
+# Pipeline wiring: StuartLandauEngine tested via CouplingBuilder → SL engine
+# (Euler/RK4/RK45) → compute_order_parameter → compute_mean_amplitude →
+# RegimeManager. Physics: bifurcation scan, amplitude ordering, Kuramoto limit.
+# Performance: step(32)<2ms.

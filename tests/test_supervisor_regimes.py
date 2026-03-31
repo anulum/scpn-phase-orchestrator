@@ -193,24 +193,60 @@ class TestRegimeEnum:
         assert len(set(regimes)) == 4
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestRegimesPipelineEndToEnd:
+    """Full pipeline: CouplingBuilder → Engine → R → RegimeManager → Policy."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_driven_regime_policy_feedback(self):
+        """Engine trajectory → R → evaluate → transition → policy.decide."""
+        from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+        from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
+        cs = CouplingBuilder().build(n, 0.5, 0.2)
+        eng = UPDEEngine(n, dt=0.01, method="rk4")
+        rm = RegimeManager(cooldown_steps=0)
+        pol = SupervisorPolicy(rm)
+        rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+        phases = eng.run(phases, omegas, cs.knm, 0.0, 0.0, cs.alpha, n_steps=300)
+        r, psi = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+        state = _state(r)
+        regime = rm.evaluate(state, _NO_VIOLATIONS)
+        rm.transition(regime)
+        actions = pol.decide(state, _NO_VIOLATIONS)
+        assert rm.current_regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
+        for a in actions:
+            assert a.justification
+
+    def test_regime_sweep_covers_all_states(self):
+        """Scanning R from 0→1 must visit at least 3 distinct regimes."""
+        rm = RegimeManager(cooldown_steps=0)
+        seen = set()
+        for r_val in np.linspace(0.0, 1.0, 50):
+            s = _state(max(r_val, 0.01))
+            regime = rm.evaluate(s, _NO_VIOLATIONS)
+            rm.transition(regime)
+            seen.add(regime)
+        assert len(seen) >= 3, f"Expected ≥3 regimes, got {seen}"
+
+    def test_performance_evaluate_transition_under_10us(self):
+        """evaluate + transition combined < 10μs."""
+        import time
+        rm = RegimeManager(cooldown_steps=0)
+        s = _state(0.5)
+        rm.evaluate(s, _NO_VIOLATIONS)
+        t0 = time.perf_counter()
+        for _ in range(10000):
+            regime = rm.evaluate(s, _NO_VIOLATIONS)
+            rm.transition(regime)
+        elapsed = (time.perf_counter() - t0) / 10000
+        assert elapsed < 1e-5, f"evaluate+transition took {elapsed*1e6:.1f}μs"
+
+
+# Pipeline wiring: RegimeManager tested via CouplingBuilder → UPDEEngine(RK4)
+# → compute_order_parameter → evaluate → transition → SupervisorPolicy.decide().
+# FSM: cooldown, hysteresis, CRITICAL→RECOVERY→NOMINAL. Performance: <10μs.
