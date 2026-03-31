@@ -91,24 +91,33 @@ def test_hard_violation_forces_critical():
     assert any(a.knob == "zeta" for a in actions)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSupervisorPolicyPipelineWiring:
+    """Pipeline: engine → R → regime → policy → actions → engine."""
 
-    def test_wires_into_pipeline(self):
+    def test_full_control_loop(self):
+        """Engine → R → SupervisorPolicy.decide → actions.
+        The complete supervisory control loop."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
+        omegas = rng.normal(1.0, 0.5, n)
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
+        for _ in range(200):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
+
+        rm = RegimeManager(cooldown_steps=0)
+        policy = SupervisorPolicy(rm)
+        actions = policy.decide(_state([r]), BoundaryState())
+        assert isinstance(actions, list)
         assert 0.0 <= r <= 1.0
