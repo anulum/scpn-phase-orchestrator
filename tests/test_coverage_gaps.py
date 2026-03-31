@@ -111,6 +111,7 @@ class TestUPDEEnginePythonPath:
         result = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
         assert result.shape == (n,)
         assert np.all(np.isfinite(result))
+        assert not np.allclose(result, phases), "RK4 must advance phases"
 
     def test_rk45_step(self):
         n = 4
@@ -125,6 +126,7 @@ class TestUPDEEnginePythonPath:
         assert result.shape == (n,)
         assert np.all(np.isfinite(result))
         assert engine.last_dt > 0.0
+        assert not np.allclose(result, phases), "RK45 must advance phases"
 
     def test_rk45_with_zeta(self):
         n = 4
@@ -161,8 +163,12 @@ class TestUPDEEnginePythonPath:
         alpha = np.zeros((n, n))
         result = engine.run(phases, omegas, knm, 0.0, 0.0, alpha, 5)
         assert result.shape == (n,)
+        # With ω=1 and no coupling, phases should advance by ~5*dt*ω = 0.05
+        expected = (phases + 5 * 0.01 * omegas) % TWO_PI
+        np.testing.assert_allclose(result, expected, atol=1e-4)
 
     def test_run_rk45(self):
+        """RK45 adaptive: phases must advance and stay finite."""
         n = 4
         engine = _py_engine(n, dt=0.01, method="rk45")
         phases = np.zeros(n)
@@ -171,6 +177,31 @@ class TestUPDEEnginePythonPath:
         alpha = np.zeros((n, n))
         result = engine.run(phases, omegas, knm, 0.0, 0.0, alpha, 5)
         assert result.shape == (n,)
+        assert np.all(np.isfinite(result))
+        assert not np.allclose(result, phases), "RK45 run must advance phases"
+
+    def test_python_euler_matches_analytical_free_rotation(self):
+        """Without coupling, Euler: θ(t) = θ₀ + ω·dt·n_steps (analytical)."""
+        n = 4
+        engine = _py_engine(n, dt=0.01)
+        phases = np.array([0.0, 1.0, 2.0, 3.0])
+        omegas = np.array([1.0, 2.0, 3.0, 4.0])
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        result = engine.run(phases, omegas, knm, 0.0, 0.0, alpha, 100)
+        expected = (phases + 100 * 0.01 * omegas) % TWO_PI
+        np.testing.assert_allclose(result, expected, atol=1e-10)
+
+    def test_python_rk4_euler_agree_for_zero_coupling(self):
+        """RK4 and Euler must agree for free rotation (no coupling)."""
+        n = 4
+        phases = np.array([0.5, 1.5, 2.5, 3.5])
+        omegas = np.array([1.0, 1.5, 2.0, 0.5])
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+        r_euler = _py_engine(n, dt=0.01).run(phases, omegas, knm, 0.0, 0.0, alpha, 50)
+        r_rk4 = _py_engine(n, dt=0.01, method="rk4").run(phases, omegas, knm, 0.0, 0.0, alpha, 50)
+        np.testing.assert_allclose(r_euler, r_rk4, atol=1e-6)
 
 
 class TestUPDEEngineValidation:
@@ -385,8 +416,14 @@ class TestCouplingBuilderPythonPath:
         builder = CouplingBuilder()
         state = builder.build(4, 0.5, 0.3)
         assert state.knm.shape == (4, 4)
-        assert np.all(np.diag(state.knm) == 0.0)
+        assert np.all(np.diag(state.knm) == 0.0), "Diagonal must be zero (no self-coupling)"
         assert state.active_template == "default"
+        # Symmetry contract
+        np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)
+        # Non-negativity
+        assert np.all(state.knm >= 0.0), "K_nm must be non-negative"
+        # Decay: K_01 > K_03 (closer oscillators have stronger coupling)
+        assert state.knm[0, 1] >= state.knm[0, 3]
 
     def test_build_with_amplitude_python(self, monkeypatch):
         import scpn_phase_orchestrator.coupling.knm as knm_mod
@@ -398,6 +435,27 @@ class TestCouplingBuilderPythonPath:
         state = builder.build_with_amplitude(4, 0.5, 0.3, 0.2, 0.1)
         assert state.knm_r is not None
         assert state.knm_r.shape == (4, 4)
+        assert np.all(np.diag(state.knm_r) == 0.0)
+        np.testing.assert_allclose(state.knm_r, state.knm_r.T, atol=1e-14)
+
+    def test_python_engine_wires_into_order_parameter(self, monkeypatch):
+        """Pipeline wiring: Python-path engine output must be valid input
+        to compute_order_parameter — proving the module isn't decorative."""
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 8
+        engine = _py_engine(n, dt=0.01)
+        rng = np.random.default_rng(99)
+        phases = rng.uniform(0, TWO_PI, n)
+        omegas = np.ones(n)
+        knm = 0.5 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        for _ in range(200):
+            phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        r, psi = compute_order_parameter(phases)
+        assert 0.0 <= r <= 1.0, f"R={r} out of [0,1]"
+        assert 0.0 <= psi < TWO_PI, f"Ψ={psi} out of [0,2π)"
 
 
 # ──────────────────────────────────────────────────────────────────────

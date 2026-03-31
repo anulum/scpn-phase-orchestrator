@@ -34,3 +34,17 @@ def test_lazy_import(name: str) -> None:
 def test_lazy_import_missing_raises() -> None:
     with pytest.raises(AttributeError, match="no_such_thing"):
         qw.no_such_thing  # noqa: B018
+
+
+def test_lazy_imported_classes_are_callable() -> None:
+    """Lazily imported names must be actual classes, not broken stubs."""
+    for name in ["QueueWavesConfig", "MetricBuffer", "AnomalyDetector", "Anomaly"]:
+        obj = getattr(qw, name)
+        assert callable(obj), f"{name} should be a callable class"
+
+
+def test_lazy_import_consistency() -> None:
+    """Importing the same name twice must return the same object (no re-exec)."""
+    a = getattr(qw, "PrometheusCollector")
+    b = getattr(qw, "PrometheusCollector")
+    assert a is b
