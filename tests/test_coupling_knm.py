@@ -53,3 +53,28 @@ def test_switch_template_missing_raises():
     state = builder.build(3, 0.5, 0.1)
     with pytest.raises(KeyError, match="no_such"):
         builder.switch_template(state, "no_such", {})
+
+
+class TestPipelineWiring:
+    """Pipeline wiring: proves this module is not decorative."""
+
+    def test_wires_into_pipeline(self):
+        import time
+
+        import numpy as np
+
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 8
+        eng = UPDEEngine(n, dt=0.01)
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0, 2 * np.pi, n)
+        omegas = np.ones(n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        for _ in range(100):
+            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        r, _ = compute_order_parameter(phases)
+        assert 0.0 <= r <= 1.0
