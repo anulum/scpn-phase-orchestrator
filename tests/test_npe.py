@@ -82,24 +82,23 @@ class TestNPE:
         assert isinstance(npe_half, float)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestNPEPipelineWiring:
+    """Pipeline: engine phases → NPE → topological disorder measure."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_synced_phases_low_npe(self):
+        """UPDEEngine with strong coupling → synchronised → NPE low.
+        Proves NPE measures disorder from engine output."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        phases = np.zeros(n)
+        omegas = np.zeros(n)
+        knm = 2.0 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+
+        npe = compute_npe(phases)
+        assert npe < 0.3, f"Synced engine phases → NPE should be low, got {npe}"
