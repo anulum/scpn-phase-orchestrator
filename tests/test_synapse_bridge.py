@@ -77,24 +77,27 @@ class TestSynapseCouplingBridge:
         assert abs(snap.knm_delta[0, 1] - 2.0) < 1e-10  # 1.0 * scale=2
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSynapseBridgePipelineWiring:
+    """Pipeline: STDP weights → apply_to_knm → engine."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_synapse_modified_knm_drives_engine(self):
+        """SynapseCouplingBridge.apply_to_knm → modified K_nm → engine → R."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        n = 4
+        bridge = SynapseCouplingBridge(n)
+        knm_base = 0.5 * np.ones((n, n))
+        np.fill_diagonal(knm_base, 0.0)
+        knm_modified = bridge.apply_to_knm(knm_base)
+
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
         for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            phases = eng.step(phases, omegas, knm_modified, 0.0, 0.0, np.zeros((n, n)))
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
