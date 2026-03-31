@@ -31,7 +31,7 @@ thiserror = "2.0"
 pyo3 = { version = "0.28", features = ["extension-module"] }
 numpy = { version = "0.28", default-features = false }
 criterion = { version = "0.5" }
-proptest = "1.5"
+proptest = "1.11"
 
 [workspace.lints.clippy]
 unwrap_used = "deny"
