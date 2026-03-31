@@ -161,24 +161,17 @@ def test_no_matplotlib_guard() -> None:
         plot.plot_r_timeline("/dev/null")
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestReportingPlotsPipelineWiring:
+    """Pipeline: audit log → CoherencePlot → R time series."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+    def test_audit_log_to_coherence_plot(self):
+        """AuditLogger log → CoherencePlot → _extract_r_series.
+        Proves reporting consumes audit pipeline output."""
+        log = _make_log()
+        plot = CoherencePlot(log)
+        steps, n_layers, r_series = plot._extract_r_series()
+        assert len(steps) > 0
+        assert n_layers >= 1
+        assert len(r_series) == n_layers
+        for layer_r in r_series:
+            assert all(0.0 <= r <= 1.0 for r in layer_r)
