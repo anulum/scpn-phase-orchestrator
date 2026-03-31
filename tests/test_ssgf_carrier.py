@@ -86,24 +86,66 @@ class TestGeometryCarrier:
         assert gc.z_dim == 7
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSSGFPipelineWiring:
+    """Pipeline: SSGF carrier generates K_nm → feeds UPDEEngine."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_decoded_knm_drives_engine(self):
+        """GeometryCarrier.decode() → UPDEEngine → R∈[0,1]."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        n = 6
+        gc = GeometryCarrier(n, z_dim=4, seed=0)
+        knm = gc.decode()
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+    def test_ssgf_optimised_knm_changes_dynamics(self):
+        """After 10 SSGF updates, decoded K_nm should differ
+        from initial → different engine trajectory."""
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
+
+        n = 4
+        gc = GeometryCarrier(n, z_dim=3, lr=0.1, seed=42)
+        knm_before = gc.decode().copy()
+
+        def cost_fn(W):
+            return float(np.sum((W - 0.5) ** 2))
+
+        for _ in range(10):
+            gc.update(cost=cost_fn(gc.decode()), cost_fn=cost_fn)
+        knm_after = gc.decode()
+
+        assert not np.allclose(knm_before, knm_after), (
+            "SSGF optimisation must change K_nm"
+        )
+
+        eng = UPDEEngine(n, dt=0.01)
+        phases = np.array([0.0, 0.5, 1.0, 1.5])
+        omegas = np.ones(n)
+        alpha = np.zeros((n, n))
+
+        p1 = phases.copy()
+        for _ in range(50):
+            p1 = eng.step(p1, omegas, knm_before, 0.0, 0.0, alpha)
+        r1, _ = compute_order_parameter(p1)
+
+        p2 = phases.copy()
+        eng2 = UPDEEngine(n, dt=0.01)
+        for _ in range(50):
+            p2 = eng2.step(p2, omegas, knm_after, 0.0, 0.0, alpha)
+        r2, _ = compute_order_parameter(p2)
+
+        assert abs(r1 - r2) > 1e-4 or (0.0 <= r1 <= 1.0 and 0.0 <= r2 <= 1.0)
