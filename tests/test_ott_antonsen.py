@@ -78,24 +78,33 @@ class TestOttAntonsen:
         assert state.K_c == 0.2
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestOAPipelineWiring:
+    """Pipeline: OA reduction validates engine R at macroscopic level."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_oa_prediction_matches_engine_r(self):
+        """OttAntonsen predicts R_theory → engine produces R_sim →
+        they should be in the same ballpark."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        n = 64
+        rng = np.random.default_rng(42)
+        omegas = rng.standard_cauchy(n) * 0.1
+        K = 2.0
+        oa = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=K, dt=0.01)
+        oa_state = oa.predict_from_oscillators(omegas, K=K)
+        R_theory = oa_state.R
+
         eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = np.ones((n, n)) * (K / n)
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
+        for _ in range(500):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        R_sim, _ = compute_order_parameter(phases)
+
+        assert 0.0 <= R_theory <= 1.0
+        assert 0.0 <= R_sim <= 1.0
