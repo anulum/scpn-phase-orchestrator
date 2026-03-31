@@ -104,3 +104,49 @@ class TestLyapunovFunction:
         state = guard.evaluate(phases, knm)
         assert state.max_phase_diff < 0.3
         assert state.in_basin
+
+
+class TestLyapunovPipelineWiring:
+    """Verify LyapunovGuard wires into the SPO engine pipeline:
+    UPDEEngine → phases → LyapunovGuard → basin detection."""
+
+    def test_engine_to_lyapunov_guard(self):
+        """Run UPDEEngine 200 steps → feed phases to LyapunovGuard.
+        Proves the Lyapunov monitor accepts engine output."""
+        import time
+
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+        n = 8
+        eng = UPDEEngine(n, dt=0.01)
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0, 2 * np.pi, n)
+        omegas = np.ones(n)
+        knm = _all_to_all(n, k=0.5)
+        alpha = np.zeros((n, n))
+        for _ in range(200):
+            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+        guard = LyapunovGuard()
+        state = guard.evaluate(phases, knm)
+        assert isinstance(state.V, float)
+        assert isinstance(state.in_basin, bool)
+        assert state.max_phase_diff >= 0.0
+
+    def test_lyapunov_evaluate_performance(self):
+        """LyapunovGuard.evaluate(N=64) must complete in <1ms."""
+        import time
+
+        n = 64
+        knm = _all_to_all(n, k=0.3)
+        phases = np.random.default_rng(0).uniform(0, 2 * np.pi, n)
+        guard = LyapunovGuard()
+
+        # Warm up
+        guard.evaluate(phases, knm)
+
+        t0 = time.perf_counter()
+        for _ in range(100):
+            guard.evaluate(phases, knm)
+        elapsed = (time.perf_counter() - t0) / 100
+        assert elapsed < 0.001, f"evaluate(64) took {elapsed*1000:.2f}ms, limit 1ms"
