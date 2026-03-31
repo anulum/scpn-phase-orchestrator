@@ -169,24 +169,21 @@ class TestVmap:
         assert results.shape == (4, N)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSparseCouplingPipelineWiring:
+    """Pipeline: masked forward → order_parameter."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+    def test_masked_forward_to_order_parameter(self, setup, key):
+        """kuramoto_forward_masked → order_parameter R∈[0,1]."""
+        phases, omegas, K = setup
+        mask = (jax.random.uniform(key, (N, N)) < 0.5).astype(jnp.float32)
+        mask = (mask + mask.T).clip(max=1.0)
+        final, _ = kuramoto_forward_masked(
+            phases,
+            omegas,
+            K,
+            mask,
+            DT,
+            100,
+        )
+        r = float(order_parameter(final))
         assert 0.0 <= r <= 1.0
