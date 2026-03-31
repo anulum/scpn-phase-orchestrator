@@ -93,24 +93,31 @@ def test_itpc_values_bounded_zero_one():
     assert np.all(itpc <= 1.0 + 1e-12)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestITPCPipelineWiring:
+    """Pipeline: engine multi-trial phases → ITPC → trial consistency."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_trials_to_itpc(self):
+        """Multiple engine trials → compute_itpc → ITPC∈[0,1].
+        Measures inter-trial phase consistency from engine runs."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
+        n_trials, n_time = 10, 50
+        n_osc = 4
+        eng = UPDEEngine(n_osc, dt=0.01)
         rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        omegas = np.ones(n_osc)
+        knm = 0.5 * np.ones((n_osc, n_osc))
         np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        alpha = np.zeros((n_osc, n_osc))
+
+        trial_phases = np.zeros((n_trials, n_time))
+        for trial in range(n_trials):
+            p = rng.uniform(0, 2 * np.pi, n_osc)
+            for t in range(n_time):
+                p = eng.step(p, omegas, knm, 0.0, 0.0, alpha)
+                trial_phases[trial, t] = p[0]
+
+        itpc = compute_itpc(trial_phases)
+        assert itpc.shape == (n_time,)
+        assert np.all(itpc >= 0.0)
+        assert np.all(itpc <= 1.0 + 1e-10)
