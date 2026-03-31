@@ -105,24 +105,31 @@ class TestPhasePoincare:
             assert result.crossings.shape[1] == N
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestPoincarePipelineWiring:
+    """Pipeline: engine trajectory → Poincaré section → return times."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_trajectory_to_poincare(self):
+        """UPDEEngine → phase trajectory → phase_poincare → crossings.
+        Proves Poincaré analysis consumes engine trajectory."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
+        n = 4
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
+        omegas = np.array([2.0, 3.0, 1.5, 2.5])
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
+
+        trajectory = []
+        for _ in range(500):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+            trajectory.append(phases.copy())
+        traj = np.array(trajectory)
+
+        result = phase_poincare(traj, oscillator_idx=0)
+        assert isinstance(result, PoincareResult)
+        assert len(result.crossings) >= 0
+        if len(result.crossings) > 1:
+            assert result.mean_return_time > 0

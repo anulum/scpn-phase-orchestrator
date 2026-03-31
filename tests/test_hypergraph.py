@@ -123,24 +123,25 @@ class TestHypergraphEngine:
         assert np.all(np.isfinite(p))
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestHypergraphPipelineWiring:
+    """Pipeline: hypergraph engine → order_parameter."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_hypergraph_to_order_parameter(self):
+        """HypergraphEngine.run → phases → compute_order_parameter.
+        Proves higher-order coupling output feeds standard analysis."""
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
+        n = 6
+        eng = HypergraphEngine(n, dt=0.01)
+        eng.add_edge((0, 1, 2), strength=1.0)
+        eng.add_edge((3, 4, 5), strength=1.0)
+        eng.add_edge((1, 3, 5), strength=0.5)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+
+        final = eng.run(phases, omegas, n_steps=200)
+        r, _ = compute_order_parameter(final)
         assert 0.0 <= r <= 1.0
