@@ -114,14 +114,34 @@ AuditLogger(log_path: str | Path)
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `log` | `(event_type: str, payload: dict)` | Append record |
-| `verify_chain` | `() → bool` | Validate hash integrity |
+| `log_header` | `(n_oscillators, dt, method, seed, amplitude_mode)` | Engine config record |
+| `log_step` | `(step, upde_state, actions, *, phases, omegas, knm, alpha, zeta, psi_drive, amplitudes, mu, knm_r, epsilon)` | Full simulation step |
+| `log_event` | `(event_type: str, data: dict)` | Named event with arbitrary data |
 | `close` | `()` | Flush and close file handle |
 
-### Thread safety
+Supports context manager (`with AuditLogger(...) as logger:`).
 
-AuditLogger uses a threading.Lock for all write operations.
-Multiple threads can call `log()` concurrently without corruption.
+`log_step` optionally records full engine state (phases, omegas, knm, alpha)
+for deterministic replay. When `phases` is provided, `omegas`, `knm`, and
+`alpha` are required (raises `AuditError` otherwise). Stuart-Landau fields
+(`amplitudes`, `mu`, `knm_r`, `epsilon`) are optional.
+
+## ReplayEngine API
+
+```python
+ReplayEngine(log_path: str | Path)
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `load` | `() → list[dict]` | Parse all JSONL entries |
+| `load_header` | `(entries) → dict \| None` | Extract engine config |
+| `step_entries` | `(entries) → list[dict]` | Filter to replayable steps |
+| `build_engine` | `(header) → UPDEEngine \| StuartLandauEngine` | Reconstruct engine from header |
+| `verify_integrity` | `(entries) → (bool, int)` | Verify SHA-256 chain |
+| `verify_determinism` | `(engine, steps) → bool` | Compare replayed R to logged R |
+| `verify_determinism_chained` | `(engine, entries, atol) → (bool, int)` | Multi-step replay: output N = input N+1 |
+| `verify_determinism_sl_chained` | `(engine, entries, atol) → (bool, int)` | Stuart-Landau chained replay |
 
 ### Hash chain verification algorithm
 
