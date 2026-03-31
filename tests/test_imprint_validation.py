@@ -70,24 +70,23 @@ def test_no_imprint_passes():
     assert validate_binding_spec(spec) == []
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestImprintValidationPipelineWiring:
+    """Pipeline: validated imprint spec → ImprintModel construction."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_validated_imprint_builds_model(self):
+        """Valid imprint spec → ImprintModel: validates config drives
+        model construction without errors."""
+        from scpn_phase_orchestrator.imprint.update import ImprintModel
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        spec = _base_spec(
+            imprint_model=ImprintSpec(decay_rate=0.05, saturation=2.0, modulates=[]),
+        )
+        errors = validate_binding_spec(spec)
+        assert errors == []
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        model = ImprintModel(
+            spec.imprint_model.decay_rate,
+            spec.imprint_model.saturation,
+        )
+        assert model._decay_rate == 0.05
+        assert model._saturation == 2.0
