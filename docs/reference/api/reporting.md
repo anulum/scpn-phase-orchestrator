@@ -7,113 +7,90 @@ Requires the `plot` optional extra:
 pip install scpn-phase-orchestrator[plot]
 ```
 
-## Available Plots
+## CoherencePlot
 
-The reporting module generates publication-quality figures for
-synchronisation analysis:
-
-| Function | Description | Typical use |
-|----------|-------------|-------------|
-| `plot_order_parameter` | R(t) time series with regime bands | Monitor sync health over time |
-| `plot_phase_portrait` | Oscillator phases on the unit circle | Visualise sync state at one timestep |
-| `plot_coupling_matrix` | $K_{nm}$ heatmap with spectral summary | Inspect coupling topology |
-| `plot_bifurcation_diagram` | R vs K with $K_c$ marker | Characterise sync transition |
-| `plot_recurrence` | Binary recurrence matrix | Detect dynamical regimes |
-| `plot_sync_dashboard` | Multi-panel: R, PLV, NPE, chimera | Comprehensive sync summary |
-| `plot_phase_trajectory` | Phase time series (unwrapped) | Track individual oscillators |
-| `plot_spectral_density` | Eigenvalue distribution of $L$ | Assess network connectivity |
-
-## Usage Pattern
-
-All plot functions accept an optional `ax` parameter (matplotlib Axes)
-for embedding in custom layouts. When `ax` is omitted, a new figure
-is created.
+The reporting module provides a single class `CoherencePlot` that
+consumes JSONL audit log data and produces diagnostic figures.
 
 ```python
-import matplotlib.pyplot as plt
-from scpn_phase_orchestrator.reporting.plots import (
-    plot_order_parameter,
-    plot_phase_portrait,
-)
-
-fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-# Left: R(t) over simulation
-plot_order_parameter(R_history, dt=0.01, ax=axes[0])
-
-# Right: phase snapshot at final timestep
-plot_phase_portrait(phases_final, ax=axes[1])
-
-plt.tight_layout()
-plt.savefig("sync_analysis.png", dpi=150)
+CoherencePlot(log_data: list[dict])
 ```
 
-## Colour Conventions
+The constructor accepts a list of parsed audit log records (from
+`ReplayEngine.load()` or direct JSON parsing). It filters to step
+records containing `"step"` and `"layers"` fields.
 
-- **R(t)** plot: green band for NOMINAL (R > 0.6), yellow for DEGRADED
-  (0.3 < R < 0.6), red for CRITICAL (R < 0.3)
-- **Phase portrait**: oscillators coloured by channel (P=blue, I=green, S=orange)
-- **Coupling heatmap**: sequential colourmap (viridis), zero diagonal masked
+### Available plots
+
+| Method | Output | Description |
+|--------|--------|-------------|
+| `plot_r_timeline(output_path)` | PNG | Per-layer R over simulation steps |
+| `plot_regime_timeline(output_path)` | PNG | Regime epochs as coloured horizontal bands |
+| `plot_action_audit(output_path)` | PNG | R(t) with actuation event markers |
+| `plot_amplitude_timeline(output_path)` | PNG | Mean amplitude and subcritical fraction |
+| `plot_pac_heatmap(output_path)` | PNG | Phase-amplitude coupling matrix |
+
+All methods return `Path` to the saved figure.
+
+### Regime colour conventions
+
+| Regime | Colour | Hex |
+|--------|--------|-----|
+| NOMINAL | Green | #2ecc71 |
+| DEGRADED | Orange | #f39c12 |
+| CRITICAL | Red | #e74c3c |
+| RECOVERY | Blue | #3498db |
 
 ## Pipeline integration
 
 ```
-UPDEEngine ──→ phases, R(t) ──→ plot_order_parameter()
-                                 plot_phase_portrait()
-                                 plot_sync_dashboard()
-
-CouplingBuilder ──→ K_nm ──→ plot_coupling_matrix()
-
-bifurcation ──→ R(K) curve ──→ plot_bifurcation_diagram()
-
-embedding ──→ recurrence matrix ──→ plot_recurrence()
+AuditLogger.log_step() ──→ audit.jsonl
+                                │
+                                ↓
+                       ReplayEngine.load()
+                                │
+                                ↓
+                       CoherencePlot(log_data)
+                                │
+               ┌────────────────┼────────────────┐
+               ↓                ↓                ↓
+        plot_r_timeline  plot_regime_timeline  plot_action_audit
+               │                │                │
+               ↓                ↓                ↓
+          r_timeline.png  regime.png        actions.png
 ```
 
-All plots consume engine output directly — no intermediate
-transformation. This ensures the visualisation always reflects
-the actual pipeline state.
+The reporting module consumes audit log output. It does not connect
+to the engine directly — all data passes through the audit trail,
+ensuring that plots match the auditable record.
 
-## Plot gallery
-
-### Order parameter time series
+## Usage
 
 ```python
-plot_order_parameter(R_history, dt=0.01, ax=ax)
+from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.reporting.plots import CoherencePlot
+
+# Load audit log
+replay = ReplayEngine("audit.jsonl")
+entries = replay.load()
+
+# Generate diagnostic plots
+plotter = CoherencePlot(entries)
+plotter.plot_r_timeline("output/r_timeline.png")
+plotter.plot_regime_timeline("output/regime.png")
+plotter.plot_action_audit("output/actions.png")
+plotter.plot_amplitude_timeline("output/amplitude.png")
+plotter.plot_pac_heatmap("output/pac.png")
 ```
 
-Shows R(t) with coloured background bands:
-- Green: NOMINAL (R > 0.6)
-- Yellow: DEGRADED (0.3 < R < 0.6)
-- Red: CRITICAL (R < 0.3)
+## Internal extraction methods
 
-Vertical dashed lines mark regime transitions.
-
-### Phase portrait
-
-```python
-plot_phase_portrait(phases, ax=ax)
-```
-
-Plots oscillator phases on the unit circle with the mean-field
-vector (R, ψ) as a bold arrow. Oscillators coloured by channel
-(P=blue, I=green, S=orange).
-
-### Coupling heatmap
-
-```python
-plot_coupling_matrix(knm, ax=ax)
-```
-
-Heatmap of K_nm with viridis colourmap, zero diagonal masked.
-Annotated with Fiedler value λ₂ and mean coupling strength.
-
-### Sync dashboard
-
-```python
-plot_sync_dashboard(R_history, phases, knm, plv_matrix, ax=axes)
-```
-
-Multi-panel figure combining R(t), phase portrait, K_nm heatmap,
-and PLV matrix in a single publication-ready layout.
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `_extract_r_series` | `(steps, n_layers, series)` | Per-layer R arrays |
+| `_extract_regime_epochs` | `[(regime, start, end)]` | Regime change boundaries |
+| `_extract_actions` | `(steps, r_global, knob_steps)` | Action event indices |
+| `_extract_amplitude` | `(steps, amps, sub_frac)` | Amplitude time series |
+| `_extract_pac_matrix` | `(n, matrix)` | PAC from last log record |
 
 ::: scpn_phase_orchestrator.reporting.plots
