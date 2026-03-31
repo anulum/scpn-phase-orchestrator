@@ -224,24 +224,26 @@ class TestHybridInverse:
         )
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestInversePipelineWiring:
+    """Pipeline: forward trajectory → inverse → recovered K → forward."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    def test_inverse_recovered_k_drives_forward(self, noiseless_data):
+        """kuramoto_forward → trajectory → analytical_inverse → K_est →
+        kuramoto_forward with K_est. Round-trip proves inverse is wired."""
+        from scpn_phase_orchestrator.nn.functional import order_parameter
 
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        K_true, _, observed = noiseless_data
+        K_est, _ = analytical_inverse(observed, DT)
+        N = K_est.shape[0]
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+        key = jax.random.PRNGKey(99)
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        final, _ = kuramoto_forward(
+            phases,
+            jnp.zeros(N),
+            K_est,
+            DT,
+            100,
+        )
+        r = float(order_parameter(final))
         assert 0.0 <= r <= 1.0
