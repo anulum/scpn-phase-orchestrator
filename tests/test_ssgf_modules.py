@@ -173,24 +173,35 @@ class TestEthicalCost:
         assert result.constraints_violated >= 1
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSSGFModulesPipelineWiring:
+    """Pipeline: SSGF closure → K_nm → engine → ethical cost."""
 
-    def test_wires_into_pipeline(self):
+    def test_ssgf_closure_to_engine_to_ethical_cost(self):
+        """CyberneticClosure → W → engine → phases → ethical cost."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
+        n = 4
+        carrier = GeometryCarrier(n, z_dim=3, lr=0.05, seed=42)
+        closure = CyberneticClosure(carrier)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
+
+        W, _ = closure.step(phases)
+        assert W.shape == (n, n)
+
+        eng = UPDEEngine(n, dt=0.01)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            phases = eng.step(phases, omegas, W, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+        cost = compute_ethical_cost(phases, W)
+        assert isinstance(cost, EthicalCost)
+        assert np.isfinite(cost.c15_sec)
