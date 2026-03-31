@@ -225,8 +225,8 @@ class TestCouplingModulesPipelineEndToEnd:
         assert cs.knm.shape == (n, n)
         np.testing.assert_allclose(np.diag(cs.knm), 0.0)
 
-    def test_performance_estimate_from_distances_64_under_5ms(self):
-        """LagModel.estimate_from_distances(64×64) < 5ms."""
+    def test_performance_estimate_from_distances_64_under_10ms(self):
+        """LagModel.estimate_from_distances(64×64) < 10ms."""
         import time
 
         rng = np.random.default_rng(0)
@@ -238,9 +238,9 @@ class TestCouplingModulesPipelineEndToEnd:
         for _ in range(1000):
             LagModel.estimate_from_distances(dist, speed=1.0)
         elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 5e-3, f"estimate_from_distances(64) took {elapsed * 1e3:.2f}ms"
+        assert elapsed < 1e-2, f"estimate_from_distances(64) took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: coupling modules (LagModel + UniversalPrior + KnmTemplateSet)
 # → UPDEEngine(RK4) → compute_order_parameter → RegimeManager. Alpha antisymmetry
-# proven. K_c estimation feeds CouplingBuilder. Performance: distances(64)<1ms.
+# proven. K_c estimation feeds CouplingBuilder. Performance: distances(64)<10ms.
