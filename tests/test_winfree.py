@@ -80,3 +80,36 @@ class TestForward:
 
         grad = jax.grad(loss)(phases)
         assert jnp.isfinite(grad).all()
+
+
+class TestWinfreePhysics:
+    """Verify Winfree model physics: dθ_i/dt = ω_i + K·Q(θ_i)·Σ P(θ_j).
+    Coupling should synchronise oscillators (R→1 for strong K)."""
+
+    def test_strong_coupling_synchronises(self, key):
+        """Strong coupling K should drive R toward 1."""
+        from scpn_phase_orchestrator.nn.functional import order_parameter
+
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        omegas = jnp.zeros(N)  # pure coupling
+        final, _ = winfree_forward(phases, omegas, 5.0, DT, 500)
+        r = float(order_parameter(final))
+        assert r > 0.5, f"Strong Winfree coupling should synchronise: R={r:.3f}"
+
+    def test_euler_rk4_agree_small_dt(self, key):
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        omegas = jnp.ones(N)
+        euler = winfree_step(phases, omegas, 1.0, 0.001)
+        rk4 = winfree_rk4_step(phases, omegas, 1.0, 0.001)
+        err = float(jnp.max(jnp.abs(jnp.sin(euler - rk4))))
+        assert err < 0.01, f"Euler-RK4 error {err:.4e} too large at dt=0.001"
+
+    def test_pipeline_to_order_parameter(self, key):
+        """Winfree output must be valid input for order_parameter."""
+        from scpn_phase_orchestrator.nn.functional import order_parameter
+
+        phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
+        omegas = jnp.ones(N)
+        final, _ = winfree_forward(phases, omegas, 0.5, DT, 100)
+        r = float(order_parameter(final))
+        assert 0.0 <= r <= 1.0
