@@ -4,6 +4,32 @@ The binding system connects domain-specific signals to SPO's universal
 oscillator framework. A *binding specification* (YAML file) declares
 the complete interface between a domain and the phase dynamics engine.
 
+## Pipeline position
+
+The binding system is the **configuration layer** of the SPO pipeline.
+It is loaded once at startup and configures all downstream subsystems:
+
+```
+binding_spec.yaml
+       │
+       ↓
+  load_binding_spec()
+       │
+       ↓
+  validate_binding_spec()
+       │
+       ↓
+  BindingSpec
+  ├── layers[] ──→ Oscillator Extractors (P/I/S)
+  ├── coupling  ──→ CouplingBuilder.build()
+  ├── policy    ──→ PolicyEngine rules
+  └── actuators ──→ ActuationMapper mappings
+```
+
+Without a valid binding spec, SPO cannot start. The spec declares
+*what* to observe, *how* to couple, *when* to intervene, and *where*
+to actuate.
+
 ## Role in the Architecture
 
 The binding system is the first stage of the SPO pipeline:
@@ -92,3 +118,38 @@ Validation errors are collected (not raised on first failure) so that
 users see all problems at once.
 
 ::: scpn_phase_orchestrator.binding.validator
+
+## Security
+
+The binding loader enforces security constraints:
+
+1. **Path traversal rejection** — `../` sequences in file paths are
+   rejected to prevent reading outside the domainpack directory
+2. **Schema validation** — all fields are checked against the JSON
+   schema before any data is used
+3. **Environment variable interpolation** — only whitelisted env vars
+   are substituted; arbitrary code execution is not possible
+4. **Size limits** — binding specs exceeding 1 MB are rejected
+
+These protections are tested in `tests/test_binding_loader_security.py`
+with adversarial inputs including malicious YAML, oversized files,
+and path traversal attempts.
+
+## Domainpacks
+
+A **domainpack** is a directory containing a binding spec plus optional
+data files (coupling templates, calibration data, policy rules). SPO
+ships with built-in domainpacks for common domains:
+
+| Domainpack | Layers | Channels | Description |
+|------------|--------|----------|-------------|
+| `power_grid` | generators, loads | P, I | AC power system sync |
+| `neural_eeg` | cortical regions | P | EEG phase dynamics |
+| `microservices` | API endpoints | I | IT infrastructure sync |
+| `tokamak` | plasma + magnetics | P | Fusion plasma control |
+| `smart_factory` | machines, queues | P, I, S | Manufacturing sync |
+
+Each domainpack is validated at load time against the schema. Invalid
+domainpacks produce detailed error messages listing all violations.
+
+**Performance:** `load_binding_spec()` < 10 ms.

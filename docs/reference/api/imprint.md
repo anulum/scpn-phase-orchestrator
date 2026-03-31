@@ -102,6 +102,48 @@ knm_modulated = model.modulate_coupling(knm, state)
 alpha_modulated = model.modulate_lag(alpha, state)
 ```
 
+## Pipeline integration
+
+```
+UPDEEngine.step() ──→ phases ──→ compute_exposure()
+                                        │
+                                        ↓
+                                 ImprintModel.update()
+                                        │
+                                        ↓
+                                 ImprintState (m_k updated)
+                                        │
+                      ┌─────────────────┼──────────────────┐
+                      ↓                 ↓                  ↓
+              modulate_coupling  modulate_lag     modulate_mu
+              K_nm' = K·(1+m)   α' = α+(Δm)     μ' = μ·(1+m)
+                      │                 │                  │
+                      ↓                 ↓                  ↓
+              UPDEEngine.step(K_nm', ..., α', ...)  ← next cycle
+```
+
+## ImprintState (dataclass)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `m_k` | `NDArray` | Imprint values per oscillator |
+| `last_update` | `float` | Timestamp of last update |
+
+## ImprintModel
+
+```python
+ImprintModel(decay_rate: float, saturation: float)
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `update` | `(state, exposure, dt) → ImprintState` | Exponential update + decay |
+| `modulate_coupling` | `(knm, state) → NDArray` | K' = K · (1 + m_k) |
+| `modulate_lag` | `(alpha, state) → NDArray` | α' = α + (m_i - m_j) |
+| `modulate_mu` | `(mu, state) → NDArray` | μ' = μ · (1 + m_k) |
+
+**Performance:** `update(n=64)` < 5 ms.
+
 ## API Reference
 
 ### State

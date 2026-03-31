@@ -84,3 +84,59 @@ if divergences:
 ```
 
 ::: scpn_phase_orchestrator.audit.replay
+
+## Pipeline integration
+
+The audit logger sits at the output of the supervisor loop:
+
+```
+SupervisorPolicy.decide() ──→ list[ControlAction]
+                                      │
+                               ┌──────┼──────┐
+                               ↓      ↓      ↓
+                          Actuator  Audit   EventBus
+                                   Logger
+                                     │
+                              audit.jsonl (append)
+                                     │
+                              SHA-256 chain
+```
+
+Every regime transition, actuation command, and boundary violation
+is recorded. The audit trail is the authoritative record of what
+the system did and why.
+
+## AuditLogger API
+
+```python
+AuditLogger(log_path: str | Path)
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `log` | `(event_type: str, payload: dict)` | Append record |
+| `verify_chain` | `() → bool` | Validate hash integrity |
+| `close` | `()` | Flush and close file handle |
+
+### Thread safety
+
+AuditLogger uses a threading.Lock for all write operations.
+Multiple threads can call `log()` concurrently without corruption.
+
+### Hash chain verification algorithm
+
+```python
+prev_hash = "0" * 64  # genesis hash
+for record in records:
+    stored_hash = record.pop("_hash")
+    content = json.dumps(record, separators=(",", ":"))
+    expected = sha256((prev_hash + content).encode()).hexdigest()
+    assert stored_hash == expected  # tamper detection
+    prev_hash = stored_hash
+```
+
+## Compliance references
+
+- NIST SP 800-92: Guide to Computer Security Log Management
+- IEC 62443: Industrial communication networks security
+- ISO 27001 A.12.4: Logging and monitoring
