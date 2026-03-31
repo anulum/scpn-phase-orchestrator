@@ -5,6 +5,29 @@ observability platforms, and hardware controllers. Each adapter
 translates SPO's internal representations (phases, coupling matrices,
 regime states) into the wire format expected by the target system.
 
+## Pipeline position
+
+```
+UPDEEngine ──→ UPDEState ──→ Adapters (output)
+                                │
+                  ┌─────────────┼──────────────────┐
+                  ↓             ↓                  ↓
+          SCPN Ecosystem   Observability      Hardware
+          │                │                  │
+          ├─ scpn_control  ├─ OpenTelemetry   ├─ Modbus/TLS
+          ├─ fusion_core   ├─ Prometheus      └─ gRPC
+          ├─ neurocore     └─ Grafana
+          ├─ plasma_control
+          ├─ quantum_control
+          └─ snn_bridge
+
+External Systems ──→ Adapters (input) ──→ Oscillator Extractors
+```
+
+Adapters are bidirectional: **output** adapters export SPO state to
+external systems; **input** adapters import external signals for
+phase extraction.
+
 ## SCPN Ecosystem Bridges
 
 These adapters connect SPO to sibling packages in the SCPN ecosystem.
@@ -49,15 +72,55 @@ Adapters for production monitoring and tracing.
 
 ### OpenTelemetry
 
-Exports SPO metrics (R, regime, step latency) and traces (per-step
-spans with phase snapshot attributes) to any OTLP-compatible backend
+Exports SPO metrics and traces to any OTLP-compatible backend
 (Jaeger, Zipkin, Grafana Tempo). Requires `opentelemetry-api`.
+
+**OTelExporter API:**
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `record_step` | `(upde_state, step_idx)` | Record metrics for one engine step |
+| `record_regime_change` | `(old, new)` | Record regime transition event |
+
+**Metrics exported:**
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `spo.order_parameter` | Gauge | Current R value |
+| `spo.regime` | Gauge | Current regime (0-3) |
+| `spo.step_latency_ms` | Histogram | Engine step duration |
+| `spo.coupling_mean` | Gauge | Mean K_nm value |
 
 ::: scpn_phase_orchestrator.adapters.opentelemetry
 
 ### Prometheus
 
-Exposes SPO metrics as a Prometheus scrape target. Gauges for R,
-regime, and coupling strength; histograms for step latency.
+Exposes SPO metrics as a Prometheus scrape target.
+
+**PrometheusAdapter API:**
+
+```python
+PrometheusAdapter(endpoint: str, timeout: float = 5.0)
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `update` | `(upde_state)` | Push current metrics |
 
 ::: scpn_phase_orchestrator.adapters.prometheus
+
+## Hardware Adapters
+
+### Modbus/TLS
+
+Industrial control interface for power grids, HVAC, and manufacturing.
+Translates ControlAction to Modbus register writes over TLS.
+
+::: scpn_phase_orchestrator.adapters.modbus
+
+### gRPC
+
+High-performance RPC interface for distributed SPO deployments.
+Supports streaming phase trajectories and bidirectional control.
+
+::: scpn_phase_orchestrator.adapters.grpc

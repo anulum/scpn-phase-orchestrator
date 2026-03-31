@@ -1,10 +1,29 @@
 # Drivers
 
-External forcing functions that inject the drive signal $\Psi(t)$ into
+External forcing functions that inject the drive signal Ψ(t) into
 the Kuramoto equation. Each driver corresponds to one of the three
 oscillator channels (Physical, Informational, Symbolic) and produces
 a time-varying phase target that pulls oscillators toward a desired
 synchronisation pattern.
+
+## Pipeline position
+
+```
+PhysicalDriver.compute(t)  ──→ Ψ_P(t)
+InformationalDriver.compute(t) ──→ Ψ_I(t)   ──→  UPDEEngine.step(..., ζ, Ψ, ...)
+SymbolicDriver.compute(step)  ──→ Ψ_S(k)
+
+SupervisorPolicy.decide() ──→ ControlAction(knob="zeta") ──→ ζ(t)
+```
+
+The supervisor controls the drive strength ζ; the driver controls
+the drive phase Ψ. Together they form the external forcing term
+ζ·sin(Ψ - θ_i) in the Kuramoto ODE.
+
+## Common interface
+
+All drivers implement `compute(t_or_step) → float` for single evaluation
+and `compute_batch(array) → NDArray` for vectorised evaluation.
 
 ## Theory
 
