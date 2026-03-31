@@ -61,24 +61,41 @@ class TestExtractPhases:
         assert result.instantaneous_freq.shape == sig.shape
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestPhaseExtractPipelineWiring:
+    """Pipeline: signal → extract_phases → omegas → engine."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_extracted_phases_drive_engine(self):
+        """extract_phases → PhaseResult.phases → engine initial conditions.
+        Proves autotune extraction feeds simulation."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        signals = np.column_stack(
+            [
+                _sine(5.0, 200.0, 1.0),
+                _sine(10.0, 200.0, 1.0),
+                _sine(15.0, 200.0, 1.0),
+            ]
+        )
+        n = signals.shape[1]
+        results = [extract_phases(signals[:, i], fs=200.0) for i in range(n)]
+        phases = np.array([r.phases[-1] for r in results])
+        omegas = np.array([r.instantaneous_freq[-1] for r in results])
+
         eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = 0.5 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            phases = eng.step(
+                phases,
+                omegas,
+                knm,
+                0.0,
+                0.0,
+                alpha,
+            )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
