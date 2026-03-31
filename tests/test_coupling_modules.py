@@ -117,20 +117,36 @@ class TestKnmTemplateSet:
 class TestPipelineWiring:
     """Pipeline wiring: proves this module is not decorative."""
 
-    def test_wires_into_pipeline(self):
+    def test_lag_alpha_with_template_drives_engine(self):
+        """LagModel → alpha + KnmTemplate → engine → R∈[0,1].
+        Proves all coupling modules compose into the engine."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        n = 4
+        distances = np.array(
+            [
+                [0.0, 1.0, 2.0, 3.0],
+                [1.0, 0.0, 1.0, 2.0],
+                [2.0, 1.0, 0.0, 1.0],
+                [3.0, 2.0, 1.0, 0.0],
+            ]
+        )
+        alpha = LagModel.estimate_from_distances(distances, speed=1.0)
+        prior = UniversalPrior()
+        sample = prior.sample()
+
+        knm = np.full((n, n), sample.K_base)
+        np.fill_diagonal(knm, 0.0)
+
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
