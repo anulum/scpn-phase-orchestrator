@@ -97,24 +97,26 @@ def test_dataclass_fields():
     assert state.chimera_index == 0.25
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestChimeraPipelineWiring:
+    """Pipeline: engine phases → detect_chimera → chimera_index."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_engine_phases_to_chimera_detection(self):
+        """UPDEEngine → phases → detect_chimera: classifies coherent
+        vs incoherent oscillators from engine output."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
+        n = 16
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
+        omegas = rng.normal(1.0, 0.5, n)
+        knm = _uniform_knm(n, 0.3)
         alpha = np.zeros((n, n))
-        for _ in range(100):
+        for _ in range(200):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+
+        state = detect_chimera(phases, _uniform_knm(n, 0.3))
+        assert isinstance(state, ChimeraState)
+        assert 0.0 <= state.chimera_index <= 1.0
+        total = len(state.coherent_indices) + len(state.incoherent_indices)
+        assert total == n

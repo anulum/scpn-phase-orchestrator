@@ -104,24 +104,23 @@ class TestMultiBasinStability:
         assert results["R>=0.30"].S_B >= results["R>=0.80"].S_B
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestBasinStabilityPipelineWiring:
+    """Pipeline: basin_stability uses UPDEEngine internally."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
+    def test_basin_stability_uses_engine(self):
+        """basin_stability drives UPDEEngine for each random IC sample,
+        proving the module is wired into the simulation core."""
+        n = 4
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        knm = np.ones((n, n)) * 0.5
+        np.fill_diagonal(knm, 0)
+        result = basin_stability(
+            omegas,
+            knm,
+            n_samples=10,
+            n_transient=50,
+            n_measure=20,
+        )
+        assert isinstance(result, BasinStabilityResult)
+        assert 0.0 <= result.S_B <= 1.0
+        assert result.n_samples == 10
