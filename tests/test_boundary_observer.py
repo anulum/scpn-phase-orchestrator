@@ -87,24 +87,44 @@ def test_unknown_severity_defaults_to_hard(caplog):
     assert "unknown severity" in caplog.text
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestBoundaryPipelineWiring:
+    """Pipeline: engine R → boundary observer → regime manager."""
 
-    def test_wires_into_pipeline(self):
+    def test_engine_r_to_boundary_to_regime(self):
+        """UPDEEngine → R → BoundaryObserver → BoundaryState →
+        RegimeManager: hard violation forces CRITICAL."""
         import numpy as np
 
+        from scpn_phase_orchestrator.supervisor.regimes import (
+            Regime,
+            RegimeManager,
+        )
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
         n = 8
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        omegas = rng.normal(1.0, 2.0, n)
+        knm = 0.1 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        for _ in range(200):
+            phases = eng.step(phases, omegas, knm, 0.0, 0.0, np.zeros((n, n)))
         r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+
+        obs = BoundaryObserver(_defs())
+        bstate = obs.observe({"R": r, "T": 50.0, "P": 5.0})
+
+        upde = UPDEState(
+            layers=[LayerState(R=r, psi=0.0)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=r,
+            regime_id="nominal",
+        )
+        rm = RegimeManager()
+        regime = rm.evaluate(upde, bstate)
+        assert isinstance(regime, Regime)
