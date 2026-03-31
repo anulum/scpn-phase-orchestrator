@@ -59,20 +59,25 @@ class TestIdentifyFrequencies:
 
 
 class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+    """Pipeline: identify_frequencies → omegas → engine."""
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
-
+    def test_identified_freqs_drive_engine(self):
+        """identify_frequencies → FrequencyResult.frequencies → engine."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
 
-        n = 8
+        signal = _multi_sine([5.0, 10.0, 20.0], fs=200.0, duration=2.0)
+        result = identify_frequencies(signal, fs=200.0)
+        n = len(result.frequencies)
+        assert n >= 1
+
+        omegas = np.array(result.frequencies) * 2 * np.pi
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = 0.5 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
         for _ in range(100):
