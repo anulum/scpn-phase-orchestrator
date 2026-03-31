@@ -143,24 +143,68 @@ def test_neurolib_hcp_too_small():
         load_neurolib_hcp(1)
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestConnectomePipelineEndToEnd:
+    """Full pipeline: load_hcp_connectome → K_nm → Engine → R → Regime.
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    Proves connectome loader is a real coupling source, not decorative.
+    """
 
+    def test_hcp_knm_drives_engine_regime(self):
+        """HCP connectome → UPDEEngine → order_parameter → RegimeManager."""
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+        from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        n = 20
+        knm = load_hcp_connectome(n)
+        assert knm.shape == (n, n)
+        eng = UPDEEngine(n, dt=0.01, method="rk4")
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, n)
+        omegas = np.ones(n)
+        alpha = np.zeros((n, n))
+        phases = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=300)
+        r, psi = compute_order_parameter(phases)
+        assert 0.0 <= r <= 1.0
+        layer = LayerState(R=r, psi=psi)
+        state = UPDEState(
+            layers=[layer],
+            cross_layer_alignment=np.array([r]),
+            stability_proxy=r,
+            regime_id="nominal",
+        )
+        rm = RegimeManager(hysteresis=0.05)
+        regime = rm.evaluate(state, BoundaryState())
+        assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
+
+    def test_neurolib_hcp_drives_engine(self):
+        """Neurolib HCP connectome → engine → R."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
+        n = 20
+        knm = load_neurolib_hcp(n)
         eng = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        phases = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=200)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+    def test_performance_load_hcp_80_under_10ms(self):
+        """load_hcp_connectome(80) < 10ms."""
+        import time
+        load_hcp_connectome(80)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(100):
+            load_hcp_connectome(80)
+        elapsed = (time.perf_counter() - t0) / 100
+        assert elapsed < 0.01, f"load_hcp(80) took {elapsed*1e3:.1f}ms"
+
+
+# Pipeline wiring: load_hcp_connectome/load_neurolib_hcp → K_nm → UPDEEngine(RK4)
+# → compute_order_parameter → RegimeManager. Performance: load_hcp(80)<10ms.

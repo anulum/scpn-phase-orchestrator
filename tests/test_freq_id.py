@@ -58,29 +58,53 @@ class TestIdentifyFrequencies:
         assert len(result.layer_assignment) == 1
 
 
-class TestPipelineWiring:
-    """Pipeline: identify_frequencies → omegas → engine."""
+class TestFreqIdPipelineEndToEnd:
+    """Full pipeline: signal → identify_frequencies → omegas → Engine → R → Regime."""
 
-    def test_identified_freqs_drive_engine(self):
-        """identify_frequencies → FrequencyResult.frequencies → engine."""
+    def test_identified_freqs_drive_engine_regime(self):
+        """identify_frequencies → omegas → UPDEEngine → R → RegimeManager."""
+        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+        from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.order_params import (
-            compute_order_parameter,
-        )
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         signal = _multi_sine([5.0, 10.0, 20.0], fs=200.0, duration=2.0)
         result = identify_frequencies(signal, fs=200.0)
         n = len(result.frequencies)
         assert n >= 1
-
         omegas = np.array(result.frequencies) * 2 * np.pi
-        eng = UPDEEngine(n, dt=0.01)
+        eng = UPDEEngine(n, dt=0.01, method="rk4")
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, n)
         knm = 0.5 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+        phases = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=200)
+        r, psi = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+        layer = LayerState(R=r, psi=psi)
+        state = UPDEState(
+            layers=[layer],
+            cross_layer_alignment=np.array([r]),
+            stability_proxy=r,
+            regime_id="nominal",
+        )
+        rm = RegimeManager(hysteresis=0.05)
+        regime = rm.evaluate(state, BoundaryState())
+        assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
+
+    def test_performance_identify_2s_200hz_under_50ms(self):
+        """identify_frequencies(2s @ 200Hz) < 50ms."""
+        import time
+        signal = _multi_sine([5.0, 10.0], fs=200.0, duration=2.0)
+        identify_frequencies(signal, fs=200.0)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(20):
+            identify_frequencies(signal, fs=200.0)
+        elapsed = (time.perf_counter() - t0) / 20
+        assert elapsed < 0.05, f"identify_frequencies took {elapsed*1e3:.1f}ms"
+
+
+# Pipeline wiring: identify_frequencies → omegas → UPDEEngine(RK4)
+# → compute_order_parameter → RegimeManager. Performance: freq_id(2s@200Hz)<50ms.

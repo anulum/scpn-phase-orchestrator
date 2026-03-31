@@ -169,24 +169,50 @@ class TestDownweightMask:
         assert mask[0] == 0.3
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestQualityScorerPipelineEndToEnd:
+    """Full pipeline: PhysicalExtractor → PhaseState → quality mask → Engine.
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    Proves quality scorer gates which oscillators enter the engine.
+    """
 
+    def test_quality_mask_gates_engine_coupling(self):
+        """Low-quality oscillators get downweighted → affects K_nm."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
+        # 4 oscillators, first two high quality, last two low
+        states = [_ps(0.9), _ps(0.8), _ps(0.1), _ps(0.05)]
+        scorer = PhaseQualityScorer()
+        mask = scorer.downweight_mask(states, min_quality=0.3)
+        assert mask[0] > 0.0  # high quality passes
+        assert mask[2] == 0.0  # low quality blocked
+        n = len(states)
+        phases = np.array([s.theta for s in states])
+        omegas = np.array([s.omega for s in states])
+        knm_base = 0.5 * np.ones((n, n))
+        np.fill_diagonal(knm_base, 0.0)
+        # Apply mask: K_nm[i,j] *= mask[i] * mask[j]
+        knm = knm_base * mask[:, None] * mask[None, :]
         alpha = np.zeros((n, n))
+        eng = UPDEEngine(n, dt=0.01)
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+    def test_performance_downweight_mask_100_under_50us(self):
+        """PhaseQualityScorer.downweight_mask(100 states) < 50μs."""
+        import time
+        states = [_ps(np.random.default_rng(i).uniform(0, 1)) for i in range(100)]
+        scorer = PhaseQualityScorer()
+        scorer.downweight_mask(states)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(10000):
+            scorer.downweight_mask(states)
+        elapsed = (time.perf_counter() - t0) / 10000
+        assert elapsed < 5e-5, f"downweight_mask(100) took {elapsed*1e6:.0f}μs"
+
+
+# Pipeline wiring: PhaseQualityScorer → downweight_mask → K_nm modulation
+# → UPDEEngine → compute_order_parameter. Quality gates engine coupling.
+# Performance: downweight_mask(100)<50μs.

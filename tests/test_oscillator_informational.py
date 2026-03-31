@@ -157,24 +157,68 @@ class TestInformationalMetadata:
         assert score == states[0].quality
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestInformationalPipelineEndToEnd:
+    """Full pipeline: event timestamps → InformationalExtractor → theta/omega → Engine → R.
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    Proves InformationalExtractor is a functional input adapter.
+    """
 
+    def test_event_streams_feed_engine(self):
+        """Multiple event streams → extract → engine → order parameter."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
+        n = 4
+        ext = InformationalExtractor()
+        rates = [5.0, 10.0, 15.0, 20.0]
+        phases = []
+        omegas = []
+        for rate in rates:
+            ts = np.arange(0.0, 2.0, 1.0 / rate)
+            states = ext.extract(ts, sample_rate=0.0)
+            phases.append(states[0].theta)
+            omegas.append(states[0].omega)
+        phases_arr = np.array(phases)
+        omegas_arr = np.array(omegas)
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+        eng = UPDEEngine(n, dt=0.001)
+        for _ in range(200):
+            phases_arr = eng.step(phases_arr, omegas_arr, knm, 0.0, 0.0, alpha)
+        r, _ = compute_order_parameter(phases_arr)
         assert 0.0 <= r <= 1.0
+        assert np.all(phases_arr >= 0.0)
+        assert np.all(phases_arr < TWO_PI)
+
+    def test_quality_gates_engine_input(self):
+        """Low-quality extraction should still produce valid engine input."""
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        ext = InformationalExtractor()
+        rng = np.random.default_rng(42)
+        phases_list = []
+        for _ in range(4):
+            ts = np.sort(rng.uniform(0, 5, size=rng.integers(5, 50)))
+            states = ext.extract(ts, sample_rate=0.0)
+            assert 0.0 <= states[0].theta < TWO_PI
+            phases_list.append(states[0].theta)
+        r, _ = compute_order_parameter(np.array(phases_list))
+        assert 0.0 <= r <= 1.0
+
+    def test_performance_extract_100_timestamps_under_500us(self):
+        """InformationalExtractor.extract(100 timestamps) < 500μs."""
+        import time
+        ts = np.arange(0.0, 10.0, 0.1)
+        ext = InformationalExtractor()
+        ext.extract(ts, sample_rate=0.0)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(1000):
+            ext.extract(ts, sample_rate=0.0)
+        elapsed = (time.perf_counter() - t0) / 1000
+        assert elapsed < 5e-4, f"extract(100) took {elapsed*1e6:.0f}μs"
+
+
+# Pipeline wiring: InformationalExtractor → theta/omega → UPDEEngine
+# → compute_order_parameter. Event timestamp input, quality-gated.
+# Performance: extract(100)<500μs.

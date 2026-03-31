@@ -131,25 +131,74 @@ def test_rust_python_parity():
     assert r_quality > 0.5
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestPhysicalExtractorPipelineEndToEnd:
+    """Full pipeline: raw signal → PhysicalExtractor → theta/omega → Engine → R.
 
-    def test_wires_into_pipeline(self):
+    Proves PhysicalExtractor is the input adapter, not decorative.
+    """
 
-        import numpy as np
-
+    def test_extract_feed_engine_order_param(self):
+        """Extract phases from sinusoids → feed into engine → compute R."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        fs = 1000.0
+        t = np.arange(0, 1.0, 1.0 / fs)
+        n = 4
+        extractor = PhysicalExtractor()
+        phases = []
+        omegas = []
+        for i in range(n):
+            signal = np.sin(TWO_PI * (5.0 + i) * t)
+            states = extractor.extract(signal, fs)
+            phases.append(states[0].theta)
+            omegas.append(states[0].omega)
+        phases_arr = np.array(phases)
+        omegas_arr = np.array(omegas)
+        knm = 0.5 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+        eng = UPDEEngine(n, dt=0.01, method="rk4")
+        for _ in range(200):
+            phases_arr = eng.step(phases_arr, omegas_arr, knm, 0.0, 0.0, alpha)
+        r, _ = compute_order_parameter(phases_arr)
         assert 0.0 <= r <= 1.0
+        assert np.all(phases_arr >= 0.0)
+        assert np.all(phases_arr < TWO_PI)
+
+    def test_multi_channel_extraction_consistency(self):
+        """Multiple channels extract to valid phases, all feedable to engine."""
+        fs = 500.0
+        t = np.arange(0, 0.5, 1.0 / fs)
+        n = 6
+        all_phases = []
+        for i in range(n):
+            signal = np.sin(TWO_PI * (3.0 + i * 2) * t)
+            extractor = PhysicalExtractor(node_id=f"p{i}")
+            states = extractor.extract(signal, fs)
+            assert states[0].channel == "P"
+            assert 0.0 <= states[0].theta < TWO_PI
+            assert states[0].quality > 0.0
+            all_phases.append(states[0].theta)
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+        r, _ = compute_order_parameter(np.array(all_phases))
+        assert 0.0 <= r <= 1.0
+
+    def test_performance_extract_1s_1kHz_under_5ms(self):
+        """PhysicalExtractor.extract(1s @ 1kHz) < 5ms."""
+        import time
+        fs = 1000.0
+        t = np.arange(0, 1.0, 1.0 / fs)
+        signal = np.sin(TWO_PI * 10.0 * t)
+        extractor = PhysicalExtractor()
+        extractor.extract(signal, fs)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(100):
+            extractor.extract(signal, fs)
+        elapsed = (time.perf_counter() - t0) / 100
+        assert elapsed < 0.005, f"extract(1s) took {elapsed*1e3:.2f}ms"
+
+
+# Pipeline wiring: PhysicalExtractor → theta/omega → UPDEEngine(RK4)
+# → compute_order_parameter. Multi-channel extraction + quality scoring.
+# Rust parity via spo_kernel. Performance: extract(1s@1kHz)<5ms.

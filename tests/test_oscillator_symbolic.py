@@ -183,24 +183,71 @@ class TestSymbolicExtractorMetadata:
             )
 
 
-class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+class TestSymbolicPipelineEndToEnd:
+    """Full pipeline: SymbolicExtractor → theta/omega → Engine → R.
 
-    def test_wires_into_pipeline(self):
-        import numpy as np
+    Proves SymbolicExtractor is a functional input adapter.
+    """
 
+    def test_symbolic_phases_feed_engine(self):
+        """Extract symbolic phases from state sequences → engine → R."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = np.ones(n)
+        n = 4
+        ext = SymbolicExtractor(n_states=8, mode="ring")
+        sequences = [
+            np.array([0, 1, 2, 3, 4, 5]),
+            np.array([1, 2, 3, 4, 5, 6]),
+            np.array([2, 3, 4, 5, 6, 7]),
+            np.array([3, 4, 5, 6, 7, 0]),
+        ]
+        phases = []
+        omegas = []
+        for seq in sequences:
+            states = ext.extract(seq, sample_rate=100.0)
+            phases.append(states[-1].theta)
+            omegas.append(states[-1].omega)
+        phases_arr = np.array(phases)
+        omegas_arr = np.array(omegas)
         knm = 0.3 * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
+        eng = UPDEEngine(n, dt=0.01)
         for _ in range(100):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-        r, _ = compute_order_parameter(phases)
+            phases_arr = eng.step(phases_arr, omegas_arr, knm, 0.0, 0.0, alpha)
+        r, _ = compute_order_parameter(phases_arr)
         assert 0.0 <= r <= 1.0
+        assert np.all(phases_arr >= 0.0)
+        assert np.all(phases_arr < TWO_PI)
+
+    def test_ring_vs_graph_both_produce_valid_engine_input(self):
+        """Both modes produce phases in [0, 2π) suitable for engine."""
+        from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+        seq = np.array([0, 2, 4, 1, 3, 5, 7, 6])
+        for mode in ("ring", "graph"):
+            ext = SymbolicExtractor(n_states=8, mode=mode)
+            states = ext.extract(seq, sample_rate=1.0)
+            phases = np.array([s.theta for s in states])
+            assert np.all(phases >= 0.0)
+            assert np.all(phases < TWO_PI)
+            r, _ = compute_order_parameter(phases)
+            assert 0.0 <= r <= 1.0
+
+    def test_performance_extract_1000_states_under_1ms(self):
+        """SymbolicExtractor.extract(1000 states) < 1ms."""
+        import time
+        ext = SymbolicExtractor(n_states=16, mode="ring")
+        seq = np.tile(np.arange(16), 63)[:1000]
+        ext.extract(seq, sample_rate=1.0)  # warm-up
+        t0 = time.perf_counter()
+        for _ in range(100):
+            ext.extract(seq, sample_rate=1.0)
+        elapsed = (time.perf_counter() - t0) / 100
+        assert elapsed < 1e-3, f"extract(1000) took {elapsed*1e3:.2f}ms"
+
+
+# Pipeline wiring: SymbolicExtractor → theta/omega → UPDEEngine
+# → compute_order_parameter. Ring + graph modes, quality scoring,
+# omega derivation from phase diffs. Performance: extract(1000)<1ms.

@@ -212,23 +212,58 @@ def test_loader_validate_control_period_and_channels(tmp_path):
 
 
 class TestPipelineWiring:
-    """Pipeline wiring: proves this module is not decorative."""
+    """Pipeline wiring: load_binding_spec -> build engine params -> UPDEEngine -> R.
 
-    def test_wires_into_pipeline(self):
+    Proves the binding loader is load-bearing infrastructure that feeds real
+    engine parameters into the UPDE pipeline.
+    """
+
+    def test_binding_spec_to_engine_to_order_parameter(self, tmp_path):
+        """E2E: load a binding spec, extract coupling params, run UPDEEngine,
+        compute order parameter R."""
         import numpy as np
 
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        n = 8
-        eng = UPDEEngine(n, dt=0.01)
-        rng = np.random.default_rng(0)
+        # Write a valid spec and load it
+        spec_data = {**_SPEC_DATA}
+        spec_path = tmp_path / "pipeline.json"
+        spec_path.write_text(json.dumps(spec_data), encoding="utf-8")
+        spec = load_binding_spec(spec_path)
+
+        # Build engine parameters from the loaded spec
+        n = sum(len(layer.oscillator_ids) for layer in spec.layers)
+        n = max(n, 4)  # ensure enough oscillators for meaningful dynamics
+        base_k = spec.coupling.base_strength
+
+        eng = UPDEEngine(n, dt=spec.sample_period_s)
+        rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
+        knm = base_k * np.ones((n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
+
         for _ in range(100):
             phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
         r, _ = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
+        assert 0.0 <= r <= 1.0, f"Order parameter out of range: {r}"
+        assert spec.name == "loader-test"
+
+    def test_load_binding_spec_performance(self, tmp_path):
+        """load_binding_spec must complete in < 10ms for a standard spec."""
+        import time
+
+        spec_path = tmp_path / "perf.json"
+        spec_path.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
+
+        start = time.perf_counter()
+        for _ in range(100):
+            load_binding_spec(spec_path)
+        elapsed_ms = (time.perf_counter() - start) / 100 * 1000
+
+        assert elapsed_ms < 10.0, (
+            f"load_binding_spec took {elapsed_ms:.2f}ms, expected < 10ms"
+        )
