@@ -77,6 +77,18 @@ run on every commit. No aspirational language — only measured reality.
 | λ₂ > 0 iff connected | Theorem | Verified (hypothesis) | test_prop_hodge_spectral.py |
 | Ring λ₂ > chain λ₂ | Theorem | Verified (N=8) | test_convergence_topology.py |
 
+
+### 2.5 Augmented Components (v0.5.1)
+
+| Test | Expectation | Measured | File |
+|------|-------------|----------|------|
+| Sparse UPDE Step | Parity with Dense | Invariant difference < 1e-12 | test_sparse_engine.py |
+| Rust Plasticity | cos-weighted K update | delta = lr * mod * cos * dt | test_sparse_engine.py |
+| Active Inference Agent | R-error driven action | Target R acquisition verified | test_active_inference_agent.py |
+| Gauged PGBO | Curvature proxy finite | 0.0 <= Kg <= 1.0 (typical) | test_pgbo.py |
+| Sheaf UPDE Step | Multi-D parity with 1D | Invariant difference < 1e-12 | test_sheaf_engine.py |
+| SINDy Recovery | Symbolic ODE discovery | omega and Knm recovered | test_sindy.py |
+
 ## 3. Cross-Engine Equivalence
 
 All engines that should agree on a given scenario produce the same result.
