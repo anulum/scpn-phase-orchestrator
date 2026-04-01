@@ -148,3 +148,24 @@ Multiple independent instances of SPO running across different machines can "cou
 - **Timeout-Aware:** Automatically drops stale peers from the mean-field calculation to prevent phantom drag.
 
 ::: scpn_phase_orchestrator.adapters.gaian_mesh_bridge
+
+## LSL BCI Entrainment Bridge
+
+The `LSLBCIBridge` implements **Phase 9: Biological Integration** of the SCPN 
+augmentation roadmap. It establishes a real-time feedback loop between human 
+neural oscillations and the phase orchestrator.
+
+By utilizing the **Lab Streaming Layer (LSL)** protocol, the bridge can ingest 
+live EEG data from a wide range of hardware (OpenBCI, Muse, Neuralink, etc.). 
+It extracts the instantaneous phase of target brainwaves (e.g., Alpha or Gamma 
+rhythms) and provides them as input to the `ActiveInferenceAgent` for 
+predictive entrainment.
+
+### Features
+- **Real-Time Phase Extraction:** Uses Hilbert transforms on sliding windows 
+  to track neural phase state.
+- **Hardware Agnostic:** Supports any EEG device with an LSL outlet.
+- **Closed-Loop Feedback:** Enables the orchestrator to steer human brainwave 
+  coherence via adaptive auditory or visual stimulation targets.
+
+::: scpn_phase_orchestrator.adapters.lsl_bci_bridge

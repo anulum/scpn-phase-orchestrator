@@ -38,6 +38,10 @@ SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-ker
 ### Cellular Sheaf Kuramoto Engine
 *   **Multi-Dimensional Phase Vectors:** Implements $\vec{\theta} \in \mathbb{R}^D$ and block coupling matrices $B_{ij} \in \mathbb{R}^{D \times D}$. Enables cross-frequency coupling (e.g., Alpha-Gamma phase locking), multi-modal synchronization, and complex opinion dynamics over vector spaces natively in the Rust kernel.
 
+
+### Biological BCI Integration (LSL)
+*   **LSL BCI Entrainment Bridge:** Establishes a sub-millisecond feedback loop with human brainwaves via the Lab Streaming Layer. Extracts instantaneous neural phases using real-time Hilbert transforms, allowing the Active Inference Agent to steer human cognitive states via predictive entrainment.
+
 ## 3. End-to-End Benchmarks (Intel i5-11600K @ 3.90GHz)
 *Measured on April 1, 2026, using bench/bench_e2e_advanced.py.*
 

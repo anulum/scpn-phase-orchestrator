@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from scpn_phase_orchestrator.adapters.fusion_core_bridge import FusionCoreBridge
 from scpn_phase_orchestrator.adapters.gaian_mesh_bridge import GaianMeshNode
+from scpn_phase_orchestrator.adapters.lsl_bci_bridge import LSLBCIBridge
 from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
 from scpn_phase_orchestrator.adapters.neurocore_bridge import NeurocoreBridge
 from scpn_phase_orchestrator.adapters.opentelemetry import OTelExporter
@@ -22,6 +23,7 @@ from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
 __all__ = [
     "FusionCoreBridge",
     "GaianMeshNode",
+    "LSLBCIBridge",
     "MetricsExporter",
     "NeurocoreBridge",
     "OTelExporter",
