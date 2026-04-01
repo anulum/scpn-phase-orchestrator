@@ -21,8 +21,10 @@ TWO_PI = 2.0 * np.pi
 class QuantumControlBridge:
     """Adapter between scpn-quantum-control artifacts and phase-orchestrator types.
 
-    Pure dict/array methods (import_artifact, export_artifact) work without
-    scpn-quantum-control installed.  Circuit methods require the package.
+    The QuantumControlBridge enables the mapping of classical Kuramoto 
+    phase dynamics onto Quantum Hardware (isomorphic XY spin Hamiltonian). 
+    It supports Hamiltonian construction, Trotterized time evolution (Q-UPDE), 
+    and variational synchronization minimization.
     """
 
     def __init__(self, n_oscillators: int, trotter_order: int = 1):
@@ -32,11 +34,7 @@ class QuantumControlBridge:
         self._trotter_order = trotter_order
 
     def import_artifact(self, artifact_dict: dict) -> UPDEState:
-        """Convert a scpn-quantum-control result dict into UPDEState.
-
-        Expected keys: 'phases' (1-D array), 'fidelity' (float),
-        optional 'regime' (str), 'layer_assignments' (list of lists of int).
-        """
+        """Convert a scpn-quantum-control result dict into UPDEState."""
         phases = np.asarray(artifact_dict["phases"], dtype=np.float64) % TWO_PI
         fidelity = float(artifact_dict.get("fidelity", 0.0))
 
@@ -93,42 +91,52 @@ class QuantumControlBridge:
 
         Requires scpn-quantum-control.
         """
-        from scpn_quantum_control import knm_to_hamiltonian  # pragma: no cover
+        from scpn_quantum_control.bridge.knm_hamiltonian import knm_to_hamiltonian
+        return knm_to_hamiltonian(knm, omegas)
 
-        return knm_to_hamiltonian(knm, omegas)  # pragma: no cover
+    def solve_q_upde(
+        self, 
+        knm: NDArray, 
+        omegas: NDArray, 
+        t_max: float = 1.0, 
+        dt: float = 0.1,
+        trotter_per_step: int = 5
+    ) -> dict:
+        """Execute Trotterized quantum simulation of the phase network (Q-UPDE).
+
+        This method maps the classical sin(delta theta) interaction to 
+        the XY spin exchange interaction (XX + YY) and natural frequencies 
+        to Z-axis magnetic fields.
+
+        Requires scpn-quantum-control.
+        """
+        from scpn_quantum_control.phase.xy_kuramoto import QuantumKuramotoSolver
+        
+        solver = QuantumKuramotoSolver(
+            n_oscillators=len(omegas),
+            K_coupling=knm,
+            omega_natural=omegas,
+            trotter_order=self._trotter_order
+        )
+        return solver.run(t_max=t_max, dt=dt, trotter_per_step=trotter_per_step)
 
     def orchestrator_to_quantum(
         self,
         state: UPDEState,
     ) -> NDArray:
-        """Convert orchestrator UPDEState to quantum phase array.
+        """Convert orchestrator UPDEState to quantum phase array."""
+        from scpn_quantum_control.bridge.conversions import orchestrator_to_quantum_phases
 
-        Requires scpn-quantum-control.
-        """
-        from scpn_quantum_control import (  # pragma: no cover
-            orchestrator_to_quantum_phases,
-        )
-
-        payload = self.export_artifact(state)  # pragma: no cover
-        layer_phases = {  # pragma: no cover
+        payload = self.export_artifact(state)
+        layer_phases = {
             f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
         }
-        result: NDArray = orchestrator_to_quantum_phases(  # pragma: no cover
-            layer_phases
-        )
-        return result  # pragma: no cover
+        return orchestrator_to_quantum_phases(layer_phases)
 
     def quantum_to_orchestrator(
         self,
         quantum_theta: NDArray,
     ) -> dict:
-        """Convert quantum phase array back to orchestrator-compatible dict.
-
-        Requires scpn-quantum-control.
-        """
-        from scpn_quantum_control import (  # pragma: no cover
-            quantum_to_orchestrator_phases,
-        )
-
-        result: dict = quantum_to_orchestrator_phases(quantum_theta)  # pragma: no cover
-        return result  # pragma: no cover
+        """Convert quantum phase array back to orchestrator-compatible dict."""
+        from scpn_quantum_control.bridge.conversions import quantum_to_orchestrator_phases
+        return quantum_to_orchestrator_phases(quantum_theta)

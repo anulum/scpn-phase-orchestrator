@@ -8,12 +8,14 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
+from scpn_phase_orchestrator.binding.semantic import SemanticDomainCompiler
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
 __all__ = [
     "BindingLoadError",
     "BindingSpec",
+    "SemanticDomainCompiler",
     "load_binding_spec",
     "validate_binding_spec",
 ]

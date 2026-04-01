@@ -300,3 +300,32 @@ file documents the derivation.
 | Numerics | CFL check after actuation |
 | Audit | Logs every actuation command |
 | Engine | Consumes modified K_nm, ζ, Ψ |
+
+## HDL Synthesis Compiler
+
+The `KuramotoVerilogCompiler` provides a path from high-level topological 
+learning to **hard real-time hardware execution**. It compiles a 
+stabilized Kuramoto network ($K_{nm}$, $\omega$) directly into structural 
+Verilog code.
+
+### Use Case: Nanosecond-Scale Control
+
+In applications like **Nuclear Fusion Plasma Control**, the latency 
+requirements for suppressing tearing modes are in the microsecond or 
+nanosecond range. Even the high-performance Rust kernel running on a 
+standard CPU may introduce jitter due to OS context switching.
+
+By compiling the synchronization manifold into an FPGA bitstream, the 
+control logic is executed in parallel hardware, achieving:
+- **Zero Jitter:** Deterministic execution timing.
+- **Nanosecond Latency:** Direct mapping of the UPDE integration loop to gates.
+- **Massive Parallelism:** All $O(N^2)$ interactions computed concurrently.
+
+### Implementation Details
+
+The compiler generates a structural Verilog module that implements:
+1. **State Registers:** Fixed-point or floating-point registers for each $\theta_i$.
+2. **Interaction Matrix:** Parallel instantiation of sine-calculators (CORDIC or LUT).
+3. **Euler Integration:** Single-clock cycle updates for the entire manifold.
+
+::: scpn_phase_orchestrator.actuation.hdl_compiler

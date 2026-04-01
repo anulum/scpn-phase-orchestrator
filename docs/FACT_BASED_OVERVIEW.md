@@ -26,6 +26,14 @@ SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-ker
 ### Distributed Mesh Synchronization
 *   **Layer 12 Gaian Mesh Bridge:** Allows independent SPO instances on different servers to "couple" via stateless UDP heartbeats. Nodes exchange macroscopic Order Parameters ($R, \Psi$) instead of heavy $O(N)$ phase vectors, enabling planetary-scale decentralized synchronization.
 
+
+### Hardware Synthesis (FPGA)
+*   **HDL Synthesis Compiler:** Compiles stabilized Kuramoto manifolds directly into structural Verilog. This bypasses the CPU entirely, enabling nanosecond-scale, jitter-free control for life-critical systems like nuclear fusion containment.
+
+
+### Semantic Domain Modeling (LLM Bridge)
+*   **LLM Semantic Domain Compiler:** A natural language interface that translates plain-English system descriptions into formal SCPN configurations. It automatically synthesizes hierarchical coupling matrices and frequency distributions from text, lowering the barrier for domain-specific modeling.
+
 ## 3. End-to-End Benchmarks (Intel i5-11600K @ 3.90GHz)
 *Measured on April 1, 2026, using bench/bench_e2e_advanced.py.*
 
