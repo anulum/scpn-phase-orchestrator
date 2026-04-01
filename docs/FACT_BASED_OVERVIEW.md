@@ -42,6 +42,10 @@ SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-ker
 ### Biological BCI Integration (LSL)
 *   **LSL BCI Entrainment Bridge:** Establishes a sub-millisecond feedback loop with human brainwaves via the Lab Streaming Layer. Extracts instantaneous neural phases using real-time Hilbert transforms, allowing the Active Inference Agent to steer human cognitive states via predictive entrainment.
 
+
+### Symbolic Equation Discovery (Phase-SINDy)
+*   **Phase-SINDy Module:** Automatically reverse-engineers the governing differential equations of an unknown oscillator system from raw time-series data. Uses sparse identification (STLSQ) to discover the underlying physical topology and natural frequencies, outputting human-readable symbolic math.
+
 ## 3. End-to-End Benchmarks (Intel i5-11600K @ 3.90GHz)
 *Measured on April 1, 2026, using bench/bench_e2e_advanced.py.*
 
