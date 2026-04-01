@@ -135,3 +135,16 @@ Translates ControlAction to Modbus register writes over TLS.
 Generic hardware I/O abstraction for digital/analogue outputs.
 
 ::: scpn_phase_orchestrator.adapters.hardware_io
+
+## Gaian Mesh Bridge
+
+The  implements **Layer 12: Distributed Mesh** of the SCPN architecture. It provides decentralized inter-node synchronization via stateless UDP heartbeats.
+
+Multiple independent instances of SPO running across different machines can "couple" together. Instead of exchanging raw (N)$ phases, nodes exchange their macroscopic **Order Parameters** ({global}, \Psi_{global}$). The bridge integrates the peer fields and translates them into external forcing parameters ($\zeta$, $\Psi$) for the local .
+
+### Features
+- **Stateless UDP Broadcasting:** Designed for high-frequency, loss-tolerant mesh topologies.
+- **Topological Consensus:** Enables thousands of independent agents (drones, servers) to synchronize without a central command node.
+- **Timeout-Aware:** Automatically drops stale peers from the mean-field calculation to prevent phantom drag.
+
+::: scpn_phase_orchestrator.adapters.gaian_mesh_bridge

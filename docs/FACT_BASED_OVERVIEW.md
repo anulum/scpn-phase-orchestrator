@@ -22,6 +22,10 @@ SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-ker
 *   **Active Inference Agent:** A predictive state-space model that minimizes Variational Free Energy to drive systems toward target coherence ({target}$).
 *   **Petri Net Supervisor:** Formal state-machine transitions based on dynamical regimes (Nominal, Degraded, Critical).
 
+
+### Distributed Mesh Synchronization
+*   **Layer 12 Gaian Mesh Bridge:** Allows independent SPO instances on different servers to "couple" via stateless UDP heartbeats. Nodes exchange macroscopic Order Parameters ($R, \Psi$) instead of heavy $O(N)$ phase vectors, enabling planetary-scale decentralized synchronization.
+
 ## 3. End-to-End Benchmarks (Intel i5-11600K @ 3.90GHz)
 *Measured on April 1, 2026, using bench/bench_e2e_advanced.py.*
 
