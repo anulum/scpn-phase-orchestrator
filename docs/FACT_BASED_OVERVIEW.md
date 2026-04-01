@@ -34,6 +34,10 @@ SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-ker
 ### Semantic Domain Modeling (LLM Bridge)
 *   **LLM Semantic Domain Compiler:** A natural language interface that translates plain-English system descriptions into formal SCPN configurations. It automatically synthesizes hierarchical coupling matrices and frequency distributions from text, lowering the barrier for domain-specific modeling.
 
+
+### Cellular Sheaf Kuramoto Engine
+*   **Multi-Dimensional Phase Vectors:** Implements $\vec{\theta} \in \mathbb{R}^D$ and block coupling matrices $B_{ij} \in \mathbb{R}^{D \times D}$. Enables cross-frequency coupling (e.g., Alpha-Gamma phase locking), multi-modal synchronization, and complex opinion dynamics over vector spaces natively in the Rust kernel.
+
 ## 3. End-to-End Benchmarks (Intel i5-11600K @ 3.90GHz)
 *Measured on April 1, 2026, using bench/bench_e2e_advanced.py.*
 

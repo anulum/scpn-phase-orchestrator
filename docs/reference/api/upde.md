@@ -41,7 +41,9 @@ output (order parameters, monitors, supervisor).
 |--------|-------|-----|----------|
 | UPDEEngine | θ ∈ [0,2π)^N | Kuramoto | General synchronisation |
 | SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ((N \log N)$) |
+| SheafUPDEEngine | $\vec{\theta} \in \mathbb{R}^{N \times D}$ | Cellular Sheaf | Multi-dimensional block coupling |
 | SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ((N \log N)$) |
+| SheafUPDEEngine | $\vec{\theta} \in \mathbb{R}^{N \times D}$ | Cellular Sheaf | Multi-dimensional block coupling |
 | StuartLandauEngine | [θ,r] ∈ R^{2N} | Stuart-Landau | Amplitude dynamics |
 | SimplicialEngine | θ ∈ [0,2π)^N | 3-body Kuramoto | Explosive sync |
 | InertialEngine | [θ,ω̇] ∈ R^{2N} | Swing equation | Power grids |
@@ -334,3 +336,20 @@ where most oscillators are only coupled to local neighbors.
 - **In-place Plasticity:** Supports sub-microsecond Hebbian updates to the  array during the integration step.
 
 ::: scpn_phase_orchestrator.upde.sparse_engine
+
+---
+
+## Cellular Sheaf Engine
+
+The  extends the Kuramoto model from scalar phases to **multi-dimensional phase vectors**. This implements the mathematical framework of Cellular Sheaves for synchronization.
+
+Instead of a single phase $\theta_i$, each oscillator maintains a vector $\vec{\theta}_i \in \mathbb{R}^D$. The scalar coupling {ij}$ is replaced by a restriction map—a block matrix {ij} \in \mathbb{R}^{D \times D}$ that transforms the phase space of node $ into the reference frame of node $.
+
+995781 \dot{\theta}_{i,d} = \omega_{i,d} + \sum_j \sum_k B_{ij}^{dk} \sin(\theta_{j,k} - \theta_{i,d}) + \zeta \sin(\Psi_d - \theta_{i,d}) 995781
+
+### Features
+- **Cross-Frequency Coupling:** A dimension $ on node $ (e.g., Theta wave) can directly drive dimension $ on node $ (e.g., Gamma wave) via off-diagonal elements in {ij}$.
+- **Complex Topology:** Models opinion dynamics, multi-modal synchronization, and anisotropic structural constraints natively.
+- **Rust Kernel:** Fully offloaded to the  via  for real-time multi-dimensional integration.
+
+::: scpn_phase_orchestrator.upde.sheaf_engine

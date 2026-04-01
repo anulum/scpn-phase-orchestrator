@@ -5,6 +5,21 @@ Elevate the SCPN Phase Orchestrator from a robust simulation engine to a univers
 
 ## Tracked Changes & Augmentations
 
+## Wave 2: Autopoiesis & Neuromorphic Integration
+
+### In Progress
+- **Phase 8: Cellular Sheaf Kuramoto Engine**
+  - **Goal:** Implement multi-dimensional phase vectors ($\vec{\theta}_i \in \mathbb{R}^D$) with restriction maps (block matrices {ij} \in \mathbb{R}^{D \times D}$) for cross-frequency and complex topological coupling. Keep current scalar engines intact; add `SheafUPDEEngine` as a new option.
+
+### Upcoming
+- **Phase 9: LSL BCI Entrainment Bridge**
+  - **Goal:** Real-time EEG streaming via Lab Streaming Layer. Extract instantaneous phases, feed into Active Inference, and output predictive entrainment signals.
+- **Phase 10: Symbolic PDE Discovery (Phase-SINDy)**
+  - **Goal:** Autonomous reverse-engineering of governing equations from time-series data using Sparse Identification of Nonlinear Dynamics with TVReg.
+- **Phase 11: WebXR Holographic Manifold Projection**
+  - **Goal:** 3D topological torus visualization of the metric tensor and $ persistent homology streaming at 60Hz via WebSockets.
+
+
 *(This section will be updated as we implement the plan)*
 
 ### In Progress

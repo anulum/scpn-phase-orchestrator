@@ -28,3 +28,4 @@ pub use stuart_landau::StuartLandauStepper;
 pub use upde::UPDEStepper;
 pub mod sparse_upde;
 pub mod plasticity;
+pub mod sheaf_upde;
