@@ -25,3 +25,4 @@ pub use policy::SupervisorPolicy;
 pub use projector::ActionProjector;
 pub use regime::RegimeManager;
 pub use rule_engine::RuleEngine;
+pub mod active_inference;

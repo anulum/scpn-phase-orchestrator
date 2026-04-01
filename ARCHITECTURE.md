@@ -87,11 +87,11 @@ differentiable. GPU acceleration via `jax[cuda12]`.
 | `binding/` | YAML/JSON spec loading, validation | `BindingSpec`, `OscillatorFamily` |
 | `oscillators/` | Signal→phase extraction (P/I/S channels) | `PhaseExtractor`, `PhaseState` |
 | `coupling/` | K_nm matrix construction, adaptation, analysis | `CouplingBuilder`, `KnmMatrix` |
-| `upde/` | Phase ODE integration (9 engine variants) | `UPDEEngine`, `StuartLandauEngine` |
+| `upde/` | Phase ODE integration (10 engine variants) | `UPDEEngine`, `SparseUPDEEngine`, `StuartLandauEngine` |
 | `imprint/` | History-dependent coupling modulation | `ImprintState`, `ImprintUpdate` |
 | `drivers/` | External forcing (P/I/S channels) | `PhysicalDriver`, `SymbolicDriver` |
 | `monitor/` | 15 dynamical observers | `BoundaryObserver`, `ChimeraDetector` |
-| `supervisor/` | Regime FSM + policy engine + MPC | `RegimeManager`, `SupervisorPolicy` |
+| `supervisor/` | Regime FSM + policy engine + AI | `RegimeManager`, `ActiveInferenceAgent`, `SupervisorPolicy` |
 | `actuation/` | Control output mapping with constraints | `ActuationMapper`, `ConstraintProjection` |
 | `audit/` | Deterministic audit trail + replay | `AuditLogger`, `ReplayEngine` |
 
@@ -135,6 +135,7 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 | Monitor | Module | Detects |
 |---------|--------|---------|
 | Boundary Observer | `boundaries.py` | Safety/performance limit crossings |
+| PGBO (Gauged) | `ssgf/pgbo.py` | Phase-Geometry curvature alignment |
 | Coherence | `coherence.py` | Order parameter R tracking |
 | Chimera Detection | `chimera.py` | Coexistent coherent/incoherent clusters |
 | EVS | `evs.py` | Entrainment verification (3-criterion) |

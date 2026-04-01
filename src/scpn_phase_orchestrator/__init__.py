@@ -30,6 +30,7 @@ from scpn_phase_orchestrator.upde.bifurcation import (
     trace_sync_transition,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.sparse_engine import SparseUPDEEngine
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 __all__ = [
@@ -43,6 +44,7 @@ __all__ = [
     "PhaseState",
     "RegimeManager",
     "SPOError",
+    "SparseUPDEEngine",
     "StuartLandauEngine",
     "SupervisorPolicy",
     "UPDEEngine",

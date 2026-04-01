@@ -341,3 +341,31 @@ MPC prediction costs ~10 ODE steps versus 10000 Euler steps.
 | `PetriNet.enabled()` | < 10 μs | Guard evaluation |
 | `PredictiveSupervisor.predict()` | < 1 ms | OA mean-field (10 complex ODE steps) |
 | `EventBus.post()` | < 5 μs | Synchronous dispatch |
+
+---
+
+## Active Inference Agent
+
+The `ActiveInferenceAgent` provides a **predictive control framework** based on 
+Karl Friston's Variational Free Energy Principle. It represents the next-generation 
+of SPO controllers, moving beyond static YAML rules into self-adaptive state-space 
+models.
+
+### Mathematical Model
+
+The agent maintains a low-dimensional internal state $ and minimizes the 
+**Variational Free Energy** $ between its prediction $\hat{R}$ and the 
+observed coherence {obs}$:
+
+936875 F \approx \int q(x) \ln \frac{q(x)}{p(R_{obs}, x)} dx 936875
+
+The controller outputs the optimal forcing strength $\zeta$ and reference phase 
+$\Psi$ to drive the network toward a target coherence level {target}$ 
+(often set to the **metastability threshold**  \approx 0.6$).
+
+### Features
+- **Adaptive Suppression:** Spontaneously discovers anti-phase driving ($\Psi = \psi + \pi$) to break harmful phase-locking.
+- **Sub-microsecond Control:** Fully implemented in the `spo-kernel` Rust backend for real-time high-frequency response.
+- **Emergent Robustness:** Naturally handles non-stationary frequency drifts by integrating prediction errors into the internal state.
+
+::: scpn_phase_orchestrator.supervisor.active_inference_agent

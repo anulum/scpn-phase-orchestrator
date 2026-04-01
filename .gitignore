@@ -53,3 +53,13 @@ experiments/.eeg_cache/
 
 # Coordination — local-only session logs and handovers
 .coordination/
+
+# Claude Code local config — never commit
+CLAUDE.md
+.claude/
+
+# Local temporary files
+.audit_tools/
+.tmp_pytest_ok/
+.venv-linux/
+HANDOVER_*.md

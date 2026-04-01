@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
-# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
-# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# © Concepts 1996-2026 Miroslav Šotek. All rights reserved.
+# © Code 2020-2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Phase-Geometry Bidirectional Observer
+# SCPN Phase Orchestrator - Phase-Geometry Bidirectional Observer
 
 from __future__ import annotations
 
@@ -26,19 +26,24 @@ class PGBOSnapshot:
     psi: float
     costs: SSGFCosts
     phase_geometry_alignment: float
+    gauge_curvature: float
     step: int
 
 
 class PGBO:
     """Phase-Geometry Bidirectional Observer.
 
-    Monitors the coupling between phase dynamics (Kuramoto state) and
-    geometry (SSGF carrier W). Computes alignment between phase coherence
-    and geometric structure — when the geometry supports the current
-    phase pattern, alignment is high.
+    Monitors the alignment between phase dynamics (Kuramoto state) and 
+    geometry (SSGF carrier W). Computes a scalar curvature proxy based 
+    on the rank-2 metric tensor h_{mu nu}. This represents the structural 
+    coupling between the phase-manifold and the underlying physical space.
 
-    The bidirectionality: phases → cost → gradient → geometry (forward),
-    geometry → coupling → phases (backward). PGBO observes both directions.
+    The bidirectionality:
+        1. Phases -> Cost -> Gradient -> Geometry (forward control)
+        2. Geometry -> Coupling -> Phases (backward influence)
+
+    PGBO observes the emergence of curvature as synchronization patterns 
+    stretch or curve the geometric coupling field W.
     """
 
     def __init__(self, cost_weights: tuple[float, ...] = (1.0, 0.5, 0.1, 0.1)):
@@ -47,7 +52,16 @@ class PGBO:
         self._history: list[PGBOSnapshot] = []
 
     def observe(self, phases: NDArray, W: NDArray) -> PGBOSnapshot:
-        """Compute coherence, SSGF costs, and phase-geometry alignment."""
+        """Compute coherence, SSGF costs, and phase-geometry alignment.
+
+        Args:
+            phases: Current phase vector theta_i.
+            W: Current geometric coupling matrix W_ij.
+
+        Returns:
+            A PGBOSnapshot containing order parameter R, Psi, SSGF costs, 
+            and the gauge curvature proxy.
+        """
         self._step += 1
         R, psi = compute_order_parameter(phases)
         costs = compute_ssgf_costs(W, phases, weights=self._weights)
@@ -57,6 +71,7 @@ class PGBO:
         n = len(phases)
         if n < 2:
             alignment = 0.0
+            gauge_curvature = 0.0
         else:
             diff = phases[:, np.newaxis] - phases[np.newaxis, :]
             plv_matrix = np.cos(diff)
@@ -67,14 +82,24 @@ class PGBO:
                 alignment = 0.0
             else:
                 alignment = float(np.corrcoef(plv_flat, w_flat)[0, 1])
-                if not np.isfinite(alignment):  # pragma: no cover
+                if not np.isfinite(alignment):
                     alignment = 0.0
+
+            # Compute Gauge-Theoretic Metric Tensor h_munu
+            # h_ij = W_ij * cos(theta_i - theta_j)
+            if np.sum(np.abs(W)) < 1e-12:
+                gauge_curvature = 0.0
+            else:
+                h_munu = W * plv_matrix
+                # Scalar curvature proxy: sum(h_ij) / sum(|W_ij|)
+                gauge_curvature = float(np.sum(h_munu) / np.sum(np.abs(W)))
 
         snap = PGBOSnapshot(
             R=R,
             psi=psi,
             costs=costs,
             phase_geometry_alignment=alignment,
+            gauge_curvature=gauge_curvature,
             step=self._step,
         )
         self._history.append(snap)
@@ -86,7 +111,7 @@ class PGBO:
         return list(self._history)
 
     def alignment_trend(self, window: int = 10) -> float:
-        """Mean alignment over last `window` observations."""
+        """Mean alignment over last window observations."""
         if not self._history:
             return 0.0
         recent = self._history[-window:]

@@ -14,6 +14,7 @@
 use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 
 use crate::dp_tableau as dp;
+use crate::plasticity::PlasticityModel;
 
 /// Kuramoto UPDE integrator with pre-allocated scratch arrays.
 pub struct UPDEStepper {
@@ -34,6 +35,8 @@ pub struct UPDEStepper {
     k7: Vec<f64>,
     y5: Vec<f64>,
     tmp_phases: Vec<f64>,
+    pub plasticity: Option<PlasticityModel>,
+    pub modulator: f64,
 }
 
 impl std::fmt::Debug for UPDEStepper {
@@ -74,6 +77,8 @@ impl UPDEStepper {
             k7: vec![0.0; n],
             y5: vec![0.0; n],
             tmp_phases: vec![0.0; n],
+            plasticity: None,
+            modulator: 1.0,
         })
     }
 
@@ -87,7 +92,7 @@ impl UPDEStepper {
         &mut self,
         phases: &mut [f64],
         omegas: &[f64],
-        knm: &[f64],
+        knm: &mut [f64],
         zeta: f64,
         psi: f64,
         alpha: &[f64],
@@ -122,7 +127,7 @@ impl UPDEStepper {
                 ));
             }
         }
-        for &k in knm {
+        for k in knm.iter() {
             if !k.is_finite() {
                 return Err(SpoError::IntegrationDiverged("knm contains NaN/Inf".into()));
             }
@@ -160,6 +165,9 @@ impl UPDEStepper {
             }
         }
 
+        if let Some(ref plast) = self.plasticity {
+            plast.update(phases, knm, self.modulator, self.dt);
+        }
         wrap_phases(phases);
         Ok(())
     }
@@ -173,7 +181,7 @@ impl UPDEStepper {
         &mut self,
         phases: &mut [f64],
         omegas: &[f64],
-        knm: &[f64],
+        knm: &mut [f64],
         zeta: f64,
         psi: f64,
         alpha: &[f64],
@@ -201,7 +209,7 @@ impl UPDEStepper {
         &mut self,
         phases: &mut [f64],
         omegas: &[f64],
-        knm: &[f64],
+        knm: &mut [f64],
         zeta: f64,
         psi: f64,
         alpha: &[f64],
@@ -227,7 +235,7 @@ impl UPDEStepper {
         &mut self,
         phases: &mut [f64],
         omegas: &[f64],
-        knm: &[f64],
+        knm: &mut [f64],
         zeta: f64,
         psi: f64,
         alpha: &[f64],
@@ -295,7 +303,7 @@ impl UPDEStepper {
         &mut self,
         phases: &mut [f64],
         omegas: &[f64],
-        knm: &[f64],
+        knm: &mut [f64],
         zeta: f64,
         psi: f64,
         alpha: &[f64],
@@ -454,7 +462,7 @@ fn compute_derivative(
     n: usize,
     theta: &[f64],
     omegas: &[f64],
-    knm: &[f64],
+    knm: &mut [f64],
     zeta: f64,
     psi: f64,
     alpha: &[f64],

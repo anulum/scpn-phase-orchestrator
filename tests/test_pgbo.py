@@ -81,6 +81,15 @@ class TestPGBO:
         snap = pgbo.observe(phases, W)
         assert np.isfinite(snap.phase_geometry_alignment)
 
+    def test_gauge_curvature_finite(self):
+        pgbo = PGBO()
+        rng = np.random.default_rng(42)
+        phases = rng.uniform(0, 2 * np.pi, 6)
+        W = rng.uniform(0.1, 2.0, (6, 6))
+        np.fill_diagonal(W, 0.0)
+        snap = pgbo.observe(phases, W)
+        assert np.isfinite(snap.gauge_curvature)
+
 
 class TestPGBOPipelineWiring:
     """Pipeline: engine phases + K_nm → PGBO → alignment metric."""
@@ -104,3 +113,4 @@ class TestPGBOPipelineWiring:
         snap = pgbo.observe(phases, knm)
         assert isinstance(snap, PGBOSnapshot)
         assert -1.0 <= snap.phase_geometry_alignment <= 1.0
+        assert np.isfinite(snap.gauge_curvature)
