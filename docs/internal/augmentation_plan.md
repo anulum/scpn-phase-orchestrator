@@ -1,7 +1,7 @@
 # SCPN Phase Orchestrator: 10x Augmentation Plan
 
 ## Objective
-Elevate the SCPN Phase Orchestrator from a robust simulation engine to a universal, hyper-adaptive intelligence and control platform.
+Elevate the SCPN Phase Orchestrator from a simulation engine to a universal, hyper-adaptive intelligence and control platform.
 
 ## Tracked Changes & Augmentations
 

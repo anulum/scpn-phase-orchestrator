@@ -46,6 +46,10 @@ SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-ker
 ### Symbolic Equation Discovery (Phase-SINDy)
 *   **Phase-SINDy Module:** Automatically reverse-engineers the governing differential equations of an unknown oscillator system from raw time-series data. Uses sparse identification (STLSQ) to discover the underlying physical topology and natural frequencies, outputting human-readable symbolic math.
 
+
+### Holographic Manifold Visualization (WebXR)
+*   **WebXR Manifold Streamer:** Broadcasts real-time simulation telemetry (metric tensors, $H_1$ homology, and phase states) via 60Hz WebSockets. Enables interactive 3D visualization of the synchronization manifold's curvature and folding in WebGL/Three.js environments.
+
 ## 3. End-to-End Benchmarks (Intel i5-11600K @ 3.90GHz)
 *Measured on April 1, 2026, using bench/bench_e2e_advanced.py.*
 

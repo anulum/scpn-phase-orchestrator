@@ -366,6 +366,6 @@ $\Psi$ to drive the network toward a target coherence level {target}$
 ### Features
 - **Adaptive Suppression:** Spontaneously discovers anti-phase driving ($\Psi = \psi + \pi$) to break harmful phase-locking.
 - **Sub-microsecond Control:** Fully implemented in the `spo-kernel` Rust backend for real-time high-frequency response.
-- **Emergent Robustness:** Naturally handles non-stationary frequency drifts by integrating prediction errors into the internal state.
+- **Emergent Resilientness:** Naturally handles non-stationary frequency drifts by integrating prediction errors into the internal state.
 
 ::: scpn_phase_orchestrator.supervisor.active_inference_agent

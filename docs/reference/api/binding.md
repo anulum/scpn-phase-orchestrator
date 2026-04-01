@@ -198,7 +198,7 @@ The compiler uses a hybrid approach to translate semantic descriptions:
 
 ### Future: LLM Integration
 
-While the current implementation uses robust heuristic parsing, the 
+While the current implementation uses heuristic parsing, the 
 architecture is designed to plug directly into Large Language Models (LLMs). 
 In an LLM-enabled mode, the compiler can synthesize deep ontological 
 mappings, such as assigning specific phase lags ($\alpha$) based on 
