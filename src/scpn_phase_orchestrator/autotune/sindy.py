@@ -17,8 +17,8 @@ __all__ = ["PhaseSINDy"]
 class PhaseSINDy:
     """Symbolic Discovery of Phase Dynamics using SINDy.
 
-    Discovers the governing equations of a coupled oscillator network 
-    by performing sparse regression on a library of trigonometric 
+    Discovers the governing equations of a coupled oscillator network
+    by performing sparse regression on a library of trigonometric
     interaction terms.
     """
 
@@ -34,45 +34,49 @@ class PhaseSINDy:
         unwrapped = np.unwrap(phases, axis=0)
         theta_dot = np.diff(unwrapped, axis=0) / dt
         X = phases[:-1, :]
-        
+
         self.coefficients = []
         self.feature_names = []
-        
+
         for i in range(N):
             # 1. Build library for node i: [1, sin(theta_j - theta_i) for all j != i]
             library = [np.ones((T - 1, 1))]
             f_names = ["1"]
-            
+
             for j in range(N):
-                if i == j: continue
+                if i == j:
+                    continue
                 diff = X[:, j] - X[:, i]
                 library.append(np.sin(diff)[:, np.newaxis])
                 f_names.append(f"sin(theta_{j} - theta_{i})")
-                
+
             Theta = np.hstack(library)
-            
+
             # 2. STLSQ for this node
             xi = lstsq(Theta, theta_dot[:, i])[0]
-            
+
             for _ in range(self.max_iter):
                 small_indices = np.abs(xi) < self.threshold
                 xi[small_indices] = 0
                 big_indices = ~small_indices
                 if np.any(big_indices):
                     xi[big_indices] = lstsq(Theta[:, big_indices], theta_dot[:, i])[0]
-            
+
             self.coefficients.append(xi)
             self.feature_names.append(f_names)
-            
+
         return self.coefficients
 
     def get_equations(self) -> list[str]:
-        if not self.coefficients: return ["Model not fitted"]
+        if not self.coefficients:
+            raise RuntimeError("PhaseSINDy.get_equations() called before fit()")
         equations = []
         for i, xi in enumerate(self.coefficients):
             terms = []
             for j, val in enumerate(xi):
                 if abs(val) > 1e-6:
                     terms.append(f"{val:.4f} * {self.feature_names[i][j]}")
-            equations.append(f"d(theta_{i})/dt = " + (" + ".join(terms) if terms else "0"))
+            equations.append(
+                f"d(theta_{i})/dt = " + (" + ".join(terms) if terms else "0")
+            )
         return equations

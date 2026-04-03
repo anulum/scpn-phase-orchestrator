@@ -10,35 +10,19 @@ use spo_types::{SpoError, SpoResult};
 
 /// Active Inference Controller using a State-Space Predictive Model.
 ///
-/// This agent implements Karl Friston's Variational Free Energy Principle 
-/// (FEP) to autonomously control oscillator synchronization. It treats 
-/// control as the minimization of prediction error (Variational Free Energy) 
-/// relative to a target coherence level $R_{target}$.
-///
-/// The controller represents the next-generation of SPO supervisory logic, 
-/// moving away from static heuristic rules to dynamic internal world-models.
+/// Implements Karl Friston's Variational Free Energy Principle (FEP)
+/// to autonomously control oscillator synchronisation. Minimises
+/// prediction error (Variational Free Energy) relative to a target
+/// coherence level `R_target`.
 ///
 /// # Internal State
-/// The agent maintains a low-dimensional predictive state $x$ that evolves 
-/// according to:
-/// $\dot{x} = A x + B \epsilon$
-/// where $\epsilon = R_{obs} - R_{target}$ is the prediction error.
 ///
-/// This agent implements Karl Friston's Variational Free Energy Principle 
-/// (FEP) to autonomously control oscillator synchronization. It treats 
-/// control as the minimization of prediction error (Variational Free Energy) 
-/// relative to a target coherence level {target}$.
+/// The agent maintains a low-dimensional predictive state **x** that
+/// evolves according to:
 ///
-/// The controller represents the next-generation of SPO supervisory logic, 
-/// moving away from static heuristic rules to dynamic internal world-models.
-///
-/// # Internal State
-/// The agent maintains a low-dimensional predictive state $ that evolves 
-/// according to:
-/// $\dot{x} = A x + B \epsilon$
-/// where $\epsilon = R_{obs} - R_{target}$ is the prediction error.
-/// Minimizes variational free energy (prediction error) between
-/// current coherence R and target R_target.
+/// ```text
+/// ẋ = A·x + B·ε,  where ε = R_obs − R_target
+/// ```
 #[derive(Debug, Clone)]
 pub struct ActiveInferenceAgent {
     pub target_r: f64,
@@ -62,34 +46,19 @@ impl ActiveInferenceAgent {
 
     /// Update internal state and compute optimal control knobs (zeta, psi).
     ///
-    /// The agent outputs an 'action' (zeta, psi) that acts on the world 
-    /// (the oscillator network) to resolve the divergence between predicted 
-    /// and observed coherence.
+    /// Outputs an action `(zeta, psi)` that acts on the oscillator network
+    /// to resolve divergence between predicted and observed coherence.
     ///
     /// # Arguments
-    /// * `r_obs` - Currently observed Order Parameter R.
-    /// * `psi_obs` - Currently observed global phase Psi.
-    /// * `dt` - Timestep for internal state-space update.
-    ///
-    /// The agent outputs an 'action' (zeta, psi) that acts on the world 
-    /// (the oscillator network) to resolve the divergence between predicted 
-    /// and observed coherence.
-    ///
-    /// # Arguments
-    /// *  - Currently observed Order Parameter R.
-    /// *  - Currently observed global phase Psi.
-    /// *  - Timestep for internal state-space update.
-    ///
-    /// # Arguments
-    /// * `r_obs` - Currently observed Order Parameter R.
-    /// * `psi_obs` - Currently observed global phase Psi.
-    /// * `dt` - Timestep.
+    /// * `r_obs` — currently observed order parameter R
+    /// * `psi_obs` — currently observed global phase Ψ
+    /// * `dt` — timestep for internal state-space update
     pub fn control(&mut self, r_obs: f64, psi_obs: f64, dt: f64) -> (f64, f64) {
         // Friston-style Active Inference: 
         // minimize error e = (r_obs - target_r)
         let error = r_obs - self.target_r;
         
-        // Update internal predictive state (simple LNN update)
+        // Update internal predictive state (SSM update)
         // x_dot = A*x + B*error
         let n = self.internal_state.len();
         for i in 0..n {

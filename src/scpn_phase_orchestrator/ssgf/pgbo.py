@@ -34,16 +34,16 @@ class PGBOSnapshot:
 class PGBO:
     """Phase-Geometry Bidirectional Observer.
 
-    Monitors the alignment between phase dynamics (Kuramoto state) and 
-    geometry (SSGF carrier W). Computes a scalar curvature proxy based 
-    on the rank-2 metric tensor h_{mu nu}. This represents the structural 
+    Monitors the alignment between phase dynamics (Kuramoto state) and
+    geometry (SSGF carrier W). Computes a scalar curvature proxy based
+    on the rank-2 metric tensor h_{mu nu}. This represents the structural
     coupling between the phase-manifold and the underlying physical space.
 
     The bidirectionality:
         1. Phases -> Cost -> Gradient -> Geometry (forward control)
         2. Geometry -> Coupling -> Phases (backward influence)
 
-    PGBO observes the emergence of curvature as synchronization patterns 
+    PGBO observes the emergence of curvature as synchronization patterns
     stretch or curve the geometric coupling field W.
     """
 
@@ -60,7 +60,7 @@ class PGBO:
             W: Current geometric coupling matrix W_ij.
 
         Returns:
-            A PGBOSnapshot containing order parameter R, Psi, SSGF costs, 
+            A PGBOSnapshot containing order parameter R, Psi, SSGF costs,
             and the gauge curvature proxy.
         """
         self._step += 1

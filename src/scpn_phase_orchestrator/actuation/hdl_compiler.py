@@ -8,20 +8,20 @@
 
 from __future__ import annotations
 
-import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["KuramotoVerilogCompiler"]
 
+
 class KuramotoVerilogCompiler:
     """Compiles a fixed Kuramoto topology into Verilog for FPGA execution.
 
-    This compiler transforms a learned coupling matrix K_nm and natural 
-    frequencies omega into a structural Verilog description. Each oscillator 
-    is mapped to a hardware module, and sin(diff) interactions are implemented 
+    This compiler transforms a learned coupling matrix K_nm and natural
+    frequencies omega into a structural Verilog description. Each oscillator
+    is mapped to a hardware module, and sin(diff) interactions are implemented
     via CORDIC or lookup tables.
 
-    Designed for sub-microsecond hard real-time control applications (e.g., 
+    Designed for sub-microsecond hard real-time control applications (e.g.,
     fusion plasma containment).
     """
 
@@ -36,38 +36,41 @@ class KuramotoVerilogCompiler:
         lines.append(f"module kuramoto_mesh_{self.n} (")
         lines.append("    input wire clk,")
         lines.append("    input wire reset,")
-        lines.append(f"    output wire [{self.width-1}:0] phases_out [0:{self.n-1}]")
+        lines.append(
+            f"    output wire [{self.width - 1}:0] phases_out [0:{self.n - 1}]"
+        )
         lines.append(");")
-        
+
         # Parameters
         lines.append(f"    localparam integer N = {self.n};")
         lines.append(f"    localparam real DT = {dt};")
-        
+
         # State registers
         for i in range(self.n):
-            lines.append(f"    reg [{self.width-1}:0] theta_{i};")
+            lines.append(f"    reg [{self.width - 1}:0] theta_{i};")
             lines.append(f"    assign phases_out[{i}] = theta_{i};")
-            
+
         # Core integration logic (Euler)
         lines.append("    always @(posedge clk or posedge reset) begin")
         lines.append("        if (reset) begin")
         for i in range(self.n):
             lines.append(f"            theta_{i} <= 0;")
         lines.append("        end else begin")
-        
+
         for i in range(self.n):
             # dtheta_i = omega_i + sum_j K_ij * sin(theta_j - theta_i)
             # We use placeholder function sin_lookup for clarity
             sum_terms = [f"{omegas[i]:.6f}"]
             for j in range(self.n):
-                if i == j or knm[i, j] == 0: continue
-                sum_terms.append(f"({knm[i,j]:.6f} * $sin(theta_{j} - theta_{i}))")
-            
+                if i == j or knm[i, j] == 0:
+                    continue
+                sum_terms.append(f"({knm[i, j]:.6f} * $sin(theta_{j} - theta_{i}))")
+
             expression = " + ".join(sum_terms)
             lines.append(f"            theta_{i} <= theta_{i} + (({expression}) * DT);")
-            
+
         lines.append("        end")
         lines.append("    end")
         lines.append("endmodule")
-        
+
         return "\n".join(lines)

@@ -8,18 +8,20 @@
 
 from scpn_phase_orchestrator.binding.semantic import SemanticDomainCompiler
 
+
 def test_semantic_compilation_physics():
     compiler = SemanticDomainCompiler()
     prompt = "Model a 4-layer power grid stability system"
     spec = compiler.compile(prompt)
-    
+
     assert len(spec.layers) == 4
     assert spec.layers[0].omegas[0] == 50.0
+
 
 def test_semantic_compilation_biology():
     compiler = SemanticDomainCompiler()
     prompt = "A 3-layer brainwave synchronization model"
     spec = compiler.compile(prompt)
-    
+
     assert len(spec.layers) == 3
     assert spec.layers[0].omegas[0] == 10.0

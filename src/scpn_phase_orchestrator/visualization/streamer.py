@@ -14,7 +14,14 @@ import threading
 from typing import Any
 
 import numpy as np
-import websockets
+
+try:
+    import websockets
+
+    HAS_WEBSOCKETS = True
+except ImportError:
+    websockets = None  # type: ignore[assignment]
+    HAS_WEBSOCKETS = False
 
 __all__ = ["VisualizerStreamer"]
 
@@ -22,8 +29,8 @@ __all__ = ["VisualizerStreamer"]
 class VisualizerStreamer:
     """Real-time Manifold Streamer for WebXR / Three.js visualization.
 
-    Broadcasts phase states, metric tensors (h_munu), and topological 
-    metrics via WebSockets at high frequency (60Hz target). 
+    Broadcasts phase states, metric tensors (h_munu), and topological
+    metrics via WebSockets at high frequency (60Hz target).
     Enables holographic 3D visualization of the synchronization manifold.
     """
 
@@ -37,6 +44,9 @@ class VisualizerStreamer:
 
     def start(self) -> None:
         """Start the WebSocket server in a background thread."""
+        if not HAS_WEBSOCKETS:
+            msg = "websockets required: pip install scpn-phase-orchestrator[queuewaves]"
+            raise RuntimeError(msg)
         self._thread.start()
 
     def stop(self) -> None:
@@ -54,7 +64,7 @@ class VisualizerStreamer:
     def _run_server(self) -> None:
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
-        
+
         start_server = websockets.serve(self._handler, self.host, self.port)
         self._server = self._loop.run_until_complete(start_server)
         self._loop.run_forever()
@@ -63,24 +73,23 @@ class VisualizerStreamer:
         """Broadcast simulation state to all connected visualization clients."""
         if not self._clients or not self._loop:
             return
-            
+
         # Convert numpy arrays to lists for JSON serialization
         serializable_data = self._json_safe(data)
         message = json.dumps(serializable_data)
-        
+
         for client in self._clients:
             asyncio.run_coroutine_threadsafe(client.send(message), self._loop)
 
     def _json_safe(self, data: Any) -> Any:
         if isinstance(data, dict):
             return {k: self._json_safe(v) for k, v in data.items()}
-        elif isinstance(data, list):
+        if isinstance(data, list):
             return [self._json_safe(v) for v in data]
-        elif isinstance(data, np.ndarray):
+        if isinstance(data, np.ndarray):
             return data.tolist()
-        elif isinstance(data, (np.float64, np.float32)):
+        if isinstance(data, (np.float64, np.float32)):
             return float(data)
-        elif isinstance(data, (np.int64, np.int32)):
+        if isinstance(data, (np.int64, np.int32)):
             return int(data)
-        else:
-            return data
+        return data

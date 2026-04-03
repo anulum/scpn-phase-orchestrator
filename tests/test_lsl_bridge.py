@@ -6,14 +6,17 @@
 # SCPN Phase Orchestrator - LSL Bridge tests
 
 from unittest.mock import MagicMock, patch
+
 import numpy as np
-import pytest
+
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import LSLBCIBridge
+
 
 def test_lsl_bridge_initialization():
     bridge = LSLBCIBridge(stream_name="TestEEG", target_channel=1)
     assert bridge.stream_name == "TestEEG"
     assert bridge.target_channel == 1
+
 
 def test_phase_extraction_logic():
     bridge = LSLBCIBridge()
@@ -22,20 +25,21 @@ def test_phase_extraction_logic():
     t = np.linspace(0, 1, fs)
     freq = 10
     signal = np.sin(2 * np.pi * freq * t)
-    
+
     bridge._data_buffer = list(signal)
-    
+
     phase = bridge.get_instantaneous_phase()
     assert 0 <= phase < 2 * np.pi
 
-@patch('scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL', True)
-@patch('scpn_phase_orchestrator.adapters.lsl_bci_bridge.pylsl')
+
+@patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", True)
+@patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.pylsl")
 def test_lsl_connection(mock_pylsl):
     mock_pylsl.resolve_byprop.return_value = [MagicMock()]
     mock_pylsl.StreamInlet.return_value.info().nominal_srate.return_value = 250
-    
+
     bridge = LSLBCIBridge()
     success = bridge.connect()
-    
+
     assert success is True
     assert bridge.sampling_rate == 250

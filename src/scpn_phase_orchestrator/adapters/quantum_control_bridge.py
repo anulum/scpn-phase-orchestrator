@@ -21,9 +21,9 @@ TWO_PI = 2.0 * np.pi
 class QuantumControlBridge:
     """Adapter between scpn-quantum-control artifacts and phase-orchestrator types.
 
-    The QuantumControlBridge enables the mapping of classical Kuramoto 
-    phase dynamics onto Quantum Hardware (isomorphic XY spin Hamiltonian). 
-    It supports Hamiltonian construction, Trotterized time evolution (Q-UPDE), 
+    The QuantumControlBridge enables the mapping of classical Kuramoto
+    phase dynamics onto Quantum Hardware (isomorphic XY spin Hamiltonian).
+    It supports Hamiltonian construction, Trotterized time evolution (Q-UPDE),
     and variational synchronization minimization.
     """
 
@@ -92,31 +92,32 @@ class QuantumControlBridge:
         Requires scpn-quantum-control.
         """
         from scpn_quantum_control.bridge.knm_hamiltonian import knm_to_hamiltonian
+
         return knm_to_hamiltonian(knm, omegas)
 
     def solve_q_upde(
-        self, 
-        knm: NDArray, 
-        omegas: NDArray, 
-        t_max: float = 1.0, 
+        self,
+        knm: NDArray,
+        omegas: NDArray,
+        t_max: float = 1.0,
         dt: float = 0.1,
-        trotter_per_step: int = 5
+        trotter_per_step: int = 5,
     ) -> dict:
         """Execute Trotterized quantum simulation of the phase network (Q-UPDE).
 
-        This method maps the classical sin(delta theta) interaction to 
-        the XY spin exchange interaction (XX + YY) and natural frequencies 
+        This method maps the classical sin(delta theta) interaction to
+        the XY spin exchange interaction (XX + YY) and natural frequencies
         to Z-axis magnetic fields.
 
         Requires scpn-quantum-control.
         """
         from scpn_quantum_control.phase.xy_kuramoto import QuantumKuramotoSolver
-        
+
         solver = QuantumKuramotoSolver(
             n_oscillators=len(omegas),
             K_coupling=knm,
             omega_natural=omegas,
-            trotter_order=self._trotter_order
+            trotter_order=self._trotter_order,
         )
         return solver.run(t_max=t_max, dt=dt, trotter_per_step=trotter_per_step)
 
@@ -125,7 +126,9 @@ class QuantumControlBridge:
         state: UPDEState,
     ) -> NDArray:
         """Convert orchestrator UPDEState to quantum phase array."""
-        from scpn_quantum_control.bridge.conversions import orchestrator_to_quantum_phases
+        from scpn_quantum_control.bridge.conversions import (
+            orchestrator_to_quantum_phases,
+        )
 
         payload = self.export_artifact(state)
         layer_phases = {
@@ -138,5 +141,8 @@ class QuantumControlBridge:
         quantum_theta: NDArray,
     ) -> dict:
         """Convert quantum phase array back to orchestrator-compatible dict."""
-        from scpn_quantum_control.bridge.conversions import quantum_to_orchestrator_phases
+        from scpn_quantum_control.bridge.conversions import (
+            quantum_to_orchestrator_phases,
+        )
+
         return quantum_to_orchestrator_phases(quantum_theta)

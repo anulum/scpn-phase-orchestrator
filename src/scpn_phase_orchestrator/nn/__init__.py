@@ -165,6 +165,15 @@ _CHIMERA = {
 
 
 def __getattr__(name: str) -> object:  # noqa: ANN204
+    try:
+        return _resolve(name)
+    except ImportError as exc:
+        raise AttributeError(
+            f"nn.{name} requires JAX: pip install scpn-phase-orchestrator[nn]"
+        ) from exc
+
+
+def _resolve(name: str) -> object:
     if name in _FUNCTIONAL:
         from . import functional
 

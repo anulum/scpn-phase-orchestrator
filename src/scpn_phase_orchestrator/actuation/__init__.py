@@ -10,4 +10,4 @@ from __future__ import annotations
 from scpn_phase_orchestrator.actuation.hdl_compiler import KuramotoVerilogCompiler
 from scpn_phase_orchestrator.actuation.mapper import ActuationMapper, ControlAction
 
-__all__ = ["ActuationMapper", "ControlAction"]
+__all__ = ["ActuationMapper", "ControlAction", "KuramotoVerilogCompiler"]

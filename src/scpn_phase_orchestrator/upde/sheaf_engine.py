@@ -21,11 +21,11 @@ class SheafUPDEEngine:
     """Cellular Sheaf UPDE integrator for multi-dimensional phase vectors.
 
     Phase per oscillator is a vector of dimension D.
-    Restriction maps (coupling blocks) B_ij are D x D matrices mapping 
+    Restriction maps (coupling blocks) B_ij are D x D matrices mapping
     the phase space of oscillator j into the space of oscillator i.
 
     Mathematics:
-    d(theta_{i,d})/dt = omega_{i,d} 
+    d(theta_{i,d})/dt = omega_{i,d}
                         + sum_j sum_k B_ij^{dk} sin(theta_{j,k} - theta_{i,d})
                         + zeta * sin(Psi_d - theta_{i,d})
 
@@ -57,7 +57,10 @@ class SheafUPDEEngine:
         if _HAS_RUST:
             try:
                 from spo_kernel import PySheafUPDEStepper
-                self._rust = PySheafUPDEStepper(n_oscillators, d_dimensions, dt, method, atol=atol, rtol=rtol)
+
+                self._rust = PySheafUPDEStepper(
+                    n_oscillators, d_dimensions, dt, method, atol=atol, rtol=rtol
+                )
             except ImportError:
                 pass
 
@@ -94,11 +97,14 @@ class SheafUPDEEngine:
                 np.ascontiguousarray(psi.ravel(), dtype=np.float64),
             )
             return np.asarray(res).reshape((self._n, self._d))
-        
+
         if self._method == "euler":
             return self._euler_step(phases, omegas, restriction_maps, zeta, psi)
-        
-        raise NotImplementedError(f"Method {self._method} sheaf fallback not implemented in Python")
+        if self._method in ("rk4", "rk45"):
+            return self._rk4_step(phases, omegas, restriction_maps, zeta, psi)
+        raise NotImplementedError(
+            f"Method {self._method} sheaf fallback not implemented in Python"
+        )
 
     def run(
         self,
@@ -120,7 +126,7 @@ class SheafUPDEEngine:
                 n_steps,
             )
             return np.asarray(res).reshape((self._n, self._d))
-            
+
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, restriction_maps, zeta, psi)
@@ -148,6 +154,24 @@ class SheafUPDEEngine:
                 if zeta != 0.0:
                     dtheta[i, dim] += zeta * np.sin(psi[dim] - theta[i, dim])
         return dtheta
+
+    def _rk4_step(
+        self,
+        phases: NDArray,
+        omegas: NDArray,
+        restriction_maps: NDArray,
+        zeta: float,
+        psi: NDArray,
+    ) -> NDArray:
+        """Single RK4 integration step (Python fallback for rk4/rk45)."""
+        dt = self._dt
+        args = (omegas, restriction_maps, zeta, psi)
+        k1 = self._derivative(phases, *args)
+        k2 = self._derivative((phases + 0.5 * dt * k1) % TWO_PI, *args)
+        k3 = self._derivative((phases + 0.5 * dt * k2) % TWO_PI, *args)
+        k4 = self._derivative((phases + dt * k3) % TWO_PI, *args)
+        result: NDArray = (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+        return result
 
     def _euler_step(
         self,

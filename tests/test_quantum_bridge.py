@@ -8,7 +8,9 @@
 
 import numpy as np
 import pytest
+
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
+
 
 def test_quantum_bridge_import_artifact():
     bridge = QuantumControlBridge(n_oscillators=4)
@@ -16,7 +18,7 @@ def test_quantum_bridge_import_artifact():
         "phases": [0.0, 0.1, 3.14, 3.2],
         "fidelity": 0.95,
         "regime": "COHERENT",
-        "layer_assignments": [[0, 1], [2, 3]]
+        "layer_assignments": [[0, 1], [2, 3]],
     }
     state = bridge.import_artifact(artifact)
     assert state.stability_proxy == 0.95
@@ -25,8 +27,10 @@ def test_quantum_bridge_import_artifact():
     assert state.layers[0].R > 0.9
     assert state.layers[1].R > 0.9
 
+
 def test_quantum_solve():
     import importlib.util
+
     if importlib.util.find_spec("qiskit") is None:
         pytest.skip("Requires qiskit")
     if importlib.util.find_spec("scpn_quantum_control") is None:
@@ -37,4 +41,4 @@ def test_quantum_solve():
     omegas = np.ones(4)
     result = bridge.solve_q_upde(knm, omegas, t_max=0.2, dt=0.1)
     assert "R" in result
-    assert len(result["R"]) == 3 # 0.0, 0.1, 0.2
+    assert len(result["R"]) == 3  # 0.0, 0.1, 0.2

@@ -8,12 +8,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import socket
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 
@@ -23,6 +23,7 @@ __all__ = ["GaianMeshNode", "PeerState"]
 @dataclass
 class PeerState:
     """State received from a peer node in the mesh."""
+
     node_id: str
     R: float
     psi: float
@@ -65,12 +66,14 @@ class GaianMeshNode:
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind((self.host, self.port))
-        
+
         self._local_R = 0.0
         self._local_psi = 0.0
 
         self._listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
-        self._broadcast_thread = threading.Thread(target=self._broadcast_loop, daemon=True)
+        self._broadcast_thread = threading.Thread(
+            target=self._broadcast_loop, daemon=True
+        )
 
     def start(self) -> None:
         """Start the mesh networking threads."""
@@ -98,29 +101,28 @@ class GaianMeshNode:
             psi_target: The phase angle of the mesh mean field.
         """
         now = time.time()
-        
+
         # Filter out stale peers
         active_peers = [
-            p for p in self._peers.values()
-            if (now - p.timestamp) < self.peer_timeout_s
+            p for p in self._peers.values() if (now - p.timestamp) < self.peer_timeout_s
         ]
-        
+
         if not active_peers:
             return 0.0, 0.0
-            
+
         # Combine peer order parameters into a resultant complex vector
         z_mesh = 0j
         for p in active_peers:
             z_mesh += p.R * np.exp(1j * p.psi)
-            
+
         z_mesh /= len(active_peers)
-        
+
         # Multiply by coupling strength
         zeta = self.mesh_coupling_strength * float(np.abs(z_mesh))
         psi_target = float(np.angle(z_mesh))
         if psi_target < 0:
             psi_target += 2 * np.pi
-            
+
         return zeta, psi_target
 
     def _listen_loop(self) -> None:
@@ -130,7 +132,7 @@ class GaianMeshNode:
             try:
                 data, addr = self._sock.recvfrom(1024)
                 msg = json.loads(data.decode("utf-8"))
-                
+
                 peer_id = msg.get("node_id")
                 if peer_id and peer_id != self.node_id:
                     self._peers[peer_id] = PeerState(
@@ -139,9 +141,7 @@ class GaianMeshNode:
                         psi=float(msg.get("psi", 0.0)),
                         timestamp=time.time(),
                     )
-            except socket.timeout:
-                continue
-            except Exception:
+            except (TimeoutError, OSError):
                 continue
 
     def _broadcast_loop(self) -> None:
@@ -150,17 +150,17 @@ class GaianMeshNode:
             if not self.peer_addresses:
                 time.sleep(self.heartbeat_interval_s)
                 continue
-                
-            msg = json.dumps({
-                "node_id": self.node_id,
-                "R": self._local_R,
-                "psi": self._local_psi,
-            }).encode("utf-8")
-            
+
+            msg = json.dumps(
+                {
+                    "node_id": self.node_id,
+                    "R": self._local_R,
+                    "psi": self._local_psi,
+                }
+            ).encode("utf-8")
+
             for addr in self.peer_addresses:
-                try:
+                with contextlib.suppress(OSError):
                     self._sock.sendto(msg, addr)
-                except Exception:
-                    pass
-                    
+
             time.sleep(self.heartbeat_interval_s)

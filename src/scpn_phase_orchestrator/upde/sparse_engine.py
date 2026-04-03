@@ -20,19 +20,19 @@ __all__ = ["SparseUPDEEngine"]
 class SparseUPDEEngine:
     """Kuramoto UPDE integrator with sparse coupling matrix support.
 
-    The SparseUPDEEngine solves the Universal Phase Dynamics Equation (UPDE) 
-    using a CSR (Compressed Sparse Row) representation for the coupling matrix 
-    K_nm and phase lags alpha_nm. This is critical for scaling to large-scale 
-    oscillator networks (e.g., N > 10,000) where the dense K_nm matrix 
+    The SparseUPDEEngine solves the Universal Phase Dynamics Equation (UPDE)
+    using a CSR (Compressed Sparse Row) representation for the coupling matrix
+    K_nm and phase lags alpha_nm. This is critical for scaling to large-scale
+    oscillator networks (e.g., N > 10,000) where the dense K_nm matrix
     would consume terabytes of RAM.
 
     Mathematics:
-    dtheta_i/dt = omega_i 
+    dtheta_i/dt = omega_i
                   + sum_{j in neighbors(i)} K_ij sin(theta_j - theta_i - alpha_ij)
                   + zeta sin(Psi - theta_i)
 
-    The integrator supports sub-microsecond in-place plasticity updates 
-    when running on the Rust FFI path, allowing the coupling topology to 
+    The integrator supports sub-microsecond in-place plasticity updates
+    when running on the Rust FFI path, allowing the coupling topology to
     evolve concurrently with the phase dynamics.
     """
 
@@ -67,7 +67,10 @@ class SparseUPDEEngine:
         if _HAS_RUST:
             try:
                 from spo_kernel import PySparseUPDEStepper
-                self._rust = PySparseUPDEStepper(n_oscillators, dt, method, atol=atol, rtol=rtol)
+
+                self._rust = PySparseUPDEStepper(
+                    n_oscillators, dt, method, atol=atol, rtol=rtol
+                )
             except ImportError:
                 pass
 
@@ -115,14 +118,32 @@ class SparseUPDEEngine:
                     np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
                 )
             )
-        
-        # Fallback to pure Python if Rust is not available
+
         if self._method == "euler":
-            return self._euler_step(phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
-        
-        # RK4 and RK45 Python fallback for sparse is not implemented here for brevity, 
-        # but the Rust kernel covers it.
-        raise NotImplementedError(f"Method {self._method} sparse fallback not implemented in Python")
+            return self._euler_step(
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+            )
+        if self._method in ("rk4", "rk45"):
+            return self._rk4_step(
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+            )
+        raise NotImplementedError(
+            f"Method {self._method} sparse fallback not implemented in Python"
+        )
 
     def run(
         self,
@@ -168,7 +189,9 @@ class SparseUPDEEngine:
             )
         p = phases.copy()
         for _ in range(n_steps):
-            p = self.step(p, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
+            p = self.step(
+                p, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
+            )
         return p
 
     def _derivative(
@@ -187,15 +210,38 @@ class SparseUPDEEngine:
         dtheta = omegas.copy()
         for i in range(n):
             start = row_ptr[i]
-            end = row_ptr[i+1]
+            end = row_ptr[i + 1]
             for idx in range(start, end):
                 j = col_indices[idx]
-                dtheta[i] += knm_values[idx] * np.sin(theta[j] - theta[i] - alpha_values[idx])
-        
+                dtheta[i] += knm_values[idx] * np.sin(
+                    theta[j] - theta[i] - alpha_values[idx]
+                )
+
         if zeta != 0.0:
             dtheta += zeta * np.sin(psi - theta)
-            
+
         return dtheta
+
+    def _rk4_step(
+        self,
+        phases: NDArray,
+        omegas: NDArray,
+        row_ptr: NDArray,
+        col_indices: NDArray,
+        knm_values: NDArray,
+        zeta: float,
+        psi: float,
+        alpha_values: NDArray,
+    ) -> NDArray:
+        """Single RK4 integration step (Python fallback for rk4/rk45)."""
+        dt = self._dt
+        args = (omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
+        k1 = self._derivative(phases, *args)
+        k2 = self._derivative((phases + 0.5 * dt * k1) % TWO_PI, *args)
+        k3 = self._derivative((phases + 0.5 * dt * k2) % TWO_PI, *args)
+        k4 = self._derivative((phases + dt * k3) % TWO_PI, *args)
+        result: NDArray = (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+        return result
 
     def _euler_step(
         self,
@@ -209,6 +255,8 @@ class SparseUPDEEngine:
         alpha_values: NDArray,
     ) -> NDArray:
         """Single Euler integration step (Python fallback)."""
-        dtheta = self._derivative(phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
+        dtheta = self._derivative(
+            phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
+        )
         result: NDArray = (phases + self._dt * dtheta) % TWO_PI
         return result

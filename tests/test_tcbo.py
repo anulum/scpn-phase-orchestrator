@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 import pytest
 
@@ -41,6 +43,10 @@ class TestTCBOInsufficient:
         assert result.is_conscious is False
 
 
+_HAS_RIPSER = importlib.util.find_spec("ripser") is not None
+
+
+@pytest.mark.skipif(not _HAS_RIPSER, reason="ripser not installed")
 class TestTCBORipser:
     def test_synchronized_low_p_h1(self):
         obs = TCBOObserver(window_size=20, embed_dim=2, embed_delay=1)

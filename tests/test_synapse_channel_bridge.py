@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -166,6 +167,10 @@ class TestSynapseChannelBridgeAsync:
         )
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        not importlib.util.find_spec("websockets"),
+        reason="websockets not installed",
+    )
     async def test_connect(self) -> None:
         bridge = self._make_bridge()
         fake_ws = AsyncMock()
