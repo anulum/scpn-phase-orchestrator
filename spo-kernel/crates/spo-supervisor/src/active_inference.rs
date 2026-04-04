@@ -72,7 +72,8 @@ impl ActiveInferenceAgent {
 
         // Output control zeta: proportional to error + internal integrated state
         // In Active Inference, zeta is the 'action' that reduces prediction error
-        let zeta = (self.lr * error.abs() + self.internal_state.iter().sum::<f64>()).clamp(0.0, 10.0);
+        let zeta =
+            (self.lr * error.abs() + self.internal_state.iter().sum::<f64>()).clamp(0.0, 10.0);
 
         // Target phase psi: align with observed global phase to encourage sync,
         // or anti-align to suppress it.

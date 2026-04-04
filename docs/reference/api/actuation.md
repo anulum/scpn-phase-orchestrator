@@ -303,19 +303,19 @@ file documents the derivation.
 
 ## HDL Synthesis Compiler
 
-The `KuramotoVerilogCompiler` provides a path from high-level topological 
-learning to **hard real-time hardware execution**. It compiles a 
-stabilized Kuramoto network ($K_{nm}$, $\omega$) directly into structural 
+The `KuramotoVerilogCompiler` provides a path from high-level topological
+learning to **hard real-time hardware execution**. It compiles a
+stabilized Kuramoto network ($K_{nm}$, $\omega$) directly into structural
 Verilog code.
 
 ### Use Case: Nanosecond-Scale Control
 
-In applications like **Nuclear Fusion Plasma Control**, the latency 
-requirements for suppressing tearing modes are in the microsecond or 
-nanosecond range. Even the high-performance Rust kernel running on a 
+In applications like **Nuclear Fusion Plasma Control**, the latency
+requirements for suppressing tearing modes are in the microsecond or
+nanosecond range. Even the high-performance Rust kernel running on a
 standard CPU may introduce jitter due to OS context switching.
 
-By compiling the synchronization manifold into an FPGA bitstream, the 
+By compiling the synchronization manifold into an FPGA bitstream, the
 control logic is executed in parallel hardware, achieving:
 - **Zero Jitter:** Deterministic execution timing.
 - **Nanosecond Latency:** Direct mapping of the UPDE integration loop to gates.

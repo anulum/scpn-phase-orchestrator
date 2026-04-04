@@ -34,7 +34,7 @@ class VisualizerStreamer:
     Enables holographic 3D visualization of the synchronization manifold.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8765):
+    def __init__(self, host: str = "127.0.0.1", port: int = 8765):
         self.host = host
         self.port = port
         self._loop: asyncio.AbstractEventLoop | None = None

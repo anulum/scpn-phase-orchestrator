@@ -29,7 +29,9 @@ pub struct PlasticityModel {
 impl PlasticityModel {
     pub fn new(lr: f64, decay: f64) -> SpoResult<Self> {
         if lr < 0.0 || decay < 0.0 {
-            return Err(SpoError::InvalidConfig("lr and decay must be non-negative".into()));
+            return Err(SpoError::InvalidConfig(
+                "lr and decay must be non-negative".into(),
+            ));
         }
         Ok(Self { lr, decay })
     }
@@ -37,13 +39,17 @@ impl PlasticityModel {
     /// Update coupling matrix K_nm in-place based on current phases.
     pub fn update(&self, phases: &[f64], knm: &mut [f64], modulator: f64, dt: f64) {
         let n = phases.len();
-        if knm.len() != n * n { return; }
+        if knm.len() != n * n {
+            return;
+        }
 
         let decay_factor = (-self.decay * dt).exp();
 
         for i in 0..n {
             for j in 0..n {
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
                 let idx = i * n + j;
                 let elig = (phases[j] - phases[i]).cos();
                 let delta = self.lr * modulator * elig * dt;
@@ -60,17 +66,19 @@ impl PlasticityModel {
         col_indices: &[usize],
         knm_values: &mut [f64],
         modulator: f64,
-        dt: f64
+        dt: f64,
     ) {
         let n = phases.len();
         let decay_factor = (-self.decay * dt).exp();
 
         for i in 0..n {
             let start = row_ptr[i];
-            let end = row_ptr[i+1];
+            let end = row_ptr[i + 1];
             for idx in start..end {
                 let j = col_indices[idx];
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
                 let elig = (phases[j] - phases[i]).cos();
                 let delta = self.lr * modulator * elig * dt;
                 knm_values[idx] = (knm_values[idx] * decay_factor + delta).max(0.0);

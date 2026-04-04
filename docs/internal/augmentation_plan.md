@@ -51,10 +51,10 @@ Elevate the SCPN Phase Orchestrator from a simulation engine to a universal, hyp
 ## Roadmap
 
 ### 1. Advanced Observability & Mathematics
-*   **PGBO Gauge-Theoretic Metric:** 
-    *   Upgrade `pgbo.py` to calculate the rank-2 metric tensor h_munu of the synchronization manifold. 
+*   **PGBO Gauge-Theoretic Metric:**
+    *   Upgrade `pgbo.py` to calculate the rank-2 metric tensor h_munu of the synchronization manifold.
     *   Compute curvature proxies instead of linear correlation to represent how physical space curves around coherent phase clusters.
-*   **Rust-Native Streaming TCBO:** 
+*   **Rust-Native Streaming TCBO:**
     *   Move Persistent Homology (H1 Betti numbers) calculation directly into the Rust kernel (`spo-kernel`).
     *   Bypass Python GIL and `ripser` dependency for true real-time consciousness/complexity gating.
 

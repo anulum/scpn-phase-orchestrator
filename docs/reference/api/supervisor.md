@@ -346,21 +346,21 @@ MPC prediction costs ~10 ODE steps versus 10000 Euler steps.
 
 ## Active Inference Agent
 
-The `ActiveInferenceAgent` provides a **predictive control framework** based on 
-Karl Friston's Variational Free Energy Principle. It represents the next-generation 
-of SPO controllers, moving beyond static YAML rules into self-adaptive state-space 
+The `ActiveInferenceAgent` provides a **predictive control framework** based on
+Karl Friston's Variational Free Energy Principle. It represents the next-generation
+of SPO controllers, moving beyond static YAML rules into self-adaptive state-space
 models.
 
 ### Mathematical Model
 
-The agent maintains a low-dimensional internal state $ and minimizes the 
-**Variational Free Energy** $ between its prediction $\hat{R}$ and the 
+The agent maintains a low-dimensional internal state $ and minimizes the
+**Variational Free Energy** $ between its prediction $\hat{R}$ and the
 observed coherence {obs}$:
 
 936875 F \approx \int q(x) \ln \frac{q(x)}{p(R_{obs}, x)} dx 936875
 
-The controller outputs the optimal forcing strength $\zeta$ and reference phase 
-$\Psi$ to drive the network toward a target coherence level {target}$ 
+The controller outputs the optimal forcing strength $\zeta$ and reference phase
+$\Psi$ to drive the network toward a target coherence level {target}$
 (often set to the **metastability threshold**  \approx 0.6$).
 
 ### Features

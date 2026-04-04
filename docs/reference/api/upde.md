@@ -323,11 +323,11 @@ Bick et al. 2023, Nat. Rev. Physics 5:307-317.
 
 ## Sparse Engine
 
-The  implements the Kuramoto model using a **CSR (Compressed Sparse Row)** 
-coupling matrix. This reduces memory overhead from (N^2)$ to (N + E)$, where $ is the 
+The  implements the Kuramoto model using a **CSR (Compressed Sparse Row)**
+coupling matrix. This reduces memory overhead from (N^2)$ to (N + E)$, where $ is the
 number of active edge connections.
 
-It is designed for large-scale simulations (national power grids, social networks) 
+It is designed for large-scale simulations (national power grids, social networks)
 where most oscillators are only coupled to local neighbors.
 
 ### Features

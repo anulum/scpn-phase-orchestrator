@@ -181,27 +181,27 @@ domainpacks produce detailed error messages listing all violations.
 
 ## Semantic Domain Compiler
 
-The `SemanticDomainCompiler` provides a **natural language interface** for 
-generating system configurations. It allows domain experts to describe 
-complex oscillatory systems in plain English and automatically translates 
+The `SemanticDomainCompiler` provides a **natural language interface** for
+generating system configurations. It allows domain experts to describe
+complex oscillatory systems in plain English and automatically translates
 them into formal `BindingSpec` objects.
 
 ### Heuristic & LLM Reasoning
 
 The compiler uses a hybrid approach to translate semantic descriptions:
-1. **Structural Extraction:** Identifies the number of hierarchical layers 
+1. **Structural Extraction:** Identifies the number of hierarchical layers
    and oscillator counts.
-2. **Domain Mapping:** Detects the discipline (Biology, Physics, Finance) 
+2. **Domain Mapping:** Detects the discipline (Biology, Physics, Finance)
    to set realistic baseline frequency ranges ($\omega$).
-3. **Coupling Synthesis:** Heuristically determines coupling strengths 
+3. **Coupling Synthesis:** Heuristically determines coupling strengths
    and decay constants based on the described connectivity.
 
 ### Future: LLM Integration
 
-While the current implementation uses heuristic parsing, the 
-architecture is designed to plug directly into Large Language Models (LLMs). 
-In an LLM-enabled mode, the compiler can synthesize deep ontological 
-mappings, such as assigning specific phase lags ($\alpha$) based on 
+While the current implementation uses heuristic parsing, the
+architecture is designed to plug directly into Large Language Models (LLMs).
+In an LLM-enabled mode, the compiler can synthesize deep ontological
+mappings, such as assigning specific phase lags ($\alpha$) based on
 published biological transport delays or chemical reaction rates.
 
 ::: scpn_phase_orchestrator.binding.semantic

@@ -136,7 +136,9 @@ impl SparseUPDEStepper {
         }
         for k in knm_values.iter() {
             if !k.is_finite() {
-                return Err(SpoError::IntegrationDiverged("knm_values contains NaN/Inf".into()));
+                return Err(SpoError::IntegrationDiverged(
+                    "knm_values contains NaN/Inf".into(),
+                ));
             }
         }
         for &a in alpha_values {
@@ -154,17 +156,46 @@ impl SparseUPDEStepper {
 
         match self.method {
             Method::RK45 => {
-                self.rk45_step(phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values);
+                self.rk45_step(
+                    phases,
+                    omegas,
+                    row_ptr,
+                    col_indices,
+                    knm_values,
+                    zeta,
+                    psi,
+                    alpha_values,
+                );
             }
             _ => {
                 let sub_dt = self.dt / f64::from(self.n_substeps);
                 for _ in 0..self.n_substeps {
                     match self.method {
                         Method::Euler => {
-                            self.euler_step(phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, sub_dt);
+                            self.euler_step(
+                                phases,
+                                omegas,
+                                row_ptr,
+                                col_indices,
+                                knm_values,
+                                zeta,
+                                psi,
+                                alpha_values,
+                                sub_dt,
+                            );
                         }
                         Method::RK4 => {
-                            self.rk4_step(phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, sub_dt);
+                            self.rk4_step(
+                                phases,
+                                omegas,
+                                row_ptr,
+                                col_indices,
+                                knm_values,
+                                zeta,
+                                psi,
+                                alpha_values,
+                                sub_dt,
+                            );
                         }
                         Method::RK45 => unreachable!(),
                     }
@@ -173,7 +204,14 @@ impl SparseUPDEStepper {
         }
 
         if let Some(ref plast) = self.plasticity {
-            plast.update_sparse(phases, row_ptr, col_indices, knm_values, self.modulator, self.dt);
+            plast.update_sparse(
+                phases,
+                row_ptr,
+                col_indices,
+                knm_values,
+                self.modulator,
+                self.dt,
+            );
         }
         wrap_phases(phases);
         Ok(())
@@ -197,7 +235,16 @@ impl SparseUPDEStepper {
         n_steps: u64,
     ) -> SpoResult<()> {
         for _ in 0..n_steps {
-            self.step(phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)?;
+            self.step(
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+            )?;
         }
         Ok(())
     }
@@ -226,7 +273,17 @@ impl SparseUPDEStepper {
         alpha_values: &[f64],
         dt: f64,
     ) {
-        compute_derivative(self.n, phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.deriv_buf,
+        compute_derivative(
+            self.n,
+            phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            zeta,
+            psi,
+            alpha_values,
+            &mut self.deriv_buf,
         );
         for i in 0..self.n {
             phases[i] += dt * self.deriv_buf[i];
@@ -249,27 +306,68 @@ impl SparseUPDEStepper {
         let n = self.n;
 
         // k1
-        compute_derivative(n, phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k1);
+        compute_derivative(
+            n,
+            phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            zeta,
+            psi,
+            alpha_values,
+            &mut self.k1,
+        );
 
         // k2: phases + 0.5*dt*k1
         for i in 0..n {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k1[i];
         }
-        compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k2,
+        compute_derivative(
+            n,
+            &self.tmp_phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            zeta,
+            psi,
+            alpha_values,
+            &mut self.k2,
         );
 
         // k3: phases + 0.5*dt*k2
         for i in 0..n {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k2[i];
         }
-        compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k3,
+        compute_derivative(
+            n,
+            &self.tmp_phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            zeta,
+            psi,
+            alpha_values,
+            &mut self.k3,
         );
 
         // k4: phases + dt*k3
         for i in 0..n {
             self.tmp_phases[i] = phases[i] + dt * self.k3[i];
         }
-        compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k4,
+        compute_derivative(
+            n,
+            &self.tmp_phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            zeta,
+            psi,
+            alpha_values,
+            &mut self.k4,
         );
 
         // phases += dt/6 * (k1 + 2*k2 + 2*k3 + k4)
@@ -297,20 +395,51 @@ impl SparseUPDEStepper {
 
         for _ in 0..=max_reject {
             // k1
-            compute_derivative(n, phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k1);
+            compute_derivative(
+                n,
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                &mut self.k1,
+            );
 
             // k2: phases + dt * a21 * k1
             for i in 0..n {
                 self.tmp_phases[i] = phases[i] + dt * dp::A21 * self.k1[i];
             }
-            compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k2,
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                &mut self.k2,
             );
 
             // k3: phases + dt * (a31*k1 + a32*k2)
             for i in 0..n {
                 self.tmp_phases[i] = phases[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k3,
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                &mut self.k3,
             );
 
             // k4: phases + dt * (a41*k1 + a42*k2 + a43*k3)
@@ -318,7 +447,17 @@ impl SparseUPDEStepper {
                 self.tmp_phases[i] = phases[i]
                     + dt * (dp::A41 * self.k1[i] + dp::A42 * self.k2[i] + dp::A43 * self.k3[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k4,
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                &mut self.k4,
             );
 
             // k5: phases + dt * (a51*k1 + a52*k2 + a53*k3 + a54*k4)
@@ -329,7 +468,17 @@ impl SparseUPDEStepper {
                         + dp::A53 * self.k3[i]
                         + dp::A54 * self.k4[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k5,
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                &mut self.k5,
             );
 
             // k6: phases + dt * (a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5)
@@ -341,7 +490,17 @@ impl SparseUPDEStepper {
                         + dp::A64 * self.k4[i]
                         + dp::A65 * self.k5[i]);
             }
-            compute_derivative(n, &self.tmp_phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k6,
+            compute_derivative(
+                n,
+                &self.tmp_phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                &mut self.k6,
             );
 
             // 5th-order solution (B5[6] = 0, so k7 does not contribute to y5)
@@ -355,7 +514,18 @@ impl SparseUPDEStepper {
             }
 
             // k7: evaluate derivative at y5 (FSAL property)
-            compute_derivative(n, &self.y5, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, &mut self.k7);
+            compute_derivative(
+                n,
+                &self.y5,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                &mut self.k7,
+            );
 
             // Error estimate using 4th-order weights (B4[6] = 1/40)
             let mut err_norm: f64 = 0.0;
@@ -434,4 +604,3 @@ fn wrap_phases(phases: &mut [f64]) {
         *p = p.rem_euclid(std::f64::consts::TAU);
     }
 }
-

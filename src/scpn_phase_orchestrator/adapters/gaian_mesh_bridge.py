@@ -46,7 +46,7 @@ class GaianMeshNode:
     def __init__(
         self,
         node_id: str,
-        host: str = "0.0.0.0",
+        host: str = "127.0.0.1",
         port: int = 12000,
         peer_addresses: list[tuple[str, int]] | None = None,
         mesh_coupling_strength: float = 1.0,

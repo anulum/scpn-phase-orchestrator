@@ -23,16 +23,16 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use spo_engine::{
-    sheaf_upde::SheafUPDEStepper,
-    plasticity::PlasticityModel,
     coupling::{project_knm, CouplingBuilder},
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
     order_params, pac,
+    plasticity::PlasticityModel,
+    sheaf_upde::SheafUPDEStepper,
+    sparse_upde::SparseUPDEStepper,
     stuart_landau::StuartLandauStepper,
     upde::UPDEStepper,
-    sparse_upde::SparseUPDEStepper,
 };
 use spo_oscillators::{informational, physical, quality::PhaseQualityScorer, symbolic};
 use spo_supervisor::{
@@ -56,7 +56,6 @@ fn spo_err(e: SpoError) -> PyErr {
 
 /// (name, variable, lower_bound, upper_bound, severity)
 type BoundaryDefTuple = Vec<(String, String, Option<f64>, Option<f64>, String)>;
-
 
 // ─── PyActiveInferenceAgent ──────────────────────────────────────────────
 
@@ -88,7 +87,6 @@ impl PyActiveInferenceAgent {
         self.inner.target_r = val;
     }
 }
-
 
 // ─── PySheafUPDEStepper ───────────────────────────────────────────────────
 
@@ -137,10 +135,18 @@ impl PySheafUPDEStepper {
         zeta: f64,
         psi: PyReadonlyArray1<'py, f64>,
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let r_m = restriction_maps.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let p_psi = psi.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let mut p_out = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let p_w = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let r_m = restriction_maps
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let p_psi = psi
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         self.inner
             .step(&mut p_out, p_w, r_m, zeta, p_psi)
@@ -160,10 +166,18 @@ impl PySheafUPDEStepper {
         psi: PyReadonlyArray1<'py, f64>,
         n_steps: u64,
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let r_m = restriction_maps.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let p_psi = psi.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let mut p_out = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let p_w = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let r_m = restriction_maps
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let p_psi = psi
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         self.inner
             .run(&mut p_out, p_w, r_m, zeta, p_psi, n_steps)
@@ -173,13 +187,19 @@ impl PySheafUPDEStepper {
     }
 
     #[getter]
-    fn n(&self) -> usize { self.inner.n() }
+    fn n(&self) -> usize {
+        self.inner.n()
+    }
 
     #[getter]
-    fn d(&self) -> usize { self.inner.d() }
+    fn d(&self) -> usize {
+        self.inner.d()
+    }
 
     #[getter]
-    fn last_dt(&self) -> f64 { self.inner.last_dt() }
+    fn last_dt(&self) -> f64 {
+        self.inner.last_dt()
+    }
 }
 
 // ─── PyUPDEStepper ──────────────────────────────────────────────────
@@ -237,7 +257,9 @@ impl PyUPDEStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let mut k_bound = knm.readwrite();
-        let k = k_bound.as_slice_mut().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = k_bound
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let a = alpha
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -267,7 +289,9 @@ impl PyUPDEStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let mut k_bound = knm.readwrite();
-        let k = k_bound.as_slice_mut().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = k_bound
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let a = alpha
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -276,7 +300,6 @@ impl PyUPDEStepper {
             .map_err(spo_err)?;
         Ok(PyArray1::from_vec(py, p))
     }
-
 
     #[pyo3(signature = (lr, decay = 0.0, modulator = 1.0))]
     fn set_plasticity(&mut self, lr: f64, decay: f64, modulator: f64) -> PyResult<()> {
@@ -642,8 +665,6 @@ impl PyLagModel {
         self.inner.alpha.clone()
     }
 
-
-
     #[getter]
     fn n(&self) -> usize {
         self.inner.n
@@ -690,7 +711,6 @@ impl PySupervisorPolicy {
             .collect()
     }
 }
-
 
 // ─── PySparseUPDEStepper ──────────────────────────────────────────────────
 
@@ -752,13 +772,25 @@ impl PySparseUPDEStepper {
         psi: f64,
         alpha_values: PyReadonlyArray1<'py, f64>,
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let rp = row_ptr.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let ci = col_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let mut p_out = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let p_w = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let rp = row_ptr
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let ci = col_indices
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let mut kv_bound = knm_values.readwrite();
-        let kv = kv_bound.as_slice_mut().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let av = alpha_values.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let kv = kv_bound
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let av = alpha_values
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         self.inner
             .step(&mut p_out, p_w, rp, ci, kv, zeta, psi, av)
@@ -781,13 +813,25 @@ impl PySparseUPDEStepper {
         alpha_values: PyReadonlyArray1<'py, f64>,
         n_steps: u64,
     ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let rp = row_ptr.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let ci = col_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let mut p_out = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let p_w = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let rp = row_ptr
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let ci = col_indices
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let mut kv_bound = knm_values.readwrite();
-        let kv = kv_bound.as_slice_mut().map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let av = alpha_values.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let kv = kv_bound
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let av = alpha_values
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
         self.inner
             .run(&mut p_out, p_w, rp, ci, kv, zeta, psi, av, n_steps)
@@ -867,7 +911,9 @@ impl PyStuartLandauStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let mut k_bound = knm.readwrite();
-        let k = k_bound.as_slice_mut().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = k_bound
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let kr = knm_r
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -906,7 +952,9 @@ impl PyStuartLandauStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let mut k_bound = knm.readwrite();
-        let k = k_bound.as_slice_mut().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = k_bound
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let kr = knm_r
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -918,8 +966,6 @@ impl PyStuartLandauStepper {
             .map_err(spo_err)?;
         Ok(s)
     }
-
-
 
     #[getter]
     fn n(&self) -> usize {
