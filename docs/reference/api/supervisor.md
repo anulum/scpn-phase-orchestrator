@@ -368,4 +368,6 @@ $\Psi$ to drive the network toward a target coherence level {target}$
 - **Sub-microsecond Control:** Fully implemented in the `spo-kernel` Rust backend for real-time high-frequency response.
 - **Emergent Resilientness:** Naturally handles non-stationary frequency drifts by integrating prediction errors into the internal state.
 
-::: scpn_phase_orchestrator.supervisor.active_inference_agent
+!!! note "Rust-only module"
+    `ActiveInferenceAgent` is implemented in `spo-kernel` (Rust crate `spo-supervisor::active_inference`).
+    Python access via `spo_kernel.PyActiveInferenceAgent` when the FFI is installed.

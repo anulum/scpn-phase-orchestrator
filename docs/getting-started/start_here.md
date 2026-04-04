@@ -313,4 +313,4 @@ PYNQ-Z2 — latency not yet measured on hardware.
 - [System Overview](../concepts/system_overview.md) — full pipeline diagram.
 - [Kuramoto Theory](../concepts/kuramoto_theory.md) — mathematical foundations.
 - [Installation Guide](installation.md) — detailed install instructions.
-- [CHANGELOG](../../CHANGELOG.md) — version history and migration notes.
+- [CHANGELOG](https://github.com/anulum/scpn-phase-orchestrator/blob/main/CHANGELOG.md) — version history and migration notes.
