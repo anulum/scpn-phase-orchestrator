@@ -36,9 +36,7 @@ def winding_numbers(phases_history: NDArray) -> NDArray:
         return np.zeros(n, dtype=np.int64)
 
     if _HAS_RUST:  # pragma: no cover
-        from spo_kernel import (  # type: ignore[import-untyped]
-            winding_numbers as _rust_winding,
-        )
+        from spo_kernel import winding_numbers as _rust_winding
 
         flat = np.ascontiguousarray(phases_history.ravel())
         return np.asarray(
