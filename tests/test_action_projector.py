@@ -164,3 +164,74 @@ class TestActionProjectorProperty:
         )
         result = proj.project(_action(value=value), previous_value=prev)
         assert abs(result.value - prev) <= rate + 1e-10
+
+
+class TestActionProjectorEmptyInputs:
+    def test_empty_rate_limits_and_bounds(self):
+        proj = ActionProjector(rate_limits={}, value_bounds={})
+        result = proj.project(_action(value=42.0), previous_value=0.0)
+        assert result.value == 42.0
+
+    def test_unknown_knob_passes_through(self):
+        proj = ActionProjector(
+            rate_limits={"K": 1.0},
+            value_bounds={"K": (0.0, 10.0)},
+        )
+        result = proj.project(_action("unknown_knob", 999.0), previous_value=0.0)
+        assert result.value == 999.0
+
+
+class TestActionProjectorPipelineIntegration:
+    def test_actuation_mapper_to_projector_flow(self):
+        """Verify ActionProjector works in the ActuationMapper pipeline."""
+        from scpn_phase_orchestrator.actuation.mapper import (
+            ActuationMapper,
+            ControlAction,
+        )
+        from scpn_phase_orchestrator.binding.types import ActuatorMapping
+
+        mapping = ActuatorMapping(
+            name="coupling_scale",
+            knob="K",
+            scope="global",
+            limits=(0.0, 10.0),
+        )
+        mapper = ActuationMapper([mapping])
+        proj = ActionProjector(
+            rate_limits={"K": 2.0},
+            value_bounds={"K": (0.0, 10.0)},
+        )
+
+        action = ControlAction(
+            knob="K",
+            scope="global",
+            value=50.0,
+            ttl_s=5.0,
+            justification="test pipeline",
+        )
+        projected = proj.project(action, previous_value=5.0)
+        commands = mapper.map_actions([projected])
+        assert len(commands) >= 1
+        assert projected.value == pytest.approx(7.0)
+
+
+class TestActionProjectorPerformance:
+    def test_projection_budget(self):
+        """1000 projections must complete in <10ms."""
+        import time
+
+        proj = ActionProjector(
+            rate_limits={"K": 2.0, "zeta": 0.5, "alpha": 0.1},
+            value_bounds={"K": (0.0, 10.0), "zeta": (0.0, 5.0), "alpha": (-3.14, 3.14)},
+        )
+        action = _action(value=50.0)
+
+        # Warm up
+        for _ in range(100):
+            proj.project(action, previous_value=5.0)
+
+        t0 = time.perf_counter()
+        for _ in range(1000):
+            proj.project(action, previous_value=5.0)
+        elapsed = time.perf_counter() - t0
+        assert elapsed < 0.05, f"1000 projections took {elapsed * 1000:.1f}ms > 50ms"

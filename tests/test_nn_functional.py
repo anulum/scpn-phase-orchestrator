@@ -388,3 +388,79 @@ class TestDifferentiability:
         g = grad_fn(K)
         assert g.shape == (4, 4)
         assert jnp.all(jnp.isfinite(g))
+
+
+# ── Empty/Edge Inputs ──
+
+
+class TestEmptyInputs:
+    def test_single_oscillator_kuramoto(self):
+        phases = jnp.array([1.0])
+        omegas = jnp.array([1.0])
+        K = jnp.zeros((1, 1))
+        result = kuramoto_step(phases, omegas, K, 0.01)
+        assert result.shape == (1,)
+        assert jnp.all(jnp.isfinite(result))
+
+    def test_single_oscillator_order_parameter(self):
+        r = float(order_parameter(jnp.array([0.5])))
+        assert abs(r - 1.0) < 1e-10
+
+    def test_two_oscillators_plv(self):
+        traj = jnp.array([[0.0, 0.0], [0.1, 0.1]])
+        plv_mat = plv(traj)
+        assert plv_mat.shape == (2, 2)
+
+    def test_zero_coupling_no_interaction(self):
+        n = 8
+        phases = jnp.linspace(0, 5.0, n)
+        omegas = jnp.zeros(n)
+        K = jnp.zeros((n, n))
+        result = kuramoto_step(phases, omegas, K, 0.01)
+        np.testing.assert_allclose(result, phases % TWO_PI, atol=1e-12)
+
+    def test_zero_dt_no_change(self):
+        phases = jnp.array([0.1, 0.5, 1.0, 1.5])
+        omegas = jnp.ones(4)
+        K = jnp.ones((4, 4))
+        result = kuramoto_step(phases, omegas, K, 0.0)
+        np.testing.assert_allclose(result, phases, atol=1e-12)
+
+
+# ── Performance Budget ──
+
+
+class TestPerformance:
+    def test_kuramoto_step_budget_n64(self):
+        """Single kuramoto_step(N=64) must complete in <10ms (JAX per-call overhead)."""
+        import time
+
+        n = 64
+        phases = jnp.zeros(n)
+        omegas = jnp.ones(n)
+        K = jnp.eye(n)
+
+        # JIT warm-up
+        kuramoto_step(phases, omegas, K, 0.01)
+        kuramoto_step(phases, omegas, K, 0.01)
+
+        t0 = time.perf_counter()
+        for _ in range(100):
+            kuramoto_step(phases, omegas, K, 0.01)
+        elapsed = (time.perf_counter() - t0) / 100
+        assert elapsed < 0.01, f"kuramoto_step(N=64) = {elapsed * 1000:.2f}ms > 10ms"
+
+    def test_order_parameter_budget(self):
+        """order_parameter(N=64) must complete in <5ms (JAX per-call overhead)."""
+        import time
+
+        phases = jnp.zeros(64)
+        # JIT warm-up
+        order_parameter(phases)
+        order_parameter(phases)
+
+        t0 = time.perf_counter()
+        for _ in range(100):
+            order_parameter(phases)
+        elapsed = (time.perf_counter() - t0) / 100
+        assert elapsed < 0.005, f"order_parameter(N=64) = {elapsed * 1000:.2f}ms > 5ms"
