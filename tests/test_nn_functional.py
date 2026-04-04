@@ -375,12 +375,14 @@ class TestDifferentiability:
 
     def test_saf_loss_has_grad(self):
         # Non-degenerate coupling to avoid repeated eigenvalues in eigh grad
-        K = jnp.array([
-            [0.0, 1.0, 0.5, 0.2],
-            [1.0, 0.0, 0.8, 0.3],
-            [0.5, 0.8, 0.0, 1.2],
-            [0.2, 0.3, 1.2, 0.0],
-        ])
+        K = jnp.array(
+            [
+                [0.0, 1.0, 0.5, 0.2],
+                [1.0, 0.0, 0.8, 0.3],
+                [0.5, 0.8, 0.0, 1.2],
+                [0.2, 0.3, 1.2, 0.0],
+            ]
+        )
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
         grad_fn = jax.grad(lambda k: saf_loss(k, omegas))
         g = grad_fn(K)
