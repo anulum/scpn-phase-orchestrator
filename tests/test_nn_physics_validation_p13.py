@@ -281,7 +281,9 @@ class TestV147RustJAXParity:
         alpha_flat = np.zeros(N * N, dtype=np.float64)
         p_rust = phases_np.copy()
         for _ in range(500):
-            p_rust = np.asarray(stepper.step(p_rust, omegas_np, knm_flat, 0.0, 0.0, alpha_flat))
+            p_rust = np.asarray(
+                stepper.step(p_rust, omegas_np, knm_flat, 0.0, 0.0, alpha_flat),
+            )
         R_rust = float(np.abs(np.mean(np.exp(1j * p_rust))))
 
         # JAX engine

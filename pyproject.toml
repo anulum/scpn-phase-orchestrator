@@ -175,6 +175,8 @@ warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
 module = [
+    "scipy",
+    "scipy.*",
     "spo_kernel",
     "spo_kernel.*",
     "redis",
