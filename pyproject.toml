@@ -134,6 +134,7 @@ ignore = ["S101", "S104", "S310", "S603", "N802", "N803", "N806", "N815", "N816"
 "tests/test_winfree.py" = ["E402"]
 "tests/test_nn_spectral.py" = ["E402"]
 "tests/test_nn_chimera.py" = ["E402"]
+"tests/test_nn_functional.py" = ["E402"]
 
 [tool.mypy]
 strict = false
