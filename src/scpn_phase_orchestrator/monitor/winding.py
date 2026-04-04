@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
+
 __all__ = ["winding_numbers", "winding_vector"]
 
 TWO_PI = 2.0 * np.pi
@@ -32,6 +34,17 @@ def winding_numbers(phases_history: NDArray) -> NDArray:
     if phases_history.ndim != 2 or phases_history.shape[0] < 2:
         n = phases_history.shape[-1] if phases_history.ndim == 2 else 0
         return np.zeros(n, dtype=np.int64)
+
+    if _HAS_RUST:  # pragma: no cover
+        from spo_kernel import (  # type: ignore[import-untyped]
+            winding_numbers as _rust_winding,
+        )
+
+        flat = np.ascontiguousarray(phases_history.ravel())
+        return np.asarray(
+            _rust_winding(flat, phases_history.shape[1]),
+            dtype=np.int64,
+        )
 
     # Unwrap via cumulative phase increments to handle wrap-around correctly
     dtheta = np.diff(phases_history, axis=0)

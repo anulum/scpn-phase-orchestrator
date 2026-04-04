@@ -33,6 +33,7 @@ use spo_engine::{
     sparse_upde::SparseUPDEStepper,
     stuart_landau::StuartLandauStepper,
     upde::UPDEStepper,
+    winding,
 };
 use spo_oscillators::{informational, physical, quality::PhaseQualityScorer, symbolic};
 use spo_supervisor::{
@@ -1443,6 +1444,25 @@ impl PyLIFEnsemble {
     }
 }
 
+// ─── Winding Numbers ────────────────────────────────────────────────
+
+#[pyfunction]
+fn winding_numbers<'py>(
+    py: Python<'py>,
+    phases_history: PyReadonlyArray1<'_, f64>,
+    n_oscillators: usize,
+) -> PyResult<Bound<'py, PyArray1<i64>>> {
+    let flat = phases_history
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    if n_oscillators == 0 {
+        return Ok(PyArray1::from_slice(py, &[]));
+    }
+    let t = flat.len() / n_oscillators;
+    let result = winding::winding_numbers(flat, t, n_oscillators);
+    Ok(PyArray1::from_slice(py, &result))
+}
+
 // ─── Module Registration ────────────────────────────────────────────
 
 #[pymodule]
@@ -1474,6 +1494,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(graph_walk_phase, m)?)?;
     m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
     m.add_function(wrap_pyfunction!(layer_coherence, m)?)?;
+    m.add_function(wrap_pyfunction!(winding_numbers, m)?)?;
     Ok(())
 }
 

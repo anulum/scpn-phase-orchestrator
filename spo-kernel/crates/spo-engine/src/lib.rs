@@ -29,3 +29,4 @@ pub use upde::UPDEStepper;
 pub mod plasticity;
 pub mod sheaf_upde;
 pub mod sparse_upde;
+pub mod winding;
