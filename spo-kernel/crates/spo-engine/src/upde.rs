@@ -717,7 +717,8 @@ mod tests {
         };
         let mut s1 = UPDEStepper::new(n, config1).unwrap();
         let mut p1 = vec![0.0; n];
-        s1.step(&mut p1, &omegas, &mut knm, 0.0, 0.0, &alpha).unwrap();
+        s1.step(&mut p1, &omegas, &mut knm, 0.0, 0.0, &alpha)
+            .unwrap();
 
         // 4 substeps
         let config4 = IntegrationConfig {
@@ -728,7 +729,8 @@ mod tests {
         };
         let mut s4 = UPDEStepper::new(n, config4).unwrap();
         let mut p4 = vec![0.0; n];
-        s4.step(&mut p4, &omegas, &mut knm, 0.0, 0.0, &alpha).unwrap();
+        s4.step(&mut p4, &omegas, &mut knm, 0.0, 0.0, &alpha)
+            .unwrap();
 
         // Without coupling, both should give exact θ = ω*dt = 0.1
         let exact = total_dt;

@@ -58,7 +58,9 @@ mod tests {
     #[test]
     fn no_rotation_gives_zero() {
         // 5 timesteps, 3 oscillators, phases constant
-        let phases = vec![0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0];
+        let phases = vec![
+            0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0, 0.0, 1.0, 2.0,
+        ];
         let w = winding_numbers(&phases, 5, 3);
         assert_eq!(w, vec![0, 0, 0]);
     }
