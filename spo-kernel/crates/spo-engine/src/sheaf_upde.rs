@@ -12,10 +12,10 @@ use crate::dp_tableau as dp;
 /// Sheaf UPDE Stepper for multi-dimensional phase vectors.
 ///
 /// Phase per oscillator is a vector of dimension D.
-/// Restriction maps (coupling blocks) B_ij are D x D matrices mapping 
+/// Restriction maps (coupling blocks) B_ij are D x D matrices mapping
 /// the phase space of oscillator j into the space of oscillator i.
 ///
-/// d(theta_{i,d})/dt = omega_{i,d} 
+/// d(theta_{i,d})/dt = omega_{i,d}
 ///                     + sum_j sum_k B_ij^{dk} sin(theta_{j,k} - theta_{i,d})
 ///                     + zeta * sin(Psi_d - theta_{i,d})
 #[derive(Debug, Clone)]
@@ -145,24 +145,24 @@ impl SheafUPDEStepper {
         dt: f64,
     ) {
         let size = phases.len();
-        
+
         compute_derivative(self.n, self.d, phases, omegas, restriction_maps, zeta, psi, &mut self.k1);
-        
+
         for i in 0..size {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k1[i];
         }
         compute_derivative(self.n, self.d, &self.tmp_phases, omegas, restriction_maps, zeta, psi, &mut self.k2);
-        
+
         for i in 0..size {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k2[i];
         }
         compute_derivative(self.n, self.d, &self.tmp_phases, omegas, restriction_maps, zeta, psi, &mut self.k3);
-        
+
         for i in 0..size {
             self.tmp_phases[i] = phases[i] + dt * self.k3[i];
         }
         compute_derivative(self.n, self.d, &self.tmp_phases, omegas, restriction_maps, zeta, psi, &mut self.k4);
-        
+
         for i in 0..size {
             phases[i] += (dt / 6.0) * (self.k1[i] + 2.0 * self.k2[i] + 2.0 * self.k3[i] + self.k4[i]);
         }
@@ -226,12 +226,12 @@ impl SheafUPDEStepper {
                     (dp::B4[6] - dp::B5[6]) * self.k7[i]
                 );
                 self.err_buf[i] = err;
-                
+
                 let scale = self.config.atol + self.config.rtol * phases[i].abs().max(self.tmp_phases[i].abs());
                 let scaled_err = err / scale;
                 err_sq += scaled_err * scaled_err;
             }
-            
+
             let err_norm = (err_sq / size as f64).sqrt();
             let mut dt_next = dt * 0.9 * err_norm.powf(-0.2);
             dt_next = dt_next.clamp(dt * 0.1, dt * 5.0).clamp(1e-9, self.config.dt);
@@ -262,7 +262,7 @@ fn compute_derivative(
         for dim in 0..d {
             let i_idx = i * d + dim;
             let mut coupling_sum = 0.0;
-            
+
             for j in 0..n {
                 for k in 0..d {
                     let j_idx = j * d + k;
@@ -270,15 +270,15 @@ fn compute_derivative(
                     // matrix_idx = i * (N * D * D) + j * (D * D) + dim * D + k
                     let b_idx = i * n * d * d + j * d * d + dim * d + k;
                     let b_val = restriction_maps[b_idx];
-                    
+
                     if b_val != 0.0 {
                         coupling_sum += b_val * (theta[j_idx] - theta[i_idx]).sin();
                     }
                 }
             }
-            
+
             out[i_idx] = omegas[i_idx] + coupling_sum;
-            
+
             if zeta != 0.0 {
                 out[i_idx] += zeta * (psi[dim] - theta[i_idx]).sin();
             }

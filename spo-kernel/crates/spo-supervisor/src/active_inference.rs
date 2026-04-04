@@ -54,10 +54,10 @@ impl ActiveInferenceAgent {
     /// * `psi_obs` — currently observed global phase Ψ
     /// * `dt` — timestep for internal state-space update
     pub fn control(&mut self, r_obs: f64, psi_obs: f64, dt: f64) -> (f64, f64) {
-        // Friston-style Active Inference: 
+        // Friston-style Active Inference:
         // minimize error e = (r_obs - target_r)
         let error = r_obs - self.target_r;
-        
+
         // Update internal predictive state (SSM update)
         // x_dot = A*x + B*error
         let n = self.internal_state.len();
@@ -69,12 +69,12 @@ impl ActiveInferenceAgent {
             x_dot += self.weights[n * n + i] * error;
             self.internal_state[i] += x_dot * dt;
         }
-        
+
         // Output control zeta: proportional to error + internal integrated state
         // In Active Inference, zeta is the 'action' that reduces prediction error
         let zeta = (self.lr * error.abs() + self.internal_state.iter().sum::<f64>()).clamp(0.0, 10.0);
-        
-        // Target phase psi: align with observed global phase to encourage sync, 
+
+        // Target phase psi: align with observed global phase to encourage sync,
         // or anti-align to suppress it.
         let psi = if error > 0.0 {
             // Suppress sync: drive out of phase
@@ -83,7 +83,7 @@ impl ActiveInferenceAgent {
             // Encourage sync: drive in phase
             psi_obs
         };
-        
+
         (zeta, psi)
     }
 }

@@ -8,11 +8,11 @@
 
 use spo_types::{SpoError, SpoResult};
 
-/// Three-factor Hebbian plasticity: 
+/// Three-factor Hebbian plasticity:
 /// dK_ij/dt = lr * modulator * cos(theta_j - theta_i) - decay * K_ij
 ///
-/// This model implements a sub-microsecond plasticity update directly 
-/// in the Rust integration loop. It allows coupling matrices (dense or 
+/// This model implements a sub-microsecond plasticity update directly
+/// in the Rust integration loop. It allows coupling matrices (dense or
 /// sparse) to adapt their topology on-the-fly based on phase coherence.
 ///
 /// Factors:
@@ -38,9 +38,9 @@ impl PlasticityModel {
     pub fn update(&self, phases: &[f64], knm: &mut [f64], modulator: f64, dt: f64) {
         let n = phases.len();
         if knm.len() != n * n { return; }
-        
+
         let decay_factor = (-self.decay * dt).exp();
-        
+
         for i in 0..n {
             for j in 0..n {
                 if i == j { continue; }
@@ -51,20 +51,20 @@ impl PlasticityModel {
             }
         }
     }
-    
+
     /// Update sparse coupling matrix values in-place.
     pub fn update_sparse(
-        &self, 
-        phases: &[f64], 
-        row_ptr: &[usize], 
-        col_indices: &[usize], 
-        knm_values: &mut [f64], 
-        modulator: f64, 
+        &self,
+        phases: &[f64],
+        row_ptr: &[usize],
+        col_indices: &[usize],
+        knm_values: &mut [f64],
+        modulator: f64,
         dt: f64
     ) {
         let n = phases.len();
         let decay_factor = (-self.decay * dt).exp();
-        
+
         for i in 0..n {
             let start = row_ptr[i];
             let end = row_ptr[i+1];

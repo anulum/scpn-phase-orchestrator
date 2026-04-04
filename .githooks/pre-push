@@ -12,7 +12,11 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 echo "pre-push: running preflight..."
 
 # Activate project venv if available (Linux or Windows)
-if [ -f "$REPO_ROOT/.venv-linux/bin/activate" ]; then
+# SPO_VENV overrides auto-detection (NTFS venv per disk-space rules)
+if [ -n "${SPO_VENV:-}" ] && [ -f "$SPO_VENV/bin/activate" ]; then
+    # shellcheck disable=SC1091
+    source "$SPO_VENV/bin/activate"
+elif [ -f "$REPO_ROOT/.venv-linux/bin/activate" ]; then
     # shellcheck disable=SC1091
     source "$REPO_ROOT/.venv-linux/bin/activate"
 elif [ -f "$REPO_ROOT/.venv/bin/activate" ]; then
