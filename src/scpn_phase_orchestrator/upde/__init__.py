@@ -7,62 +7,8 @@
 
 from __future__ import annotations
 
-from scpn_phase_orchestrator.upde.adjoint import (
-    cost_R,
-    gradient_knm_fd,
-    gradient_knm_jax,
-)
-from scpn_phase_orchestrator.upde.basin_stability import (
-    BasinStabilityResult,
-    basin_stability,
-    multi_basin_stability,
-)
-from scpn_phase_orchestrator.upde.bifurcation import (
-    BifurcationDiagram,
-    BifurcationPoint,
-    find_critical_coupling,
-    trace_sync_transition,
-)
-from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
-from scpn_phase_orchestrator.upde.engine import UPDEEngine
-from scpn_phase_orchestrator.upde.envelope import EnvelopeState
-from scpn_phase_orchestrator.upde.geometric import TorusEngine
-from scpn_phase_orchestrator.upde.hypergraph import Hyperedge, HypergraphEngine
-from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
-from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX, JaxUPDEEngine
-from scpn_phase_orchestrator.upde.market import (
-    detect_regimes,
-    extract_phase,
-    market_order_parameter,
-    market_plv,
-    sync_warning,
-)
-from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
-from scpn_phase_orchestrator.upde.numerics import IntegrationConfig, check_stability
-from scpn_phase_orchestrator.upde.order_params import (
-    compute_layer_coherence,
-    compute_order_parameter,
-    compute_plv,
-)
-from scpn_phase_orchestrator.upde.pac import modulation_index, pac_gate, pac_matrix
-from scpn_phase_orchestrator.upde.prediction import (
-    PredictionModel,
-    PredictionState,
-    VariationalPredictor,
-    VariationalState,
-)
-from scpn_phase_orchestrator.upde.reduction import OAState, OttAntonsenReduction
-from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
-from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
-from scpn_phase_orchestrator.upde.sparse_engine import SparseUPDEEngine
-from scpn_phase_orchestrator.upde.splitting import SplittingEngine
-from scpn_phase_orchestrator.upde.stochastic import (
-    NoiseProfile,
-    StochasticInjector,
-    find_optimal_noise,
-)
-from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
+import importlib
+from typing import Any
 
 __all__ = [
     "BasinStabilityResult",
@@ -117,3 +63,70 @@ __all__ = [
     "sync_warning",
     "trace_sync_transition",
 ]
+
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "cost_R": (".adjoint", "cost_R"),
+    "gradient_knm_fd": (".adjoint", "gradient_knm_fd"),
+    "gradient_knm_jax": (".adjoint", "gradient_knm_jax"),
+    "BasinStabilityResult": (".basin_stability", "BasinStabilityResult"),
+    "basin_stability": (".basin_stability", "basin_stability"),
+    "multi_basin_stability": (".basin_stability", "multi_basin_stability"),
+    "BifurcationDiagram": (".bifurcation", "BifurcationDiagram"),
+    "BifurcationPoint": (".bifurcation", "BifurcationPoint"),
+    "find_critical_coupling": (".bifurcation", "find_critical_coupling"),
+    "trace_sync_transition": (".bifurcation", "trace_sync_transition"),
+    "DelayBuffer": (".delay", "DelayBuffer"),
+    "DelayedEngine": (".delay", "DelayedEngine"),
+    "UPDEEngine": (".engine", "UPDEEngine"),
+    "EnvelopeState": (".envelope", "EnvelopeState"),
+    "TorusEngine": (".geometric", "TorusEngine"),
+    "Hyperedge": (".hypergraph", "Hyperedge"),
+    "HypergraphEngine": (".hypergraph", "HypergraphEngine"),
+    "InertialKuramotoEngine": (".inertial", "InertialKuramotoEngine"),
+    "HAS_JAX": (".jax_engine", "HAS_JAX"),
+    "JaxUPDEEngine": (".jax_engine", "JaxUPDEEngine"),
+    "detect_regimes": (".market", "detect_regimes"),
+    "extract_phase": (".market", "extract_phase"),
+    "market_order_parameter": (".market", "market_order_parameter"),
+    "market_plv": (".market", "market_plv"),
+    "sync_warning": (".market", "sync_warning"),
+    "LayerState": (".metrics", "LayerState"),
+    "LockSignature": (".metrics", "LockSignature"),
+    "UPDEState": (".metrics", "UPDEState"),
+    "IntegrationConfig": (".numerics", "IntegrationConfig"),
+    "check_stability": (".numerics", "check_stability"),
+    "compute_layer_coherence": (".order_params", "compute_layer_coherence"),
+    "compute_order_parameter": (".order_params", "compute_order_parameter"),
+    "compute_plv": (".order_params", "compute_plv"),
+    "modulation_index": (".pac", "modulation_index"),
+    "pac_gate": (".pac", "pac_gate"),
+    "pac_matrix": (".pac", "pac_matrix"),
+    "PredictionModel": (".prediction", "PredictionModel"),
+    "PredictionState": (".prediction", "PredictionState"),
+    "VariationalPredictor": (".prediction", "VariationalPredictor"),
+    "VariationalState": (".prediction", "VariationalState"),
+    "OAState": (".reduction", "OAState"),
+    "OttAntonsenReduction": (".reduction", "OttAntonsenReduction"),
+    "SheafUPDEEngine": (".sheaf_engine", "SheafUPDEEngine"),
+    "SimplicialEngine": (".simplicial", "SimplicialEngine"),
+    "SparseUPDEEngine": (".sparse_engine", "SparseUPDEEngine"),
+    "SplittingEngine": (".splitting", "SplittingEngine"),
+    "NoiseProfile": (".stochastic", "NoiseProfile"),
+    "StochasticInjector": (".stochastic", "StochasticInjector"),
+    "find_optimal_noise": (".stochastic", "find_optimal_noise"),
+    "StuartLandauEngine": (".stuart_landau", "StuartLandauEngine"),
+    "SwarmalatorEngine": (".swarmalator", "SwarmalatorEngine"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_IMPORTS:
+        module_path, attr_name = _LAZY_IMPORTS[name]
+        module = importlib.import_module(module_path, __package__)
+        return getattr(module, attr_name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
+def __dir__() -> list[str]:
+    return __all__

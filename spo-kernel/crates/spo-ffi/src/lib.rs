@@ -912,9 +912,8 @@ impl PyStuartLandauStepper {
         let m = mu
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let mut k_bound = knm.readwrite();
-        let k = k_bound
-            .as_slice_mut()
+        let mut k = knm
+            .to_vec()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let kr = knm_r
             .as_slice()
@@ -923,7 +922,7 @@ impl PyStuartLandauStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         self.inner
-            .step(&mut s, o, m, k, kr, zeta, psi, a, epsilon)
+            .step(&mut s, o, m, &mut k, kr, zeta, psi, a, epsilon)
             .map_err(spo_err)?;
         Ok(s)
     }
@@ -953,9 +952,8 @@ impl PyStuartLandauStepper {
         let m = mu
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let mut k_bound = knm.readwrite();
-        let k = k_bound
-            .as_slice_mut()
+        let mut k = knm
+            .to_vec()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let kr = knm_r
             .as_slice()
@@ -964,7 +962,7 @@ impl PyStuartLandauStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         self.inner
-            .run(&mut s, o, m, k, kr, zeta, psi, a, epsilon, n_steps)
+            .run(&mut s, o, m, &mut k, kr, zeta, psi, a, epsilon, n_steps)
             .map_err(spo_err)?;
         Ok(s)
     }

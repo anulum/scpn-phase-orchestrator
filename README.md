@@ -19,6 +19,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 [![Rust FFI](https://img.shields.io/badge/Rust-spo--kernel-orange)](https://github.com/anulum/scpn-phase-orchestrator/tree/main/spo-kernel)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
 [![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
+[![Polar.sh](https://img.shields.io/badge/Fund-Polar.sh-blue)](https://polar.sh/anulum)
 
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 

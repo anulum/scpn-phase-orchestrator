@@ -1,5 +1,8 @@
 # SCPN Phase Orchestrator: 10x Augmentation Plan
 
+> **Status: PLANNING DOCUMENT — NOT YET IMPLEMENTED.**
+> Features and strategies listed here are planned, not available in the current release.
+
 ## Objective
 Elevate the SCPN Phase Orchestrator from a simulation engine to a universal, hyper-adaptive intelligence and control platform.
 

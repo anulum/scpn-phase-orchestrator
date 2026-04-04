@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.signal import hilbert  # type: ignore[import-untyped]
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
@@ -30,6 +29,8 @@ class PhysicalExtractor(PhaseExtractor):
             raise ValueError(
                 f"signal must be 1-D with >= 2 samples, got shape {signal.shape}"
             )
+        from scipy.signal import hilbert  # noqa: PLC0415
+
         analytic = hilbert(signal)
 
         if _HAS_RUST:  # pragma: no cover
