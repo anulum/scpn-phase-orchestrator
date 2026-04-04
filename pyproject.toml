@@ -85,7 +85,7 @@ dev = [
     "mkdocs-material>=9.5,<10.0",
     "mkdocstrings[python]>=0.24,<1.0",
     "pymdown-extensions>=10.0,<11.0",
-    "pygments>=2.16,<2.20",  # 2.20 breaks pymdownx highlight (filename=None)
+    "pygments>=2.16,<2.21",  # 2.20 breaks pymdownx highlight (filename=None)
     "pre-commit>=3.5,<4.0",
     "twine>=5.0,<6.0",
     "pytest-benchmark>=5.0,<6.0",
