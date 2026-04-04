@@ -23,7 +23,7 @@ __all__ = ["TCBOObserver", "TCBOState"]
 _TAU_H1 = 0.72  # from SCPN-CODEBASE optimizations/tcbo/observer.py
 
 try:
-    from ripser import ripser as _ripser  # type: ignore[import-untyped]
+    from ripser import ripser as _ripser
 
     _HAS_RIPSER = True
 except ImportError:  # pragma: no cover

@@ -54,7 +54,7 @@ class VisualizerStreamer:
         if self._loop:
             self._loop.call_soon_threadsafe(self._loop.stop)
 
-    async def _handler(self, websocket: Any):
+    async def _handler(self, websocket: Any) -> None:
         self._clients.add(websocket)
         try:
             await websocket.wait_closed()

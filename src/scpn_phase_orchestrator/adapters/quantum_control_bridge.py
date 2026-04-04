@@ -119,7 +119,7 @@ class QuantumControlBridge:
             omega_natural=omegas,
             trotter_order=self._trotter_order,
         )
-        return solver.run(t_max=t_max, dt=dt, trotter_per_step=trotter_per_step)
+        return solver.run(t_max=t_max, dt=dt, trotter_per_step=trotter_per_step)  # type: ignore[no-any-return]
 
     def orchestrator_to_quantum(
         self,
@@ -134,7 +134,7 @@ class QuantumControlBridge:
         layer_phases = {
             f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
         }
-        return orchestrator_to_quantum_phases(layer_phases)
+        return orchestrator_to_quantum_phases(layer_phases)  # type: ignore[no-any-return]
 
     def quantum_to_orchestrator(
         self,
@@ -145,4 +145,4 @@ class QuantumControlBridge:
             quantum_to_orchestrator_phases,
         )
 
-        return quantum_to_orchestrator_phases(quantum_theta)
+        return quantum_to_orchestrator_phases(quantum_theta)  # type: ignore[no-any-return]

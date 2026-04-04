@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.signal import hilbert  # type: ignore[import-untyped]
+from scipy.signal import hilbert
 
 __all__ = ["extract_phases", "PhaseResult"]
 

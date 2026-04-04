@@ -157,6 +157,10 @@ module = [
     "scpn_phase_orchestrator.adapters.opentelemetry",
     "scpn_phase_orchestrator.adapters.neurocore_bridge",
     "scpn_phase_orchestrator.adapters.quantum_control_bridge",
+    "scpn_phase_orchestrator.adapters.lsl_bci_bridge",
+    "scpn_phase_orchestrator.adapters.gaian_mesh_bridge",
+    "scpn_phase_orchestrator.autotune.sindy",
+    "scpn_phase_orchestrator.visualization.streamer",
     "scpn_phase_orchestrator.coupling.connectome",
     "scpn_phase_orchestrator.coupling.knm",
     "scpn_phase_orchestrator.oscillators.physical",
@@ -182,6 +186,16 @@ module = [
     "scpn_quantum_control.*",
     "optax",
     "optax.*",
+    "pylsl",
+    "pylsl.*",
+    "websockets",
+    "websockets.*",
+    "rtamt",
+    "rtamt.*",
+    "ripser",
+    "ripser.*",
+    "neurolib",
+    "neurolib.*",
 ]
 ignore_missing_imports = true
 
