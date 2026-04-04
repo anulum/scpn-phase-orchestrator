@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
+
 __all__ = ["redundancy", "synergy"]
 
 # Williams & Beer 2010, arXiv:1004.2515 — PID framework
@@ -35,10 +37,7 @@ def _circular_entropy(phases: NDArray, n_bins: int = _DEFAULT_BINS) -> float:
 def _joint_entropy_2d(
     phases_a: NDArray, phases_b: NDArray, n_bins: int = _DEFAULT_BINS
 ) -> float:
-    """Joint entropy H(A, B) from paired circular observations.
-
-    Requires len(a) == len(b) — each index is one paired observation.
-    """
+    """Joint entropy H(A, B) from paired circular observations."""
     bins = np.linspace(0, 2 * np.pi, n_bins + 1)
     a_wrapped = phases_a % (2 * np.pi)
     b_wrapped = phases_b % (2 * np.pi)
@@ -71,10 +70,7 @@ def redundancy(
 ) -> float:
     """Redundant information: shared by both groups about the global phase.
 
-    I_red = min(MI(φ_A; φ_global), MI(φ_B; φ_global))
-
-    where φ_A is the per-oscillator phase in group A paired with the
-    global mean-field phase broadcast to the same length.
+    I_red = min(MI(A; global), MI(B; global))
 
     Williams & Beer 2010 minimum-MI redundancy.
     """
@@ -86,7 +82,18 @@ def redundancy(
     if len(group_a) == 0 or len(group_b) == 0:
         return 0.0
 
-    # Global mean-field phase repeated for each oscillator in the group
+    if _HAS_RUST:  # pragma: no cover
+        from spo_kernel import pid_redundancy as _rust_red
+
+        return float(
+            _rust_red(
+                np.ascontiguousarray(phases.ravel()),
+                group_a.tolist(),
+                group_b.tolist(),
+                n_bins,
+            )
+        )
+
     global_phase = float(np.angle(np.mean(np.exp(1j * phases))))
     global_a = np.full(len(group_a), global_phase)
     global_b = np.full(len(group_b), global_phase)
@@ -104,7 +111,7 @@ def synergy(
 ) -> float:
     """Synergistic information: present only in the joint (A, B).
 
-    I_syn = MI(φ_{A∪B}; φ_global) - MI(φ_A; φ_global) - MI(φ_B; φ_global) + I_red
+    I_syn = MI(A+B; global) - MI(A; global) - MI(B; global) + I_red
 
     Positive synergy means the combined group carries information
     about the global state that neither subgroup carries alone.
@@ -116,6 +123,18 @@ def synergy(
     group_b = np.asarray(group_b, dtype=np.intp)
     if len(group_a) == 0 or len(group_b) == 0:
         return 0.0
+
+    if _HAS_RUST:  # pragma: no cover
+        from spo_kernel import pid_synergy as _rust_syn
+
+        return float(
+            _rust_syn(
+                np.ascontiguousarray(phases.ravel()),
+                group_a.tolist(),
+                group_b.tolist(),
+                n_bins,
+            )
+        )
 
     global_phase = float(np.angle(np.mean(np.exp(1j * phases))))
 

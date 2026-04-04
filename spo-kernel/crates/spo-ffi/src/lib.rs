@@ -1445,6 +1445,36 @@ impl PyLIFEnsemble {
     }
 }
 
+// ─── PID (Redundancy / Synergy) ─────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (phases, group_a, group_b, n_bins = 32))]
+fn pid_redundancy(
+    phases: PyReadonlyArray1<'_, f64>,
+    group_a: Vec<usize>,
+    group_b: Vec<usize>,
+    n_bins: usize,
+) -> PyResult<f64> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spo_engine::pid::redundancy(p, &group_a, &group_b, n_bins))
+}
+
+#[pyfunction]
+#[pyo3(signature = (phases, group_a, group_b, n_bins = 32))]
+fn pid_synergy(
+    phases: PyReadonlyArray1<'_, f64>,
+    group_a: Vec<usize>,
+    group_b: Vec<usize>,
+    n_bins: usize,
+) -> PyResult<f64> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spo_engine::pid::synergy(p, &group_a, &group_b, n_bins))
+}
+
 // ─── Normalized Persistent Entropy ──────────────────────────────────
 
 #[pyfunction]
@@ -1540,6 +1570,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(graph_walk_phase, m)?)?;
     m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
     m.add_function(wrap_pyfunction!(layer_coherence, m)?)?;
+    m.add_function(wrap_pyfunction!(pid_redundancy, m)?)?;
+    m.add_function(wrap_pyfunction!(pid_synergy, m)?)?;
     m.add_function(wrap_pyfunction!(compute_npe, m)?)?;
     m.add_function(wrap_pyfunction!(phase_distance_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;
