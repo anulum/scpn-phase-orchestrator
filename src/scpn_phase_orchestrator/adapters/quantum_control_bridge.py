@@ -126,7 +126,7 @@ class QuantumControlBridge:
         state: UPDEState,
     ) -> NDArray:
         """Convert orchestrator UPDEState to quantum phase array."""
-        from scpn_quantum_control.bridge.conversions import (
+        from scpn_quantum_control import (  # noqa: PLC0415
             orchestrator_to_quantum_phases,
         )
 
@@ -141,7 +141,7 @@ class QuantumControlBridge:
         quantum_theta: NDArray,
     ) -> dict:
         """Convert quantum phase array back to orchestrator-compatible dict."""
-        from scpn_quantum_control.bridge.conversions import (
+        from scpn_quantum_control import (  # noqa: PLC0415
             quantum_to_orchestrator_phases,
         )
 

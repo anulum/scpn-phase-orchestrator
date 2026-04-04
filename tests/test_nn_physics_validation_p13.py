@@ -264,7 +264,7 @@ class TestV147RustJAXParity:
         )
 
         try:
-            from scpn_phase_orchestrator.upde._spo_ffi import PyUPDEStepper
+            from spo_kernel import PyUPDEStepper
         except ImportError:
             pytest.skip("Rust FFI not available (spo-kernel not compiled)")
 
@@ -275,11 +275,13 @@ class TestV147RustJAXParity:
         K_np = np.full((N, N), 0.3 / N, dtype=np.float64)
         np.fill_diagonal(K_np, 0.0)
 
-        # Rust engine
+        # Rust engine — expects flattened 1D arrays for knm and alpha
         stepper = PyUPDEStepper(N, dt=0.01, method="rk4")
+        knm_flat = np.ascontiguousarray(K_np.ravel())
+        alpha_flat = np.zeros(N * N, dtype=np.float64)
         p_rust = phases_np.copy()
         for _ in range(500):
-            p_rust = stepper.step(p_rust, omegas_np, K_np, 0.0, 0.0)
+            p_rust = np.asarray(stepper.step(p_rust, omegas_np, knm_flat, 0.0, 0.0, alpha_flat))
         R_rust = float(np.abs(np.mean(np.exp(1j * p_rust))))
 
         # JAX engine
