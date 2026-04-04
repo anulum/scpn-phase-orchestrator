@@ -5,12 +5,27 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Auto-tune pipeline
 
+from __future__ import annotations
+
+from scpn_phase_orchestrator.autotune.coupling_est import estimate_coupling
+from scpn_phase_orchestrator.autotune.freq_id import (
+    FrequencyResult,
+    identify_frequencies,
+)
+from scpn_phase_orchestrator.autotune.phase_extract import PhaseResult, extract_phases
+from scpn_phase_orchestrator.autotune.pipeline import (
+    AutoTuneResult,
+    identify_binding_spec,
+)
+from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
+
 __all__ = [
-    "extract_phases",
-    "PhaseResult",
-    "identify_frequencies",
-    "FrequencyResult",
-    "estimate_coupling",
-    "identify_binding_spec",
     "AutoTuneResult",
+    "FrequencyResult",
+    "PhaseResult",
+    "PhaseSINDy",
+    "estimate_coupling",
+    "extract_phases",
+    "identify_binding_spec",
+    "identify_frequencies",
 ]

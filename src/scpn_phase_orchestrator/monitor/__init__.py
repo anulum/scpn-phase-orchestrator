@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.monitor.embedding import (
     optimal_delay,
     optimal_dimension,
 )
+from scpn_phase_orchestrator.monitor.entropy_prod import entropy_production_rate
 from scpn_phase_orchestrator.monitor.evs import EVSMonitor, EVSResult
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 from scpn_phase_orchestrator.monitor.lyapunov import (
@@ -30,6 +31,8 @@ from scpn_phase_orchestrator.monitor.lyapunov import (
     LyapunovState,
     lyapunov_spectrum,
 )
+from scpn_phase_orchestrator.monitor.npe import compute_npe, phase_distance_matrix
+from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
 from scpn_phase_orchestrator.monitor.poincare import (
     PoincareResult,
     phase_poincare,
@@ -56,6 +59,12 @@ from scpn_phase_orchestrator.monitor.sleep_staging import (
     classify_sleep_stage,
     ultradian_phase,
 )
+from scpn_phase_orchestrator.monitor.stl import HAS_RTAMT, STLMonitor
+from scpn_phase_orchestrator.monitor.transfer_entropy import (
+    phase_transfer_entropy,
+    transfer_entropy_matrix,
+)
+from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
 
 __all__ = [
     "BoundaryObserver",
@@ -94,4 +103,15 @@ __all__ = [
     "rqa",
     "simulate_psychedelic_trajectory",
     "ultradian_phase",
+    "compute_npe",
+    "entropy_production_rate",
+    "HAS_RTAMT",
+    "phase_distance_matrix",
+    "phase_transfer_entropy",
+    "redundancy",
+    "STLMonitor",
+    "synergy",
+    "transfer_entropy_matrix",
+    "winding_numbers",
+    "winding_vector",
 ]
