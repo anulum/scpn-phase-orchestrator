@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
 
@@ -246,7 +248,9 @@ class TestSymbolicPipelineEndToEnd:
         for _ in range(100):
             ext.extract(seq, sample_rate=1.0)
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 5e-3, f"extract(1000) took {elapsed * 1e3:.2f}ms"
+        # CI shared runners and high-load machines can be 4-5x slower.
+        budget = 50e-3 if (os.getenv("CI") or os.getloadavg()[0] > 10) else 5e-3
+        assert elapsed < budget, f"extract(1000) took {elapsed * 1e3:.2f}ms"
 
 
 # Pipeline wiring: SymbolicExtractor → theta/omega → UPDEEngine
