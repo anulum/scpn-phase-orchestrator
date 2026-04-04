@@ -24,6 +24,7 @@ use pyo3::types::PyDict;
 
 use spo_engine::{
     coupling::{project_knm, CouplingBuilder},
+    entropy_prod,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1444,6 +1445,28 @@ impl PyLIFEnsemble {
     }
 }
 
+// ─── Entropy Production Rate ────────────────────────────────────────
+
+#[pyfunction]
+fn entropy_production_rate(
+    phases: PyReadonlyArray1<'_, f64>,
+    omegas: PyReadonlyArray1<'_, f64>,
+    knm: PyReadonlyArray1<'_, f64>,
+    alpha: f64,
+    dt: f64,
+) -> PyResult<f64> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(entropy_prod::entropy_production_rate(p, o, k, alpha, dt))
+}
+
 // ─── Winding Numbers ────────────────────────────────────────────────
 
 #[pyfunction]
@@ -1494,6 +1517,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(graph_walk_phase, m)?)?;
     m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
     m.add_function(wrap_pyfunction!(layer_coherence, m)?)?;
+    m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;
     m.add_function(wrap_pyfunction!(winding_numbers, m)?)?;
     Ok(())
 }
