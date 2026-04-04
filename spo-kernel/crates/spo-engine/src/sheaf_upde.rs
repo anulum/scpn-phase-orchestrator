@@ -36,6 +36,8 @@ pub struct SheafUPDEStepper {
 }
 
 impl SheafUPDEStepper {
+    /// # Errors
+    /// Propagates config validation errors.
     pub fn new(n: usize, d: usize, config: IntegrationConfig) -> SpoResult<Self> {
         let size = n * d;
         let last_dt = config.dt;
@@ -56,18 +58,23 @@ impl SheafUPDEStepper {
         })
     }
 
+    #[must_use]
     pub fn n(&self) -> usize {
         self.n
     }
 
+    #[must_use]
     pub fn d(&self) -> usize {
         self.d
     }
 
+    #[must_use]
     pub fn last_dt(&self) -> f64 {
         self.last_dt
     }
 
+    /// # Errors
+    /// Returns `InvalidDimension` on size mismatch.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -109,6 +116,8 @@ impl SheafUPDEStepper {
         Ok(())
     }
 
+    /// # Errors
+    /// Propagates errors from `step()`.
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -124,6 +133,7 @@ impl SheafUPDEStepper {
         Ok(())
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn euler_step(
         &mut self,
         phases: &mut [f64],
@@ -148,6 +158,7 @@ impl SheafUPDEStepper {
         }
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn rk4_step(
         &mut self,
         phases: &mut [f64],
@@ -218,6 +229,7 @@ impl SheafUPDEStepper {
         }
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn rk45_step(
         &mut self,
         phases: &mut [f64],
@@ -367,9 +379,7 @@ impl SheafUPDEStepper {
                 .clamp(1e-9, self.config.dt);
 
             if err_norm <= 1.0 {
-                for i in 0..size {
-                    phases[i] = self.tmp_phases[i];
-                }
+                phases[..size].copy_from_slice(&self.tmp_phases[..size]);
                 t_remaining -= dt;
                 self.last_dt = dt_next;
             }
@@ -378,6 +388,7 @@ impl SheafUPDEStepper {
     }
 }
 
+#[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
 fn compute_derivative(
     n: usize,
     d: usize,

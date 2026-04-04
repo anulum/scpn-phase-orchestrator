@@ -89,6 +89,7 @@ impl SparseUPDEStepper {
     ///
     /// # Errors
     /// Returns `InvalidDimension` on length mismatch or `IntegrationDiverged` on NaN/Inf input.
+    #[allow(clippy::too_many_arguments)]
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -116,9 +117,9 @@ impl SparseUPDEStepper {
             )));
         }
         if knm_values.len() != col_indices.len() || alpha_values.len() != col_indices.len() {
-            return Err(SpoError::InvalidDimension(format!(
-                "sparse arrays length mismatch"
-            )));
+            return Err(SpoError::InvalidDimension(
+                "sparse arrays length mismatch".to_string(),
+            ));
         }
         for &th in phases.iter() {
             if !th.is_finite() {

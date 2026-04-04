@@ -19,6 +19,7 @@ use spo_types::{SpoError, SpoResult};
 /// 1. Pre/Post-synaptic correlation (Hebbian): cos(theta_j - theta_i)
 /// 2. Neuromodulatory reward/error signal: modulator
 /// 3. Structural decay: exp(-decay * dt)
+///
 /// dK_ij/dt = lr * modulator * cos(theta_j - theta_i) - decay * K_ij
 #[derive(Debug, Clone)]
 pub struct PlasticityModel {
@@ -27,6 +28,8 @@ pub struct PlasticityModel {
 }
 
 impl PlasticityModel {
+    /// # Errors
+    /// Returns `InvalidConfig` if lr or decay is negative.
     pub fn new(lr: f64, decay: f64) -> SpoResult<Self> {
         if lr < 0.0 || decay < 0.0 {
             return Err(SpoError::InvalidConfig(

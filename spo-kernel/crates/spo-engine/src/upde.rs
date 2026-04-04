@@ -511,9 +511,9 @@ mod tests {
         let mut s = make_stepper(n);
         let mut phases = vec![0.0; n];
         let omegas = vec![1.0; n];
-        let knm = vec![0.0; n * n];
+        let mut knm = vec![0.0; n * n];
         let alpha = zero_alpha(n);
-        s.step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+        s.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .unwrap();
         // dθ = ω*dt = 1.0 * 0.01
         for &p in &phases {
@@ -529,10 +529,10 @@ mod tests {
             .map(|i| i as f64 * std::f64::consts::TAU / n as f64)
             .collect();
         let omegas = vec![2.0; n];
-        let knm = vec![0.1; n * n];
+        let mut knm = vec![0.1; n * n];
         let alpha = zero_alpha(n);
         for _ in 0..500 {
-            s.step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+            s.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
                 .unwrap();
         }
         for &p in &phases {
@@ -549,10 +549,10 @@ mod tests {
         let mut s = make_stepper(n);
         let mut phases = vec![f64::NAN; n];
         let omegas = vec![1.0; n];
-        let knm = vec![0.0; n * n];
+        let mut knm = vec![0.0; n * n];
         let alpha = zero_alpha(n);
         assert!(s
-            .step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+            .step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .is_err());
     }
 
@@ -561,10 +561,10 @@ mod tests {
         let mut s = make_stepper(4);
         let mut phases = vec![0.0; 3];
         let omegas = vec![1.0; 4];
-        let knm = vec![0.0; 16];
+        let mut knm = vec![0.0; 16];
         let alpha = vec![0.0; 16];
         assert!(s
-            .step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+            .step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .is_err());
     }
 
@@ -580,9 +580,9 @@ mod tests {
         let mut s = UPDEStepper::new(n, config).unwrap();
         let mut phases = vec![0.0; n];
         let omegas = vec![1.0; n];
-        let knm = vec![0.0; n * n];
+        let mut knm = vec![0.0; n * n];
         let alpha = zero_alpha(n);
-        s.step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+        s.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .unwrap();
         // Without coupling, RK4 on dθ=ω gives θ=ω*dt exactly
         for &p in &phases {
@@ -604,7 +604,7 @@ mod tests {
         let alpha = zero_alpha(n);
 
         let r_before = crate::order_params::compute_order_parameter(&phases).0;
-        s.run(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha, 1000)
+        s.run(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha, 1000)
             .unwrap();
         let r_after = crate::order_params::compute_order_parameter(&phases).0;
 
@@ -620,13 +620,13 @@ mod tests {
         let mut s = make_stepper(n);
         let mut phases = vec![0.0; n];
         let omegas = vec![0.0; n];
-        let knm = vec![0.0; n * n];
+        let mut knm = vec![0.0; n * n];
         let alpha = zero_alpha(n);
         // zeta = 1, psi = pi/2 → dθ = sin(pi/2 - 0) = 1.0
         s.step(
             &mut phases,
             &omegas,
-            &knm,
+            &mut knm,
             1.0,
             std::f64::consts::FRAC_PI_2,
             &alpha,
@@ -644,9 +644,9 @@ mod tests {
         let mut phases = vec![0.5; n];
         let original = phases.clone();
         let omegas = vec![1.0; n];
-        let knm = vec![0.0; n * n];
+        let mut knm = vec![0.0; n * n];
         let alpha = zero_alpha(n);
-        s.run(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha, 0)
+        s.run(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha, 0)
             .unwrap();
         assert_eq!(phases, original);
     }
@@ -656,10 +656,10 @@ mod tests {
         let mut s = make_stepper(4);
         let mut phases = vec![0.0; 4];
         let omegas = vec![1.0; 4];
-        let knm = vec![0.0; 16];
+        let mut knm = vec![0.0; 16];
         let alpha = zero_alpha(4);
         assert!(s
-            .step(&mut phases, &omegas, &knm, f64::NAN, 0.0, &alpha)
+            .step(&mut phases, &omegas, &mut knm, f64::NAN, 0.0, &alpha)
             .is_err());
     }
 
@@ -668,10 +668,10 @@ mod tests {
         let mut s = make_stepper(4);
         let mut phases = vec![0.0; 4];
         let omegas = vec![1.0; 4];
-        let knm = vec![0.0; 16];
+        let mut knm = vec![0.0; 16];
         let alpha = zero_alpha(4);
         assert!(s
-            .step(&mut phases, &omegas, &knm, 0.0, f64::INFINITY, &alpha)
+            .step(&mut phases, &omegas, &mut knm, 0.0, f64::INFINITY, &alpha)
             .is_err());
     }
 
@@ -680,10 +680,10 @@ mod tests {
         let mut s = make_stepper(4);
         let mut phases = vec![0.0; 4];
         let omegas = vec![1.0, f64::NAN, 1.0, 1.0];
-        let knm = vec![0.0; 16];
+        let mut knm = vec![0.0; 16];
         let alpha = zero_alpha(4);
         assert!(s
-            .step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+            .step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .is_err());
     }
 
@@ -696,7 +696,7 @@ mod tests {
         knm[5] = f64::NAN;
         let alpha = zero_alpha(4);
         assert!(s
-            .step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+            .step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .is_err());
     }
 
@@ -704,7 +704,7 @@ mod tests {
     fn substeps_refine_accuracy() {
         let n = 4;
         let omegas = vec![1.0; n];
-        let knm = vec![0.0; n * n];
+        let mut knm = vec![0.0; n * n];
         let alpha = zero_alpha(n);
         let total_dt = 0.1;
 
@@ -717,7 +717,7 @@ mod tests {
         };
         let mut s1 = UPDEStepper::new(n, config1).unwrap();
         let mut p1 = vec![0.0; n];
-        s1.step(&mut p1, &omegas, &knm, 0.0, 0.0, &alpha).unwrap();
+        s1.step(&mut p1, &omegas, &mut knm, 0.0, 0.0, &alpha).unwrap();
 
         // 4 substeps
         let config4 = IntegrationConfig {
@@ -728,7 +728,7 @@ mod tests {
         };
         let mut s4 = UPDEStepper::new(n, config4).unwrap();
         let mut p4 = vec![0.0; n];
-        s4.step(&mut p4, &omegas, &knm, 0.0, 0.0, &alpha).unwrap();
+        s4.step(&mut p4, &omegas, &mut knm, 0.0, 0.0, &alpha).unwrap();
 
         // Without coupling, both should give exact θ = ω*dt = 0.1
         let exact = total_dt;
@@ -745,20 +745,20 @@ mod tests {
     fn phase_lag_alpha_effect() {
         let n = 2;
         let mut s = make_stepper(n);
-        let knm = vec![0.0, 1.0, 1.0, 0.0];
+        let mut knm = vec![0.0, 1.0, 1.0, 0.0];
 
         // Without lag
         let mut p1 = vec![0.0, 1.0];
         let omegas = vec![0.0; n];
         let alpha_zero = vec![0.0; 4];
-        s.step(&mut p1, &omegas, &knm, 0.0, 0.0, &alpha_zero)
+        s.step(&mut p1, &omegas, &mut knm, 0.0, 0.0, &alpha_zero)
             .unwrap();
 
         // With lag alpha[0,1] = 0.5
         let mut p2 = vec![0.0, 1.0];
         let alpha_lag = vec![0.0, 0.5, -0.5, 0.0];
         let mut s2 = make_stepper(n);
-        s2.step(&mut p2, &omegas, &knm, 0.0, 0.0, &alpha_lag)
+        s2.step(&mut p2, &omegas, &mut knm, 0.0, 0.0, &alpha_lag)
             .unwrap();
 
         // Phase updates should differ due to lag

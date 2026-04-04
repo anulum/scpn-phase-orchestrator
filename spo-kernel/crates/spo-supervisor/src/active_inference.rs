@@ -32,8 +32,10 @@ pub struct ActiveInferenceAgent {
 }
 
 impl ActiveInferenceAgent {
+    /// # Errors
+    /// Returns `InvalidConfig` if `target_r` is outside [0, 1].
     pub fn new(n_hidden: usize, target_r: f64, lr: f64) -> SpoResult<Self> {
-        if target_r < 0.0 || target_r > 1.0 {
+        if !(0.0..=1.0).contains(&target_r) {
             return Err(SpoError::InvalidConfig("target_r must be in [0, 1]".into()));
         }
         Ok(Self {

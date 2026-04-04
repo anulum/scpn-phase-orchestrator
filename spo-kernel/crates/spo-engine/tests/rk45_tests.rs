@@ -29,11 +29,11 @@ fn rk45_phases_stay_bounded() {
     let mut s = UPDEStepper::new(n, rk45_config(0.01)).unwrap();
     let mut phases: Vec<f64> = (0..n).map(|i| i as f64 * TAU / n as f64).collect();
     let omegas = vec![2.0; n];
-    let knm = vec![0.1; n * n];
+    let mut knm = vec![0.1; n * n];
     let alpha = zero_alpha(n);
 
     for _ in 0..500 {
-        s.step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+        s.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .unwrap();
     }
     for &p in &phases {
@@ -47,12 +47,12 @@ fn rk45_constant_derivative_advances() {
     let mut s = UPDEStepper::new(n, rk45_config(0.01)).unwrap();
     let mut phases = vec![1.0; n];
     let omegas = vec![1.0; n];
-    let knm = vec![0.0; n * n];
+    let mut knm = vec![0.0; n * n];
     let alpha = zero_alpha(n);
 
     // Run several steps; phases should advance from initial 1.0
     for _ in 0..20 {
-        s.step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+        s.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .unwrap();
     }
     // Phase should have advanced (wrapped to [0, 2pi))
@@ -75,7 +75,7 @@ fn rk45_adaptive_dt_grows_for_coupled_system() {
 
     let initial_dt = s.last_dt();
     for _ in 0..50 {
-        s.step(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha)
+        s.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
             .unwrap();
     }
     // After many accepted steps on smooth dynamics, dt should grow beyond initial
@@ -99,7 +99,7 @@ fn rk45_synchronisation_tendency() {
     let alpha = zero_alpha(n);
 
     let r_before = spo_engine::order_params::compute_order_parameter(&phases).0;
-    s.run(&mut phases, &omegas, &knm, 0.0, 0.0, &alpha, 500)
+    s.run(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha, 500)
         .unwrap();
     let r_after = spo_engine::order_params::compute_order_parameter(&phases).0;
 
