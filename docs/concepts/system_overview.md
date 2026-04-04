@@ -88,9 +88,12 @@ Each integration step follows this sequence:
 7. **Actuate**: map actions to domain commands, apply rate limits.
 8. **Audit**: log step to JSONL trace.
 
-Steps 1-8 execute in ~1ms for N=64 oscillators on the Rust FFI path,
-or ~10ms on the pure Python path. For real-time applications (EEG at
-256 Hz), this allows processing at sample rate with margin.
+The UPDE step alone takes ~0.1ms for N=64 on the pure Python path
+(measured 2026-04-04, i5-11600K). Full pipeline latency (extract +
+integrate + monitor + supervise) depends on which monitors are active.
+Rust FFI latency is not yet measured on this host (spo_kernel not
+installed). For real-time applications (EEG at 256 Hz = 3.9ms budget),
+the Python path is sufficient for N<=64 with minimal monitoring.
 
 ## Dual Objective: R_good / R_bad
 
@@ -213,12 +216,12 @@ of regime transitions, control actions, and boundary events.
 
 | Target | Method | Latency |
 |--------|--------|---------|
-| Python process | `pip install` | ~10ms/step |
-| Rust FFI | `maturin develop` | ~1ms/step |
-| Docker | `docker compose up` | ~10ms/step |
-| FPGA (PYNQ-Z2) | `KuramotoVerilogCompiler` | ~1us/step |
-| Browser | WASM bundle | ~5ms/step |
-| gRPC server | `spo serve --grpc` | ~2ms/step + network |
+| Python process | `pip install` | ~0.1ms/step (N=64, measured 2026-04-04) |
+| Rust FFI | `maturin develop` | not yet measured (FFI not installed on this host) |
+| Docker | `docker compose up` | not yet measured |
+| FPGA (PYNQ-Z2) | `KuramotoVerilogCompiler` | not yet measured |
+| Browser | WASM bundle | not yet measured |
+| gRPC server | `spo serve --grpc` | not yet measured |
 
 ## Stochastic Synthesis of Geometric Fields (SSGF)
 
@@ -242,7 +245,8 @@ for systems where geometric field coupling is physically meaningful
 
 ## Testing and Validation
 
-The system includes over 2300 tests organised in tiers:
+The system includes 3921 collected tests (as of 2026-04-04) organised
+in tiers:
 
 | Tier | Count | Scope |
 |------|-------|-------|

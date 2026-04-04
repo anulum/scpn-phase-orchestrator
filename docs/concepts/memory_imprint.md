@@ -301,8 +301,8 @@ A Brain-Computer Interface session runs for 30 minutes:
 At session end, `ImprintState` is saved. Next session starts from the
 saved state, so the system does not need to re-learn from scratch.
 Over multiple sessions, the imprint converges to a user-specific
-profile that improves classification accuracy by 15-30% (observed in
-internal testing; not yet validated in published studies).
+profile that should reduce re-calibration time (not yet measured —
+this is a design expectation, not a validated result).
 
 ## References
 

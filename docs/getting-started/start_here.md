@@ -282,10 +282,11 @@ scpn_phase_orchestrator/
 ## FAQ
 
 **Q: How many oscillators can SPO handle?**
-A: The pure Python path handles N=64 in real-time at 256 Hz. The Rust
-FFI path handles N=256 at the same rate. The JaxUPDEEngine on GPU
-handles N=10,000+ but with higher latency. The SparseUPDEEngine is
-recommended for N>100 with sparse coupling topology.
+A: The pure Python path step takes ~0.1ms for N=64 (measured 2026-04-04),
+which fits within a 256 Hz sample budget (3.9ms). Rust FFI and JAX GPU
+scaling have not been measured on the current host. The
+SparseUPDEEngine is recommended for N>100 with sparse coupling
+topology to avoid O(N^2) dense matrix overhead.
 
 **Q: Do I need to understand Kuramoto theory to use SPO?**
 A: No. If you just want to detect synchronisation regimes, you can use
@@ -303,9 +304,9 @@ and use `JaxUPDEEngine` or the `nn.functional` API. Requires JAX with
 CUDA or ROCm backend.
 
 **Q: Can I run SPO on a Raspberry Pi / embedded?**
-A: The Rust library (`spo-engine`) compiles for ARM. The FPGA path
-(`spo-fpga`) generates Verilog for Xilinx PYNQ-Z2, achieving
-sub-microsecond step latency for N<=16.
+A: The Rust library (`spo-engine`) compiles for ARM (not yet tested
+on RPi). The FPGA path (`spo-fpga`) generates Verilog for Xilinx
+PYNQ-Z2 — latency not yet measured on hardware.
 
 ## References
 
