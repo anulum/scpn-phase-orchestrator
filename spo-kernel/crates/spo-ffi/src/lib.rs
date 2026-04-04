@@ -1445,6 +1445,29 @@ impl PyLIFEnsemble {
     }
 }
 
+// ─── Normalized Persistent Entropy ──────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (phases, max_radius = std::f64::consts::PI))]
+fn compute_npe(phases: PyReadonlyArray1<'_, f64>, max_radius: f64) -> PyResult<f64> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spo_engine::npe::compute_npe(p, max_radius))
+}
+
+#[pyfunction]
+fn phase_distance_matrix<'py>(
+    py: Python<'py>,
+    phases: PyReadonlyArray1<'_, f64>,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let dist = spo_engine::npe::phase_distance_matrix(p);
+    Ok(PyArray1::from_slice(py, &dist))
+}
+
 // ─── Entropy Production Rate ────────────────────────────────────────
 
 #[pyfunction]
@@ -1517,6 +1540,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(graph_walk_phase, m)?)?;
     m.add_function(wrap_pyfunction!(transition_quality, m)?)?;
     m.add_function(wrap_pyfunction!(layer_coherence, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_npe, m)?)?;
+    m.add_function(wrap_pyfunction!(phase_distance_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;
     m.add_function(wrap_pyfunction!(winding_numbers, m)?)?;
     Ok(())
