@@ -12,6 +12,15 @@ import contextlib
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        estimate_coupling_rust as _rust_estimate_coupling,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["estimate_coupling"]
 
 
@@ -38,6 +47,12 @@ def estimate_coupling(
     n, T = phases.shape
     if T < 3:
         raise ValueError(f"Need >= 3 timesteps, got {T}")
+
+    if _HAS_RUST:
+        p_flat = np.ascontiguousarray(phases, dtype=np.float64).ravel()
+        o = np.ascontiguousarray(omegas, dtype=np.float64)
+        result = _rust_estimate_coupling(p_flat, o, n, T, dt)
+        return result.reshape(n, n)
 
     # Phase derivative: (dθ/dt)_i ≈ (θ_{t+1} - θ_{t-1}) / (2*dt)
     dphase = np.diff(np.unwrap(phases, axis=1), axis=1) / dt

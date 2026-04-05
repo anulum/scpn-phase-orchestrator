@@ -19,6 +19,15 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        load_hcp_connectome_rust as _rust_load_hcp,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["load_hcp_connectome", "load_neurolib_hcp"]
 
 _NEUROLIB_HCP_SIZE = 80  # Cakan & Obermayer 2021, Neuroimage 227:117474
@@ -78,6 +87,10 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> NDArray:
     if n_regions < 2:
         msg = f"n_regions must be >= 2, got {n_regions}"
         raise ValueError(msg)
+
+    if _HAS_RUST:
+        flat = _rust_load_hcp(n_regions, seed)
+        return flat.reshape(n_regions, n_regions)
 
     rng = np.random.default_rng(seed=seed)
     knm = np.zeros((n_regions, n_regions), dtype=np.float64)

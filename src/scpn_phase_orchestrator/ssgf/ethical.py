@@ -25,6 +25,15 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.coupling.spectral import fiedler_value
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        compute_ethical_cost_rust as _rust_ethical_cost,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["EthicalCost", "compute_ethical_cost"]
 
 
@@ -69,6 +78,17 @@ def compute_ethical_cost(
     if n == 0:
         return EthicalCost(
             J_sec=0.0, phi_ethics=0.0, c15_sec=1.0, constraints_violated=0
+        )
+
+    if _HAS_RUST:
+        p = np.ascontiguousarray(phases, dtype=np.float64)
+        k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        j, phi, c15, nv = _rust_ethical_cost(
+            p, k, n, alpha_R, beta_K, gamma_Q, nu_S, kappa,
+            R_min, connectivity_min, max_coupling,
+        )
+        return EthicalCost(
+            J_sec=j, phi_ethics=phi, c15_sec=c15, constraints_violated=nv,
         )
 
     R, _ = compute_order_parameter(phases)

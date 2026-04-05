@@ -12,6 +12,15 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        splitting_run_rust as _rust_splitting_run,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["SplittingEngine"]
 
 
@@ -67,6 +76,14 @@ class SplittingEngine:
         n_steps: int,
     ) -> NDArray:
         """Run n_steps of Strang splitting and return final phases."""
+        if _HAS_RUST:
+            p = np.ascontiguousarray(phases, dtype=np.float64)
+            o = np.ascontiguousarray(omegas, dtype=np.float64)
+            k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+            a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+            return _rust_splitting_run(
+                p, o, k, a, self._n, zeta, psi, self._dt, n_steps,
+            )
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

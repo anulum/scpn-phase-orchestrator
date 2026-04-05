@@ -26,8 +26,9 @@ use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
     basin_stability, bifurcation, delay, dimension, ei_balance, embedding, entropy_prod,
-    free_energy, hodge, inertial, itpc, market, poincare, psychedelic, ssgf_costs,
-    swarmalator,
+    carrier, connectome, coupling_est, envelope, ethical, evs, free_energy, freq_id, geometric,
+    hodge, hypergraph, inertial, itpc, market, phase_extract, poincare, prior, psychedelic,
+    reduction, simplicial, sindy, sleep_staging, splitting, ssgf_costs, swarmalator, te_adaptive,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -2339,6 +2340,366 @@ fn itpc_persistence_rust(
     Ok(itpc::itpc_persistence(p, n_trials, n_timepoints, &idx))
 }
 
+// ─── Hypergraph Kuramoto ──────���─────────────────────────────────────
+
+// ─── Carrier (SSGF decode) ──────────────────────────────────────────
+
+#[pyfunction]
+fn carrier_decode_rust(
+    py: Python<'_>,
+    z: PyReadonlyArray1<f64>,
+    a: PyReadonlyArray1<f64>,
+    n: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let zv = z.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let av = a.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = carrier::decode(zv, av, n);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Connectome ─────────────────────────────────────────────────────
+
+#[pyfunction]
+fn load_hcp_connectome_rust(
+    py: Python<'_>,
+    n_regions: usize,
+    seed: u64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let result = connectome::load_hcp_connectome(n_regions, seed);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Frequency Identification (DMD) ─────────────────────────────────
+
+#[pyfunction]
+fn identify_frequencies_rust(
+    py: Python<'_>,
+    data: PyReadonlyArray1<f64>,
+    n_ch: usize,
+    n_samples: usize,
+    fs: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let d = data.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = freq_id::identify_frequencies(d, n_ch, n_samples, fs);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Coupling Estimation ────────────────────────────────────────────
+
+#[pyfunction]
+fn estimate_coupling_rust(
+    py: Python<'_>,
+    phases: PyReadonlyArray1<f64>,
+    omegas: PyReadonlyArray1<f64>,
+    n: usize,
+    t: usize,
+    dt: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = coupling_est::estimate_coupling(p, o, n, t, dt);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Phase-SINDy ────────────────────────────────────────────────────
+
+#[pyfunction]
+fn sindy_fit_rust(
+    py: Python<'_>,
+    phases: PyReadonlyArray1<f64>,
+    n_osc: usize,
+    n_time: usize,
+    dt: f64,
+    threshold: f64,
+    max_iter: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = sindy::sindy_fit(p, n_osc, n_time, dt, threshold, max_iter);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Phase Extraction (Hilbert) ─────────────────────────────────────
+
+#[pyfunction]
+fn extract_phases_rust(
+    py: Python<'_>,
+    signal: PyReadonlyArray1<f64>,
+    fs: f64,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>, Py<PyArray1<f64>>, f64)> {
+    let s = signal.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (phases, amps, inst, dom) = phase_extract::extract_phases(s, fs);
+    Ok((
+        PyArray1::from_vec(py, phases).into(),
+        PyArray1::from_vec(py, amps).into(),
+        PyArray1::from_vec(py, inst).into(),
+        dom,
+    ))
+}
+
+// ─── TE Adaptive Coupling ───────────────────────────────────────────
+
+#[pyfunction]
+fn te_adapt_coupling_rust(
+    py: Python<'_>,
+    knm: PyReadonlyArray1<f64>,
+    te: PyReadonlyArray1<f64>,
+    n: usize,
+    lr: f64,
+    decay: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let t = te.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = te_adaptive::te_adapt_coupling(k, t, n, lr, decay);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Prior ──────────────────────────────────────────────────────────
+
+#[pyfunction]
+fn prior_log_probability_rust(
+    k_base: f64,
+    decay_alpha: f64,
+    k_mean: f64,
+    k_std: f64,
+    alpha_mean: f64,
+    alpha_std: f64,
+) -> PyResult<f64> {
+    Ok(prior::log_probability(k_base, decay_alpha, k_mean, k_std, alpha_mean, alpha_std))
+}
+
+#[pyfunction]
+fn prior_distance_decay_rust(
+    py: Python<'_>,
+    n: usize,
+    k_base: f64,
+    decay_alpha: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let result = prior::distance_decay_matrix(n, k_base, decay_alpha);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Ethical Cost ───────────────────────────────────────────────────
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn compute_ethical_cost_rust(
+    phases: PyReadonlyArray1<f64>,
+    knm: PyReadonlyArray1<f64>,
+    n: usize,
+    alpha_r: f64,
+    beta_k: f64,
+    gamma_q: f64,
+    nu_s: f64,
+    kappa: f64,
+    r_min: f64,
+    connectivity_min: f64,
+    max_coupling: f64,
+) -> PyResult<(f64, f64, f64, usize)> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(ethical::compute_ethical_cost(
+        p, k, n, alpha_r, beta_k, gamma_q, nu_s, kappa, r_min, connectivity_min, max_coupling,
+    ))
+}
+
+// ─── Sleep Staging ──────────────────────────────────────────────────
+
+#[pyfunction]
+fn classify_sleep_stage_rust(r: f64, functional_desync: bool) -> PyResult<u8> {
+    Ok(sleep_staging::classify_sleep_stage(r, functional_desync))
+}
+
+#[pyfunction]
+fn ultradian_phase_rust(
+    timestamps: PyReadonlyArray1<f64>,
+    stages: PyReadonlyArray1<u8>,
+) -> PyResult<f64> {
+    let ts = timestamps.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let st = stages.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(sleep_staging::ultradian_phase(ts, st))
+}
+
+// ─── EVS (Frequency Specificity) ────────────────────────────────────
+
+#[pyfunction]
+fn frequency_specificity_rust(
+    phases: PyReadonlyArray1<f64>,
+    n_trials: usize,
+    n_timepoints: usize,
+    target_freq: f64,
+    control_freq: f64,
+) -> PyResult<f64> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(evs::frequency_specificity(p, n_trials, n_timepoints, target_freq, control_freq))
+}
+
+// ─── Geometric (Torus) Integrator ───────────────────────────────────
+
+#[pyfunction]
+fn torus_run_rust(
+    py: Python<'_>,
+    phases: PyReadonlyArray1<f64>,
+    omegas: PyReadonlyArray1<f64>,
+    knm: PyReadonlyArray1<f64>,
+    alpha: PyReadonlyArray1<f64>,
+    n: usize,
+    zeta: f64,
+    psi: f64,
+    dt: f64,
+    n_steps: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = geometric::torus_run(p, o, k, a, zeta, psi, dt, n_steps);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Envelope ───────────────────────────────────────────────────────
+
+#[pyfunction]
+fn extract_envelope_rust(
+    py: Python<'_>,
+    amplitudes: PyReadonlyArray1<f64>,
+    window: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let a = amplitudes.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = envelope::extract_envelope(a, window);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+#[pyfunction]
+fn envelope_modulation_depth_rust(envelope_arr: PyReadonlyArray1<f64>) -> PyResult<f64> {
+    let e = envelope_arr.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(envelope::envelope_modulation_depth(e))
+}
+
+// ─── Ott-Antonsen Reduction ─────────────────────────────────────────
+
+#[pyfunction]
+fn oa_run_rust(
+    z_re: f64,
+    z_im: f64,
+    omega_0: f64,
+    delta: f64,
+    k_coupling: f64,
+    dt: f64,
+    n_steps: usize,
+) -> PyResult<(f64, f64, f64, f64)> {
+    Ok(reduction::oa_run(z_re, z_im, omega_0, delta, k_coupling, dt, n_steps))
+}
+
+#[pyfunction]
+fn steady_state_r_oa_rust(delta: f64, k_coupling: f64) -> PyResult<f64> {
+    Ok(reduction::steady_state_r_oa(delta, k_coupling))
+}
+
+#[pyfunction]
+fn fit_lorentzian_rust(omegas: PyReadonlyArray1<f64>) -> PyResult<(f64, f64)> {
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(reduction::fit_lorentzian(o))
+}
+
+// ─── Strang Splitting ───────────────────────────────────────────────
+
+#[pyfunction]
+fn splitting_run_rust(
+    py: Python<'_>,
+    phases: PyReadonlyArray1<f64>,
+    omegas: PyReadonlyArray1<f64>,
+    knm: PyReadonlyArray1<f64>,
+    alpha: PyReadonlyArray1<f64>,
+    n: usize,
+    zeta: f64,
+    psi: f64,
+    dt: f64,
+    n_steps: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = splitting::splitting_run(p, o, k, a, zeta, psi, dt, n_steps);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+/// Hypergraph Kuramoto run with flat-encoded hyperedges.
+///
+/// `edge_nodes`: flat array of node indices for all edges concatenated.
+/// `edge_offsets`: start index in `edge_nodes` for each edge (length = n_edges).
+/// `edge_strengths`: coupling strength per edge (length = n_edges).
+#[pyfunction]
+fn hypergraph_run_rust(
+    py: Python<'_>,
+    phases: PyReadonlyArray1<f64>,
+    omegas: PyReadonlyArray1<f64>,
+    n: usize,
+    edge_nodes: PyReadonlyArray1<i64>,
+    edge_offsets: PyReadonlyArray1<i64>,
+    edge_strengths: PyReadonlyArray1<f64>,
+    pairwise_knm: PyReadonlyArray1<f64>,
+    alpha: PyReadonlyArray1<f64>,
+    zeta: f64,
+    psi: f64,
+    dt: f64,
+    n_steps: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let en = edge_nodes.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let eo = edge_offsets.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let es = edge_strengths.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let kn = pairwise_knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let al = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    // Reconstruct hyperedges from flat encoding
+    let n_edges = eo.len();
+    let mut edges = Vec::with_capacity(n_edges);
+    for i in 0..n_edges {
+        let start = eo[i] as usize;
+        let end = if i + 1 < n_edges { eo[i + 1] as usize } else { en.len() };
+        let nodes: Vec<usize> = en[start..end].iter().map(|&v| v as usize).collect();
+        edges.push(hypergraph::Hyperedge {
+            nodes,
+            strength: es[i],
+        });
+    }
+
+    let result = hypergraph::hypergraph_run(p, o, n, &edges, kn, al, zeta, psi, dt, n_steps);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
+// ─── Simplicial Kuramoto ────────────────────────────────────────────
+
+#[pyfunction]
+fn simplicial_run_rust(
+    py: Python<'_>,
+    phases: PyReadonlyArray1<f64>,
+    omegas: PyReadonlyArray1<f64>,
+    knm: PyReadonlyArray1<f64>,
+    alpha: PyReadonlyArray1<f64>,
+    n: usize,
+    zeta: f64,
+    psi: f64,
+    sigma2: f64,
+    dt: f64,
+    n_steps: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    if p.len() != n || o.len() != n {
+        return Err(PyValueError::new_err("phases/omegas length must equal n"));
+    }
+    if k.len() != n * n || a.len() != n * n {
+        return Err(PyValueError::new_err("knm/alpha length must equal n*n"));
+    }
+    let result = simplicial::simplicial_run(p, o, k, a, zeta, psi, sigma2, dt, n_steps);
+    Ok(PyArray1::from_vec(py, result).into())
+}
+
 // ─── Module Registration ────────────────────────────────────────────
 
 #[pymodule]
@@ -2417,6 +2778,28 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(steady_state_r_rust, m)?)?;
     m.add_function(wrap_pyfunction!(trace_sync_transition_rust, m)?)?;
     m.add_function(wrap_pyfunction!(find_critical_coupling_bif_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(simplicial_run_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(hypergraph_run_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(torus_run_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_envelope_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(envelope_modulation_depth_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(oa_run_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(steady_state_r_oa_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(fit_lorentzian_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(splitting_run_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(te_adapt_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(prior_log_probability_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(prior_distance_decay_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_ethical_cost_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(classify_sleep_stage_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(ultradian_phase_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(frequency_specificity_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(estimate_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(sindy_fit_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_phases_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(carrier_decode_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(load_hcp_connectome_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(identify_frequencies_rust, m)?)?;
     Ok(())
 }
 

@@ -33,6 +33,15 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        hypergraph_run_rust as _rust_hypergraph_run,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "Hyperedge",
     "HypergraphEngine",
@@ -153,6 +162,33 @@ class HypergraphEngine:
         psi: float = 0.0,
     ) -> NDArray:
         """Run multiple steps, return final phases."""
+        if _HAS_RUST and self._hyperedges:
+            p = np.ascontiguousarray(phases, dtype=np.float64)
+            o = np.ascontiguousarray(omegas, dtype=np.float64)
+            # Flat-encode hyperedges
+            edge_nodes: list[int] = []
+            edge_offsets: list[int] = []
+            edge_strengths: list[float] = []
+            for edge in self._hyperedges:
+                edge_offsets.append(len(edge_nodes))
+                edge_nodes.extend(edge.nodes)
+                edge_strengths.append(edge.strength)
+            en = np.array(edge_nodes, dtype=np.int64)
+            eo = np.array(edge_offsets, dtype=np.int64)
+            es = np.array(edge_strengths, dtype=np.float64)
+            kn = (
+                np.ascontiguousarray(pairwise_knm.ravel(), dtype=np.float64)
+                if pairwise_knm is not None
+                else np.empty(0, dtype=np.float64)
+            )
+            al = (
+                np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+                if alpha is not None
+                else np.empty(0, dtype=np.float64)
+            )
+            return _rust_hypergraph_run(
+                p, o, self._n, en, eo, es, kn, al, zeta, psi, self._dt, n_steps,
+            )
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, pairwise_knm, alpha, zeta, psi)

@@ -13,6 +13,15 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        carrier_decode_rust as _rust_decode,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["GeometryCarrier", "SSGFState"]
 
 
@@ -68,6 +77,11 @@ class GeometryCarrier:
         """Map z → coupling matrix W (n × n, non-negative, zero diagonal)."""
         if z is None:
             z = self._z
+        if _HAS_RUST:
+            zv = np.ascontiguousarray(z, dtype=np.float64)
+            av = np.ascontiguousarray(self._A.ravel(), dtype=np.float64)
+            w_flat = _rust_decode(zv, av, self._n)
+            return w_flat.reshape(self._n, self._n)
         raw = self._A @ z
         # Softplus ensures non-negative coupling
         W = np.log1p(np.exp(raw)).reshape(self._n, self._n)

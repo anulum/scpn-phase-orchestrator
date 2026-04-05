@@ -12,6 +12,21 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (
+        fit_lorentzian_rust as _rust_fit_lorentzian,
+    )
+    from spo_kernel import (  # type: ignore[import-untyped]
+        oa_run_rust as _rust_oa_run,
+    )
+    from spo_kernel import (
+        steady_state_r_oa_rust as _rust_steady_state_r,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["OttAntonsenReduction", "OAState"]
 
 
@@ -50,6 +65,8 @@ class OttAntonsenReduction:
 
     def steady_state_R(self) -> float:
         """Analytical steady-state order parameter R_ss = √(1 - 2Δ/K)."""
+        if _HAS_RUST:
+            return _rust_steady_state_r(self._delta, self._K)
         if self.K_c >= self._K:
             return 0.0
         return float(np.sqrt(1.0 - 2.0 * self._delta / self._K))
@@ -74,6 +91,12 @@ class OttAntonsenReduction:
 
     def run(self, z0: complex, n_steps: int) -> OAState:
         """Integrate n_steps, return final state."""
+        if _HAS_RUST:
+            z_re, z_im, R, psi = _rust_oa_run(
+                z0.real, z0.imag,
+                self._omega_0, self._delta, self._K, self._dt, n_steps,
+            )
+            return OAState(z=complex(z_re, z_im), R=R, psi=psi, K_c=self.K_c)
         z = z0
         for _ in range(n_steps):
             z = self.step(z)
@@ -86,11 +109,15 @@ class OttAntonsenReduction:
 
         Uses median as ω₀ and IQR-based Δ estimate.
         """
-        # Fit Lorentzian: median → centre ω₀, IQR/2 → half-width Δ
-        # (IQR of a Lorentzian equals 2Δ, so IQR/2 ≈ Δ)
-        omega_0 = float(np.median(omegas))
-        q75, q25 = np.percentile(omegas, [75, 25])
-        delta = (q75 - q25) / 2.0 if q75 > q25 else 0.01
+        if _HAS_RUST:
+            o = np.ascontiguousarray(omegas, dtype=np.float64)
+            omega_0, delta = _rust_fit_lorentzian(o)
+        else:
+            # Fit Lorentzian: median → centre ω₀, IQR/2 → half-width Δ
+            # (IQR of a Lorentzian equals 2Δ, so IQR/2 ≈ Δ)
+            omega_0 = float(np.median(omegas))
+            q75, q25 = np.percentile(omegas, [75, 25])
+            delta = (q75 - q25) / 2.0 if q75 > q25 else 0.01
 
         reducer = OttAntonsenReduction(omega_0, delta, K, dt=self._dt)
         # Small seed breaks symmetry; integrate ~10 time units to steady state

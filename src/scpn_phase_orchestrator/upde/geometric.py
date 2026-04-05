@@ -10,6 +10,15 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        torus_run_rust as _rust_torus_run,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["TorusEngine"]
 
 
@@ -66,6 +75,12 @@ class TorusEngine:
         n_steps: int,
     ) -> NDArray:
         """Run *n_steps* torus integration steps, return final phases."""
+        if _HAS_RUST:
+            p = np.ascontiguousarray(phases, dtype=np.float64)
+            o = np.ascontiguousarray(omegas, dtype=np.float64)
+            k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+            a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+            return _rust_torus_run(p, o, k, a, self._n, zeta, psi, self._dt, n_steps)
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

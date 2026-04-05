@@ -13,6 +13,15 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        extract_phases_rust as _rust_extract_phases,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["extract_phases", "PhaseResult"]
 
 
@@ -43,6 +52,16 @@ def extract_phases(
         raise ValueError(f"signal must be 1-D, got shape {x.shape}")
     if len(x) < 4:
         raise ValueError(f"signal too short ({len(x)} samples), need >= 4")
+
+    if _HAS_RUST and bandpass is None:
+        s = np.ascontiguousarray(x, dtype=np.float64)
+        phases_r, amps_r, inst_r, dom_r = _rust_extract_phases(s, fs)
+        return PhaseResult(
+            phases=phases_r,
+            amplitudes=amps_r,
+            instantaneous_freq=inst_r,
+            dominant_freq=dom_r,
+        )
 
     if bandpass is not None:
         x = _bandpass_filter(x, fs, bandpass[0], bandpass[1])

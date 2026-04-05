@@ -12,6 +12,15 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        prior_log_probability_rust as _rust_log_prob,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["UniversalPrior", "CouplingPrior"]
 
 # Empirical prior from 25 domainpacks (R4-A3 cross-domain transfer study)
@@ -90,6 +99,12 @@ class UniversalPrior:
 
     def log_probability(self, K_base: float, decay_alpha: float) -> float:
         """Log-probability under the Gaussian prior (unnormalized)."""
+        if _HAS_RUST:
+            return _rust_log_prob(
+                K_base, decay_alpha,
+                self._K_base_mean, self._K_base_std,
+                self._decay_alpha_mean, self._decay_alpha_std,
+            )
         lp_K = -0.5 * ((K_base - self._K_base_mean) / self._K_base_std) ** 2
         lp_a = (
             -0.5 * ((decay_alpha - self._decay_alpha_mean) / self._decay_alpha_std) ** 2

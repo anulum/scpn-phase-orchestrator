@@ -14,6 +14,15 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
     transfer_entropy_matrix,
 )
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        te_adapt_coupling_rust as _rust_te_adapt,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["te_adapt_coupling"]
 
 
@@ -42,6 +51,12 @@ def te_adapt_coupling(
         n_bins: histogram bins for TE estimation.
     """
     te = transfer_entropy_matrix(phase_history, n_bins=n_bins)
+    if _HAS_RUST:
+        n = knm.shape[0]
+        k_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        t_flat = np.ascontiguousarray(te.ravel(), dtype=np.float64)
+        result_flat = _rust_te_adapt(k_flat, t_flat, n, lr, decay)
+        return result_flat.reshape(n, n)
     knm_new = (1.0 - decay) * knm + lr * te
     np.fill_diagonal(knm_new, 0.0)
     result: NDArray = np.maximum(knm_new, 0.0)

@@ -12,6 +12,18 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (
+        envelope_modulation_depth_rust as _rust_modulation_depth,
+    )
+    from spo_kernel import (  # type: ignore[import-untyped]
+        extract_envelope_rust as _rust_extract_envelope,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["extract_envelope", "envelope_modulation_depth", "EnvelopeState"]
 
 
@@ -30,6 +42,10 @@ def extract_envelope(amplitudes_history: NDArray, window: int = 10) -> NDArray:
         return amplitudes_history.copy()
     if window < 1:
         raise ValueError(f"window must be >= 1, got {window}")
+
+    if _HAS_RUST and amplitudes_history.ndim == 1:
+        a = np.ascontiguousarray(amplitudes_history, dtype=np.float64)
+        return _rust_extract_envelope(a, window)
 
     sq = amplitudes_history.astype(np.float64) ** 2
     if sq.ndim == 1:
@@ -55,6 +71,9 @@ def envelope_modulation_depth(envelope: NDArray) -> float:
     """
     if envelope.size == 0:
         return 0.0
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(envelope.ravel(), dtype=np.float64)
+        return _rust_modulation_depth(flat)
     flat = envelope.ravel()
     vmax = float(np.max(flat))
     vmin = float(np.min(flat))

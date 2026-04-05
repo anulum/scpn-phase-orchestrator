@@ -11,6 +11,15 @@ from __future__ import annotations
 import numpy as np
 from scipy.linalg import lstsq
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        sindy_fit_rust as _rust_sindy_fit,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["PhaseSINDy"]
 
 
@@ -31,6 +40,28 @@ class PhaseSINDy:
     def fit(self, phases: np.ndarray, dt: float) -> list[np.ndarray]:
         """Discover equations node-by-node to handle independent coupling."""
         T, N = phases.shape
+
+        if _HAS_RUST:
+            p_flat = np.ascontiguousarray(phases, dtype=np.float64).ravel()
+            result_flat = _rust_sindy_fit(
+                p_flat, N, T, dt, self.threshold, self.max_iter,
+            )
+            result = result_flat.reshape(N, N)
+            # Remap: Rust stores [ω at diagonal, K_ij off-diagonal]
+            # Python expects [ω, K_j1, K_j2, ...] (constant first, then j≠i)
+            self.coefficients = []
+            self.feature_names = []
+            for i in range(N):
+                xi = [result[i, i]]  # constant (ω)
+                names = ["1"]
+                for j in range(N):
+                    if j != i:
+                        xi.append(result[i, j])
+                        names.append(f"sin(theta_{j} - theta_{i})")
+                self.coefficients.append(np.array(xi))
+                self.feature_names.append(names)
+            return self.coefficients
+
         unwrapped = np.unwrap(phases, axis=0)
         theta_dot = np.diff(unwrapped, axis=0) / dt
         X = phases[:-1, :]

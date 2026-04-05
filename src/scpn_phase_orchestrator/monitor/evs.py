@@ -14,6 +14,15 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        frequency_specificity_rust as _rust_freq_spec,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["EVSMonitor", "EVSResult"]
 
 
@@ -111,6 +120,11 @@ class EVSMonitor:
         """
         if target_freq <= 0 or control_freq <= 0:
             return 0.0
+
+        if _HAS_RUST:
+            p = np.ascontiguousarray(phases_trials, dtype=np.float64)
+            n_trials, n_tp = p.shape
+            return _rust_freq_spec(p.ravel(), n_trials, n_tp, target_freq, control_freq)
 
         itpc_target = compute_itpc(phases_trials)
         target_mean = float(np.mean(itpc_target)) if itpc_target.size > 0 else 0.0

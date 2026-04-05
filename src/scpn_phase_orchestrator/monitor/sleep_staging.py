@@ -10,6 +10,18 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        classify_sleep_stage_rust as _rust_classify,
+    )
+    from spo_kernel import (
+        ultradian_phase_rust as _rust_ultradian,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["classify_sleep_stage", "ultradian_phase"]
 
 # AASM sleep staging mapped to Kuramoto order parameter R.
@@ -27,6 +39,9 @@ _STAGE_THRESHOLDS = {
 }
 
 
+_STAGE_NAMES = {0: "Wake", 1: "N1", 2: "N2", 3: "N3", 4: "REM"}
+
+
 def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
     """Classify sleep stage from Kuramoto order parameter *R*.
 
@@ -39,6 +54,9 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
     Returns:
         One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
     """
+    if _HAS_RUST:
+        code = _rust_classify(float(R), functional_desync)
+        return _STAGE_NAMES[code]
     R = float(R)
     if _STAGE_THRESHOLDS["N3"] <= R:
         return "N3"
@@ -56,6 +74,9 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
 
 # Ultradian NREM–REM cycle period (Rechtschaffen & Kales 1968).
 _ULTRADIAN_PERIOD_S = 90.0 * 60.0  # 90 minutes in seconds
+
+
+_STAGE_CODES = {"Wake": 0, "N1": 1, "N2": 2, "N3": 3, "REM": 4}
 
 
 def ultradian_phase(
@@ -76,6 +97,12 @@ def ultradian_phase(
         0.5 ≈ mid-cycle (REM), wrapping back toward 0.
         Returns 0.0 if no N3 epoch is found.
     """
+    if _HAS_RUST:
+        ts = np.ascontiguousarray(timestamps, dtype=np.float64)
+        codes = np.array(
+            [_STAGE_CODES.get(s, 0) for s in stage_history], dtype=np.uint8,
+        )
+        return _rust_ultradian(ts, codes)
     ts = np.asarray(timestamps, dtype=np.float64)
     if len(ts) == 0 or len(stage_history) == 0:
         return 0.0
