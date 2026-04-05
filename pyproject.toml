@@ -201,6 +201,9 @@ module = [
     "sc_neurocore.*",
     "scpn_quantum_control",
     "scpn_quantum_control.*",
+    "jax",
+    "jax.*",
+    "yaml",
 ]
 ignore_missing_imports = true
 
