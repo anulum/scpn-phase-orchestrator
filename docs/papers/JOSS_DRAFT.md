@@ -92,7 +92,7 @@ configuration.
 # Key Features
 
 - **3-tier acceleration.** Pure Python (development), Rust via PyO3
-  (production, ~40x speedup on Kuramoto step), and JAX (GPU batches).
+  (production, 53 engine modules, 2-96x speedup), and JAX (GPU batches).
 - **33 domainpacks** covering physical, biological, engineering, and
   financial systems.
 - **TCBO (Topological Consciousness Boundary Observable).** H1 persistent
@@ -108,7 +108,7 @@ configuration.
 - **Kani proof stubs.** Prepared for control bound correctness,
   rate-limit enforcement, and FSM transition ordering in the Rust kernel
   (requires Linux runner; CI workflow prepared but not yet executed).
-- **1560+ tests** across 95+ test files, 95% coverage gate.
+- **4 500+ tests** (3 945 Python + 567 Rust) across 120+ test files, 99%+ coverage.
 
 # Measured Evidence
 

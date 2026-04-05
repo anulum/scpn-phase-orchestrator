@@ -16,9 +16,11 @@ $$
 
 ### Technical specifications
 
-- **`spo-kernel` (Rust PyO3 backend):** Numerical integration (`euler`, `rk4`,
-  `rk45`) offloaded to a locally compiled, memory-safe Rust kernel for
-  zero-overhead parallel computation.
+- **`spo-kernel` (Rust PyO3 backend):** 53 engine modules compiled to native
+  code via PyO3, covering UPDE integration (12 variants), coupling estimation
+  (plasticity, TE, prior, connectome), monitors (sleep staging, EVS, chimera),
+  SSGF geometry (carrier, ethical cost), and autotune (SINDy, frequency ID).
+  Speedups range from 2x to 96x depending on the module.
 
 | Scenario | $N$ | Step time | Throughput |
 |----------|-----|-----------|------------|

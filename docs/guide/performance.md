@@ -43,9 +43,14 @@ are copied since the scratch buffer is reused across stages.
 
 ## Rust FFI
 
-When `spo_kernel` is installed, Python classes delegate hot paths to Rust
-automatically. Typical speedup: 3-9x depending on N. See
-[Rust FFI Acceleration](rust_ffi.md) for build instructions.
+When `spo_kernel` is installed, 53 engine modules delegate hot paths to
+Rust automatically. Speedups range from 2x to 96x depending on the module
+and N. See [Rust FFI Acceleration](rust_ffi.md) for build instructions
+and the full module table.
+
+**Note:** Two modules (coupling_est, phase_extract) have Rust auto-select
+disabled because LAPACK lstsq and SciPy FFT respectively outperform the
+current Rust implementations.
 
 Benchmark numbers (RK4, 1000 steps, averaged):
 

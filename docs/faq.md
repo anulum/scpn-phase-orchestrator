@@ -16,8 +16,10 @@ neural coherence, or microservice health.
 ### Do I need Rust?
 
 No. Pure Python works out of the box. When `spo_kernel` is installed (compiled
-via `maturin develop` in `spo-kernel/`), hot loops auto-delegate to Rust for
-5--10x acceleration. The public API is identical in both backends.
+via `maturin develop -m spo-kernel/crates/spo-ffi/Cargo.toml --release`),
+53 engine modules auto-delegate to Rust for 2-96x acceleration across UPDE
+integration, coupling, monitors, SSGF, and autotune. The public API is
+identical in both backends.
 
 ### What Python versions are supported?
 
@@ -111,9 +113,9 @@ Install: `pip install scpn-phase-orchestrator[nn]`
 
 See the [Differentiable Kuramoto guide](guide/differentiable_kuramoto.md).
 
-### What are the 9 UPDE engines?
+### What are the UPDE engines?
 
-SPO ships 9 ODE engine variants beyond the standard Kuramoto:
+SPO ships 18 ODE engine variants beyond the standard Kuramoto:
 
 1. **Standard Kuramoto** — first-order phase coupling
 2. **Stuart-Landau** — phase + amplitude with Hopf bifurcation
@@ -121,11 +123,18 @@ SPO ships 9 ODE engine variants beyond the standard Kuramoto:
 4. **Market** — financial regime detection via Hilbert phase
 5. **Swarmalator** — coupled spatial position + phase (robotics, biology)
 6. **Stochastic** — Euler-Maruyama with optimal noise D*
-7. **Geometric** — torus-preserving symplectic integrator for long simulations
+7. **Geometric** — torus-preserving SO(2) exponential map integrator
 8. **Delay** — time-delayed coupling with circular buffer
 9. **Simplicial** — 3-body higher-order interactions (Gambuzza 2023)
-
-Plus Ott-Antonsen mean-field reduction for O(1) MPC prediction.
+10. **Splitting** — Strang operator splitting (exact rotation + RK4 coupling)
+11. **Hypergraph** — k-body coupling with explicit edge lists
+12. **Sparse** — CSR-based O(N+E) integration for large networks
+13. **Sheaf** — multi-dimensional block coupling on cellular sheaves
+14. **Ott-Antonsen** — exact mean-field reduction for Lorentzian g(ω)
+15. **Prediction** — FEP-Kuramoto variational predictor
+16. **Adjoint** — gradient computation for K optimisation
+17. **Bifurcation** — continuation and critical point tracking
+18. **Basin Stability** — Monte Carlo stability analysis
 
 See the [Advanced Dynamics guide](guide/advanced_dynamics.md).
 
