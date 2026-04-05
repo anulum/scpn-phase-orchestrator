@@ -33,4 +33,6 @@ from scpn_phase_orchestrator import (
 | [Reporting](reporting.md) | Matplotlib coherence visualizations |
 | [Adapters](adapters.md) | Bridges to SCPN ecosystem, observability, SNN controllers |
 | [QueueWaves](queuewaves.md) | Real-time cascade failure detector for microservices |
+| [SSGF](ssgf.md) | Self-Stabilizing Gauge Field: geometry carrier, ethical cost, PGBO, TCBO |
+| [Autotune](autotune_sindy.md) | Auto-calibration: SINDy, coupling estimation, phase extraction, frequency ID |
 | [CLI](../cli.md) | `spo` command-line interface |

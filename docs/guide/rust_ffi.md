@@ -1,9 +1,10 @@
 # Rust FFI Acceleration
 
-The `spo-kernel` Rust workspace provides 5-10x speedup for UPDE integration,
-coupling construction, imprint modulation, and supervisor logic. Python classes
-auto-detect the compiled `spo_kernel` module and delegate transparently -- no
-code changes needed.
+The `spo-kernel` Rust workspace provides 2-96x speedup across 53 engine
+modules spanning UPDE integration, coupling construction, imprint modulation,
+supervisor logic, SSGF geometry control, monitor observers, and autotune
+pipelines. Python classes auto-detect the compiled `spo_kernel` module and
+delegate transparently — no code changes needed.
 
 ## Prerequisites
 
@@ -64,6 +65,22 @@ in benchmarks to force the Python path.
 | Physical extractor | `physical_extract` | analytic signal extraction |
 | Symbolic extractors | `ring_phase`, `graph_walk_phase`, `transition_quality` | single call |
 | Informational extractor | `event_phase` | timestamp analysis |
+| `SimplicialEngine` | `simplicial_run` | 3-body coupling `run()` |
+| `HypergraphEngine` | `hypergraph_run` | k-body coupling `run()` |
+| `GeometricEngine` | `geometric_run` | SO(2) exp map `run()` |
+| `extract_envelope` | `envelope_rms_rust` | cumulative-sum RMS |
+| `OttAntonsenReduction` | `oa_run_rust` | `run()`, `steady_state_R()`, `predict_from_oscillators()` |
+| `SplittingEngine` | `splitting_run_rust` | Strang split `run()` |
+| `te_adapt_coupling` | `te_adapt_coupling_rust` | TE-directed coupling update |
+| `UniversalPrior.log_probability` | `prior_log_probability_rust` | Bayesian log-density |
+| `load_hcp_connectome` | `load_hcp_connectome_rust` | synthetic connectome generation |
+| `GeometryCarrier.decode` | `carrier_decode_rust` | softplus(A·z) decode |
+| `compute_ethical_cost` | `compute_ethical_cost_rust` | SEC + CBF ethical cost |
+| `classify_sleep_stage` | `classify_sleep_stage_rust` | AASM stage classification |
+| `EVSMonitor._frequency_specificity` | `frequency_specificity_rust` | target/control ITPC ratio |
+| `PhaseSINDy.fit` | `sindy_fit_rust` | STLSQ sparse regression |
+| `estimate_coupling` | (disabled) | normal equations (3x slower than LAPACK) |
+| `extract_phases` | (disabled) | naive DFT (60x slower than SciPy FFT) |
 
 ## Benchmark Comparison
 
@@ -103,7 +120,7 @@ spo-kernel/
   Cargo.toml          # workspace root
   crates/
     spo-types/        # Shared types: UPDEState, LayerState, Regime, Knob, ControlAction
-    spo-engine/       # UPDE stepper, Stuart-Landau stepper, coupling, imprint, lags, PAC, LIF ensemble
+    spo-engine/       # 53 modules: UPDE (12 engines), coupling (11), monitors (14), SSGF (3), autotune (4), + support
     spo-oscillators/  # Physical, informational, symbolic, quality extractors
     spo-supervisor/   # Boundaries, coherence, policy, projector, regime manager
     spo-ffi/          # PyO3 bindings (this is what maturin builds)

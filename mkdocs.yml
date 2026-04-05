@@ -104,10 +104,29 @@ nav:
       - Core & Exceptions: reference/api/core.md
       - Binding: reference/api/binding.md
       - UPDE Engine: reference/api/upde.md
+      - "UPDE — Simplicial (3-body)": reference/api/upde_simplicial.md
+      - "UPDE — Hypergraph (k-body)": reference/api/upde_hypergraph.md
+      - "UPDE — Geometric (SO(2))": reference/api/upde_geometric.md
+      - "UPDE — Envelope (RMS)": reference/api/upde_envelope.md
+      - "UPDE — Ott-Antonsen Reduction": reference/api/upde_reduction.md
+      - "UPDE — Strang Splitting": reference/api/upde_splitting.md
       - Oscillators: reference/api/oscillators.md
       - Coupling: reference/api/coupling.md
+      - "Coupling — TE Adaptive": reference/api/coupling_te_adaptive.md
+      - "Coupling — Universal Prior": reference/api/coupling_prior.md
+      - "Coupling — HCP Connectome": reference/api/coupling_connectome.md
       - Supervisor: reference/api/supervisor.md
       - Monitor: reference/api/monitor.md
+      - "Monitor — Sleep Staging": reference/api/monitor_sleep_staging.md
+      - "Monitor — EVS (Entrainment)": reference/api/monitor_evs.md
+      - SSGF: reference/api/ssgf.md
+      - "SSGF — Geometry Carrier": reference/api/ssgf_carrier.md
+      - "SSGF — Ethical Cost (C15)": reference/api/ssgf_ethical.md
+      - Autotune:
+          - "Phase-SINDy": reference/api/autotune_sindy.md
+          - "Coupling Estimation": reference/api/autotune_coupling_est.md
+          - "Phase Extraction (Hilbert)": reference/api/autotune_phase_extract.md
+          - "Frequency Identification (DMD)": reference/api/autotune_freq_id.md
       - Actuation: reference/api/actuation.md
       - Imprint: reference/api/imprint.md
       - Drivers: reference/api/drivers.md

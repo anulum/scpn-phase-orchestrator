@@ -21,7 +21,7 @@ hide:
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
 [![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
 
-**3191 Python tests | 221 Rust tests | 99%+ coverage | 33 domainpacks | 27 examples**
+**3 945 Python tests | 567 Rust tests | 99%+ coverage | 53 Rust engine modules | 24 domainpacks | 27 examples**
 
 </div>
 

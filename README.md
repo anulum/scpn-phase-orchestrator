@@ -2,10 +2,10 @@
 
 Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics.
 
-> **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, all 12 integration methods, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are fully functional and tested (3 921 Python tests collected, 243 Rust tests, zero functional failures). We are currently expanding Rust FFI coverage across all monitor modules and completing per-module performance benchmarking. APIs may evolve as this work progresses.
+> **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, all 12 integration methods, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are fully functional and tested (3 945 Python tests passed, 567 Rust tests, zero functional failures). Rust FFI coverage now spans 53 engine modules across UPDE, coupling, monitor, SSGF, and autotune subsystems with Superior-level documentation (567+ lines, 8 mandatory sections) for every Rust-accelerated module. APIs may evolve as this work progresses.
 
-**Version:** 0.4.1
-**Status:** 142 Python Modules | 12 Engine Variants | 19 Monitors | 24 Domainpacks | 17 Rust Engine Modules | 243 Rust Tests | 3 921 Python Tests Collected
+**Version:** 0.5.0
+**Status:** 142 Python Modules | 12 Engine Variants | 19 Monitors | 24 Domainpacks | 53 Rust Engine Modules | 567 Rust Tests | 3 945 Python Tests Passed
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml)

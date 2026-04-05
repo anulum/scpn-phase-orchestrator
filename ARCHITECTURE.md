@@ -17,10 +17,11 @@ Domain YAML ──► Binding Loader ──► Validator
               Oscillator Extractors (P / I / S)
                      │
                      ▼
-         ┌── UPDE Engine (9 variants) ────────────┐
+         ┌── UPDE Engine (12 variants) ───────────┐
          │   Kuramoto, Stuart-Landau, Inertial,   │
          │   Market, Swarmalator, Stochastic,     │
-         │   Geometric, Delay, Simplicial         │
+         │   Geometric, Delay, Simplicial,        │
+         │   Splitting, Hypergraph, Sparse/Sheaf  │
          │   + Ott-Antonsen mean-field reduction  │
          └────────────┬───────────────────────────┘
                       │
@@ -188,16 +189,26 @@ Supporting: `order_params.py`, `pac.py`, `envelope.py`, `numerics.py`, `metrics.
 
 ## Rust Kernel (`spo-kernel/`)
 
-| Crate | Purpose |
-|-------|---------|
-| `spo-types` | Shared config and state types |
-| `spo-engine` | UPDE stepper, Stuart-Landau ODE, PAC, coupling |
-| `spo-oscillators` | Phase extraction (P/I/S channels) |
-| `spo-supervisor` | Regime manager, policy, coherence, projector |
-| `spo-ffi` | PyO3 bindings exposing Rust engine to Python |
+| Crate | Purpose | Modules |
+|-------|---------|---------|
+| `spo-types` | Shared config and state types | 4 |
+| `spo-engine` | UPDE integration, coupling, monitors, SSGF, autotune | 53 |
+| `spo-oscillators` | Phase extraction (P/I/S channels) | 5 |
+| `spo-supervisor` | Regime manager, policy, coherence, projector | 6 |
+| `spo-ffi` | PyO3 bindings exposing Rust engine to Python | 1 (cdylib) |
 
-Python auto-delegates to Rust when `spo_kernel` is importable. Pure-Python
-fallback ensures the package works without the native extension.
+The `spo-engine` crate contains 53 modules spanning UPDE integration
+(12 engine variants + order params + envelope + splitting + reduction),
+coupling (plasticity, TE adaptive, prior, connectome, spectral, Hodge),
+monitors (sleep staging, EVS, chimera, Lyapunov, entropy production),
+SSGF (carrier, ethical, costs), and autotune (SINDy, coupling estimation,
+phase extraction, frequency identification).
+
+Python auto-delegates to Rust when `spo_kernel` is importable via the
+`_HAS_RUST` pattern. Pure-Python fallback ensures the package works
+without the native extension. Two modules (phase_extract, coupling_est)
+have Rust auto-select disabled because LAPACK/FFT outperforms the
+current Rust implementation.
 
 ## Data Flow
 

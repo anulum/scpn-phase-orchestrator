@@ -249,6 +249,8 @@ across the two backends.
 | Gauged PGBO | Full | Full | Curvature proxy implementation |
 | TCBO (H1) | Full | In Progress | Moving to streaming Rust engine |
 | Plasticity (Hebbian)| Full | Full | Sub-microsecond inner loop |
+| Geometry Carrier | Full | Full | softplus decode (Python NumPy faster for N>16) |
+| Ethical Cost (C15) | Full | Full | SEC + CBF, 5.7x at N=8, Jacobi eigenvalues |
 
 ---
 
