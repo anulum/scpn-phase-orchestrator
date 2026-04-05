@@ -26,7 +26,7 @@ use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
     basin_stability, bifurcation, delay, dimension, ei_balance, embedding, entropy_prod,
-    free_energy, hodge, inertial, itpc, market, poincare, psychedelic,
+    free_energy, hodge, inertial, itpc, market, poincare, psychedelic, swarmalator,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1798,6 +1798,41 @@ fn rqa_rust(
     ))
 }
 
+// ─── Swarmalator ──────────────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (pos_init, phases_init, omegas, n, dim, dt, a, b, j, k, n_steps))]
+fn swarmalator_run_rust<'py>(
+    py: Python<'py>,
+    pos_init: PyReadonlyArray1<'py, f64>,
+    phases_init: PyReadonlyArray1<'py, f64>,
+    omegas: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    dim: usize,
+    dt: f64,
+    a: f64,
+    b: f64,
+    j: f64,
+    k: f64,
+    n_steps: usize,
+) -> PyResult<(
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+)> {
+    let p = pos_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let ph = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (fp, fph, pt, pht) = swarmalator::swarmalator_run(p, ph, o, n, dim, dt, a, b, j, k, n_steps);
+    Ok((
+        PyArray1::from_vec(py, fp),
+        PyArray1::from_vec(py, fph),
+        PyArray1::from_vec(py, pt),
+        PyArray1::from_vec(py, pht),
+    ))
+}
+
 // ─── Delayed Kuramoto ─────────────────────────────────────────────
 
 #[pyfunction]
@@ -2344,6 +2379,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(swarmalator_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(delayed_kuramoto_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(boltzmann_weight_rust, m)?)?;
     m.add_function(wrap_pyfunction!(effective_temperature_rust, m)?)?;

@@ -16,6 +16,7 @@ pub mod lif_ensemble;
 pub mod order_params;
 pub mod pac;
 pub mod stuart_landau;
+pub mod swarmalator;
 pub mod upde;
 
 pub use coupling::{CouplingBuilder, CouplingState};

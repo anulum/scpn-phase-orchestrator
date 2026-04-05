@@ -39,6 +39,15 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        swarmalator_run_rust as _rust_swarm_run,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 TWO_PI = 2.0 * np.pi
 
 
@@ -126,6 +135,22 @@ class SwarmalatorEngine:
             pos_traj: (n_steps, N, D), phase_traj: (n_steps, N)
         """
         n, dim = self._n, self._dim
+
+        if _HAS_RUST:
+            p = np.ascontiguousarray(positions.ravel(), dtype=np.float64)
+            ph_arr = np.ascontiguousarray(phases, dtype=np.float64)
+            o = np.ascontiguousarray(omegas, dtype=np.float64)
+            fp, fph, pt, pht = _rust_swarm_run(
+                p, ph_arr, o, n, dim, self._dt,
+                self.A, self.B, self.J, self.K, n_steps,
+            )
+            return (
+                np.asarray(fp).reshape(n, dim),
+                np.asarray(fph),
+                np.asarray(pt).reshape(n_steps, n, dim),
+                np.asarray(pht).reshape(n_steps, n),
+            )
+
         pos_traj = np.empty((n_steps, n, dim))
         phase_traj = np.empty((n_steps, n))
 
