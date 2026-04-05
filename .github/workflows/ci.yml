@@ -58,7 +58,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - name: Install (lockfile, 3.12 only)
+        if: matrix.python-version == '3.12'
+        run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - name: Install (loose, non-3.12)
+        if: matrix.python-version != '3.12'
+        run: pip install -e ".[dev,full,plot,otel,queuewaves]"
       - run: >
           pytest tests/ -v --tb=short
           --cov=scpn_phase_orchestrator
@@ -159,8 +164,8 @@ jobs:
             spo-kernel/target
           key: cargo-ffi-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-ffi-${{ runner.os }}-
-      - name: Build and test (Unix)
-        if: runner.os != 'Windows'
+      - name: Build and test (Unix, lockfile)
+        if: runner.os != 'Windows' && matrix.python-version == '3.12'
         run: |
           python -m venv .venv
           . .venv/bin/activate
@@ -168,14 +173,32 @@ jobs:
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           pytest tests/ -v --tb=short
-      - name: Build and test (Windows)
-        if: runner.os == 'Windows'
+      - name: Build and test (Unix, loose)
+        if: runner.os != 'Windows' && matrix.python-version != '3.12'
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install maturin
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install -e ".[dev,full,plot,otel,queuewaves]"
+          pytest tests/ -v --tb=short
+      - name: Build and test (Windows, lockfile)
+        if: runner.os == 'Windows' && matrix.python-version == '3.12'
         run: |
           python -m venv .venv
           .venv\Scripts\activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pytest tests/ -v --tb=short
+      - name: Build and test (Windows, loose)
+        if: runner.os == 'Windows' && matrix.python-version != '3.12'
+        run: |
+          python -m venv .venv
+          .venv\Scripts\activate
+          pip install maturin
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install -e ".[dev,full,plot,otel,queuewaves]"
           pytest tests/ -v --tb=short
 
   cargo-audit:
