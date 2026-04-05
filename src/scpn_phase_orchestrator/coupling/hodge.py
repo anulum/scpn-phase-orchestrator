@@ -12,6 +12,15 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        hodge_decomposition_rust as _rust_hodge,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["HodgeResult", "hodge_decomposition"]
 
 
@@ -42,10 +51,22 @@ def hodge_decomposition(knm: NDArray, phases: NDArray) -> HodgeResult:
 
     Jiang et al. 2011, Math. Program. 127(1):203-244.
     """
+    phases = np.asarray(phases, dtype=np.float64)
     n = len(phases)
     if n == 0:
         empty = np.array([], dtype=np.float64)
         return HodgeResult(gradient=empty, curl=empty, harmonic=empty)
+
+    if _HAS_RUST:
+        knm = np.asarray(knm, dtype=np.float64)
+        k_flat = np.ascontiguousarray(knm.ravel())
+        p_flat = np.ascontiguousarray(phases)
+        g, c, h = _rust_hodge(k_flat, p_flat, n)
+        return HodgeResult(
+            gradient=np.asarray(g),
+            curl=np.asarray(c),
+            harmonic=np.asarray(h),
+        )
 
     diff = phases[np.newaxis, :] - phases[:, np.newaxis]  # θ_j - θ_i
     cos_diff = np.cos(diff)

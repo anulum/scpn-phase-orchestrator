@@ -32,6 +32,7 @@ pub mod chimera;
 pub mod dimension;
 pub mod ei_balance;
 pub mod embedding;
+pub mod hodge;
 pub mod inertial;
 pub mod itpc;
 pub mod entropy_prod;

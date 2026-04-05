@@ -25,8 +25,8 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    basin_stability, bifurcation, dimension, ei_balance, embedding, entropy_prod, inertial, itpc,
-    market, poincare, psychedelic,
+    basin_stability, bifurcation, dimension, ei_balance, embedding, entropy_prod, hodge, inertial,
+    itpc, market, poincare, psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1798,6 +1798,29 @@ fn rqa_rust(
     ))
 }
 
+// ─── Hodge Decomposition ──────────────────────────────────────────
+
+#[pyfunction]
+fn hodge_decomposition_rust<'py>(
+    py: Python<'py>,
+    knm_flat: PyReadonlyArray1<'py, f64>,
+    phases: PyReadonlyArray1<'py, f64>,
+    n: usize,
+) -> PyResult<(
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+)> {
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (g, c, h) = hodge::hodge_decomposition(k, p, n);
+    Ok((
+        PyArray1::from_vec(py, g),
+        PyArray1::from_vec(py, c),
+        PyArray1::from_vec(py, h),
+    ))
+}
+
 // ─── E/I Balance ──────────────────────────────────────────────────
 
 #[pyfunction]
@@ -2268,6 +2291,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(hodge_decomposition_rust, m)?)?;
     m.add_function(wrap_pyfunction!(compute_ei_balance_rust, m)?)?;
     m.add_function(wrap_pyfunction!(adjust_ei_ratio_rust, m)?)?;
     m.add_function(wrap_pyfunction!(inertial_step_rust, m)?)?;
