@@ -34,6 +34,7 @@ pub mod embedding;
 pub mod itpc;
 pub mod entropy_prod;
 pub mod lyapunov;
+pub mod market;
 pub mod npe;
 pub mod pid;
 pub mod poincare;

@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    basin_stability, bifurcation, dimension, embedding, entropy_prod, itpc, poincare,
+    basin_stability, bifurcation, dimension, embedding, entropy_prod, itpc, market, poincare,
     psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
@@ -1798,6 +1798,47 @@ fn rqa_rust(
     ))
 }
 
+// ─── Market Synchronisation ───────────────────────────────────────
+
+#[pyfunction]
+fn market_order_parameter_rust<'py>(
+    py: Python<'py>,
+    phases_flat: PyReadonlyArray1<'py, f64>,
+    t: usize,
+    n: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let p = phases_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(PyArray1::from_vec(py, market::market_order_parameter(p, t, n)))
+}
+
+#[pyfunction]
+#[pyo3(signature = (phases_flat, t, n, window = 50))]
+fn market_plv_rust<'py>(
+    py: Python<'py>,
+    phases_flat: PyReadonlyArray1<'py, f64>,
+    t: usize,
+    n: usize,
+    window: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let p = phases_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(PyArray1::from_vec(py, market::market_plv(p, t, n, window)))
+}
+
+#[pyfunction]
+#[pyo3(signature = (r, sync_threshold = 0.7, desync_threshold = 0.3))]
+fn detect_regimes_rust<'py>(
+    py: Python<'py>,
+    r: PyReadonlyArray1<'py, f64>,
+    sync_threshold: f64,
+    desync_threshold: f64,
+) -> PyResult<Bound<'py, PyArray1<i32>>> {
+    let rv = r.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(PyArray1::from_vec(
+        py,
+        market::detect_regimes(rv, sync_threshold, desync_threshold),
+    ))
+}
+
 // ─── Basin Stability (Menck et al. 2013) ──────────────────────────
 
 #[pyfunction]
@@ -2130,6 +2171,9 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(market_order_parameter_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(market_plv_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(detect_regimes_rust, m)?)?;
     m.add_function(wrap_pyfunction!(basin_stability_rust, m)?)?;
     m.add_function(wrap_pyfunction!(steady_state_r_rust, m)?)?;
     m.add_function(wrap_pyfunction!(trace_sync_transition_rust, m)?)?;

@@ -21,6 +21,21 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        detect_regimes_rust as _rust_regimes,
+    )
+    from spo_kernel import (
+        market_order_parameter_rust as _rust_mop,
+    )
+    from spo_kernel import (
+        market_plv_rust as _rust_plv,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 
 def extract_phase(series: NDArray) -> NDArray:
     """Extract instantaneous phase from a time series via Hilbert transform.
@@ -45,6 +60,11 @@ def market_order_parameter(phases: NDArray) -> NDArray:
     Returns:
         (T,) order parameter R(t) in [0, 1]
     """
+    phases = np.asarray(phases, dtype=np.float64)
+    if _HAS_RUST:
+        T, N = phases.shape
+        flat = np.ascontiguousarray(phases.ravel())
+        return np.asarray(_rust_mop(flat, T, N))
     z = np.exp(1j * phases)
     R: NDArray = np.abs(np.mean(z, axis=1))
     return R
@@ -60,7 +80,15 @@ def market_plv(phases: NDArray, window: int = 50) -> NDArray:
     Returns:
         (T - window + 1, N, N) PLV matrices
     """
+    phases = np.asarray(phases, dtype=np.float64)
     T, N = phases.shape
+
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(phases.ravel())
+        plv_flat = np.asarray(_rust_plv(flat, T, N, window))
+        n_windows = T - window + 1
+        return plv_flat.reshape(n_windows, N, N)
+
     n_windows = T - window + 1
     plv_series = np.empty((n_windows, N, N))
 
@@ -87,6 +115,12 @@ def detect_regimes(
     Returns:
         (T,) integer labels: 0=desync, 1=transition, 2=synchronized
     """
+    R = np.asarray(R, dtype=np.float64)
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(R.ravel())
+        return np.asarray(
+            _rust_regimes(flat, sync_threshold, desync_threshold),
+        )
     regimes = np.ones(len(R), dtype=np.int32)  # default: transition
     mask_sync = sync_threshold <= R
     mask_desync = desync_threshold >= R
