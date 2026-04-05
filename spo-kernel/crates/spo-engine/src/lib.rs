@@ -31,6 +31,7 @@ pub mod bifurcation;
 pub mod chimera;
 pub mod dimension;
 pub mod embedding;
+pub mod inertial;
 pub mod itpc;
 pub mod entropy_prod;
 pub mod lyapunov;

@@ -25,6 +25,18 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        inertial_run_rust as _rust_run,
+    )
+    from spo_kernel import (
+        inertial_step_rust as _rust_step,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 TWO_PI = 2.0 * np.pi
 
 
@@ -60,6 +72,19 @@ class InertialKuramotoEngine:
         Returns:
             Tuple of (new_theta, new_omega_dot)
         """
+        if _HAS_RUST:
+            n = self._n
+            th = np.ascontiguousarray(theta, dtype=np.float64)
+            od = np.ascontiguousarray(omega_dot, dtype=np.float64)
+            pw = np.ascontiguousarray(power, dtype=np.float64)
+            km = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+            in_ = np.ascontiguousarray(inertia, dtype=np.float64)
+            dm = np.ascontiguousarray(damping, dtype=np.float64)
+            new_th, new_od = _rust_step(
+                th, od, pw, km, in_, dm, n, self._dt,
+            )
+            return np.asarray(new_th), np.asarray(new_od)
+
         dt = self._dt
 
         def deriv(th: NDArray, od: NDArray) -> tuple[NDArray, NDArray]:
@@ -96,6 +121,24 @@ class InertialKuramotoEngine:
             where trajectories are (n_steps, N)
         """
         n = self._n
+
+        if _HAS_RUST:
+            th = np.ascontiguousarray(theta, dtype=np.float64)
+            od = np.ascontiguousarray(omega_dot, dtype=np.float64)
+            pw = np.ascontiguousarray(power, dtype=np.float64)
+            km = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+            in_ = np.ascontiguousarray(inertia, dtype=np.float64)
+            dm = np.ascontiguousarray(damping, dtype=np.float64)
+            f_th, f_od, t_th, t_od = _rust_run(
+                th, od, pw, km, in_, dm, n, self._dt, n_steps,
+            )
+            return (
+                np.asarray(f_th),
+                np.asarray(f_od),
+                np.asarray(t_th).reshape(n_steps, n),
+                np.asarray(t_od).reshape(n_steps, n),
+            )
+
         theta_traj = np.empty((n_steps, n))
         omega_traj = np.empty((n_steps, n))
 

@@ -25,8 +25,8 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    basin_stability, bifurcation, dimension, embedding, entropy_prod, itpc, market, poincare,
-    psychedelic,
+    basin_stability, bifurcation, dimension, embedding, entropy_prod, inertial, itpc, market,
+    poincare, psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1798,6 +1798,66 @@ fn rqa_rust(
     ))
 }
 
+// ─── Inertial Kuramoto (Swing Equation) ───────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (theta, omega_dot, power, knm_flat, inertia, damping, n, dt))]
+fn inertial_step_rust<'py>(
+    py: Python<'py>,
+    theta: PyReadonlyArray1<'py, f64>,
+    omega_dot: PyReadonlyArray1<'py, f64>,
+    power: PyReadonlyArray1<'py, f64>,
+    knm_flat: PyReadonlyArray1<'py, f64>,
+    inertia: PyReadonlyArray1<'py, f64>,
+    damping: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    dt: f64,
+) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
+    let th = theta.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let od = omega_dot.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let pw = power.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let km = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let in_ = inertia.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let dm = damping.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (new_th, new_od) = inertial::inertial_step(th, od, pw, km, in_, dm, n, dt);
+    Ok((PyArray1::from_vec(py, new_th), PyArray1::from_vec(py, new_od)))
+}
+
+#[pyfunction]
+#[pyo3(signature = (theta, omega_dot, power, knm_flat, inertia, damping, n, dt, n_steps))]
+fn inertial_run_rust<'py>(
+    py: Python<'py>,
+    theta: PyReadonlyArray1<'py, f64>,
+    omega_dot: PyReadonlyArray1<'py, f64>,
+    power: PyReadonlyArray1<'py, f64>,
+    knm_flat: PyReadonlyArray1<'py, f64>,
+    inertia: PyReadonlyArray1<'py, f64>,
+    damping: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    dt: f64,
+    n_steps: usize,
+) -> PyResult<(
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+    Bound<'py, PyArray1<f64>>,
+)> {
+    let th = theta.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let od = omega_dot.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let pw = power.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let km = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let in_ = inertia.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let dm = damping.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (f_th, f_od, t_th, t_od) =
+        inertial::inertial_run(th, od, pw, km, in_, dm, n, dt, n_steps);
+    Ok((
+        PyArray1::from_vec(py, f_th),
+        PyArray1::from_vec(py, f_od),
+        PyArray1::from_vec(py, t_th),
+        PyArray1::from_vec(py, t_od),
+    ))
+}
+
 // ─── Market Synchronisation ───────────────────────────────────────
 
 #[pyfunction]
@@ -2171,6 +2231,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(inertial_step_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(inertial_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(market_order_parameter_rust, m)?)?;
     m.add_function(wrap_pyfunction!(market_plv_rust, m)?)?;
     m.add_function(wrap_pyfunction!(detect_regimes_rust, m)?)?;
