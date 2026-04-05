@@ -1,0 +1,20 @@
+{
+  "n": 16,
+  "n_groups": 3,
+  "n_steps": 100,
+  "n_epochs": 200,
+  "dt": 0.01,
+  "lr": 0.01,
+  "seed": 42,
+  "elapsed_s": 336.95,
+  "final_loss": 0.0032,
+  "initial_loss": 0.0039,
+  "final_R": 0.2356,
+  "mean_intra_K": -0.0086,
+  "mean_inter_K": -0.0073,
+  "mean_intra_PLV": 0.9859,
+  "mean_inter_PLV": 0.9892,
+  "K_separation": -0.0013,
+  "PLV_separation": -0.0032,
+  "works": false
+}
