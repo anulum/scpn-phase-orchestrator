@@ -17,6 +17,18 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        entropy_from_phases_rust as _rust_entropy,
+    )
+    from spo_kernel import (
+        reduce_coupling_rust as _rust_reduce,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "entropy_from_phases",
     "reduce_coupling",
@@ -34,7 +46,11 @@ def reduce_coupling(knm: NDArray, reduction_factor: float) -> NDArray:
     Returns:
         Scaled copy. Zero when reduction_factor == 1.
     """
-    return np.asarray(knm, dtype=np.float64) * (1.0 - reduction_factor)
+    k = np.asarray(knm, dtype=np.float64)
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(k.ravel())
+        return np.asarray(_rust_reduce(flat, reduction_factor)).reshape(k.shape)
+    return k * (1.0 - reduction_factor)
 
 
 def entropy_from_phases(phases: NDArray) -> float:
@@ -46,6 +62,11 @@ def entropy_from_phases(phases: NDArray) -> float:
     phases = np.asarray(phases, dtype=np.float64)
     if phases.size == 0:
         return 0.0
+
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(phases.ravel())
+        return float(_rust_entropy(flat, 36))
+
     wrapped = phases % (2.0 * np.pi)
     n_bins = 36
     counts, _ = np.histogram(wrapped, bins=n_bins, range=(0, 2.0 * np.pi))

@@ -35,6 +35,7 @@ pub mod lyapunov;
 pub mod npe;
 pub mod pid;
 pub mod poincare;
+pub mod psychedelic;
 pub mod plasticity;
 pub mod recurrence;
 pub mod sheaf_upde;

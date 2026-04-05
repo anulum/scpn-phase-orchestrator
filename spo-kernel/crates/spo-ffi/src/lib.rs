@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    dimension, embedding, entropy_prod, itpc, poincare,
+    dimension, embedding, entropy_prod, itpc, poincare, psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1797,6 +1797,32 @@ fn rqa_rust(
     ))
 }
 
+// ─── Psychedelic Entropy ───────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (phases, n_bins = 36))]
+fn entropy_from_phases_rust(
+    phases: PyReadonlyArray1<'_, f64>,
+    n_bins: usize,
+) -> PyResult<f64> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(psychedelic::entropy_from_phases(p, n_bins))
+}
+
+#[pyfunction]
+fn reduce_coupling_rust<'py>(
+    py: Python<'py>,
+    knm: PyReadonlyArray1<'py, f64>,
+    reduction_factor: f64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(PyArray1::from_vec(py, psychedelic::reduce_coupling(k, reduction_factor)))
+}
+
 // ─── Poincaré Section ──────────────────────────────────────────────
 
 /// Returns (crossings_flat, crossing_times, n_crossings).
@@ -1995,6 +2021,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(optimal_dimension_rust, m)?)?;
     m.add_function(wrap_pyfunction!(poincare_section_rust, m)?)?;
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
     Ok(())
 }
 
