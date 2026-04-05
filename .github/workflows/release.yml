@@ -30,12 +30,12 @@ jobs:
 
       - name: Build sdist
         run: |
-          pip install --require-hashes --no-deps -r requirements/release-tools.txt && pip install build==1.4.2 cyclonedx-bom==7.2.2
+          pip install --require-hashes --no-deps -r requirements/release-tools.txt
           python -m build --sdist
 
       - name: Generate SBOM
         run: |
-          pip install -e .
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           cyclonedx-py environment -o sbom.json --output-format json
 
       - name: Extract changelog

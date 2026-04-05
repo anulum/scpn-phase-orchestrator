@@ -52,7 +52,7 @@ else
     cd scpn-phase-orchestrator
 fi
 
-pip install --quiet -e ".[nn]" 2>&1 | tail -3
+pip install --quiet --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --quiet --no-deps -e . 2>&1 | tail -3
 echo "  Install complete"
 
 # Step 4: Smoke test

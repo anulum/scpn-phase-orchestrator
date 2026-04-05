@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev,full,nn,queuewaves,plot]"
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
       - run: python tools/check_version_sync.py
@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev,full,nn,queuewaves,plot]"
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: mypy src/scpn_phase_orchestrator/
 
   test:
@@ -58,7 +58,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: pip install -e ".[dev,full,nn,queuewaves,plot]"
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: >
           pytest tests/ -v --tb=short
           --cov=scpn_phase_orchestrator
@@ -73,7 +73,7 @@ jobs:
       - name: Validate notebooks
         if: matrix.python-version == '3.12'
         run: |
-          pip install -e ".[notebook]"
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           jupyter nbconvert --execute --to notebook notebooks/*.ipynb --ExecutePreprocessor.timeout=120
 
   coverage-guard:
@@ -85,7 +85,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev,full,nn,queuewaves,plot]"
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: coverage-xml
@@ -99,7 +99,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev,full,nn,queuewaves,plot]"
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: python tools/check_test_module_linkage.py
 
   security:
@@ -110,9 +110,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev,full,nn,queuewaves,plot]"
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: bandit -r src/ -c pyproject.toml
-      - run: pip install --require-hashes --no-deps -r requirements/audit-tools.txt && pip install pip-audit==2.10.0 && pip-audit --ignore-vuln CVE-2026-4539
+      - run: pip install --require-hashes --no-deps -r requirements/audit-tools.txt && pip-audit --ignore-vuln CVE-2026-4539
 
   rust-check:
     strategy:
@@ -166,7 +166,7 @@ jobs:
           . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install -e ".[dev,full,nn,queuewaves,plot]"
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           pytest tests/ -v --tb=short
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
@@ -175,7 +175,7 @@ jobs:
           .venv\Scripts\activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install -e ".[dev,full,nn,queuewaves,plot]"
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           pytest tests/ -v --tb=short
 
   cargo-audit:
@@ -213,7 +213,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev]"
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: python bench/run_benchmarks.py --json > bench/current.json
       - name: Compare against baseline (informational)
         run: python bench/compare_baseline.py bench/baseline.json bench/current.json

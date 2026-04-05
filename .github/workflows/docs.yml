@@ -33,6 +33,6 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev,queuewaves,plot,otel]"
-      - run: pip install --require-hashes --no-deps -r requirements/docs-tools.txt && pip install "pygments>=2.16,<2.20" mkdocs-material==9.7.6 mkdocstrings[python]==1.0.3 pymdown-extensions==10.21
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: pip install --require-hashes --no-deps -r requirements/docs-tools.txt
       - run: mkdocs gh-deploy --force
