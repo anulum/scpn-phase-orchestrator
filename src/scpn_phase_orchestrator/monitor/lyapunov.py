@@ -16,7 +16,7 @@ __all__ = ["LyapunovGuard", "LyapunovState", "lyapunov_spectrum"]
 
 try:
     from spo_kernel import (
-        lyapunov_spectrum_rust as _rust_lyapunov,  # type: ignore[import-untyped]
+        lyapunov_spectrum_rust as _rust_lyapunov,
     )
 
     _HAS_RUST = True

@@ -80,7 +80,10 @@ class TorusEngine:
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            return _rust_torus_run(p, o, k, a, self._n, zeta, psi, self._dt, n_steps)
+            result: NDArray = np.asarray(
+                _rust_torus_run(p, o, k, a, self._n, zeta, psi, self._dt, n_steps)
+            )
+            return result
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

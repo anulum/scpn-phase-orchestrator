@@ -16,7 +16,7 @@ __all__ = ["ChimeraState", "detect_chimera"]
 
 try:
     from spo_kernel import (
-        detect_chimera_rust as _rust_dc,  # type: ignore[import-untyped]
+        detect_chimera_rust as _rust_dc,
     )
 
     _HAS_RUST = True
