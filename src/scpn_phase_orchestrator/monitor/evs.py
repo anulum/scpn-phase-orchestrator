@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         frequency_specificity_rust as _rust_freq_spec,
     )
 

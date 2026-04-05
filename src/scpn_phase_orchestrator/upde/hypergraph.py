@@ -186,7 +186,7 @@ class HypergraphEngine:
                 if alpha is not None
                 else np.empty(0, dtype=np.float64)
             )
-            return _rust_hypergraph_run(
+            result: NDArray = _rust_hypergraph_run(
                 p,
                 o,
                 self._n,
@@ -200,6 +200,7 @@ class HypergraphEngine:
                 self._dt,
                 n_steps,
             )
+            return result
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, pairwise_knm, alpha, zeta, psi)

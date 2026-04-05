@@ -15,7 +15,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
 )
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         te_adapt_coupling_rust as _rust_te_adapt,
     )
 
@@ -55,7 +55,7 @@ def te_adapt_coupling(
         n = knm.shape[0]
         k_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         t_flat = np.ascontiguousarray(te.ravel(), dtype=np.float64)
-        result_flat = _rust_te_adapt(k_flat, t_flat, n, lr, decay)
+        result_flat: NDArray = np.asarray(_rust_te_adapt(k_flat, t_flat, n, lr, decay))
         return result_flat.reshape(n, n)
     knm_new = (1.0 - decay) * knm + lr * te
     np.fill_diagonal(knm_new, 0.0)
