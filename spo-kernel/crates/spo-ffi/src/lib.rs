@@ -34,6 +34,7 @@ use spo_engine::{
     sheaf_upde::SheafUPDEStepper,
     sparse_upde::SparseUPDEStepper,
     stuart_landau::StuartLandauStepper,
+    transfer_entropy,
     upde::UPDEStepper,
     winding,
 };
@@ -1572,6 +1573,39 @@ fn lyapunov_spectrum_rust<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
+// ─── Transfer Entropy ───────────────────────────────────────────────
+
+#[pyfunction]
+fn phase_transfer_entropy_rust(
+    source: PyReadonlyArray1<'_, f64>,
+    target: PyReadonlyArray1<'_, f64>,
+    n_bins: usize,
+) -> PyResult<f64> {
+    let s = source
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let t = target
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(transfer_entropy::phase_transfer_entropy(s, t, n_bins))
+}
+
+#[pyfunction]
+fn transfer_entropy_matrix_rust<'py>(
+    py: Python<'py>,
+    phase_series: PyReadonlyArray1<'py, f64>,
+    n_osc: usize,
+    n_time: usize,
+    n_bins: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let ps = phase_series
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = transfer_entropy::transfer_entropy_matrix(ps, n_osc, n_time, n_bins)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok(PyArray1::from_vec(py, result))
+}
+
 // ─── Recurrence Analysis ────────────────────────────────────────────
 
 #[pyfunction]
@@ -1682,6 +1716,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(recurrence_matrix_rust, m)?)?;
     m.add_function(wrap_pyfunction!(cross_recurrence_matrix_rust, m)?)?;
     m.add_function(wrap_pyfunction!(rqa_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(phase_transfer_entropy_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(transfer_entropy_matrix_rust, m)?)?;
     Ok(())
 }
 

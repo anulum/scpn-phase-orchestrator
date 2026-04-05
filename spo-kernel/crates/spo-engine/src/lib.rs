@@ -34,4 +34,5 @@ pub mod plasticity;
 pub mod recurrence;
 pub mod sheaf_upde;
 pub mod sparse_upde;
+pub mod transfer_entropy;
 pub mod winding;

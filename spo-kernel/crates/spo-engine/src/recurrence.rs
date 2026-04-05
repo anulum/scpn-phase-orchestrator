@@ -38,6 +38,9 @@ pub struct RqaResult {
 ///
 /// # Returns
 /// Flattened (T × T) boolean matrix as Vec<u8> (1 = recurrent, 0 = not).
+///
+/// # Errors
+/// Returns error if trajectory length ≠ T × d.
 pub fn recurrence_matrix(
     trajectory: &[f64],
     t: usize,
@@ -89,6 +92,9 @@ pub fn recurrence_matrix(
 }
 
 /// Cross-recurrence matrix CR_ij = Θ(ε − ‖x_i − y_j‖).
+///
+/// # Errors
+/// Returns error if trajectory lengths ≠ T × d.
 pub fn cross_recurrence_matrix(
     traj_a: &[f64],
     traj_b: &[f64],
@@ -143,6 +149,9 @@ pub fn cross_recurrence_matrix(
 /// The main diagonal is excluded from RR computation (self-recurrence
 /// is trivial). Diagonal lines of length ≥ l_min contribute to DET.
 /// Vertical lines of length ≥ v_min contribute to LAM.
+///
+/// # Errors
+/// Returns error if recurrence length ≠ T².
 #[allow(clippy::too_many_arguments)]
 pub fn rqa(
     recurrence: &[u8],

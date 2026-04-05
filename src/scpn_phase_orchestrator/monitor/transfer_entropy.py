@@ -12,6 +12,18 @@ from numpy.typing import NDArray
 
 __all__ = ["phase_transfer_entropy", "transfer_entropy_matrix"]
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        phase_transfer_entropy_rust as _rust_pte,
+    )
+    from spo_kernel import (
+        transfer_entropy_matrix_rust as _rust_tem,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 
 def phase_transfer_entropy(
     source: NDArray,
@@ -24,6 +36,15 @@ def phase_transfer_entropy(
 
     Estimated via binned phase histograms. Higher TE = source drives target.
     """
+    if _HAS_RUST:
+        return float(
+            _rust_pte(
+                np.ascontiguousarray(source, dtype=np.float64),
+                np.ascontiguousarray(target, dtype=np.float64),
+                n_bins,
+            )
+        )
+
     n = len(source)
     if n < 3 or len(target) < 3:
         return 0.0
@@ -73,6 +94,12 @@ def transfer_entropy_matrix(
         phase_series: (n_oscillators, n_timesteps) phase trajectories.
     """
     n_osc = phase_series.shape[0]
+    if _HAS_RUST:
+        n_time = phase_series.shape[1]
+        flat = np.ascontiguousarray(phase_series.ravel(), dtype=np.float64)
+        te_flat = np.asarray(_rust_tem(flat, n_osc, n_time, n_bins))
+        return te_flat.reshape(n_osc, n_osc)
+
     te = np.zeros((n_osc, n_osc), dtype=np.float64)
     for i in range(n_osc):
         for j in range(n_osc):
