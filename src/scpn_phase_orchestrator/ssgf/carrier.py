@@ -80,7 +80,7 @@ class GeometryCarrier:
         if _HAS_RUST:
             zv = np.ascontiguousarray(z, dtype=np.float64)
             av = np.ascontiguousarray(self._A.ravel(), dtype=np.float64)
-            w_flat = _rust_decode(zv, av, self._n)
+            w_flat: NDArray = np.asarray(_rust_decode(zv, av, self._n))
             return w_flat.reshape(self._n, self._n)
         raw = self._A @ z
         # Softplus ensures non-negative coupling

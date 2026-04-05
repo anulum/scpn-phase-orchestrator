@@ -45,7 +45,8 @@ def extract_envelope(amplitudes_history: NDArray, window: int = 10) -> NDArray:
 
     if _HAS_RUST and amplitudes_history.ndim == 1:
         a = np.ascontiguousarray(amplitudes_history, dtype=np.float64)
-        return _rust_extract_envelope(a, window)
+        result: NDArray = np.asarray(_rust_extract_envelope(a, window))
+        return result
 
     sq = amplitudes_history.astype(np.float64) ** 2
     if sq.ndim == 1:
@@ -73,7 +74,7 @@ def envelope_modulation_depth(envelope: NDArray) -> float:
         return 0.0
     if _HAS_RUST:
         flat = np.ascontiguousarray(envelope.ravel(), dtype=np.float64)
-        return _rust_modulation_depth(flat)
+        return float(_rust_modulation_depth(flat))
     flat = envelope.ravel()
     vmax = float(np.max(flat))
     vmin = float(np.min(flat))

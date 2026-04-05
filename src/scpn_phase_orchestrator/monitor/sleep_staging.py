@@ -103,7 +103,7 @@ def ultradian_phase(
             [_STAGE_CODES.get(s, 0) for s in stage_history],
             dtype=np.uint8,
         )
-        return _rust_ultradian(ts, codes)
+        return float(_rust_ultradian(ts, codes))
     ts = np.asarray(timestamps, dtype=np.float64)
     if len(ts) == 0 or len(stage_history) == 0:
         return 0.0
