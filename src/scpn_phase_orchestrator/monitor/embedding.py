@@ -27,6 +27,21 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        delay_embed_rust as _rust_delay_embed,
+    )
+    from spo_kernel import (
+        optimal_delay_rust as _rust_optimal_delay,
+    )
+    from spo_kernel import (
+        optimal_dimension_rust as _rust_optimal_dimension,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "EmbeddingResult",
     "delay_embed",
@@ -70,7 +85,7 @@ def delay_embed(
     Returns:
         (T', m) embedded trajectory where T' = T - (m-1)*τ.
     """
-    s = np.asarray(signal).ravel()
+    s = np.asarray(signal, dtype=np.float64).ravel()
     T = len(s)
     T_eff = T - (dimension - 1) * delay
     if T_eff <= 0:
@@ -79,6 +94,11 @@ def delay_embed(
             f"dimension={dimension}: need T > {(dimension - 1) * delay}"
         )
         raise ValueError(msg)
+
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(s)
+        result_flat = np.asarray(_rust_delay_embed(flat, delay, dimension))
+        return result_flat.reshape(T_eff, dimension)
 
     indices = np.arange(dimension) * delay
     rows = np.arange(T_eff)[:, np.newaxis] + indices[np.newaxis, :]
@@ -138,7 +158,12 @@ def optimal_delay(
     Returns:
         Optimal delay τ (samples). Returns 1 if no minimum found.
     """
-    s = np.asarray(signal).ravel()
+    s = np.asarray(signal, dtype=np.float64).ravel()
+
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(s)
+        return int(_rust_optimal_delay(flat, max_lag, n_bins))
+
     max_lag = min(max_lag, len(s) // 2)
 
     mi_values = np.array(
@@ -195,10 +220,14 @@ def optimal_dimension(
     Returns:
         Optimal embedding dimension m.
     """
-    s = np.asarray(signal).ravel()
+    s = np.asarray(signal, dtype=np.float64).ravel()
     sigma = np.std(s)
     if sigma == 0:
         return 1
+
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(s)
+        return int(_rust_optimal_dimension(flat, delay, max_dim, rtol, atol))
 
     for m in range(1, max_dim + 1):
         T_eff = len(s) - m * delay

@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    dimension, entropy_prod, itpc,
+    dimension, embedding, entropy_prod, itpc,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1797,6 +1797,51 @@ fn rqa_rust(
     ))
 }
 
+// ─── Embedding (Takens 1981) ───────────────────────────────────────
+
+#[pyfunction]
+fn delay_embed_rust<'py>(
+    py: Python<'py>,
+    signal: PyReadonlyArray1<'py, f64>,
+    delay: usize,
+    dimension: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let s = signal
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = embedding::delay_embed(s, delay, dimension)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok(PyArray1::from_vec(py, result))
+}
+
+#[pyfunction]
+#[pyo3(signature = (signal, max_lag = 100, n_bins = 32))]
+fn optimal_delay_rust(
+    signal: PyReadonlyArray1<'_, f64>,
+    max_lag: usize,
+    n_bins: usize,
+) -> PyResult<usize> {
+    let s = signal
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(embedding::optimal_delay(s, max_lag, n_bins))
+}
+
+#[pyfunction]
+#[pyo3(signature = (signal, delay, max_dim = 10, rtol = 15.0, atol = 2.0))]
+fn optimal_dimension_rust(
+    signal: PyReadonlyArray1<'_, f64>,
+    delay: usize,
+    max_dim: usize,
+    rtol: f64,
+    atol: f64,
+) -> PyResult<usize> {
+    let s = signal
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(embedding::optimal_dimension(s, delay, max_dim, rtol, atol))
+}
+
 // ─── ITPC (Lachaux et al. 1999) ────────────────────────────────────
 
 #[pyfunction]
@@ -1888,6 +1933,9 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(kaplan_yorke_dimension_rust, m)?)?;
     m.add_function(wrap_pyfunction!(compute_itpc_rust, m)?)?;
     m.add_function(wrap_pyfunction!(itpc_persistence_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(delay_embed_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(optimal_delay_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(optimal_dimension_rust, m)?)?;
     Ok(())
 }
 
