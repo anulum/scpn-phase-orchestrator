@@ -25,7 +25,8 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    bifurcation, dimension, embedding, entropy_prod, itpc, poincare, psychedelic,
+    basin_stability, bifurcation, dimension, embedding, entropy_prod, itpc, poincare,
+    psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1797,6 +1798,35 @@ fn rqa_rust(
     ))
 }
 
+// ─── Basin Stability (Menck et al. 2013) ──────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (
+    omegas, knm_flat, alpha_flat, n,
+    dt, n_transient, n_measure, n_samples, r_threshold, seed
+))]
+fn basin_stability_rust<'py>(
+    py: Python<'py>,
+    omegas: PyReadonlyArray1<'py, f64>,
+    knm_flat: PyReadonlyArray1<'py, f64>,
+    alpha_flat: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+    n_samples: usize,
+    r_threshold: f64,
+    seed: u64,
+) -> PyResult<(f64, Bound<'py, PyArray1<f64>>, usize)> {
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = basin_stability::basin_stability(
+        o, k, a, n, dt, n_transient, n_measure, n_samples, r_threshold, seed,
+    );
+    Ok((result.s_b, PyArray1::from_vec(py, result.r_finals), result.n_converged))
+}
+
 // ─── Bifurcation (Kuramoto 1975) ──────────────────────────────────
 
 #[pyfunction]
@@ -2100,6 +2130,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(basin_stability_rust, m)?)?;
     m.add_function(wrap_pyfunction!(steady_state_r_rust, m)?)?;
     m.add_function(wrap_pyfunction!(trace_sync_transition_rust, m)?)?;
     m.add_function(wrap_pyfunction!(find_critical_coupling_bif_rust, m)?)?;

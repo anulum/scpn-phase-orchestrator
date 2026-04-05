@@ -23,6 +23,15 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        basin_stability_rust as _rust_basin,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "BasinStabilityResult",
     "basin_stability",
@@ -111,13 +120,29 @@ def basin_stability(
     if alpha is None:
         alpha = np.zeros((N, N))
 
+    if _HAS_RUST:
+        o = np.ascontiguousarray(omegas, dtype=np.float64)
+        k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+        s_b, r_finals_arr, n_conv = _rust_basin(
+            o, k, a, N, dt, n_transient, n_measure,
+            n_samples, R_threshold, seed,
+        )
+        return BasinStabilityResult(
+            S_B=float(s_b),
+            n_samples=n_samples,
+            n_converged=int(n_conv),
+            R_final=np.asarray(r_finals_arr),
+            R_threshold=R_threshold,
+        )
+
     rng = np.random.default_rng(seed)
     R_finals = np.zeros(n_samples)
 
     for i in range(n_samples):
         phases_init = rng.uniform(0, 2 * np.pi, N)
         R_finals[i] = _run_kuramoto_to_steady(
-            phases_init, omegas, knm, alpha, dt, n_transient, n_measure
+            phases_init, omegas, knm, alpha, dt, n_transient, n_measure,
         )
 
     n_converged = int(np.sum(R_finals >= R_threshold))
@@ -158,13 +183,35 @@ def multi_basin_stability(
     if alpha is None:
         alpha = np.zeros((N, N))
 
+    if _HAS_RUST:
+        # Run once at lowest threshold to get R_finals, then threshold locally
+        o = np.ascontiguousarray(omegas, dtype=np.float64)
+        k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+        _, r_finals_arr, _ = _rust_basin(
+            o, k, a, N, dt, n_transient, n_measure,
+            n_samples, 0.0, seed,
+        )
+        R_finals = np.asarray(r_finals_arr)
+        results = {}
+        for thresh in R_thresholds:
+            n_above = int(np.sum(R_finals >= thresh))
+            results[f"R>={thresh:.2f}"] = BasinStabilityResult(
+                S_B=n_above / n_samples,
+                n_samples=n_samples,
+                n_converged=n_above,
+                R_final=R_finals,
+                R_threshold=thresh,
+            )
+        return results
+
     rng = np.random.default_rng(seed)
     R_finals = np.zeros(n_samples)
 
     for i in range(n_samples):
         phases_init = rng.uniform(0, 2 * np.pi, N)
         R_finals[i] = _run_kuramoto_to_steady(
-            phases_init, omegas, knm, alpha, dt, n_transient, n_measure
+            phases_init, omegas, knm, alpha, dt, n_transient, n_measure,
         )
 
     results = {}
