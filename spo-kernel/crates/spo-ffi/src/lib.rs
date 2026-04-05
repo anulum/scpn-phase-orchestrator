@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    dimension, entropy_prod,
+    dimension, entropy_prod, itpc,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1797,6 +1797,44 @@ fn rqa_rust(
     ))
 }
 
+// ─── ITPC (Lachaux et al. 1999) ────────────────────────────────────
+
+#[pyfunction]
+fn compute_itpc_rust<'py>(
+    py: Python<'py>,
+    phases_flat: PyReadonlyArray1<'py, f64>,
+    n_trials: usize,
+    n_timepoints: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let p = phases_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = itpc::compute_itpc(p, n_trials, n_timepoints);
+    Ok(PyArray1::from_vec(py, result))
+}
+
+#[pyfunction]
+fn itpc_persistence_rust(
+    phases_flat: PyReadonlyArray1<'_, f64>,
+    n_trials: usize,
+    n_timepoints: usize,
+    pause_indices: PyReadonlyArray1<'_, i64>,
+) -> PyResult<f64> {
+    let p = phases_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let idx_raw = pause_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    // Convert i64 indices to usize, filtering negatives
+    let idx: Vec<usize> = idx_raw
+        .iter()
+        .filter(|&&v| v >= 0)
+        .map(|&v| v as usize)
+        .collect();
+    Ok(itpc::itpc_persistence(p, n_trials, n_timepoints, &idx))
+}
+
 // ─── Module Registration ────────────────────────────────────────────
 
 #[pymodule]
@@ -1848,6 +1886,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(detect_chimera_rust, m)?)?;
     m.add_function(wrap_pyfunction!(correlation_integral_rust, m)?)?;
     m.add_function(wrap_pyfunction!(kaplan_yorke_dimension_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_itpc_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(itpc_persistence_rust, m)?)?;
     Ok(())
 }
 

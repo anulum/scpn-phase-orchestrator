@@ -28,6 +28,7 @@ pub use stuart_landau::StuartLandauStepper;
 pub use upde::UPDEStepper;
 pub mod chimera;
 pub mod dimension;
+pub mod itpc;
 pub mod entropy_prod;
 pub mod lyapunov;
 pub mod npe;

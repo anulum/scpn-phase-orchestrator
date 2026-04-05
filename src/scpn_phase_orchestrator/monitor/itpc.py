@@ -10,6 +10,18 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        compute_itpc_rust as _rust_itpc,
+    )
+    from spo_kernel import (
+        itpc_persistence_rust as _rust_itpc_persist,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["compute_itpc", "itpc_persistence"]
 
 
@@ -29,6 +41,12 @@ def compute_itpc(phases_trials: NDArray) -> NDArray:
         return np.array([1.0])
     if phases.shape[0] == 0:
         return np.array([])
+
+    if _HAS_RUST:
+        n_trials, n_tp = phases.shape
+        flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
+        return np.asarray(_rust_itpc(flat, n_trials, n_tp))
+
     result: NDArray = np.abs(np.mean(np.exp(1j * phases), axis=0))
     return result
 
@@ -55,6 +73,16 @@ def itpc_persistence(
     pause_idx = np.asarray(pause_indices, dtype=int)
     if pause_idx.size == 0:
         return 0.0
+
+    if _HAS_RUST:
+        phases = np.asarray(phases_trials, dtype=np.float64)
+        if phases.ndim == 1:
+            phases = phases.reshape(1, -1)
+        n_trials, n_tp = phases.shape
+        flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
+        idx = np.ascontiguousarray(pause_idx, dtype=np.int64)
+        return float(_rust_itpc_persist(flat, n_trials, n_tp, idx))
+
     itpc_full = compute_itpc(phases_trials)
     valid = pause_idx[(pause_idx >= 0) & (pause_idx < itpc_full.size)]
     if valid.size == 0:
