@@ -12,6 +12,18 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        adjust_ei_ratio_rust as _rust_adjust,
+    )
+    from spo_kernel import (
+        compute_ei_balance_rust as _rust_ei,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["EIBalance", "compute_ei_balance", "adjust_ei_ratio"]
 
 
@@ -37,7 +49,21 @@ def compute_ei_balance(
     ratio < 1: inhibition-dominated (desynchronization risk)
     ratio ≈ 1: balanced (optimal for metastability)
     """
+    knm = np.asarray(knm, dtype=np.float64)
     n = knm.shape[0]
+
+    if _HAS_RUST:
+        k_flat = np.ascontiguousarray(knm.ravel())
+        e_arr = np.array(excitatory_indices, dtype=np.int64)
+        i_arr = np.array(inhibitory_indices, dtype=np.int64)
+        ratio, e_str, i_str, balanced = _rust_ei(k_flat, n, e_arr, i_arr)
+        return EIBalance(
+            ratio=float(ratio),
+            excitatory_strength=float(e_str),
+            inhibitory_strength=float(i_str),
+            is_balanced=bool(balanced),
+        )
+
     e_mask = np.zeros(n, dtype=bool)
     i_mask = np.zeros(n, dtype=bool)
     for idx in excitatory_indices:
@@ -76,6 +102,18 @@ def adjust_ei_ratio(
     Returns modified knm with inhibitory rows scaled so that
     E_strength / I_strength ≈ target_ratio.
     """
+    knm = np.asarray(knm, dtype=np.float64)
+    n = knm.shape[0]
+
+    if _HAS_RUST:
+        k_flat = np.ascontiguousarray(knm.ravel())
+        e_arr = np.array(excitatory_indices, dtype=np.int64)
+        i_arr = np.array(inhibitory_indices, dtype=np.int64)
+        result_flat = np.asarray(
+            _rust_adjust(k_flat, n, e_arr, i_arr, target_ratio),
+        )
+        return result_flat.reshape(n, n)
+
     balance = compute_ei_balance(knm, excitatory_indices, inhibitory_indices)
     if balance.inhibitory_strength < 1e-15 or balance.excitatory_strength < 1e-15:
         return knm.copy()
@@ -87,7 +125,6 @@ def adjust_ei_ratio(
     # Scale inhibitory rows: I_new = I_old * (current_ratio / target_ratio)
     scale = current_ratio / target_ratio
     result = knm.copy()
-    n = knm.shape[0]
     for idx in inhibitory_indices:
         if idx < n:
             result[idx, :] *= scale

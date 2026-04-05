@@ -30,6 +30,7 @@ pub mod basin_stability;
 pub mod bifurcation;
 pub mod chimera;
 pub mod dimension;
+pub mod ei_balance;
 pub mod embedding;
 pub mod inertial;
 pub mod itpc;

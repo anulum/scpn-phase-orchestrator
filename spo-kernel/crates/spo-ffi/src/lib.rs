@@ -25,8 +25,8 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    basin_stability, bifurcation, dimension, embedding, entropy_prod, inertial, itpc, market,
-    poincare, psychedelic,
+    basin_stability, bifurcation, dimension, ei_balance, embedding, entropy_prod, inertial, itpc,
+    market, poincare, psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1798,6 +1798,43 @@ fn rqa_rust(
     ))
 }
 
+// ─── E/I Balance ──────────────────────────────────────────────────
+
+#[pyfunction]
+fn compute_ei_balance_rust(
+    knm_flat: PyReadonlyArray1<'_, f64>,
+    n: usize,
+    excitatory_indices: PyReadonlyArray1<'_, i64>,
+    inhibitory_indices: PyReadonlyArray1<'_, i64>,
+) -> PyResult<(f64, f64, f64, bool)> {
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_raw = excitatory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let i_raw = inhibitory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_idx: Vec<usize> = e_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
+    let i_idx: Vec<usize> = i_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
+    let r = ei_balance::compute_ei_balance(k, n, &e_idx, &i_idx);
+    Ok((r.ratio, r.excitatory_strength, r.inhibitory_strength, r.is_balanced))
+}
+
+#[pyfunction]
+#[pyo3(signature = (knm_flat, n, excitatory_indices, inhibitory_indices, target_ratio = 1.0))]
+fn adjust_ei_ratio_rust<'py>(
+    py: Python<'py>,
+    knm_flat: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    excitatory_indices: PyReadonlyArray1<'py, i64>,
+    inhibitory_indices: PyReadonlyArray1<'py, i64>,
+    target_ratio: f64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_raw = excitatory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let i_raw = inhibitory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_idx: Vec<usize> = e_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
+    let i_idx: Vec<usize> = i_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
+    let result = ei_balance::adjust_ei_ratio(k, n, &e_idx, &i_idx, target_ratio);
+    Ok(PyArray1::from_vec(py, result))
+}
+
 // ─── Inertial Kuramoto (Swing Equation) ───────────────────────────
 
 #[pyfunction]
@@ -2231,6 +2268,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_ei_balance_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(adjust_ei_ratio_rust, m)?)?;
     m.add_function(wrap_pyfunction!(inertial_step_rust, m)?)?;
     m.add_function(wrap_pyfunction!(inertial_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(market_order_parameter_rust, m)?)?;
