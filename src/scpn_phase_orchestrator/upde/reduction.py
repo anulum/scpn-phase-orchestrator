@@ -66,7 +66,7 @@ class OttAntonsenReduction:
     def steady_state_R(self) -> float:
         """Analytical steady-state order parameter R_ss = √(1 - 2Δ/K)."""
         if _HAS_RUST:
-            return _rust_steady_state_r(self._delta, self._K)
+            return float(_rust_steady_state_r(self._delta, self._K))
         if self.K_c >= self._K:
             return 0.0
         return float(np.sqrt(1.0 - 2.0 * self._delta / self._K))

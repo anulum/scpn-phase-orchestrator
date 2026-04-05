@@ -170,6 +170,7 @@ module = [
     "scpn_phase_orchestrator.upde.pac",
     "scpn_phase_orchestrator.upde.stuart_landau",
     "scpn_phase_orchestrator.upde.order_params",
+    "scpn_phase_orchestrator.monitor.poincare",
 ]
 warn_unused_ignores = false
 
