@@ -26,7 +26,8 @@ use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
     basin_stability, bifurcation, delay, dimension, ei_balance, embedding, entropy_prod,
-    free_energy, hodge, inertial, itpc, market, poincare, psychedelic, swarmalator,
+    free_energy, hodge, inertial, itpc, market, poincare, psychedelic, ssgf_costs,
+    swarmalator,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1798,6 +1799,25 @@ fn rqa_rust(
     ))
 }
 
+// ─── SSGF Costs ───────────────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (w_flat, phases, n, w1 = 1.0, w2 = 0.5, w3 = 0.1, w4 = 0.1))]
+fn compute_ssgf_costs_rust(
+    w_flat: PyReadonlyArray1<'_, f64>,
+    phases: PyReadonlyArray1<'_, f64>,
+    n: usize,
+    w1: f64,
+    w2: f64,
+    w3: f64,
+    w4: f64,
+) -> PyResult<(f64, f64, f64, f64, f64)> {
+    let w = w_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let r = ssgf_costs::compute_ssgf_costs(w, p, n, (w1, w2, w3, w4));
+    Ok((r.c1_sync, r.c2_spectral_gap, r.c3_sparsity, r.c4_symmetry, r.u_total))
+}
+
 // ─── Swarmalator ──────────────────────────────────────────────────
 
 #[pyfunction]
@@ -2379,6 +2399,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_ssgf_costs_rust, m)?)?;
     m.add_function(wrap_pyfunction!(swarmalator_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(delayed_kuramoto_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(boltzmann_weight_rust, m)?)?;

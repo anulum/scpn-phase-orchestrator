@@ -15,6 +15,15 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.coupling.spectral import fiedler_value
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        compute_ssgf_costs_rust as _rust_costs,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["SSGFCosts", "compute_ssgf_costs"]
 
 
@@ -42,7 +51,17 @@ def compute_ssgf_costs(
     U_total = w1·C1 + w2·C2 + w3·C3 + w4·C4
     """
     w1, w2, w3, w4 = weights
+    W = np.asarray(W, dtype=np.float64)
     n = W.shape[0]
+
+    if _HAS_RUST:
+        w_flat = np.ascontiguousarray(W.ravel())
+        p = np.ascontiguousarray(phases, dtype=np.float64)
+        c1, c2, c3, c4, ut = _rust_costs(w_flat, p, n, w1, w2, w3, w4)
+        return SSGFCosts(
+            c1_sync=c1, c2_spectral_gap=c2,
+            c3_sparsity=c3, c4_symmetry=c4, u_total=ut,
+        )
 
     R, _ = compute_order_parameter(phases)
     c1 = 1.0 - R
