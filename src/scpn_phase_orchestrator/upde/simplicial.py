@@ -13,7 +13,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import TWO_PI
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         simplicial_run_rust as _rust_simplicial_run,
     )
 
@@ -82,18 +82,21 @@ class SimplicialEngine:
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            return _rust_simplicial_run(
-                p,
-                o,
-                k,
-                a,
-                self._n,
-                zeta,
-                psi,
-                self._sigma2,
-                self._dt,
-                n_steps,
+            result: NDArray = np.asarray(
+                _rust_simplicial_run(
+                    p,
+                    o,
+                    k,
+                    a,
+                    self._n,
+                    zeta,
+                    psi,
+                    self._sigma2,
+                    self._dt,
+                    n_steps,
+                )
             )
+            return result
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

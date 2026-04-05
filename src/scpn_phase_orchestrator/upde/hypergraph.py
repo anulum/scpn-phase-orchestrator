@@ -34,7 +34,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import TWO_PI
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         hypergraph_run_rust as _rust_hypergraph_run,
     )
 
