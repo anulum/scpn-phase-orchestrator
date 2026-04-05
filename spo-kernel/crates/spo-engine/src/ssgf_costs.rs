@@ -141,8 +141,10 @@ mod tests {
         let phases = vec![0.0, PI / 4.0, PI / 2.0];
         let weights = (1.0, 0.5, 0.1, 0.1);
         let r = compute_ssgf_costs(&w, &phases, n, weights);
-        let expected = weights.0 * r.c1_sync + weights.1 * r.c2_spectral_gap
-            + weights.2 * r.c3_sparsity + weights.3 * r.c4_symmetry;
+        let expected = weights.0 * r.c1_sync
+            + weights.1 * r.c2_spectral_gap
+            + weights.2 * r.c3_sparsity
+            + weights.3 * r.c4_symmetry;
         assert!((r.u_total - expected).abs() < 1e-10);
     }
 

@@ -100,7 +100,9 @@ fn hypergraph_derivative(
     }
 
     if zeta != 0.0 {
-        for i in 0..n { dtheta[i] += zeta * (psi - p[i]).sin(); }
+        for i in 0..n {
+            dtheta[i] += zeta * (psi - p[i]).sin();
+        }
     }
 
     dtheta
@@ -163,8 +165,14 @@ mod tests {
         let phases = vec![0.0, 0.5, 1.0, 1.5];
         let omegas = vec![1.0; n];
         let edges = vec![
-            Hyperedge { nodes: vec![0, 1, 2], strength: 2.0 },
-            Hyperedge { nodes: vec![1, 2, 3], strength: 2.0 },
+            Hyperedge {
+                nodes: vec![0, 1, 2],
+                strength: 2.0,
+            },
+            Hyperedge {
+                nodes: vec![1, 2, 3],
+                strength: 2.0,
+            },
         ];
         let without = hypergraph_run(&phases, &omegas, n, &[], &[], &[], 0.0, 0.0, 0.01, 50);
         let with = hypergraph_run(&phases, &omegas, n, &edges, &[], &[], 0.0, 0.0, 0.01, 50);
@@ -180,7 +188,10 @@ mod tests {
         let n = 4;
         let phases = vec![0.0, 0.3, 0.6, 0.9];
         let omegas = vec![1.0; n];
-        let edges = vec![Hyperedge { nodes: vec![0, 1, 2, 3], strength: 1.0 }];
+        let edges = vec![Hyperedge {
+            nodes: vec![0, 1, 2, 3],
+            strength: 1.0,
+        }];
         let result = hypergraph_run(&phases, &omegas, n, &edges, &[], &[], 0.0, 0.0, 0.01, 100);
         for p in &result {
             assert!(*p >= 0.0 && *p < TAU, "phase {p} out of range");
@@ -193,9 +204,18 @@ mod tests {
         let phases = vec![0.0, 0.4, 0.8, 1.2, 1.6];
         let omegas = vec![1.0; n];
         let edges = vec![
-            Hyperedge { nodes: vec![0, 1], strength: 1.0 },      // pairwise
-            Hyperedge { nodes: vec![1, 2, 3], strength: 0.5 },    // 3-body
-            Hyperedge { nodes: vec![2, 3, 4, 0], strength: 0.3 }, // 4-body
+            Hyperedge {
+                nodes: vec![0, 1],
+                strength: 1.0,
+            }, // pairwise
+            Hyperedge {
+                nodes: vec![1, 2, 3],
+                strength: 0.5,
+            }, // 3-body
+            Hyperedge {
+                nodes: vec![2, 3, 4, 0],
+                strength: 0.3,
+            }, // 4-body
         ];
         let result = hypergraph_run(&phases, &omegas, n, &edges, &[], &[], 0.0, 0.0, 0.005, 200);
         for p in &result {
@@ -208,9 +228,7 @@ mod tests {
         let n = 3;
         let phases = vec![0.0; n];
         let omegas = vec![0.0; n];
-        let result = hypergraph_run(
-            &phases, &omegas, n, &[], &[], &[], 1.0, PI / 2.0, 0.01, 100,
-        );
+        let result = hypergraph_run(&phases, &omegas, n, &[], &[], &[], 1.0, PI / 2.0, 0.01, 100);
         for p in &result {
             assert!(*p > 0.0, "should move toward psi");
         }

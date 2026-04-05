@@ -120,7 +120,10 @@ mod tests {
         let phase = ultradian_phase(&ts, &stages);
         // elapsed = 240 - 60 = 180s, period = 5400s
         let expected = 180.0 / ULTRADIAN_PERIOD_S;
-        assert!((phase - expected).abs() < 1e-10, "phase={phase}, expected={expected}");
+        assert!(
+            (phase - expected).abs() < 1e-10,
+            "phase={phase}, expected={expected}"
+        );
     }
 
     #[test]

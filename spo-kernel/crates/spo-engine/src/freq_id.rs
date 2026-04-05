@@ -13,7 +13,6 @@
 //! Uses eigendecomposition of the 2×2 projected matrix Ã for the rank-2
 //! truncation (sufficient for frequency identification).
 
-
 /// Identify dominant frequency from multichannel data via DMD.
 ///
 /// # Arguments
@@ -25,12 +24,7 @@
 /// # Returns
 /// Vector of identified frequencies (Hz), sorted by amplitude.
 #[must_use]
-pub fn identify_frequencies(
-    data: &[f64],
-    n_ch: usize,
-    n_samples: usize,
-    fs: f64,
-) -> Vec<f64> {
+pub fn identify_frequencies(data: &[f64], n_ch: usize, n_samples: usize, fs: f64) -> Vec<f64> {
     if n_samples < 3 || n_ch == 0 {
         return vec![];
     }
@@ -48,7 +42,9 @@ pub fn identify_frequencies(
 /// Dominant frequency via zero-crossing rate of autocorrelation.
 fn dominant_freq_autocorr(signal: &[f64], fs: f64) -> f64 {
     let n = signal.len();
-    if n < 4 { return 0.0; }
+    if n < 4 {
+        return 0.0;
+    }
 
     // Remove mean
     let mean = signal.iter().sum::<f64>() / n as f64;
@@ -58,17 +54,23 @@ fn dominant_freq_autocorr(signal: &[f64], fs: f64) -> f64 {
     let max_lag = n / 2;
     let mut acf = vec![0.0; max_lag];
     let norm = centered.iter().map(|x| x * x).sum::<f64>();
-    if norm < 1e-15 { return 0.0; }
+    if norm < 1e-15 {
+        return 0.0;
+    }
 
     for lag in 0..max_lag {
         let mut sum = 0.0;
-        for i in 0..(n - lag) { sum += centered[i] * centered[i + lag]; }
+        for i in 0..(n - lag) {
+            sum += centered[i] * centered[i + lag];
+        }
         acf[lag] = sum / norm;
     }
 
     // Find first peak after first zero crossing
     let first_peak = find_first_acf_peak(&acf);
-    if first_peak == 0 { return 0.0; }
+    if first_peak == 0 {
+        return 0.0;
+    }
 
     fs / first_peak as f64
 }
@@ -76,12 +78,17 @@ fn dominant_freq_autocorr(signal: &[f64], fs: f64) -> f64 {
 /// Find first peak in autocorrelation after initial decay.
 fn find_first_acf_peak(acf: &[f64]) -> usize {
     let n = acf.len();
-    if n < 3 { return 0; }
+    if n < 3 {
+        return 0;
+    }
 
     // Find first zero crossing
     let mut zero_cross = 1;
     for i in 1..n {
-        if acf[i] <= 0.0 { zero_cross = i; break; }
+        if acf[i] <= 0.0 {
+            zero_cross = i;
+            break;
+        }
     }
 
     // Find first peak after zero crossing
@@ -95,14 +102,21 @@ fn find_first_acf_peak(acf: &[f64]) -> usize {
 
 /// Deduplicate nearby frequencies (within `resolution` Hz).
 fn deduplicate_freqs(freqs: &[f64], resolution: f64) -> Vec<f64> {
-    if freqs.is_empty() { return vec![]; }
+    if freqs.is_empty() {
+        return vec![];
+    }
     let mut result = vec![freqs[0]];
     for &f in &freqs[1..] {
         let last = match result.last() {
             Some(&v) => v,
-            None => { result.push(f); continue; }
+            None => {
+                result.push(f);
+                continue;
+            }
         };
-        if (f - last).abs() > resolution { result.push(f); }
+        if (f - last).abs() > resolution {
+            result.push(f);
+        }
     }
     result
 }
@@ -117,14 +131,13 @@ mod tests {
         let fs = 100.0;
         let n = 256;
         let freq = 10.0;
-        let signal: Vec<f64> = (0..n)
-            .map(|i| (TAU * freq * i as f64 / fs).sin())
-            .collect();
+        let signal: Vec<f64> = (0..n).map(|i| (TAU * freq * i as f64 / fs).sin()).collect();
         let freqs = identify_frequencies(&signal, 1, n, fs);
         assert!(!freqs.is_empty(), "should find at least one frequency");
         assert!(
             (freqs[0] - freq).abs() < 2.0,
-            "found {}, expected ≈{freq}", freqs[0],
+            "found {}, expected ≈{freq}",
+            freqs[0],
         );
     }
 
@@ -138,7 +151,11 @@ mod tests {
             data[n + i] = (TAU * 20.0 * i as f64 / fs).sin();
         }
         let freqs = identify_frequencies(&data, 2, n, fs);
-        assert!(freqs.len() >= 2, "should find 2 frequencies, got {}", freqs.len());
+        assert!(
+            freqs.len() >= 2,
+            "should find 2 frequencies, got {}",
+            freqs.len()
+        );
     }
 
     #[test]
@@ -168,9 +185,7 @@ mod tests {
     fn test_autocorr_peak() {
         let fs = 100.0;
         let n = 200;
-        let signal: Vec<f64> = (0..n)
-            .map(|i| (TAU * 10.0 * i as f64 / fs).sin())
-            .collect();
+        let signal: Vec<f64> = (0..n).map(|i| (TAU * 10.0 * i as f64 / fs).sin()).collect();
         let f = dominant_freq_autocorr(&signal, fs);
         assert!((f - 10.0).abs() < 2.0, "autocorr freq={f}, expected≈10");
     }

@@ -56,8 +56,12 @@ fn compute_theta_dot(phases: &[f64], n_osc: usize, n_time: usize, dt: f64) -> Ve
         for tt in 0..t_eff {
             let curr = phases[(tt + 1) * n_osc + i];
             let mut diff = curr - prev;
-            while diff > PI { diff -= TAU; }
-            while diff < -PI { diff += TAU; }
+            while diff > PI {
+                diff -= TAU;
+            }
+            while diff < -PI {
+                diff += TAU;
+            }
             theta_dot[tt * n_osc + i] = diff / dt;
             prev = curr;
         }
@@ -106,13 +110,19 @@ fn stlsq_node(
 
     for _ in 0..max_iter {
         for v in xi.iter_mut() {
-            if v.abs() < threshold { *v = 0.0; }
+            if v.abs() < threshold {
+                *v = 0.0;
+            }
         }
-        let big: Vec<usize> = xi.iter().enumerate()
+        let big: Vec<usize> = xi
+            .iter()
+            .enumerate()
             .filter(|(_, v)| v.abs() >= threshold)
             .map(|(idx, _)| idx)
             .collect();
-        if big.is_empty() { break; }
+        if big.is_empty() {
+            break;
+        }
 
         let n_big = big.len();
         let mut lib_red = vec![0.0; t_eff * n_big];
@@ -138,14 +148,18 @@ fn lstsq(a: &[f64], b: &[f64], m: usize, n: usize) -> Vec<f64> {
     for j in 0..n {
         for k in 0..n {
             let mut sum = 0.0;
-            for i in 0..m { sum += a[i * n + j] * a[i * n + k]; }
+            for i in 0..m {
+                sum += a[i * n + j] * a[i * n + k];
+            }
             ata[j * n + k] = sum;
         }
     }
     let mut atb = vec![0.0; n];
     for j in 0..n {
         let mut sum = 0.0;
-        for i in 0..m { sum += a[i * n + j] * b[i]; }
+        for i in 0..m {
+            sum += a[i * n + j] * b[i];
+        }
         atb[j] = sum;
     }
     solve_linear_sys(n, &mut ata, &mut atb)
@@ -158,26 +172,39 @@ fn solve_linear_sys(n: usize, a: &mut [f64], b: &mut [f64]) -> Vec<f64> {
         let mut max_row = col;
         for row in col..n {
             let v = a[row * n + col].abs();
-            if v > max_val { max_val = v; max_row = row; }
+            if v > max_val {
+                max_val = v;
+                max_row = row;
+            }
         }
-        if max_val < 1e-14 { continue; }
+        if max_val < 1e-14 {
+            continue;
+        }
         if max_row != col {
-            for k in 0..n { a.swap(col * n + k, max_row * n + k); }
+            for k in 0..n {
+                a.swap(col * n + k, max_row * n + k);
+            }
             b.swap(col, max_row);
         }
         let pivot = a[col * n + col];
         for row in (col + 1)..n {
             let factor = a[row * n + col] / pivot;
-            for k in col..n { a[row * n + k] -= factor * a[col * n + k]; }
+            for k in col..n {
+                a[row * n + k] -= factor * a[col * n + k];
+            }
             b[row] -= factor * b[col];
         }
     }
     let mut x = vec![0.0; n];
     for col in (0..n).rev() {
         let diag = a[col * n + col];
-        if diag.abs() < 1e-14 { continue; }
+        if diag.abs() < 1e-14 {
+            continue;
+        }
         let mut sum = b[col];
-        for k in (col + 1)..n { sum -= a[col * n + k] * x[k]; }
+        for k in (col + 1)..n {
+            sum -= a[col * n + k] * x[k];
+        }
         x[col] = sum / diag;
     }
     x
@@ -195,7 +222,9 @@ mod tests {
         coupling: &[f64],
     ) -> Vec<f64> {
         let mut phases = vec![0.0; t * n];
-        for i in 0..n { phases[i] = i as f64 * 0.5; }
+        for i in 0..n {
+            phases[i] = i as f64 * 0.5;
+        }
         for tt in 1..t {
             for i in 0..n {
                 let mut deriv = omegas[i];
@@ -223,7 +252,9 @@ mod tests {
         for i in 0..n {
             assert!(
                 (result[i * n + i] - omegas[i]).abs() < 0.5,
-                "ω_{i}: got {}, expected {}", result[i * n + i], omegas[i],
+                "ω_{i}: got {}, expected {}",
+                result[i * n + i],
+                omegas[i],
             );
         }
     }
@@ -240,7 +271,11 @@ mod tests {
         for i in 0..n {
             for j in 0..n {
                 if i != j {
-                    assert!(result[i * n + j].abs() < 0.3, "K[{i},{j}]={}", result[i * n + j]);
+                    assert!(
+                        result[i * n + j].abs() < 0.3,
+                        "K[{i},{j}]={}",
+                        result[i * n + j]
+                    );
                 }
             }
         }
@@ -249,7 +284,9 @@ mod tests {
     #[test]
     fn test_short_data_returns_zeros() {
         let result = sindy_fit(&[0.0; 4], 2, 2, 0.01, 0.05, 10);
-        for v in &result { assert_eq!(*v, 0.0); }
+        for v in &result {
+            assert_eq!(*v, 0.0);
+        }
     }
 
     #[test]

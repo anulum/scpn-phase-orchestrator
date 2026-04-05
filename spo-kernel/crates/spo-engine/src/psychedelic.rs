@@ -87,10 +87,7 @@ mod tests {
         }
         let h = entropy_from_phases(&phases, n_bins);
         let h_max = (n_bins as f64).ln();
-        assert!(
-            (h - h_max).abs() < 0.01,
-            "expected H ≈ {h_max}, got {h}"
-        );
+        assert!((h - h_max).abs() < 0.01, "expected H ≈ {h_max}, got {h}");
     }
 
     #[test]
@@ -130,9 +127,7 @@ mod tests {
     #[test]
     fn test_entropy_nonnegative() {
         // Shannon entropy is always ≥ 0
-        let phases: Vec<f64> = (0..100)
-            .map(|i| (i as f64 * 0.37).sin() * 10.0)
-            .collect();
+        let phases: Vec<f64> = (0..100).map(|i| (i as f64 * 0.37).sin() * 10.0).collect();
         let h = entropy_from_phases(&phases, 36);
         assert!(h >= 0.0, "entropy must be non-negative, got {h}");
     }
@@ -142,9 +137,7 @@ mod tests {
         // H ≤ ln(n_bins) always
         let n_bins = 36;
         let h_max = (n_bins as f64).ln();
-        let phases: Vec<f64> = (0..10000)
-            .map(|i| TAU * i as f64 / 10000.0)
-            .collect();
+        let phases: Vec<f64> = (0..10000).map(|i| TAU * i as f64 / 10000.0).collect();
         let h = entropy_from_phases(&phases, n_bins);
         assert!(h <= h_max + 1e-10, "H = {h} exceeds ln({n_bins}) = {h_max}");
     }

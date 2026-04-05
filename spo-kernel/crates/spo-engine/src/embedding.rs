@@ -309,7 +309,10 @@ mod tests {
         let signal: Vec<f64> = (0..500).map(|i| (i as f64 * 0.05).sin()).collect();
         for lag in 0..20 {
             let mi = mutual_information(&signal, lag, 32);
-            assert!(mi >= -1e-12, "MI should be non-negative, got {mi} at lag {lag}");
+            assert!(
+                mi >= -1e-12,
+                "MI should be non-negative, got {mi} at lag {lag}"
+            );
         }
     }
 
@@ -322,7 +325,10 @@ mod tests {
             .collect();
         let tau = optimal_delay(&signal, 50, 32);
         // Quarter period = 10; allow range [5, 15]
-        assert!(tau >= 5 && tau <= 15, "optimal delay {tau} not near quarter-period");
+        assert!(
+            tau >= 5 && tau <= 15,
+            "optimal delay {tau} not near quarter-period"
+        );
     }
 
     #[test]
@@ -342,7 +348,10 @@ mod tests {
             .collect();
         let tau = optimal_delay(&signal, 50, 32);
         let m = optimal_dimension(&signal, tau, 8, 15.0, 2.0);
-        assert!(m >= 2 && m <= 8, "sinusoid embedding dimension {m} unexpected (tau={tau})");
+        assert!(
+            m >= 2 && m <= 8,
+            "sinusoid embedding dimension {m} unexpected (tau={tau})"
+        );
     }
 
     #[test]
@@ -378,6 +387,9 @@ mod tests {
         }
         let m = optimal_dimension(&signal, 1, 8, 15.0, 2.0);
         // Logistic map attractor is 1D but typically needs m=2-3 for embedding
-        assert!(m >= 1 && m <= 5, "logistic map embedding dimension {m} unexpected");
+        assert!(
+            m >= 1 && m <= 5,
+            "logistic map embedding dimension {m} unexpected"
+        );
     }
 }

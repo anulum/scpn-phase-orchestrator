@@ -44,11 +44,15 @@ fn build_intra_hemi(knm: &mut [f64], n: usize, half: usize, seed: u64) {
         let size = hemi_end - hemi_start;
         for i in 0..size {
             for j in 0..size {
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
                 let dist = if i > j { i - j } else { j - i };
                 let base = INTRA_HEMI_STRENGTH * (-0.3 * dist as f64).exp();
                 // LCG noise
-                rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                rng = rng
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
                 let noise = ((rng >> 33) as f64 / (1u64 << 31) as f64 - 0.5) * 0.04;
                 let val = (base + noise).max(0.0);
                 knm[(hemi_start + i) * n + (hemi_start + j)] = val;
@@ -81,13 +85,19 @@ fn add_dmn_hubs(knm: &mut [f64], n: usize, half: usize) {
     let mut dmn_nodes = Vec::new();
     for &f in &fractions {
         let left = (f * half as f64) as usize;
-        if left < n { dmn_nodes.push(left); }
+        if left < n {
+            dmn_nodes.push(left);
+        }
         let right = left + half;
-        if right < n { dmn_nodes.push(right); }
+        if right < n {
+            dmn_nodes.push(right);
+        }
     }
     for &hub in &dmn_nodes {
         for &other in &dmn_nodes {
-            if hub != other { knm[hub * n + other] += DMN_HUB_BOOST; }
+            if hub != other {
+                knm[hub * n + other] += DMN_HUB_BOOST;
+            }
         }
     }
 }
@@ -119,7 +129,9 @@ mod tests {
     fn test_diagonal_zero() {
         let n = 8;
         let knm = load_hcp_connectome(n, 42);
-        for i in 0..n { assert_eq!(knm[i * n + i], 0.0); }
+        for i in 0..n {
+            assert_eq!(knm[i * n + i], 0.0);
+        }
     }
 
     #[test]
@@ -140,7 +152,9 @@ mod tests {
     fn test_non_negative() {
         let n = 20;
         let knm = load_hcp_connectome(n, 42);
-        for &v in &knm { assert!(v >= 0.0, "negative value {v}"); }
+        for &v in &knm {
+            assert!(v >= 0.0, "negative value {v}");
+        }
     }
 
     #[test]
@@ -149,9 +163,17 @@ mod tests {
         let half = n / 2;
         let knm = load_hcp_connectome(n, 42);
         let mut intra = 0.0_f64;
-        for i in 0..half { for j in 0..half { intra += knm[i * n + j]; } }
+        for i in 0..half {
+            for j in 0..half {
+                intra += knm[i * n + j];
+            }
+        }
         let mut inter = 0.0_f64;
-        for i in 0..half { for j in half..n { inter += knm[i * n + j]; } }
+        for i in 0..half {
+            for j in half..n {
+                inter += knm[i * n + j];
+            }
+        }
         assert!(intra > inter, "intra={intra} should > inter={inter}");
     }
 

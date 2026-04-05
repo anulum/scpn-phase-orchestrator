@@ -36,7 +36,11 @@ pub fn frequency_specificity(
     let control_itpc = mean_itpc(&control_phases, n_trials, n_timepoints);
 
     if control_itpc < 1e-12 {
-        return if target_itpc > 0.0 { f64::INFINITY } else { 0.0 };
+        return if target_itpc > 0.0 {
+            f64::INFINITY
+        } else {
+            0.0
+        };
     }
 
     target_itpc / control_itpc

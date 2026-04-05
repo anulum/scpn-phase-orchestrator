@@ -116,7 +116,7 @@ The three-component architecture is grounded in:
 ### Historical Context
 
 - **Hagmann, P. et al. (2008):** First comprehensive mapping of the
-  human structural connectome using diffusion spectrum imaging. 
+  human structural connectome using diffusion spectrum imaging.
   Identified exponential distance-decay as the primary connectivity
   principle.
 - **Van Essen, D. C. et al. (2013):** The Human Connectome Project —

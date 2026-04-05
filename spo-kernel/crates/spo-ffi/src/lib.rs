@@ -23,23 +23,23 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use spo_engine::{
-    chimera,
+    basin_stability, bifurcation, carrier, chimera, connectome,
     coupling::{project_knm, CouplingBuilder},
-    basin_stability, bifurcation, delay, dimension, ei_balance, embedding, entropy_prod,
-    carrier, connectome, coupling_est, envelope, ethical, evs, free_energy, freq_id, geometric,
-    hodge, hypergraph, inertial, itpc, market, phase_extract, poincare, prior, psychedelic,
-    reduction, simplicial, sindy, sleep_staging, splitting, ssgf_costs, swarmalator, te_adaptive,
+    coupling_est, delay, dimension, ei_balance, embedding, entropy_prod, envelope, ethical, evs,
+    free_energy, freq_id, geometric, hodge, hypergraph,
     imprint::ImprintModel,
+    inertial, itpc,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
-    lyapunov, order_params, pac,
+    lyapunov, market, order_params, pac, phase_extract,
     plasticity::PlasticityModel,
-    recurrence,
+    poincare, prior, psychedelic, recurrence, reduction,
     sheaf_upde::SheafUPDEStepper,
+    simplicial, sindy, sleep_staging,
     sparse_upde::SparseUPDEStepper,
-    spectral,
+    spectral, splitting, ssgf_costs,
     stuart_landau::StuartLandauStepper,
-    transfer_entropy,
+    swarmalator, te_adaptive, transfer_entropy,
     upde::UPDEStepper,
     winding,
 };
@@ -1813,10 +1813,20 @@ fn compute_ssgf_costs_rust(
     w3: f64,
     w4: f64,
 ) -> PyResult<(f64, f64, f64, f64, f64)> {
-    let w = w_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let w = w_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let r = ssgf_costs::compute_ssgf_costs(w, p, n, (w1, w2, w3, w4));
-    Ok((r.c1_sync, r.c2_spectral_gap, r.c3_sparsity, r.c4_symmetry, r.u_total))
+    Ok((
+        r.c1_sync,
+        r.c2_spectral_gap,
+        r.c3_sparsity,
+        r.c4_symmetry,
+        r.u_total,
+    ))
 }
 
 // ─── Swarmalator ──────────────────────────────────────────────────
@@ -1842,10 +1852,17 @@ fn swarmalator_run_rust<'py>(
     Bound<'py, PyArray1<f64>>,
     Bound<'py, PyArray1<f64>>,
 )> {
-    let p = pos_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let ph = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (fp, fph, pt, pht) = swarmalator::swarmalator_run(p, ph, o, n, dim, dt, a, b, j, k, n_steps);
+    let p = pos_init
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let ph = phases_init
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (fp, fph, pt, pht) =
+        swarmalator::swarmalator_run(p, ph, o, n, dim, dt, a, b, j, k, n_steps);
     Ok((
         PyArray1::from_vec(py, fp),
         PyArray1::from_vec(py, fph),
@@ -1874,10 +1891,18 @@ fn delayed_kuramoto_run_rust<'py>(
     delay_steps: usize,
     n_steps: usize,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases_init
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = delay::delayed_kuramoto_run(p, o, k, a, n, zeta, psi, dt, delay_steps, n_steps);
     Ok(PyArray1::from_vec(py, result))
 }
@@ -1891,7 +1916,9 @@ fn boltzmann_weight_rust(u_total: f64, temperature: f64) -> f64 {
 
 #[pyfunction]
 fn effective_temperature_rust(costs: PyReadonlyArray1<'_, f64>) -> PyResult<f64> {
-    let c = costs.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let c = costs
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(free_energy::effective_temperature(c))
 }
 
@@ -1903,8 +1930,13 @@ fn add_langevin_noise_rust<'py>(
     dt: f64,
     seed: u64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let zv = z.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(PyArray1::from_vec(py, free_energy::add_langevin_noise(zv, temperature, dt, seed)))
+    let zv = z
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(PyArray1::from_vec(
+        py,
+        free_energy::add_langevin_noise(zv, temperature, dt, seed),
+    ))
 }
 
 // ─── Hodge Decomposition ──────────────────────────────────────────
@@ -1920,8 +1952,12 @@ fn hodge_decomposition_rust<'py>(
     Bound<'py, PyArray1<f64>>,
     Bound<'py, PyArray1<f64>>,
 )> {
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let (g, c, h) = hodge::hodge_decomposition(k, p, n);
     Ok((
         PyArray1::from_vec(py, g),
@@ -1939,13 +1975,32 @@ fn compute_ei_balance_rust(
     excitatory_indices: PyReadonlyArray1<'_, i64>,
     inhibitory_indices: PyReadonlyArray1<'_, i64>,
 ) -> PyResult<(f64, f64, f64, bool)> {
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_raw = excitatory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let i_raw = inhibitory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_idx: Vec<usize> = e_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
-    let i_idx: Vec<usize> = i_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_raw = excitatory_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let i_raw = inhibitory_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_idx: Vec<usize> = e_raw
+        .iter()
+        .filter(|&&v| v >= 0)
+        .map(|&v| v as usize)
+        .collect();
+    let i_idx: Vec<usize> = i_raw
+        .iter()
+        .filter(|&&v| v >= 0)
+        .map(|&v| v as usize)
+        .collect();
     let r = ei_balance::compute_ei_balance(k, n, &e_idx, &i_idx);
-    Ok((r.ratio, r.excitatory_strength, r.inhibitory_strength, r.is_balanced))
+    Ok((
+        r.ratio,
+        r.excitatory_strength,
+        r.inhibitory_strength,
+        r.is_balanced,
+    ))
 }
 
 #[pyfunction]
@@ -1958,11 +2013,25 @@ fn adjust_ei_ratio_rust<'py>(
     inhibitory_indices: PyReadonlyArray1<'py, i64>,
     target_ratio: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_raw = excitatory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let i_raw = inhibitory_indices.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_idx: Vec<usize> = e_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
-    let i_idx: Vec<usize> = i_raw.iter().filter(|&&v| v >= 0).map(|&v| v as usize).collect();
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_raw = excitatory_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let i_raw = inhibitory_indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e_idx: Vec<usize> = e_raw
+        .iter()
+        .filter(|&&v| v >= 0)
+        .map(|&v| v as usize)
+        .collect();
+    let i_idx: Vec<usize> = i_raw
+        .iter()
+        .filter(|&&v| v >= 0)
+        .map(|&v| v as usize)
+        .collect();
     let result = ei_balance::adjust_ei_ratio(k, n, &e_idx, &i_idx, target_ratio);
     Ok(PyArray1::from_vec(py, result))
 }
@@ -1982,14 +2051,29 @@ fn inertial_step_rust<'py>(
     n: usize,
     dt: f64,
 ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
-    let th = theta.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let od = omega_dot.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let pw = power.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let km = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let in_ = inertia.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let dm = damping.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let th = theta
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let od = omega_dot
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let pw = power
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let km = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let in_ = inertia
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let dm = damping
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let (new_th, new_od) = inertial::inertial_step(th, od, pw, km, in_, dm, n, dt);
-    Ok((PyArray1::from_vec(py, new_th), PyArray1::from_vec(py, new_od)))
+    Ok((
+        PyArray1::from_vec(py, new_th),
+        PyArray1::from_vec(py, new_od),
+    ))
 }
 
 #[pyfunction]
@@ -2011,14 +2095,25 @@ fn inertial_run_rust<'py>(
     Bound<'py, PyArray1<f64>>,
     Bound<'py, PyArray1<f64>>,
 )> {
-    let th = theta.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let od = omega_dot.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let pw = power.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let km = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let in_ = inertia.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let dm = damping.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (f_th, f_od, t_th, t_od) =
-        inertial::inertial_run(th, od, pw, km, in_, dm, n, dt, n_steps);
+    let th = theta
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let od = omega_dot
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let pw = power
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let km = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let in_ = inertia
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let dm = damping
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (f_th, f_od, t_th, t_od) = inertial::inertial_run(th, od, pw, km, in_, dm, n, dt, n_steps);
     Ok((
         PyArray1::from_vec(py, f_th),
         PyArray1::from_vec(py, f_od),
@@ -2036,8 +2131,13 @@ fn market_order_parameter_rust<'py>(
     t: usize,
     n: usize,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let p = phases_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(PyArray1::from_vec(py, market::market_order_parameter(p, t, n)))
+    let p = phases_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(PyArray1::from_vec(
+        py,
+        market::market_order_parameter(p, t, n),
+    ))
 }
 
 #[pyfunction]
@@ -2049,7 +2149,9 @@ fn market_plv_rust<'py>(
     n: usize,
     window: usize,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let p = phases_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(PyArray1::from_vec(py, market::market_plv(p, t, n, window)))
 }
 
@@ -2061,7 +2163,9 @@ fn detect_regimes_rust<'py>(
     sync_threshold: f64,
     desync_threshold: f64,
 ) -> PyResult<Bound<'py, PyArray1<i32>>> {
-    let rv = r.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let rv = r
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(PyArray1::from_vec(
         py,
         market::detect_regimes(rv, sync_threshold, desync_threshold),
@@ -2088,13 +2192,32 @@ fn basin_stability_rust<'py>(
     r_threshold: f64,
     seed: u64,
 ) -> PyResult<(f64, Bound<'py, PyArray1<f64>>, usize)> {
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = basin_stability::basin_stability(
-        o, k, a, n, dt, n_transient, n_measure, n_samples, r_threshold, seed,
+        o,
+        k,
+        a,
+        n,
+        dt,
+        n_transient,
+        n_measure,
+        n_samples,
+        r_threshold,
+        seed,
     );
-    Ok((result.s_b, PyArray1::from_vec(py, result.r_finals), result.n_converged))
+    Ok((
+        result.s_b,
+        PyArray1::from_vec(py, result.r_finals),
+        result.n_converged,
+    ))
 }
 
 // ─── Bifurcation (Kuramoto 1975) ──────────────────────────────────
@@ -2115,11 +2238,29 @@ fn steady_state_r_rust(
     n_transient: usize,
     n_measure: usize,
 ) -> PyResult<f64> {
-    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(bifurcation::steady_state_r(p, o, k, a, n, k_scale, dt, n_transient, n_measure))
+    let p = phases_init
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(bifurcation::steady_state_r(
+        p,
+        o,
+        k,
+        a,
+        n,
+        k_scale,
+        dt,
+        n_transient,
+        n_measure,
+    ))
 }
 
 #[pyfunction]
@@ -2141,12 +2282,30 @@ fn trace_sync_transition_rust<'py>(
     n_transient: usize,
     n_measure: usize,
 ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>, f64)> {
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases_init
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let (kv, rv, kc) = bifurcation::trace_sync_transition(
-        o, k, a, n, p, k_min, k_max, n_points, dt, n_transient, n_measure,
+        o,
+        k,
+        a,
+        n,
+        p,
+        k_min,
+        k_max,
+        n_points,
+        dt,
+        n_transient,
+        n_measure,
     );
     Ok((PyArray1::from_vec(py, kv), PyArray1::from_vec(py, rv), kc))
 }
@@ -2167,21 +2326,36 @@ fn find_critical_coupling_bif_rust(
     n_measure: usize,
     tol: f64,
 ) -> PyResult<f64> {
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(bifurcation::find_critical_coupling(o, k, a, n, p, dt, n_transient, n_measure, tol))
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases_init
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(bifurcation::find_critical_coupling(
+        o,
+        k,
+        a,
+        n,
+        p,
+        dt,
+        n_transient,
+        n_measure,
+        tol,
+    ))
 }
 
 // ─── Psychedelic Entropy ───────────────────────────────────────────
 
 #[pyfunction]
 #[pyo3(signature = (phases, n_bins = 36))]
-fn entropy_from_phases_rust(
-    phases: PyReadonlyArray1<'_, f64>,
-    n_bins: usize,
-) -> PyResult<f64> {
+fn entropy_from_phases_rust(phases: PyReadonlyArray1<'_, f64>, n_bins: usize) -> PyResult<f64> {
     let p = phases
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -2197,7 +2371,10 @@ fn reduce_coupling_rust<'py>(
     let k = knm
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(PyArray1::from_vec(py, psychedelic::reduce_coupling(k, reduction_factor)))
+    Ok(PyArray1::from_vec(
+        py,
+        psychedelic::reduce_coupling(k, reduction_factor),
+    ))
 }
 
 // ─── Poincaré Section ──────────────────────────────────────────────
@@ -2224,7 +2401,11 @@ fn poincare_section_rust<'py>(
         "positive" => poincare::CrossingDirection::Positive,
         "negative" => poincare::CrossingDirection::Negative,
         "both" => poincare::CrossingDirection::Both,
-        _ => return Err(PyValueError::new_err("direction must be 'positive', 'negative', or 'both'")),
+        _ => {
+            return Err(PyValueError::new_err(
+                "direction must be 'positive', 'negative', or 'both'",
+            ))
+        }
     };
     let result = poincare::poincare_section(tr, t, d, n, offset, dir)
         .map_err(|e| PyValueError::new_err(e))?;
@@ -2269,8 +2450,8 @@ fn delay_embed_rust<'py>(
     let s = signal
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = embedding::delay_embed(s, delay, dimension)
-        .map_err(|e| PyValueError::new_err(e))?;
+    let result =
+        embedding::delay_embed(s, delay, dimension).map_err(|e| PyValueError::new_err(e))?;
     Ok(PyArray1::from_vec(py, result))
 }
 
@@ -2351,8 +2532,12 @@ fn carrier_decode_rust(
     a: PyReadonlyArray1<f64>,
     n: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let zv = z.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let av = a.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let zv = z
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let av = a
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = carrier::decode(zv, av, n);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -2379,7 +2564,9 @@ fn identify_frequencies_rust(
     n_samples: usize,
     fs: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let d = data.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let d = data
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = freq_id::identify_frequencies(d, n_ch, n_samples, fs);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -2395,8 +2582,12 @@ fn estimate_coupling_rust(
     t: usize,
     dt: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = coupling_est::estimate_coupling(p, o, n, t, dt);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -2413,7 +2604,9 @@ fn sindy_fit_rust(
     threshold: f64,
     max_iter: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = sindy::sindy_fit(p, n_osc, n_time, dt, threshold, max_iter);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -2426,7 +2619,9 @@ fn extract_phases_rust(
     signal: PyReadonlyArray1<f64>,
     fs: f64,
 ) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>, Py<PyArray1<f64>>, f64)> {
-    let s = signal.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let s = signal
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let (phases, amps, inst, dom) = phase_extract::extract_phases(s, fs);
     Ok((
         PyArray1::from_vec(py, phases).into(),
@@ -2447,8 +2642,12 @@ fn te_adapt_coupling_rust(
     lr: f64,
     decay: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let t = te.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let t = te
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = te_adaptive::te_adapt_coupling(k, t, n, lr, decay);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -2464,7 +2663,14 @@ fn prior_log_probability_rust(
     alpha_mean: f64,
     alpha_std: f64,
 ) -> PyResult<f64> {
-    Ok(prior::log_probability(k_base, decay_alpha, k_mean, k_std, alpha_mean, alpha_std))
+    Ok(prior::log_probability(
+        k_base,
+        decay_alpha,
+        k_mean,
+        k_std,
+        alpha_mean,
+        alpha_std,
+    ))
 }
 
 #[pyfunction]
@@ -2495,10 +2701,24 @@ fn compute_ethical_cost_rust(
     connectivity_min: f64,
     max_coupling: f64,
 ) -> PyResult<(f64, f64, f64, usize)> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(ethical::compute_ethical_cost(
-        p, k, n, alpha_r, beta_k, gamma_q, nu_s, kappa, r_min, connectivity_min, max_coupling,
+        p,
+        k,
+        n,
+        alpha_r,
+        beta_k,
+        gamma_q,
+        nu_s,
+        kappa,
+        r_min,
+        connectivity_min,
+        max_coupling,
     ))
 }
 
@@ -2514,8 +2734,12 @@ fn ultradian_phase_rust(
     timestamps: PyReadonlyArray1<f64>,
     stages: PyReadonlyArray1<u8>,
 ) -> PyResult<f64> {
-    let ts = timestamps.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let st = stages.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let ts = timestamps
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let st = stages
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(sleep_staging::ultradian_phase(ts, st))
 }
 
@@ -2529,8 +2753,16 @@ fn frequency_specificity_rust(
     target_freq: f64,
     control_freq: f64,
 ) -> PyResult<f64> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(evs::frequency_specificity(p, n_trials, n_timepoints, target_freq, control_freq))
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(evs::frequency_specificity(
+        p,
+        n_trials,
+        n_timepoints,
+        target_freq,
+        control_freq,
+    ))
 }
 
 // ─── Geometric (Torus) Integrator ───────────────────────────────────
@@ -2548,10 +2780,18 @@ fn torus_run_rust(
     dt: f64,
     n_steps: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = geometric::torus_run(p, o, k, a, zeta, psi, dt, n_steps);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -2564,14 +2804,18 @@ fn extract_envelope_rust(
     amplitudes: PyReadonlyArray1<f64>,
     window: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let a = amplitudes.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = amplitudes
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = envelope::extract_envelope(a, window);
     Ok(PyArray1::from_vec(py, result).into())
 }
 
 #[pyfunction]
 fn envelope_modulation_depth_rust(envelope_arr: PyReadonlyArray1<f64>) -> PyResult<f64> {
-    let e = envelope_arr.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let e = envelope_arr
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(envelope::envelope_modulation_depth(e))
 }
 
@@ -2587,7 +2831,9 @@ fn oa_run_rust(
     dt: f64,
     n_steps: usize,
 ) -> PyResult<(f64, f64, f64, f64)> {
-    Ok(reduction::oa_run(z_re, z_im, omega_0, delta, k_coupling, dt, n_steps))
+    Ok(reduction::oa_run(
+        z_re, z_im, omega_0, delta, k_coupling, dt, n_steps,
+    ))
 }
 
 #[pyfunction]
@@ -2597,7 +2843,9 @@ fn steady_state_r_oa_rust(delta: f64, k_coupling: f64) -> PyResult<f64> {
 
 #[pyfunction]
 fn fit_lorentzian_rust(omegas: PyReadonlyArray1<f64>) -> PyResult<(f64, f64)> {
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(reduction::fit_lorentzian(o))
 }
 
@@ -2616,10 +2864,18 @@ fn splitting_run_rust(
     dt: f64,
     n_steps: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = splitting::splitting_run(p, o, k, a, zeta, psi, dt, n_steps);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -2645,20 +2901,38 @@ fn hypergraph_run_rust(
     dt: f64,
     n_steps: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let en = edge_nodes.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let eo = edge_offsets.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let es = edge_strengths.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let kn = pairwise_knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let al = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let en = edge_nodes
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let eo = edge_offsets
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let es = edge_strengths
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let kn = pairwise_knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let al = alpha
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
     // Reconstruct hyperedges from flat encoding
     let n_edges = eo.len();
     let mut edges = Vec::with_capacity(n_edges);
     for i in 0..n_edges {
         let start = eo[i] as usize;
-        let end = if i + 1 < n_edges { eo[i + 1] as usize } else { en.len() };
+        let end = if i + 1 < n_edges {
+            eo[i + 1] as usize
+        } else {
+            en.len()
+        };
         let nodes: Vec<usize> = en[start..end].iter().map(|&v| v as usize).collect();
         edges.push(hypergraph::Hyperedge {
             nodes,
@@ -2686,10 +2960,18 @@ fn simplicial_run_rust(
     dt: f64,
     n_steps: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     if p.len() != n || o.len() != n {
         return Err(PyValueError::new_err("phases/omegas length must equal n"));
     }

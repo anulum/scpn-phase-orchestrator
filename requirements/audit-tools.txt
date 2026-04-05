@@ -1,3 +1,5 @@
 # Audit tool dependencies with hash pins (OpenSSF Scorecard compliance)
 pip-audit==2.10.0 \
     --hash=sha256:16e02093872fac97580303f0848fa3ad64f7ecf600736ea7835a2b24de49613f
+pip-api==0.0.34 \
+    --hash=sha256:8b2d7d7c37f2447373aa2cf8b1f60a2f2b27a84e1e9e0294a3f6ef10eb3ba6bb

@@ -56,15 +56,7 @@ pub fn splitting_run(
 }
 
 /// RK4 step on coupling-only derivative (no ω).
-fn rk4_coupling(
-    p: &mut [f64],
-    knm: &[f64],
-    alpha: &[f64],
-    n: usize,
-    zeta: f64,
-    psi: f64,
-    dt: f64,
-) {
+fn rk4_coupling(p: &mut [f64], knm: &[f64], alpha: &[f64], n: usize, zeta: f64, psi: f64, dt: f64) {
     let k1 = coupling_deriv(p, knm, alpha, n, zeta, psi);
 
     let mut p2 = vec![0.0; n];
@@ -86,8 +78,7 @@ fn rk4_coupling(
     let k4 = coupling_deriv(&p4, knm, alpha, n, zeta, psi);
 
     for i in 0..n {
-        p[i] = (p[i] + (dt / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]))
-            .rem_euclid(TAU);
+        p[i] = (p[i] + (dt / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i])).rem_euclid(TAU);
     }
 }
 

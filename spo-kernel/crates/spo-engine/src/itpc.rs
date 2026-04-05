@@ -143,7 +143,11 @@ mod tests {
             phases[k] = PI;
         }
         let itpc = compute_itpc(&phases, n_trials, n_tp);
-        assert!(itpc[0] < 1e-12, "opposite phases should cancel, got {}", itpc[0]);
+        assert!(
+            itpc[0] < 1e-12,
+            "opposite phases should cancel, got {}",
+            itpc[0]
+        );
     }
 
     #[test]
@@ -155,12 +159,17 @@ mod tests {
         // Simple LCG for deterministic randomness
         let mut x: u64 = 12345;
         for _ in 0..n_trials * n_tp {
-            x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            x = x
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             phases.push((x >> 33) as f64 / (1u64 << 31) as f64 * TAU);
         }
         let itpc = compute_itpc(&phases, n_trials, n_tp);
         for (t, v) in itpc.iter().enumerate() {
-            assert!(*v >= 0.0 && *v <= 1.0 + 1e-12, "ITPC[{t}] = {v} out of range");
+            assert!(
+                *v >= 0.0 && *v <= 1.0 + 1e-12,
+                "ITPC[{t}] = {v} out of range"
+            );
         }
     }
 

@@ -58,15 +58,14 @@ mod tests {
     fn test_symmetric_coupling_no_curl() {
         // Symmetric K → curl = 0
         let n = 3;
-        let knm = vec![
-            0.0, 1.0, 0.5,
-            1.0, 0.0, 0.8,
-            0.5, 0.8, 0.0,
-        ];
+        let knm = vec![0.0, 1.0, 0.5, 1.0, 0.0, 0.8, 0.5, 0.8, 0.0];
         let phases = vec![0.0, PI / 4.0, PI / 2.0];
         let (_, curl, _) = hodge_decomposition(&knm, &phases, n);
         for (i, &c) in curl.iter().enumerate() {
-            assert!(c.abs() < 1e-12, "curl[{i}] = {c}, expected 0 for symmetric K");
+            assert!(
+                c.abs() < 1e-12,
+                "curl[{i}] = {c}, expected 0 for symmetric K"
+            );
         }
     }
 
@@ -74,15 +73,14 @@ mod tests {
     fn test_antisymmetric_coupling_no_gradient() {
         // Antisymmetric K → gradient = 0
         let n = 3;
-        let knm = vec![
-            0.0,  1.0, -0.5,
-           -1.0,  0.0,  0.8,
-            0.5, -0.8,  0.0,
-        ];
+        let knm = vec![0.0, 1.0, -0.5, -1.0, 0.0, 0.8, 0.5, -0.8, 0.0];
         let phases = vec![0.0, PI / 3.0, PI];
         let (gradient, _, _) = hodge_decomposition(&knm, &phases, n);
         for (i, &g) in gradient.iter().enumerate() {
-            assert!(g.abs() < 1e-12, "gradient[{i}] = {g}, expected 0 for antisymmetric K");
+            assert!(
+                g.abs() < 1e-12,
+                "gradient[{i}] = {g}, expected 0 for antisymmetric K"
+            );
         }
     }
 

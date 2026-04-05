@@ -121,11 +121,20 @@ mod tests {
         let knm = make_all_to_all(n, 5.0);
         let alpha = vec![0.0; n * n];
 
-        let instant = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 0, 200);
-        let delayed = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 10, 200);
+        let instant =
+            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 0, 200);
+        let delayed =
+            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 10, 200);
 
-        let diff: f64 = instant.iter().zip(&delayed).map(|(a, b)| (a - b).abs()).sum();
-        assert!(diff > 0.01, "delay should produce different result, diff = {diff}");
+        let diff: f64 = instant
+            .iter()
+            .zip(&delayed)
+            .map(|(a, b)| (a - b).abs())
+            .sum();
+        assert!(
+            diff > 0.01,
+            "delay should produce different result, diff = {diff}"
+        );
     }
 
     #[test]
@@ -136,7 +145,8 @@ mod tests {
         let knm = make_all_to_all(n, 3.0);
         let alpha = vec![0.0; n * n];
 
-        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 5, 500);
+        let result =
+            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 5, 500);
         for (i, &v) in result.iter().enumerate() {
             assert!(v >= 0.0 && v < TAU, "phase[{i}] = {v} out of [0, 2π)");
         }
@@ -152,7 +162,16 @@ mod tests {
 
         // With external drive, phases should move toward psi
         let result = delayed_kuramoto_run(
-            &phases, &omegas, &knm, &alpha, n, 1.0, PI / 2.0, 0.01, 0, 500,
+            &phases,
+            &omegas,
+            &knm,
+            &alpha,
+            n,
+            1.0,
+            PI / 2.0,
+            0.01,
+            0,
+            500,
         );
         // All phases should have moved
         for &v in &result {
@@ -194,9 +213,8 @@ mod tests {
         let knm = make_all_to_all(n, 1.0);
         let alpha = vec![0.0; n * n];
 
-        let result = delayed_kuramoto_run(
-            &phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 1000, 10,
-        );
+        let result =
+            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 1000, 10);
         // Should still produce valid phases
         assert_eq!(result.len(), n);
         for &v in &result {

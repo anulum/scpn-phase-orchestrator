@@ -49,7 +49,11 @@ pub fn compute_ei_balance(
                 }
             }
         }
-        if count > 0 { sum / count as f64 } else { 0.0 }
+        if count > 0 {
+            sum / count as f64
+        } else {
+            0.0
+        }
     };
 
     let i_strength = if inhibitory_indices.is_empty() {
@@ -65,11 +69,19 @@ pub fn compute_ei_balance(
                 }
             }
         }
-        if count > 0 { sum / count as f64 } else { 0.0 }
+        if count > 0 {
+            sum / count as f64
+        } else {
+            0.0
+        }
     };
 
     let ratio = if i_strength.abs() < 1e-15 {
-        if e_strength > 0.0 { f64::INFINITY } else { 1.0 }
+        if e_strength > 0.0 {
+            f64::INFINITY
+        } else {
+            1.0
+        }
     } else {
         e_strength / i_strength
     };
@@ -140,7 +152,11 @@ mod tests {
             knm[1 * n + j] = 3.0;
         }
         let result = compute_ei_balance(&knm, n, &[0, 1], &[2, 3]);
-        assert!(result.ratio > 1.0, "should be excitation-dominated, got {}", result.ratio);
+        assert!(
+            result.ratio > 1.0,
+            "should be excitation-dominated, got {}",
+            result.ratio
+        );
         assert!(!result.is_balanced);
     }
 

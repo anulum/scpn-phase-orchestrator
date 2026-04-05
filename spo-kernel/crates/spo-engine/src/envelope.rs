@@ -151,7 +151,7 @@ mod tests {
         let n = 200;
         let amps: Vec<f64> = (0..n).map(|i| (i as f64 * 0.1).sin()).collect();
         let env = extract_envelope(&amps, 63); // ~1 period
-        // After the padding, interior values should be roughly constant
+                                               // After the padding, interior values should be roughly constant
         let interior = &env[63..n];
         let mean: f64 = interior.iter().sum::<f64>() / interior.len() as f64;
         for v in interior {

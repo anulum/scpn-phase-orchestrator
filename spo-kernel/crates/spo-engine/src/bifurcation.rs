@@ -133,7 +133,15 @@ pub fn trace_sync_transition(
         };
         k_values.push(k);
         let r = steady_state_r(
-            phases_init, omegas, knm_flat, alpha_flat, n, k, dt, n_transient, n_measure,
+            phases_init,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            k,
+            dt,
+            n_transient,
+            n_measure,
         );
         r_values.push(r);
     }
@@ -180,7 +188,15 @@ pub fn find_critical_coupling(
     let mut k_hi = 20.0;
 
     let r_hi = steady_state_r(
-        phases_init, omegas, knm_flat, alpha_flat, n, k_hi, dt, n_transient, n_measure,
+        phases_init,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        k_hi,
+        dt,
+        n_transient,
+        n_measure,
     );
     if r_hi < threshold {
         return f64::NAN;
@@ -189,7 +205,15 @@ pub fn find_critical_coupling(
     for _ in 0..30 {
         let k_mid = (k_lo + k_hi) / 2.0;
         let r_mid = steady_state_r(
-            phases_init, omegas, knm_flat, alpha_flat, n, k_mid, dt, n_transient, n_measure,
+            phases_init,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            k_mid,
+            dt,
+            n_transient,
+            n_measure,
         );
         if r_mid < threshold {
             k_lo = k_mid;
@@ -272,14 +296,14 @@ mod tests {
         let phases: Vec<f64> = (0..n).map(|i| TAU * i as f64 / n as f64).collect();
 
         let (_, r_values, _) = trace_sync_transition(
-            &omegas, &knm, &alpha, n, &phases,
-            0.0, 8.0, 5, 0.01, 500, 200,
+            &omegas, &knm, &alpha, n, &phases, 0.0, 8.0, 5, 0.01, 500, 200,
         );
         // R at K=8 should be greater than R at K=0
         assert!(
             r_values[4] > r_values[0],
             "R should increase with K: R(0)={}, R(8)={}",
-            r_values[0], r_values[4]
+            r_values[0],
+            r_values[4]
         );
     }
 
@@ -291,8 +315,7 @@ mod tests {
         let alpha = vec![0.0; n * n];
         let phases = vec![0.0; n];
         let (k_vals, r_vals, _) = trace_sync_transition(
-            &omegas, &knm, &alpha, n, &phases,
-            0.0, 5.0, 10, 0.01, 100, 50,
+            &omegas, &knm, &alpha, n, &phases, 0.0, 5.0, 10, 0.01, 100, 50,
         );
         assert_eq!(k_vals.len(), 10);
         assert_eq!(r_vals.len(), 10);
@@ -307,11 +330,12 @@ mod tests {
         let alpha = vec![0.0; n * n];
         let phases = vec![0.0; n];
 
-        let kc = find_critical_coupling(
-            &omegas, &knm, &alpha, n, &phases, 0.01, 500, 200, 0.1,
-        );
+        let kc = find_critical_coupling(&omegas, &knm, &alpha, n, &phases, 0.01, 500, 200, 0.1);
         // Identical ω: even tiny coupling syncs → K_c should be small
-        assert!(kc < 5.0, "identical frequencies should have low K_c, got {kc}");
+        assert!(
+            kc < 5.0,
+            "identical frequencies should have low K_c, got {kc}"
+        );
     }
 
     #[test]
@@ -323,12 +347,13 @@ mod tests {
         let alpha = vec![0.0; n * n];
         let phases: Vec<f64> = (0..n).map(|i| TAU * i as f64 / n as f64).collect();
 
-        let kc = find_critical_coupling(
-            &omegas, &knm, &alpha, n, &phases, 0.01, 2000, 500, 0.1,
-        );
+        let kc = find_critical_coupling(&omegas, &knm, &alpha, n, &phases, 0.01, 2000, 500, 0.1);
         assert!(!kc.is_nan(), "should find K_c for spread frequencies");
         // K_c > 0 (some coupling needed)
-        assert!(kc > 0.0, "spread frequencies need nonzero coupling, got {kc}");
+        assert!(
+            kc > 0.0,
+            "spread frequencies need nonzero coupling, got {kc}"
+        );
     }
 
     #[test]
@@ -353,8 +378,7 @@ mod tests {
         let phases = vec![0.0, 1.0, 2.0, 3.0];
 
         let (_, r_vals, _) = trace_sync_transition(
-            &omegas, &knm, &alpha, n, &phases,
-            0.0, 10.0, 5, 0.01, 200, 100,
+            &omegas, &knm, &alpha, n, &phases, 0.0, 10.0, 5, 0.01, 200, 100,
         );
         for (i, &r) in r_vals.iter().enumerate() {
             assert!(r >= 0.0 && r <= 1.0 + 1e-10, "R[{i}] = {r} out of [0,1]");

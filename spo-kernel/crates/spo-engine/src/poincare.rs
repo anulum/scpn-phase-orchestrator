@@ -150,9 +150,7 @@ pub fn phase_poincare(
         ));
     }
     if oscillator_idx >= n {
-        return Err(format!(
-            "oscillator_idx {oscillator_idx} >= N = {n}"
-        ));
+        return Err(format!("oscillator_idx {oscillator_idx} >= N = {n}"));
     }
 
     let two_pi = 2.0 * PI;
@@ -223,8 +221,20 @@ mod tests {
             traj.push(theta.sin());
         }
         let normal = vec![0.0, 1.0];
-        let result = poincare_section(&traj, n_points, 2, &normal, 0.0, CrossingDirection::Positive).unwrap();
-        assert_eq!(result.n_crossings, 3, "expected 3 positive crossings, got {}", result.n_crossings);
+        let result = poincare_section(
+            &traj,
+            n_points,
+            2,
+            &normal,
+            0.0,
+            CrossingDirection::Positive,
+        )
+        .unwrap();
+        assert_eq!(
+            result.n_crossings, 3,
+            "expected 3 positive crossings, got {}",
+            result.n_crossings
+        );
     }
 
     #[test]
@@ -238,8 +248,13 @@ mod tests {
             traj.push(theta.sin());
         }
         let normal = vec![0.0, 1.0];
-        let result = poincare_section(&traj, n_points, 2, &normal, 0.0, CrossingDirection::Both).unwrap();
-        assert_eq!(result.n_crossings, 6, "expected 6 both-direction crossings, got {}", result.n_crossings);
+        let result =
+            poincare_section(&traj, n_points, 2, &normal, 0.0, CrossingDirection::Both).unwrap();
+        assert_eq!(
+            result.n_crossings, 6,
+            "expected 6 both-direction crossings, got {}",
+            result.n_crossings
+        );
     }
 
     #[test]
@@ -247,7 +262,8 @@ mod tests {
         // Constant trajectory
         let traj = vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0]; // 3 points in 2D
         let normal = vec![0.0, 1.0];
-        let result = poincare_section(&traj, 3, 2, &normal, 0.0, CrossingDirection::Positive).unwrap();
+        let result =
+            poincare_section(&traj, 3, 2, &normal, 0.0, CrossingDirection::Positive).unwrap();
         assert_eq!(result.n_crossings, 0);
     }
 
@@ -262,9 +278,25 @@ mod tests {
             traj.push(theta.sin());
         }
         let normal = vec![0.0, 1.0];
-        let result = poincare_section(&traj, n_points, 2, &normal, 0.0, CrossingDirection::Positive).unwrap();
-        assert!(result.n_crossings >= 3, "expected ≥3 crossings, got {}", result.n_crossings);
-        let rt: Vec<f64> = result.crossing_times.windows(2).map(|w| w[1] - w[0]).collect();
+        let result = poincare_section(
+            &traj,
+            n_points,
+            2,
+            &normal,
+            0.0,
+            CrossingDirection::Positive,
+        )
+        .unwrap();
+        assert!(
+            result.n_crossings >= 3,
+            "expected ≥3 crossings, got {}",
+            result.n_crossings
+        );
+        let rt: Vec<f64> = result
+            .crossing_times
+            .windows(2)
+            .map(|w| w[1] - w[0])
+            .collect();
         for (i, pair) in rt.windows(2).enumerate() {
             let diff = (pair[0] - pair[1]).abs();
             assert!(diff < 2.0, "return times {i} differ by {diff}");
@@ -276,7 +308,8 @@ mod tests {
         // Simple linear crossing: (0, -1) → (0, 1), should cross at (0, 0)
         let traj = vec![0.0, -1.0, 0.0, 1.0];
         let normal = vec![0.0, 1.0];
-        let result = poincare_section(&traj, 2, 2, &normal, 0.0, CrossingDirection::Positive).unwrap();
+        let result =
+            poincare_section(&traj, 2, 2, &normal, 0.0, CrossingDirection::Positive).unwrap();
         assert_eq!(result.n_crossings, 1);
         assert!((result.crossings[0] - 0.0).abs() < 1e-12);
         assert!((result.crossings[1] - 0.0).abs() < 1e-12); // y should be ~0
@@ -300,7 +333,11 @@ mod tests {
             phases.push(3.0 * TAU * i as f64 / t as f64); // 3 revolutions
         }
         let result = phase_poincare(&phases, t, n, 0, 0.0).unwrap();
-        assert!(result.n_crossings >= 2, "expected ≥2 crossings, got {}", result.n_crossings);
+        assert!(
+            result.n_crossings >= 2,
+            "expected ≥2 crossings, got {}",
+            result.n_crossings
+        );
     }
 
     #[test]
@@ -316,9 +353,12 @@ mod tests {
         }
         let r0 = phase_poincare(&phases, t, n, 0, 0.0).unwrap();
         let r1 = phase_poincare(&phases, t, n, 1, 0.0).unwrap();
-        assert!(r0.n_crossings > r1.n_crossings,
+        assert!(
+            r0.n_crossings > r1.n_crossings,
             "osc 0 ({} freq) should have more crossings than osc 1 ({})",
-            r0.n_crossings, r1.n_crossings);
+            r0.n_crossings,
+            r1.n_crossings
+        );
     }
 
     #[test]
@@ -334,7 +374,12 @@ mod tests {
         let r_pi = phase_poincare(&phases, t, n, 0, PI).unwrap();
         // Both should have crossings; counts may differ by ±1 due to boundary
         let diff = (r0.n_crossings as i64 - r_pi.n_crossings as i64).unsigned_abs();
-        assert!(diff <= 1, "crossing counts differ by {diff}: {} vs {}", r0.n_crossings, r_pi.n_crossings);
+        assert!(
+            diff <= 1,
+            "crossing counts differ by {diff}: {} vs {}",
+            r0.n_crossings,
+            r_pi.n_crossings
+        );
     }
 
     #[test]

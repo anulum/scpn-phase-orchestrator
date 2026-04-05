@@ -28,13 +28,7 @@
 /// # Returns
 /// Updated coupling matrix (row-major, n×n).
 #[must_use]
-pub fn te_adapt_coupling(
-    knm: &[f64],
-    te: &[f64],
-    n: usize,
-    lr: f64,
-    decay: f64,
-) -> Vec<f64> {
+pub fn te_adapt_coupling(knm: &[f64], te: &[f64], n: usize, lr: f64, decay: f64) -> Vec<f64> {
     let mut result = vec![0.0; n * n];
     for i in 0..n {
         for j in 0..n {
@@ -106,11 +100,7 @@ mod tests {
     fn test_preserves_asymmetry() {
         let n = 3;
         let knm = vec![0.0; n * n];
-        let te = vec![
-            0.0, 0.5, 0.1,
-            0.2, 0.0, 0.8,
-            0.0, 0.3, 0.0,
-        ];
+        let te = vec![0.0, 0.5, 0.1, 0.2, 0.0, 0.8, 0.0, 0.3, 0.0];
         let result = te_adapt_coupling(&knm, &te, n, 1.0, 0.0);
         // K_01 ≠ K_10
         assert!((result[1] - result[3]).abs() > 0.1);

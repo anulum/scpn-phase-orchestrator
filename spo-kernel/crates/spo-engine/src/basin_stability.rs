@@ -62,9 +62,15 @@ pub fn basin_stability(
         }
 
         let r = steady_state_r(
-            &phases_init, omegas, knm_flat, alpha_flat, n,
+            &phases_init,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
             1.0, // k_scale = 1.0 (knm already scaled)
-            dt, n_transient, n_measure,
+            dt,
+            n_transient,
+            n_measure,
         );
         if r >= r_threshold {
             n_converged += 1;
@@ -102,15 +108,10 @@ mod tests {
         // Strong coupling → most ICs converge → S_B high
         let n = 4;
         let omegas = vec![1.0; n];
-        let knm: Vec<f64> = make_all_to_all(n)
-            .iter()
-            .map(|&v| v * 10.0)
-            .collect();
+        let knm: Vec<f64> = make_all_to_all(n).iter().map(|&v| v * 10.0).collect();
         let alpha = vec![0.0; n * n];
 
-        let result = basin_stability(
-            &omegas, &knm, &alpha, n, 0.01, 500, 200, 20, 0.8, 42,
-        );
+        let result = basin_stability(&omegas, &knm, &alpha, n, 0.01, 500, 200, 20, 0.8, 42);
         assert!(
             result.s_b > 0.5,
             "strong coupling should give S_B > 0.5, got {}",
@@ -127,9 +128,7 @@ mod tests {
         let knm = vec![0.0; n * n];
         let alpha = vec![0.0; n * n];
 
-        let result = basin_stability(
-            &omegas, &knm, &alpha, n, 0.01, 300, 100, 30, 0.8, 42,
-        );
+        let result = basin_stability(&omegas, &knm, &alpha, n, 0.01, 300, 100, 30, 0.8, 42);
         assert!(
             result.s_b < 0.3,
             "zero coupling should give low S_B, got {}",
@@ -142,10 +141,7 @@ mod tests {
         // Same seed → same result
         let n = 4;
         let omegas = vec![1.0, 1.5, 2.0, 2.5];
-        let knm: Vec<f64> = make_all_to_all(n)
-            .iter()
-            .map(|&v| v * 5.0)
-            .collect();
+        let knm: Vec<f64> = make_all_to_all(n).iter().map(|&v| v * 5.0).collect();
         let alpha = vec![0.0; n * n];
 
         let r1 = basin_stability(&omegas, &knm, &alpha, n, 0.01, 200, 100, 10, 0.5, 123);
@@ -161,9 +157,7 @@ mod tests {
         let knm = make_all_to_all(n);
         let alpha = vec![0.0; n * n];
 
-        let result = basin_stability(
-            &omegas, &knm, &alpha, n, 0.01, 200, 100, 15, 0.5, 42,
-        );
+        let result = basin_stability(&omegas, &knm, &alpha, n, 0.01, 200, 100, 15, 0.5, 42);
         assert!(result.s_b >= 0.0 && result.s_b <= 1.0);
         assert!(result.n_converged <= 15);
         for &r in &result.r_finals {
@@ -173,9 +167,7 @@ mod tests {
 
     #[test]
     fn test_basin_stability_empty() {
-        let result = basin_stability(
-            &[], &[], &[], 0, 0.01, 100, 50, 0, 0.8, 42,
-        );
+        let result = basin_stability(&[], &[], &[], 0, 0.01, 100, 50, 0, 0.8, 42);
         assert_eq!(result.s_b, 0.0);
         assert_eq!(result.r_finals.len(), 0);
     }
@@ -185,22 +177,16 @@ mod tests {
         // Lower R_threshold → more samples "converge" → higher S_B
         let n = 4;
         let omegas = vec![1.0, 2.0, 3.0, 4.0];
-        let knm: Vec<f64> = make_all_to_all(n)
-            .iter()
-            .map(|&v| v * 3.0)
-            .collect();
+        let knm: Vec<f64> = make_all_to_all(n).iter().map(|&v| v * 3.0).collect();
         let alpha = vec![0.0; n * n];
 
-        let r_low = basin_stability(
-            &omegas, &knm, &alpha, n, 0.01, 300, 100, 20, 0.3, 42,
-        );
-        let r_high = basin_stability(
-            &omegas, &knm, &alpha, n, 0.01, 300, 100, 20, 0.9, 42,
-        );
+        let r_low = basin_stability(&omegas, &knm, &alpha, n, 0.01, 300, 100, 20, 0.3, 42);
+        let r_high = basin_stability(&omegas, &knm, &alpha, n, 0.01, 300, 100, 20, 0.9, 42);
         assert!(
             r_low.s_b >= r_high.s_b,
             "lower threshold should give higher S_B: {:.2} vs {:.2}",
-            r_low.s_b, r_high.s_b
+            r_low.s_b,
+            r_high.s_b
         );
     }
 }

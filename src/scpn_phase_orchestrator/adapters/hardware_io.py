@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 try:
-    from brainflow.board_shim import (  # type: ignore[import-untyped]  # pragma: no cover
+    from brainflow.board_shim import (  # type: ignore[import-not-found,import-untyped]  # pragma: no cover
         BoardShim,
         BrainFlowInputParams,
     )

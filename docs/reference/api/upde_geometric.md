@@ -126,7 +126,7 @@ For the Kuramoto ODE $\dot{\theta} = f(\theta)$:
 
 - **Standard Euler:** $\theta_{n+1} = \theta_n + \Delta t \cdot f(\theta_n) + O(\Delta t^2)$,
   then mod $2\pi$. Local error $O(\Delta t^2)$, global error $O(\Delta t)$.
-  
+
 - **Geometric Euler:** $z_{n+1} = z_n \cdot \exp(i \cdot f(\theta_n) \cdot \Delta t)$.
   Local error $O(\Delta t^2)$, global error $O(\Delta t)$ — **same order**.
 
@@ -564,7 +564,7 @@ Is the problem Hamiltonian (energy must be conserved)?
 - **When accuracy matters more than topology:** The geometric engine is
   first-order (Euler). For the same $\Delta t$, `UPDEEngine` with RK4
   is 4th-order accurate — a better choice if you need precise trajectories.
-  
+
 - **When performance is critical:** The complex arithmetic overhead makes
   `TorusEngine` 1.4-47x slower than `UPDEEngine` (Euler, Rust). If the
   simulation budget is tight, the standard engine is better.

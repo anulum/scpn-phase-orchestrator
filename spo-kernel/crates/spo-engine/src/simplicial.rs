@@ -167,7 +167,10 @@ mod tests {
         for i in 0..n {
             diff_sum += (without[i] - with[i]).abs();
         }
-        assert!(diff_sum > 1e-4, "simplicial term had no effect: diff_sum={diff_sum}");
+        assert!(
+            diff_sum > 1e-4,
+            "simplicial term had no effect: diff_sum={diff_sum}"
+        );
     }
 
     #[test]
@@ -179,8 +182,15 @@ mod tests {
         let alpha = vec![0.0; n * n];
 
         let result = simplicial_run(
-            &phases, &omegas, &knm, &alpha,
-            1.0, PI / 2.0, 0.0, 0.01, 100,
+            &phases,
+            &omegas,
+            &knm,
+            &alpha,
+            1.0,
+            PI / 2.0,
+            0.0,
+            0.01,
+            100,
         );
         // Drive toward psi=π/2 with zeta=1
         for p in &result {
@@ -287,7 +297,17 @@ mod tests {
         let alpha_shift = vec![0.0, 0.3, 0.3, 0.0];
 
         let r1 = simplicial_run(&phases, &omegas, &knm, &alpha_zero, 0.0, 0.0, 0.0, 0.01, 50);
-        let r2 = simplicial_run(&phases, &omegas, &knm, &alpha_shift, 0.0, 0.0, 0.0, 0.01, 50);
+        let r2 = simplicial_run(
+            &phases,
+            &omegas,
+            &knm,
+            &alpha_shift,
+            0.0,
+            0.0,
+            0.0,
+            0.01,
+            50,
+        );
 
         let diff = (r1[0] - r2[0]).abs() + (r1[1] - r2[1]).abs();
         assert!(diff > 1e-4, "alpha should shift evolution: diff={diff}");

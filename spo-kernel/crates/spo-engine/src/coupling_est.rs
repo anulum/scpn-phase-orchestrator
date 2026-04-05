@@ -26,13 +26,7 @@
 /// # Returns
 /// Row-major (n × n) estimated coupling matrix, diagonal zeroed.
 #[must_use]
-pub fn estimate_coupling(
-    phases: &[f64],
-    omegas: &[f64],
-    n: usize,
-    t: usize,
-    dt: f64,
-) -> Vec<f64> {
+pub fn estimate_coupling(phases: &[f64], omegas: &[f64], n: usize, t: usize, dt: f64) -> Vec<f64> {
     if t < 3 || n == 0 {
         return vec![0.0; n * n];
     }
@@ -41,9 +35,13 @@ pub fn estimate_coupling(
     let mut knm = vec![0.0; n * n];
     for i in 0..n {
         let row = solve_node(phases, &dphase, omegas, n, t, t_eff, i);
-        for j in 0..n { knm[i * n + j] = row[j]; }
+        for j in 0..n {
+            knm[i * n + j] = row[j];
+        }
     }
-    for i in 0..n { knm[i * n + i] = 0.0; }
+    for i in 0..n {
+        knm[i * n + i] = 0.0;
+    }
     knm
 }
 
@@ -56,8 +54,12 @@ fn unwrapped_deriv(phases: &[f64], n: usize, t: usize, dt: f64) -> Vec<f64> {
         for tt in 0..t_eff {
             let curr = phases[i * t + tt + 1];
             let mut d = curr - prev;
-            while d > std::f64::consts::PI { d -= std::f64::consts::TAU; }
-            while d < -std::f64::consts::PI { d += std::f64::consts::TAU; }
+            while d > std::f64::consts::PI {
+                d -= std::f64::consts::TAU;
+            }
+            while d < -std::f64::consts::PI {
+                d += std::f64::consts::TAU;
+            }
             dp[i * t_eff + tt] = d / dt;
             prev = curr;
         }
@@ -67,11 +69,18 @@ fn unwrapped_deriv(phases: &[f64], n: usize, t: usize, dt: f64) -> Vec<f64> {
 
 /// Solve coupling coefficients for one oscillator via normal equations.
 fn solve_node(
-    phases: &[f64], dphase: &[f64], omegas: &[f64],
-    n: usize, t: usize, t_eff: usize, i: usize,
+    phases: &[f64],
+    dphase: &[f64],
+    omegas: &[f64],
+    n: usize,
+    t: usize,
+    t_eff: usize,
+    i: usize,
 ) -> Vec<f64> {
     let mut target = vec![0.0; t_eff];
-    for tt in 0..t_eff { target[tt] = dphase[i * t_eff + tt] - omegas[i]; }
+    for tt in 0..t_eff {
+        target[tt] = dphase[i * t_eff + tt] - omegas[i];
+    }
     let mut ata = vec![0.0; n * n];
     let mut atb = vec![0.0; n];
     for tt in 0..t_eff {
@@ -100,17 +109,26 @@ fn forward_elimination(a: &mut [f64], b: &mut [f64], n: usize) {
         let mut max_row = col;
         for row in col..n {
             let v = a[row * n + col].abs();
-            if v > max_val { max_val = v; max_row = row; }
+            if v > max_val {
+                max_val = v;
+                max_row = row;
+            }
         }
-        if max_val < 1e-14 { continue; }
+        if max_val < 1e-14 {
+            continue;
+        }
         if max_row != col {
-            for k in 0..n { a.swap(col * n + k, max_row * n + k); }
+            for k in 0..n {
+                a.swap(col * n + k, max_row * n + k);
+            }
             b.swap(col, max_row);
         }
         let pivot = a[col * n + col];
         for row in (col + 1)..n {
             let factor = a[row * n + col] / pivot;
-            for k in col..n { a[row * n + k] -= factor * a[col * n + k]; }
+            for k in col..n {
+                a[row * n + k] -= factor * a[col * n + k];
+            }
             b[row] -= factor * b[col];
         }
     }
@@ -121,9 +139,13 @@ fn back_substitution(a: &[f64], b: &[f64], n: usize) -> Vec<f64> {
     let mut x = vec![0.0; n];
     for col in (0..n).rev() {
         let diag = a[col * n + col];
-        if diag.abs() < 1e-14 { continue; }
+        if diag.abs() < 1e-14 {
+            continue;
+        }
         let mut sum = b[col];
-        for k in (col + 1)..n { sum -= a[col * n + k] * x[k]; }
+        for k in (col + 1)..n {
+            sum -= a[col * n + k] * x[k];
+        }
         x[col] = sum / diag;
     }
     x
@@ -201,11 +223,7 @@ mod tests {
 
         let knm = estimate_coupling(&phases, &omegas, n, t, dt);
         // K_01 and K_10 should be positive (coupling detected)
-        assert!(
-            knm[1] > 0.5,
-            "K_01={} should detect coupling > 0.5",
-            knm[1]
-        );
+        assert!(knm[1] > 0.5, "K_01={} should detect coupling > 0.5", knm[1]);
     }
 
     #[test]

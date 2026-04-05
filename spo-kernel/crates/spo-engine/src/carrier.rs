@@ -42,7 +42,13 @@ pub fn decode(z: &[f64], a: &[f64], n: usize) -> Vec<f64> {
 
 /// Softplus activation: log(1 + exp(x)), numerically stable.
 fn softplus(x: f64) -> f64 {
-    if x > 20.0 { x } else if x < -20.0 { 0.0 } else { (1.0 + x.exp()).ln() }
+    if x > 20.0 {
+        x
+    } else if x < -20.0 {
+        0.0
+    } else {
+        (1.0 + x.exp()).ln()
+    }
 }
 
 /// Finite-difference gradient of a cost function w.r.t. z.

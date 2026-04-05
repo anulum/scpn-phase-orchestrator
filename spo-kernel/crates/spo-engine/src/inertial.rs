@@ -155,7 +155,8 @@ mod tests {
         let inertia = vec![1.0; n];
         let damping = vec![0.1; n];
 
-        let (new_th, new_od) = inertial_step(&theta, &omega, &power, &knm, &inertia, &damping, n, 0.01);
+        let (new_th, new_od) =
+            inertial_step(&theta, &omega, &power, &knm, &inertia, &damping, n, 0.01);
         assert_eq!(new_th.len(), n);
         assert_eq!(new_od.len(), n);
     }
@@ -204,8 +205,16 @@ mod tests {
 
         let (_, new_od) = inertial_step(&theta, &omega, &power, &knm, &inertia, &damping, n, 0.1);
         // Velocity should decrease in magnitude
-        assert!(new_od[0].abs() < 1.0, "damping should reduce |ω|, got {}", new_od[0]);
-        assert!(new_od[1].abs() < 1.0, "damping should reduce |ω|, got {}", new_od[1]);
+        assert!(
+            new_od[0].abs() < 1.0,
+            "damping should reduce |ω|, got {}",
+            new_od[0]
+        );
+        assert!(
+            new_od[1].abs() < 1.0,
+            "damping should reduce |ω|, got {}",
+            new_od[1]
+        );
     }
 
     #[test]
@@ -222,9 +231,15 @@ mod tests {
 
         let (_, new_od) = inertial_step(&theta, &omega, &power, &knm, &inertia, &damping, n, 0.01);
         // Osc 0 should accelerate toward osc 1 (positive direction)
-        assert!(new_od[0] > 0.0, "coupling should attract osc 0 toward osc 1");
+        assert!(
+            new_od[0] > 0.0,
+            "coupling should attract osc 0 toward osc 1"
+        );
         // Osc 1 should decelerate (negative direction toward osc 0)
-        assert!(new_od[1] < 0.0, "coupling should attract osc 1 toward osc 0");
+        assert!(
+            new_od[1] < 0.0,
+            "coupling should attract osc 1 toward osc 0"
+        );
     }
 
     #[test]
@@ -257,7 +272,9 @@ mod tests {
         let inertia = vec![1.0; n];
         let damping = vec![0.0; n];
 
-        let (th, _, _, _) = inertial_run(&theta, &omega, &power, &knm, &inertia, &damping, n, 0.01, 100);
+        let (th, _, _, _) = inertial_run(
+            &theta, &omega, &power, &knm, &inertia, &damping, n, 0.01, 100,
+        );
         for &v in &th {
             assert!(v >= 0.0 && v < TAU, "theta = {v} out of [0, 2π)");
         }
@@ -303,13 +320,24 @@ mod tests {
         let low_inertia = vec![0.5; n];
         let high_inertia = vec![5.0; n];
 
-        let (_, od_low) = inertial_step(&theta, &omega, &power, &knm, &low_inertia, &damping, n, 0.1);
-        let (_, od_high) = inertial_step(&theta, &omega, &power, &knm, &high_inertia, &damping, n, 0.1);
+        let (_, od_low) =
+            inertial_step(&theta, &omega, &power, &knm, &low_inertia, &damping, n, 0.1);
+        let (_, od_high) = inertial_step(
+            &theta,
+            &omega,
+            &power,
+            &knm,
+            &high_inertia,
+            &damping,
+            n,
+            0.1,
+        );
 
         assert!(
             od_low[0].abs() > od_high[0].abs(),
             "low inertia should accelerate faster: {} vs {}",
-            od_low[0], od_high[0]
+            od_low[0],
+            od_high[0]
         );
     }
 }

@@ -320,7 +320,7 @@ for i, (s, r) in enumerate(zip(sigma_values, R_values)):
 class Hyperedge:
     nodes: tuple[int, ...]   # oscillator indices in this hyperedge
     strength: float = 1.0    # coupling strength σ_e
-    
+
     @property
     def order(self) -> int:  # k = number of nodes
         return len(self.nodes)

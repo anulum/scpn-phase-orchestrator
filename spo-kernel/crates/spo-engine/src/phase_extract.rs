@@ -44,8 +44,13 @@ pub fn extract_phases(signal: &[f64], fs: f64) -> (Vec<f64>, Vec<f64>, Vec<f64>,
 fn compute_analytic_signal(fft: &[(f64, f64)], n: usize) -> Vec<(f64, f64)> {
     let mut a_fft = fft.to_vec();
     let half = n / 2;
-    for i in 1..half { a_fft[i].0 *= 2.0; a_fft[i].1 *= 2.0; }
-    for i in (half + 1)..n { a_fft[i] = (0.0, 0.0); }
+    for i in 1..half {
+        a_fft[i].0 *= 2.0;
+        a_fft[i].1 *= 2.0;
+    }
+    for i in (half + 1)..n {
+        a_fft[i] = (0.0, 0.0);
+    }
     idft(&a_fft)
 }
 
@@ -63,8 +68,12 @@ fn extract_phase_amplitude(analytic: &[(f64, f64)], n: usize) -> (Vec<f64>, Vec<
     // Phase unwrapping
     for i in 1..n {
         let mut d = unwrapped[i] - unwrapped[i - 1];
-        while d > PI { d -= TAU; }
-        while d < -PI { d += TAU; }
+        while d > PI {
+            d -= TAU;
+        }
+        while d < -PI {
+            d += TAU;
+        }
         unwrapped[i] = unwrapped[i - 1] + d;
     }
     (phases, amps, unwrapped)
@@ -73,7 +82,9 @@ fn extract_phase_amplitude(analytic: &[(f64, f64)], n: usize) -> (Vec<f64>, Vec<
 /// Compute instantaneous frequency from unwrapped phase.
 fn instantaneous_frequency(unwrapped: &[f64], fs: f64, n: usize) -> Vec<f64> {
     let mut inst = vec![0.0; n];
-    for i in 1..n { inst[i] = (unwrapped[i] - unwrapped[i - 1]) * fs / TAU; }
+    for i in 1..n {
+        inst[i] = (unwrapped[i] - unwrapped[i - 1]) * fs / TAU;
+    }
     inst
 }
 
@@ -83,7 +94,10 @@ fn find_dominant_freq(fft: &[(f64, f64)], n: usize, fs: f64) -> f64 {
     let mut max_idx = 1;
     for i in 1..(n / 2 + 1) {
         let mag = (fft[i].0 * fft[i].0 + fft[i].1 * fft[i].1).sqrt();
-        if mag > max_mag { max_mag = mag; max_idx = i; }
+        if mag > max_mag {
+            max_mag = mag;
+            max_idx = i;
+        }
     }
     max_idx as f64 * fs / n as f64
 }
@@ -133,9 +147,7 @@ mod tests {
         let fs = 100.0;
         let n = 256;
         let freq = 10.0;
-        let signal: Vec<f64> = (0..n)
-            .map(|i| (TAU * freq * i as f64 / fs).sin())
-            .collect();
+        let signal: Vec<f64> = (0..n).map(|i| (TAU * freq * i as f64 / fs).sin()).collect();
         let (_, _, _, dom) = extract_phases(&signal, fs);
         assert!(
             (dom - freq).abs() < fs / n as f64 * 2.0,
@@ -157,9 +169,7 @@ mod tests {
 
     #[test]
     fn test_amplitudes_nonneg() {
-        let signal: Vec<f64> = (0..64)
-            .map(|i| (i as f64 * 0.1).sin() * 3.0)
-            .collect();
+        let signal: Vec<f64> = (0..64).map(|i| (i as f64 * 0.1).sin() * 3.0).collect();
         let (_, amps, _, _) = extract_phases(&signal, 100.0);
         for a in &amps {
             assert!(*a >= 0.0, "amplitude {a} should be >= 0");
@@ -199,10 +209,7 @@ mod tests {
         let fft = dft(&x);
         let back = idft(&fft);
         for (i, &val) in x.iter().enumerate() {
-            assert!(
-                (back[i].0 - val).abs() < 1e-10,
-                "roundtrip failed at {i}"
-            );
+            assert!((back[i].0 - val).abs() < 1e-10, "roundtrip failed at {i}");
             assert!(back[i].1.abs() < 1e-10);
         }
     }

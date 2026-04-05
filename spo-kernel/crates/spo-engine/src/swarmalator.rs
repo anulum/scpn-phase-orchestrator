@@ -111,9 +111,8 @@ mod tests {
         let phases = vec![0.0; n];
         let omegas = vec![1.0; n];
 
-        let (fp, fph, pt, pht) = swarmalator_run(
-            &pos, &phases, &omegas, n, dim, 0.01, 1.0, 1.0, 0.5, 1.0, 10,
-        );
+        let (fp, fph, pt, pht) =
+            swarmalator_run(&pos, &phases, &omegas, n, dim, 0.01, 1.0, 1.0, 0.5, 1.0, 10);
         assert_eq!(fp.len(), n * dim);
         assert_eq!(fph.len(), n);
         assert_eq!(pt.len(), 10 * n * dim);
@@ -194,7 +193,10 @@ mod tests {
                 max_dist = max_dist.max(d2.sqrt());
             }
         }
-        assert!(max_dist < 5.0, "agents should converge, max_dist = {max_dist}");
+        assert!(
+            max_dist < 5.0,
+            "agents should converge, max_dist = {max_dist}"
+        );
     }
 
     #[test]
@@ -205,9 +207,8 @@ mod tests {
         let phases = vec![0.0; n];
         let omegas = vec![1.0; n];
 
-        let (fp, fph, _, _) = swarmalator_run(
-            &pos, &phases, &omegas, n, dim, 0.01, 1.0, 1.0, 0.5, 1.0, 10,
-        );
+        let (fp, fph, _, _) =
+            swarmalator_run(&pos, &phases, &omegas, n, dim, 0.01, 1.0, 1.0, 0.5, 1.0, 10);
         assert_eq!(fp.len(), n * dim);
         assert_eq!(fph.len(), n);
     }
@@ -215,7 +216,17 @@ mod tests {
     #[test]
     fn test_single_agent() {
         let (fp, fph, _, _) = swarmalator_run(
-            &[1.0, 2.0], &[0.5], &[1.0], 1, 2, 0.01, 1.0, 1.0, 0.5, 1.0, 10,
+            &[1.0, 2.0],
+            &[0.5],
+            &[1.0],
+            1,
+            2,
+            0.01,
+            1.0,
+            1.0,
+            0.5,
+            1.0,
+            10,
         );
         assert_eq!(fp.len(), 2);
         assert_eq!(fph.len(), 1);

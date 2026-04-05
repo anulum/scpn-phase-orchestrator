@@ -51,18 +51,18 @@ pub fn oa_run(
         let (k2r, k2i) = oa_deriv(
             re + 0.5 * dt * k1r,
             im + 0.5 * dt * k1i,
-            omega_0, delta, half_k,
+            omega_0,
+            delta,
+            half_k,
         );
         let (k3r, k3i) = oa_deriv(
             re + 0.5 * dt * k2r,
             im + 0.5 * dt * k2i,
-            omega_0, delta, half_k,
+            omega_0,
+            delta,
+            half_k,
         );
-        let (k4r, k4i) = oa_deriv(
-            re + dt * k3r,
-            im + dt * k3i,
-            omega_0, delta, half_k,
-        );
+        let (k4r, k4i) = oa_deriv(re + dt * k3r, im + dt * k3i, omega_0, delta, half_k);
         re += (dt / 6.0) * (k1r + 2.0 * k2r + 2.0 * k3r + k4r);
         im += (dt / 6.0) * (k1i + 2.0 * k2i + 2.0 * k3i + k4i);
     }
@@ -144,10 +144,7 @@ mod tests {
         // K=4 >> K_c=2, should converge to R ≈ 0.707
         let (_, _, r, _) = oa_run(0.01, 0.0, 0.0, 1.0, 4.0, 0.01, 2000);
         let expected = steady_state_r_oa(1.0, 4.0);
-        assert!(
-            (r - expected).abs() < 0.05,
-            "R={r}, expected≈{expected}"
-        );
+        assert!((r - expected).abs() < 0.05, "R={r}, expected≈{expected}");
     }
 
     #[test]
@@ -162,10 +159,7 @@ mod tests {
         // ω₀ ≠ 0 → mean field rotates
         let (_, _, r, _) = oa_run(0.01, 0.0, 5.0, 0.5, 4.0, 0.01, 2000);
         let expected = steady_state_r_oa(0.5, 4.0);
-        assert!(
-            (r - expected).abs() < 0.1,
-            "R={r}, expected≈{expected}"
-        );
+        assert!((r - expected).abs() < 0.1, "R={r}, expected≈{expected}");
     }
 
     #[test]

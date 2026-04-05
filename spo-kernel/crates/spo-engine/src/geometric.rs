@@ -47,7 +47,9 @@ pub fn torus_run(
         exp_map_step(&mut z_re, &mut z_im, &omega_eff, dt, n);
     }
 
-    (0..n).map(|i| z_im[i].atan2(z_re[i]).rem_euclid(TAU)).collect()
+    (0..n)
+        .map(|i| z_im[i].atan2(z_re[i]).rem_euclid(TAU))
+        .collect()
 }
 
 /// Exponential map on S¹: z_i → z_i · exp(i·ω_i·dt), then renormalise.
@@ -60,7 +62,10 @@ fn exp_map_step(z_re: &mut [f64], z_im: &mut [f64], omega: &[f64], dt: f64, n: u
         z_re[i] = re * cos_a - im * sin_a;
         z_im[i] = re * sin_a + im * cos_a;
         let norm = (z_re[i] * z_re[i] + z_im[i] * z_im[i]).sqrt();
-        if norm > 0.0 { z_re[i] /= norm; z_im[i] /= norm; }
+        if norm > 0.0 {
+            z_re[i] /= norm;
+            z_im[i] /= norm;
+        }
     }
 }
 
