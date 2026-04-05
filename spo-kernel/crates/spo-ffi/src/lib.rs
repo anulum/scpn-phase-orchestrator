@@ -25,8 +25,8 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    basin_stability, bifurcation, dimension, ei_balance, embedding, entropy_prod, free_energy,
-    hodge, inertial, itpc, market, poincare, psychedelic,
+    basin_stability, bifurcation, delay, dimension, ei_balance, embedding, entropy_prod,
+    free_energy, hodge, inertial, itpc, market, poincare, psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1798,6 +1798,34 @@ fn rqa_rust(
     ))
 }
 
+// ─── Delayed Kuramoto ─────────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (
+    phases_init, omegas, knm_flat, alpha_flat, n,
+    zeta, psi, dt, delay_steps, n_steps
+))]
+fn delayed_kuramoto_run_rust<'py>(
+    py: Python<'py>,
+    phases_init: PyReadonlyArray1<'py, f64>,
+    omegas: PyReadonlyArray1<'py, f64>,
+    knm_flat: PyReadonlyArray1<'py, f64>,
+    alpha_flat: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    zeta: f64,
+    psi: f64,
+    dt: f64,
+    delay_steps: usize,
+    n_steps: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = delay::delayed_kuramoto_run(p, o, k, a, n, zeta, psi, dt, delay_steps, n_steps);
+    Ok(PyArray1::from_vec(py, result))
+}
+
 // ─── Free Energy ──────────────────────────────────────────────────
 
 #[pyfunction]
@@ -2316,6 +2344,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(delayed_kuramoto_run_rust, m)?)?;
     m.add_function(wrap_pyfunction!(boltzmann_weight_rust, m)?)?;
     m.add_function(wrap_pyfunction!(effective_temperature_rust, m)?)?;
     m.add_function(wrap_pyfunction!(add_langevin_noise_rust, m)?)?;

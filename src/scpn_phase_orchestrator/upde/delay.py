@@ -14,6 +14,15 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        delayed_kuramoto_run_rust as _rust_delayed_run,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["DelayBuffer", "DelayedEngine"]
 
 
@@ -113,6 +122,16 @@ class DelayedEngine:
         n_steps: int,
     ) -> NDArray:
         """Run *n_steps* delayed Euler steps, return final phases."""
+        if _HAS_RUST:
+            n = self._n
+            p = np.ascontiguousarray(phases, dtype=np.float64)
+            o = np.ascontiguousarray(omegas, dtype=np.float64)
+            k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+            a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+            return np.asarray(_rust_delayed_run(
+                p, o, k, a, n, zeta, psi,
+                self._dt, self._delay_steps, n_steps,
+            ))
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)
