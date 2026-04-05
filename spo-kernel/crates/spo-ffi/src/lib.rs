@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    dimension, embedding, entropy_prod, itpc,
+    dimension, embedding, entropy_prod, itpc, poincare,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1797,6 +1797,63 @@ fn rqa_rust(
     ))
 }
 
+// ─── Poincaré Section ──────────────────────────────────────────────
+
+/// Returns (crossings_flat, crossing_times, n_crossings).
+#[pyfunction]
+#[pyo3(signature = (traj_flat, t, d, normal, offset = 0.0, direction = "positive"))]
+fn poincare_section_rust<'py>(
+    py: Python<'py>,
+    traj_flat: PyReadonlyArray1<'py, f64>,
+    t: usize,
+    d: usize,
+    normal: PyReadonlyArray1<'py, f64>,
+    offset: f64,
+    direction: &str,
+) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>, usize)> {
+    let tr = traj_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let n = normal
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let dir = match direction {
+        "positive" => poincare::CrossingDirection::Positive,
+        "negative" => poincare::CrossingDirection::Negative,
+        "both" => poincare::CrossingDirection::Both,
+        _ => return Err(PyValueError::new_err("direction must be 'positive', 'negative', or 'both'")),
+    };
+    let result = poincare::poincare_section(tr, t, d, n, offset, dir)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok((
+        PyArray1::from_vec(py, result.crossings),
+        PyArray1::from_vec(py, result.crossing_times),
+        result.n_crossings,
+    ))
+}
+
+#[pyfunction]
+#[pyo3(signature = (phases_flat, t, n, oscillator_idx = 0, section_phase = 0.0))]
+fn phase_poincare_rust<'py>(
+    py: Python<'py>,
+    phases_flat: PyReadonlyArray1<'py, f64>,
+    t: usize,
+    n: usize,
+    oscillator_idx: usize,
+    section_phase: f64,
+) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>, usize)> {
+    let p = phases_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = poincare::phase_poincare(p, t, n, oscillator_idx, section_phase)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok((
+        PyArray1::from_vec(py, result.crossings),
+        PyArray1::from_vec(py, result.crossing_times),
+        result.n_crossings,
+    ))
+}
+
 // ─── Embedding (Takens 1981) ───────────────────────────────────────
 
 #[pyfunction]
@@ -1936,6 +1993,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(delay_embed_rust, m)?)?;
     m.add_function(wrap_pyfunction!(optimal_delay_rust, m)?)?;
     m.add_function(wrap_pyfunction!(optimal_dimension_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(poincare_section_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     Ok(())
 }
 

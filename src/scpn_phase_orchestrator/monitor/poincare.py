@@ -25,6 +25,18 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        phase_poincare_rust as _rust_phase_poincare,
+    )
+    from spo_kernel import (
+        poincare_section_rust as _rust_poincare_section,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "PoincareResult",
     "poincare_section",
@@ -70,9 +82,35 @@ def poincare_section(
     Returns:
         PoincareResult with crossing coordinates and return times.
     """
-    traj = np.atleast_2d(trajectory)
-    n = np.asarray(normal, dtype=float)
-    n = n / np.linalg.norm(n)
+    traj = np.atleast_2d(np.asarray(trajectory, dtype=np.float64))
+    T, d = traj.shape
+    norm_vec = np.asarray(normal, dtype=np.float64)
+
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(traj.ravel())
+        n_arr = np.ascontiguousarray(norm_vec / np.linalg.norm(norm_vec))
+        cr_flat, ct, n_cr = _rust_poincare_section(flat, T, d, n_arr, offset, direction)
+        cr_flat = np.asarray(cr_flat)
+        ct = np.asarray(ct)
+        if n_cr == 0:
+            return PoincareResult(
+                crossings=np.empty((0, d)),
+                crossing_times=np.array([]),
+                return_times=np.array([]),
+                mean_return_time=0.0,
+                std_return_time=0.0,
+            )
+        crossings_arr = cr_flat.reshape(n_cr, d)
+        rt = np.diff(ct)
+        return PoincareResult(
+            crossings=crossings_arr,
+            crossing_times=ct,
+            return_times=rt,
+            mean_return_time=float(np.mean(rt)) if len(rt) > 0 else 0.0,
+            std_return_time=float(np.std(rt)) if len(rt) > 0 else 0.0,
+        )
+
+    n = norm_vec / np.linalg.norm(norm_vec)
 
     # Signed distance from plane
     signed_dist = traj @ n - offset
@@ -149,8 +187,33 @@ def phase_poincare(
         PoincareResult. Crossings contain the full phase vector at each
         crossing time.
     """
-    phases = np.atleast_2d(phases)
+    phases = np.atleast_2d(np.asarray(phases, dtype=np.float64))
     T, N = phases.shape
+
+    if _HAS_RUST:
+        flat = np.ascontiguousarray(phases.ravel())
+        cr_flat, ct, n_cr = _rust_phase_poincare(
+            flat, T, N, oscillator_idx, section_phase,
+        )
+        cr_flat = np.asarray(cr_flat)
+        ct = np.asarray(ct)
+        if n_cr == 0:
+            return PoincareResult(
+                crossings=np.empty((0, N)),
+                crossing_times=np.array([]),
+                return_times=np.array([]),
+                mean_return_time=0.0,
+                std_return_time=0.0,
+            )
+        crossings_arr = cr_flat.reshape(n_cr, N)
+        rt = np.diff(ct)
+        return PoincareResult(
+            crossings=crossings_arr,
+            crossing_times=ct,
+            return_times=rt,
+            mean_return_time=float(np.mean(rt)) if len(rt) > 0 else 0.0,
+            std_return_time=float(np.std(rt)) if len(rt) > 0 else 0.0,
+        )
 
     # Unwrap the target oscillator's phase for crossing detection
     target = np.unwrap(phases[:, oscillator_idx])

@@ -34,6 +34,7 @@ pub mod entropy_prod;
 pub mod lyapunov;
 pub mod npe;
 pub mod pid;
+pub mod poincare;
 pub mod plasticity;
 pub mod recurrence;
 pub mod sheaf_upde;
