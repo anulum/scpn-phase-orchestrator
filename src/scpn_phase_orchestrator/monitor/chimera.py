@@ -14,6 +14,15 @@ from numpy.typing import NDArray
 
 __all__ = ["ChimeraState", "detect_chimera"]
 
+try:
+    from spo_kernel import (
+        detect_chimera_rust as _rust_dc,  # type: ignore[import-untyped]
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 # Kuramoto & Battogtokh 2002, Nonlinear Phenom. Complex Syst. 5:380-385
 _COHERENT_THRESHOLD = 0.7
 _INCOHERENT_THRESHOLD = 0.3
@@ -64,6 +73,18 @@ def detect_chimera(phases: NDArray, knm: NDArray) -> ChimeraState:
 
     if n == 0:
         return ChimeraState()
+
+    if _HAS_RUST:
+        coh, incoh, ci, _ = _rust_dc(
+            np.ascontiguousarray(phases),
+            np.ascontiguousarray(knm.ravel()),
+            n,
+        )
+        return ChimeraState(
+            coherent_indices=[int(i) for i in coh],
+            incoherent_indices=[int(i) for i in incoh],
+            chimera_index=float(ci),
+        )
 
     r_local = _local_order_parameter(phases, knm)
 

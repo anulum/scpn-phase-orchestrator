@@ -23,6 +23,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use spo_engine::{
+    chimera,
     coupling::{project_knm, CouplingBuilder},
     entropy_prod,
     imprint::ImprintModel,
@@ -1574,6 +1575,31 @@ fn lyapunov_spectrum_rust<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
+// ─── Chimera Detection ──────────────────────────────────────────────
+
+/// Returns (coherent_indices, incoherent_indices, chimera_index, local_order).
+#[pyfunction]
+fn detect_chimera_rust<'py>(
+    py: Python<'py>,
+    phases: PyReadonlyArray1<'py, f64>,
+    knm: PyReadonlyArray1<'py, f64>,
+    n: usize,
+) -> PyResult<(Vec<usize>, Vec<usize>, f64, Bound<'py, PyArray1<f64>>)> {
+    let p = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = chimera::detect_chimera(p, k, n);
+    Ok((
+        result.coherent_indices,
+        result.incoherent_indices,
+        result.chimera_index,
+        PyArray1::from_vec(py, result.local_order),
+    ))
+}
+
 // ─── Spectral Analysis ──────────────────────────────────────────────
 
 #[pyfunction]
@@ -1786,6 +1812,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(spectral_gap_rust, m)?)?;
     m.add_function(wrap_pyfunction!(critical_coupling_rust, m)?)?;
     m.add_function(wrap_pyfunction!(sync_convergence_rate_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(detect_chimera_rust, m)?)?;
     Ok(())
 }
 
