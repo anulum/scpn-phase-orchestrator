@@ -11,7 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         compute_itpc_rust as _rust_itpc,
     )
     from spo_kernel import (

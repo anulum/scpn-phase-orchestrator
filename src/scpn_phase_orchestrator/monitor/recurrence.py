@@ -32,7 +32,7 @@ __all__ = [
 ]
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         cross_recurrence_matrix_rust as _rust_cross_rm,
     )
     from spo_kernel import (

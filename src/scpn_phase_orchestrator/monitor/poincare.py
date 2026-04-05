@@ -26,7 +26,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         phase_poincare_rust as _rust_phase_poincare,
     )
     from spo_kernel import (

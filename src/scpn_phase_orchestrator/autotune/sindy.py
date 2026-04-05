@@ -12,7 +12,7 @@ import numpy as np
 from scipy.linalg import lstsq
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         sindy_fit_rust as _rust_sindy_fit,
     )
 

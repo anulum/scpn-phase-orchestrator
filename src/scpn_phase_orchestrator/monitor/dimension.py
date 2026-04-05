@@ -24,7 +24,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         correlation_integral_rust as _rust_ci,
     )
     from spo_kernel import (

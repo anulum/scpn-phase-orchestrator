@@ -26,7 +26,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         inertial_run_rust as _rust_run,
     )
     from spo_kernel import (

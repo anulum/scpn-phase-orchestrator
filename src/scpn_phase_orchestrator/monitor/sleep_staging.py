@@ -11,7 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         classify_sleep_stage_rust as _rust_classify,
     )
     from spo_kernel import (

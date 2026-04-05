@@ -22,7 +22,7 @@ from numpy.typing import NDArray
 from scipy.signal import hilbert
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         detect_regimes_rust as _rust_regimes,
     )
     from spo_kernel import (

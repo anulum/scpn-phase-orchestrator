@@ -27,7 +27,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         find_critical_coupling_bif_rust as _rust_find_kc,
     )
     from spo_kernel import (

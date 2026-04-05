@@ -16,7 +16,7 @@ try:
     from spo_kernel import (
         envelope_modulation_depth_rust as _rust_modulation_depth,
     )
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         extract_envelope_rust as _rust_extract_envelope,
     )
 

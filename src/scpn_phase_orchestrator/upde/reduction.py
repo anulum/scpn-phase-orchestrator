@@ -16,7 +16,7 @@ try:
     from spo_kernel import (
         fit_lorentzian_rust as _rust_fit_lorentzian,
     )
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         oa_run_rust as _rust_oa_run,
     )
     from spo_kernel import (

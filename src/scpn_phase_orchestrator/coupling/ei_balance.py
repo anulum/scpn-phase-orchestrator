@@ -13,7 +13,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         adjust_ei_ratio_rust as _rust_adjust,
     )
     from spo_kernel import (

@@ -28,7 +28,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         delay_embed_rust as _rust_delay_embed,
     )
     from spo_kernel import (

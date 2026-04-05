@@ -93,7 +93,7 @@ class CouplingBuilder:
     ) -> CouplingState:
         """K_ij = base_strength * exp(-decay_alpha * |i - j|), zero diagonal."""
         if _HAS_RUST:  # pragma: no cover
-            from spo_kernel import PyCouplingBuilder  # type: ignore[import-untyped]
+            from spo_kernel import PyCouplingBuilder
 
             d = PyCouplingBuilder().build(n_layers, base_strength, decay_alpha)
             n = d["n"]

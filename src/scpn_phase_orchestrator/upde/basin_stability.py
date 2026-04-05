@@ -24,7 +24,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         basin_stability_rust as _rust_basin,
     )
 

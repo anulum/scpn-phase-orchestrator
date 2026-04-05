@@ -13,7 +13,7 @@ from numpy.typing import NDArray
 __all__ = ["phase_transfer_entropy", "transfer_entropy_matrix"]
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         phase_transfer_entropy_rust as _rust_pte,
     )
     from spo_kernel import (

@@ -92,7 +92,7 @@ class NeurocoreBridge:
         self._backend = backend
 
         if backend == "rust":
-            from spo_kernel import PyLIFEnsemble  # type: ignore[import-untyped]
+            from spo_kernel import PyLIFEnsemble
 
             self._rust_ensemble = PyLIFEnsemble(n_layers, neurons_per_layer, noise_std)
         elif backend == "numpy":
