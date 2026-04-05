@@ -188,7 +188,11 @@ def rqa(
             _rust_rm(flat, t_len, d, epsilon, metric == "angular"),
         )
         rr, det, avg_d, max_d, ent_d, lam, tt, max_v = _rust_rqa(
-            r_flat, t_len, l_min, v_min, True,
+            r_flat,
+            t_len,
+            l_min,
+            v_min,
+            True,
         )
         return RQAResult(
             recurrence_rate=rr,

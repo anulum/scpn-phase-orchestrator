@@ -141,8 +141,17 @@ class SwarmalatorEngine:
             ph_arr = np.ascontiguousarray(phases, dtype=np.float64)
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             fp, fph, pt, pht = _rust_swarm_run(
-                p, ph_arr, o, n, dim, self._dt,
-                self.A, self.B, self.J, self.K, n_steps,
+                p,
+                ph_arr,
+                o,
+                n,
+                dim,
+                self._dt,
+                self.A,
+                self.B,
+                self.J,
+                self.K,
+                n_steps,
             )
             return (
                 np.asarray(fp).reshape(n, dim),

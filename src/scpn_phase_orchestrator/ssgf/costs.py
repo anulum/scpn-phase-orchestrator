@@ -59,8 +59,11 @@ def compute_ssgf_costs(
         p = np.ascontiguousarray(phases, dtype=np.float64)
         c1, c2, c3, c4, ut = _rust_costs(w_flat, p, n, w1, w2, w3, w4)
         return SSGFCosts(
-            c1_sync=c1, c2_spectral_gap=c2,
-            c3_sparsity=c3, c4_symmetry=c4, u_total=ut,
+            c1_sync=c1,
+            c2_spectral_gap=c2,
+            c3_sparsity=c3,
+            c4_symmetry=c4,
+            u_total=ut,
         )
 
     R, _ = compute_order_parameter(phases)

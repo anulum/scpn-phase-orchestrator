@@ -100,7 +100,8 @@ def ultradian_phase(
     if _HAS_RUST:
         ts = np.ascontiguousarray(timestamps, dtype=np.float64)
         codes = np.array(
-            [_STAGE_CODES.get(s, 0) for s in stage_history], dtype=np.uint8,
+            [_STAGE_CODES.get(s, 0) for s in stage_history],
+            dtype=np.uint8,
         )
         return _rust_ultradian(ts, codes)
     ts = np.asarray(timestamps, dtype=np.float64)

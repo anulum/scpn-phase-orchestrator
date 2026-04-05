@@ -81,7 +81,14 @@ class InertialKuramotoEngine:
             in_ = np.ascontiguousarray(inertia, dtype=np.float64)
             dm = np.ascontiguousarray(damping, dtype=np.float64)
             new_th, new_od = _rust_step(
-                th, od, pw, km, in_, dm, n, self._dt,
+                th,
+                od,
+                pw,
+                km,
+                in_,
+                dm,
+                n,
+                self._dt,
             )
             return np.asarray(new_th), np.asarray(new_od)
 
@@ -130,7 +137,15 @@ class InertialKuramotoEngine:
             in_ = np.ascontiguousarray(inertia, dtype=np.float64)
             dm = np.ascontiguousarray(damping, dtype=np.float64)
             f_th, f_od, t_th, t_od = _rust_run(
-                th, od, pw, km, in_, dm, n, self._dt, n_steps,
+                th,
+                od,
+                pw,
+                km,
+                in_,
+                dm,
+                n,
+                self._dt,
+                n_steps,
             )
             return (
                 np.asarray(f_th),

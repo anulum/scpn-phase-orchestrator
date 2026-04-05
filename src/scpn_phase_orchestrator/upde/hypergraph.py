@@ -187,7 +187,18 @@ class HypergraphEngine:
                 else np.empty(0, dtype=np.float64)
             )
             return _rust_hypergraph_run(
-                p, o, self._n, en, eo, es, kn, al, zeta, psi, self._dt, n_steps,
+                p,
+                o,
+                self._n,
+                en,
+                eo,
+                es,
+                kn,
+                al,
+                zeta,
+                psi,
+                self._dt,
+                n_steps,
             )
         p = phases.copy()
         for _ in range(n_steps):

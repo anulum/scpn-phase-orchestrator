@@ -44,7 +44,12 @@ class PhaseSINDy:
         if _HAS_RUST:
             p_flat = np.ascontiguousarray(phases, dtype=np.float64).ravel()
             result_flat = _rust_sindy_fit(
-                p_flat, N, T, dt, self.threshold, self.max_iter,
+                p_flat,
+                N,
+                T,
+                dt,
+                self.threshold,
+                self.max_iter,
             )
             result = result_flat.reshape(N, N)
             # Remap: Rust stores [ω at diagonal, K_ij off-diagonal]

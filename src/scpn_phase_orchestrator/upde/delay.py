@@ -128,10 +128,20 @@ class DelayedEngine:
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            return np.asarray(_rust_delayed_run(
-                p, o, k, a, n, zeta, psi,
-                self._dt, self._delay_steps, n_steps,
-            ))
+            return np.asarray(
+                _rust_delayed_run(
+                    p,
+                    o,
+                    k,
+                    a,
+                    n,
+                    zeta,
+                    psi,
+                    self._dt,
+                    self._delay_steps,
+                    n_steps,
+                )
+            )
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

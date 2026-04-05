@@ -93,8 +93,13 @@ class OttAntonsenReduction:
         """Integrate n_steps, return final state."""
         if _HAS_RUST:
             z_re, z_im, R, psi = _rust_oa_run(
-                z0.real, z0.imag,
-                self._omega_0, self._delta, self._K, self._dt, n_steps,
+                z0.real,
+                z0.imag,
+                self._omega_0,
+                self._delta,
+                self._K,
+                self._dt,
+                n_steps,
             )
             return OAState(z=complex(z_re, z_im), R=R, psi=psi, K_c=self.K_c)
         z = z0

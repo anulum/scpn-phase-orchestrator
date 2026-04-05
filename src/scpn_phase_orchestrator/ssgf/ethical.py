@@ -84,11 +84,23 @@ def compute_ethical_cost(
         p = np.ascontiguousarray(phases, dtype=np.float64)
         k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         j, phi, c15, nv = _rust_ethical_cost(
-            p, k, n, alpha_R, beta_K, gamma_Q, nu_S, kappa,
-            R_min, connectivity_min, max_coupling,
+            p,
+            k,
+            n,
+            alpha_R,
+            beta_K,
+            gamma_Q,
+            nu_S,
+            kappa,
+            R_min,
+            connectivity_min,
+            max_coupling,
         )
         return EthicalCost(
-            J_sec=j, phi_ethics=phi, c15_sec=c15, constraints_violated=nv,
+            J_sec=j,
+            phi_ethics=phi,
+            c15_sec=c15,
+            constraints_violated=nv,
         )
 
     R, _ = compute_order_parameter(phases)

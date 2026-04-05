@@ -83,7 +83,16 @@ class SimplicialEngine:
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
             return _rust_simplicial_run(
-                p, o, k, a, self._n, zeta, psi, self._sigma2, self._dt, n_steps,
+                p,
+                o,
+                k,
+                a,
+                self._n,
+                zeta,
+                psi,
+                self._sigma2,
+                self._dt,
+                n_steps,
             )
         p = phases.copy()
         for _ in range(n_steps):

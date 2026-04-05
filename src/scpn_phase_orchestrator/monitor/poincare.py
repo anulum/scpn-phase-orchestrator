@@ -193,7 +193,11 @@ def phase_poincare(
     if _HAS_RUST:
         flat = np.ascontiguousarray(phases.ravel())
         cr_flat, ct, n_cr = _rust_phase_poincare(
-            flat, T, N, oscillator_idx, section_phase,
+            flat,
+            T,
+            N,
+            oscillator_idx,
+            section_phase,
         )
         cr_flat = np.asarray(cr_flat)
         ct = np.asarray(ct)
