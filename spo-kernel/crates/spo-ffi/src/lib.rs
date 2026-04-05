@@ -25,8 +25,8 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    basin_stability, bifurcation, dimension, ei_balance, embedding, entropy_prod, hodge, inertial,
-    itpc, market, poincare, psychedelic,
+    basin_stability, bifurcation, dimension, ei_balance, embedding, entropy_prod, free_energy,
+    hodge, inertial, itpc, market, poincare, psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1798,6 +1798,31 @@ fn rqa_rust(
     ))
 }
 
+// ─── Free Energy ──────────────────────────────────────────────────
+
+#[pyfunction]
+fn boltzmann_weight_rust(u_total: f64, temperature: f64) -> f64 {
+    free_energy::boltzmann_weight(u_total, temperature)
+}
+
+#[pyfunction]
+fn effective_temperature_rust(costs: PyReadonlyArray1<'_, f64>) -> PyResult<f64> {
+    let c = costs.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(free_energy::effective_temperature(c))
+}
+
+#[pyfunction]
+fn add_langevin_noise_rust<'py>(
+    py: Python<'py>,
+    z: PyReadonlyArray1<'py, f64>,
+    temperature: f64,
+    dt: f64,
+    seed: u64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let zv = z.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(PyArray1::from_vec(py, free_energy::add_langevin_noise(zv, temperature, dt, seed)))
+}
+
 // ─── Hodge Decomposition ──────────────────────────────────────────
 
 #[pyfunction]
@@ -2291,6 +2316,9 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(boltzmann_weight_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(effective_temperature_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(add_langevin_noise_rust, m)?)?;
     m.add_function(wrap_pyfunction!(hodge_decomposition_rust, m)?)?;
     m.add_function(wrap_pyfunction!(compute_ei_balance_rust, m)?)?;
     m.add_function(wrap_pyfunction!(adjust_ei_ratio_rust, m)?)?;

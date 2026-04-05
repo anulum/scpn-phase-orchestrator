@@ -10,6 +10,21 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        add_langevin_noise_rust as _rust_langevin,
+    )
+    from spo_kernel import (
+        boltzmann_weight_rust as _rust_boltzmann,
+    )
+    from spo_kernel import (
+        effective_temperature_rust as _rust_teff,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = ["add_langevin_noise", "boltzmann_weight", "effective_temperature"]
 
 
@@ -30,6 +45,13 @@ def add_langevin_noise(
     """
     if temperature <= 0.0 or dt <= 0.0:
         return z.copy()
+
+    if _HAS_RUST and rng is None:
+        flat = np.ascontiguousarray(z.ravel(), dtype=np.float64)
+        return np.asarray(_rust_langevin(flat, temperature, dt, 42)).reshape(
+            z.shape,
+        )
+
     if rng is None:
         rng = np.random.default_rng()
     sigma = np.sqrt(2.0 * temperature * dt)
@@ -44,6 +66,8 @@ def boltzmann_weight(u_total: float, temperature: float) -> float:
     Clamps exponent to [-700, 700] to avoid over/underflow.
     Returns 1.0 at T=0 if U=0, else 0.0 for U>0 at T=0.
     """
+    if _HAS_RUST:
+        return float(_rust_boltzmann(u_total, temperature))
     if temperature <= 0.0:
         return 1.0 if u_total <= 0.0 else 0.0
     exponent = -u_total / temperature
@@ -64,6 +88,9 @@ def effective_temperature(costs_history: NDArray) -> float:
     """
     if len(costs_history) < 2:
         return 0.0
+    if _HAS_RUST:
+        c = np.ascontiguousarray(costs_history, dtype=np.float64).ravel()
+        return float(_rust_teff(c))
     var = float(np.var(costs_history, ddof=1))
     mean = float(np.mean(costs_history))
     if abs(mean) < 1e-30:
