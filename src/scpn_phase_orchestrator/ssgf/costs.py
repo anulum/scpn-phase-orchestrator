@@ -16,7 +16,7 @@ from scpn_phase_orchestrator.coupling.spectral import fiedler_value
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         compute_ssgf_costs_rust as _rust_costs,
     )
 

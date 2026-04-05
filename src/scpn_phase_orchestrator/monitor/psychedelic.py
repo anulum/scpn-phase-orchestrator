@@ -18,7 +18,7 @@ from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         entropy_from_phases_rust as _rust_entropy,
     )
     from spo_kernel import (
