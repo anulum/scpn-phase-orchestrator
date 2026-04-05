@@ -27,6 +27,7 @@ pub use pac::{modulation_index, pac_matrix};
 pub use stuart_landau::StuartLandauStepper;
 pub use upde::UPDEStepper;
 pub mod chimera;
+pub mod dimension;
 pub mod entropy_prod;
 pub mod lyapunov;
 pub mod npe;

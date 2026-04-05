@@ -23,6 +23,18 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        correlation_integral_rust as _rust_ci,
+    )
+    from spo_kernel import (
+        kaplan_yorke_dimension_rust as _rust_ky,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "CorrelationDimensionResult",
     "correlation_integral",
@@ -73,6 +85,13 @@ def correlation_integral(
     """
     traj = np.atleast_2d(trajectory)
     T = traj.shape[0]
+
+    if _HAS_RUST:
+        d = traj.shape[1]
+        flat = np.ascontiguousarray(traj.ravel(), dtype=np.float64)
+        eps_arr = np.ascontiguousarray(np.sort(epsilons), dtype=np.float64)
+        return np.asarray(_rust_ci(flat, T, d, eps_arr, max_pairs, seed))
+
     total_pairs = T * (T - 1) // 2
     epsilons = np.sort(epsilons)
 
@@ -229,6 +248,10 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float:
         D_KY. Returns 0.0 if the largest exponent is negative (stable
         fixed point, zero-dimensional attractor).
     """
+    if _HAS_RUST:
+        le_sorted = np.sort(lyapunov_exponents)[::-1]
+        return float(_rust_ky(np.ascontiguousarray(le_sorted, dtype=np.float64)))
+
     # Sort descending: λ_1 ≥ λ_2 ≥ ... ≥ λ_N
     le = np.sort(lyapunov_exponents)[::-1]
     cumsum = np.cumsum(le)

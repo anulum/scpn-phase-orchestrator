@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    entropy_prod,
+    dimension, entropy_prod,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1575,6 +1575,39 @@ fn lyapunov_spectrum_rust<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
+// ─── Fractal Dimension ──────────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (trajectory, t, d, epsilons, max_pairs = 50000, seed = 42))]
+#[allow(clippy::too_many_arguments)]
+fn correlation_integral_rust<'py>(
+    py: Python<'py>,
+    trajectory: PyReadonlyArray1<'py, f64>,
+    t: usize,
+    d: usize,
+    epsilons: PyReadonlyArray1<'py, f64>,
+    max_pairs: usize,
+    seed: u64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let traj = trajectory
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let eps = epsilons
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = dimension::correlation_integral(traj, t, d, eps, max_pairs, seed)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok(PyArray1::from_vec(py, result))
+}
+
+#[pyfunction]
+fn kaplan_yorke_dimension_rust(exponents: PyReadonlyArray1<'_, f64>) -> PyResult<f64> {
+    let le = exponents
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(dimension::kaplan_yorke_dimension(le))
+}
+
 // ─── Chimera Detection ──────────────────────────────────────────────
 
 /// Returns (coherent_indices, incoherent_indices, chimera_index, local_order).
@@ -1813,6 +1846,8 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(critical_coupling_rust, m)?)?;
     m.add_function(wrap_pyfunction!(sync_convergence_rate_rust, m)?)?;
     m.add_function(wrap_pyfunction!(detect_chimera_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(correlation_integral_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(kaplan_yorke_dimension_rust, m)?)?;
     Ok(())
 }
 
