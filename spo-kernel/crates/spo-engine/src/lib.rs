@@ -31,6 +31,7 @@ pub mod lyapunov;
 pub mod npe;
 pub mod pid;
 pub mod plasticity;
+pub mod recurrence;
 pub mod sheaf_upde;
 pub mod sparse_upde;
 pub mod winding;

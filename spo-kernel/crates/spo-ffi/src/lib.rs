@@ -30,6 +30,7 @@ use spo_engine::{
     lif_ensemble::{LIFEnsemble, LIFParams},
     lyapunov, order_params, pac,
     plasticity::PlasticityModel,
+    recurrence,
     sheaf_upde::SheafUPDEStepper,
     sparse_upde::SparseUPDEStepper,
     stuart_landau::StuartLandauStepper,
@@ -1571,6 +1572,75 @@ fn lyapunov_spectrum_rust<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
+// ─── Recurrence Analysis ────────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (trajectory, t, d, epsilon, angular = false))]
+fn recurrence_matrix_rust<'py>(
+    py: Python<'py>,
+    trajectory: PyReadonlyArray1<'py, f64>,
+    t: usize,
+    d: usize,
+    epsilon: f64,
+    angular: bool,
+) -> PyResult<Bound<'py, PyArray1<u8>>> {
+    let traj = trajectory
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = recurrence::recurrence_matrix(traj, t, d, epsilon, angular)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok(PyArray1::from_vec(py, result))
+}
+
+#[pyfunction]
+#[pyo3(signature = (traj_a, traj_b, t, d, epsilon, angular = false))]
+fn cross_recurrence_matrix_rust<'py>(
+    py: Python<'py>,
+    traj_a: PyReadonlyArray1<'py, f64>,
+    traj_b: PyReadonlyArray1<'py, f64>,
+    t: usize,
+    d: usize,
+    epsilon: f64,
+    angular: bool,
+) -> PyResult<Bound<'py, PyArray1<u8>>> {
+    let a = traj_a
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let b = traj_b
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = recurrence::cross_recurrence_matrix(a, b, t, d, epsilon, angular)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok(PyArray1::from_vec(py, result))
+}
+
+/// Returns (rr, det, avg_diag, max_diag, ent_diag, lam, trap_time, max_vert).
+#[pyfunction]
+#[pyo3(signature = (recurrence_flat, t, l_min = 2, v_min = 2, exclude_main_diagonal = true))]
+fn rqa_rust(
+    recurrence_flat: PyReadonlyArray1<'_, u8>,
+    t: usize,
+    l_min: usize,
+    v_min: usize,
+    exclude_main_diagonal: bool,
+) -> PyResult<(f64, f64, f64, usize, f64, f64, f64, usize)> {
+    let r = recurrence_flat
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = recurrence::rqa(r, t, l_min, v_min, exclude_main_diagonal)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok((
+        result.recurrence_rate,
+        result.determinism,
+        result.avg_diagonal,
+        result.max_diagonal,
+        result.entropy_diagonal,
+        result.laminarity,
+        result.trapping_time,
+        result.max_vertical,
+    ))
+}
+
 // ─── Module Registration ────────────────────────────────────────────
 
 #[pymodule]
@@ -1609,6 +1679,9 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;
     m.add_function(wrap_pyfunction!(winding_numbers, m)?)?;
     m.add_function(wrap_pyfunction!(lyapunov_spectrum_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(recurrence_matrix_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(cross_recurrence_matrix_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(rqa_rust, m)?)?;
     Ok(())
 }
 

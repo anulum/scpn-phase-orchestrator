@@ -31,6 +31,21 @@ __all__ = [
     "cross_rqa",
 ]
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        cross_recurrence_matrix_rust as _rust_cross_rm,
+    )
+    from spo_kernel import (
+        recurrence_matrix_rust as _rust_rm,
+    )
+    from spo_kernel import (
+        rqa_rust as _rust_rqa,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 
 @dataclass
 class RQAResult:
@@ -83,6 +98,12 @@ def recurrence_matrix(
     traj = np.asarray(trajectory)
     if traj.ndim == 1:
         traj = traj[:, np.newaxis]
+
+    if _HAS_RUST:
+        t, d = traj.shape
+        flat = np.ascontiguousarray(traj.ravel(), dtype=np.float64)
+        r_flat = np.asarray(_rust_rm(flat, t, d, epsilon, metric == "angular"))
+        return r_flat.reshape(t, t).astype(bool)
 
     if metric == "angular":
         # Chord distance on circle: 2*sin(|Δθ|/2) for each dimension
@@ -157,6 +178,29 @@ def rqa(
     Returns:
         RQAResult with all standard RQA measures.
     """
+    if _HAS_RUST:
+        traj = np.asarray(trajectory)
+        if traj.ndim == 1:
+            traj = traj[:, np.newaxis]
+        t_len, d = traj.shape
+        flat = np.ascontiguousarray(traj.ravel(), dtype=np.float64)
+        r_flat = np.asarray(
+            _rust_rm(flat, t_len, d, epsilon, metric == "angular"),
+        )
+        rr, det, avg_d, max_d, ent_d, lam, tt, max_v = _rust_rqa(
+            r_flat, t_len, l_min, v_min, True,
+        )
+        return RQAResult(
+            recurrence_rate=rr,
+            determinism=det,
+            avg_diagonal=avg_d,
+            max_diagonal=int(max_d),
+            entropy_diagonal=ent_d,
+            laminarity=lam,
+            trapping_time=tt,
+            max_vertical=int(max_v),
+        )
+
     R = recurrence_matrix(trajectory, epsilon, metric)
     T = R.shape[0]
     total_points = T * T
@@ -236,6 +280,15 @@ def cross_recurrence_matrix(
         a = a[:, np.newaxis]
     if b.ndim == 1:
         b = b[:, np.newaxis]
+
+    if _HAS_RUST:
+        t, d = a.shape
+        a_flat = np.ascontiguousarray(a.ravel(), dtype=np.float64)
+        b_flat = np.ascontiguousarray(b.ravel(), dtype=np.float64)
+        cr_flat = np.asarray(
+            _rust_cross_rm(a_flat, b_flat, t, d, epsilon, metric == "angular"),
+        )
+        return cr_flat.reshape(t, t).astype(bool)
 
     if metric == "angular":
         diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
