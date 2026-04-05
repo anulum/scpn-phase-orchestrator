@@ -224,7 +224,7 @@ class TestPerformanceBudgets:
         # Only assert when system load is reasonable.
         import os
 
-        load_1m = os.getloadavg()[0]
+        load_1m = os.getloadavg()[0] if hasattr(os, "getloadavg") else 0.0
         if load_1m < 10:
             assert speedup > 1.2, f"Rust should be faster: speedup={speedup:.1f}×"
         else:
