@@ -184,18 +184,20 @@ jobs:
           pytest tests/ -v --tb=short
       - name: Build and test (Windows, lockfile)
         if: runner.os == 'Windows' && matrix.python-version == '3.12'
+        shell: bash
         run: |
           python -m venv .venv
-          .venv\Scripts\activate
+          source .venv/Scripts/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           pytest tests/ -v --tb=short
       - name: Build and test (Windows, loose)
         if: runner.os == 'Windows' && matrix.python-version != '3.12'
+        shell: bash
         run: |
           python -m venv .venv
-          .venv\Scripts\activate
+          source .venv/Scripts/activate
           pip install maturin
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install -e ".[dev,full,plot,otel,queuewaves]"
