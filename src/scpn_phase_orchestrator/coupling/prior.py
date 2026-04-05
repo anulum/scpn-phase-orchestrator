@@ -100,14 +100,16 @@ class UniversalPrior:
     def log_probability(self, K_base: float, decay_alpha: float) -> float:
         """Log-probability under the Gaussian prior (unnormalized)."""
         if _HAS_RUST:
-            return float(_rust_log_prob(
-                K_base,
-                decay_alpha,
-                self._K_base_mean,
-                self._K_base_std,
-                self._decay_alpha_mean,
-                self._decay_alpha_std,
-            ))
+            return float(
+                _rust_log_prob(
+                    K_base,
+                    decay_alpha,
+                    self._K_base_mean,
+                    self._K_base_std,
+                    self._decay_alpha_mean,
+                    self._decay_alpha_std,
+                )
+            )
         lp_K = -0.5 * ((K_base - self._K_base_mean) / self._K_base_std) ** 2
         lp_a = (
             -0.5 * ((decay_alpha - self._decay_alpha_mean) / self._decay_alpha_std) ** 2
