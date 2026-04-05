@@ -48,8 +48,8 @@ def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
         ValueError: If n_regions < 2 or > 80.
     """
     try:
-        from neurolib.utils.loadData import (
-            Dataset,  # type: ignore[import-untyped,import-not-found]
+        from neurolib.utils.loadData import (  # type: ignore[import-untyped,import-not-found]
+            Dataset,
         )
     except ModuleNotFoundError:
         raise ImportError(
