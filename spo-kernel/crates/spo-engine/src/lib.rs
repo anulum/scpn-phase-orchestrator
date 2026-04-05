@@ -26,6 +26,7 @@ pub use order_params::{compute_layer_coherence, compute_order_parameter, compute
 pub use pac::{modulation_index, pac_matrix};
 pub use stuart_landau::StuartLandauStepper;
 pub use upde::UPDEStepper;
+pub mod bifurcation;
 pub mod chimera;
 pub mod dimension;
 pub mod embedding;

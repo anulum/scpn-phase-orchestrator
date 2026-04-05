@@ -26,6 +26,21 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        find_critical_coupling_bif_rust as _rust_find_kc,
+    )
+    from spo_kernel import (
+        steady_state_r_rust as _rust_ssr,
+    )
+    from spo_kernel import (
+        trace_sync_transition_rust as _rust_trace,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "BifurcationPoint",
     "BifurcationDiagram",
@@ -66,6 +81,18 @@ def _steady_state_R(
     n_measure: int,
 ) -> float:
     """Run Kuramoto to steady state and return time-averaged R."""
+    if _HAS_RUST:
+        n = len(omegas)
+        p = np.ascontiguousarray(phases_init, dtype=np.float64)
+        o = np.ascontiguousarray(omegas, dtype=np.float64)
+        k = np.ascontiguousarray(
+            knm_template.ravel(), dtype=np.float64,
+        )
+        a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+        return float(_rust_ssr(
+            p, o, k, a, n, K_scale, dt, n_transient, n_measure,
+        ))
+
     knm = knm_template * K_scale
     phases = phases_init.copy()
 
@@ -125,16 +152,39 @@ def trace_sync_transition(
     if alpha is None:
         alpha = np.zeros((n, n))
 
-    K_values = np.linspace(K_range[0], K_range[1], n_points)
+    phases_init = rng.uniform(0, 2 * np.pi, n)
     diagram = BifurcationDiagram()
 
-    phases_init = rng.uniform(0, 2 * np.pi, n)
+    if _HAS_RUST:
+        o = np.ascontiguousarray(omegas, dtype=np.float64)
+        k = np.ascontiguousarray(knm_template.ravel(), dtype=np.float64)
+        a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+        p = np.ascontiguousarray(phases_init, dtype=np.float64)
+        kv, rv, kc = _rust_trace(
+            o, k, a, n, p,
+            K_range[0], K_range[1], n_points,
+            dt, n_transient, n_measure,
+        )
+        kv = np.asarray(kv)
+        rv = np.asarray(rv)
+        for i in range(len(kv)):
+            diagram.points.append(
+                BifurcationPoint(K=float(kv[i]), R=float(rv[i]), stable=True),
+            )
+        if not np.isnan(kc):
+            diagram.K_critical = float(kc)
+        return diagram
+
+    K_values = np.linspace(K_range[0], K_range[1], n_points)
 
     for K_val in K_values:
         R = _steady_state_R(
-            phases_init, omegas, K_val, knm_template, alpha, dt, n_transient, n_measure
+            phases_init, omegas, K_val, knm_template, alpha, dt,
+            n_transient, n_measure,
         )
-        diagram.points.append(BifurcationPoint(K=float(K_val), R=R, stable=True))
+        diagram.points.append(
+            BifurcationPoint(K=float(K_val), R=R, stable=True),
+        )
 
     R_arr = diagram.R_values
     threshold = 0.1
@@ -177,12 +227,22 @@ def find_critical_coupling(
 
     alpha = np.zeros((n, n))
     phases_init = rng.uniform(0, 2 * np.pi, n)
-    threshold = 0.1
 
+    if _HAS_RUST:
+        o = np.ascontiguousarray(omegas, dtype=np.float64)
+        k = np.ascontiguousarray(knm_template.ravel(), dtype=np.float64)
+        a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+        p = np.ascontiguousarray(phases_init, dtype=np.float64)
+        return float(_rust_find_kc(
+            o, k, a, n, p, dt, n_transient, n_measure, tol,
+        ))
+
+    threshold = 0.1
     K_lo, K_hi = 0.0, 20.0
 
     R_hi = _steady_state_R(
-        phases_init, omegas, K_hi, knm_template, alpha, dt, n_transient, n_measure
+        phases_init, omegas, K_hi, knm_template, alpha,
+        dt, n_transient, n_measure,
     )
     if R_hi < threshold:
         return float("nan")
@@ -190,7 +250,8 @@ def find_critical_coupling(
     for _ in range(30):
         K_mid = (K_lo + K_hi) / 2
         R_mid = _steady_state_R(
-            phases_init, omegas, K_mid, knm_template, alpha, dt, n_transient, n_measure
+            phases_init, omegas, K_mid, knm_template, alpha,
+            dt, n_transient, n_measure,
         )
         if R_mid < threshold:
             K_lo = K_mid

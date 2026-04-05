@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     chimera,
     coupling::{project_knm, CouplingBuilder},
-    dimension, embedding, entropy_prod, itpc, poincare, psychedelic,
+    bifurcation, dimension, embedding, entropy_prod, itpc, poincare, psychedelic,
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1797,6 +1797,83 @@ fn rqa_rust(
     ))
 }
 
+// ─── Bifurcation (Kuramoto 1975) ──────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (
+    phases_init, omegas, knm_flat, alpha_flat, n,
+    k_scale, dt, n_transient, n_measure
+))]
+fn steady_state_r_rust(
+    phases_init: PyReadonlyArray1<'_, f64>,
+    omegas: PyReadonlyArray1<'_, f64>,
+    knm_flat: PyReadonlyArray1<'_, f64>,
+    alpha_flat: PyReadonlyArray1<'_, f64>,
+    n: usize,
+    k_scale: f64,
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+) -> PyResult<f64> {
+    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(bifurcation::steady_state_r(p, o, k, a, n, k_scale, dt, n_transient, n_measure))
+}
+
+#[pyfunction]
+#[pyo3(signature = (
+    omegas, knm_flat, alpha_flat, n, phases_init,
+    k_min, k_max, n_points, dt, n_transient, n_measure
+))]
+fn trace_sync_transition_rust<'py>(
+    py: Python<'py>,
+    omegas: PyReadonlyArray1<'py, f64>,
+    knm_flat: PyReadonlyArray1<'py, f64>,
+    alpha_flat: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    phases_init: PyReadonlyArray1<'py, f64>,
+    k_min: f64,
+    k_max: f64,
+    n_points: usize,
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>, f64)> {
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let (kv, rv, kc) = bifurcation::trace_sync_transition(
+        o, k, a, n, p, k_min, k_max, n_points, dt, n_transient, n_measure,
+    );
+    Ok((PyArray1::from_vec(py, kv), PyArray1::from_vec(py, rv), kc))
+}
+
+#[pyfunction]
+#[pyo3(signature = (
+    omegas, knm_flat, alpha_flat, n, phases_init,
+    dt, n_transient, n_measure, tol
+))]
+fn find_critical_coupling_bif_rust(
+    omegas: PyReadonlyArray1<'_, f64>,
+    knm_flat: PyReadonlyArray1<'_, f64>,
+    alpha_flat: PyReadonlyArray1<'_, f64>,
+    n: usize,
+    phases_init: PyReadonlyArray1<'_, f64>,
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+    tol: f64,
+) -> PyResult<f64> {
+    let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha_flat.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let p = phases_init.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(bifurcation::find_critical_coupling(o, k, a, n, p, dt, n_transient, n_measure, tol))
+}
+
 // ─── Psychedelic Entropy ───────────────────────────────────────────
 
 #[pyfunction]
@@ -2023,6 +2100,9 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_poincare_rust, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_from_phases_rust, m)?)?;
     m.add_function(wrap_pyfunction!(reduce_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(steady_state_r_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(trace_sync_transition_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(find_critical_coupling_bif_rust, m)?)?;
     Ok(())
 }
 
