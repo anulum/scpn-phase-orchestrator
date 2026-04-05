@@ -14,6 +14,15 @@ from numpy.typing import NDArray
 
 __all__ = ["LyapunovGuard", "LyapunovState", "lyapunov_spectrum"]
 
+try:
+    from spo_kernel import (
+        lyapunov_spectrum_rust as _rust_lyapunov,  # type: ignore[import-untyped]
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 
 @dataclass
 class LyapunovState:
@@ -135,6 +144,21 @@ def lyapunov_spectrum(
     Returns:
         (N,) array of Lyapunov exponents, sorted descending.
     """
+    if _HAS_RUST:
+        return np.asarray(
+            _rust_lyapunov(
+                np.ascontiguousarray(phases_init, dtype=np.float64),
+                np.ascontiguousarray(omegas, dtype=np.float64),
+                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
+                dt,
+                n_steps,
+                qr_interval,
+                zeta,
+                psi,
+            )
+        )
+
     n = len(phases_init)
     phases = phases_init.copy()
     # Q holds N orthonormal perturbation vectors (Benettin 1980)

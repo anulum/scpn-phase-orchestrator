@@ -28,7 +28,7 @@ use spo_engine::{
     imprint::ImprintModel,
     lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
-    order_params, pac,
+    lyapunov, order_params, pac,
     plasticity::PlasticityModel,
     sheaf_upde::SheafUPDEStepper,
     sparse_upde::SparseUPDEStepper,
@@ -1537,6 +1537,40 @@ fn winding_numbers<'py>(
     Ok(PyArray1::from_slice(py, &result))
 }
 
+// ─── Lyapunov Spectrum ──────────────────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (phases_init, omegas, knm, alpha, dt = 0.01, n_steps = 1000, qr_interval = 10, zeta = 0.0, psi = 0.0))]
+#[allow(clippy::too_many_arguments)]
+fn lyapunov_spectrum_rust<'py>(
+    py: Python<'py>,
+    phases_init: PyReadonlyArray1<'py, f64>,
+    omegas: PyReadonlyArray1<'py, f64>,
+    knm: PyReadonlyArray1<'py, f64>,
+    alpha: PyReadonlyArray1<'py, f64>,
+    dt: f64,
+    n_steps: usize,
+    qr_interval: usize,
+    zeta: f64,
+    psi: f64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let p = phases_init
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = alpha
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let result = lyapunov::lyapunov_spectrum(p, o, k, a, dt, n_steps, qr_interval, zeta, psi)
+        .map_err(|e| PyValueError::new_err(e))?;
+    Ok(PyArray1::from_vec(py, result))
+}
+
 // ─── Module Registration ────────────────────────────────────────────
 
 #[pymodule]
@@ -1574,6 +1608,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_distance_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;
     m.add_function(wrap_pyfunction!(winding_numbers, m)?)?;
+    m.add_function(wrap_pyfunction!(lyapunov_spectrum_rust, m)?)?;
     Ok(())
 }
 
