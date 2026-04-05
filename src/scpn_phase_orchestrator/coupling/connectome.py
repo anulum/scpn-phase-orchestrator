@@ -20,7 +20,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 try:
-    from spo_kernel import (  # type: ignore[import-untyped]
+    from spo_kernel import (
         load_hcp_connectome_rust as _rust_load_hcp,
     )
 
@@ -48,7 +48,7 @@ def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
         ValueError: If n_regions < 2 or > 80.
     """
     try:
-        from neurolib.utils.loadData import Dataset  # type: ignore[import-untyped]
+        from neurolib.utils.loadData import Dataset  # type: ignore[import-not-found]
     except ModuleNotFoundError:
         raise ImportError(
             "neurolib is required for real HCP data: pip install neurolib"
@@ -89,7 +89,7 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> NDArray:
         raise ValueError(msg)
 
     if _HAS_RUST:
-        flat = _rust_load_hcp(n_regions, seed)
+        flat: NDArray = np.asarray(_rust_load_hcp(n_regions, seed))
         return flat.reshape(n_regions, n_regions)
 
     rng = np.random.default_rng(seed=seed)
