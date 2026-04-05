@@ -63,7 +63,7 @@ jobs:
         run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - name: Install (loose, non-3.12)
         if: matrix.python-version != '3.12'
-        run: pip install -e ".[dev,full,plot,otel,queuewaves]"
+        run: pip install -e ".[dev,full,plot,otel,queuewaves,nn]"
       - run: >
           pytest tests/ -v --tb=short
           --cov=scpn_phase_orchestrator
@@ -180,7 +180,7 @@ jobs:
           . .venv/bin/activate
           pip install maturin
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install -e ".[dev,full,plot,otel,queuewaves]"
+          pip install -e ".[dev,full,plot,otel,queuewaves,nn]"
           pytest tests/ -v --tb=short
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
@@ -190,7 +190,7 @@ jobs:
           source .venv/Scripts/activate
           pip install maturin
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install -e ".[dev,full,plot,otel]"
+          pip install -e ".[dev,full,plot,otel,nn]"
           pytest tests/ -v --tb=short
 
   cargo-audit:
