@@ -23,6 +23,7 @@ use std::f64::consts::TAU;
 /// This is mathematically equivalent to Euler but avoids
 /// numerical artefacts at the 0/2π boundary.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn torus_run(
     phases: &[f64],
     omegas: &[f64],

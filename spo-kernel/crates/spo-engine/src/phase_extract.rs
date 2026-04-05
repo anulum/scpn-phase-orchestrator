@@ -8,6 +8,7 @@
 
 //! Extract instantaneous phase, amplitude, and frequency from a real-valued
 //! time series using the analytic signal (Hilbert transform via FFT).
+#![allow(clippy::needless_range_loop)] // indices used as mathematical variables in DFT
 
 use std::f64::consts::{PI, TAU};
 
@@ -44,12 +45,12 @@ pub fn extract_phases(signal: &[f64], fs: f64) -> (Vec<f64>, Vec<f64>, Vec<f64>,
 fn compute_analytic_signal(fft: &[(f64, f64)], n: usize) -> Vec<(f64, f64)> {
     let mut a_fft = fft.to_vec();
     let half = n / 2;
-    for i in 1..half {
-        a_fft[i].0 *= 2.0;
-        a_fft[i].1 *= 2.0;
+    for entry in a_fft.iter_mut().take(half).skip(1) {
+        entry.0 *= 2.0;
+        entry.1 *= 2.0;
     }
-    for i in (half + 1)..n {
-        a_fft[i] = (0.0, 0.0);
+    for entry in a_fft.iter_mut().take(n).skip(half + 1) {
+        *entry = (0.0, 0.0);
     }
     idft(&a_fft)
 }

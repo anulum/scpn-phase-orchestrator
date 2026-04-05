@@ -84,8 +84,8 @@ fn find_first_acf_peak(acf: &[f64]) -> usize {
 
     // Find first zero crossing
     let mut zero_cross = 1;
-    for i in 1..n {
-        if acf[i] <= 0.0 {
+    for (i, val) in acf.iter().enumerate().take(n).skip(1) {
+        if *val <= 0.0 {
             zero_cross = i;
             break;
         }

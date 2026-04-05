@@ -47,7 +47,7 @@ fn build_intra_hemi(knm: &mut [f64], n: usize, half: usize, seed: u64) {
                 if i == j {
                     continue;
                 }
-                let dist = if i > j { i - j } else { j - i };
+                let dist = i.abs_diff(j);
                 let base = INTRA_HEMI_STRENGTH * (-0.3 * dist as f64).exp();
                 // LCG noise
                 rng = rng

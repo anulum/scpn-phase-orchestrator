@@ -6,6 +6,7 @@
 // SCPN Phase Orchestrator — Engine crate root
 
 #![deny(unsafe_code)]
+#![allow(clippy::too_many_arguments)] // physics engine functions require many parameters
 //! UPDE integration, coupling, order parameters, lags, imprint, Stuart-Landau, PAC.
 
 pub mod coupling;

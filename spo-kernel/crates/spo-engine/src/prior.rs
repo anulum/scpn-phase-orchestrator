@@ -39,7 +39,7 @@ pub fn distance_decay_matrix(n: usize, k_base: f64, decay_alpha: f64) -> Vec<f64
     for i in 0..n {
         for j in 0..n {
             if i != j {
-                let dist = if i > j { i - j } else { j - i };
+                let dist = i.abs_diff(j);
                 knm[i * n + j] = k_base * (-decay_alpha * dist as f64).exp();
             }
         }
