@@ -1,6 +1,6 @@
 # Monitor
 
-The monitor subsystem provides 12 dynamical observers that detect different
+The monitor subsystem provides 15+ dynamical observers that detect different
 aspects of oscillator network behavior. Most oscillator simulators provide
 only the global order parameter R. SPO's monitors detect chimera states,
 cross-frequency coupling, causal information flow, topological invariants,
@@ -64,6 +64,8 @@ state = detect_chimera(phases, knm)
 ::: scpn_phase_orchestrator.monitor.chimera
 
 ## Entrainment Verification Score (EVS)
+
+**Detailed documentation:** [EVS (Entrainment) — Superior Reference](monitor_evs.md)
 
 Three-criterion battery that distinguishes genuine entrainment
 (phase-locking to a stimulus) from broadband artifacts. All three
@@ -353,3 +355,13 @@ result = phase_poincare(phases, oscillator_idx=0, section_phase=0.0)
 ```
 
 ::: scpn_phase_orchestrator.monitor.poincare
+
+## Sleep Stage Classifier
+
+AASM sleep staging mapped to the Kuramoto order parameter R.
+Classifies phases into Wake/N1/N2/N3/REM based on R thresholds
+and a functional desynchronisation flag. Includes ultradian
+(~90 min) cycle phase estimation.
+**Detailed documentation:** [Sleep Staging — Superior Reference](monitor_sleep_staging.md)
+
+::: scpn_phase_orchestrator.monitor.sleep_staging

@@ -322,6 +322,7 @@ information flow — oscillator i can influence j without j influencing i.
 
 **Reference:** Lizier 2012, "Local Information Transfer as
 Spatiotemporal Filter."
+**Detailed documentation:** [TE Adaptive — Superior Reference](coupling_te_adaptive.md)
 
 ::: scpn_phase_orchestrator.coupling.te_adaptive
 
@@ -373,6 +374,7 @@ experimental programme.
   with Dörfler-Bullo K_c for given omegas
 - `log_probability(K_base, decay_alpha) → float` — unnormalised
   log-probability under Gaussian prior
+**Detailed documentation:** [Universal Prior — Superior Reference](coupling_prior.md)
 
 ::: scpn_phase_orchestrator.coupling.prior
 
@@ -395,7 +397,8 @@ Neuroscience-realistic coupling matrices.
 `load_neurolib_hcp(n_regions=80)` loads real HCP structural connectivity
 from the neurolib library. Supports n_regions from 2 to 80.
 
-**Performance:** `load_hcp_connectome(80)` < 10 ms.
+**Performance:** `load_hcp_connectome(80)` < 10 ms (Python), ~48 µs (Rust, 17.6x speedup).
+**Detailed documentation:** [HCP Connectome — Superior Reference](coupling_connectome.md)
 
 ::: scpn_phase_orchestrator.coupling.connectome
 

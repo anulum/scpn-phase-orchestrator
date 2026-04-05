@@ -1,7 +1,7 @@
 # UPDE Engine
 
 The Unified Phase Dynamics Engine (UPDE) is SPO's core integrator subsystem.
-It provides 14 ODE engine variants covering standard Kuramoto, amplitude
+It provides 18 ODE engine variants covering standard Kuramoto, amplitude
 dynamics (Stuart-Landau), higher-order interactions (simplicial), inertial
 systems (power grids), stochastic resonance, geometric integration, time
 delays, financial markets, spatial-phase coupling (swarmalators),
@@ -40,9 +40,7 @@ output (order parameters, monitors, supervisor).
 | Engine | State | ODE | Use case |
 |--------|-------|-----|----------|
 | UPDEEngine | θ ∈ [0,2π)^N | Kuramoto | General synchronisation |
-| SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ((N \log N)$) |
-| SheafUPDEEngine | $\vec{\theta} \in \mathbb{R}^{N \times D}$ | Cellular Sheaf | Multi-dimensional block coupling |
-| SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ((N \log N)$) |
+| SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ($O(N \log N)$) |
 | SheafUPDEEngine | $\vec{\theta} \in \mathbb{R}^{N \times D}$ | Cellular Sheaf | Multi-dimensional block coupling |
 | StuartLandauEngine | [θ,r] ∈ R^{2N} | Stuart-Landau | Amplitude dynamics |
 | SimplicialEngine | θ ∈ [0,2π)^N | 3-body Kuramoto | Explosive sync |
@@ -94,6 +92,7 @@ synchronization transitions not achievable with pairwise coupling alone.
 Vectorized via trig identity: 2·S_i·C_i where S = Σsin(Δθ), C = Σcos(Δθ).
 
 Gambuzza et al. 2023, Nature Physics; Tang et al. 2025.
+**Detailed documentation:** [Simplicial (3-body) — Superior Reference](upde_simplicial.md)
 
 ::: scpn_phase_orchestrator.upde.simplicial
 
@@ -152,6 +151,7 @@ Symplectic Euler on T^N using SO(2) exponential map: z_i = exp(iθ_i).
 Avoids mod 2π discontinuity errors that accumulate in standard integrators
 over long simulations. Essential for multi-hour or multi-day simulations
 where phase wrapping drift becomes significant.
+**Detailed documentation:** [Geometric (SO(2)) — Superior Reference](upde_geometric.md)
 
 ::: scpn_phase_orchestrator.upde.geometric
 
@@ -173,6 +173,7 @@ ODE: dz/dt = -(Δ + iω₀)z + (K/2)(z - |z|²z).
 Critical coupling K_c = 2Δ. Steady-state: R_ss = √(1 - 2Δ/K).
 Used by the PredictiveSupervisor as a fast forward model for MPC
 (O(1) computation vs O(N) for full simulation).
+**Detailed documentation:** [Ott-Antonsen Reduction — Superior Reference](upde_reduction.md)
 
 ::: scpn_phase_orchestrator.upde.reduction
 
@@ -217,6 +218,7 @@ Central to neuroscience cross-frequency coupling analysis.
 
 Amplitude envelope extraction and numerical integration utilities
 (DP54 coefficients, error estimation, step size control).
+**Detailed documentation:** [Envelope (RMS) — Superior Reference](upde_envelope.md)
 
 ::: scpn_phase_orchestrator.upde.envelope
 
@@ -316,8 +318,18 @@ phases = eng.run(phases_init, omegas, n_steps=1000,
 
 **References:** Tanaka & Aoyagi 2011, Phys. Rev. Lett. 106:224101;
 Bick et al. 2023, Nat. Rev. Physics 5:307-317.
+**Detailed documentation:** [Hypergraph (k-body) — Superior Reference](upde_hypergraph.md)
 
 ::: scpn_phase_orchestrator.upde.hypergraph
+
+## Strang Splitting Engine
+
+Symmetric operator splitting: A(dt/2) → B(dt) → A(dt/2) where
+A is exact rotation (ω·dt) and B is RK4 on coupling. Second-order
+accurate, time-reversible, preserves symplectic structure approximately.
+**Detailed documentation:** [Strang Splitting — Superior Reference](upde_splitting.md)
+
+::: scpn_phase_orchestrator.upde.splitting
 
 ---
 
