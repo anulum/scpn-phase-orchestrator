@@ -33,6 +33,7 @@ use spo_engine::{
     recurrence,
     sheaf_upde::SheafUPDEStepper,
     sparse_upde::SparseUPDEStepper,
+    spectral,
     stuart_landau::StuartLandauStepper,
     transfer_entropy,
     upde::UPDEStepper,
@@ -1573,6 +1574,68 @@ fn lyapunov_spectrum_rust<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
+// ─── Spectral Analysis ──────────────────────────────────────────────
+
+#[pyfunction]
+fn fiedler_value_rust(knm: PyReadonlyArray1<'_, f64>, n: usize) -> PyResult<f64> {
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spectral::fiedler_value(k, n))
+}
+
+#[pyfunction]
+fn fiedler_vector_rust<'py>(
+    py: Python<'py>,
+    knm: PyReadonlyArray1<'py, f64>,
+    n: usize,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let v = spectral::fiedler_vector(k, n);
+    Ok(PyArray1::from_vec(py, v))
+}
+
+#[pyfunction]
+fn spectral_gap_rust(knm: PyReadonlyArray1<'_, f64>, n: usize) -> PyResult<f64> {
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spectral::spectral_gap(k, n))
+}
+
+#[pyfunction]
+fn critical_coupling_rust(
+    omegas: PyReadonlyArray1<'_, f64>,
+    knm: PyReadonlyArray1<'_, f64>,
+    n: usize,
+) -> PyResult<f64> {
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spectral::critical_coupling(o, k, n))
+}
+
+#[pyfunction]
+fn sync_convergence_rate_rust(
+    knm: PyReadonlyArray1<'_, f64>,
+    omegas: PyReadonlyArray1<'_, f64>,
+    n: usize,
+    gamma_max: f64,
+) -> PyResult<f64> {
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let o = omegas
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(spectral::sync_convergence_rate(k, o, n, gamma_max))
+}
+
 // ─── Transfer Entropy ───────────────────────────────────────────────
 
 #[pyfunction]
@@ -1718,6 +1781,11 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(rqa_rust, m)?)?;
     m.add_function(wrap_pyfunction!(phase_transfer_entropy_rust, m)?)?;
     m.add_function(wrap_pyfunction!(transfer_entropy_matrix_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(fiedler_value_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(fiedler_vector_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(spectral_gap_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(critical_coupling_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(sync_convergence_rate_rust, m)?)?;
     Ok(())
 }
 

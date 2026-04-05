@@ -10,6 +10,27 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from spo_kernel import (  # type: ignore[import-untyped]
+        critical_coupling_rust as _rust_kc,
+    )
+    from spo_kernel import (
+        fiedler_value_rust as _rust_fv,
+    )
+    from spo_kernel import (
+        fiedler_vector_rust as _rust_fvec,
+    )
+    from spo_kernel import (
+        spectral_gap_rust as _rust_sg,
+    )
+    from spo_kernel import (
+        sync_convergence_rate_rust as _rust_scr,
+    )
+
+    _HAS_RUST = True
+except ImportError:
+    _HAS_RUST = False
+
 __all__ = [
     "graph_laplacian",
     "fiedler_value",
@@ -35,6 +56,11 @@ def fiedler_value(knm: NDArray) -> float:
 
     Dörfler & Bullo 2014, Automatica 50(6):1539–1564.
     """
+    if _HAS_RUST:
+        n = knm.shape[0]
+        flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        return float(_rust_fv(flat, n))
+
     L = graph_laplacian(knm)
     eigs = np.linalg.eigvalsh(L)
     # λ₁ ≈ 0 (connected graph), λ₂ is algebraic connectivity
@@ -43,6 +69,11 @@ def fiedler_value(knm: NDArray) -> float:
 
 def fiedler_vector(knm: NDArray) -> NDArray:
     """Eigenvector corresponding to λ₂(L) — partitions network into sync clusters."""
+    if _HAS_RUST:
+        n = knm.shape[0]
+        flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        return np.asarray(_rust_fvec(flat, n))
+
     L = graph_laplacian(knm)
     _, vecs = np.linalg.eigh(L)
     return vecs[:, 1]
@@ -55,6 +86,16 @@ def critical_coupling(omegas: NDArray, knm: NDArray) -> float:
 
     Dörfler & Bullo 2013, IEEE Proc. 102(10):1539–1564.
     """
+    if _HAS_RUST:
+        n = knm.shape[0]
+        return float(
+            _rust_kc(
+                np.ascontiguousarray(omegas, dtype=np.float64),
+                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                n,
+            )
+        )
+
     lambda2 = fiedler_value(knm)
     if lambda2 < 1e-12:
         return float("inf")
@@ -76,6 +117,11 @@ def fiedler_partition(knm: NDArray) -> tuple[list[int], list[int]]:
 
 def spectral_gap(knm: NDArray) -> float:
     """Gap between λ₂ and λ₃ — larger gap means cleaner two-cluster structure."""
+    if _HAS_RUST:
+        n = knm.shape[0]
+        flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        return float(_rust_sg(flat, n))
+
     L = graph_laplacian(knm)
     eigs = np.linalg.eigvalsh(L)
     if len(eigs) < 3:
@@ -94,6 +140,16 @@ def sync_convergence_rate(
     n = len(omegas)
     if n == 0:
         return 0.0
+    if _HAS_RUST:
+        return float(
+            _rust_scr(
+                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                np.ascontiguousarray(omegas, dtype=np.float64),
+                n,
+                gamma_max,
+            )
+        )
+
     lambda2 = fiedler_value(knm)
     k_eff = float(np.mean(knm[knm > 0])) if np.any(knm > 0) else 0.0
     return float(k_eff * lambda2 * np.cos(gamma_max) / n)
