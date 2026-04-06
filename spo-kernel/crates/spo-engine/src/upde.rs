@@ -532,9 +532,26 @@ fn compute_derivative(
                     let i = start_i + local_i;
                     let offset = i * n;
                     let k_row = &knm[offset..offset + n];
-                    let sum_s: f64 = k_row.iter().zip(st.iter()).map(|(&kj, &sj)| kj * sj).sum();
-                    let sum_c: f64 = k_row.iter().zip(ct.iter()).map(|(&kj, &cj)| kj * cj).sum();
-                    let coupling_sum = sum_s * ct[i] - sum_c * st[i];
+                    let mut s_acc0 = 0.0; let mut s_acc1 = 0.0; let mut s_acc2 = 0.0; let mut s_acc3 = 0.0;
+                    let mut s_acc4 = 0.0; let mut s_acc5 = 0.0; let mut s_acc6 = 0.0; let mut s_acc7 = 0.0;
+                    let mut c_acc0 = 0.0; let mut c_acc1 = 0.0; let mut c_acc2 = 0.0; let mut c_acc3 = 0.0;
+                    let mut c_acc4 = 0.0; let mut c_acc5 = 0.0; let mut c_acc6 = 0.0; let mut c_acc7 = 0.0;
+                    let mut k_iter = k_row.chunks_exact(8);
+                    let mut s_iter = st.chunks_exact(8);
+                    let mut c_iter = ct.chunks_exact(8);
+                    for ((kc, sc), cc) in k_iter.by_ref().zip(s_iter.by_ref()).zip(c_iter.by_ref()) {
+                        s_acc0 += kc[0] * sc[0]; s_acc1 += kc[1] * sc[1]; s_acc2 += kc[2] * sc[2]; s_acc3 += kc[3] * sc[3];
+                        s_acc4 += kc[4] * sc[4]; s_acc5 += kc[5] * sc[5]; s_acc6 += kc[6] * sc[6]; s_acc7 += kc[7] * sc[7];
+                        c_acc0 += kc[0] * cc[0]; c_acc1 += kc[1] * cc[1]; c_acc2 += kc[2] * cc[2]; c_acc3 += kc[3] * cc[3];
+                        c_acc4 += kc[4] * cc[4]; c_acc5 += kc[5] * cc[5]; c_acc6 += kc[6] * cc[6]; c_acc7 += kc[7] * cc[7];
+                    }
+                    let mut final_s = s_acc0 + s_acc1 + s_acc2 + s_acc3 + s_acc4 + s_acc5 + s_acc6 + s_acc7;
+                    let mut final_c = c_acc0 + c_acc1 + c_acc2 + c_acc3 + c_acc4 + c_acc5 + c_acc6 + c_acc7;
+                    for ((&kj, &sj), &cj) in k_iter.remainder().iter().zip(s_iter.remainder()).zip(c_iter.remainder()) {
+                        final_s += kj * sj;
+                        final_c += kj * cj;
+                    }
+                    let coupling_sum = final_s * ct[i] - final_c * st[i];
                     *val = omegas[i] + coupling_sum;
                     if zeta != 0.0 {
                         *val += zeta * (s_psi * ct[i] - c_psi * st[i]);
