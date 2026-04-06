@@ -95,7 +95,8 @@ class DelayedEngine:
         dtheta = omegas + coupling
         if zeta != 0.0:
             dtheta += zeta * np.sin(psi - phases)
-        return (phases + self._dt * dtheta) % TWO_PI
+        step_out: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        return step_out
 
     def run(
         self,
