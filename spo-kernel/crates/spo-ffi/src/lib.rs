@@ -82,8 +82,13 @@ impl PyActiveInferenceAgent {
         Ok(Self { inner })
     }
 
-    fn control(&mut self, r_obs: f64, psi_obs: f64, dt: f64) -> (f64, f64) {
-        self.inner.control(r_obs, psi_obs, dt)
+        fn control<'py>(
+        &mut self,
+        _py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+    ) -> (f64, f64) {
+        let p = phases.as_slice().unwrap_or(&[]);
+        self.inner.control(p)
     }
 
     #[getter]

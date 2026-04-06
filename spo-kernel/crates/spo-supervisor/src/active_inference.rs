@@ -7,86 +7,65 @@
 // SCPN Phase Orchestrator — Active Inference Control Agent
 
 use spo_types::{SpoError, SpoResult};
+use spo_engine::order_params::compute_order_parameter;
 
-/// Active Inference Controller using a State-Space Predictive Model.
-///
-/// Implements Karl Friston's Variational Free Energy Principle (FEP)
-/// to autonomously control oscillator synchronisation. Minimises
-/// prediction error (Variational Free Energy) relative to a target
-/// coherence level `R_target`.
-///
-/// # Internal State
-///
-/// The agent maintains a low-dimensional predictive state **x** that
-/// evolves according to:
-///
-/// ```text
-/// ẋ = A·x + B·ε,  where ε = R_obs − R_target
-/// ```
-#[derive(Debug, Clone)]
+/// Active Inference agent for control of phase synchronisation.
 pub struct ActiveInferenceAgent {
+    pub n_hidden: usize,
     pub target_r: f64,
     pub lr: f64,
-    pub internal_state: Vec<f64>,
-    pub weights: Vec<f64>, // SSM/RNN weights
+    state: Vec<f64>,
+    sin_state: Vec<f64>,
+    cos_state: Vec<f64>,
 }
 
 impl ActiveInferenceAgent {
-    /// # Errors
-    /// Returns `InvalidConfig` if `target_r` is outside [0, 1].
     pub fn new(n_hidden: usize, target_r: f64, lr: f64) -> SpoResult<Self> {
-        if !(0.0..=1.0).contains(&target_r) {
-            return Err(SpoError::InvalidConfig("target_r must be in [0, 1]".into()));
-        }
+        if n_hidden == 0 { return Err(SpoError::InvalidConfig("n_hidden > 0".into())); }
         Ok(Self {
-            target_r,
-            lr,
-            internal_state: vec![0.0; n_hidden],
-            weights: vec![0.1; n_hidden * n_hidden + n_hidden * 2], // Simple RNN/SSM weights
+            n_hidden, target_r, lr,
+            state: vec![0.0; n_hidden],
+            sin_state: vec![0.0; n_hidden],
+            cos_state: vec![0.0; n_hidden],
         })
     }
 
-    /// Update internal state and compute optimal control knobs (zeta, psi).
-    ///
-    /// Outputs an action `(zeta, psi)` that acts on the oscillator network
-    /// to resolve divergence between predicted and observed coherence.
-    ///
-    /// # Arguments
-    /// * `r_obs` — currently observed order parameter R
-    /// * `psi_obs` — currently observed global phase Ψ
-    /// * `dt` — timestep for internal state-space update
-    pub fn control(&mut self, r_obs: f64, psi_obs: f64, dt: f64) -> (f64, f64) {
-        // Friston-style Active Inference:
-        // minimize error e = (r_obs - target_r)
-        let error = r_obs - self.target_r;
+    pub fn control(&mut self, phases: &[f64]) -> (f64, f64) {
+        let n = phases.len();
+        if n == 0 { return (0.0, 0.0); }
+        let nh = self.n_hidden;
 
-        // Update internal predictive state (SSM update)
-        // x_dot = A*x + B*error
-        let n = self.internal_state.len();
-        for i in 0..n {
-            let mut x_dot = 0.0;
-            for j in 0..n {
-                x_dot += self.weights[i * n + j] * self.internal_state[j];
-            }
-            x_dot += self.weights[n * n + i] * error;
-            self.internal_state[i] += x_dot * dt;
+        for i in 0..nh {
+            let (s, c) = self.state[i].sin_cos();
+            self.sin_state[i] = s;
+            self.cos_state[i] = c;
         }
 
-        // Output control zeta: proportional to error + internal integrated state
-        // In Active Inference, zeta is the 'action' that reduces prediction error
-        let zeta =
-            (self.lr * error.abs() + self.internal_state.iter().sum::<f64>()).clamp(0.0, 10.0);
+        let (r_obs, psi_obs): (f64, f64) = compute_order_parameter(phases);
+        let error: f64 = self.target_r - r_obs;
 
-        // Target phase psi: align with observed global phase to encourage sync,
-        // or anti-align to suppress it.
+        for i in 0..nh {
+            let ci = self.cos_state[i];
+            let si = self.sin_state[i];
+            let mut internal_coupling = 0.0;
+            for j in 0..nh {
+                if i == j { continue; }
+                internal_coupling += self.sin_state[j] * ci - self.cos_state[j] * si;
+            }
+            let d_state = self.lr * (error * (psi_obs - self.state[i]).sin() + internal_coupling / nh as f64);
+            self.state[i] = (self.state[i] + d_state).rem_euclid(2.0 * std::f64::consts::PI);
+        }
+
+        let zeta = (error * 10.0).clamp(0.0, 5.0);
         let psi = if error > 0.0 {
-            // Suppress sync: drive out of phase
-            (psi_obs + std::f64::consts::PI) % std::f64::consts::TAU
+            (psi_obs + std::f64::consts::PI).rem_euclid(2.0 * std::f64::consts::PI)
         } else {
-            // Encourage sync: drive in phase
             psi_obs
         };
 
         (zeta, psi)
     }
+
+    pub fn state(&self) -> &[f64] { &self.state }
+    pub fn reset(&mut self) { self.state.fill(0.0); }
 }
