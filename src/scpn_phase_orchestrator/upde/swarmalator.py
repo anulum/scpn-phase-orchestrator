@@ -39,8 +39,26 @@ class SwarmalatorEngine:
             new_pos, new_phases = self._stepper.step(p_pos, p_phases, p_omegas, a, b, j, k)
             return np.asarray(new_pos).reshape(self._n, self._dim), np.asarray(new_phases)
         
-        # Fallback derivative logic (omitted for brevity, assume HAS_RUST for benchmarks)
-        return pos, phases
+        # Python fallback (O(N^2))
+        n, dim, dt = self._n, self._dim, self._dt
+        new_pos = pos.copy()
+        new_phases = phases.copy()
+        for i in range(n):
+            diff = pos - pos[i]
+            dist = np.sqrt(np.sum(diff**2, axis=1) + 1e-6)
+            cos_diff = np.cos(phases - phases[i])
+            sin_diff = np.sin(phases - phases[i])
+            
+            attract = (a + j * cos_diff) / dist
+            repulse = b / (dist**3 + 1e-6)
+            
+            vel = np.sum(diff * (attract - repulse)[:, np.newaxis], axis=0) / n
+            new_pos[i] += dt * vel
+            
+            dth = omegas[i] + k * np.mean(sin_diff / dist)
+            new_phases[i] = (phases[i] + dt * dth) % TWO_PI
+            
+        return new_pos, new_phases
 
     def run(self, pos: NDArray, phases: NDArray, omegas: NDArray, a: float = 1.0, b: float = 1.0, j: float = 1.0, k: float = 1.0, n_steps: int = 100) -> tuple[NDArray, NDArray, NDArray, NDArray]:
         curr_pos, curr_phases = pos.copy(), phases.copy()
