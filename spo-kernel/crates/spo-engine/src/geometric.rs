@@ -15,6 +15,7 @@
 //! Symplectic Euler on T^N:
 //!   z_i(t+dt) = z_i(t) · exp(i · ω_eff_i · dt)
 
+use rayon::prelude::*;
 use std::f64::consts::TAU;
 
 /// Run torus geometric integration for `n_steps`.
@@ -38,14 +39,87 @@ pub fn torus_run(
     let mut z_re = vec![0.0; n];
     let mut z_im = vec![0.0; n];
     for i in 0..n {
-        z_re[i] = phases[i].cos();
-        z_im[i] = phases[i].sin();
+        let (s, c) = phases[i].sin_cos();
+        z_re[i] = c;
+        z_im[i] = s;
     }
 
+    let alpha_zero = alpha.iter().all(|&a| a == 0.0);
+    let (zs_psi, zc_psi) = if zeta != 0.0 {
+        let (s, c) = psi.sin_cos();
+        (zeta * s, zeta * c)
+    } else {
+        (0.0, 0.0)
+    };
+
     for _ in 0..n_steps {
-        let theta: Vec<f64> = (0..n).map(|i| z_im[i].atan2(z_re[i])).collect();
-        let omega_eff = kuramoto_derivative(&theta, omegas, knm, alpha, n, zeta, psi);
-        exp_map_step(&mut z_re, &mut z_im, &omega_eff, dt, n);
+        let re_slice = &*z_re;
+        let im_slice = &*z_im;
+
+        let res: Vec<(f64, f64)> = (0..n)
+            .into_par_iter()
+            .map(|i| {
+                let mut coupling = 0.0;
+                let offset = i * n;
+                let k_row = &knm[offset..offset + n];
+
+                if alpha_zero {
+                    let mut k_iter = k_row.chunks_exact(8);
+                    let mut re_iter = re_slice.chunks_exact(8);
+                    let mut im_iter = im_slice.chunks_exact(8);
+                    let mut acc = 0.0;
+                    for ((kc, rec), imc) in
+                        k_iter.by_ref().zip(re_iter.by_ref()).zip(im_iter.by_ref())
+                    {
+                        // sin(tj - ti) = sj*ci - cj*si
+                        acc += kc[0] * (imc[0] * re_slice[i] - rec[0] * im_slice[i]);
+                        acc += kc[1] * (imc[1] * re_slice[i] - rec[1] * im_slice[i]);
+                        acc += kc[2] * (imc[2] * re_slice[i] - rec[2] * im_slice[i]);
+                        acc += kc[3] * (imc[3] * re_slice[i] - rec[3] * im_slice[i]);
+                        acc += kc[4] * (imc[4] * re_slice[i] - rec[4] * im_slice[i]);
+                        acc += kc[5] * (imc[5] * re_slice[i] - rec[5] * im_slice[i]);
+                        acc += kc[6] * (imc[6] * re_slice[i] - rec[6] * im_slice[i]);
+                        acc += kc[7] * (imc[7] * re_slice[i] - rec[7] * im_slice[i]);
+                    }
+                    coupling = acc;
+                    for ((&kj, &rej), &imj) in k_iter
+                        .remainder()
+                        .iter()
+                        .zip(re_iter.remainder())
+                        .zip(im_iter.remainder())
+                    {
+                        coupling += kj * (imj * re_slice[i] - rej * im_slice[i]);
+                    }
+                } else {
+                    for j in 0..n {
+                        let tj = im_slice[j].atan2(re_slice[j]);
+                        let ti = im_slice[i].atan2(re_slice[i]);
+                        coupling += knm[offset + j] * (tj - ti - alpha[offset + j]).sin();
+                    }
+                }
+
+                let mut omega_eff = omegas[i] + coupling;
+                if zeta != 0.0 {
+                    omega_eff += zs_psi * re_slice[i] - zc_psi * im_slice[i];
+                }
+
+                let angle = omega_eff * dt;
+                let (sin_a, cos_a) = angle.sin_cos();
+                let next_re = re_slice[i] * cos_a - im_slice[i] * sin_a;
+                let next_im = re_slice[i] * sin_a + im_slice[i] * cos_a;
+                let norm = (next_re * next_re + next_im * next_im).sqrt();
+                if norm > 0.0 {
+                    (next_re / norm, next_im / norm)
+                } else {
+                    (next_re, next_im)
+                }
+            })
+            .collect();
+
+        for i in 0..n {
+            z_re[i] = res[i].0;
+            z_im[i] = res[i].1;
+        }
     }
 
     (0..n)
@@ -54,46 +128,8 @@ pub fn torus_run(
 }
 
 /// Exponential map on S¹: z_i → z_i · exp(i·ω_i·dt), then renormalise.
-fn exp_map_step(z_re: &mut [f64], z_im: &mut [f64], omega: &[f64], dt: f64, n: usize) {
-    for i in 0..n {
-        let angle = omega[i] * dt;
-        let (sin_a, cos_a) = angle.sin_cos();
-        let re = z_re[i];
-        let im = z_im[i];
-        z_re[i] = re * cos_a - im * sin_a;
-        z_im[i] = re * sin_a + im * cos_a;
-        let norm = (z_re[i] * z_re[i] + z_im[i] * z_im[i]).sqrt();
-        if norm > 0.0 {
-            z_re[i] /= norm;
-            z_im[i] /= norm;
-        }
-    }
-}
 
 /// Standard Kuramoto derivative: ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) + ζ sin(ψ - θ_i).
-fn kuramoto_derivative(
-    theta: &[f64],
-    omegas: &[f64],
-    knm: &[f64],
-    alpha: &[f64],
-    n: usize,
-    zeta: f64,
-    psi: f64,
-) -> Vec<f64> {
-    let mut result = vec![0.0; n];
-    for i in 0..n {
-        let mut coupling = 0.0;
-        for j in 0..n {
-            let diff = theta[j] - theta[i] - alpha[i * n + j];
-            coupling += knm[i * n + j] * diff.sin();
-        }
-        result[i] = omegas[i] + coupling;
-        if zeta != 0.0 {
-            result[i] += zeta * (psi - theta[i]).sin();
-        }
-    }
-    result
-}
 
 #[cfg(test)]
 mod tests {

@@ -15,6 +15,7 @@ from scpn_phase_orchestrator._compat import TWO_PI
 try:
     from spo_kernel import (
         splitting_run_rust as _rust_splitting_run,
+        PySplittingStepper as _SplittingStepper,
     )
 
     _HAS_RUST = True
@@ -43,6 +44,10 @@ class SplittingEngine:
     def __init__(self, n_oscillators: int, dt: float):
         self._n = n_oscillators
         self._dt = dt
+        if _HAS_RUST:
+            self._stepper = _SplittingStepper(n_oscillators, dt)
+        else:
+            self._stepper = None
         self._phase_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)
         self._sin_diff = np.empty((n_oscillators, n_oscillators), dtype=np.float64)
         self._scratch = np.empty(n_oscillators, dtype=np.float64)
@@ -75,29 +80,25 @@ class SplittingEngine:
         alpha: NDArray,
         n_steps: int,
     ) -> NDArray:
-        """Run n_steps of Strang splitting and return final phases."""
         if _HAS_RUST:
             p = np.ascontiguousarray(phases, dtype=np.float64)
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            result: NDArray = np.asarray(
-                _rust_splitting_run(
-                    p,
-                    o,
-                    k,
-                    a,
-                    self._n,
-                    zeta,
-                    psi,
-                    self._dt,
-                    n_steps,
-                )
-            )
-            return result
+            return self._stepper.run(p, o, k, a, zeta, psi, n_steps)
+        
         p = phases.copy()
         for _ in range(n_steps):
-            p = self.step(p, omegas, knm, zeta, psi, alpha)
+            # Slow Python fallback
+            p = (p + 0.5 * self._dt * omegas) % TWO_PI
+            d = self._derivative(p, knm, alpha, zeta, psi)
+            # RK4 on coupling
+            k1 = d
+            k2 = self._derivative((p + 0.5 * self._dt * k1) % TWO_PI, knm, alpha, zeta, psi)
+            k3 = self._derivative((p + 0.5 * self._dt * k2) % TWO_PI, knm, alpha, zeta, psi)
+            k4 = self._derivative((p + self._dt * k3) % TWO_PI, knm, alpha, zeta, psi)
+            p = (p + (self._dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+            p = (p + 0.5 * self._dt * omegas) % TWO_PI
         return p
 
     def _coupling_deriv(

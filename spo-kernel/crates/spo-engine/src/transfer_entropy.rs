@@ -14,6 +14,7 @@
 //! - Lobier et al. 2014, NeuroImage 94:347-354 (phase TE).
 //! - Paluš & Vejmelka 2007, Phys. Rev. E 75:056211 (binned estimation).
 
+use rayon::prelude::*;
 use std::f64::consts::TAU;
 
 /// Phase transfer entropy from source → target.
@@ -90,16 +91,18 @@ pub fn transfer_entropy_matrix(
             n_osc * n_time
         ));
     }
-    let mut te = vec![0.0_f64; n_osc * n_osc];
-    for i in 0..n_osc {
+    let mut te = vec![0.0; n_osc * n_osc];
+
+    te.par_chunks_mut(n_osc).enumerate().for_each(|(i, row)| {
         let src = &phase_series[i * n_time..(i + 1) * n_time];
         for j in 0..n_osc {
             if i != j {
                 let tgt = &phase_series[j * n_time..(j + 1) * n_time];
-                te[i * n_osc + j] = phase_transfer_entropy(src, tgt, n_bins);
+                row[j] = phase_transfer_entropy(src, tgt, n_bins);
             }
         }
-    }
+    });
+
     Ok(te)
 }
 

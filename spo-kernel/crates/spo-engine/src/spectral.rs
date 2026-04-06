@@ -15,6 +15,8 @@
 //! - Fiedler 1973, Czech. Math. J. 23:298-305 (algebraic connectivity).
 //! - Golub & Van Loan 2013, Matrix Computations, 4th ed., §8.4.
 
+use rayon::prelude::*;
+
 /// Spectral decomposition result: sorted eigenvalues + eigenvectors.
 pub struct SpectralResult {
     /// Eigenvalues sorted ascending: λ_1 ≤ λ_2 ≤ ... ≤ λ_N.
@@ -36,18 +38,19 @@ pub struct SpectralResult {
 /// Row-major N×N Laplacian.
 #[must_use]
 pub fn graph_laplacian(knm: &[f64], n: usize) -> Vec<f64> {
-    let mut l = vec![0.0_f64; n * n];
-    for i in 0..n {
-        let mut degree = 0.0_f64;
+    let mut l = vec![0.0; n * n];
+    l.par_chunks_mut(n).enumerate().for_each(|(i, row)| {
+        let offset = i * n;
+        let mut degree = 0.0;
         for j in 0..n {
             if i != j {
-                let w = knm[i * n + j].abs();
-                l[i * n + j] = -w;
+                let w = knm[offset + j].abs();
+                row[j] = -w;
                 degree += w;
             }
         }
-        l[i * n + i] = degree;
-    }
+        row[i] = degree;
+    });
     l
 }
 

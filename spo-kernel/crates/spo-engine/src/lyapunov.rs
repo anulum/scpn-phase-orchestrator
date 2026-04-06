@@ -5,6 +5,7 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Lyapunov spectrum via Benettin QR algorithm
 
+use rayon::prelude::*;
 use std::f64::consts::PI;
 
 /// Full Lyapunov spectrum of a Kuramoto network with Sakaguchi phase-lag
@@ -69,92 +70,147 @@ pub fn lyapunov_spectrum(
     }
 
     let nn = n * n;
-    let two_pi = 2.0 * PI;
-
     let mut phases = phases_init.to_vec();
-    // Q: row-major N×N perturbation matrix (identity initially)
-    let mut q = vec![0.0_f64; nn];
+    let mut q = vec![0.0; nn];
     for i in 0..n {
         q[i * n + i] = 1.0;
     }
-    let mut exponents = vec![0.0_f64; n];
-    let mut n_qr: usize = 0;
-    let mut total_time = 0.0_f64;
+    let mut exponents = vec![0.0; n];
+    let mut n_qr = 0;
+    let mut total_time = 0.0;
 
-    // Scratch space (allocated once, reused every step)
-    let mut k1_p = vec![0.0_f64; n];
-    let mut k2_p = vec![0.0_f64; n];
-    let mut k3_p = vec![0.0_f64; n];
-    let mut k4_p = vec![0.0_f64; n];
-    let mut k1_q = vec![0.0_f64; nn];
-    let mut k2_q = vec![0.0_f64; nn];
-    let mut k3_q = vec![0.0_f64; nn];
-    let mut k4_q = vec![0.0_f64; nn];
-    let mut tmp_phases = vec![0.0_f64; n];
-    let mut tmp_q = vec![0.0_f64; nn];
+    let mut k1_p = vec![0.0; n];
+    let mut k2_p = vec![0.0; n];
+    let mut k3_p = vec![0.0; n];
+    let mut k4_p = vec![0.0; n];
+    let mut k1_q = vec![0.0; nn];
+    let mut k2_q = vec![0.0; nn];
+    let mut k3_q = vec![0.0; nn];
+    let mut k4_q = vec![0.0; nn];
+    let mut tmp_p = vec![0.0; n];
+    let mut tmp_q = vec![0.0; nn];
+    let mut sin_theta = vec![0.0; n];
+    let mut cos_theta = vec![0.0; n];
+
+    let alpha_zero = alpha.iter().all(|&a| a == 0.0);
+    let (zs_psi, zc_psi) = if zeta != 0.0 {
+        let (s, c) = psi.sin_cos();
+        (zeta * s, zeta * c)
+    } else {
+        (0.0, 0.0)
+    };
+
+    let dt6 = dt / 6.0;
+    let two_pi = 2.0 * PI;
 
     for step in 0..n_steps {
-        // RK4 step for (phases, Q) simultaneously
-        //
-        // Phase ODE: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) + ζ sin(Ψ - θ_i)
-        // Tangent ODE: dQ/dt = J(θ) · Q
-        // where J_ij = K_ij cos(θ_j - θ_i - α_ij), J_ii = -Σ_{j≠i} J_ij - ζ cos(Ψ - θ_i)
+        compute_rhs(
+            n,
+            &phases,
+            &mut sin_theta,
+            &mut cos_theta,
+            omegas,
+            knm,
+            alpha,
+            alpha_zero,
+            zeta,
+            zs_psi,
+            zc_psi,
+            &mut k1_p,
+        );
+        compute_jq(
+            n, &phases, &sin_theta, &cos_theta, knm, alpha, alpha_zero, zeta, zs_psi, zc_psi, &q,
+            &mut k1_q,
+        );
 
-        // k1
-        compute_rhs(n, &phases, omegas, knm, alpha, zeta, psi, &mut k1_p);
-        compute_jq(n, &phases, knm, alpha, zeta, psi, &q, &mut k1_q);
-
-        // k2: evaluate at (phases + dt/2 * k1_p, Q + dt/2 * k1_q)
         for i in 0..n {
-            tmp_phases[i] = phases[i] + 0.5 * dt * k1_p[i];
+            tmp_p[i] = phases[i] + 0.5 * dt * k1_p[i];
         }
         for i in 0..nn {
             tmp_q[i] = q[i] + 0.5 * dt * k1_q[i];
         }
-        compute_rhs(n, &tmp_phases, omegas, knm, alpha, zeta, psi, &mut k2_p);
-        compute_jq(n, &tmp_phases, knm, alpha, zeta, psi, &tmp_q, &mut k2_q);
+        compute_rhs(
+            n,
+            &tmp_p,
+            &mut sin_theta,
+            &mut cos_theta,
+            omegas,
+            knm,
+            alpha,
+            alpha_zero,
+            zeta,
+            zs_psi,
+            zc_psi,
+            &mut k2_p,
+        );
+        compute_jq(
+            n, &tmp_p, &sin_theta, &cos_theta, knm, alpha, alpha_zero, zeta, zs_psi, zc_psi,
+            &tmp_q, &mut k2_q,
+        );
 
-        // k3: evaluate at (phases + dt/2 * k2_p, Q + dt/2 * k2_q)
         for i in 0..n {
-            tmp_phases[i] = phases[i] + 0.5 * dt * k2_p[i];
+            tmp_p[i] = phases[i] + 0.5 * dt * k2_p[i];
         }
         for i in 0..nn {
             tmp_q[i] = q[i] + 0.5 * dt * k2_q[i];
         }
-        compute_rhs(n, &tmp_phases, omegas, knm, alpha, zeta, psi, &mut k3_p);
-        compute_jq(n, &tmp_phases, knm, alpha, zeta, psi, &tmp_q, &mut k3_q);
+        compute_rhs(
+            n,
+            &tmp_p,
+            &mut sin_theta,
+            &mut cos_theta,
+            omegas,
+            knm,
+            alpha,
+            alpha_zero,
+            zeta,
+            zs_psi,
+            zc_psi,
+            &mut k3_p,
+        );
+        compute_jq(
+            n, &tmp_p, &sin_theta, &cos_theta, knm, alpha, alpha_zero, zeta, zs_psi, zc_psi,
+            &tmp_q, &mut k3_q,
+        );
 
-        // k4: evaluate at (phases + dt * k3_p, Q + dt * k3_q)
         for i in 0..n {
-            tmp_phases[i] = phases[i] + dt * k3_p[i];
+            tmp_p[i] = phases[i] + dt * k3_p[i];
         }
         for i in 0..nn {
             tmp_q[i] = q[i] + dt * k3_q[i];
         }
-        compute_rhs(n, &tmp_phases, omegas, knm, alpha, zeta, psi, &mut k4_p);
-        compute_jq(n, &tmp_phases, knm, alpha, zeta, psi, &tmp_q, &mut k4_q);
+        compute_rhs(
+            n,
+            &tmp_p,
+            &mut sin_theta,
+            &mut cos_theta,
+            omegas,
+            knm,
+            alpha,
+            alpha_zero,
+            zeta,
+            zs_psi,
+            zc_psi,
+            &mut k4_p,
+        );
+        compute_jq(
+            n, &tmp_p, &sin_theta, &cos_theta, knm, alpha, alpha_zero, zeta, zs_psi, zc_psi,
+            &tmp_q, &mut k4_q,
+        );
 
-        // Combine: y += (dt/6)(k1 + 2k2 + 2k3 + k4)
-        let dt6 = dt / 6.0;
         for i in 0..n {
-            phases[i] += dt6 * (k1_p[i] + 2.0 * k2_p[i] + 2.0 * k3_p[i] + k4_p[i]);
+            phases[i] = (phases[i] + dt6 * (k1_p[i] + 2.0 * k2_p[i] + 2.0 * k3_p[i] + k4_p[i]))
+                .rem_euclid(two_pi);
         }
         for i in 0..nn {
             q[i] += dt6 * (k1_q[i] + 2.0 * k2_q[i] + 2.0 * k3_q[i] + k4_q[i]);
         }
-
-        // Wrap phases to [0, 2π)
-        for p in phases.iter_mut() {
-            *p = ((*p % two_pi) + two_pi) % two_pi;
-        }
         total_time += dt;
 
-        // QR reorthogonalisation (modified Gram-Schmidt, Pikovsky & Politi 2016 §3.2)
         if (step + 1) % qr_interval == 0 {
             let r_diag = modified_gram_schmidt(&mut q, n);
             for (i, &rd) in r_diag.iter().enumerate() {
-                let rd_abs = rd.abs().max(1e-300);
-                exponents[i] += rd_abs.ln();
+                exponents[i] += rd.abs().max(1e-300).ln();
             }
             n_qr += 1;
         }
@@ -165,8 +221,6 @@ pub fn lyapunov_spectrum(
             *e /= total_time;
         }
     }
-
-    // Sort descending: λ_1 ≥ λ_2 ≥ ... ≥ λ_N
     exponents.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
     Ok(exponents)
 }
@@ -177,26 +231,49 @@ pub fn lyapunov_spectrum(
 fn compute_rhs(
     n: usize,
     phases: &[f64],
+    sin_theta: &mut [f64],
+    cos_theta: &mut [f64],
     omegas: &[f64],
     knm: &[f64],
     alpha: &[f64],
+    alpha_zero: bool,
     zeta: f64,
-    psi: f64,
+    zs_psi: f64,
+    zc_psi: f64,
     out: &mut [f64],
 ) {
     for i in 0..n {
-        let mut coupling = 0.0_f64;
-        for j in 0..n {
-            let diff = phases[j] - phases[i] - alpha[i * n + j];
-            coupling += knm[i * n + j] * diff.sin();
+        let (s, c) = phases[i].sin_cos();
+        sin_theta[i] = s;
+        cos_theta[i] = c;
+    }
+    let st = &*sin_theta;
+    let ct = &*cos_theta;
+
+    out.par_iter_mut().enumerate().for_each(|(i, val)| {
+        let mut coupling = 0.0;
+        let offset = i * n;
+        let k_row = &knm[offset..offset + n];
+        let ci = ct[i];
+        let si = st[i];
+
+        if alpha_zero {
+            for j in 0..n {
+                coupling += k_row[j] * (st[j] * ci - ct[j] * si);
+            }
+        } else {
+            for j in 0..n {
+                coupling += k_row[j] * (phases[j] - phases[i] - alpha[offset + j]).sin();
+            }
         }
+
         let driving = if zeta != 0.0 {
-            zeta * (psi - phases[i]).sin()
+            zs_psi * ci - zc_psi * si
         } else {
             0.0
         };
-        out[i] = omegas[i] + coupling + driving;
-    }
+        *val = omegas[i] + coupling + driving;
+    });
 }
 
 /// Compute J(θ)·Q where J is the Kuramoto Jacobian.
@@ -210,41 +287,57 @@ fn compute_rhs(
 fn compute_jq(
     n: usize,
     phases: &[f64],
+    sin_theta: &[f64],
+    cos_theta: &[f64],
     knm: &[f64],
     alpha: &[f64],
+    alpha_zero: bool,
     zeta: f64,
-    psi: f64,
+    zs_psi: f64,
+    zc_psi: f64,
     q_mat: &[f64],
     out: &mut [f64],
 ) {
-    // Zero output
-    for v in out.iter_mut() {
-        *v = 0.0;
-    }
-    for i in 0..n {
-        let mut diag_sum = 0.0_f64;
+    let st = sin_theta;
+    let ct = cos_theta;
+
+    out.par_chunks_mut(n).enumerate().for_each(|(i, out_row)| {
+        let mut diag_sum = 0.0;
+        let offset = i * n;
+        let k_row = &knm[offset..offset + n];
+        let ci = ct[i];
+        let si = st[i];
+
+        out_row.fill(0.0);
+
         for j in 0..n {
-            if i != j {
-                let diff = phases[j] - phases[i] - alpha[i * n + j];
-                let j_ij = knm[i * n + j] * diff.cos();
-                diag_sum += j_ij;
-                // out[i,k] += j_ij * q[j,k]
-                for k in 0..n {
-                    out[i * n + k] += j_ij * q_mat[j * n + k];
-                }
+            if i == j {
+                continue;
+            }
+            let j_ij = if alpha_zero {
+                k_row[j] * (ct[j] * ci + st[j] * si)
+            } else {
+                k_row[j] * (phases[j] - phases[i] - alpha[offset + j]).cos()
+            };
+            diag_sum += j_ij;
+
+            let q_row = &q_mat[j * n..(j + 1) * n];
+            for k in 0..n {
+                out_row[k] += j_ij * q_row[k];
             }
         }
-        // Diagonal includes driver term: -ζ cos(Ψ - θ_i)
+
         let driver_diag = if zeta != 0.0 {
-            zeta * (psi - phases[i]).cos()
+            zc_psi * ci + zs_psi * si
         } else {
             0.0
         };
         let j_ii = -(diag_sum + driver_diag);
+        let q_row_ii = &q_mat[i * n..(i + 1) * n];
         for k in 0..n {
-            out[i * n + k] += j_ii * q_mat[i * n + k];
+            out_row[k] += j_ii * q_row_ii[k];
         }
-    }
+    });
 }
 
 /// Modified Gram-Schmidt QR on row-major N×N matrix Q, in-place.
@@ -253,32 +346,30 @@ fn compute_jq(
 /// Uses two-pass reorthogonalisation (Daniel et al. 1976) for numerical stability
 /// when vectors become nearly parallel under contraction.
 fn modified_gram_schmidt(q: &mut [f64], n: usize) -> Vec<f64> {
-    let mut r_diag = vec![0.0_f64; n];
-
+    let mut r_diag = vec![0.0; n];
     for j in 0..n {
-        // Two-pass MGS for stability (Daniel et al. 1976, BIT 16:421-430)
         for _pass in 0..2 {
             for k in 0..j {
-                let mut dot = 0.0_f64;
-                for i in 0..n {
-                    dot += q[i * n + k] * q[i * n + j];
-                }
-                for i in 0..n {
-                    q[i * n + j] -= dot * q[i * n + k];
+                let (q_before, q_after) = q.split_at_mut(j * n);
+                let q_k = &q_before[k * n..(k + 1) * n];
+                let q_j = &mut q_after[..n];
+
+                let dot: f64 = q_k.iter().zip(q_j.iter()).map(|(&qk, &qj)| qk * qj).sum();
+                for (i, val) in q_j.iter_mut().enumerate() {
+                    *val -= dot * q_k[i];
                 }
             }
         }
-        // Normalise column j
-        let mut norm = 0.0_f64;
-        for i in 0..n {
-            norm += q[i * n + j] * q[i * n + j];
-        }
-        norm = norm.sqrt();
+        let start = j * n;
+        let q_j = &q[start..start + n];
+        let norm_sq: f64 = q_j.iter().map(|&x| x * x).sum();
+        let norm = norm_sq.sqrt();
         r_diag[j] = norm;
         if norm > 1e-300 {
             let inv = 1.0 / norm;
-            for i in 0..n {
-                q[i * n + j] *= inv;
+            let q_j_mut = &mut q[start..start + n];
+            for val in q_j_mut.iter_mut() {
+                *val *= inv;
             }
         }
     }

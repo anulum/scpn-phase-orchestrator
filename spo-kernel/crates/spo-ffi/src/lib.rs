@@ -330,6 +330,10 @@ impl PyUPDEStepper {
     fn last_dt(&self) -> f64 {
         self.inner.last_dt()
     }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
 }
 
 // ─── PyCouplingBuilder ──────────────────────────────────────────────
@@ -721,6 +725,416 @@ impl PySupervisorPolicy {
     }
 }
 
+// ─── PyDelayedStepper ────────────────────────────────────────────────────
+
+#[pyclass(name = "PyDelayedStepper")]
+struct PyDelayedStepper {
+    inner: delay::DelayedStepper,
+}
+
+#[pymethods]
+impl PyDelayedStepper {
+    #[new]
+    #[pyo3(signature = (n, delay_steps, dt = 0.01))]
+    fn new(n: usize, delay_steps: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig {
+            dt,
+            ..Default::default()
+        };
+        let inner = delay::DelayedStepper::new(n, delay_steps, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        step_idx: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner
+            .step(&mut p, o, k, a, zeta, psi, step_idx)
+            .map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn run<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        n_steps: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner
+            .run(&mut p, o, k, a, zeta, psi, n_steps)
+            .map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
+}
+
+// ─── PyInertialStepper ───────────────────────────────────────────────────
+
+#[pyclass(name = "PyInertialStepper")]
+struct PyInertialStepper {
+    inner: inertial::InertialStepper,
+}
+
+#[pymethods]
+impl PyInertialStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01))]
+    fn new(n: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig {
+            dt,
+            ..Default::default()
+        };
+        let inner = inertial::InertialStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        theta: PyReadonlyArray1<'py, f64>,
+        omega_dot: PyReadonlyArray1<'py, f64>,
+        power: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        inertia: PyReadonlyArray1<'py, f64>,
+        damping: PyReadonlyArray1<'py, f64>,
+    ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
+        let mut th = theta
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("theta not contiguous"))?;
+        let mut od = omega_dot
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("omega_dot not contiguous"))?;
+        let p = power
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let i = inertia
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let d = damping
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner
+            .step(&mut th, &mut od, p, k, i, d)
+            .map_err(spo_err)?;
+
+        Ok((PyArray1::from_vec(py, th), PyArray1::from_vec(py, od)))
+    }
+}
+
+// ─── PyHypergraphStepper ──────────────────────────────────────────────────
+
+#[pyclass(name = "PyHypergraphStepper")]
+struct PyHypergraphStepper {
+    inner: hypergraph::HypergraphStepper,
+}
+
+#[pymethods]
+impl PyHypergraphStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01))]
+    fn new(n: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig {
+            dt,
+            ..Default::default()
+        };
+        let inner = hypergraph::HypergraphStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        edges: Vec<(Vec<usize>, f64)>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        let h_edges: Vec<hypergraph::Hyperedge> = edges
+            .into_iter()
+            .map(|(nodes, strength)| hypergraph::Hyperedge { nodes, strength })
+            .collect();
+
+        self.inner
+            .step(&mut p, o, &h_edges, k, a, zeta, psi)
+            .map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn run<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        edges: Vec<(Vec<usize>, f64)>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        n_steps: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        let h_edges: Vec<hypergraph::Hyperedge> = edges
+            .into_iter()
+            .map(|(nodes, strength)| hypergraph::Hyperedge { nodes, strength })
+            .collect();
+
+        self.inner
+            .run(&mut p, o, &h_edges, k, a, zeta, psi, n_steps)
+            .map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
+}
+
+// ─── PySplittingStepper ──────────────────────────────────────────────────
+
+#[pyclass(name = "PySplittingStepper")]
+struct PySplittingStepper {
+    inner: splitting::SplittingStepper,
+}
+
+#[pymethods]
+impl PySplittingStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01))]
+    fn new(n: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig {
+            dt,
+            ..Default::default()
+        };
+        let inner = splitting::SplittingStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner
+            .step(&mut p, o, k, a, zeta, psi)
+            .map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn run<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        n_steps: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner
+            .run(&mut p, o, k, a, zeta, psi, n_steps)
+            .map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
+}
+
+// ─── PySimplicialStepper ──────────────────────────────────────────────────
+
+#[pyclass(name = "PySimplicialStepper")]
+struct PySimplicialStepper {
+    inner: simplicial::SimplicialStepper,
+}
+
+#[pymethods]
+impl PySimplicialStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01))]
+    fn new(n: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig {
+            dt,
+            ..Default::default()
+        };
+        let inner = simplicial::SimplicialStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        sigma2: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner
+            .step(&mut p, o, k, a, zeta, psi, sigma2)
+            .map_err(spo_err)?;
+
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn run<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        sigma2: f64,
+        n_steps: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner
+            .run(&mut p, o, k, a, zeta, psi, sigma2, n_steps)
+            .map_err(spo_err)?;
+
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
+}
+
 // ─── PySparseUPDEStepper ──────────────────────────────────────────────────
 
 #[pyclass(name = "PySparseUPDEStepper")]
@@ -857,6 +1271,10 @@ impl PySparseUPDEStepper {
     #[getter]
     fn last_dt(&self) -> f64 {
         self.inner.last_dt()
+    }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
     }
 }
 
@@ -2989,6 +3407,11 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyUPDEStepper>()?;
     m.add_class::<PySheafUPDEStepper>()?;
     m.add_class::<PyActiveInferenceAgent>()?;
+    m.add_class::<PyDelayedStepper>()?;
+    m.add_class::<PyInertialStepper>()?;
+    m.add_class::<PyHypergraphStepper>()?;
+    m.add_class::<PySplittingStepper>()?;
+    m.add_class::<PySimplicialStepper>()?;
     m.add_class::<PySparseUPDEStepper>()?;
     m.add_class::<PyCouplingBuilder>()?;
     m.add_class::<PyRegimeManager>()?;
