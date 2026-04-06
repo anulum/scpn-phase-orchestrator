@@ -64,17 +64,7 @@ jobs:
       - name: Install (loose, non-3.12)
         if: matrix.python-version != '3.12'
         run: pip install -e ".[dev,full,plot,otel,queuewaves,nn]"
-      - run: >
-          pytest tests/ -v --tb=short
-          --cov=scpn_phase_orchestrator
-          --cov-report=term-missing
-          ${{ matrix.python-version == '3.12' && '--cov-report=xml:coverage-python.xml' || '' }}
-      - name: Upload coverage XML
-        if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
-        with:
-          name: coverage-xml
-          path: coverage-python.xml
+      - run: pytest tests/ -v --tb=short
       - name: Validate notebooks
         if: matrix.python-version == '3.12'
         run: |
@@ -82,7 +72,7 @@ jobs:
           jupyter nbconvert --execute --to notebook notebooks/*.ipynb --ExecutePreprocessor.timeout=120
 
   coverage-guard:
-    needs: [test]
+    needs: [ffi-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -93,8 +83,8 @@ jobs:
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: coverage-xml
-      - run: python tools/coverage_guard.py --coverage-xml coverage-python.xml
+          name: coverage-ffi-xml
+      - run: python tools/coverage_guard.py --coverage-xml coverage-ffi.xml
 
   module-linkage:
     runs-on: ubuntu-latest
@@ -172,7 +162,13 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
-          pytest tests/ -v --tb=short
+          pytest tests/ -v --tb=short --cov=scpn_phase_orchestrator --cov-report=term-missing --cov-report=xml:coverage-ffi.xml
+      - name: Upload FFI coverage
+        if: runner.os != 'Windows' && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: coverage-ffi-xml
+          path: coverage-ffi.xml
       - name: Build and test (Unix, loose)
         if: runner.os != 'Windows' && matrix.python-version != '3.12'
         run: |
