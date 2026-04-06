@@ -13,6 +13,7 @@
 //! - Marwan et al. 2007, Phys. Reports 438:237-329.
 
 use std::collections::HashMap;
+use rayon::prelude::*;
 
 /// RQA result: all standard measures from Marwan et al. 2007 Table 1.
 #[derive(Debug, Clone)]
@@ -49,45 +50,47 @@ pub fn recurrence_matrix(
     angular: bool,
 ) -> Result<Vec<u8>, String> {
     if trajectory.len() != t * d {
-        return Err(format!(
-            "trajectory length {} != T*d={}*{}={}",
-            trajectory.len(),
-            t,
-            d,
-            t * d
-        ));
+        return Err(format!("trajectory length {} != T*d={}", trajectory.len(), t * d));
     }
     let eps_sq = epsilon * epsilon;
     let mut result = vec![0u8; t * t];
 
-    for i in 0..t {
-        // Diagonal is always recurrent (self-recurrence)
-        result[i * t + i] = 1;
+    result.par_chunks_mut(t).enumerate().for_each(|(i, row)| {
+        let ti = &trajectory[i * d .. (i + 1) * d];
+        row[i] = 1; // Diagonal
         for j in (i + 1)..t {
+            let tj = &trajectory[j * d .. (j + 1) * d];
             let dist_sq = if angular {
-                // Chord distance on S¹: d(θ,φ) = 2|sin((θ-φ)/2)| per dimension
-                // Squared sum: Σ_k 4 sin²((x_ik - x_jk)/2)
-                let mut s = 0.0_f64;
+                let mut s = 0.0;
                 for k in 0..d {
-                    let diff = trajectory[i * d + k] - trajectory[j * d + k];
-                    let half_sin = (diff * 0.5).sin();
+                    let half_sin = ((ti[k] - tj[k]) * 0.5).sin();
                     s += 4.0 * half_sin * half_sin;
                 }
                 s
             } else {
-                let mut s = 0.0_f64;
+                let mut s = 0.0;
                 for k in 0..d {
-                    let diff = trajectory[i * d + k] - trajectory[j * d + k];
+                    let diff = ti[k] - tj[k];
                     s += diff * diff;
                 }
                 s
             };
             if dist_sq <= eps_sq {
-                result[i * t + j] = 1;
+                row[j] = 1;
+            }
+        }
+    });
+
+    // Mirror the matrix since it is symmetric
+    // This part is sequential but fast O(T^2) without expensive math
+    for i in 0..t {
+        for j in (i + 1)..t {
+            if result[i * t + j] == 1 {
                 result[j * t + i] = 1;
             }
         }
     }
+
     Ok(result)
 }
 
@@ -104,39 +107,36 @@ pub fn cross_recurrence_matrix(
     angular: bool,
 ) -> Result<Vec<u8>, String> {
     if traj_a.len() != t * d || traj_b.len() != t * d {
-        return Err(format!(
-            "trajectory lengths ({}, {}) != T*d={}",
-            traj_a.len(),
-            traj_b.len(),
-            t * d
-        ));
+        return Err(format!("trajectory lengths mismatch T*d={}", t * d));
     }
     let eps_sq = epsilon * epsilon;
     let mut result = vec![0u8; t * t];
 
-    for i in 0..t {
+    result.par_chunks_mut(t).enumerate().for_each(|(i, row)| {
+        let ta = &traj_a[i * d .. (i + 1) * d];
         for j in 0..t {
+            let tb = &traj_b[j * d .. (j + 1) * d];
             let dist_sq = if angular {
-                let mut s = 0.0_f64;
+                let mut s = 0.0;
                 for k in 0..d {
-                    let diff = traj_a[i * d + k] - traj_b[j * d + k];
-                    let half_sin = (diff * 0.5).sin();
+                    let half_sin = ((ta[k] - tb[k]) * 0.5).sin();
                     s += 4.0 * half_sin * half_sin;
                 }
                 s
             } else {
-                let mut s = 0.0_f64;
+                let mut s = 0.0;
                 for k in 0..d {
-                    let diff = traj_a[i * d + k] - traj_b[j * d + k];
+                    let diff = ta[k] - tb[k];
                     s += diff * diff;
                 }
                 s
             };
             if dist_sq <= eps_sq {
-                result[i * t + j] = 1;
+                row[j] = 1;
             }
         }
-    }
+    });
+
     Ok(result)
 }
 
