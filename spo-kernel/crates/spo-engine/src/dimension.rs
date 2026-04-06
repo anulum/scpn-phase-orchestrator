@@ -16,6 +16,8 @@
 //! - Kaplan & Yorke 1979, Lecture Notes in Mathematics 730:228-237.
 //! - Theiler 1987, Phys. Rev. A 36:4456-4462 (Theiler correction).
 
+use rayon::prelude::*;
+
 /// Correlation integral C(ε) = fraction of point pairs within distance ε.
 ///
 /// Grassberger & Procaccia 1983, Eq. 1.
@@ -44,11 +46,7 @@ pub fn correlation_integral(
     seed: u64,
 ) -> Result<Vec<f64>, String> {
     if trajectory.len() != t * d {
-        return Err(format!(
-            "trajectory length {} != T*d={}",
-            trajectory.len(),
-            t * d
-        ));
+        return Err(format!("trajectory length {} != T*d={}", trajectory.len(), t * d));
     }
     if t < 2 {
         return Ok(vec![0.0; epsilons.len()]);
@@ -56,55 +54,57 @@ pub fn correlation_integral(
 
     let total_pairs = t * (t - 1) / 2;
 
-    // Compute pairwise distances (all or subsampled)
     let dists = if total_pairs <= max_pairs {
-        // All unique pairs
-        let mut dists = Vec::with_capacity(total_pairs);
-        for i in 0..t {
+        // Parallel computation of all unique pairs
+        let results: Vec<Vec<f64>> = (0..t).into_par_iter().map(|i| {
+            let mut local_dists = Vec::with_capacity(t - i - 1);
+            let ti = &trajectory[i * d .. (i + 1) * d];
             for j in (i + 1)..t {
-                let mut dist_sq = 0.0_f64;
+                let tj = &trajectory[j * d .. (j + 1) * d];
+                let mut dist_sq = 0.0;
                 for k in 0..d {
-                    let diff = trajectory[i * d + k] - trajectory[j * d + k];
+                    let diff = ti[k] - tj[k];
                     dist_sq += diff * diff;
                 }
-                dists.push(dist_sq.sqrt());
+                local_dists.push(dist_sq.sqrt());
             }
-        }
-        dists
+            local_dists
+        }).collect();
+        results.into_iter().flatten().collect::<Vec<f64>>()
     } else {
-        // Subsampled pairs via simple LCG PRNG
-        // Knuth LCG: x_{n+1} = (a*x_n + c) mod m
-        let mut rng_state = seed;
-        let mut dists = Vec::with_capacity(max_pairs);
-        let mut count = 0usize;
-        while count < max_pairs {
-            rng_state = rng_state
-                .wrapping_mul(6364136223846793005)
-                .wrapping_add(1442695040888963407);
-            let i = ((rng_state >> 33) as usize) % t;
-            rng_state = rng_state
-                .wrapping_mul(6364136223846793005)
-                .wrapping_add(1442695040888963407);
-            let j = ((rng_state >> 33) as usize) % t;
-            if i == j {
-                continue;
+        // Parallel subsampled pairs
+        let n_chunks = rayon::current_num_threads().max(1);
+        let pairs_per_chunk = max_pairs / n_chunks;
+        
+        let results: Vec<Vec<f64>> = (0..n_chunks).into_par_iter().map(|c| {
+            let mut local_dists = Vec::with_capacity(pairs_per_chunk);
+            let mut rng_state = seed ^ (c as u64).wrapping_mul(0x9e3779b97f4a7c15);
+            let mut count = 0;
+            while count < pairs_per_chunk {
+                rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                let i = ((rng_state >> 33) as usize) % t;
+                rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                let j = ((rng_state >> 33) as usize) % t;
+                if i == j { continue; }
+                let ti = &trajectory[i * d .. (i + 1) * d];
+                let tj = &trajectory[j * d .. (j + 1) * d];
+                let mut dist_sq = 0.0;
+                for k in 0..d {
+                    let diff = ti[k] - tj[k];
+                    dist_sq += diff * diff;
+                }
+                local_dists.push(dist_sq.sqrt());
+                count += 1;
             }
-            let mut dist_sq = 0.0_f64;
-            for k in 0..d {
-                let diff = trajectory[i * d + k] - trajectory[j * d + k];
-                dist_sq += diff * diff;
-            }
-            dists.push(dist_sq.sqrt());
-            count += 1;
-        }
-        dists
+            local_dists
+        }).collect();
+        results.into_iter().flatten().collect()
     };
 
-    // C(ε) = count(dist < ε) / n_pairs
     let n = dists.len() as f64;
     let mut c_eps = Vec::with_capacity(epsilons.len());
     for &eps in epsilons {
-        let count = dists.iter().filter(|&&d| d < eps).count();
+        let count = dists.par_iter().filter(|&&d| d < eps).count();
         c_eps.push(count as f64 / n);
     }
     Ok(c_eps)
@@ -115,28 +115,28 @@ pub fn correlation_integral(
 /// Uses up to 200 randomly sampled points for efficiency.
 #[must_use]
 pub fn attractor_diameter(trajectory: &[f64], t: usize, d: usize) -> f64 {
-    if t <= 1 || d == 0 {
-        return 0.0;
-    }
-    // Sample up to 200 points
+    if t <= 1 || d == 0 { return 0.0; }
     let sample_size = t.min(200);
     let step = if t > 200 { t / 200 } else { 1 };
-    let mut max_dist = 0.0_f64;
-    for si in 0..sample_size {
+    
+    let max_dist = (0..sample_size).into_par_iter().map(|si| {
         let i = si * step;
+        let ti = &trajectory[i * d .. (i + 1) * d];
+        let mut local_max = 0.0;
         for sj in (si + 1)..sample_size {
             let j = sj * step;
-            let mut dist_sq = 0.0_f64;
+            let tj = &trajectory[j * d .. (j + 1) * d];
+            let mut dist_sq = 0.0;
             for k in 0..d {
-                let diff = trajectory[i * d + k] - trajectory[j * d + k];
+                let diff = ti[k] - tj[k];
                 dist_sq += diff * diff;
             }
             let dist = dist_sq.sqrt();
-            if dist > max_dist {
-                max_dist = dist;
-            }
+            if dist > local_max { local_max = dist; }
         }
-    }
+        local_max
+    }).max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)).unwrap_or(0.0);
+    
     max_dist
 }
 
