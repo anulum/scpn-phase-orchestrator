@@ -11,6 +11,8 @@
 //! R(t) → 1 precedes market crashes (Black Monday 1987, 2008 crisis).
 //! arXiv:1109.1167; CEUR-WS Vol-915.
 
+use rayon::prelude::*;
+
 /// Kuramoto order parameter R(t) across assets at each timestep.
 ///
 /// R(t) = |<exp(iθ)>| where average is over N assets.
@@ -21,24 +23,22 @@
 /// * `n` — number of assets
 #[must_use]
 pub fn market_order_parameter(phases_flat: &[f64], t: usize, n: usize) -> Vec<f64> {
-    if n == 0 || t == 0 {
-        return vec![];
-    }
+    if n == 0 || t == 0 { return vec![]; }
     let inv_n = 1.0 / n as f64;
-    let mut result = Vec::with_capacity(t);
-    for row in 0..t {
+    
+    (0..t).into_par_iter().map(|row| {
         let mut sum_cos = 0.0;
         let mut sum_sin = 0.0;
-        for col in 0..n {
-            let theta = phases_flat[row * n + col];
-            sum_cos += theta.cos();
-            sum_sin += theta.sin();
+        let p_row = &phases_flat[row * n .. (row + 1) * n];
+        for &theta in p_row {
+            let (s, c) = theta.sin_cos();
+            sum_cos += c;
+            sum_sin += s;
         }
         let mc = sum_cos * inv_n;
         let ms = sum_sin * inv_n;
-        result.push((mc * mc + ms * ms).sqrt());
-    }
-    result
+        (mc * mc + ms * ms).sqrt()
+    }).collect()
 }
 
 /// Windowed Phase-Locking Value matrix between assets.
@@ -46,29 +46,45 @@ pub fn market_order_parameter(phases_flat: &[f64], t: usize, n: usize) -> Vec<f6
 /// Returns flattened (n_windows × N × N) PLV matrices.
 #[must_use]
 pub fn market_plv(phases_flat: &[f64], t: usize, n: usize, window: usize) -> Vec<f64> {
-    if t < window || n == 0 || window == 0 {
-        return vec![];
-    }
+    if t < window || n == 0 || window == 0 { return vec![]; }
     let n_windows = t - window + 1;
     let mut plv = vec![0.0; n_windows * n * n];
     let inv_w = 1.0 / window as f64;
 
-    for w in 0..n_windows {
+    // Parallelize over windows
+    plv.par_chunks_mut(n * n).enumerate().for_each(|(w, window_mat)| {
+        // Precompute sincos for this window to avoid O(N^2 * W) trig
+        let mut window_s = vec![0.0; window * n];
+        let mut window_c = vec![0.0; window * n];
+        for k in 0..window {
+            let p_step = &phases_flat[(w + k) * n .. (w + k + 1) * n];
+            for i in 0..n {
+                let (s, c) = p_step[i].sin_cos();
+                window_s[k * n + i] = s;
+                window_c[k * n + i] = c;
+            }
+        }
+
         for i in 0..n {
             for j in 0..n {
                 let mut sum_cos = 0.0;
                 let mut sum_sin = 0.0;
                 for k in 0..window {
-                    let diff = phases_flat[(w + k) * n + i] - phases_flat[(w + k) * n + j];
-                    sum_cos += diff.cos();
-                    sum_sin += diff.sin();
+                    let si = window_s[k * n + i];
+                    let ci = window_c[k * n + i];
+                    let sj = window_s[k * n + j];
+                    let cj = window_c[k * n + j];
+                    // cos(tj - ti) = cj*ci + sj*si
+                    // sin(tj - ti) = sj*ci - cj*si
+                    sum_cos += cj * ci + sj * si;
+                    sum_sin += sj * ci - cj * si;
                 }
                 let mc = sum_cos * inv_w;
                 let ms = sum_sin * inv_w;
-                plv[w * n * n + i * n + j] = (mc * mc + ms * ms).sqrt();
+                window_mat[i * n + j] = (mc * mc + ms * ms).sqrt();
             }
         }
-    }
+    });
     plv
 }
 
