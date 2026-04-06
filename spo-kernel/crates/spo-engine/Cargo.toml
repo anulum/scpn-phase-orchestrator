@@ -17,6 +17,7 @@ description = "SCPN Phase Orchestrator — UPDE integrator, coupling, order para
 [dependencies]
 spo-types = { path = "../spo-types" }
 serde = { workspace = true }
+rayon = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

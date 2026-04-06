@@ -15,6 +15,7 @@ use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 
 use crate::dp_tableau as dp;
 use crate::plasticity::PlasticityModel;
+use rayon::prelude::*;
 
 /// Kuramoto UPDE integrator with pre-allocated scratch arrays.
 pub struct UPDEStepper {
@@ -35,6 +36,8 @@ pub struct UPDEStepper {
     k7: Vec<f64>,
     y5: Vec<f64>,
     tmp_phases: Vec<f64>,
+    sin_theta: Vec<f64>,
+    cos_theta: Vec<f64>,
     pub plasticity: Option<PlasticityModel>,
     pub modulator: f64,
 }
@@ -77,6 +80,8 @@ impl UPDEStepper {
             k7: vec![0.0; n],
             y5: vec![0.0; n],
             tmp_phases: vec![0.0; n],
+            sin_theta: vec![0.0; n],
+            cos_theta: vec![0.0; n],
             plasticity: None,
             modulator: 1.0,
         })
@@ -145,19 +150,21 @@ impl UPDEStepper {
             ));
         }
 
+        let alpha_zero = alpha.iter().all(|&a| a == 0.0);
+
         match self.method {
             Method::RK45 => {
-                self.rk45_step(phases, omegas, knm, zeta, psi, alpha);
+                self.rk45_step(phases, omegas, knm, zeta, psi, alpha, alpha_zero);
             }
             _ => {
                 let sub_dt = self.dt / f64::from(self.n_substeps);
                 for _ in 0..self.n_substeps {
                     match self.method {
                         Method::Euler => {
-                            self.euler_step(phases, omegas, knm, zeta, psi, alpha, sub_dt);
+                            self.euler_step(phases, omegas, knm, zeta, psi, alpha, sub_dt, alpha_zero);
                         }
                         Method::RK4 => {
-                            self.rk4_step(phases, omegas, knm, zeta, psi, alpha, sub_dt);
+                            self.rk4_step(phases, omegas, knm, zeta, psi, alpha, sub_dt, alpha_zero);
                         }
                         Method::RK45 => unreachable!(),
                     }
@@ -214,15 +221,19 @@ impl UPDEStepper {
         psi: f64,
         alpha: &[f64],
         dt: f64,
+        alpha_zero: bool,
     ) {
         compute_derivative(
             self.n,
             phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
             omegas,
             knm,
             zeta,
             psi,
             alpha,
+            alpha_zero,
             &mut self.deriv_buf,
         );
         for i in 0..self.n {
@@ -240,11 +251,12 @@ impl UPDEStepper {
         psi: f64,
         alpha: &[f64],
         dt: f64,
+        alpha_zero: bool,
     ) {
         let n = self.n;
 
         // k1
-        compute_derivative(n, phases, omegas, knm, zeta, psi, alpha, &mut self.k1);
+        compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, knm, zeta, psi, alpha, alpha_zero, &mut self.k1);
 
         // k2: phases + 0.5*dt*k1
         for i in 0..n {
@@ -253,11 +265,14 @@ impl UPDEStepper {
         compute_derivative(
             n,
             &self.tmp_phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
             omegas,
             knm,
             zeta,
             psi,
             alpha,
+            alpha_zero,
             &mut self.k2,
         );
 
@@ -268,11 +283,14 @@ impl UPDEStepper {
         compute_derivative(
             n,
             &self.tmp_phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
             omegas,
             knm,
             zeta,
             psi,
             alpha,
+            alpha_zero,
             &mut self.k3,
         );
 
@@ -283,11 +301,14 @@ impl UPDEStepper {
         compute_derivative(
             n,
             &self.tmp_phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
             omegas,
             knm,
             zeta,
             psi,
             alpha,
+            alpha_zero,
             &mut self.k4,
         );
 
@@ -307,6 +328,7 @@ impl UPDEStepper {
         zeta: f64,
         psi: f64,
         alpha: &[f64],
+        alpha_zero: bool,
     ) {
         let n = self.n;
         let max_reject = 3u32;
@@ -314,7 +336,7 @@ impl UPDEStepper {
 
         for _ in 0..=max_reject {
             // k1
-            compute_derivative(n, phases, omegas, knm, zeta, psi, alpha, &mut self.k1);
+            compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, knm, zeta, psi, alpha, alpha_zero, &mut self.k1);
 
             // k2: phases + dt * a21 * k1
             for i in 0..n {
@@ -323,11 +345,14 @@ impl UPDEStepper {
             compute_derivative(
                 n,
                 &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
                 omegas,
                 knm,
                 zeta,
                 psi,
                 alpha,
+                alpha_zero,
                 &mut self.k2,
             );
 
@@ -338,11 +363,14 @@ impl UPDEStepper {
             compute_derivative(
                 n,
                 &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
                 omegas,
                 knm,
                 zeta,
                 psi,
                 alpha,
+                alpha_zero,
                 &mut self.k3,
             );
 
@@ -354,11 +382,14 @@ impl UPDEStepper {
             compute_derivative(
                 n,
                 &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
                 omegas,
                 knm,
                 zeta,
                 psi,
                 alpha,
+                alpha_zero,
                 &mut self.k4,
             );
 
@@ -373,11 +404,14 @@ impl UPDEStepper {
             compute_derivative(
                 n,
                 &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
                 omegas,
                 knm,
                 zeta,
                 psi,
                 alpha,
+                alpha_zero,
                 &mut self.k5,
             );
 
@@ -393,11 +427,14 @@ impl UPDEStepper {
             compute_derivative(
                 n,
                 &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
                 omegas,
                 knm,
                 zeta,
                 psi,
                 alpha,
+                alpha_zero,
                 &mut self.k6,
             );
 
@@ -412,7 +449,7 @@ impl UPDEStepper {
             }
 
             // k7: evaluate derivative at y5 (FSAL property)
-            compute_derivative(n, &self.y5, omegas, knm, zeta, psi, alpha, &mut self.k7);
+            compute_derivative(n, &self.y5, &mut self.sin_theta, &mut self.cos_theta, omegas, knm, zeta, psi, alpha, alpha_zero, &mut self.k7);
 
             // Error estimate using 4th-order weights (B4[6] = 1/40)
             let mut err_norm: f64 = 0.0;
@@ -461,21 +498,89 @@ impl UPDEStepper {
 fn compute_derivative(
     n: usize,
     theta: &[f64],
+    sin_theta: &mut [f64],
+    cos_theta: &mut [f64],
     omegas: &[f64],
     knm: &mut [f64],
     zeta: f64,
     psi: f64,
     alpha: &[f64],
+    alpha_zero: bool,
     out: &mut [f64],
 ) {
     for i in 0..n {
-        let mut coupling_sum = 0.0;
-        for j in 0..n {
-            coupling_sum += knm[i * n + j] * (theta[j] - theta[i] - alpha[i * n + j]).sin();
-        }
-        out[i] = omegas[i] + coupling_sum;
-        if zeta != 0.0 {
-            out[i] += zeta * (psi - theta[i]).sin();
+        let (s, c) = theta[i].sin_cos();
+        sin_theta[i] = s;
+        cos_theta[i] = c;
+    }
+
+    let (s_psi, c_psi) = if zeta != 0.0 {
+        psi.sin_cos()
+    } else {
+        (0.0, 0.0)
+    };
+
+    let st = &*sin_theta;
+    let ct = &*cos_theta;
+
+    if n >= 256 {
+        let block_size = 64;
+        out.par_chunks_mut(block_size).enumerate().for_each(|(block_idx, chunk)| {
+            let start_i = block_idx * block_size;
+            if alpha_zero {
+                for (local_i, val) in chunk.iter_mut().enumerate() {
+                    let i = start_i + local_i;
+                    let offset = i * n;
+                    let k_row = &knm[offset..offset + n];
+                    let sum_s: f64 = k_row.iter().zip(st.iter()).map(|(&kj, &sj)| kj * sj).sum();
+                    let sum_c: f64 = k_row.iter().zip(ct.iter()).map(|(&kj, &cj)| kj * cj).sum();
+                    let coupling_sum = sum_s * ct[i] - sum_c * st[i];
+                    *val = omegas[i] + coupling_sum;
+                    if zeta != 0.0 {
+                        *val += zeta * (s_psi * ct[i] - c_psi * st[i]);
+                    }
+                }
+            } else {
+                for (local_i, val) in chunk.iter_mut().enumerate() {
+                    let i = start_i + local_i;
+                    let mut coupling_sum = 0.0;
+                    let offset = i * n;
+                    for j in 0..n {
+                        coupling_sum += knm[offset + j] * (theta[j] - theta[i] - alpha[offset + j]).sin();
+                    }
+                    *val = omegas[i] + coupling_sum;
+                    if zeta != 0.0 {
+                        *val += zeta * (s_psi * ct[i] - c_psi * st[i]);
+                    }
+                }
+            }
+        });
+    } else {
+        if alpha_zero {
+            for i in 0..n {
+                let mut sum_s = 0.0;
+                let mut sum_c = 0.0;
+                for j in 0..n {
+                    sum_s += knm[i * n + j] * st[j];
+                    sum_c += knm[i * n + j] * ct[j];
+                }
+                let coupling_sum = sum_s * ct[i] - sum_c * st[i];
+                out[i] = omegas[i] + coupling_sum;
+                if zeta != 0.0 {
+                    out[i] += zeta * (s_psi * ct[i] - c_psi * st[i]);
+                }
+            }
+        } else {
+            for i in 0..n {
+                let mut coupling_sum = 0.0;
+                for j in 0..n {
+                    coupling_sum += knm[i * n + j] * (theta[j] - theta[i] - alpha[i * n + j]).sin();
+                }
+                out[i] = omegas[i] + coupling_sum;
+                if zeta != 0.0 {
+                    out[i] += zeta * (s_psi * ct[i] - c_psi * st[i]);
+                }
+            }
         }
     }
 }
