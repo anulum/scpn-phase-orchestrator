@@ -962,6 +962,48 @@ impl PySplittingStepper {
     }
 }
 
+// ─── PySwarmalatorStepper ────────────────────────────────────────────────
+
+#[pyclass(name = "PySwarmalatorStepper")]
+struct PySwarmalatorStepper {
+    inner: swarmalator::SwarmalatorStepper,
+}
+
+#[pymethods]
+impl PySwarmalatorStepper {
+    #[new]
+    #[pyo3(signature = (n, dim, dt = 0.01))]
+    fn new(n: usize, dim: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig { dt, ..Default::default() };
+        let inner = swarmalator::SwarmalatorStepper::new(n, dim, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        pos: PyReadonlyArray1<'py, f64>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        a: f64,
+        b: f64,
+        j: f64,
+        k: f64,
+    ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
+        let mut p_pos = pos.to_vec().map_err(|_| PyValueError::new_err("pos not contiguous"))?;
+        let mut p_phases = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner.step(&mut p_pos, &mut p_phases, o, a, b, j, k).map_err(spo_err)?;
+
+        Ok((PyArray1::from_vec(py, p_pos), PyArray1::from_vec(py, p_phases)))
+    }
+    
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
+}
+
 // ─── PySimplicialStepper ──────────────────────────────────────────────────
 
 #[pyclass(name = "PySimplicialStepper")]
@@ -3326,6 +3368,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyInertialStepper>()?;
     m.add_class::<PyHypergraphStepper>()?;
     m.add_class::<PySplittingStepper>()?;
+    m.add_class::<PySwarmalatorStepper>()?;
     m.add_class::<PySimplicialStepper>()?;
     m.add_class::<PySparseUPDEStepper>()?;
     m.add_class::<PyCouplingBuilder>()?;
