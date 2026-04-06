@@ -725,6 +725,74 @@ impl PySupervisorPolicy {
     }
 }
 
+// ─── PySimplicialStepper ──────────────────────────────────────────────────
+
+#[pyclass(name = "PySimplicialStepper")]
+struct PySimplicialStepper {
+    inner: simplicial::SimplicialStepper,
+}
+
+#[pymethods]
+impl PySimplicialStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01))]
+    fn new(n: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig {
+            dt,
+            ..Default::default()
+        };
+        let inner = simplicial::SimplicialStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        sigma2: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner.step(&mut p, o, k, a, zeta, psi, sigma2).map_err(spo_err)?;
+
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn run<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        sigma2: f64,
+        n_steps: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner.run(&mut p, o, k, a, zeta, psi, sigma2, n_steps).map_err(spo_err)?;
+
+        Ok(PyArray1::from_vec(py, p))
+    }
+    
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
+}
+
 // ─── PySparseUPDEStepper ──────────────────────────────────────────────────
 
 #[pyclass(name = "PySparseUPDEStepper")]
@@ -2997,6 +3065,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyUPDEStepper>()?;
     m.add_class::<PySheafUPDEStepper>()?;
     m.add_class::<PyActiveInferenceAgent>()?;
+    m.add_class::<PySimplicialStepper>()?;
     m.add_class::<PySparseUPDEStepper>()?;
     m.add_class::<PyCouplingBuilder>()?;
     m.add_class::<PyRegimeManager>()?;

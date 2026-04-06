@@ -15,6 +15,7 @@ from scpn_phase_orchestrator._compat import TWO_PI
 try:
     from spo_kernel import (
         simplicial_run_rust as _rust_simplicial_run,
+        PySimplicialStepper as _SimplicialStepper,
     )
 
     _HAS_RUST = True
@@ -44,6 +45,10 @@ class SimplicialEngine:
         self._n = n_oscillators
         self._dt = dt
         self._sigma2 = sigma2
+        if _HAS_RUST:
+            self._stepper = _SimplicialStepper(n_oscillators, dt)
+        else:
+            self._stepper = None
 
     @property
     def sigma2(self) -> float:
@@ -62,7 +67,13 @@ class SimplicialEngine:
         psi: float,
         alpha: NDArray,
     ) -> NDArray:
-        """Euler step with pairwise + 3-body coupling."""
+        if _HAS_RUST:
+            p = np.ascontiguousarray(phases, dtype=np.float64)
+            o = np.ascontiguousarray(omegas, dtype=np.float64)
+            k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+            a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
+            return self._stepper.step(p, o, k, a, zeta, psi, self._sigma2)
+        
         dtheta = self._derivative(phases, omegas, knm, zeta, psi, alpha)
         result: NDArray = (phases + self._dt * dtheta) % TWO_PI
         return result
@@ -82,21 +93,7 @@ class SimplicialEngine:
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            result: NDArray = np.asarray(
-                _rust_simplicial_run(
-                    p,
-                    o,
-                    k,
-                    a,
-                    self._n,
-                    zeta,
-                    psi,
-                    self._sigma2,
-                    self._dt,
-                    n_steps,
-                )
-            )
-            return result
+            return self._stepper.run(p, o, k, a, zeta, psi, self._sigma2, n_steps)
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)
