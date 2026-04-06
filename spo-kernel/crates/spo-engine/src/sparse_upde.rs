@@ -36,6 +36,8 @@ pub struct SparseUPDEStepper {
     k7: Vec<f64>,
     y5: Vec<f64>,
     tmp_phases: Vec<f64>,
+    sin_theta: Vec<f64>,
+    cos_theta: Vec<f64>,
     pub plasticity: Option<PlasticityModel>,
     pub modulator: f64,
 }
@@ -78,6 +80,8 @@ impl SparseUPDEStepper {
             k7: vec![0.0; n],
             y5: vec![0.0; n],
             tmp_phases: vec![0.0; n],
+            sin_theta: vec![0.0; n],
+            cos_theta: vec![0.0; n],
             plasticity: None,
             modulator: 1.0,
         })
@@ -102,6 +106,7 @@ impl SparseUPDEStepper {
         alpha_values: &[f64],
     ) -> SpoResult<()> {
         let n = self.n;
+        let alpha_zero = alpha_values.iter().all(|&a| a == 0.0);
         if phases.len() != n || omegas.len() != n {
             return Err(SpoError::InvalidDimension(format!(
                 "expected {n}, got phases={} omegas={}",
@@ -166,6 +171,7 @@ impl SparseUPDEStepper {
                     zeta,
                     psi,
                     alpha_values,
+                    alpha_zero,
                 );
             }
             _ => {
@@ -183,6 +189,7 @@ impl SparseUPDEStepper {
                                 psi,
                                 alpha_values,
                                 sub_dt,
+                                alpha_zero,
                             );
                         }
                         Method::RK4 => {
@@ -196,6 +203,7 @@ impl SparseUPDEStepper {
                                 psi,
                                 alpha_values,
                                 sub_dt,
+                                alpha_zero,
                             );
                         }
                         Method::RK45 => unreachable!(),
@@ -273,10 +281,13 @@ impl SparseUPDEStepper {
         psi: f64,
         alpha_values: &[f64],
         dt: f64,
+        alpha_zero: bool,
     ) {
         compute_derivative(
             self.n,
             phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
             omegas,
             row_ptr,
             col_indices,
@@ -284,6 +295,7 @@ impl SparseUPDEStepper {
             zeta,
             psi,
             alpha_values,
+            alpha_zero,
             &mut self.deriv_buf,
         );
         for i in 0..self.n {
@@ -303,73 +315,30 @@ impl SparseUPDEStepper {
         psi: f64,
         alpha_values: &[f64],
         dt: f64,
+        alpha_zero: bool,
     ) {
         let n = self.n;
 
         // k1
-        compute_derivative(
-            n,
-            phases,
-            omegas,
-            row_ptr,
-            col_indices,
-            knm_values,
-            zeta,
-            psi,
-            alpha_values,
-            &mut self.k1,
-        );
+        compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k1);
 
         // k2: phases + 0.5*dt*k1
         for i in 0..n {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k1[i];
         }
-        compute_derivative(
-            n,
-            &self.tmp_phases,
-            omegas,
-            row_ptr,
-            col_indices,
-            knm_values,
-            zeta,
-            psi,
-            alpha_values,
-            &mut self.k2,
-        );
+        compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k2);
 
         // k3: phases + 0.5*dt*k2
         for i in 0..n {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k2[i];
         }
-        compute_derivative(
-            n,
-            &self.tmp_phases,
-            omegas,
-            row_ptr,
-            col_indices,
-            knm_values,
-            zeta,
-            psi,
-            alpha_values,
-            &mut self.k3,
-        );
+        compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k3);
 
         // k4: phases + dt*k3
         for i in 0..n {
             self.tmp_phases[i] = phases[i] + dt * self.k3[i];
         }
-        compute_derivative(
-            n,
-            &self.tmp_phases,
-            omegas,
-            row_ptr,
-            col_indices,
-            knm_values,
-            zeta,
-            psi,
-            alpha_values,
-            &mut self.k4,
-        );
+        compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k4);
 
         // phases += dt/6 * (k1 + 2*k2 + 2*k3 + k4)
         let dt6 = dt / 6.0;
@@ -389,6 +358,7 @@ impl SparseUPDEStepper {
         zeta: f64,
         psi: f64,
         alpha_values: &[f64],
+        alpha_zero: bool,
     ) {
         let n = self.n;
         let max_reject = 3u32;
@@ -396,70 +366,26 @@ impl SparseUPDEStepper {
 
         for _ in 0..=max_reject {
             // k1
-            compute_derivative(
-                n,
-                phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-                &mut self.k1,
-            );
+            compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k1);
 
             // k2: phases + dt * a21 * k1
             for i in 0..n {
                 self.tmp_phases[i] = phases[i] + dt * dp::A21 * self.k1[i];
             }
-            compute_derivative(
-                n,
-                &self.tmp_phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-                &mut self.k2,
-            );
+            compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k2);
 
             // k3: phases + dt * (a31*k1 + a32*k2)
             for i in 0..n {
                 self.tmp_phases[i] = phases[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]);
             }
-            compute_derivative(
-                n,
-                &self.tmp_phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-                &mut self.k3,
-            );
+            compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k3);
 
             // k4: phases + dt * (a41*k1 + a42*k2 + a43*k3)
             for i in 0..n {
                 self.tmp_phases[i] = phases[i]
                     + dt * (dp::A41 * self.k1[i] + dp::A42 * self.k2[i] + dp::A43 * self.k3[i]);
             }
-            compute_derivative(
-                n,
-                &self.tmp_phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-                &mut self.k4,
-            );
+            compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k4);
 
             // k5: phases + dt * (a51*k1 + a52*k2 + a53*k3 + a54*k4)
             for i in 0..n {
@@ -469,18 +395,7 @@ impl SparseUPDEStepper {
                         + dp::A53 * self.k3[i]
                         + dp::A54 * self.k4[i]);
             }
-            compute_derivative(
-                n,
-                &self.tmp_phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-                &mut self.k5,
-            );
+            compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k5);
 
             // k6: phases + dt * (a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5)
             for i in 0..n {
@@ -491,18 +406,7 @@ impl SparseUPDEStepper {
                         + dp::A64 * self.k4[i]
                         + dp::A65 * self.k5[i]);
             }
-            compute_derivative(
-                n,
-                &self.tmp_phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-                &mut self.k6,
-            );
+            compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k6);
 
             // 5th-order solution (B5[6] = 0, so k7 does not contribute to y5)
             for i in 0..n {
@@ -515,18 +419,7 @@ impl SparseUPDEStepper {
             }
 
             // k7: evaluate derivative at y5 (FSAL property)
-            compute_derivative(
-                n,
-                &self.y5,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-                &mut self.k7,
-            );
+            compute_derivative(n, &self.y5, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k7);
 
             // Error estimate using 4th-order weights (B4[6] = 1/40)
             let mut err_norm: f64 = 0.0;
@@ -575,6 +468,8 @@ impl SparseUPDEStepper {
 fn compute_derivative(
     n: usize,
     theta: &[f64],
+    sin_theta: &mut [f64],
+    cos_theta: &mut [f64],
     omegas: &[f64],
     row_ptr: &[usize],
     col_indices: &[usize],
@@ -582,19 +477,49 @@ fn compute_derivative(
     zeta: f64,
     psi: f64,
     alpha_values: &[f64],
+    alpha_zero: bool,
     out: &mut [f64],
 ) {
     for i in 0..n {
-        let mut coupling_sum = 0.0;
-        let start = row_ptr[i];
-        let end = row_ptr[i + 1];
-        for idx in start..end {
-            let j = col_indices[idx];
-            coupling_sum += knm_values[idx] * (theta[j] - theta[i] - alpha_values[idx]).sin();
+        let (s, c) = theta[i].sin_cos();
+        sin_theta[i] = s;
+        cos_theta[i] = c;
+    }
+
+    let (s_psi, c_psi) = if zeta != 0.0 {
+        psi.sin_cos()
+    } else {
+        (0.0, 0.0)
+    };
+
+    if alpha_zero {
+        for i in 0..n {
+            let mut coupling_sum = 0.0;
+            let start = row_ptr[i];
+            let end = row_ptr[i + 1];
+            for idx in start..end {
+                let j = col_indices[idx];
+                // sin(theta_j - theta_i) = sin(theta_j)cos(theta_i) - cos(theta_j)sin(theta_i)
+                coupling_sum += knm_values[idx] * (sin_theta[j] * cos_theta[i] - cos_theta[j] * sin_theta[i]);
+            }
+            out[i] = omegas[i] + coupling_sum;
+            if zeta != 0.0 {
+                out[i] += zeta * (s_psi * cos_theta[i] - c_psi * sin_theta[i]);
+            }
         }
-        out[i] = omegas[i] + coupling_sum;
-        if zeta != 0.0 {
-            out[i] += zeta * (psi - theta[i]).sin();
+    } else {
+        for i in 0..n {
+            let mut coupling_sum = 0.0;
+            let start = row_ptr[i];
+            let end = row_ptr[i + 1];
+            for idx in start..end {
+                let j = col_indices[idx];
+                coupling_sum += knm_values[idx] * (theta[j] - theta[i] - alpha_values[idx]).sin();
+            }
+            out[i] = omegas[i] + coupling_sum;
+            if zeta != 0.0 {
+                out[i] += zeta * (s_psi * cos_theta[i] - c_psi * sin_theta[i]);
+            }
         }
     }
 }
