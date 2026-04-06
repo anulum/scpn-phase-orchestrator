@@ -37,8 +37,8 @@ pub use simplicial::SimplicialStepper;
 pub use sparse_upde::SparseUPDEStepper;
 pub use splitting::SplittingStepper;
 pub use stuart_landau::StuartLandauStepper;
-pub use upde::UPDEStepper;
 pub use swarmalator::SwarmalatorStepper;
+pub use upde::UPDEStepper;
 
 pub mod basin_stability;
 pub mod bifurcation;

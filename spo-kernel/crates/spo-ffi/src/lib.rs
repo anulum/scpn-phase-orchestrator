@@ -974,7 +974,10 @@ impl PySwarmalatorStepper {
     #[new]
     #[pyo3(signature = (n, dim, dt = 0.01))]
     fn new(n: usize, dim: usize, dt: f64) -> PyResult<Self> {
-        let config = IntegrationConfig { dt, ..Default::default() };
+        let config = IntegrationConfig {
+            dt,
+            ..Default::default()
+        };
         let inner = swarmalator::SwarmalatorStepper::new(n, dim, config).map_err(spo_err)?;
         Ok(Self { inner })
     }
@@ -990,15 +993,26 @@ impl PySwarmalatorStepper {
         j: f64,
         k: f64,
     ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
-        let mut p_pos = pos.to_vec().map_err(|_| PyValueError::new_err("pos not contiguous"))?;
-        let mut p_phases = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let mut p_pos = pos
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("pos not contiguous"))?;
+        let mut p_phases = phases
+            .to_vec()
+            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
-        self.inner.step(&mut p_pos, &mut p_phases, o, a, b, j, k).map_err(spo_err)?;
+        self.inner
+            .step(&mut p_pos, &mut p_phases, o, a, b, j, k)
+            .map_err(spo_err)?;
 
-        Ok((PyArray1::from_vec(py, p_pos), PyArray1::from_vec(py, p_phases)))
+        Ok((
+            PyArray1::from_vec(py, p_pos),
+            PyArray1::from_vec(py, p_phases),
+        ))
     }
-    
+
     fn order_parameter(&self) -> (f64, f64) {
         self.inner.order_parameter()
     }
