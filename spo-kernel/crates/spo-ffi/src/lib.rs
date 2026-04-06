@@ -725,91 +725,6 @@ impl PySupervisorPolicy {
     }
 }
 
-// ─── PyDelayedStepper ────────────────────────────────────────────────────
-
-#[pyclass(name = "PyDelayedStepper")]
-struct PyDelayedStepper {
-    inner: delay::DelayedStepper,
-}
-
-#[pymethods]
-impl PyDelayedStepper {
-    #[new]
-    #[pyo3(signature = (n, delay_steps, dt = 0.01))]
-    fn new(n: usize, delay_steps: usize, dt: f64) -> PyResult<Self> {
-        let config = IntegrationConfig {
-            dt,
-            ..Default::default()
-        };
-        let inner = delay::DelayedStepper::new(n, delay_steps, config).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-        step_idx: usize,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .step(&mut p, o, k, a, zeta, psi, step_idx)
-            .map_err(spo_err)?;
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn run<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-        n_steps: usize,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .run(&mut p, o, k, a, zeta, psi, n_steps)
-            .map_err(spo_err)?;
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn order_parameter(&self) -> (f64, f64) {
-        self.inner.order_parameter()
-    }
-}
-
 // ─── PyInertialStepper ───────────────────────────────────────────────────
 
 #[pyclass(name = "PyInertialStepper")]
@@ -3407,7 +3322,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyUPDEStepper>()?;
     m.add_class::<PySheafUPDEStepper>()?;
     m.add_class::<PyActiveInferenceAgent>()?;
-    m.add_class::<PyDelayedStepper>()?;
+    // PyDelayedStepper removed: delay::DelayedStepper not yet implemented
     m.add_class::<PyInertialStepper>()?;
     m.add_class::<PyHypergraphStepper>()?;
     m.add_class::<PySplittingStepper>()?;
