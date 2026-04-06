@@ -725,6 +725,77 @@ impl PySupervisorPolicy {
     }
 }
 
+// ─── PyHypergraphStepper ──────────────────────────────────────────────────
+
+#[pyclass(name = "PyHypergraphStepper")]
+struct PyHypergraphStepper {
+    inner: hypergraph::HypergraphStepper,
+}
+
+#[pymethods]
+impl PyHypergraphStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01))]
+    fn new(n: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig { dt, ..Default::default() };
+        let inner = hypergraph::HypergraphStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        edges: Vec<(Vec<usize>, f64)>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        
+        let h_edges: Vec<hypergraph::Hyperedge> = edges.into_iter().map(|(nodes, strength)| {
+            hypergraph::Hyperedge { nodes, strength }
+        }).collect();
+
+        self.inner.step(&mut p, o, &h_edges, k, a, zeta, psi).map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn run<'py>(
+        &mut self,
+        py: Python<'py>,
+        phases: PyReadonlyArray1<'py, f64>,
+        omegas: PyReadonlyArray1<'py, f64>,
+        edges: Vec<(Vec<usize>, f64)>,
+        knm: PyReadonlyArray1<'py, f64>,
+        alpha: PyReadonlyArray1<'py, f64>,
+        zeta: f64,
+        psi: f64,
+        n_steps: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let mut p = phases.to_vec().map_err(|_| PyValueError::new_err("phases not contiguous"))?;
+        let o = omegas.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = alpha.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        
+        let h_edges: Vec<hypergraph::Hyperedge> = edges.into_iter().map(|(nodes, strength)| {
+            hypergraph::Hyperedge { nodes, strength }
+        }).collect();
+
+        self.inner.run(&mut p, o, &h_edges, k, a, zeta, psi, n_steps).map_err(spo_err)?;
+        Ok(PyArray1::from_vec(py, p))
+    }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
+}
+
 // ─── PySimplicialStepper ──────────────────────────────────────────────────
 
 #[pyclass(name = "PySimplicialStepper")]
@@ -3065,6 +3136,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyUPDEStepper>()?;
     m.add_class::<PySheafUPDEStepper>()?;
     m.add_class::<PyActiveInferenceAgent>()?;
+    m.add_class::<PyHypergraphStepper>()?;
     m.add_class::<PySimplicialStepper>()?;
     m.add_class::<PySparseUPDEStepper>()?;
     m.add_class::<PyCouplingBuilder>()?;
