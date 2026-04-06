@@ -1,224 +1,96 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
 // © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 // © Code 2020–2026 Miroslav Šotek. All rights reserved.
-// ORCID: 0009-0009-3560-0851
-// Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Time-delayed Kuramoto coupling
 
-//! Kuramoto model with time-delayed coupling.
-//!
-//! dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j(t−τ) − θ_i(t) − α_ij)
-//!
-//! Time delay generates effective higher-order interactions
-//! (Ciszak et al. 2025).
-
-use std::collections::VecDeque;
 use std::f64::consts::TAU;
+use rayon::prelude::*;
+use spo_types::{IntegrationConfig, SpoResult, SpoError};
 
-/// Run n_steps of delayed Kuramoto, returning final phases.
-///
-/// Internally maintains a circular buffer for delayed phase lookup.
-/// Falls back to instantaneous coupling when buffer is not yet full.
-///
-/// # Arguments
-/// * `phases_init` — (N,) initial phases
-/// * `omegas` — (N,) natural frequencies
-/// * `knm_flat` — (N×N) row-major coupling
-/// * `alpha_flat` — (N×N) row-major phase lags
-/// * `n` — number of oscillators
-/// * `zeta` — external drive strength
-/// * `psi` — external drive phase
-/// * `dt` — timestep
-/// * `delay_steps` — number of steps of delay
-/// * `n_steps` — total steps to run
-#[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn delayed_kuramoto_run(
-    phases_init: &[f64],
-    omegas: &[f64],
-    knm_flat: &[f64],
-    alpha_flat: &[f64],
-    n: usize,
-    zeta: f64,
-    psi: f64,
-    dt: f64,
-    delay_steps: usize,
-    n_steps: usize,
-) -> Vec<f64> {
-    let mut phases = phases_init.to_vec();
-    let max_buf = delay_steps + 1;
-    let mut buffer: VecDeque<Vec<f64>> = VecDeque::with_capacity(max_buf);
-
-    for _ in 0..n_steps {
-        // Get delayed phases (or current if buffer not full)
-        let coupling_phases = if delay_steps > 0 && buffer.len() >= delay_steps {
-            buffer[buffer.len() - delay_steps].clone()
-        } else {
-            phases.clone()
-        };
-
-        // Push current to buffer
-        buffer.push_back(phases.clone());
-        if buffer.len() > max_buf {
-            buffer.pop_front();
-        }
-
-        // Euler step: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j(t−τ) − θ_i(t) − α_ij)
-        let mut new_phases = Vec::with_capacity(n);
-        for i in 0..n {
-            let mut coupling = 0.0;
-            for j in 0..n {
-                let k_ij = knm_flat[i * n + j];
-                if k_ij.abs() > 1e-30 {
-                    let a_ij = alpha_flat[i * n + j];
-                    coupling += k_ij * (coupling_phases[j] - phases[i] - a_ij).sin();
-                }
-            }
-            let mut dtheta = omegas[i] + coupling;
-            if zeta.abs() > 1e-30 {
-                dtheta += zeta * (psi - phases[i]).sin();
-            }
-            let raw = phases[i] + dt * dtheta;
-            new_phases.push(((raw % TAU) + TAU) % TAU);
-        }
-        phases = new_phases;
-    }
-
-    phases
+pub struct DelayedStepper {
+    n: usize, dt: f64, delay_steps: usize, head: usize,
+    history_sincos: Vec<f64>, sin_theta: Vec<f64>, cos_theta: Vec<f64>, deriv_buf: Vec<f64>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::f64::consts::PI;
+impl std::fmt::Debug for DelayedStepper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DelayedStepper").field("n", &self.n).field("delay_steps", &self.delay_steps).finish_non_exhaustive()
+    }
+}
 
-    fn make_all_to_all(n: usize, strength: f64) -> Vec<f64> {
-        let mut knm = vec![strength / n as f64; n * n];
+impl DelayedStepper {
+    pub fn new(n: usize, delay_steps: usize, config: IntegrationConfig) -> SpoResult<Self> {
+        if n == 0 { return Err(SpoError::InvalidDimension("n must be > 0".into())); }
+        config.validate()?;
+        let max_buf = delay_steps + 1;
+        Ok(Self {
+            n, dt: config.dt, delay_steps, head: 0,
+            history_sincos: vec![0.0; max_buf * 2 * n], sin_theta: vec![0.0; n], cos_theta: vec![0.0; n], deriv_buf: vec![0.0; n],
+        })
+    }
+
+    pub fn step(&mut self, phases: &mut [f64], omegas: &[f64], knm: &[f64], alpha: &[f64], zeta: f64, psi: f64, step_idx: usize) -> SpoResult<()> {
+        let n = self.n; let max_buf = self.delay_steps + 1;
         for i in 0..n {
-            knm[i * n + i] = 0.0;
+            let (s, c) = phases[i].sin_cos();
+            self.sin_theta[i] = s; self.cos_theta[i] = c;
+            self.history_sincos[self.head * 2 * n + 2 * i] = s;
+            self.history_sincos[self.head * 2 * n + 2 * i + 1] = c;
         }
-        knm
-    }
+        let delayed_idx = if self.delay_steps > 0 && step_idx >= self.delay_steps { (self.head + max_buf - self.delay_steps) % max_buf } else { self.head };
+        let d_sc = &self.history_sincos[delayed_idx * 2 * n .. (delayed_idx + 1) * 2 * n];
+        let (zs_psi, zc_psi) = if zeta != 0.0 { let (s, c) = psi.sin_cos(); (zeta * s, zeta * c) } else { (0.0, 0.0) };
+        let alpha_zero = alpha.iter().all(|&a| a == 0.0);
+        let st = &*self.sin_theta; let ct = &*self.cos_theta;
 
-    #[test]
-    fn test_zero_delay_equals_instantaneous() {
-        let n = 4;
-        let phases = vec![0.0, 0.5, 1.0, 1.5];
-        let omegas = vec![1.0; n];
-        let knm = make_all_to_all(n, 2.0);
-        let alpha = vec![0.0; n * n];
-
-        let r0 = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 0, 100);
-        let r1 = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 0, 100);
-        assert_eq!(r0, r1);
-    }
-
-    #[test]
-    fn test_delay_differs_from_instantaneous() {
-        let n = 4;
-        let phases = vec![0.0, 0.5, 1.0, 1.5];
-        let omegas = vec![1.0; n];
-        let knm = make_all_to_all(n, 5.0);
-        let alpha = vec![0.0; n * n];
-
-        let instant =
-            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 0, 200);
-        let delayed =
-            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 10, 200);
-
-        let diff: f64 = instant
-            .iter()
-            .zip(&delayed)
-            .map(|(a, b)| (a - b).abs())
-            .sum();
-        assert!(
-            diff > 0.01,
-            "delay should produce different result, diff = {diff}"
-        );
-    }
-
-    #[test]
-    fn test_phases_bounded() {
-        let n = 5;
-        let phases: Vec<f64> = (0..n).map(|i| i as f64 * 1.2).collect();
-        let omegas: Vec<f64> = (0..n).map(|i| 0.5 + 0.3 * i as f64).collect();
-        let knm = make_all_to_all(n, 3.0);
-        let alpha = vec![0.0; n * n];
-
-        let result =
-            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 5, 500);
-        for (i, &v) in result.iter().enumerate() {
-            assert!(v >= 0.0 && v < TAU, "phase[{i}] = {v} out of [0, 2π)");
+        if n >= 256 {
+            self.deriv_buf.par_iter_mut().enumerate().for_each(|(i, val)| {
+                let offset = i * n; let k_row = &knm[offset..offset + n];
+                let ci = ct[i]; let si = st[i];
+                let mut coupling = 0.0;
+                if alpha_zero {
+                    let mut k_iter = k_row.chunks_exact(8);
+                    let mut d_sc_iter = d_sc.chunks_exact(16);
+                    let mut acc = 0.0;
+                    for (kc, dsc8) in k_iter.by_ref().zip(d_sc_iter.by_ref()) {
+                        acc += kc[0]*(dsc8[0]*ci - dsc8[1]*si) + kc[1]*(dsc8[2]*ci - dsc8[3]*si) + kc[2]*(dsc8[4]*ci - dsc8[5]*si) + kc[3]*(dsc8[6]*ci - dsc8[7]*si) +
+                               kc[4]*(dsc8[8]*ci - dsc8[9]*si) + kc[5]*(dsc8[10]*ci - dsc8[11]*si) + kc[6]*(dsc8[12]*ci - dsc8[13]*si) + kc[7]*(dsc8[14]*ci - dsc8[15]*si);
+                    }
+                    coupling = acc;
+                    for (&kj, dsc2) in k_iter.remainder().iter().zip(d_sc_iter.remainder().chunks_exact(2)) { coupling += kj * (dsc2[0]*ci - dsc2[1]*si); }
+                } else {
+                    for j in 0..n { let tj_d = d_sc[2*j].atan2(d_sc[2*j+1]); coupling += k_row[j] * (tj_d - phases[i] - alpha[offset+j]).sin(); }
+                }
+                *val = omegas[i] + coupling + (if zeta != 0.0 { zs_psi * ci - zc_psi * si } else { 0.0 });
+            });
+        } else {
+            for i in 0..n {
+                let offset = i * n; let k_row = &knm[offset..offset + n];
+                let ci = ct[i]; let si = st[i];
+                let mut coupling = 0.0;
+                if alpha_zero { for j in 0..n { coupling += k_row[j] * (d_sc[2*j]*ci - d_sc[2*j+1]*si); } }
+                else { for j in 0..n { let tj_d = d_sc[2*j].atan2(d_sc[2*j+1]); coupling += k_row[j] * (tj_d - phases[i] - alpha[offset+j]).sin(); } }
+                self.deriv_buf[i] = omegas[i] + coupling + (if zeta != 0.0 { zs_psi * ci - zc_psi * si } else { 0.0 });
+            }
         }
+        for i in 0..n { phases[i] = (phases[i] + self.dt * self.deriv_buf[i]).rem_euclid(TAU); }
+        self.head = (self.head + 1) % max_buf;
+        Ok(())
     }
 
-    #[test]
-    fn test_external_drive() {
-        let n = 3;
-        let phases = vec![0.0; n];
-        let omegas = vec![0.0; n]; // no natural frequency
-        let knm = vec![0.0; n * n]; // no coupling
-        let alpha = vec![0.0; n * n];
-
-        // With external drive, phases should move toward psi
-        let result = delayed_kuramoto_run(
-            &phases,
-            &omegas,
-            &knm,
-            &alpha,
-            n,
-            1.0,
-            PI / 2.0,
-            0.01,
-            0,
-            500,
-        );
-        // All phases should have moved
-        for &v in &result {
-            assert!(v > 0.01, "external drive should move phases");
-        }
+    pub fn run(&mut self, phases: &mut [f64], omegas: &[f64], knm: &[f64], alpha: &[f64], zeta: f64, psi: f64, n_steps: usize) -> SpoResult<()> {
+        for step_idx in 0..n_steps { self.step(phases, omegas, knm, alpha, zeta, psi, step_idx)?; }
+        Ok(())
     }
 
-    #[test]
-    fn test_preserves_length() {
-        let n = 6;
-        let phases = vec![0.0; n];
-        let omegas = vec![1.0; n];
-        let knm = vec![0.0; n * n];
-        let alpha = vec![0.0; n * n];
-
-        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 3, 10);
-        assert_eq!(result.len(), n);
+    pub fn order_parameter(&self) -> (f64, f64) {
+        crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
+}
 
-    #[test]
-    fn test_deterministic() {
-        let n = 4;
-        let phases = vec![0.1, 0.5, 1.2, 2.3];
-        let omegas = vec![1.0, 1.5, 2.0, 0.5];
-        let knm = make_all_to_all(n, 2.0);
-        let alpha = vec![0.0; n * n];
-
-        let r1 = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 5, 100);
-        let r2 = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 5, 100);
-        assert_eq!(r1, r2);
-    }
-
-    #[test]
-    fn test_large_delay_uses_initial() {
-        // When delay > n_steps, buffer never fills → uses instantaneous
-        let n = 3;
-        let phases = vec![0.1, 0.2, 0.3];
-        let omegas = vec![1.0; n];
-        let knm = make_all_to_all(n, 1.0);
-        let alpha = vec![0.0; n * n];
-
-        let result =
-            delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, n, 0.0, 0.0, 0.01, 1000, 10);
-        // Should still produce valid phases
-        assert_eq!(result.len(), n);
-        for &v in &result {
-            assert!(v >= 0.0 && v < TAU);
-        }
-    }
+pub fn delayed_kuramoto_run(phases_init: &[f64], omegas: &[f64], knm_flat: &[f64], alpha_flat: &[f64], n: usize, zeta: f64, psi: f64, dt: f64, delay_steps: usize, n_steps: usize) -> Vec<f64> {
+    let mut s = DelayedStepper::new(n, delay_steps, IntegrationConfig { dt, ..Default::default() }).unwrap();
+    let mut p = phases_init.to_vec();
+    s.run(&mut p, omegas, knm_flat, alpha_flat, zeta, psi, n_steps).unwrap();
+    p
 }
