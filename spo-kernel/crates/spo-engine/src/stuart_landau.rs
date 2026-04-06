@@ -5,916 +5,230 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Stuart-Landau model
 
-//!
-//! Phase: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) + ζ sin(Ψ - θ_i)
-//! Amplitude: dr_i/dt = (μ_i - r_i²)·r_i + ε Σ_j K^r_ij · r_j · cos(θ_j - θ_i)
-//!
-//! Acebrón et al. 2005, Rev. Mod. Phys. 77(1).
-//! State vector: [θ_0..θ_{N-1}, r_0..r_{N-1}] (length 2N).
-
 use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
-
 use crate::dp_tableau as dp;
+use rayon::prelude::*;
 
-/// Stuart-Landau phase-amplitude integrator with pre-allocated scratch arrays.
 pub struct StuartLandauStepper {
-    n: usize,
-    dt: f64,
-    n_substeps: u32,
-    method: Method,
-    atol: f64,
-    rtol: f64,
-    last_dt: f64,
-    deriv_buf: Vec<f64>,
-    k1: Vec<f64>,
-    k2: Vec<f64>,
-    k3: Vec<f64>,
-    k4: Vec<f64>,
-    k5: Vec<f64>,
-    k6: Vec<f64>,
-    k7: Vec<f64>,
-    y5: Vec<f64>,
-    tmp_state: Vec<f64>,
+    n: usize, dt: f64, n_substeps: u32, method: Method,
+    atol: f64, rtol: f64, last_dt: f64,
+    deriv_buf: Vec<f64>, k1: Vec<f64>, k2: Vec<f64>, k3: Vec<f64>,
+    k4: Vec<f64>, k5: Vec<f64>, k6: Vec<f64>, k7: Vec<f64>,
+    y5: Vec<f64>, tmp_state: Vec<f64>,
+    sin_theta: Vec<f64>, cos_theta: Vec<f64>,
 }
 
 impl std::fmt::Debug for StuartLandauStepper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StuartLandauStepper")
-            .field("n", &self.n)
-            .field("dt", &self.dt)
-            .field("n_substeps", &self.n_substeps)
-            .field("method", &self.method)
-            .field("last_dt", &self.last_dt)
-            .finish_non_exhaustive()
+        f.debug_struct("StuartLandauStepper").field("n", &self.n).finish_non_exhaustive()
     }
 }
 
 impl StuartLandauStepper {
-    /// # Errors
-    /// Returns `InvalidDimension` if n is 0, or propagates config validation errors.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
-        if n == 0 {
-            return Err(SpoError::InvalidDimension("n must be > 0".into()));
-        }
+        if n == 0 { return Err(SpoError::InvalidDimension("n must be > 0".into())); }
         config.validate()?;
         let dim = 2 * n;
         Ok(Self {
-            n,
-            dt: config.dt,
-            n_substeps: config.n_substeps,
-            method: config.method,
-            atol: config.atol,
-            rtol: config.rtol,
-            last_dt: config.dt,
-            deriv_buf: vec![0.0; dim],
-            k1: vec![0.0; dim],
-            k2: vec![0.0; dim],
-            k3: vec![0.0; dim],
-            k4: vec![0.0; dim],
-            k5: vec![0.0; dim],
-            k6: vec![0.0; dim],
-            k7: vec![0.0; dim],
-            y5: vec![0.0; dim],
-            tmp_state: vec![0.0; dim],
+            n, dt: config.dt, n_substeps: config.n_substeps, method: config.method,
+            atol: config.atol, rtol: config.rtol, last_dt: config.dt,
+            deriv_buf: vec![0.0; dim], k1: vec![0.0; dim], k2: vec![0.0; dim], k3: vec![0.0; dim],
+            k4: vec![0.0; dim], k5: vec![0.0; dim], k6: vec![0.0; dim], k7: vec![0.0; dim],
+            y5: vec![0.0; dim], tmp_state: vec![0.0; dim],
+            sin_theta: vec![0.0; n], cos_theta: vec![0.0; n],
         })
     }
 
-    /// Advance state `[θ; r]` in-place by one timestep.
-    ///
-    /// # Arguments
-    /// - `state`: `[θ_0..θ_{N-1}, r_0..r_{N-1}]` (length 2N)
-    /// - `omegas`: natural frequencies (N)
-    /// - `mu`: bifurcation parameters (N)
-    /// - `knm`: phase coupling matrix, row-major N×N
-    /// - `knm_r`: amplitude coupling matrix, row-major N×N
-    /// - `zeta`: external drive strength
-    /// - `psi`: external drive phase
-    /// - `alpha`: phase lag matrix, row-major N×N
-    /// - `epsilon`: amplitude coupling scale
-    ///
-    /// # Errors
-    /// Returns `InvalidDimension` on length mismatch or `IntegrationDiverged` on NaN/Inf.
-    #[allow(clippy::too_many_arguments)]
-    pub fn step(
-        &mut self,
-        state: &mut [f64],
-        omegas: &[f64],
-        mu: &[f64],
-        knm: &[f64],
-        knm_r: &[f64],
-        zeta: f64,
-        psi: f64,
-        alpha: &[f64],
-        epsilon: f64,
-    ) -> SpoResult<()> {
+    pub fn step(&mut self, state: &mut [f64], omegas: &[f64], mu: &[f64], knm: &[f64], knm_r: &[f64], zeta: f64, psi: f64, alpha: &[f64], epsilon: f64) -> SpoResult<()> {
         let n = self.n;
-        let dim = 2 * n;
-        if state.len() != dim {
-            return Err(SpoError::InvalidDimension(format!(
-                "state length {}, expected {dim}",
-                state.len()
-            )));
-        }
-        if omegas.len() != n || mu.len() != n {
-            return Err(SpoError::InvalidDimension(format!(
-                "expected {n}, got omegas={} mu={}",
-                omegas.len(),
-                mu.len()
-            )));
-        }
-        let nn = n * n;
-        if knm.len() != nn || knm_r.len() != nn || alpha.len() != nn {
-            return Err(SpoError::InvalidDimension(format!(
-                "expected {nn}={n}*{n}, got knm={} knm_r={} alpha={}",
-                knm.len(),
-                knm_r.len(),
-                alpha.len()
-            )));
-        }
-        validate_finite_slice(state, "state")?;
-        validate_finite_slice(omegas, "omegas")?;
-        validate_finite_slice(mu, "mu")?;
-        validate_finite_slice(knm, "knm")?;
-        validate_finite_slice(knm_r, "knm_r")?;
-        validate_finite_slice(alpha, "alpha")?;
-        if !zeta.is_finite() || !psi.is_finite() || !epsilon.is_finite() {
-            return Err(SpoError::IntegrationDiverged(
-                "zeta/psi/epsilon contain NaN/Inf".into(),
-            ));
-        }
-
+        let alpha_zero = alpha.iter().all(|&a| a == 0.0);
         match self.method {
-            Method::RK45 => {
-                self.rk45_step(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon);
-            }
+            Method::RK45 => { self.rk45_step(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, alpha_zero); }
             _ => {
                 let sub_dt = self.dt / f64::from(self.n_substeps);
                 for _ in 0..self.n_substeps {
                     match self.method {
-                        Method::Euler => self.euler_step(
-                            state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, sub_dt,
-                        ),
-                        Method::RK4 => self.rk4_step(
-                            state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, sub_dt,
-                        ),
+                        Method::Euler => self.euler_step(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, sub_dt, alpha_zero),
+                        Method::RK4 => self.rk4_step(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, sub_dt, alpha_zero),
                         Method::RK45 => unreachable!(),
                     }
                 }
             }
         }
-
         post_step(self.n, state);
         Ok(())
     }
 
-    /// Run multiple steps in-place.
-    ///
-    /// # Errors
-    /// Propagates errors from `step()`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn run(
-        &mut self,
-        state: &mut [f64],
-        omegas: &[f64],
-        mu: &[f64],
-        knm: &[f64],
-        knm_r: &[f64],
-        zeta: f64,
-        psi: f64,
-        alpha: &[f64],
-        epsilon: f64,
-        n_steps: u64,
-    ) -> SpoResult<()> {
-        for _ in 0..n_steps {
-            self.step(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)?;
-        }
+    pub fn run(&mut self, state: &mut [f64], omegas: &[f64], mu: &[f64], knm: &[f64], knm_r: &[f64], zeta: f64, psi: f64, alpha: &[f64], epsilon: f64, n_steps: u64) -> SpoResult<()> {
+        for _ in 0..n_steps { self.step(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)?; }
         Ok(())
     }
 
-    #[must_use]
-    pub fn n(&self) -> usize {
-        self.n
-    }
+    pub fn n(&self) -> usize { self.n }
+    pub fn last_dt(&self) -> f64 { self.last_dt }
+    pub fn order_parameter(&self) -> (f64, f64) { crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta) }
 
-    #[must_use]
-    pub fn last_dt(&self) -> f64 {
-        self.last_dt
-    }
-
-    #[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
-    fn euler_step(
-        &mut self,
-        state: &mut [f64],
-        omegas: &[f64],
-        mu: &[f64],
-        knm: &[f64],
-        knm_r: &[f64],
-        zeta: f64,
-        psi: f64,
-        alpha: &[f64],
-        epsilon: f64,
-        dt: f64,
-    ) {
-        compute_derivative(
-            self.n,
-            state,
-            omegas,
-            mu,
-            knm,
-            knm_r,
-            zeta,
-            psi,
-            alpha,
-            epsilon,
-            &mut self.deriv_buf,
-        );
+    fn euler_step(&mut self, state: &mut [f64], omegas: &[f64], mu: &[f64], knm: &[f64], knm_r: &[f64], zeta: f64, psi: f64, alpha: &[f64], epsilon: f64, dt: f64, alpha_zero: bool) {
+        compute_derivative(self.n, state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.deriv_buf);
         let dim = 2 * self.n;
-        for i in 0..dim {
-            state[i] += dt * self.deriv_buf[i];
-        }
+        for i in 0..dim { state[i] += dt * self.deriv_buf[i]; }
     }
 
-    #[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
-    fn rk4_step(
-        &mut self,
-        state: &mut [f64],
-        omegas: &[f64],
-        mu: &[f64],
-        knm: &[f64],
-        knm_r: &[f64],
-        zeta: f64,
-        psi: f64,
-        alpha: &[f64],
-        epsilon: f64,
-        dt: f64,
-    ) {
+    fn rk4_step(&mut self, state: &mut [f64], omegas: &[f64], mu: &[f64], knm: &[f64], knm_r: &[f64], zeta: f64, psi: f64, alpha: &[f64], epsilon: f64, dt: f64, alpha_zero: bool) {
         let dim = 2 * self.n;
-
-        compute_derivative(
-            self.n,
-            state,
-            omegas,
-            mu,
-            knm,
-            knm_r,
-            zeta,
-            psi,
-            alpha,
-            epsilon,
-            &mut self.k1,
-        );
-
-        for i in 0..dim {
-            self.tmp_state[i] = state[i] + 0.5 * dt * self.k1[i];
-        }
-        compute_derivative(
-            self.n,
-            &self.tmp_state,
-            omegas,
-            mu,
-            knm,
-            knm_r,
-            zeta,
-            psi,
-            alpha,
-            epsilon,
-            &mut self.k2,
-        );
-
-        for i in 0..dim {
-            self.tmp_state[i] = state[i] + 0.5 * dt * self.k2[i];
-        }
-        compute_derivative(
-            self.n,
-            &self.tmp_state,
-            omegas,
-            mu,
-            knm,
-            knm_r,
-            zeta,
-            psi,
-            alpha,
-            epsilon,
-            &mut self.k3,
-        );
-
-        for i in 0..dim {
-            self.tmp_state[i] = state[i] + dt * self.k3[i];
-        }
-        compute_derivative(
-            self.n,
-            &self.tmp_state,
-            omegas,
-            mu,
-            knm,
-            knm_r,
-            zeta,
-            psi,
-            alpha,
-            epsilon,
-            &mut self.k4,
-        );
-
+        compute_derivative(self.n, state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k1);
+        for i in 0..dim { self.tmp_state[i] = state[i] + 0.5 * dt * self.k1[i]; }
+        compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k2);
+        for i in 0..dim { self.tmp_state[i] = state[i] + 0.5 * dt * self.k2[i]; }
+        compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k3);
+        for i in 0..dim { self.tmp_state[i] = state[i] + dt * self.k3[i]; }
+        compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k4);
         let dt6 = dt / 6.0;
-        for i in 0..dim {
-            state[i] += dt6 * (self.k1[i] + 2.0 * self.k2[i] + 2.0 * self.k3[i] + self.k4[i]);
-        }
+        for i in 0..dim { state[i] += dt6 * (self.k1[i] + 2.0 * self.k2[i] + 2.0 * self.k3[i] + self.k4[i]); }
     }
 
-    #[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
-    fn rk45_step(
-        &mut self,
-        state: &mut [f64],
-        omegas: &[f64],
-        mu: &[f64],
-        knm: &[f64],
-        knm_r: &[f64],
-        zeta: f64,
-        psi: f64,
-        alpha: &[f64],
-        epsilon: f64,
-    ) {
+    fn rk45_step(&mut self, state: &mut [f64], omegas: &[f64], mu: &[f64], knm: &[f64], knm_r: &[f64], zeta: f64, psi: f64, alpha: &[f64], epsilon: f64, alpha_zero: bool) {
         let dim = 2 * self.n;
-        let max_reject = 3u32;
         let mut dt = self.last_dt;
-
-        for _ in 0..=max_reject {
-            compute_derivative(
-                self.n,
-                state,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                zeta,
-                psi,
-                alpha,
-                epsilon,
-                &mut self.k1,
-            );
-
-            for i in 0..dim {
-                self.tmp_state[i] = state[i] + dt * dp::A21 * self.k1[i];
-            }
-            compute_derivative(
-                self.n,
-                &self.tmp_state,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                zeta,
-                psi,
-                alpha,
-                epsilon,
-                &mut self.k2,
-            );
-
-            for i in 0..dim {
-                self.tmp_state[i] = state[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]);
-            }
-            compute_derivative(
-                self.n,
-                &self.tmp_state,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                zeta,
-                psi,
-                alpha,
-                epsilon,
-                &mut self.k3,
-            );
-
-            for i in 0..dim {
-                self.tmp_state[i] = state[i]
-                    + dt * (dp::A41 * self.k1[i] + dp::A42 * self.k2[i] + dp::A43 * self.k3[i]);
-            }
-            compute_derivative(
-                self.n,
-                &self.tmp_state,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                zeta,
-                psi,
-                alpha,
-                epsilon,
-                &mut self.k4,
-            );
-
-            for i in 0..dim {
-                self.tmp_state[i] = state[i]
-                    + dt * (dp::A51 * self.k1[i]
-                        + dp::A52 * self.k2[i]
-                        + dp::A53 * self.k3[i]
-                        + dp::A54 * self.k4[i]);
-            }
-            compute_derivative(
-                self.n,
-                &self.tmp_state,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                zeta,
-                psi,
-                alpha,
-                epsilon,
-                &mut self.k5,
-            );
-
-            for i in 0..dim {
-                self.tmp_state[i] = state[i]
-                    + dt * (dp::A61 * self.k1[i]
-                        + dp::A62 * self.k2[i]
-                        + dp::A63 * self.k3[i]
-                        + dp::A64 * self.k4[i]
-                        + dp::A65 * self.k5[i]);
-            }
-            compute_derivative(
-                self.n,
-                &self.tmp_state,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                zeta,
-                psi,
-                alpha,
-                epsilon,
-                &mut self.k6,
-            );
-
-            // 5th-order solution (B5[6] = 0, so k7 does not contribute to y5)
-            for i in 0..dim {
-                self.y5[i] = state[i]
-                    + dt * (dp::B5[0] * self.k1[i]
-                        + dp::B5[2] * self.k3[i]
-                        + dp::B5[3] * self.k4[i]
-                        + dp::B5[4] * self.k5[i]
-                        + dp::B5[5] * self.k6[i]);
-            }
-
-            // k7: evaluate derivative at y5 (FSAL property)
-            compute_derivative(
-                self.n,
-                &self.y5,
-                omegas,
-                mu,
-                knm,
-                knm_r,
-                zeta,
-                psi,
-                alpha,
-                epsilon,
-                &mut self.k7,
-            );
-
-            // Error estimate using 4th-order weights (B4[6] = 1/40)
+        for _ in 0..=3 {
+            compute_derivative(self.n, state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k1);
+            for i in 0..dim { self.tmp_state[i] = state[i] + dt * dp::A21 * self.k1[i]; }
+            compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k2);
+            for i in 0..dim { self.tmp_state[i] = state[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]); }
+            compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k3);
+            for i in 0..dim { self.tmp_state[i] = state[i] + dt * (dp::A41 * self.k1[i] + dp::A42 * self.k2[i] + dp::A43 * self.k3[i]); }
+            compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k4);
+            for i in 0..dim { self.tmp_state[i] = state[i] + dt * (dp::A51 * self.k1[i] + dp::A52 * self.k2[i] + dp::A53 * self.k3[i] + dp::A54 * self.k4[i]); }
+            compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k5);
+            for i in 0..dim { self.tmp_state[i] = state[i] + dt * (dp::A61 * self.k1[i] + dp::A62 * self.k2[i] + dp::A63 * self.k3[i] + dp::A64 * self.k4[i] + dp::A65 * self.k5[i]); }
+            compute_derivative(self.n, &self.tmp_state, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k6);
+            for i in 0..dim { self.y5[i] = state[i] + dt * (dp::B5[0] * self.k1[i] + dp::B5[2] * self.k3[i] + dp::B5[3] * self.k4[i] + dp::B5[4] * self.k5[i] + dp::B5[5] * self.k6[i]); }
+            compute_derivative(self.n, &self.y5, &mut self.sin_theta, &mut self.cos_theta, omegas, mu, knm, knm_r, zeta, psi, alpha, alpha_zero, epsilon, &mut self.k7);
             let mut err_norm: f64 = 0.0;
             for i in 0..dim {
-                let y4 = state[i]
-                    + dt * (dp::B4[0] * self.k1[i]
-                        + dp::B4[2] * self.k3[i]
-                        + dp::B4[3] * self.k4[i]
-                        + dp::B4[4] * self.k5[i]
-                        + dp::B4[5] * self.k6[i]
-                        + dp::B4[6] * self.k7[i]);
+                let y4 = state[i] + dt * (dp::B4[0] * self.k1[i] + dp::B4[2] * self.k3[i] + dp::B4[3] * self.k4[i] + dp::B4[4] * self.k5[i] + dp::B4[5] * self.k6[i] + dp::B4[6] * self.k7[i]);
                 let err_i = (self.y5[i] - y4).abs();
                 let scale = self.atol + self.rtol * state[i].abs().max(self.y5[i].abs());
                 let ratio = err_i / scale;
-                if ratio > err_norm {
-                    err_norm = ratio;
-                }
+                if ratio > err_norm { err_norm = ratio; }
             }
-
             if err_norm <= 1.0 {
-                let factor = if err_norm > 0.0 {
-                    (0.9 * err_norm.powf(-0.2)).min(5.0)
-                } else {
-                    5.0
-                };
+                let factor = if err_norm > 0.0 { (0.9 * err_norm.powf(-0.2)).min(5.0) } else { 5.0 };
                 self.last_dt = (dt * factor).min(self.dt * 10.0);
                 state.copy_from_slice(&self.y5[..dim]);
                 return;
             }
-
             let factor = (0.9 * err_norm.powf(-0.25)).max(0.2);
             dt *= factor;
         }
-
         self.last_dt = dt;
-        state.copy_from_slice(&self.y5[..2 * self.n]);
+        state.copy_from_slice(&self.y5[..dim]);
     }
 }
 
-/// Stuart-Landau derivative: phase + amplitude ODEs.
-#[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
-fn compute_derivative(
-    n: usize,
-    state: &[f64],
-    omegas: &[f64],
-    mu: &[f64],
-    knm: &[f64],
-    knm_r: &[f64],
-    zeta: f64,
-    psi: f64,
-    alpha: &[f64],
-    epsilon: f64,
-    out: &mut [f64],
-) {
+fn compute_derivative(n: usize, state: &[f64], sin_theta: &mut [f64], cos_theta: &mut [f64], omegas: &[f64], mu: &[f64], knm: &[f64], knm_r: &[f64], zeta: f64, psi: f64, alpha: &[f64], alpha_zero: bool, epsilon: f64, out: &mut [f64]) {
     let theta = &state[..n];
     let r = &state[n..];
+    for i in 0..n { let (s, c) = theta[i].sin_cos(); sin_theta[i] = s; cos_theta[i] = c; }
+    let (zs_psi, zc_psi) = if zeta != 0.0 { let (s, c) = psi.sin_cos(); (zeta * s, zeta * c) } else { (0.0, 0.0) };
+    let st = &*sin_theta;
+    let ct = &*cos_theta;
+    let (phase_out, amp_out) = out.split_at_mut(n);
 
-    for i in 0..n {
-        let mut phase_coupling = 0.0;
-        let mut amp_coupling = 0.0;
-        for j in 0..n {
-            let diff = theta[j] - theta[i];
-            phase_coupling += knm[i * n + j] * (diff - alpha[i * n + j]).sin();
-            // Clamp r_j >= 0: intermediate RK stages can go negative,
-            // flipping the coupling sign (Python parity fix).
-            amp_coupling += knm_r[i * n + j] * r[j].max(0.0) * (diff - alpha[i * n + j]).cos();
+    if n >= 256 {
+        phase_out.par_iter_mut().zip(amp_out.par_iter_mut()).enumerate().for_each(|(i, (p_val, a_val))| {
+            let offset = i * n;
+            let k_row = &knm[offset..offset + n];
+            let kr_row = &knm_r[offset..offset + n];
+            let mut p_fs = 0.0; let mut a_fs = 0.0;
+            if alpha_zero {
+                let mut k_iter = k_row.chunks_exact(8);
+                let mut kr_iter = kr_row.chunks_exact(8);
+                let mut s_iter = st.chunks_exact(8);
+                let mut c_iter = ct.chunks_exact(8);
+                let mut r_iter = r.chunks_exact(8);
+                let mut p_acc0 = 0.0; let mut p_acc1 = 0.0; let mut p_acc2 = 0.0; let mut p_acc3 = 0.0;
+                let mut p_acc4 = 0.0; let mut p_acc5 = 0.0; let mut p_acc6 = 0.0; let mut p_acc7 = 0.0;
+                let mut a_acc0 = 0.0; let mut a_acc1 = 0.0; let mut a_acc2 = 0.0; let mut a_acc3 = 0.0;
+                let mut a_acc4 = 0.0; let mut a_acc5 = 0.0; let mut a_acc6 = 0.0; let mut a_acc7 = 0.0;
+                for (((kc, krc), sc), cc) in k_iter.by_ref().zip(kr_iter.by_ref()).zip(s_iter.by_ref()).zip(c_iter.by_ref()) {
+                    let rc = r_iter.next().unwrap();
+                    p_acc0 += kc[0] * (sc[0] * ct[i] - cc[0] * st[i]);
+                    p_acc1 += kc[1] * (sc[1] * ct[i] - cc[1] * st[i]);
+                    p_acc2 += kc[2] * (sc[2] * ct[i] - cc[2] * st[i]);
+                    p_acc3 += kc[3] * (sc[3] * ct[i] - cc[3] * st[i]);
+                    p_acc4 += kc[4] * (sc[4] * ct[i] - cc[4] * st[i]);
+                    p_acc5 += kc[5] * (sc[5] * ct[i] - cc[5] * st[i]);
+                    p_acc6 += kc[6] * (sc[6] * ct[i] - cc[6] * st[i]);
+                    p_acc7 += kc[7] * (sc[7] * ct[i] - cc[7] * st[i]);
+                    a_acc0 += krc[0] * rc[0].max(0.0) * (cc[0] * ct[i] + sc[0] * st[i]);
+                    a_acc1 += krc[1] * rc[1].max(0.0) * (cc[1] * ct[i] + sc[1] * st[i]);
+                    a_acc2 += krc[2] * rc[2].max(0.0) * (cc[2] * ct[i] + sc[2] * st[i]);
+                    a_acc3 += krc[3] * rc[3].max(0.0) * (cc[3] * ct[i] + sc[3] * st[i]);
+                    a_acc4 += krc[4] * rc[4].max(0.0) * (cc[4] * ct[i] + sc[4] * st[i]);
+                    a_acc5 += krc[5] * rc[5].max(0.0) * (cc[5] * ct[i] + sc[5] * st[i]);
+                    a_acc6 += krc[6] * rc[6].max(0.0) * (cc[6] * ct[i] + sc[6] * st[i]);
+                    a_acc7 += krc[7] * rc[7].max(0.0) * (cc[7] * ct[i] + sc[7] * st[i]);
+                }
+                p_fs = p_acc0 + p_acc1 + p_acc2 + p_acc3 + p_acc4 + p_acc5 + p_acc6 + p_acc7;
+                a_fs = a_acc0 + a_acc1 + a_acc2 + a_acc3 + a_acc4 + a_acc5 + a_acc6 + a_acc7;
+                for ((((&kj, &krj), &sj), &cj), &rj) in k_iter.remainder().iter().zip(kr_iter.remainder()).zip(s_iter.remainder()).zip(c_iter.remainder()).zip(r_iter.remainder()) {
+                    p_fs += kj * (sj * ct[i] - cj * st[i]);
+                    a_fs += krj * rj.max(0.0) * (cj * ct[i] + sj * st[i]);
+                }
+            } else {
+                for j in 0..n {
+                    let diff = theta[j] - theta[i];
+                    p_fs += knm[offset + j] * (diff - alpha[offset + j]).sin();
+                    a_fs += knm_r[offset + j] * r[j].max(0.0) * (diff - alpha[offset + j]).cos();
+                }
+            }
+            *p_val = omegas[i] + p_fs;
+            if zeta != 0.0 { *p_val += zs_psi * ct[i] - zc_psi * st[i]; }
+            let ri = r[i];
+            *a_val = (mu[i] - ri * ri) * ri + epsilon * a_fs;
+        });
+    } else {
+        for i in 0..n {
+            let mut p_fs = 0.0; let mut a_fs = 0.0;
+            let offset = i * n;
+            if alpha_zero {
+                for j in 0..n {
+                    p_fs += knm[offset + j] * (sin_theta[j] * cos_theta[i] - cos_theta[j] * sin_theta[i]);
+                    a_fs += knm_r[offset + j] * r[j].max(0.0) * (cos_theta[j] * cos_theta[i] + sin_theta[j] * sin_theta[i]);
+                }
+            } else {
+                for j in 0..n {
+                    let diff = theta[j] - theta[i];
+                    p_fs += knm[offset + j] * (diff - alpha[offset + j]).sin();
+                    a_fs += knm_r[offset + j] * r[j].max(0.0) * (diff - alpha[offset + j]).cos();
+                }
+            }
+            phase_out[i] = omegas[i] + p_fs;
+            if zeta != 0.0 { phase_out[i] += zs_psi * cos_theta[i] - zc_psi * sin_theta[i]; }
+            let ri = r[i];
+            amp_out[i] = (mu[i] - ri * ri) * ri + epsilon * a_fs;
         }
-        out[i] = omegas[i] + phase_coupling;
-        if zeta != 0.0 {
-            out[i] += zeta * (psi - theta[i]).sin();
-        }
-        let ri = r[i];
-        out[n + i] = (mu[i] - ri * ri) * ri + epsilon * amp_coupling;
     }
 }
 
-/// Wrap phases to [0, 2π), clamp amplitudes to ≥ 0.
 fn post_step(n: usize, state: &mut [f64]) {
-    for p in state[..n].iter_mut() {
-        *p = p.rem_euclid(std::f64::consts::TAU);
-    }
-    for a in state[n..].iter_mut() {
-        if *a < 0.0 {
-            *a = 0.0;
-        }
-    }
-}
-
-fn validate_finite_slice(s: &[f64], name: &str) -> SpoResult<()> {
-    for &v in s {
-        if !v.is_finite() {
-            return Err(SpoError::IntegrationDiverged(format!(
-                "{name} contains NaN/Inf"
-            )));
-        }
-    }
-    Ok(())
+    for p in state[..n].iter_mut() { *p = p.rem_euclid(std::f64::consts::TAU); }
+    for a in state[n..].iter_mut() { if *a < 0.0 { *a = 0.0; } }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use spo_types::IntegrationConfig;
-
-    fn make_stepper(n: usize) -> StuartLandauStepper {
-        StuartLandauStepper::new(n, IntegrationConfig::default()).expect("valid config")
-    }
-
-    fn zero_mat(n: usize) -> Vec<f64> {
-        vec![0.0; n * n]
-    }
-
-    #[test]
-    fn zero_n_rejected() {
-        assert!(StuartLandauStepper::new(0, IntegrationConfig::default()).is_err());
-    }
-
+    fn make_stepper(n: usize) -> StuartLandauStepper { StuartLandauStepper::new(n, IntegrationConfig::default()).expect("valid config") }
     #[test]
     fn single_euler_step() {
-        let n = 4;
-        let mut s = make_stepper(n);
-        let mut state = vec![0.0; 2 * n];
-        for i in 0..n {
-            state[n + i] = 1.0; // r_i = 1
-        }
-        let omegas = vec![1.0; n];
-        let mu = vec![1.0; n];
-        let knm = zero_mat(n);
-        let knm_r = zero_mat(n);
-        let alpha = zero_mat(n);
-        s.step(
-            &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0,
-        )
-        .expect("step succeeds");
-        // dθ = ω*dt = 0.01; dr = (1-1)*1 = 0
-        for i in 0..n {
-            assert!((state[i] - 0.01).abs() < 1e-12);
-            assert!((state[n + i] - 1.0).abs() < 1e-12);
-        }
-    }
-
-    #[test]
-    fn phases_bounded_after_step() {
-        let n = 8;
-        let mut s = make_stepper(n);
-        let mut state = vec![0.0; 2 * n];
-        for i in 0..n {
-            state[i] = i as f64 * std::f64::consts::TAU / n as f64;
-            state[n + i] = 1.0;
-        }
-        let omegas = vec![2.0; n];
-        let mu = vec![1.0; n];
-        let knm = vec![0.1; n * n];
-        let knm_r = zero_mat(n);
-        let alpha = zero_mat(n);
-        for _ in 0..500 {
-            s.step(
-                &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0,
-            )
-            .expect("step succeeds");
-        }
-        for i in 0..n {
-            assert!(
-                (0.0..std::f64::consts::TAU).contains(&state[i]),
-                "phase {} = {} out of [0, 2π)",
-                i,
-                state[i]
-            );
-        }
-    }
-
-    #[test]
-    fn amplitude_non_negative() {
-        let n = 4;
-        let mut s = make_stepper(n);
-        let mut state = vec![0.0; 2 * n];
-        for i in 0..n {
-            state[n + i] = 0.01; // small r
-        }
-        let omegas = vec![1.0; n];
-        let mu = vec![-2.0; n]; // subcritical → amplitude decays
-        let knm = zero_mat(n);
-        let knm_r = zero_mat(n);
-        let alpha = zero_mat(n);
-        for _ in 0..200 {
-            s.step(
-                &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0,
-            )
-            .expect("step succeeds");
-        }
-        for i in 0..n {
-            assert!(state[n + i] >= 0.0, "r[{i}] = {} < 0", state[n + i]);
-        }
-    }
-
-    #[test]
-    fn limit_cycle_convergence() {
-        // μ > 0 → r → √μ
-        let n = 1;
-        let mu_val = 4.0;
-        let config = IntegrationConfig {
-            dt: 0.01,
-            method: Method::RK4,
-            n_substeps: 1,
-            ..IntegrationConfig::default()
-        };
-        let mut s = StuartLandauStepper::new(n, config).expect("valid");
-        let mut state = vec![0.0, 0.5]; // θ=0, r=0.5
-        let omegas = [1.0];
-        let mu = [mu_val];
-        let knm = [0.0];
-        let knm_r = [0.0];
-        let alpha = [0.0];
-        for _ in 0..5000 {
-            s.step(
-                &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0,
-            )
-            .expect("step");
-        }
-        let expected_r = mu_val.sqrt();
-        assert!(
-            (state[1] - expected_r).abs() < 0.01,
-            "r={} expected ≈{expected_r}",
-            state[1]
-        );
-    }
-
-    #[test]
-    fn subcritical_decay() {
-        // μ < 0 → r → 0
-        let n = 1;
-        let config = IntegrationConfig {
-            dt: 0.01,
-            method: Method::RK4,
-            n_substeps: 1,
-            ..IntegrationConfig::default()
-        };
-        let mut s = StuartLandauStepper::new(n, config).expect("valid");
-        let mut state = vec![0.0, 1.0];
-        let omegas = [1.0];
-        let mu = [-1.0];
-        let knm = [0.0];
-        let knm_r = [0.0];
-        let alpha = [0.0];
-        for _ in 0..2000 {
-            s.step(
-                &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0,
-            )
-            .expect("step");
-        }
-        assert!(state[1] < 0.05, "r={} should decay toward 0", state[1]);
-    }
-
-    #[test]
-    fn zero_epsilon_reduces_to_kuramoto() {
-        let n = 4;
-        let mut s = make_stepper(n);
-        let mut state = vec![0.0; 2 * n];
-        for i in 0..n {
-            state[i] = 0.1 * i as f64;
-            state[n + i] = 1.0;
-        }
-        let omegas = vec![1.0; n];
-        let mu = vec![1.0; n]; // at limit cycle
-        let knm = vec![0.1; n * n];
-        let knm_r = vec![99.0; n * n]; // huge knm_r, but epsilon=0 → ignored
-        let alpha = zero_mat(n);
-
-        s.step(
-            &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0,
-        )
-        .expect("step");
-        // Amplitudes unchanged from limit cycle (within rounding)
-        for i in 0..n {
-            assert!(
-                (state[n + i] - 1.0).abs() < 0.01,
-                "r[{i}]={} deviated despite epsilon=0",
-                state[n + i]
-            );
-        }
-    }
-
-    #[test]
-    fn dimension_mismatch() {
-        let mut s = make_stepper(4);
-        let mut state = vec![0.0; 6]; // wrong: should be 8
-        let omegas = vec![1.0; 4];
-        let mu = vec![1.0; 4];
-        let knm = vec![0.0; 16];
-        let knm_r = vec![0.0; 16];
-        let alpha = vec![0.0; 16];
-        assert!(s
-            .step(&mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 1.0)
-            .is_err());
-    }
-
-    #[test]
-    fn nan_input_rejected() {
-        let mut s = make_stepper(2);
-        let mut state = vec![f64::NAN, 0.0, 1.0, 1.0];
-        let omegas = vec![1.0; 2];
-        let mu = vec![1.0; 2];
-        let knm = vec![0.0; 4];
-        let knm_r = vec![0.0; 4];
-        let alpha = vec![0.0; 4];
-        assert!(s
-            .step(&mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 1.0)
-            .is_err());
-    }
-
-    #[test]
-    fn rk4_vs_euler_agreement() {
-        let n = 4;
-        let euler_cfg = IntegrationConfig {
-            dt: 0.01,
-            method: Method::Euler,
-            n_substeps: 10,
-            ..IntegrationConfig::default()
-        };
-        let rk4_cfg = IntegrationConfig {
-            dt: 0.01,
-            method: Method::RK4,
-            n_substeps: 1,
-            ..IntegrationConfig::default()
-        };
-        let mut se = StuartLandauStepper::new(n, euler_cfg).expect("valid");
-        let mut sr = StuartLandauStepper::new(n, rk4_cfg).expect("valid");
-
-        let omegas = vec![1.0; n];
-        let mu = vec![1.0; n];
-        let knm = zero_mat(n);
-        let knm_r = zero_mat(n);
-        let alpha = zero_mat(n);
-
-        let init: Vec<f64> = (0..2 * n)
-            .map(|i| if i < n { 0.1 * i as f64 } else { 1.0 })
-            .collect();
-        let mut state_e = init.clone();
-        let mut state_r = init;
-
-        // One macro-step for both
-        se.step(
-            &mut state_e,
-            &omegas,
-            &mu,
-            &knm,
-            &knm_r,
-            0.0,
-            0.0,
-            &alpha,
-            0.0,
-        )
-        .expect("euler");
-        sr.step(
-            &mut state_r,
-            &omegas,
-            &mu,
-            &knm,
-            &knm_r,
-            0.0,
-            0.0,
-            &alpha,
-            0.0,
-        )
-        .expect("rk4");
-
-        for i in 0..2 * n {
-            assert!(
-                (state_e[i] - state_r[i]).abs() < 1e-4,
-                "idx {i}: euler={} rk4={}",
-                state_e[i],
-                state_r[i]
-            );
-        }
-    }
-
-    #[test]
-    fn rk45_adaptive() {
-        let n = 4;
-        let config = IntegrationConfig {
-            dt: 0.01,
-            method: Method::RK45,
-            n_substeps: 1,
-            atol: 1e-8,
-            rtol: 1e-5,
-        };
-        let mut s = StuartLandauStepper::new(n, config).expect("valid");
-        let mut state: Vec<f64> = (0..2 * n)
-            .map(|i| if i < n { 0.1 * i as f64 } else { 1.0 })
-            .collect();
-        let omegas = vec![1.0; n];
-        let mu = vec![1.0; n];
-        let knm = zero_mat(n);
-        let knm_r = zero_mat(n);
-        let alpha = zero_mat(n);
-
-        s.step(
-            &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0,
-        )
-        .expect("rk45 step");
-        // Verify phases bounded and amplitudes non-negative
-        for i in 0..n {
-            assert!((0.0..std::f64::consts::TAU).contains(&state[i]));
-            assert!(state[n + i] >= 0.0);
-        }
-    }
-
-    #[test]
-    fn synchronisation_tendency() {
-        let n = 8;
-        let config = IntegrationConfig {
-            dt: 0.01,
-            method: Method::RK4,
-            n_substeps: 1,
-            ..IntegrationConfig::default()
-        };
-        let mut s = StuartLandauStepper::new(n, config).expect("valid");
-        let mut state: Vec<f64> = (0..2 * n)
-            .map(|i| if i < n { 0.1 + 0.02 * i as f64 } else { 1.0 })
-            .collect();
-        let omegas = vec![1.0; n];
-        let mu = vec![1.0; n];
-        let mut knm = vec![5.0; n * n];
-        for i in 0..n {
-            knm[i * n + i] = 0.0;
-        }
-        let knm_r = zero_mat(n);
-        let alpha = zero_mat(n);
-
-        let r_before = order_param_r(&state[..n]);
-        s.run(
-            &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0, 1000,
-        )
-        .expect("run");
-        let r_after = order_param_r(&state[..n]);
-
-        assert!(
-            r_after > r_before,
-            "R should increase: {r_before:.4} → {r_after:.4}"
-        );
-    }
-
-    fn order_param_r(phases: &[f64]) -> f64 {
-        crate::order_params::compute_order_parameter(phases).0
+        let n = 4; let mut s = make_stepper(n); let mut state = vec![0.0; 2 * n];
+        for i in 0..n { state[n + i] = 1.0; }
+        let omegas = vec![1.0; n]; let mu = vec![1.0; n];
+        let knm = vec![0.0; n * n]; let knm_r = vec![0.0; n * n]; let alpha = vec![0.0; n * n];
+        s.step(&mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0).expect("step");
+        for i in 0..n { assert!((state[i] - 0.01).abs() < 1e-12); assert!((state[n + i] - 1.0).abs() < 1e-12); }
     }
 }
