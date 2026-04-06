@@ -28,6 +28,7 @@ pub use lif_ensemble::{LIFEnsemble, LIFParams};
 pub use order_params::{compute_layer_coherence, compute_order_parameter, compute_plv};
 pub use pac::{modulation_index, pac_matrix};
 pub use simplicial::SimplicialStepper;
+pub use splitting::SplittingStepper;
 pub use sparse_upde::SparseUPDEStepper;
 pub use stuart_landau::StuartLandauStepper;
 pub use upde::UPDEStepper;
