@@ -15,6 +15,7 @@
 //! - Paluš & Vejmelka 2007, Phys. Rev. E 75:056211 (binned estimation).
 
 use std::f64::consts::TAU;
+use rayon::prelude::*;
 
 /// Phase transfer entropy from source → target.
 ///
@@ -84,22 +85,20 @@ pub fn transfer_entropy_matrix(
     n_bins: usize,
 ) -> Result<Vec<f64>, String> {
     if phase_series.len() != n_osc * n_time {
-        return Err(format!(
-            "phase_series length {} != N*T={}",
-            phase_series.len(),
-            n_osc * n_time
-        ));
+        return Err(format!("phase_series length {} != N*T={}", phase_series.len(), n_osc * n_time));
     }
-    let mut te = vec![0.0_f64; n_osc * n_osc];
-    for i in 0..n_osc {
+    let mut te = vec![0.0; n_osc * n_osc];
+
+    te.par_chunks_mut(n_osc).enumerate().for_each(|(i, row)| {
         let src = &phase_series[i * n_time..(i + 1) * n_time];
         for j in 0..n_osc {
             if i != j {
                 let tgt = &phase_series[j * n_time..(j + 1) * n_time];
-                te[i * n_osc + j] = phase_transfer_entropy(src, tgt, n_bins);
+                row[j] = phase_transfer_entropy(src, tgt, n_bins);
             }
         }
-    }
+    });
+
     Ok(te)
 }
 
