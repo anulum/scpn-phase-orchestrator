@@ -14,7 +14,6 @@ from scpn_phase_orchestrator._compat import TWO_PI
 
 try:
     from spo_kernel import (
-        splitting_run_rust as _rust_splitting_run,
         PySplittingStepper as _SplittingStepper,
     )
 
@@ -85,18 +84,39 @@ class SplittingEngine:
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            return self._stepper.run(p, o, k, a, zeta, psi, n_steps)
-        
+            result: NDArray = np.asarray(
+                self._stepper.run(p, o, k, a, zeta, psi, n_steps)
+            )
+            return result
+
         p = phases.copy()
         for _ in range(n_steps):
             # Slow Python fallback
             p = (p + 0.5 * self._dt * omegas) % TWO_PI
-            d = self._derivative(p, knm, alpha, zeta, psi)
+            d = self._coupling_deriv(p, knm, zeta, psi, alpha)
             # RK4 on coupling
             k1 = d
-            k2 = self._derivative((p + 0.5 * self._dt * k1) % TWO_PI, knm, alpha, zeta, psi)
-            k3 = self._derivative((p + 0.5 * self._dt * k2) % TWO_PI, knm, alpha, zeta, psi)
-            k4 = self._derivative((p + self._dt * k3) % TWO_PI, knm, alpha, zeta, psi)
+            k2 = self._coupling_deriv(
+                (p + 0.5 * self._dt * k1) % TWO_PI,
+                knm,
+                zeta,
+                psi,
+                alpha,
+            )
+            k3 = self._coupling_deriv(
+                (p + 0.5 * self._dt * k2) % TWO_PI,
+                knm,
+                zeta,
+                psi,
+                alpha,
+            )
+            k4 = self._coupling_deriv(
+                (p + self._dt * k3) % TWO_PI,
+                knm,
+                zeta,
+                psi,
+                alpha,
+            )
             p = (p + (self._dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
             p = (p + 0.5 * self._dt * omegas) % TWO_PI
         return p

@@ -14,7 +14,6 @@ from scpn_phase_orchestrator._compat import TWO_PI
 
 try:
     from spo_kernel import (
-        simplicial_run_rust as _rust_simplicial_run,
         PySimplicialStepper as _SimplicialStepper,
     )
 
@@ -72,11 +71,14 @@ class SimplicialEngine:
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            return self._stepper.step(p, o, k, a, zeta, psi, self._sigma2)
-        
+            result: NDArray = np.asarray(
+                self._stepper.step(p, o, k, a, zeta, psi, self._sigma2)
+            )
+            return result
+
         dtheta = self._derivative(phases, omegas, knm, zeta, psi, alpha)
-        result: NDArray = (phases + self._dt * dtheta) % TWO_PI
-        return result
+        fallback: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        return fallback
 
     def run(
         self,
@@ -93,7 +95,10 @@ class SimplicialEngine:
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
             a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-            return self._stepper.run(p, o, k, a, zeta, psi, self._sigma2, n_steps)
+            result_run: NDArray = np.asarray(
+                self._stepper.run(p, o, k, a, zeta, psi, self._sigma2, n_steps)
+            )
+            return result_run
         p = phases.copy()
         for _ in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha)

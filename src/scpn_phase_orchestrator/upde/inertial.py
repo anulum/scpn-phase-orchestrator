@@ -6,20 +6,21 @@
 # SCPN Phase Orchestrator — Second-order inertial Kuramoto
 
 from __future__ import annotations
+
 import numpy as np
 from numpy.typing import NDArray
 
 try:
     from spo_kernel import (
-        inertial_run_rust as _rust_run,
-        inertial_step_rust as _rust_step,
         PyInertialStepper as _InertialStepper,
     )
+
     _HAS_RUST = True
 except ImportError:
     _HAS_RUST = False
 
 TWO_PI = 2.0 * np.pi
+
 
 class InertialKuramotoEngine:
     def __init__(self, n: int, dt: float = 0.01) -> None:
@@ -30,7 +31,15 @@ class InertialKuramotoEngine:
         else:
             self._stepper = None
 
-    def step(self, theta: NDArray, omega_dot: NDArray, power: NDArray, knm: NDArray, inertia: NDArray, damping: NDArray) -> tuple[NDArray, NDArray]:
+    def step(
+        self,
+        theta: NDArray,
+        omega_dot: NDArray,
+        power: NDArray,
+        knm: NDArray,
+        inertia: NDArray,
+        damping: NDArray,
+    ) -> tuple[NDArray, NDArray]:
         if _HAS_RUST:
             th = np.ascontiguousarray(theta, dtype=np.float64)
             od = np.ascontiguousarray(omega_dot, dtype=np.float64)
@@ -40,8 +49,9 @@ class InertialKuramotoEngine:
             dm = np.ascontiguousarray(damping, dtype=np.float64)
             res_th, res_od = self._stepper.step(th, od, pw, km, in_, dm)
             return np.asarray(res_th), np.asarray(res_od)
-        
+
         dt = self._dt
+
         def deriv(th: NDArray, od: NDArray) -> tuple[NDArray, NDArray]:
             diff = th[np.newaxis, :] - th[:, np.newaxis]
             coupling = np.sum(knm * np.sin(diff), axis=1)
@@ -56,7 +66,16 @@ class InertialKuramotoEngine:
         new_omega = omega_dot + (dt / 6.0) * (k1o + 2 * k2o + 2 * k3o + k4o)
         return new_theta, new_omega
 
-    def run(self, theta: NDArray, omega_dot: NDArray, power: NDArray, knm: NDArray, inertia: NDArray, damping: NDArray, n_steps: int) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+    def run(
+        self,
+        theta: NDArray,
+        omega_dot: NDArray,
+        power: NDArray,
+        knm: NDArray,
+        inertia: NDArray,
+        damping: NDArray,
+        n_steps: int,
+    ) -> tuple[NDArray, NDArray, NDArray, NDArray]:
         if _HAS_RUST:
             # Fallback to loop for now as PyInertialStepper doesnt have run() yet
             # but we can add it later if needed.
@@ -68,7 +87,7 @@ class InertialKuramotoEngine:
                 theta_traj[i] = th
                 omega_traj[i] = od
             return th, od, theta_traj, omega_traj
-        
+
         theta_traj = np.empty((n_steps, self._n))
         omega_traj = np.empty((n_steps, self._n))
         th, od = theta.copy(), omega_dot.copy()
