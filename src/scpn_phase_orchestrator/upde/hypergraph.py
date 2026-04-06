@@ -54,6 +54,17 @@ class HypergraphEngine:
     def add_edge(self, nodes: tuple[int, ...], strength: float = 1.0) -> None:
         self._hyperedges.append(Hyperedge(nodes=nodes, strength=strength))
 
+    def add_all_to_all(self, order: int, strength: float = 1.0) -> None:
+        """Add all C(N, order) hyperedges of given order."""
+        from itertools import combinations
+
+        for combo in combinations(range(self._n), order):
+            self._hyperedges.append(Hyperedge(nodes=combo, strength=strength))
+
+    @property
+    def n_edges(self) -> int:
+        return len(self._hyperedges)
+
     def step(
         self,
         phases: NDArray,
