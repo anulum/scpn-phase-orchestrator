@@ -12,8 +12,8 @@
 //! - Zbilut & Webber 1992, Phys. Lett. A 171:199-203.
 //! - Marwan et al. 2007, Phys. Reports 438:237-329.
 
-use std::collections::HashMap;
 use rayon::prelude::*;
+use std::collections::HashMap;
 
 /// RQA result: all standard measures from Marwan et al. 2007 Table 1.
 #[derive(Debug, Clone)]
@@ -50,16 +50,20 @@ pub fn recurrence_matrix(
     angular: bool,
 ) -> Result<Vec<u8>, String> {
     if trajectory.len() != t * d {
-        return Err(format!("trajectory length {} != T*d={}", trajectory.len(), t * d));
+        return Err(format!(
+            "trajectory length {} != T*d={}",
+            trajectory.len(),
+            t * d
+        ));
     }
     let eps_sq = epsilon * epsilon;
     let mut result = vec![0u8; t * t];
 
     result.par_chunks_mut(t).enumerate().for_each(|(i, row)| {
-        let ti = &trajectory[i * d .. (i + 1) * d];
+        let ti = &trajectory[i * d..(i + 1) * d];
         row[i] = 1; // Diagonal
         for j in (i + 1)..t {
-            let tj = &trajectory[j * d .. (j + 1) * d];
+            let tj = &trajectory[j * d..(j + 1) * d];
             let dist_sq = if angular {
                 let mut s = 0.0;
                 for k in 0..d {
@@ -113,9 +117,9 @@ pub fn cross_recurrence_matrix(
     let mut result = vec![0u8; t * t];
 
     result.par_chunks_mut(t).enumerate().for_each(|(i, row)| {
-        let ta = &traj_a[i * d .. (i + 1) * d];
+        let ta = &traj_a[i * d..(i + 1) * d];
         for j in 0..t {
-            let tb = &traj_b[j * d .. (j + 1) * d];
+            let tb = &traj_b[j * d..(j + 1) * d];
             let dist_sq = if angular {
                 let mut s = 0.0;
                 for k in 0..d {

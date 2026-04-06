@@ -160,7 +160,19 @@ impl SheafUPDEStepper {
         #[allow(unused_variables)] psi: &[f64],
         dt: f64,
     ) {
-        compute_derivative(self.n, self.d, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k1);
+        compute_derivative(
+            self.n,
+            self.d,
+            phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
+            omegas,
+            restriction_maps,
+            zeta,
+            &self.sin_psi,
+            &self.cos_psi,
+            &mut self.k1,
+        );
         for i in 0..phases.len() {
             phases[i] += dt * self.k1[i];
         }
@@ -178,22 +190,70 @@ impl SheafUPDEStepper {
     ) {
         let size = phases.len();
 
-        compute_derivative(self.n, self.d, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k1);
+        compute_derivative(
+            self.n,
+            self.d,
+            phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
+            omegas,
+            restriction_maps,
+            zeta,
+            &self.sin_psi,
+            &self.cos_psi,
+            &mut self.k1,
+        );
 
         for i in 0..size {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k1[i];
         }
-        compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k2);
+        compute_derivative(
+            self.n,
+            self.d,
+            &self.tmp_phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
+            omegas,
+            restriction_maps,
+            zeta,
+            &self.sin_psi,
+            &self.cos_psi,
+            &mut self.k2,
+        );
 
         for i in 0..size {
             self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k2[i];
         }
-        compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k3);
+        compute_derivative(
+            self.n,
+            self.d,
+            &self.tmp_phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
+            omegas,
+            restriction_maps,
+            zeta,
+            &self.sin_psi,
+            &self.cos_psi,
+            &mut self.k3,
+        );
 
         for i in 0..size {
             self.tmp_phases[i] = phases[i] + dt * self.k3[i];
         }
-        compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k4);
+        compute_derivative(
+            self.n,
+            self.d,
+            &self.tmp_phases,
+            &mut self.sin_theta,
+            &mut self.cos_theta,
+            omegas,
+            restriction_maps,
+            zeta,
+            &self.sin_psi,
+            &self.cos_psi,
+            &mut self.k4,
+        );
 
         for i in 0..size {
             phases[i] +=
@@ -217,23 +277,71 @@ impl SheafUPDEStepper {
         while t_remaining > 1e-12 {
             dt = dt.min(t_remaining);
 
-            compute_derivative(self.n, self.d, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k1);
+            compute_derivative(
+                self.n,
+                self.d,
+                phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
+                omegas,
+                restriction_maps,
+                zeta,
+                &self.sin_psi,
+                &self.cos_psi,
+                &mut self.k1,
+            );
 
             for i in 0..size {
                 self.tmp_phases[i] = phases[i] + dt * dp::A21 * self.k1[i];
             }
-            compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k2);
+            compute_derivative(
+                self.n,
+                self.d,
+                &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
+                omegas,
+                restriction_maps,
+                zeta,
+                &self.sin_psi,
+                &self.cos_psi,
+                &mut self.k2,
+            );
 
             for i in 0..size {
                 self.tmp_phases[i] = phases[i] + dt * (dp::A31 * self.k1[i] + dp::A32 * self.k2[i]);
             }
-            compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k3);
+            compute_derivative(
+                self.n,
+                self.d,
+                &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
+                omegas,
+                restriction_maps,
+                zeta,
+                &self.sin_psi,
+                &self.cos_psi,
+                &mut self.k3,
+            );
 
             for i in 0..size {
                 self.tmp_phases[i] = phases[i]
                     + dt * (dp::A41 * self.k1[i] + dp::A42 * self.k2[i] + dp::A43 * self.k3[i]);
             }
-            compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k4);
+            compute_derivative(
+                self.n,
+                self.d,
+                &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
+                omegas,
+                restriction_maps,
+                zeta,
+                &self.sin_psi,
+                &self.cos_psi,
+                &mut self.k4,
+            );
 
             for i in 0..size {
                 self.tmp_phases[i] = phases[i]
@@ -242,7 +350,19 @@ impl SheafUPDEStepper {
                         + dp::A53 * self.k3[i]
                         + dp::A54 * self.k4[i]);
             }
-            compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k5);
+            compute_derivative(
+                self.n,
+                self.d,
+                &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
+                omegas,
+                restriction_maps,
+                zeta,
+                &self.sin_psi,
+                &self.cos_psi,
+                &mut self.k5,
+            );
 
             for i in 0..size {
                 self.tmp_phases[i] = phases[i]
@@ -252,7 +372,19 @@ impl SheafUPDEStepper {
                         + dp::A64 * self.k4[i]
                         + dp::A65 * self.k5[i]);
             }
-            compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k6);
+            compute_derivative(
+                self.n,
+                self.d,
+                &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
+                omegas,
+                restriction_maps,
+                zeta,
+                &self.sin_psi,
+                &self.cos_psi,
+                &mut self.k6,
+            );
 
             for i in 0..size {
                 self.tmp_phases[i] = phases[i]
@@ -262,7 +394,19 @@ impl SheafUPDEStepper {
                         + dp::A75 * self.k5[i]
                         + dp::A76 * self.k6[i]);
             }
-            compute_derivative(self.n, self.d, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, restriction_maps, zeta, &self.sin_psi, &self.cos_psi, &mut self.k7);
+            compute_derivative(
+                self.n,
+                self.d,
+                &self.tmp_phases,
+                &mut self.sin_theta,
+                &mut self.cos_theta,
+                omegas,
+                restriction_maps,
+                zeta,
+                &self.sin_psi,
+                &self.cos_psi,
+                &mut self.k7,
+            );
 
             let mut err_sq = 0.0;
             for i in 0..size {

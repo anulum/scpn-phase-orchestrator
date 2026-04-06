@@ -19,20 +19,33 @@ pub struct PlasticityModel {
 impl PlasticityModel {
     pub fn new(lr: f64, decay: f64) -> SpoResult<Self> {
         if lr < 0.0 || decay < 0.0 {
-            return Err(SpoError::InvalidConfig("lr and decay must be non-negative".into()));
+            return Err(SpoError::InvalidConfig(
+                "lr and decay must be non-negative".into(),
+            ));
         }
         Ok(Self { lr, decay })
     }
 
-    pub fn update(&self, sin_theta: &[f64], cos_theta: &[f64], knm: &mut [f64], modulator: f64, dt: f64) {
+    pub fn update(
+        &self,
+        sin_theta: &[f64],
+        cos_theta: &[f64],
+        knm: &mut [f64],
+        modulator: f64,
+        dt: f64,
+    ) {
         let n = sin_theta.len();
-        if knm.len() != n * n { return; }
+        if knm.len() != n * n {
+            return;
+        }
         let decay_factor = (-self.decay * dt).exp();
         for i in 0..n {
             let ci = cos_theta[i];
             let si = sin_theta[i];
             for j in 0..n {
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
                 let idx = i * n + j;
                 let elig = cos_theta[j] * ci + sin_theta[j] * si;
                 let delta = self.lr * modulator * elig * dt;
@@ -41,7 +54,16 @@ impl PlasticityModel {
         }
     }
 
-    pub fn update_sparse(&self, sin_theta: &[f64], cos_theta: &[f64], row_ptr: &[usize], col_indices: &[usize], knm_values: &mut [f64], modulator: f64, dt: f64) {
+    pub fn update_sparse(
+        &self,
+        sin_theta: &[f64],
+        cos_theta: &[f64],
+        row_ptr: &[usize],
+        col_indices: &[usize],
+        knm_values: &mut [f64],
+        modulator: f64,
+        dt: f64,
+    ) {
         let n = sin_theta.len();
         let decay_factor = (-self.decay * dt).exp();
         for i in 0..n {
@@ -51,7 +73,9 @@ impl PlasticityModel {
             let end = row_ptr[i + 1];
             for idx in start..end {
                 let j = col_indices[idx];
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
                 let elig = cos_theta[j] * ci + sin_theta[j] * si;
                 let delta = self.lr * modulator * elig * dt;
                 knm_values[idx] = (knm_values[idx] * decay_factor + delta).max(0.0);

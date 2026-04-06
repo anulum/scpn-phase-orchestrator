@@ -151,26 +151,31 @@ fn nearest_neighbor_distances(embedded: &[f64], t: usize, m: usize) -> (Vec<f64>
     let mut nn_dist = vec![f64::INFINITY; t];
     let mut nn_idx = vec![0usize; t];
 
-    let results: Vec<(f64, usize)> = (0..t).into_par_iter().map(|i| {
-        let mut min_d = f64::INFINITY;
-        let mut min_idx = 0;
-        let ei = &embedded[i * m .. (i + 1) * m];
-        
-        for j in 0..t {
-            if i == j { continue; }
-            let ej = &embedded[j * m .. (j + 1) * m];
-            let mut d2 = 0.0;
-            for k in 0..m {
-                let diff = ei[k] - ej[k];
-                d2 += diff * diff;
+    let results: Vec<(f64, usize)> = (0..t)
+        .into_par_iter()
+        .map(|i| {
+            let mut min_d = f64::INFINITY;
+            let mut min_idx = 0;
+            let ei = &embedded[i * m..(i + 1) * m];
+
+            for j in 0..t {
+                if i == j {
+                    continue;
+                }
+                let ej = &embedded[j * m..(j + 1) * m];
+                let mut d2 = 0.0;
+                for k in 0..m {
+                    let diff = ei[k] - ej[k];
+                    d2 += diff * diff;
+                }
+                if d2 < min_d * min_d {
+                    min_d = d2.sqrt();
+                    min_idx = j;
+                }
             }
-            if d2 < min_d * min_d {
-                min_d = d2.sqrt();
-                min_idx = j;
-            }
-        }
-        (min_d, min_idx)
-    }).collect();
+            (min_d, min_idx)
+        })
+        .collect();
 
     for i in 0..t {
         nn_dist[i] = results[i].0;

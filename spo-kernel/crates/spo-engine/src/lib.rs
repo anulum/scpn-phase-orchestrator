@@ -5,6 +5,10 @@
 
 #![deny(unsafe_code)]
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::missing_errors_doc)] // physics engine — error docs deferred
+#![allow(clippy::missing_panics_doc)] // physics engine — panic docs deferred
+#![allow(clippy::must_use_candidate)] // stepper methods have side effects via &mut self
+#![allow(clippy::needless_range_loop)] // indices used as mathematical variables
 
 pub mod coupling;
 pub mod dp_tableau;
@@ -22,18 +26,18 @@ pub mod swarmalator;
 pub mod upde;
 
 pub use coupling::{CouplingBuilder, CouplingState};
+pub use hypergraph::{Hyperedge, HypergraphStepper};
 pub use imprint::ImprintModel;
+pub use inertial::InertialStepper;
 pub use lags::LagModel;
 pub use lif_ensemble::{LIFEnsemble, LIFParams};
 pub use order_params::{compute_layer_coherence, compute_order_parameter, compute_plv};
 pub use pac::{modulation_index, pac_matrix};
 pub use simplicial::SimplicialStepper;
-pub use splitting::SplittingStepper;
 pub use sparse_upde::SparseUPDEStepper;
+pub use splitting::SplittingStepper;
 pub use stuart_landau::StuartLandauStepper;
 pub use upde::UPDEStepper;
-pub use inertial::InertialStepper;
-pub use hypergraph::{Hyperedge, HypergraphStepper};
 
 pub mod basin_stability;
 pub mod bifurcation;
