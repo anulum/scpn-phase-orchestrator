@@ -14,6 +14,8 @@
 //! Constructs the regression matrix from pairwise sin(Δθ) and solves
 //! for K_ij via normal equations (Aᵀ A)⁻¹ Aᵀ b.
 
+use rayon::prelude::*;
+
 /// Estimate coupling matrix from phase trajectories.
 ///
 /// # Arguments
@@ -33,15 +35,15 @@ pub fn estimate_coupling(phases: &[f64], omegas: &[f64], n: usize, t: usize, dt:
     let t_eff = t - 1;
     let dphase = unwrapped_deriv(phases, n, t, dt);
     let mut knm = vec![0.0; n * n];
-    for i in 0..n {
-        let row = solve_node(phases, &dphase, omegas, n, t, t_eff, i);
+
+    // Parallelize over oscillators
+    knm.par_chunks_mut(n).enumerate().for_each(|(i, row)| {
+        let node_coeffs = solve_node(phases, &dphase, omegas, n, t, t_eff, i);
         for j in 0..n {
-            knm[i * n + j] = row[j];
+            row[j] = if i == j { 0.0 } else { node_coeffs[j] };
         }
-    }
-    for i in 0..n {
-        knm[i * n + i] = 0.0;
-    }
+    });
+
     knm
 }
 
@@ -83,16 +85,32 @@ fn solve_node(
     }
     let mut ata = vec![0.0; n * n];
     let mut atb = vec![0.0; n];
-    for tt in 0..t_eff {
-        let phi_i = phases[i * t + tt];
-        for j in 0..n {
-            let s = (phases[j * t + tt] - phi_i).sin();
-            atb[j] += s * target[tt];
-            for k in 0..n {
-                ata[j * n + k] += s * (phases[k * t + tt] - phi_i).sin();
-            }
+
+    // Construction of normal equations is O(T * N^2)
+    // Parallelize over features j
+    atb.par_iter_mut().enumerate().for_each(|(j, val)| {
+        let mut sum_atb = 0.0;
+        for tt in 0..t_eff {
+            let phi_i = phases[i * t + tt];
+            let s_j = (phases[j * t + tt] - phi_i).sin();
+            sum_atb += s_j * target[tt];
         }
-    }
+        *val = sum_atb;
+    });
+
+    ata.par_chunks_mut(n).enumerate().for_each(|(j, row)| {
+        for k in 0..n {
+            let mut sum_ata = 0.0;
+            for tt in 0..t_eff {
+                let phi_i = phases[i * t + tt];
+                let s_j = (phases[j * t + tt] - phi_i).sin();
+                let s_k = (phases[k * t + tt] - phi_i).sin();
+                sum_ata += s_j * s_k;
+            }
+            row[k] = sum_ata;
+        }
+    });
+
     solve_linear(n, &mut ata, &mut atb).unwrap_or_else(|| vec![0.0; n])
 }
 
