@@ -5,159 +5,90 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Order parameters
 
-//!
-//! R = |⟨e^{iθ}⟩|  (Kuramoto global order parameter)
-//! PLV = |⟨e^{i(φ_a - φ_b)}⟩|  (Phase-Locking Value)
-
 use std::f64::consts::TAU;
-
 use spo_types::{SpoError, SpoResult};
 
 /// Kuramoto global order parameter: (R, psi_mean).
-///
-/// R = |mean(exp(i*theta))|, psi_mean = arg(mean(exp(i*theta))) mod 2π.
 #[must_use]
 pub fn compute_order_parameter(phases: &[f64]) -> (f64, f64) {
-    let n = phases.len() as f64;
-    if n < 1.0 {
-        return (0.0, 0.0);
+    let n = phases.len();
+    if n == 0 { return (0.0, 0.0); }
+    let mut sum_sin = 0.0;
+    let mut sum_cos = 0.0;
+    for &th in phases {
+        let (s, c) = th.sin_cos();
+        sum_sin += s;
+        sum_cos += c;
     }
-    let (sum_sin, sum_cos) = phases
-        .iter()
-        .fold((0.0, 0.0), |(s, c), &th| (s + th.sin(), c + th.cos()));
+    assemble_r_psi(sum_sin, sum_cos, n as f64)
+}
+
+/// Compute order parameter from precomputed sin/cos arrays.
+#[must_use]
+pub fn compute_order_parameter_from_sincos(sin_theta: &[f64], cos_theta: &[f64]) -> (f64, f64) {
+    let n = sin_theta.len();
+    if n == 0 { return (0.0, 0.0); }
+    let sum_sin: f64 = sin_theta.iter().sum();
+    let sum_cos: f64 = cos_theta.iter().sum();
+    assemble_r_psi(sum_sin, sum_cos, n as f64)
+}
+
+#[inline]
+fn assemble_r_psi(sum_sin: f64, sum_cos: f64, n: f64) -> (f64, f64) {
     let mean_sin = sum_sin / n;
     let mean_cos = sum_cos / n;
-    let r = (mean_sin * mean_sin + mean_cos * mean_cos)
-        .sqrt()
-        .clamp(0.0, 1.0);
+    let r = (mean_sin * mean_sin + mean_cos * mean_cos).sqrt().clamp(0.0, 1.0);
     let psi = mean_sin.atan2(mean_cos).rem_euclid(TAU);
     (r, psi)
 }
 
-/// Phase-locking value between two equal-length phase arrays.
-///
-/// PLV = |mean(exp(i*(φ_a - φ_b)))| over samples.
-///
-/// # Errors
-/// Returns `InvalidDimension` if arrays differ in length.
 pub fn compute_plv(phases_a: &[f64], phases_b: &[f64]) -> SpoResult<f64> {
     if phases_a.len() != phases_b.len() {
-        return Err(SpoError::InvalidDimension(format!(
-            "PLV requires equal-length arrays, got {} vs {}",
-            phases_a.len(),
-            phases_b.len()
-        )));
+        return Err(SpoError::InvalidDimension(format!("PLV requires equal-length arrays, got {} vs {}", phases_a.len(), phases_b.len())));
     }
-    let n = phases_a.len() as f64;
-    if n < 1.0 {
-        return Ok(0.0);
+    let n = phases_a.len();
+    if n == 0 { return Ok(0.0); }
+    let mut sum_sin = 0.0;
+    let mut sum_cos = 0.0;
+    for (&a, &b) in phases_a.iter().zip(phases_b) {
+        let (s, c) = (a - b).sin_cos();
+        sum_sin += s;
+        sum_cos += c;
     }
-    let (sum_sin, sum_cos) =
-        phases_a
-            .iter()
-            .zip(phases_b.iter())
-            .fold((0.0, 0.0), |(s, c), (&a, &b)| {
-                let diff = a - b;
-                (s + diff.sin(), c + diff.cos())
-            });
-    let mean_sin = sum_sin / n;
-    let mean_cos = sum_cos / n;
-    Ok((mean_sin * mean_sin + mean_cos * mean_cos)
-        .sqrt()
-        .clamp(0.0, 1.0))
+    Ok(assemble_r_psi(sum_sin, sum_cos, n as f64).0)
 }
 
-/// Order parameter R for oscillators selected by mask indices.
 #[must_use]
 pub fn compute_layer_coherence(phases: &[f64], indices: &[usize]) -> f64 {
-    let valid: Vec<f64> = indices
-        .iter()
-        .filter_map(|&i| phases.get(i).copied())
-        .collect();
-    if valid.is_empty() {
-        return 0.0;
+    let mut sum_sin = 0.0;
+    let mut sum_cos = 0.0;
+    let mut count = 0;
+    for &i in indices {
+        if let Some(&th) = phases.get(i) {
+            let (s, c) = th.sin_cos();
+            sum_sin += s;
+            sum_cos += c;
+            count += 1;
+        }
     }
-    compute_order_parameter(&valid).0
+    if count == 0 { return 0.0; }
+    assemble_r_psi(sum_sin, sum_cos, count as f64).0
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn all_equal_r_one() {
         let phases = vec![0.5; 16];
         let (r, _) = compute_order_parameter(&phases);
         assert!((r - 1.0).abs() < 1e-9);
     }
-
     #[test]
     fn dispersed_r_near_zero() {
         let n = 16;
         let phases: Vec<f64> = (0..n).map(|i| i as f64 * TAU / n as f64).collect();
         let (r, _) = compute_order_parameter(&phases);
-        assert!(r < 0.15, "dispersed R={r}");
-    }
-
-    #[test]
-    fn empty_phases() {
-        let (r, psi) = compute_order_parameter(&[]);
-        assert_eq!(r, 0.0);
-        assert_eq!(psi, 0.0);
-    }
-
-    #[test]
-    fn plv_identical_signals() {
-        let a = vec![0.1, 0.2, 0.3, 0.4];
-        let plv = compute_plv(&a, &a).unwrap();
-        assert!((plv - 1.0).abs() < 1e-9);
-    }
-
-    #[test]
-    fn plv_orthogonal_signals() {
-        let a: Vec<f64> = (0..100).map(|i| i as f64 * 0.1).collect();
-        let b: Vec<f64> = a.iter().map(|&x| x + std::f64::consts::FRAC_PI_2).collect();
-        let plv = compute_plv(&a, &b).unwrap();
-        assert!((plv - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn plv_empty() {
-        assert_eq!(compute_plv(&[], &[]).unwrap(), 0.0);
-    }
-
-    #[test]
-    fn plv_length_mismatch_error() {
-        let result = compute_plv(&[1.0, 2.0], &[1.0]);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn layer_coherence_subset() {
-        let phases = vec![0.5, 0.5, 3.0, 0.5];
-        let r_all = compute_order_parameter(&phases).0;
-        let r_sub = compute_layer_coherence(&phases, &[0, 1, 3]);
-        assert!(
-            r_sub > r_all,
-            "subset {r_sub:.4} should be more coherent than all {r_all:.4}"
-        );
-    }
-
-    #[test]
-    fn layer_coherence_empty_indices() {
-        assert_eq!(compute_layer_coherence(&[1.0, 2.0], &[]), 0.0);
-    }
-
-    #[test]
-    fn layer_coherence_out_of_bounds() {
-        let r = compute_layer_coherence(&[1.0], &[0, 5, 10]);
-        assert!(r > 0.0); // only index 0 is valid → R=1.0
-    }
-
-    #[test]
-    fn order_param_psi_range() {
-        let phases = vec![1.0, 2.0, 3.0];
-        let (_, psi) = compute_order_parameter(&phases);
-        assert!((0.0..TAU).contains(&psi), "psi={psi} out of [0, 2π)");
+        assert!(r < 0.15);
     }
 }

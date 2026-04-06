@@ -137,6 +137,10 @@ impl UPDEStepper {
     pub fn n(&self) -> usize { self.n }
     pub fn last_dt(&self) -> f64 { self.last_dt }
 
+    pub fn order_parameter(&self) -> (f64, f64) {
+        crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
+    }
+
     fn euler_step(&mut self, phases: &mut [f64], omegas: &[f64], knm: &mut [f64], zeta: f64, psi: f64, alpha: &[f64], dt: f64, alpha_zero: bool) {
         compute_derivative(self.n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, knm, zeta, psi, alpha, alpha_zero, &mut self.deriv_buf);
         for i in 0..self.n { phases[i] += dt * self.deriv_buf[i]; }

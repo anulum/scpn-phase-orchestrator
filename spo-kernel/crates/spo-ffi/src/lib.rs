@@ -330,6 +330,10 @@ impl PyUPDEStepper {
     fn last_dt(&self) -> f64 {
         self.inner.last_dt()
     }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
+    }
 }
 
 // ─── PyCouplingBuilder ──────────────────────────────────────────────
@@ -857,6 +861,10 @@ impl PySparseUPDEStepper {
     #[getter]
     fn last_dt(&self) -> f64 {
         self.inner.last_dt()
+    }
+
+    fn order_parameter(&self) -> (f64, f64) {
+        self.inner.order_parameter()
     }
 }
 
