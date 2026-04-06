@@ -40,7 +40,7 @@ impl StuartLandauStepper {
     }
 
     pub fn step(&mut self, state: &mut [f64], omegas: &[f64], mu: &[f64], knm: &[f64], knm_r: &[f64], zeta: f64, psi: f64, alpha: &[f64], epsilon: f64) -> SpoResult<()> {
-        let n = self.n;
+        #[allow(unused_variables)] let n = self.n;
         let alpha_zero = alpha.iter().all(|&a| a == 0.0);
         match self.method {
             Method::RK45 => { self.rk45_step(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, alpha_zero); }

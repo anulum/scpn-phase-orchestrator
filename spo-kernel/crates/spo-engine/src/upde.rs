@@ -88,7 +88,7 @@ impl UPDEStepper {
         psi: f64,
         alpha: &[f64],
     ) -> SpoResult<()> {
-        let n = self.n;
+        #[allow(unused_variables)] let n = self.n;
         let alpha_zero = alpha.iter().all(|&a| a == 0.0);
 
         match self.method {
@@ -147,7 +147,7 @@ impl UPDEStepper {
     }
 
     fn rk4_step(&mut self, phases: &mut [f64], omegas: &[f64], knm: &mut [f64], zeta: f64, psi: f64, alpha: &[f64], dt: f64, alpha_zero: bool) {
-        let n = self.n;
+        #[allow(unused_variables)] let n = self.n;
         compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, knm, zeta, psi, alpha, alpha_zero, &mut self.k1);
         for i in 0..n { self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k1[i]; }
         compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, knm, zeta, psi, alpha, alpha_zero, &mut self.k2);
@@ -160,7 +160,7 @@ impl UPDEStepper {
     }
 
     fn rk45_step(&mut self, phases: &mut [f64], omegas: &[f64], knm: &mut [f64], zeta: f64, psi: f64, alpha: &[f64], alpha_zero: bool) {
-        let n = self.n;
+        #[allow(unused_variables)] let n = self.n;
         let mut dt = self.last_dt;
         for _ in 0..=3 {
             compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, knm, zeta, psi, alpha, alpha_zero, &mut self.k1);

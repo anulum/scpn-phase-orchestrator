@@ -52,7 +52,7 @@ impl SparseUPDEStepper {
     }
 
     pub fn step(&mut self, phases: &mut [f64], omegas: &[f64], row_ptr: &[usize], col_indices: &[usize], knm_values: &mut [f64], zeta: f64, psi: f64, alpha_values: &[f64]) -> SpoResult<()> {
-        let n = self.n;
+        #[allow(unused_variables)] let n = self.n;
         let alpha_zero = alpha_values.iter().all(|&a| a == 0.0);
         match self.method {
             Method::RK45 => { self.rk45_step(phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero); }
@@ -92,7 +92,7 @@ impl SparseUPDEStepper {
     }
 
     fn rk4_step(&mut self, phases: &mut [f64], omegas: &[f64], row_ptr: &[usize], col_indices: &[usize], knm_values: &mut [f64], zeta: f64, psi: f64, alpha_values: &[f64], dt: f64, alpha_zero: bool) {
-        let n = self.n;
+        #[allow(unused_variables)] let n = self.n;
         compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k1);
         for i in 0..n { self.tmp_phases[i] = phases[i] + 0.5 * dt * self.k1[i]; }
         compute_derivative(n, &self.tmp_phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k2);
@@ -105,7 +105,7 @@ impl SparseUPDEStepper {
     }
 
     fn rk45_step(&mut self, phases: &mut [f64], omegas: &[f64], row_ptr: &[usize], col_indices: &[usize], knm_values: &mut [f64], zeta: f64, psi: f64, alpha_values: &[f64], alpha_zero: bool) {
-        let n = self.n;
+        #[allow(unused_variables)] let n = self.n;
         let mut dt = self.last_dt;
         for _ in 0..=3 {
             compute_derivative(n, phases, &mut self.sin_theta, &mut self.cos_theta, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values, alpha_zero, &mut self.k1);
