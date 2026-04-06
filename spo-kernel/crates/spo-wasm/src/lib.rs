@@ -4,68 +4,78 @@
 // © Code 2020–2026 Miroslav Šotek. All rights reserved.
 // ORCID: 0009-0009-3560-0851
 // Contact: www.anulum.li | protoscience@anulum.li
-// SCPN Phase Orchestrator — WASM bindings
+// SCPN Phase Orchestrator — WASM bindings (Optimized)
 
-//! Minimal WASM wrapper exposing a single-step UPDE integrator
-//! for browser and edge deployments.
-//!
-//! Build: `cd spo-kernel && wasm-pack build crates/spo-wasm --target web --out-dir ../../../wasm-pkg`
-
-use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
+use js_sys::Float64Array;
 
-thread_local! {
-    static PHASES: RefCell<Vec<f64>> = const { RefCell::new(Vec::new()) };
+#[wasm_bindgen]
+pub struct WasmEngine {
+    n: usize,
+    phases: Vec<f64>,
+    sin_theta: Vec<f64>,
+    cos_theta: Vec<f64>,
 }
 
-/// Initialise the phase array with `n` oscillators at zero phase.
 #[wasm_bindgen]
-pub fn init(n: usize) {
-    PHASES.with(|p| *p.borrow_mut() = vec![0.0; n]);
-}
-
-/// Advance all oscillators by one Euler step.
-///
-/// `omega_json`: JSON array of natural frequencies (length must match init `n`).
-/// `coupling`: global coupling strength K.
-/// `dt`: integration timestep.
-///
-/// Returns the Kuramoto order parameter R after the step.
-#[must_use]
-#[wasm_bindgen]
-pub fn step(omega_json: &str, coupling: f64, dt: f64) -> f64 {
-    let omega: Vec<f64> = serde_json::from_str(omega_json).unwrap_or_default();
-
-    PHASES.with(|cell| {
-        let mut phases = cell.borrow_mut();
-        let n = phases.len();
-        if n == 0 || omega.len() != n {
-            return 0.0;
+impl WasmEngine {
+    #[wasm_bindgen(constructor)]
+    pub fn new(n: usize) -> Self {
+        Self {
+            n,
+            phases: vec![0.0; n],
+            sin_theta: vec![0.0; n],
+            cos_theta: vec![0.0; n],
         }
+    }
 
-        // Kuramoto mean-field coupling
-        let (sin_sum, cos_sum): (f64, f64) = phases
-            .iter()
-            .fold((0.0, 0.0), |(s, c), &th| (s + th.sin(), c + th.cos()));
-        let r = (sin_sum * sin_sum + cos_sum * cos_sum).sqrt() / n as f64;
-        let psi = sin_sum.atan2(cos_sum);
+    pub fn set_phases(&mut self, new_phases: Float64Array) {
+        new_phases.copy_to(&mut self.phases);
+    }
 
-        // Euler step: dθ_i/dt = ω_i + K·R·sin(ψ − θ_i)
+    pub fn get_phases(&self) -> Float64Array {
+        unsafe { Float64Array::view(&self.phases) }
+    }
+
+    pub fn step(&mut self, omegas: Float64Array, coupling: f64, dt: f64) -> f64 {
+        let n = self.n;
+        let mut sum_s = 0.0;
+        let mut sum_c = 0.0;
+
         for i in 0..n {
-            phases[i] += (omega[i] + coupling * r * (psi - phases[i]).sin()) * dt;
+            let (s, c) = self.phases[i].sin_cos();
+            self.sin_theta[i] = s;
+            self.cos_theta[i] = c;
+            sum_s += s;
+            sum_c += c;
         }
 
-        // Recompute R after step
-        let (s2, c2): (f64, f64) = phases
-            .iter()
-            .fold((0.0, 0.0), |(s, c), &th| (s + th.sin(), c + th.cos()));
-        (s2 * s2 + c2 * c2).sqrt() / n as f64
-    })
-}
+        let inv_n = 1.0 / n as f64;
+        let r = (sum_s * sum_s + sum_c * sum_c).sqrt() * inv_n;
+        let (s_psi, c_psi) = if r > 1e-15 {
+            let psi = sum_s.atan2(sum_c);
+            psi.sin_cos()
+        } else {
+            (0.0, 0.0)
+        };
 
-/// Return current phases as JSON array.
-#[must_use]
-#[wasm_bindgen]
-pub fn get_phases() -> String {
-    PHASES.with(|cell| serde_json::to_string(&*cell.borrow()).unwrap_or_else(|_| "[]".to_string()))
+        let ks = coupling * r;
+        let omegas_vec = omegas.to_vec();
+
+        for i in 0..n {
+            // sin(psi - theta) = s_psi * cos_theta - c_psi * sin_theta
+            let coupling_term = ks * (s_psi * self.cos_theta[i] - c_psi * self.sin_theta[i]);
+            self.phases[i] += (omegas_vec[i] + coupling_term) * dt;
+        }
+
+        r
+    }
+
+    pub fn run(&mut self, omegas: Float64Array, coupling: f64, dt: f64, n_steps: usize) -> f64 {
+        let mut r = 0.0;
+        for _ in 0..n_steps {
+            r = self.step(omegas.clone(), coupling, dt);
+        }
+        r
+    }
 }
