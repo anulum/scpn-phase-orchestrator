@@ -725,6 +725,46 @@ impl PySupervisorPolicy {
     }
 }
 
+// ─── PyInertialStepper ───────────────────────────────────────────────────
+
+#[pyclass(name = "PyInertialStepper")]
+struct PyInertialStepper {
+    inner: inertial::InertialStepper,
+}
+
+#[pymethods]
+impl PyInertialStepper {
+    #[new]
+    #[pyo3(signature = (n, dt = 0.01))]
+    fn new(n: usize, dt: f64) -> PyResult<Self> {
+        let config = IntegrationConfig { dt, ..Default::default() };
+        let inner = inertial::InertialStepper::new(n, config).map_err(spo_err)?;
+        Ok(Self { inner })
+    }
+
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        theta: PyReadonlyArray1<'py, f64>,
+        omega_dot: PyReadonlyArray1<'py, f64>,
+        power: PyReadonlyArray1<'py, f64>,
+        knm: PyReadonlyArray1<'py, f64>,
+        inertia: PyReadonlyArray1<'py, f64>,
+        damping: PyReadonlyArray1<'py, f64>,
+    ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
+        let mut th = theta.to_vec().map_err(|_| PyValueError::new_err("theta not contiguous"))?;
+        let mut od = omega_dot.to_vec().map_err(|_| PyValueError::new_err("omega_dot not contiguous"))?;
+        let p = power.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let k = knm.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let i = inertia.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let d = damping.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        self.inner.step(&mut th, &mut od, p, k, i, d).map_err(spo_err)?;
+
+        Ok((PyArray1::from_vec(py, th), PyArray1::from_vec(py, od)))
+    }
+}
+
 // ─── PyHypergraphStepper ──────────────────────────────────────────────────
 
 #[pyclass(name = "PyHypergraphStepper")]
@@ -3136,6 +3176,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyUPDEStepper>()?;
     m.add_class::<PySheafUPDEStepper>()?;
     m.add_class::<PyActiveInferenceAgent>()?;
+    m.add_class::<PyInertialStepper>()?;
     m.add_class::<PyHypergraphStepper>()?;
     m.add_class::<PySimplicialStepper>()?;
     m.add_class::<PySparseUPDEStepper>()?;
