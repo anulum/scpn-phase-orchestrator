@@ -145,7 +145,7 @@ impl SparseUPDEStepper {
 
 fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta: &mut [f64], omegas: &[f64], row_ptr: &[usize], col_indices: &[usize], knm_values: &mut [f64], zeta: f64, psi: f64, alpha_values: &[f64], alpha_zero: bool, out: &mut [f64]) {
     for i in 0..n { let (s, c) = theta[i].sin_cos(); sin_theta[i] = s; cos_theta[i] = c; }
-    let (s_psi, c_psi) = if zeta != 0.0 { psi.sin_cos() } else { (0.0, 0.0) };
+    let (zs_psi, zc_psi) = if zeta != 0.0 { let (s, c) = psi.sin_cos(); (zeta * s, zeta * c) } else { (0.0, 0.0) };
     if alpha_zero {
         for i in 0..n {
             let mut coupling_sum = 0.0;
@@ -156,7 +156,7 @@ fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta:
                 coupling_sum += knm_values[idx] * (sin_theta[j] * ci - cos_theta[j] * si);
             }
             out[i] = omegas[i] + coupling_sum;
-            if zeta != 0.0 { out[i] += zeta * (s_psi * ci - c_psi * si); }
+            if zeta != 0.0 { out[i] += zs_psi * ci - zc_psi * si; }
         }
     } else {
         for i in 0..n {
@@ -168,7 +168,7 @@ fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta:
                 coupling_sum += knm_values[idx] * (theta[j] - theta[i] - alpha_values[idx]).sin();
             }
             out[i] = omegas[i] + coupling_sum;
-            if zeta != 0.0 { out[i] += zeta * (s_psi * ci - c_psi * si); }
+            if zeta != 0.0 { out[i] += zs_psi * ci - zc_psi * si; }
         }
     }
 }

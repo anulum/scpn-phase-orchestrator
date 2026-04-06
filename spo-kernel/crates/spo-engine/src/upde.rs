@@ -204,7 +204,7 @@ fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta:
         sin_theta[i] = s;
         cos_theta[i] = c;
     }
-    let (s_psi, c_psi) = if zeta != 0.0 { psi.sin_cos() } else { (0.0, 0.0) };
+    let (zs_psi, zc_psi) = if zeta != 0.0 { let (s, c) = psi.sin_cos(); (zeta * s, zeta * c) } else { (0.0, 0.0) };
     let st = &*sin_theta;
     let ct = &*cos_theta;
 
@@ -237,7 +237,7 @@ fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta:
                     }
                     let coupling_sum = fs * ct[i] - fc * st[i];
                     *val = omegas[i] + coupling_sum;
-                    if zeta != 0.0 { *val += zeta * (s_psi * ct[i] - c_psi * st[i]); }
+                    if zeta != 0.0 { *val += zs_psi * ct[i] - zc_psi * st[i]; }
                 }
             } else {
                 for (local_i, val) in chunk.iter_mut().enumerate() {
@@ -248,7 +248,7 @@ fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta:
                         coupling_sum += knm[offset + j] * (theta[j] - theta[i] - alpha[offset + j]).sin();
                     }
                     *val = omegas[i] + coupling_sum;
-                    if zeta != 0.0 { *val += zeta * (s_psi * ct[i] - c_psi * st[i]); }
+                    if zeta != 0.0 { *val += zs_psi * ct[i] - zc_psi * st[i]; }
                 }
             }
         });
@@ -263,7 +263,7 @@ fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta:
                 }
                 let coupling_sum = fs * ct[i] - fc * st[i];
                 out[i] = omegas[i] + coupling_sum;
-                if zeta != 0.0 { out[i] += zeta * (s_psi * ct[i] - c_psi * st[i]); }
+                if zeta != 0.0 { out[i] += zs_psi * ct[i] - zc_psi * st[i]; }
             }
         } else {
             for i in 0..n {
@@ -273,7 +273,7 @@ fn compute_derivative(n: usize, theta: &[f64], sin_theta: &mut [f64], cos_theta:
                     coupling_sum += knm[offset + j] * (theta[j] - theta[i] - alpha[offset + j]).sin();
                 }
                 out[i] = omegas[i] + coupling_sum;
-                if zeta != 0.0 { out[i] += zeta * (s_psi * ct[i] - c_psi * st[i]); }
+                if zeta != 0.0 { out[i] += zs_psi * ct[i] - zc_psi * st[i]; }
             }
         }
     }
