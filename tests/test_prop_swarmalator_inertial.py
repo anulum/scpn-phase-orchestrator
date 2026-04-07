@@ -76,14 +76,13 @@ class TestSwarmalatorInvariants:
         """J=0 → phase dynamics don't depend on spatial positions."""
         n = 4
         rng = np.random.default_rng(seed)
-        eng = SwarmalatorEngine(n, dim=2, dt=0.01, J=0.0)
+        eng = SwarmalatorEngine(n, dim=2, dt=0.01)
         phases = rng.uniform(0, TWO_PI, n)
         omegas = rng.uniform(-1, 1, n)
         pos1 = rng.standard_normal((n, 2))
         pos2 = pos1 + 10.0
-        _, p1 = eng.step(pos1, phases.copy(), omegas)
-        eng2 = SwarmalatorEngine(n, dim=2, dt=0.01, J=0.0)
-        _, p2 = eng2.step(pos2, phases.copy(), omegas)
+        _, p1 = eng.step(pos1, phases.copy(), omegas, j=0.0)
+        _, p2 = eng.step(pos2, phases.copy(), omegas, j=0.0)
         np.testing.assert_allclose(p1, p2, atol=1e-10)
 
 

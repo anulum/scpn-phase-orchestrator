@@ -19,7 +19,7 @@ DT = 0.01
 
 @pytest.fixture()
 def engine():
-    return SwarmalatorEngine(N, dim=DIM, dt=DT, A=1.0, B=1.0, J=0.5, K=1.0)
+    return SwarmalatorEngine(N, dim=DIM, dt=DT)
 
 
 @pytest.fixture()
@@ -34,28 +34,27 @@ def initial_state():
 class TestSwarmalatorStep:
     def test_output_shapes(self, engine, initial_state):
         pos, ph, om = initial_state
-        new_pos, new_ph = engine.step(pos, ph, om)
+        new_pos, new_ph = engine.step(pos, ph, om, a=1.0, b=1.0, j=0.5, k=1.0)
         assert new_pos.shape == (N, DIM)
         assert new_ph.shape == (N,)
 
     def test_phases_in_range(self, engine, initial_state):
         pos, ph, om = initial_state
-        _, new_ph = engine.step(pos, ph, om)
+        _, new_ph = engine.step(pos, ph, om, a=1.0, b=1.0, j=0.5, k=1.0)
         assert np.all(new_ph >= 0.0)
         assert np.all(new_ph < 2.0 * np.pi)
 
     def test_finite_values(self, engine, initial_state):
         pos, ph, om = initial_state
-        new_pos, new_ph = engine.step(pos, ph, om)
+        new_pos, new_ph = engine.step(pos, ph, om, a=1.0, b=1.0, j=0.5, k=1.0)
         assert np.all(np.isfinite(new_pos))
         assert np.all(np.isfinite(new_ph))
 
     def test_J_zero_decouples_phase_from_position(self, initial_state):
         pos, ph, om = initial_state
-        engine_coupled = SwarmalatorEngine(N, DIM, DT, J=0.5, K=1.0)
-        engine_decoupled = SwarmalatorEngine(N, DIM, DT, J=0.0, K=1.0)
-        pos_c, _ = engine_coupled.step(pos, ph, om)
-        pos_d, _ = engine_decoupled.step(pos, ph, om)
+        engine = SwarmalatorEngine(N, dim=DIM, dt=DT)
+        pos_c, _ = engine.step(pos, ph, om, j=0.5, k=1.0)
+        pos_d, _ = engine.step(pos, ph, om, j=0.0, k=1.0)
         # With J=0, phase doesn't affect position dynamics
         # (but attraction A still operates, so positions differ from J=0.5)
         assert not np.allclose(pos_c, pos_d)
@@ -64,7 +63,7 @@ class TestSwarmalatorStep:
 class TestSwarmalatorRun:
     def test_trajectory_shapes(self, engine, initial_state):
         pos, ph, om = initial_state
-        fp, fph, pt, pht = engine.run(pos, ph, om, 100)
+        fp, fph, pt, pht = engine.run(pos, ph, om, n_steps=100)
         assert fp.shape == (N, DIM)
         assert fph.shape == (N,)
         assert pt.shape == (100, N, DIM)
@@ -72,7 +71,7 @@ class TestSwarmalatorRun:
 
     def test_finite_trajectories(self, engine, initial_state):
         pos, ph, om = initial_state
-        _, _, pt, pht = engine.run(pos, ph, om, 200)
+        _, _, pt, pht = engine.run(pos, ph, om, n_steps=200)
         assert np.all(np.isfinite(pt))
         assert np.all(np.isfinite(pht))
 
@@ -81,30 +80,20 @@ class TestSwarmalatorRun:
         pos3d = rng.uniform(-1, 1, (N, 3))
         _, ph, om = initial_state
         engine3d = SwarmalatorEngine(N, dim=3, dt=DT)
-        fp, fph, pt, pht = engine3d.run(pos3d, ph, om, 50)
+        fp, fph, pt, pht = engine3d.run(pos3d, ph, om, n_steps=50)
         assert pt.shape == (50, N, 3)
 
 
 class TestSwarmalatorMetrics:
-    def test_spatial_coherence_positive(self, engine, initial_state):
-        pos, _, _ = initial_state
-        sc = engine.spatial_coherence(pos)
-        assert sc > 0.0
-
-    def test_phase_coherence_range(self, engine, initial_state):
+    def test_order_parameter_range(self, engine, initial_state):
         _, ph, _ = initial_state
-        R = engine.phase_coherence(ph)
+        R = engine.order_parameter(ph)
         assert 0.0 <= R <= 1.0
 
-    def test_phase_coherence_perfect_sync(self, engine):
+    def test_order_parameter_perfect_sync(self, engine):
         ph = np.ones(N) * 1.5
-        R = engine.phase_coherence(ph)
+        R = engine.order_parameter(ph)
         assert abs(R - 1.0) < 1e-10
-
-    def test_phase_spatial_correlation_bounded(self, engine, initial_state):
-        pos, ph, _ = initial_state
-        corr = engine.phase_spatial_correlation(pos, ph)
-        assert -1.0 <= corr <= 1.0
 
 
 class TestSwarmalatorBehavior:
@@ -112,30 +101,34 @@ class TestSwarmalatorBehavior:
         """J > 0: phase-similar agents should cluster spatially."""
         rng = np.random.default_rng(42)
         n = 20
-        engine = SwarmalatorEngine(n, 2, dt=0.01, A=1.0, B=1.0, J=1.0, K=1.0)
+        engine = SwarmalatorEngine(n, dim=2, dt=0.01)
         pos = rng.uniform(-2, 2, (n, 2))
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.zeros(n)
 
-        sc_before = engine.spatial_coherence(pos)
-        fp, _, _, _ = engine.run(pos, phases, omegas, 500)
-        sc_after = engine.spatial_coherence(fp)
-        # With J>0, agents should become more compact (lower mean distance)
-        assert sc_after < sc_before
+        mean_dist_before = np.mean(np.linalg.norm(pos - pos.mean(axis=0), axis=1))
+        fp, _, _, _ = engine.run(
+            pos, phases, omegas, a=1.0, b=1.0, j=1.0, k=1.0, n_steps=500
+        )
+        mean_dist_after = np.mean(np.linalg.norm(fp - fp.mean(axis=0), axis=1))
+        # With J>0, agents should become more compact
+        assert mean_dist_after < mean_dist_before
 
     def test_K_positive_nearby_sync(self):
-        """K > 0: nearby agents should synchronize phases."""
+        """K > 0: nearby agents should synchronise phases."""
         rng = np.random.default_rng(42)
         n = 10
-        engine = SwarmalatorEngine(n, 2, dt=0.01, A=1.0, B=1.0, J=0.0, K=2.0)
+        engine = SwarmalatorEngine(n, dim=2, dt=0.01)
         # Start in a tight cluster
         pos = rng.uniform(-0.1, 0.1, (n, 2))
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.zeros(n)
 
-        R_before = engine.phase_coherence(phases)
-        _, fph, _, _ = engine.run(pos, phases, omegas, 500)
-        R_after = engine.phase_coherence(fph)
+        R_before = engine.order_parameter(phases)
+        _, fph, _, _ = engine.run(
+            pos, phases, omegas, a=1.0, b=1.0, j=0.0, k=2.0, n_steps=500
+        )
+        R_after = engine.order_parameter(fph)
         assert R_after > R_before
 
 
@@ -151,11 +144,11 @@ class TestSwarmalatorPipelineWiring:
 
         rng = np.random.default_rng(0)
         n = 8
-        engine = SwarmalatorEngine(n, 2, dt=0.01, K=2.0)
+        engine = SwarmalatorEngine(n, dim=2, dt=0.01)
         pos = rng.uniform(-1, 1, (n, 2))
         phases = rng.uniform(0, 2 * np.pi, n)
         omegas = np.zeros(n)
 
-        _, final_ph, _, _ = engine.run(pos, phases, omegas, 200)
+        _, final_ph, _, _ = engine.run(pos, phases, omegas, k=2.0, n_steps=200)
         r, _ = compute_order_parameter(final_ph)
         assert 0.0 <= r <= 1.0

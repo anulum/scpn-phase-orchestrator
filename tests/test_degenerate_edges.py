@@ -366,14 +366,13 @@ class TestSwarmalatorEdges:
 
     def test_j_zero_decouples(self) -> None:
         n = 4
-        eng_coupled = SwarmalatorEngine(n, dt=0.01, J=1.0)
-        eng_decoupled = SwarmalatorEngine(n, dt=0.01, J=0.0)
+        eng = SwarmalatorEngine(n, dt=0.01)
         rng = np.random.default_rng(10)
         pos = rng.uniform(-1, 1, (n, 2))
         phases = rng.uniform(0, TWO_PI, n)
         omegas = rng.uniform(-2, 2, n)
-        _, ph_c = eng_coupled.step(pos, phases, omegas)
-        _, ph_d = eng_decoupled.step(pos, phases, omegas)
+        _, ph_c = eng.step(pos, phases, omegas, j=1.0)
+        _, ph_d = eng.step(pos, phases, omegas, j=0.0)
         assert ph_c.shape == (n,)
         assert ph_d.shape == (n,)
 

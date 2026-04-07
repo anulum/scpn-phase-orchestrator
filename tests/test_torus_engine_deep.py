@@ -105,7 +105,10 @@ class TestFreeRotation:
         knm, alpha = _zero_coupling(n)
         result = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=n_steps)
         expected = (phases + omegas * dt * n_steps) % TWO_PI
-        assert_allclose(result, expected, atol=1e-10)
+        # Use circular distance: min(|a-b|, 2π - |a-b|)
+        diff = np.abs(result - expected)
+        circ_dist = np.minimum(diff, TWO_PI - diff)
+        assert_allclose(circ_dist, 0.0, atol=1e-10)
 
     def test_zero_omega_stays_fixed(self):
         """Zero natural frequency with zero coupling: phase unchanged."""
