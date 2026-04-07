@@ -1,5 +1,6 @@
 # Release tool dependencies with hash pins (OpenSSF Scorecard compliance)
 build==1.4.2 \
     --hash=sha256:7a4d8651ea877cb2a89458b1b198f2e69f536c95e89129dbf5d448045d60db88
-cyclonedx-bom==7.2.2 \
-    --hash=sha256:c3cfb62762090c73dbc6937a6da8847de99e949097bc32362a33c55a3a6e5589
+cyclonedx-bom==7.3.0 \
+    --hash=sha256:73d7d76b3a28ebadc50eabf424cbcf128785a74b8a59ce7893da2e29cfaab585 \
+    --hash=sha256:d54080d65731980945de38e52009a5e5711f4a3c31377a3d13af96eaca5fcf3d
