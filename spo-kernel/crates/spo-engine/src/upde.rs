@@ -88,8 +88,40 @@ impl UPDEStepper {
         psi: f64,
         alpha: &[f64],
     ) -> SpoResult<()> {
-        #[allow(unused_variables)]
         let n = self.n;
+
+        // Dimension validation
+        if phases.len() != n || omegas.len() != n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected {n}, got phases={} omegas={}",
+                phases.len(),
+                omegas.len()
+            )));
+        }
+        if knm.len() != n * n || alpha.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected {}={n}*{n}, got knm={} alpha={}",
+                n * n,
+                knm.len(),
+                alpha.len()
+            )));
+        }
+
+        // Input validation: reject NaN/Inf
+        for th in phases.iter() {
+            if !th.is_finite() {
+                return Err(SpoError::IntegrationDiverged(
+                    "input phases contain NaN/Inf".into(),
+                ));
+            }
+        }
+        if !zeta.is_finite() {
+            return Err(SpoError::IntegrationDiverged("zeta is NaN/Inf".into()));
+        }
+        if !psi.is_finite() {
+            return Err(SpoError::IntegrationDiverged("psi is NaN/Inf".into()));
+        }
+
         let alpha_zero = alpha.iter().all(|&a| a == 0.0);
 
         match self.method {

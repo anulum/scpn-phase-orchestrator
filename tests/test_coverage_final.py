@@ -115,7 +115,7 @@ class TestSwarmalator3D:
     def test_3d_step_shape_and_finiteness(self):
         from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
-        eng = SwarmalatorEngine(n=4, dt=0.01, dim=3)
+        eng = SwarmalatorEngine(4, dt=0.01, dim=3)
         rng = np.random.default_rng(42)
         positions = rng.uniform(-1, 1, (4, 3))
         phases = rng.uniform(0, 2 * np.pi, 4)
@@ -130,7 +130,7 @@ class TestSwarmalator3D:
         """Non-zero omegas must advance phases."""
         from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
-        eng = SwarmalatorEngine(n=4, dt=0.01, dim=3)
+        eng = SwarmalatorEngine(4, dt=0.01, dim=3)
         positions = np.zeros((4, 3))
         phases = np.zeros(4)
         omegas = np.array([1.0, 2.0, 3.0, 4.0])

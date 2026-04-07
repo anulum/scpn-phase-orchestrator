@@ -16,26 +16,61 @@ from scpn_phase_orchestrator._compat import TWO_PI
 
 try:
     from spo_kernel import (
-        PyDelayedStepper as _DelayedStepper,
+        delayed_kuramoto_run_rust as _rust_delayed_run,
     )
 
     _HAS_RUST = True
 except ImportError:
     _HAS_RUST = False
 
-__all__ = ["DelayedEngine"]
+__all__ = ["DelayBuffer", "DelayedEngine"]
+
+
+class DelayBuffer:
+    """Circular buffer storing phase history for delayed coupling.
+
+    Stores last `max_delay_steps` snapshots. Retrieves phases from
+    `delay_steps` steps ago.
+    """
+
+    def __init__(self, n_oscillators: int, max_delay_steps: int):
+        if max_delay_steps < 1:
+            raise ValueError(f"max_delay_steps must be >= 1, got {max_delay_steps}")
+        self._n = n_oscillators
+        self._max = max_delay_steps
+        self._buffer: deque[NDArray] = deque(maxlen=max_delay_steps)
+
+    def push(self, phases: NDArray) -> None:
+        """Append a phase snapshot to the buffer."""
+        self._buffer.append(phases.copy())
+
+    def get_delayed(self, delay_steps: int) -> NDArray | None:
+        """Return phases from `delay_steps` ago, or None if not enough history."""
+        if delay_steps < 1 or delay_steps > len(self._buffer):
+            return None
+        return self._buffer[-delay_steps]
+
+    @property
+    def length(self) -> int:
+        """Number of snapshots currently stored."""
+        return len(self._buffer)
+
+    def clear(self) -> None:
+        """Discard all stored phase snapshots."""
+        self._buffer.clear()
 
 
 class DelayedEngine:
+    """Kuramoto with time-delayed coupling.
+
+    dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j(t-τ) - θ_i(t) - α_ij)
+    """
+
     def __init__(self, n_oscillators: int, dt: float, delay_steps: int = 1):
         self._n = n_oscillators
         self._dt = dt
         self._delay_steps = delay_steps
-        if _HAS_RUST:
-            self._stepper = _DelayedStepper(n_oscillators, delay_steps, dt)
-        else:
-            self._stepper = None
-            self._buffer: deque[NDArray] = deque(maxlen=delay_steps + 1)
+        self._buffer: deque[NDArray] = deque(maxlen=delay_steps + 1)
 
     @property
     def delay_steps(self) -> int:
@@ -51,19 +86,6 @@ class DelayedEngine:
         alpha: NDArray | None = None,
         step_idx: int = 0,
     ) -> NDArray:
-        if _HAS_RUST:
-            p = np.ascontiguousarray(phases, dtype=np.float64)
-            o = np.ascontiguousarray(omegas, dtype=np.float64)
-            k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
-            a = np.ascontiguousarray(
-                alpha.ravel() if alpha is not None else np.zeros(self._n * self._n),
-                dtype=np.float64,
-            )
-            result: NDArray = np.asarray(
-                self._stepper.step(p, o, k, a, zeta, psi, step_idx)
-            )
-            return result
-
         self._buffer.append(phases.copy())
         delayed = self._buffer[0] if len(self._buffer) > self._delay_steps else phases
         if alpha is None:
@@ -73,8 +95,8 @@ class DelayedEngine:
         dtheta = omegas + coupling
         if zeta != 0.0:
             dtheta += zeta * np.sin(psi - phases)
-        step_result: NDArray = (phases + self._dt * dtheta) % TWO_PI
-        return step_result
+        step_out: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        return step_out
 
     def run(
         self,
@@ -94,10 +116,21 @@ class DelayedEngine:
                 alpha.ravel() if alpha is not None else np.zeros(self._n * self._n),
                 dtype=np.float64,
             )
-            result_run: NDArray = np.asarray(
-                self._stepper.run(p, o, k, a, zeta, psi, n_steps)
+            result: NDArray = np.asarray(
+                _rust_delayed_run(
+                    p,
+                    o,
+                    k,
+                    a,
+                    self._n,
+                    zeta,
+                    psi,
+                    self._dt,
+                    self._delay_steps,
+                    n_steps,
+                )
             )
-            return result_run
+            return result
         p = phases.copy()
         for i in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha, step_idx=i)

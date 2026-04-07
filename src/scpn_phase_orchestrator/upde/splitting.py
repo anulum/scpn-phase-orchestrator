@@ -43,7 +43,7 @@ class SplittingEngine:
     def __init__(self, n_oscillators: int, dt: float):
         self._n = n_oscillators
         self._dt = dt
-        if _HAS_RUST:
+        if _HAS_RUST and dt > 0:
             self._stepper = _SplittingStepper(n_oscillators, dt)
         else:
             self._stepper = None
@@ -79,7 +79,7 @@ class SplittingEngine:
         alpha: NDArray,
         n_steps: int,
     ) -> NDArray:
-        if _HAS_RUST:
+        if self._stepper is not None:
             p = np.ascontiguousarray(phases, dtype=np.float64)
             o = np.ascontiguousarray(omegas, dtype=np.float64)
             k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)

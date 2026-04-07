@@ -5,206 +5,96 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Swarmalator dynamics
 
-"""Swarmalator model: coupled spatial + phase dynamics.
-
-Agents are simultaneously self-propelled particles AND phase oscillators.
-Phase modulates spatial attraction; proximity modulates phase coupling.
-
-Position dynamics:
-    ẋ_i = (1/N) Σ_j [ (x_j - x_i)/|x_j - x_i| · (A + J cos(θ_j - θ_i))
-                        - (x_j - x_i)/|x_j - x_i|³ · B ]
-
-Phase dynamics:
-    θ̇_i = ω_i + (K/N) Σ_j sin(θ_j - θ_i) / |x_j - x_i|
-
-Model parameters:
-
-- A: spatial attraction strength
-- B: spatial repulsion strength
-- J: phase-dependent spatial modulation (-1 to 1)
-- K: phase coupling strength
-
-J > 0: phase-similar agents attract → static sync
-J < 0: phase-similar agents repel → static async
-J = 0: standard swarm + standard Kuramoto (decoupled)
-K > 0: nearby agents synchronize → phase waves
-K < 0: nearby agents desynchronize → static phase wave
-
-O'Keeffe, Hong, Strogatz, Nature Communications 2017.
-Experimental validation: Nature Communications Dec 2025 (colloidal system).
-"""
-
 from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import TWO_PI
+
 try:
     from spo_kernel import (
-        swarmalator_run_rust as _rust_swarm_run,
+        PySwarmalatorStepper as _SwarmalatorStepper,
     )
 
     _HAS_RUST = True
 except ImportError:
     _HAS_RUST = False
 
-TWO_PI = 2.0 * np.pi
+__all__ = ["SwarmalatorEngine"]
 
 
 class SwarmalatorEngine:
-    """Swarmalator dynamics in D-dimensional space.
-
-    State: positions (N, D) + phases (N,).
-    """
-
-    def __init__(
-        self,
-        n: int,
-        dim: int = 2,
-        dt: float = 0.01,
-        A: float = 1.0,
-        B: float = 1.0,
-        J: float = 0.5,
-        K: float = 1.0,
-    ) -> None:
-        self._n = n
+    def __init__(self, n_agents: int, dim: int = 2, dt: float = 0.01):
+        self._n = n_agents
         self._dim = dim
         self._dt = dt
-        self.A = A
-        self.B = B
-        self.J = J
-        self.K = K
+        if _HAS_RUST:
+            self._stepper = _SwarmalatorStepper(n_agents, dim, dt)
+        else:
+            self._stepper = None
 
     def step(
         self,
-        positions: NDArray,
+        pos: NDArray,
         phases: NDArray,
         omegas: NDArray,
+        a: float = 1.0,
+        b: float = 1.0,
+        j: float = 1.0,
+        k: float = 1.0,
     ) -> tuple[NDArray, NDArray]:
-        """Single Euler step of swarmalator dynamics.
+        if _HAS_RUST:
+            p_pos = np.ascontiguousarray(pos.ravel(), dtype=np.float64)
+            p_phases = np.ascontiguousarray(phases, dtype=np.float64)
+            p_omegas = np.ascontiguousarray(omegas, dtype=np.float64)
+            new_pos, new_phases = self._stepper.step(
+                p_pos, p_phases, p_omegas, a, b, j, k
+            )
+            return np.asarray(new_pos).reshape(self._n, self._dim), np.asarray(
+                new_phases
+            )
 
-        Args:
-            positions: (N, D) spatial positions
-            phases: (N,) oscillator phases
-            omegas: (N,) natural frequencies
+        # Python fallback (O(N^2))
+        n, dt = self._n, self._dt
+        new_pos = pos.copy()
+        new_phases = phases.copy()
+        for i in range(n):
+            diff = pos - pos[i]
+            dist = np.sqrt(np.sum(diff**2, axis=1) + 1e-6)
+            cos_diff = np.cos(phases - phases[i])
+            sin_diff = np.sin(phases - phases[i])
 
-        Returns:
-            Tuple of (new_positions, new_phases)
-        """
-        n = self._n
-        dt = self._dt
-        eps = 1e-6
+            attract = (a + j * cos_diff) / dist
+            repulse = b / (dist**3 + 1e-6)
 
-        # Pairwise displacement: delta[i,j] = x_j - x_i, shape (N, N, D)
-        delta = positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
-        # Pairwise distance: (N, N)
-        dist = np.sqrt(np.sum(delta**2, axis=2) + eps)
-        # Unit direction: (N, N, D)
-        direction = delta / dist[:, :, np.newaxis]
+            vel = np.sum(diff * (attract - repulse)[:, np.newaxis], axis=0) / n
+            new_pos[i] += dt * vel
 
-        # Phase difference: cos(θ_j - θ_i), shape (N, N)
-        phase_diff = phases[np.newaxis, :] - phases[:, np.newaxis]
-        cos_diff = np.cos(phase_diff)
-        sin_diff = np.sin(phase_diff)
+            dth = omegas[i] + k * np.mean(sin_diff / dist)
+            new_phases[i] = (phases[i] + dt * dth) % TWO_PI
 
-        # Position dynamics
-        attract = direction * (self.A + self.J * cos_diff[:, :, np.newaxis])
-        repulse = delta / (dist**3 + eps)[:, :, np.newaxis] * self.B
-        dx = np.sum(attract - repulse, axis=1) / n
-
-        # Phase dynamics: coupling weighted by 1/distance
-        inv_dist = 1.0 / dist
-        np.fill_diagonal(inv_dist, 0.0)
-        dtheta = omegas + self.K / n * np.sum(sin_diff * inv_dist, axis=1)
-
-        new_pos = positions + dt * dx
-        new_phases = (phases + dt * dtheta) % TWO_PI
         return new_pos, new_phases
 
     def run(
         self,
-        positions: NDArray,
+        pos: NDArray,
         phases: NDArray,
         omegas: NDArray,
-        n_steps: int,
+        a: float = 1.0,
+        b: float = 1.0,
+        j: float = 1.0,
+        k: float = 1.0,
+        n_steps: int = 100,
     ) -> tuple[NDArray, NDArray, NDArray, NDArray]:
-        """Run n_steps, returning final state and trajectories.
-
-        Returns:
-            (final_pos, final_phases, pos_traj, phase_traj)
-            pos_traj: (n_steps, N, D), phase_traj: (n_steps, N)
-        """
-        n, dim = self._n, self._dim
-
-        if _HAS_RUST:
-            p = np.ascontiguousarray(positions.ravel(), dtype=np.float64)
-            ph_arr = np.ascontiguousarray(phases, dtype=np.float64)
-            o = np.ascontiguousarray(omegas, dtype=np.float64)
-            fp, fph, pt, pht = _rust_swarm_run(
-                p,
-                ph_arr,
-                o,
-                n,
-                dim,
-                self._dt,
-                self.A,
-                self.B,
-                self.J,
-                self.K,
-                n_steps,
-            )
-            return (
-                np.asarray(fp).reshape(n, dim),
-                np.asarray(fph),
-                np.asarray(pt).reshape(n_steps, n, dim),
-                np.asarray(pht).reshape(n_steps, n),
-            )
-
-        pos_traj = np.empty((n_steps, n, dim))
-        phase_traj = np.empty((n_steps, n))
-
-        pos, ph = positions.copy(), phases.copy()
+        curr_pos, curr_phases = pos.copy(), phases.copy()
+        pos_traj = np.empty((n_steps, self._n, self._dim))
+        phase_traj = np.empty((n_steps, self._n))
         for i in range(n_steps):
-            pos, ph = self.step(pos, ph, omegas)
-            pos_traj[i] = pos
-            phase_traj[i] = ph
+            curr_pos, curr_phases = self.step(curr_pos, curr_phases, omegas, a, b, j, k)
+            pos_traj[i] = curr_pos
+            phase_traj[i] = curr_phases
+        return curr_pos, curr_phases, pos_traj, phase_traj
 
-        return pos, ph, pos_traj, phase_traj
-
-    def spatial_coherence(self, positions: NDArray) -> float:
-        """Mean pairwise distance (spatial compactness measure)."""
-        delta = positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
-        dists = np.sqrt(np.sum(delta**2, axis=2))
-        n = positions.shape[0]
-        mean_dist: float = float(np.sum(dists) / (n * (n - 1)))
-        return mean_dist
-
-    def phase_coherence(self, phases: NDArray) -> float:
-        """Kuramoto order parameter R."""
-        z = np.exp(1j * phases)
-        return float(np.abs(np.mean(z)))
-
-    def phase_spatial_correlation(self, positions: NDArray, phases: NDArray) -> float:
-        """Correlation between spatial distance and phase difference.
-
-        Positive = nearby agents have similar phases (phase wave).
-        Negative = nearby agents have different phases (anti-phase wave).
-        Near zero = no spatial-phase relationship (decoupled).
-        """
-        delta = positions[np.newaxis, :, :] - positions[:, np.newaxis, :]
-        dist = np.sqrt(np.sum(delta**2, axis=2))
-        phase_diff = np.abs(phases[np.newaxis, :] - phases[:, np.newaxis])
-        phase_diff = np.minimum(phase_diff, TWO_PI - phase_diff)
-
-        idx = np.triu_indices(self._n, k=1)
-        d_flat = dist[idx]
-        p_flat = phase_diff[idx]
-
-        if len(d_flat) < 2:
-            return 0.0
-
-        d_c = d_flat - np.mean(d_flat)
-        p_c = p_flat - np.mean(p_flat)
-        num = np.sum(d_c * p_c)
-        denom = np.sqrt(np.sum(d_c**2) * np.sum(p_c**2) + 1e-10)
-        return float(num / denom)
+    def order_parameter(self, phases: NDArray) -> float:
+        return float(np.abs(np.mean(np.exp(1j * phases))))

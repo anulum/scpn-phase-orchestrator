@@ -64,11 +64,10 @@ jobs:
       - name: Install (loose, non-3.12)
         if: matrix.python-version != '3.12'
         run: pip install -e ".[dev,full,plot,otel,queuewaves,nn]"
-      - run: >
+      - name: Run tests (with coverage on 3.12)
+        run: >
           pytest tests/ -v --tb=short
-          --cov=scpn_phase_orchestrator
-          --cov-report=term-missing
-          ${{ matrix.python-version == '3.12' && '--cov-report=xml:coverage-python.xml' || '' }}
+          ${{ matrix.python-version == '3.12' && '--cov=scpn_phase_orchestrator --cov-report=term-missing --cov-report=xml:coverage-python.xml' || '' }}
       - name: Upload coverage XML
         if: matrix.python-version == '3.12'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
