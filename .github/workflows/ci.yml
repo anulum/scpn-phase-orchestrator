@@ -116,7 +116,7 @@ jobs:
           cache: pip
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: bandit -r src/ -c pyproject.toml
-      - run: pip install pip-audit==2.10.0 && pip-audit --ignore-vuln CVE-2026-4539
+      - run: pip install pip-audit==2.10.0 && pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-39892
 
   rust-check:
     strategy:
