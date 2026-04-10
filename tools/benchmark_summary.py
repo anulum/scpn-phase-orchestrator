@@ -1,22 +1,23 @@
 import subprocess
 import time
-import numpy as np
-import json
-from pathlib import Path
+
 
 def run_bench(cmd):
     try:
         start = time.perf_counter()
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
+        result = subprocess.run(  # noqa: S602 — benchmark cmds are hardcoded
+            cmd, shell=True, capture_output=True, text=True, check=True
+        )
         elapsed = time.perf_counter() - start
         return result.stdout.strip(), elapsed
     except Exception as e:
         return f"Error: {e}", 0
 
+
 def main():
     print("SCPN Phase Orchestrator — Optimization Summary")
     print("=" * 50)
-    
+
     benchmarks = [
         ("UPDE (Dense, N=1000)", "python benchmarks/scaling_benchmark.py"),
         ("Sparse UPDE (N=1000, d=0.01)", "python benchmarks/sparse_benchmark.py"),
@@ -34,6 +35,7 @@ def main():
         output, _ = run_bench(f"export PYTHONPATH=$PYTHONPATH:$(pwd)/src && {cmd}")
         print(output)
         print("-" * 30)
+
 
 if __name__ == "__main__":
     main()

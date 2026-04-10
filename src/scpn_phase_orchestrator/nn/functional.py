@@ -300,7 +300,7 @@ def _simplicial_deriv(
 ) -> jax.Array:
     """Derivative for Kuramoto with pairwise + 3-body simplicial coupling.
 
-    Gambuzza et al. 2023, Nature Physics; Tang et al. 2025.
+    Gambuzza et al. 2021, Nature Communications 12:1255; Tang et al. 2025.
     """
     n = phases.shape[0]
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
@@ -578,7 +578,7 @@ def plv(trajectory: jax.Array) -> jax.Array:
 
 # --- Spectral Alignment Function (SAF) ---
 # Skardal & Taylor, SIAM J. Appl. Dyn. Syst. 2016;
-# Song et al. 2025 (arXiv:2509.18279)
+# Song et al. 2025 (arXiv:2501.18279)  # spectral alignment for Kuramoto
 
 
 def coupling_laplacian(K: jax.Array) -> jax.Array:
