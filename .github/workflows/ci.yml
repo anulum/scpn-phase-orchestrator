@@ -78,6 +78,7 @@ jobs:
         if: matrix.python-version == '3.12'
         run: |
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pip install jupyter nbconvert
           jupyter nbconvert --execute --to notebook notebooks/*.ipynb --ExecutePreprocessor.timeout=120
 
   coverage-guard:
