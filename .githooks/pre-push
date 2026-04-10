@@ -11,17 +11,17 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 echo "pre-push: running preflight..."
 
-# Activate project venv if available (Linux or Windows)
+# Resolve venv Python binary (activate may not override system python3)
 # SPO_VENV overrides auto-detection (NTFS venv per disk-space rules)
-if [ -n "${SPO_VENV:-}" ] && [ -f "$SPO_VENV/bin/activate" ]; then
-    # shellcheck disable=SC1091
-    source "$SPO_VENV/bin/activate"
-elif [ -f "$REPO_ROOT/.venv-linux/bin/activate" ]; then
-    # shellcheck disable=SC1091
-    source "$REPO_ROOT/.venv-linux/bin/activate"
-elif [ -f "$REPO_ROOT/.venv/bin/activate" ]; then
-    # shellcheck disable=SC1091
-    source "$REPO_ROOT/.venv/bin/activate"
+VENV_PYTHON=""
+if [ -n "${SPO_VENV:-}" ] && [ -x "$SPO_VENV/bin/python3" ]; then
+    VENV_PYTHON="$SPO_VENV/bin/python3"
+elif [ -x "$REPO_ROOT/.venv-linux/bin/python3" ]; then
+    VENV_PYTHON="$REPO_ROOT/.venv-linux/bin/python3"
+elif [ -x "$REPO_ROOT/.venv/bin/python3" ]; then
+    VENV_PYTHON="$REPO_ROOT/.venv/bin/python3"
+else
+    VENV_PYTHON="python3"
 fi
 
-python3 "$REPO_ROOT/tools/preflight.py"
+"$VENV_PYTHON" "$REPO_ROOT/tools/preflight.py"

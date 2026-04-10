@@ -21,6 +21,7 @@ venv/
 .pytest_cache/
 .hypothesis/
 .coverage
+.coverage.*
 coverage*.xml
 htmlcov/
 .ipynb_checkpoints/
@@ -66,3 +67,7 @@ HANDOVER_*.md
 
 # WASM binaries (built artifacts, not source)
 *.wasm
+
+# Local backups — never committed
+BACKUP/
+ARCHIVE/
