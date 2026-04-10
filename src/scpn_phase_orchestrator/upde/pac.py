@@ -57,6 +57,8 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
     # KL divergence from uniform q = 1/n_bins
     # D_KL = Σ p_k log(p_k / q_k) = Σ p_k log(p_k * n_bins)
     log_n = np.log(n_bins)
+    if log_n < 1e-15:
+        return 0.0
     kl = 0.0
     for pk in p:
         if pk > 0.0:

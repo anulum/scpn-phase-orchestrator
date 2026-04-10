@@ -40,6 +40,10 @@ class SecureModbusAdapter:
         Path to client certificate (PEM).
     tls_key_path : str | Path
         Path to client private key (PEM).
+    ca_cert_path : str | Path | None
+        Path to CA bundle (PEM) for server verification. When provided,
+        server certificate is verified against this CA. When ``None``,
+        verification is disabled (NOT recommended for production).
     """
 
     def __init__(
@@ -48,11 +52,13 @@ class SecureModbusAdapter:
         port: int,
         tls_cert_path: str | Path,
         tls_key_path: str | Path,
+        ca_cert_path: str | Path | None = None,
     ) -> None:
         self._host = host
         self._port = port
         self._cert = Path(tls_cert_path)
         self._key = Path(tls_key_path)
+        self._ca = Path(ca_cert_path) if ca_cert_path is not None else None
         self._ctx = self._build_tls_context()
         self._client = self._connect()
 
@@ -64,8 +70,13 @@ class SecureModbusAdapter:
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.load_cert_chain(certfile=str(self._cert), keyfile=str(self._key))
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
+            if self._ca is not None:
+                ctx.load_verify_locations(cafile=str(self._ca))
+                ctx.check_hostname = True
+                ctx.verify_mode = ssl.CERT_REQUIRED
+            else:
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
             return ctx
         except ssl.SSLError as exc:
             raise ConnectionError(f"TLS context creation failed: {exc}") from exc
