@@ -1,5 +1,5 @@
 {
-  "_comment": "TODO(coverage-merge): restore to 95% globally and per-domain after CI implements coverage XML merging across test + ffi-test jobs. Current values reflect coverage WITHOUT _HAS_RUST FFI branches (~641 uncovered lines). See Phase 5 in SPO TODO.",
+  "_comment": "Coverage XML merging implemented (Phase 5). Thresholds remain conservative until first green merged run establishes baseline — then raise back to 95% globally and per-domain.",
   "global_min_line_rate": 92.0,
   "domain_min_line_rate": {
     "coupling": 90.0,
