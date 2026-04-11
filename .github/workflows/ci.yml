@@ -191,7 +191,7 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
-          pytest tests/ -v --tb=short --cov=scpn_phase_orchestrator --cov-report=
+          pytest tests/ -v --tb=short --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.ffi
       - name: Upload coverage data (ffi, ubuntu only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
