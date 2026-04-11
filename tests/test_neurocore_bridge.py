@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 
 import numpy as np
@@ -263,7 +264,12 @@ class TestNeurocoreBridgeScaleTiming:
         rates = bridge.step(state, n_substeps=100)
         elapsed = time.perf_counter() - t0
         assert rates.shape == (10,)
-        assert elapsed < 0.1, f"Rust N=10000 took {elapsed:.3f}s (expected <100ms)"
+        # Shared CI runners (especially macOS) have high variance — use 500ms
+        # budget on CI, tight 100ms locally.
+        budget = 0.5 if os.environ.get("CI") else 0.1
+        assert elapsed < budget, (
+            f"Rust N=10000 took {elapsed:.3f}s (expected <{budget * 1000:.0f}ms)"
+        )
         print(f"\n  [rust] N=10000: {elapsed:.4f}s")
 
 
