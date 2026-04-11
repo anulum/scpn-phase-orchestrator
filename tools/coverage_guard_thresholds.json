@@ -1,20 +1,20 @@
 {
-  "_comment": "Coverage XML merging implemented (Phase 5). Thresholds remain conservative until first green merged run establishes baseline — then raise back to 95% globally and per-domain.",
-  "global_min_line_rate": 92.0,
+  "_comment": "Coverage XML merging (Phase 5) merged FFI + test coverage. Baseline 97.63% verified in CI run 24274613712. Restored to 95% global per ecosystem rule.",
+  "global_min_line_rate": 95.0,
   "domain_min_line_rate": {
-    "coupling": 90.0,
+    "coupling": 95.0,
     "oscillators": 95.0,
-    "upde": 87.0,
-    "monitor": 89.0,
+    "upde": 95.0,
+    "monitor": 95.0,
     "supervisor": 95.0,
     "binding": 95.0,
     "audit": 95.0,
     "imprint": 95.0,
     "actuation": 95.0,
     "drivers": 95.0,
-    "adapters": 93.0,
+    "adapters": 95.0,
     "reporting": 95.0,
-    "ssgf": 92.0,
+    "ssgf": 95.0,
     "apps": 95.0
   }
 }

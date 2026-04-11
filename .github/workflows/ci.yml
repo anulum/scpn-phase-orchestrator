@@ -67,7 +67,7 @@ jobs:
       - name: Run tests (with coverage on 3.12)
         run: >
           pytest tests/ -v --tb=short
-          ${{ matrix.python-version == '3.12' && '--cov=scpn_phase_orchestrator --cov-report=term-missing' || '' }}
+          ${{ matrix.python-version == '3.12' && '--cov=scpn_phase_orchestrator --cov-report=term-missing --cov-fail-under=0' || '' }}
       - name: Rename coverage data (test)
         if: matrix.python-version == '3.12'
         run: mv .coverage .coverage.test
