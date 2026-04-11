@@ -1,0 +1,6962 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/reference/api/upde_reduction/">
+      
+      
+        <link rel="prev" href="../upde_envelope/">
+      
+      
+        <link rel="next" href="../upde_splitting/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/anulum_logo_company.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>UPDE — Ott-Antonsen Reduction - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ott-antonsen-mean-field-reduction" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              UPDE — Ott-Antonsen Reduction
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../concepts/system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../guide/stuart_landau/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../tutorials/01_new_domain_checklist/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../galleries/domainpack_gallery/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../ASSUMPTIONS/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../papers/JOSS_DRAFT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Papers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../VALIDATION_REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../pricing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Pricing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/start_here/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here (Learning Path)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/phase_control_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/domain_utilisation_schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/kuramoto_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Differentiable Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/advanced_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/control_systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/analysis_toolkit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Toolkit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/hardware_deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/digital_twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital Twin Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/notebook_to_production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook → Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/interactive_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../video_scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Video Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/04_differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Differentiable Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_simplicial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Simplicial (3-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_hypergraph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Hypergraph (k-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_geometric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Geometric (SO(2))
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_envelope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Envelope (RMS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-mathematical-formalism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Mathematical Formalism
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Mathematical Formalism">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-ott-antonsen-ansatz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Ott-Antonsen Ansatz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decomposition-of-the-ode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decomposition of the ODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#steady-state-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steady-State Solution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#critical-coupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Coupling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Method
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-theoretical-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Theoretical Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Theoretical Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-mean-field-reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Mean-Field Reduction?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#domain-of-validity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain of Validity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#historical-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Historical Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applications-in-spo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applications in SPO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lorentzian-fitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lorentzian Fitting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-pipeline-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Pipeline Position
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Pipeline Position">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input Contracts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Features
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-predict-r-for-given-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic: Predict R for Given Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast-diagnostic-from-oscillator-frequencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast Diagnostic from Oscillator Frequencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameter-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameter Sweep
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-against-full-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Against Full Simulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-technical-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Technical Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Technical Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-ottantonsenreduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: OttAntonsenReduction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="reduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OttAntonsenReduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OttAntonsenReduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.K_c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        K_c
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.steady_state_R" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        steady_state_R
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.predict_from_oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        predict_from_oscillators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-oastate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: OAState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rust-engine-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rust Engine Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-select-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Select Logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-performance-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Performance Benchmarks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Performance Benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-38-96x-speedup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why 38-96x Speedup?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-citations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Citations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases and Limitations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edge Cases and Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#z0-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        |z₀| ≥ 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#0-identical-oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Δ = 0 (Identical Oscillators)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-lorentzian-distributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Lorentzian Distributions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numerical-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Numerical Stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finite-n-corrections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finite-\(N\) Corrections
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derivation-of-the-ott-antonsen-ansatz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derivation of the Ott-Antonsen Ansatz
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Derivation of the Ott-Antonsen Ansatz">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-continuity-equation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Continuity Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-fourier-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Fourier Expansion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-the-ansatz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: The Ansatz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-lorentzian-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Lorentzian Closure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rust-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rust Implementation Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rust Implementation Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#oa_deriv-inner-loop-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oa_deriv — Inner Loop Kernel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fit_lorentzian-robust-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fit_lorentzian — Robust Estimation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffi-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FFI Transfer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue-r-does-not-converge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: R Does Not Converge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-predict_from_oscillators-returns-r-0-for-clearly-coupled-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: predict_from_oscillators Returns R ≈ 0 for Clearly Coupled System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-r_ss-0-despite-supercritical-k" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: R_ss = 0 Despite Supercritical K
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-mismatch-between-oa-and-full-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: Mismatch Between OA and Full Simulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-other-spo-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with Other SPO Modules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration with Other SPO Modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#with-updeengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With UPDEEngine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-ssgf-costs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With SSGF Costs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-regimemanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With RegimeManager
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_splitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Strang Splitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_te_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — TE Adaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_prior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Universal Prior
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_connectome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — HCP Connectome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_sleep_staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Sleep Staging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_evs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — EVS (Entrainment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_carrier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Geometry Carrier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_ethical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Ethical Cost (C15)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_23" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_23" id="__nav_7_23_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_23_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_23">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autotune
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_sindy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase-SINDy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_coupling_est/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_phase_extract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Extraction (Hilbert)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_freq_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequency Identification (DMD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neural Network (nn)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_physics_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Physics Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../end_to_end_wiring_audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Wiring Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../competitive_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../competitive_comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What SPO Does That No One Else Can
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Papers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/JOSS_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JOSS: Phase Dynamics Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/DUAL_R_PH1_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual R+p_h1 Consciousness Criterion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/SSGF_IDENTITY_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF Sextuple Identity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/SAFETY_CERT_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Certification Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/FEP_CORRESPONDENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FEP Correspondence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_STUDY_PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clinical Study Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../pricing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pricing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-mathematical-formalism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Mathematical Formalism
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Mathematical Formalism">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-ott-antonsen-ansatz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Ott-Antonsen Ansatz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decomposition-of-the-ode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decomposition of the ODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#steady-state-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steady-State Solution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#critical-coupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Coupling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Method
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-theoretical-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Theoretical Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Theoretical Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-mean-field-reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Mean-Field Reduction?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#domain-of-validity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain of Validity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#historical-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Historical Context
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applications-in-spo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applications in SPO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lorentzian-fitting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lorentzian Fitting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-pipeline-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Pipeline Position
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Pipeline Position">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input Contracts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Features
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-predict-r-for-given-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic: Predict R for Given Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast-diagnostic-from-oscillator-frequencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fast Diagnostic from Oscillator Frequencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameter-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameter Sweep
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-against-full-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Against Full Simulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-technical-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Technical Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Technical Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#class-ottantonsenreduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Class: OttAntonsenReduction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="reduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OttAntonsenReduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OttAntonsenReduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.K_c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        K_c
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.steady_state_R" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        steady_state_R
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.predict_from_oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        predict_from_oscillators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataclass-oastate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataclass: OAState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rust-engine-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rust Engine Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-select-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Select Logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-performance-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Performance Benchmarks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Performance Benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-38-96x-speedup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why 38-96x Speedup?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-citations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Citations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#edge-cases-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases and Limitations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Edge Cases and Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#z0-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        |z₀| ≥ 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#0-identical-oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Δ = 0 (Identical Oscillators)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-lorentzian-distributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Lorentzian Distributions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numerical-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Numerical Stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finite-n-corrections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finite-\(N\) Corrections
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#derivation-of-the-ott-antonsen-ansatz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Derivation of the Ott-Antonsen Ansatz
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Derivation of the Ott-Antonsen Ansatz">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-continuity-equation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Continuity Equation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-fourier-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Fourier Expansion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-the-ansatz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: The Ansatz
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-lorentzian-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Lorentzian Closure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rust-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rust Implementation Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rust Implementation Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#oa_deriv-inner-loop-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oa_deriv — Inner Loop Kernel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fit_lorentzian-robust-estimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fit_lorentzian — Robust Estimation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffi-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FFI Transfer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue-r-does-not-converge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: R Does Not Converge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-predict_from_oscillators-returns-r-0-for-clearly-coupled-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: predict_from_oscillators Returns R ≈ 0 for Clearly Coupled System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-r_ss-0-despite-supercritical-k" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: R_ss = 0 Despite Supercritical K
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-mismatch-between-oa-and-full-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: Mismatch Between OA and Full Simulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-other-spo-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with Other SPO Modules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration with Other SPO Modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#with-updeengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With UPDEEngine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-ssgf-costs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With SSGF Costs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-regimemanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With RegimeManager
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ott-antonsen-mean-field-reduction">Ott-Antonsen Mean-Field Reduction<a class="headerlink" href="#ott-antonsen-mean-field-reduction" title="Permanent link">&para;</a></h1>
+<h2 id="1-mathematical-formalism">1. Mathematical Formalism<a class="headerlink" href="#1-mathematical-formalism" title="Permanent link">&para;</a></h2>
+<h3 id="the-ott-antonsen-ansatz">The Ott-Antonsen Ansatz<a class="headerlink" href="#the-ott-antonsen-ansatz" title="Permanent link">&para;</a></h3>
+<p>For an infinite population of globally coupled Kuramoto oscillators
+with Lorentzian (Cauchy) natural frequency distribution:</p>
+<div class="arithmatex">\[g(\omega) = \frac{\Delta / \pi}{(\omega - \omega_0)^2 + \Delta^2}\]</div>
+<p>where <span class="arithmatex">\(\omega_0\)</span> is the centre frequency and <span class="arithmatex">\(\Delta\)</span> is the half-width
+at half-maximum, the exact low-dimensional dynamics of the Kuramoto
+order parameter <span class="arithmatex">\(z = R e^{i\psi}\)</span> are given by:</p>
+<div class="arithmatex">\[\frac{dz}{dt} = -(\Delta + i\omega_0)\,z + \frac{K}{2}\left(z - |z|^2 z\right)\]</div>
+<p>This is the <strong>Ott-Antonsen reduction</strong> — a single complex ODE that
+captures the exact macroscopic dynamics of the infinite-<span class="arithmatex">\(N\)</span> Kuramoto
+model.</p>
+<h3 id="decomposition-of-the-ode">Decomposition of the ODE<a class="headerlink" href="#decomposition-of-the-ode" title="Permanent link">&para;</a></h3>
+<p>Separating real and imaginary parts <span class="arithmatex">\(z = x + iy\)</span>:</p>
+<div class="arithmatex">\[\dot{x} = -\Delta x + \omega_0 y + \frac{K}{2}(1 - x^2 - y^2)\,x\]</div>
+<div class="arithmatex">\[\dot{y} = -\Delta y - \omega_0 x + \frac{K}{2}(1 - x^2 - y^2)\,y\]</div>
+<p>The three terms have clear physical meanings:
+1. <strong><span class="arithmatex">\(-\Delta z\)</span></strong>: Damping from frequency spread (wider distribution → faster decay)
+2. <strong><span class="arithmatex">\(-i\omega_0 z\)</span></strong>: Rotation at the mean frequency
+3. <strong><span class="arithmatex">\(\frac{K}{2}(z - |z|^2 z)\)</span></strong>: Cubic self-coupling from the Lorentzian
+   closure (Ott &amp; Antonsen 2008, Eq. 9)</p>
+<h3 id="steady-state-solution">Steady-State Solution<a class="headerlink" href="#steady-state-solution" title="Permanent link">&para;</a></h3>
+<p>Setting <span class="arithmatex">\(\dot{R} = 0\)</span> in the polar representation:</p>
+<div class="arithmatex">\[R_{ss} = \begin{cases} 0 &amp; \text{if } K \leq K_c = 2\Delta \\ \sqrt{1 - \frac{2\Delta}{K}} &amp; \text{if } K &gt; K_c \end{cases}\]</div>
+<p>This is exact for the Lorentzian distribution. The transition at <span class="arithmatex">\(K_c = 2\Delta\)</span>
+is continuous (second-order), with the universal Kuramoto scaling
+<span class="arithmatex">\(R \propto \sqrt{K - K_c}\)</span> near the transition.</p>
+<h3 id="critical-coupling">Critical Coupling<a class="headerlink" href="#critical-coupling" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[K_c = 2\Delta\]</div>
+<p>This is the <strong>Dörfler-Bullo criterion</strong> for globally coupled oscillators
+with Lorentzian spread. Larger frequency spread (larger <span class="arithmatex">\(\Delta\)</span>)
+requires stronger coupling to achieve synchronisation.</p>
+<h3 id="integration-method">Integration Method<a class="headerlink" href="#integration-method" title="Permanent link">&para;</a></h3>
+<p>RK4 (Runge-Kutta 4th order) on the complex ODE:</p>
+<div class="arithmatex">\[z_{n+1} = z_n + \frac{\Delta t}{6}(k_1 + 2k_2 + 2k_3 + k_4)\]</div>
+<p>where <span class="arithmatex">\(k_i\)</span> are the standard RK4 stages applied to <span class="arithmatex">\(f(z) = -(\Delta + i\omega_0)z + \frac{K}{2}(z - |z|^2 z)\)</span>.</p>
+<hr />
+<h2 id="2-theoretical-context">2. Theoretical Context<a class="headerlink" href="#2-theoretical-context" title="Permanent link">&para;</a></h2>
+<h3 id="why-mean-field-reduction">Why Mean-Field Reduction?<a class="headerlink" href="#why-mean-field-reduction" title="Permanent link">&para;</a></h3>
+<p>Simulating <span class="arithmatex">\(N\)</span> oscillators costs <span class="arithmatex">\(O(N^2)\)</span> per step (all-to-all coupling).
+For <span class="arithmatex">\(N = 10{,}000\)</span> with 1000 steps, that is <span class="arithmatex">\(10^{11}\)</span> operations. The
+Ott-Antonsen reduction replaces this with a <strong>single complex ODE</strong> —
+constant cost per step, independent of <span class="arithmatex">\(N\)</span>.</p>
+<p>This is not an approximation: for Lorentzian <span class="arithmatex">\(g(\omega)\)</span> and <span class="arithmatex">\(N \to \infty\)</span>,
+the reduction is <strong>exact</strong>. For finite <span class="arithmatex">\(N\)</span>, it provides a mean-field
+prediction that converges as <span class="arithmatex">\(1/\sqrt{N}\)</span>.</p>
+<h3 id="domain-of-validity">Domain of Validity<a class="headerlink" href="#domain-of-validity" title="Permanent link">&para;</a></h3>
+<p>The Ott-Antonsen ansatz applies when:
+1. <strong>Coupling is global</strong> (all-to-all): <span class="arithmatex">\(K_{ij} = K/N\)</span> for all <span class="arithmatex">\(i, j\)</span>
+2. <strong>Frequency distribution is Lorentzian</strong> (or can be well approximated)
+3. <strong>No noise</strong> (deterministic dynamics)
+4. <strong>No phase frustration</strong> (<span class="arithmatex">\(\alpha_{ij} = 0\)</span>)</p>
+<p>For non-Lorentzian distributions, the ansatz is no longer exact but
+remains a useful approximation. For Gaussian <span class="arithmatex">\(g(\omega)\)</span>, the error
+is typically <span class="arithmatex">\(&lt; 5\%\)</span> in <span class="arithmatex">\(R_{ss}\)</span> for moderate coupling.</p>
+<h3 id="historical-context">Historical Context<a class="headerlink" href="#historical-context" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Kuramoto (1975):</strong> Original model, heuristic self-consistency for <span class="arithmatex">\(R\)</span></li>
+<li><strong>Strogatz (2000):</strong> Mean-field theory for finite <span class="arithmatex">\(N\)</span></li>
+<li><strong>Ott &amp; Antonsen (2008):</strong> Exact low-dimensional reduction for Lorentzian <span class="arithmatex">\(g(\omega)\)</span></li>
+<li><strong>Ott &amp; Antonsen (2009):</strong> Extension to multivariate coupling</li>
+<li><strong>Marvel, Mirollo &amp; Strogatz (2009):</strong> Identified the OA manifold as
+  the Möbius group (Watanabe-Strogatz theory)</li>
+<li><strong>Pikovsky &amp; Rosenblum (2008):</strong> Analogous reduction via circular
+  cumulants</li>
+</ul>
+<p>The Ott-Antonsen result is considered one of the most significant
+theoretical advances in coupled oscillator theory since Kuramoto's
+original work.</p>
+<h3 id="applications-in-spo">Applications in SPO<a class="headerlink" href="#applications-in-spo" title="Permanent link">&para;</a></h3>
+<p>The <code>OttAntonsenReduction</code> serves as a <strong>fast diagnostic</strong>:
+- Before running expensive N-oscillator simulations, predict whether
+  the given <span class="arithmatex">\((K, \Delta)\)</span> will produce synchronisation
+- Estimate the steady-state <span class="arithmatex">\(R\)</span> for parameter sweeps in seconds rather
+  than hours
+- Validate N-oscillator results against the exact mean-field solution
+- Provide initial conditions for the full simulation (seed phases near
+  the predicted <span class="arithmatex">\(R_{ss}\)</span>)</p>
+<h3 id="lorentzian-fitting">Lorentzian Fitting<a class="headerlink" href="#lorentzian-fitting" title="Permanent link">&para;</a></h3>
+<p>The <code>predict_from_oscillators()</code> method automatically estimates
+<span class="arithmatex">\((\omega_0, \Delta)\)</span> from a set of measured frequencies:
+- <span class="arithmatex">\(\omega_0 = \text{median}(\omega)\)</span> (robust central tendency)
+- <span class="arithmatex">\(\Delta = \text{IQR}(\omega) / 2\)</span> (the IQR of a Lorentzian equals <span class="arithmatex">\(2\Delta\)</span>)</p>
+<p>This enables one-call diagnostics: pass frequencies, get predicted <span class="arithmatex">\(R\)</span>.</p>
+<hr />
+<h2 id="3-pipeline-position">3. Pipeline Position<a class="headerlink" href="#3-pipeline-position" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Oscillators.extract() ──→ ω₁, ω₂, ..., ωₙ
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                                │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                                ↓
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>     ┌── OttAntonsenReduction(ω₀, Δ, K, dt) ──┐
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>     │                                          │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>     │  Input:  z₀ (seed), n_steps             │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>     │  Param:  ω₀, Δ (from g(ω)), K, dt      │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>     │  Method: RK4 on complex ODE (Rust/Py)   │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>     │  Output: OAState(z, R, ψ, K_c)          │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>     │                                          │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>     │  OR: predict_from_oscillators(ω, K)      │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>     │      → fit Lorentzian → run → OAState    │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>     │                                          │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>     └──────────────────────────────────────────┘
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                                │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                                ↓
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>              R_predicted vs R_measured (from UPDEEngine)
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>              → validation / parameter guidance
+</code></pre></div>
+<h3 id="input-contracts">Input Contracts<a class="headerlink" href="#input-contracts" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Range</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>omega_0</code></td>
+<td><code>float</code></td>
+<td>any</td>
+<td>Median of natural frequencies</td>
+</tr>
+<tr>
+<td><code>delta</code></td>
+<td><code>float</code></td>
+<td><span class="arithmatex">\(\geq 0\)</span></td>
+<td>Half-width of Lorentzian fit</td>
+</tr>
+<tr>
+<td><code>K</code></td>
+<td><code>float</code></td>
+<td><span class="arithmatex">\(\geq 0\)</span></td>
+<td>Coupling strength</td>
+</tr>
+<tr>
+<td><code>dt</code></td>
+<td><code>float</code></td>
+<td><span class="arithmatex">\(&gt; 0\)</span></td>
+<td>Integration time step (default 0.01)</td>
+</tr>
+<tr>
+<td><code>z0</code></td>
+<td><code>complex</code></td>
+<td>$</td>
+<td>z_0</td>
+</tr>
+<tr>
+<td><code>n_steps</code></td>
+<td><code>int</code></td>
+<td><span class="arithmatex">\(\geq 0\)</span></td>
+<td>Number of RK4 steps</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output-contract">Output Contract<a class="headerlink" href="#output-contract" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Range</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>z</code></td>
+<td><code>complex</code></td>
+<td>$</td>
+<td>z</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td><code>float</code></td>
+<td><span class="arithmatex">\([0, 1]\)</span></td>
+<td>$</td>
+</tr>
+<tr>
+<td><code>psi</code></td>
+<td><code>float</code></td>
+<td><span class="arithmatex">\((-\pi, \pi]\)</span></td>
+<td><span class="arithmatex">\(\arg(z)\)</span>, mean phase</td>
+</tr>
+<tr>
+<td><code>K_c</code></td>
+<td><code>float</code></td>
+<td><span class="arithmatex">\(\geq 0\)</span></td>
+<td>Critical coupling <span class="arithmatex">\(2\Delta\)</span></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-features">4. Features<a class="headerlink" href="#4-features" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Exact reduction</strong> for Lorentzian <span class="arithmatex">\(g(\omega)\)</span> — not an approximation</li>
+<li><strong>RK4 integration</strong> — 4th-order accurate on the complex ODE</li>
+<li><strong>Rust FFI acceleration</strong> — 38-96x speedup over Python loop</li>
+<li><strong>Analytical steady-state</strong> — <code>steady_state_R()</code> returns exact <span class="arithmatex">\(R_{ss}\)</span></li>
+<li><strong>Automatic Lorentzian fitting</strong> — <code>predict_from_oscillators()</code> fits
+  <span class="arithmatex">\((\omega_0, \Delta)\)</span> from measured frequencies</li>
+<li><strong>Critical coupling</strong> — <code>K_c</code> property returns <span class="arithmatex">\(2\Delta\)</span></li>
+<li><strong>Single-step and batch</strong> — <code>step()</code> for interactive, <code>run()</code> for batch</li>
+<li><strong>Immutable state</strong> — returns <code>OAState</code> dataclass, engine is reusable</li>
+</ul>
+<hr />
+<h2 id="5-usage-examples">5. Usage Examples<a class="headerlink" href="#5-usage-examples" title="Permanent link">&para;</a></h2>
+<h3 id="basic-predict-r-for-given-parameters">Basic: Predict R for Given Parameters<a class="headerlink" href="#basic-predict-r-for-given-parameters" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.reduction</span><span class="w"> </span><span class="kn">import</span> <span class="n">OttAntonsenReduction</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">oa</span> <span class="o">=</span> <span class="n">OttAntonsenReduction</span><span class="p">(</span><span class="n">omega_0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;K_c = </span><span class="si">{</span><span class="n">oa</span><span class="o">.</span><span class="n">K_c</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>           <span class="c1"># 1.0</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;R_ss = </span><span class="si">{</span><span class="n">oa</span><span class="o">.</span><span class="n">steady_state_R</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># sqrt(1 - 2*0.5/3.0) = 0.8165</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">state</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">z0</span><span class="o">=</span><span class="nb">complex</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;R (numerical) = </span><span class="si">{</span><span class="n">state</span><span class="o">.</span><span class="n">R</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># Should match R_ss</span>
+</code></pre></div>
+<h3 id="fast-diagnostic-from-oscillator-frequencies">Fast Diagnostic from Oscillator Frequencies<a class="headerlink" href="#fast-diagnostic-from-oscillator-frequencies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.reduction</span><span class="w"> </span><span class="kn">import</span> <span class="n">OttAntonsenReduction</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Given N oscillator frequencies (e.g. from EEG channels)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">omegas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">standard_cauchy</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.3</span> <span class="o">+</span> <span class="mf">1.0</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">oa</span> <span class="o">=</span> <span class="n">OttAntonsenReduction</span><span class="p">(</span><span class="n">omega_0</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">prediction</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">predict_from_oscillators</span><span class="p">(</span><span class="n">omegas</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Predicted R = </span><span class="si">{</span><span class="n">prediction</span><span class="o">.</span><span class="n">R</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;K_c = </span><span class="si">{</span><span class="n">prediction</span><span class="o">.</span><span class="n">K_c</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Supercritical: </span><span class="si">{</span><span class="mf">2.0</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">prediction</span><span class="o">.</span><span class="n">K_c</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="parameter-sweep">Parameter Sweep<a class="headerlink" href="#parameter-sweep" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.reduction</span><span class="w"> </span><span class="kn">import</span> <span class="n">OttAntonsenReduction</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">delta</span> <span class="o">=</span> <span class="mf">0.5</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">K_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">for</span> <span class="n">K</span> <span class="ow">in</span> <span class="n">K_values</span><span class="p">:</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">oa</span> <span class="o">=</span> <span class="n">OttAntonsenReduction</span><span class="p">(</span><span class="n">omega_0</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">R_analytical</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">steady_state_R</span><span class="p">()</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">state</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="nb">complex</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="mi">3000</span><span class="p">)</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;K=</span><span class="si">{</span><span class="n">K</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">: R_analytical=</span><span class="si">{</span><span class="n">R_analytical</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, R_numerical=</span><span class="si">{</span><span class="n">state</span><span class="o">.</span><span class="n">R</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="validation-against-full-simulation">Validation Against Full Simulation<a class="headerlink" href="#validation-against-full-simulation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.reduction</span><span class="w"> </span><span class="kn">import</span> <span class="n">OttAntonsenReduction</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPDEEngine</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.order_params</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_order_parameter</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">N</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">K</span> <span class="o">=</span> <span class="mf">3.0</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">delta</span> <span class="o">=</span> <span class="mf">0.5</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1"># OA prediction (milliseconds)</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="n">oa</span> <span class="o">=</span> <span class="n">OttAntonsenReduction</span><span class="p">(</span><span class="n">omega_0</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">R_oa</span> <span class="o">=</span> <span class="n">oa</span><span class="o">.</span><span class="n">steady_state_R</span><span class="p">()</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="c1"># Full simulation (seconds)</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="n">omegas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">standard_cauchy</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">delta</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="n">knm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">K</span> <span class="o">/</span> <span class="n">N</span><span class="p">);</span> <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">knm</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">phases</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">UPDEEngine</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5000</span><span class="p">):</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>    <span class="n">phases</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">phases</span><span class="p">,</span> <span class="n">omegas</span><span class="p">,</span> <span class="n">knm</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">)))</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="n">R_sim</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">compute_order_parameter</span><span class="p">(</span><span class="n">phases</span><span class="p">)</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;OA prediction: R = </span><span class="si">{</span><span class="n">R_oa</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Full sim (N=</span><span class="si">{</span><span class="n">N</span><span class="si">}</span><span class="s2">): R = </span><span class="si">{</span><span class="n">R_sim</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="c1"># Error: typically &lt; 0.05 for N &gt;= 100</span>
+</code></pre></div>
+<hr />
+<h2 id="6-technical-reference">6. Technical Reference<a class="headerlink" href="#6-technical-reference" title="Permanent link">&para;</a></h2>
+<h3 id="class-ottantonsenreduction">Class: OttAntonsenReduction<a class="headerlink" href="#class-ottantonsenreduction" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="scpn_phase_orchestrator.upde.reduction" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">reduction</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.reduction" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<h3 id="scpn_phase_orchestrator.upde.reduction-classes">Classes<a href="#scpn_phase_orchestrator.upde.reduction-classes" class="headerlink" title="Permanent link">&para;</a></h3>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">OttAntonsenReduction</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">OttAntonsenReduction</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">omega_0</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">K</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Ott-Antonsen mean-field reduction for globally-coupled Kuramoto.</p>
+<p>dz/dt = -(Δ + iω₀)z + (K/2)(z - |z|²z)</p>
+<p>Exact for Lorentzian g(ω) with half-width Δ, center ω₀.
+Critical coupling K_c = 2Δ.
+Steady-state: R_ss = √(1 - 2Δ/K) for K &gt; K_c.</p>
+<p>Ott &amp; Antonsen 2008, Chaos 18(3):037113.</p>
+
+
+
+
+
+
+
+
+                  <details class="mkdocstrings-source">
+                    <summary>Source code in <code>src/scpn_phase_orchestrator/upde/reduction.py</code></summary>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-53">53</a></span>
+<span class="normal"><a href="#__codelineno-0-54">54</a></span>
+<span class="normal"><a href="#__codelineno-0-55">55</a></span>
+<span class="normal"><a href="#__codelineno-0-56">56</a></span>
+<span class="normal"><a href="#__codelineno-0-57">57</a></span>
+<span class="normal"><a href="#__codelineno-0-58">58</a></span>
+<span class="normal"><a href="#__codelineno-0-59">59</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-53" name="__codelineno-0-53"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">omega_0</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">K</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">):</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54"></a>    <span class="k">if</span> <span class="n">delta</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-55" name="__codelineno-0-55"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;delta (half-width) must be non-negative, got </span><span class="si">{</span><span class="n">delta</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-56" name="__codelineno-0-56"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_omega_0</span> <span class="o">=</span> <span class="n">omega_0</span>
+<a id="__codelineno-0-57" name="__codelineno-0-57"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_delta</span> <span class="o">=</span> <span class="n">delta</span>
+<a id="__codelineno-0-58" name="__codelineno-0-58"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_K</span> <span class="o">=</span> <span class="n">K</span>
+<a id="__codelineno-0-59" name="__codelineno-0-59"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span> <span class="o">=</span> <span class="n">dt</span>
+</code></pre></div></td></tr></table></div>
+                  </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+<h5 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-attributes">Attributes<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-attributes" class="headerlink" title="Permanent link">&para;</a></h5>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h6 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.K_c" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">K_c</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.K_c" class="headerlink" title="Permanent link">&para;</a></h6>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">K_c</span><span class="p">:</span> <span class="nb">float</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Critical coupling: K_c = 2Δ.</p>
+
+    </div>
+
+</div>
+
+
+<h5 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-functions">Functions<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction-functions" class="headerlink" title="Permanent link">&para;</a></h5>
+
+<div class="doc doc-object doc-function">
+
+
+<h6 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.steady_state_R" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">steady_state_R</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.steady_state_R" class="headerlink" title="Permanent link">&para;</a></h6>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">steady_state_R</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Analytical steady-state order parameter R_ss = √(1 - 2Δ/K).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/upde/reduction.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-66">66</a></span>
+<span class="normal"><a href="#__codelineno-0-67">67</a></span>
+<span class="normal"><a href="#__codelineno-0-68">68</a></span>
+<span class="normal"><a href="#__codelineno-0-69">69</a></span>
+<span class="normal"><a href="#__codelineno-0-70">70</a></span>
+<span class="normal"><a href="#__codelineno-0-71">71</a></span>
+<span class="normal"><a href="#__codelineno-0-72">72</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-66" name="__codelineno-0-66"></a><span class="k">def</span><span class="w"> </span><span class="nf">steady_state_R</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-0-67" name="__codelineno-0-67"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Analytical steady-state order parameter R_ss = √(1 - 2Δ/K).&quot;&quot;&quot;</span>
+<a id="__codelineno-0-68" name="__codelineno-0-68"></a>    <span class="k">if</span> <span class="n">_HAS_RUST</span><span class="p">:</span>
+<a id="__codelineno-0-69" name="__codelineno-0-69"></a>        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">_rust_steady_state_r</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_delta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">))</span>
+<a id="__codelineno-0-70" name="__codelineno-0-70"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_c</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">:</span>
+<a id="__codelineno-0-71" name="__codelineno-0-71"></a>        <span class="k">return</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-72" name="__codelineno-0-72"></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delta</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h6 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.step" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">step</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.step" class="headerlink" title="Permanent link">&para;</a></h6>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">step</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="nb">complex</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">complex</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>RK4 integration of dz/dt = -(Δ+iω₀)z + (K/2)(z-|z|²z).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/upde/reduction.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-74">74</a></span>
+<span class="normal"><a href="#__codelineno-0-75">75</a></span>
+<span class="normal"><a href="#__codelineno-0-76">76</a></span>
+<span class="normal"><a href="#__codelineno-0-77">77</a></span>
+<span class="normal"><a href="#__codelineno-0-78">78</a></span>
+<span class="normal"><a href="#__codelineno-0-79">79</a></span>
+<span class="normal"><a href="#__codelineno-0-80">80</a></span>
+<span class="normal"><a href="#__codelineno-0-81">81</a></span>
+<span class="normal"><a href="#__codelineno-0-82">82</a></span>
+<span class="normal"><a href="#__codelineno-0-83">83</a></span>
+<span class="normal"><a href="#__codelineno-0-84">84</a></span>
+<span class="normal"><a href="#__codelineno-0-85">85</a></span>
+<span class="normal"><a href="#__codelineno-0-86">86</a></span>
+<span class="normal"><a href="#__codelineno-0-87">87</a></span>
+<span class="normal"><a href="#__codelineno-0-88">88</a></span>
+<span class="normal"><a href="#__codelineno-0-89">89</a></span>
+<span class="normal"><a href="#__codelineno-0-90">90</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-74" name="__codelineno-0-74"></a><span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="nb">complex</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">complex</span><span class="p">:</span>
+<a id="__codelineno-0-75" name="__codelineno-0-75"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;RK4 integration of dz/dt = -(Δ+iω₀)z + (K/2)(z-|z|²z).&quot;&quot;&quot;</span>
+<a id="__codelineno-0-76" name="__codelineno-0-76"></a>    <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span>
+<a id="__codelineno-0-77" name="__codelineno-0-77"></a>
+<a id="__codelineno-0-78" name="__codelineno-0-78"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">zz</span><span class="p">:</span> <span class="nb">complex</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">complex</span><span class="p">:</span>
+<a id="__codelineno-0-79" name="__codelineno-0-79"></a>        <span class="c1"># OA manifold ODE: -(Δ+iω₀)z damps/rotates the mean field;</span>
+<a id="__codelineno-0-80" name="__codelineno-0-80"></a>        <span class="c1"># (K/2)(z - |z|²z) is the cubic self-coupling from the</span>
+<a id="__codelineno-0-81" name="__codelineno-0-81"></a>        <span class="c1"># Lorentzian g(ω) closure (Ott &amp; Antonsen 2008, Eq. 9)</span>
+<a id="__codelineno-0-82" name="__codelineno-0-82"></a>        <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_delta</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_omega_0</span><span class="p">)</span> <span class="o">*</span> <span class="n">zz</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83"></a>            <span class="n">zz</span> <span class="o">-</span> <span class="nb">abs</span><span class="p">(</span><span class="n">zz</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">zz</span>
+<a id="__codelineno-0-84" name="__codelineno-0-84"></a>        <span class="p">)</span>
+<a id="__codelineno-0-85" name="__codelineno-0-85"></a>
+<a id="__codelineno-0-86" name="__codelineno-0-86"></a>    <span class="n">k1</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+<a id="__codelineno-0-87" name="__codelineno-0-87"></a>    <span class="n">k2</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">z</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">k1</span><span class="p">)</span>
+<a id="__codelineno-0-88" name="__codelineno-0-88"></a>    <span class="n">k3</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">z</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">k2</span><span class="p">)</span>
+<a id="__codelineno-0-89" name="__codelineno-0-89"></a>    <span class="n">k4</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">z</span> <span class="o">+</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">k3</span><span class="p">)</span>
+<a id="__codelineno-0-90" name="__codelineno-0-90"></a>    <span class="k">return</span> <span class="n">z</span> <span class="o">+</span> <span class="p">(</span><span class="n">dt</span> <span class="o">/</span> <span class="mf">6.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">k2</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">k3</span> <span class="o">+</span> <span class="n">k4</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h6 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.run" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">run</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.run" class="headerlink" title="Permanent link">&para;</a></h6>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">run</span><span class="p">(</span><span class="n">z0</span><span class="p">:</span> <span class="nb">complex</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OAState</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Integrate n_steps, return final state.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/upde/reduction.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-92"> 92</a></span>
+<span class="normal"><a href="#__codelineno-0-93"> 93</a></span>
+<span class="normal"><a href="#__codelineno-0-94"> 94</a></span>
+<span class="normal"><a href="#__codelineno-0-95"> 95</a></span>
+<span class="normal"><a href="#__codelineno-0-96"> 96</a></span>
+<span class="normal"><a href="#__codelineno-0-97"> 97</a></span>
+<span class="normal"><a href="#__codelineno-0-98"> 98</a></span>
+<span class="normal"><a href="#__codelineno-0-99"> 99</a></span>
+<span class="normal"><a href="#__codelineno-0-100">100</a></span>
+<span class="normal"><a href="#__codelineno-0-101">101</a></span>
+<span class="normal"><a href="#__codelineno-0-102">102</a></span>
+<span class="normal"><a href="#__codelineno-0-103">103</a></span>
+<span class="normal"><a href="#__codelineno-0-104">104</a></span>
+<span class="normal"><a href="#__codelineno-0-105">105</a></span>
+<span class="normal"><a href="#__codelineno-0-106">106</a></span>
+<span class="normal"><a href="#__codelineno-0-107">107</a></span>
+<span class="normal"><a href="#__codelineno-0-108">108</a></span>
+<span class="normal"><a href="#__codelineno-0-109">109</a></span>
+<span class="normal"><a href="#__codelineno-0-110">110</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-92" name="__codelineno-0-92"></a><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z0</span><span class="p">:</span> <span class="nb">complex</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OAState</span><span class="p">:</span>
+<a id="__codelineno-0-93" name="__codelineno-0-93"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Integrate n_steps, return final state.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="k">if</span> <span class="n">_HAS_RUST</span><span class="p">:</span>
+<a id="__codelineno-0-95" name="__codelineno-0-95"></a>        <span class="n">z_re</span><span class="p">,</span> <span class="n">z_im</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">psi</span> <span class="o">=</span> <span class="n">_rust_oa_run</span><span class="p">(</span>
+<a id="__codelineno-0-96" name="__codelineno-0-96"></a>            <span class="n">z0</span><span class="o">.</span><span class="n">real</span><span class="p">,</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97"></a>            <span class="n">z0</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span>
+<a id="__codelineno-0-98" name="__codelineno-0-98"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_omega_0</span><span class="p">,</span>
+<a id="__codelineno-0-99" name="__codelineno-0-99"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_delta</span><span class="p">,</span>
+<a id="__codelineno-0-100" name="__codelineno-0-100"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">,</span>
+<a id="__codelineno-0-101" name="__codelineno-0-101"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span><span class="p">,</span>
+<a id="__codelineno-0-102" name="__codelineno-0-102"></a>            <span class="n">n_steps</span><span class="p">,</span>
+<a id="__codelineno-0-103" name="__codelineno-0-103"></a>        <span class="p">)</span>
+<a id="__codelineno-0-104" name="__codelineno-0-104"></a>        <span class="k">return</span> <span class="n">OAState</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="nb">complex</span><span class="p">(</span><span class="n">z_re</span><span class="p">,</span> <span class="n">z_im</span><span class="p">),</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">psi</span><span class="o">=</span><span class="n">psi</span><span class="p">,</span> <span class="n">K_c</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">K_c</span><span class="p">)</span>
+<a id="__codelineno-0-105" name="__codelineno-0-105"></a>    <span class="n">z</span> <span class="o">=</span> <span class="n">z0</span>
+<a id="__codelineno-0-106" name="__codelineno-0-106"></a>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+<a id="__codelineno-0-107" name="__codelineno-0-107"></a>        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+<a id="__codelineno-0-108" name="__codelineno-0-108"></a>    <span class="n">R</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+<a id="__codelineno-0-109" name="__codelineno-0-109"></a>    <span class="n">psi</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">z</span><span class="p">))</span>
+<a id="__codelineno-0-110" name="__codelineno-0-110"></a>    <span class="k">return</span> <span class="n">OAState</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">psi</span><span class="o">=</span><span class="n">psi</span><span class="p">,</span> <span class="n">K_c</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">K_c</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h6 id="scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.predict_from_oscillators" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">predict_from_oscillators</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.reduction.OttAntonsenReduction.predict_from_oscillators" class="headerlink" title="Permanent link">&para;</a></h6>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">predict_from_oscillators</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">omegas</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">K</span><span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OAState</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Fit Lorentzian to omegas, run OA reduction as fast diagnostic.</p>
+<p>Uses median as ω₀ and IQR-based Δ estimate.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/upde/reduction.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-112">112</a></span>
+<span class="normal"><a href="#__codelineno-0-113">113</a></span>
+<span class="normal"><a href="#__codelineno-0-114">114</a></span>
+<span class="normal"><a href="#__codelineno-0-115">115</a></span>
+<span class="normal"><a href="#__codelineno-0-116">116</a></span>
+<span class="normal"><a href="#__codelineno-0-117">117</a></span>
+<span class="normal"><a href="#__codelineno-0-118">118</a></span>
+<span class="normal"><a href="#__codelineno-0-119">119</a></span>
+<span class="normal"><a href="#__codelineno-0-120">120</a></span>
+<span class="normal"><a href="#__codelineno-0-121">121</a></span>
+<span class="normal"><a href="#__codelineno-0-122">122</a></span>
+<span class="normal"><a href="#__codelineno-0-123">123</a></span>
+<span class="normal"><a href="#__codelineno-0-124">124</a></span>
+<span class="normal"><a href="#__codelineno-0-125">125</a></span>
+<span class="normal"><a href="#__codelineno-0-126">126</a></span>
+<span class="normal"><a href="#__codelineno-0-127">127</a></span>
+<span class="normal"><a href="#__codelineno-0-128">128</a></span>
+<span class="normal"><a href="#__codelineno-0-129">129</a></span>
+<span class="normal"><a href="#__codelineno-0-130">130</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-112" name="__codelineno-0-112"></a><span class="k">def</span><span class="w"> </span><span class="nf">predict_from_oscillators</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">omegas</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">K</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OAState</span><span class="p">:</span>
+<a id="__codelineno-0-113" name="__codelineno-0-113"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit Lorentzian to omegas, run OA reduction as fast diagnostic.</span>
+<a id="__codelineno-0-114" name="__codelineno-0-114"></a>
+<a id="__codelineno-0-115" name="__codelineno-0-115"></a><span class="sd">    Uses median as ω₀ and IQR-based Δ estimate.</span>
+<a id="__codelineno-0-116" name="__codelineno-0-116"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-117" name="__codelineno-0-117"></a>    <span class="k">if</span> <span class="n">_HAS_RUST</span><span class="p">:</span>
+<a id="__codelineno-0-118" name="__codelineno-0-118"></a>        <span class="n">o</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">omegas</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<a id="__codelineno-0-119" name="__codelineno-0-119"></a>        <span class="n">omega_0</span><span class="p">,</span> <span class="n">delta</span> <span class="o">=</span> <span class="n">_rust_fit_lorentzian</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+<a id="__codelineno-0-120" name="__codelineno-0-120"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-121" name="__codelineno-0-121"></a>        <span class="c1"># Fit Lorentzian: median → centre ω₀, IQR/2 → half-width Δ</span>
+<a id="__codelineno-0-122" name="__codelineno-0-122"></a>        <span class="c1"># (IQR of a Lorentzian equals 2Δ, so IQR/2 ≈ Δ)</span>
+<a id="__codelineno-0-123" name="__codelineno-0-123"></a>        <span class="n">omega_0</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">omegas</span><span class="p">))</span>
+<a id="__codelineno-0-124" name="__codelineno-0-124"></a>        <span class="n">q75</span><span class="p">,</span> <span class="n">q25</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">omegas</span><span class="p">,</span> <span class="p">[</span><span class="mi">75</span><span class="p">,</span> <span class="mi">25</span><span class="p">])</span>
+<a id="__codelineno-0-125" name="__codelineno-0-125"></a>        <span class="n">delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">q75</span> <span class="o">-</span> <span class="n">q25</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="k">if</span> <span class="n">q75</span> <span class="o">&gt;</span> <span class="n">q25</span> <span class="k">else</span> <span class="mf">0.01</span>
+<a id="__codelineno-0-126" name="__codelineno-0-126"></a>
+<a id="__codelineno-0-127" name="__codelineno-0-127"></a>    <span class="n">reducer</span> <span class="o">=</span> <span class="n">OttAntonsenReduction</span><span class="p">(</span><span class="n">omega_0</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dt</span><span class="p">)</span>
+<a id="__codelineno-0-128" name="__codelineno-0-128"></a>    <span class="c1"># Small seed breaks symmetry; integrate ~10 time units to steady state</span>
+<a id="__codelineno-0-129" name="__codelineno-0-129"></a>    <span class="n">z0</span> <span class="o">=</span> <span class="nb">complex</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<a id="__codelineno-0-130" name="__codelineno-0-130"></a>    <span class="k">return</span> <span class="n">reducer</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">z0</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mf">10.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dt</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="dataclass-oastate">Dataclass: OAState<a class="headerlink" href="#dataclass-oastate" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">OAState</span><span class="p">:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">z</span><span class="p">:</span> <span class="nb">complex</span>   <span class="c1"># Mean-field z = R·exp(iψ)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">R</span><span class="p">:</span> <span class="nb">float</span>     <span class="c1"># |z|, order parameter</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">psi</span><span class="p">:</span> <span class="nb">float</span>   <span class="c1"># arg(z), mean phase</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">K_c</span><span class="p">:</span> <span class="nb">float</span>   <span class="c1"># Critical coupling 2Δ</span>
+</code></pre></div>
+<h3 id="rust-engine-functions">Rust Engine Functions<a class="headerlink" href="#rust-engine-functions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// RK4 integration of OA ODE, returns (z_re, z_im, R, psi)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">oa_run</span><span class="p">(</span><span class="n">z_re</span><span class="p">,</span><span class="w"> </span><span class="n">z_im</span><span class="p">,</span><span class="w"> </span><span class="n">omega_0</span><span class="p">,</span><span class="w"> </span><span class="n">delta</span><span class="p">,</span><span class="w"> </span><span class="n">k_coupling</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">,</span><span class="w"> </span><span class="n">n_steps</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="p">(</span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="kt">f64</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1">// Analytical steady-state R</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">steady_state_r_oa</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span><span class="w"> </span><span class="n">k_coupling</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">f64</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1">// Fit Lorentzian (omega_0, delta) from frequency array</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">fit_lorentzian</span><span class="p">(</span><span class="n">omegas</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="kt">f64</span><span class="p">])</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="p">(</span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="kt">f64</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="auto-select-logic">Auto-Select Logic<a class="headerlink" href="#auto-select-logic" title="Permanent link">&para;</a></h3>
+<p>All three functions (<code>run</code>, <code>steady_state_R</code>, <code>predict_from_oscillators</code>)
+use Rust when available. The RK4 loop in Rust is 38-96x faster because
+the Python path executes a Python-level loop with complex arithmetic
+per step.</p>
+<hr />
+<h2 id="7-performance-benchmarks">7. Performance Benchmarks<a class="headerlink" href="#7-performance-benchmarks" title="Permanent link">&para;</a></h2>
+<p>Measured on Intel Core i5-11600K @ 3.90 GHz, 32 GB DDR4-2400.
+ω₀ = 0, Δ = 1, K = 4, z₀ = 0.01. Averaged over 100-1000 iterations.</p>
+<table>
+<thead>
+<tr>
+<th>Steps</th>
+<th>Python (ms)</th>
+<th>Rust (ms)</th>
+<th>Speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>0.203</td>
+<td>0.0053</td>
+<td><strong>38.1x</strong></td>
+</tr>
+<tr>
+<td>500</td>
+<td>1.836</td>
+<td>0.0192</td>
+<td><strong>95.8x</strong></td>
+</tr>
+<tr>
+<td>2,000</td>
+<td>7.183</td>
+<td>0.0763</td>
+<td><strong>94.2x</strong></td>
+</tr>
+<tr>
+<td>10,000</td>
+<td>20.811</td>
+<td>0.3641</td>
+<td><strong>57.2x</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="why-38-96x-speedup">Why 38-96x Speedup?<a class="headerlink" href="#why-38-96x-speedup" title="Permanent link">&para;</a></h3>
+<p>The OA reduction is a <strong>scalar</strong> complex ODE. Each RK4 step requires
+4 evaluations of <span class="arithmatex">\(f(z)\)</span>, each involving:
+- 1 complex multiply (<span class="arithmatex">\(|z|^2\)</span>)
+- 2 complex multiply-adds
+- ~10 floating-point operations total</p>
+<p>In Python, each step crosses the Python interpreter boundary for every
+arithmetic operation (complex + float overhead). In Rust, the entire
+loop runs in native code with no interpreter overhead. The 38-96x
+range reflects the interplay between Python interpreter overhead
+(dominant at high step counts → ~96x) and FFI call overhead
+(dominant at low step counts → ~38x). For the typical use case
+(500-2000 steps), the speedup is ~95x.</p>
+<h3 id="memory-usage">Memory Usage<a class="headerlink" href="#memory-usage" title="Permanent link">&para;</a></h3>
+<p>Negligible: 2 floats (re, im) for state, 8 floats for RK4 stages.
+No heap allocation in the inner loop.</p>
+<h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Rust tests:</strong> 9 (reduction module in spo-engine)</li>
+<li>Steady-state subcritical/supercritical, convergence, subcritical
+    decay, rotation with ω₀, fit_lorentzian, zero steps, psi angle,
+    critical coupling</li>
+<li><strong>Python tests:</strong> 12 (<code>tests/test_ott_antonsen.py</code>)</li>
+<li>Critical coupling, below/above/at K_c, step finite, run convergence,
+    run decay, negative delta raises, predict_from_oscillators,
+    predict identical omegas, OAState fields, pipeline wiring</li>
+<li><strong>Source lines:</strong> 208 (Rust) + 99 (Python) = 307 total</li>
+</ul>
+<hr />
+<h2 id="8-citations">8. Citations<a class="headerlink" href="#8-citations" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Ott, E. &amp; Antonsen, T. M.</strong> (2008).
+   "Low dimensional behavior of large systems of globally coupled
+   oscillators."
+   <em>Chaos</em> 18(3):037113.
+   DOI: <a href="https://doi.org/10.1063/1.2930766">10.1063/1.2930766</a></p>
+</li>
+<li>
+<p><strong>Ott, E. &amp; Antonsen, T. M.</strong> (2009).
+   "Long time evolution of phase oscillator systems."
+   <em>Chaos</em> 19(2):023117.
+   DOI: <a href="https://doi.org/10.1063/1.3136851">10.1063/1.3136851</a></p>
+</li>
+<li>
+<p><strong>Marvel, S. A., Mirollo, R. E., &amp; Strogatz, S. H.</strong> (2009).
+   "Identical phase oscillators with global sinusoidal coupling evolve
+   by Möbius group action."
+   <em>Chaos</em> 19(4):043104.
+   DOI: <a href="https://doi.org/10.1063/1.3247089">10.1063/1.3247089</a></p>
+</li>
+<li>
+<p><strong>Pikovsky, A. &amp; Rosenblum, M.</strong> (2008).
+   "Partially integrable dynamics of hierarchical populations of
+   coupled oscillators."
+   <em>Physical Review Letters</em> 101(26):264103.
+   DOI: <a href="https://doi.org/10.1103/PhysRevLett.101.264103">10.1103/PhysRevLett.101.264103</a></p>
+</li>
+<li>
+<p><strong>Strogatz, S. H.</strong> (2000).
+   "From Kuramoto to Crawford: exploring the onset of synchronization
+   in populations of coupled oscillators."
+   <em>Physica D</em> 143(1-4):1-20.
+   DOI: <a href="https://doi.org/10.1016/S0167-2789(00)00094-4">10.1016/S0167-2789(00)00094-4</a></p>
+</li>
+<li>
+<p><strong>Dörfler, F. &amp; Bullo, F.</strong> (2014).
+   "Synchronization in complex networks of phase oscillators:
+   A survey."
+   <em>Automatica</em> 50(6):1539-1564.
+   DOI: <a href="https://doi.org/10.1016/j.automatica.2014.04.012">10.1016/j.automatica.2014.04.012</a></p>
+</li>
+<li>
+<p><strong>Kuramoto, Y.</strong> (1975).
+   "Self-entrainment of a population of coupled non-linear oscillators."
+   In <em>Int. Symp. Mathematical Problems in Theoretical Physics</em>,
+   Lecture Notes in Physics 39:420-422. Springer.</p>
+</li>
+<li>
+<p><strong>Acebrón, J. A., Bonilla, L. L., Pérez Vicente, C. J., Ritort, F.,
+   &amp; Spigler, R.</strong> (2005).
+   "The Kuramoto model: A simple paradigm for synchronization phenomena."
+   <em>Reviews of Modern Physics</em> 77:137-185.
+   DOI: <a href="https://doi.org/10.1103/RevModPhys.77.137">10.1103/RevModPhys.77.137</a></p>
+</li>
+</ol>
+<hr />
+<h2 id="edge-cases-and-limitations">Edge Cases and Limitations<a class="headerlink" href="#edge-cases-and-limitations" title="Permanent link">&para;</a></h2>
+<h3 id="z0-1">|z₀| ≥ 1<a class="headerlink" href="#z0-1" title="Permanent link">&para;</a></h3>
+<p>The OA manifold requires <span class="arithmatex">\(|z| \leq 1\)</span>. If seeded with <span class="arithmatex">\(|z_0| &gt; 1\)</span>,
+the cubic term <span class="arithmatex">\(-|z|^2 z\)</span> drives <span class="arithmatex">\(|z|\)</span> back below 1, but the transient
+may be non-physical. Always seed with <span class="arithmatex">\(|z_0| \ll 1\)</span> (e.g., 0.01).</p>
+<h3 id="0-identical-oscillators">Δ = 0 (Identical Oscillators)<a class="headerlink" href="#0-identical-oscillators" title="Permanent link">&para;</a></h3>
+<p>When <span class="arithmatex">\(\Delta = 0\)</span>, <span class="arithmatex">\(K_c = 0\)</span> — any positive coupling produces
+synchronisation. The steady-state <span class="arithmatex">\(R_{ss} = \sqrt{1 - 0} = 1\)</span>.
+The OA ODE becomes <span class="arithmatex">\(\dot{z} = -i\omega_0 z + \frac{K}{2}(z - |z|^2 z)\)</span>
+— pure rotation plus cubic growth. Starting from <span class="arithmatex">\(|z_0| &lt; 1\)</span>,
+<span class="arithmatex">\(|z| \to 1\)</span> exponentially with rate <span class="arithmatex">\(K/2\)</span>.</p>
+<h3 id="non-lorentzian-distributions">Non-Lorentzian Distributions<a class="headerlink" href="#non-lorentzian-distributions" title="Permanent link">&para;</a></h3>
+<p>For Gaussian <span class="arithmatex">\(g(\omega) = \frac{1}{\sigma\sqrt{2\pi}} e^{-(\omega-\omega_0)^2/2\sigma^2}\)</span>:
+- The OA ansatz is <strong>not</strong> exact
+- Using <span class="arithmatex">\(\Delta = \sigma \cdot \sqrt{2\ln 2}\)</span> (FWHM matching) gives
+  <span class="arithmatex">\(R_{ss}\)</span> accurate to <span class="arithmatex">\(\sim 5\%\)</span> for moderate coupling
+- For bimodal distributions, the OA ansatz does not apply</p>
+<h3 id="numerical-stability">Numerical Stability<a class="headerlink" href="#numerical-stability" title="Permanent link">&para;</a></h3>
+<p>The RK4 integrator is unconditionally stable for <span class="arithmatex">\(K \Delta t &lt; 4\)</span>.
+For typical parameters (<span class="arithmatex">\(K \leq 10\)</span>, <span class="arithmatex">\(\Delta t = 0.01\)</span>), this is
+always satisfied. If <span class="arithmatex">\(K &gt; 100\)</span>, reduce <span class="arithmatex">\(\Delta t\)</span> accordingly.</p>
+<h3 id="finite-n-corrections">Finite-<span class="arithmatex">\(N\)</span> Corrections<a class="headerlink" href="#finite-n-corrections" title="Permanent link">&para;</a></h3>
+<p>For <span class="arithmatex">\(N\)</span> oscillators (not <span class="arithmatex">\(N \to \infty\)</span>):
+- <span class="arithmatex">\(R\)</span> fluctuates around <span class="arithmatex">\(R_{ss}\)</span> with variance <span class="arithmatex">\(\sim 1/N\)</span>
+- The transition at <span class="arithmatex">\(K_c\)</span> is rounded: <span class="arithmatex">\(R &gt; 0\)</span> for all <span class="arithmatex">\(K &gt; 0\)</span>
+  (finite-size precursors)
+- The <code>predict_from_oscillators</code> method accounts for the Lorentzian
+  fitting uncertainty but not the finite-<span class="arithmatex">\(N\)</span> fluctuations</p>
+<hr />
+<h2 id="derivation-of-the-ott-antonsen-ansatz">Derivation of the Ott-Antonsen Ansatz<a class="headerlink" href="#derivation-of-the-ott-antonsen-ansatz" title="Permanent link">&para;</a></h2>
+<h3 id="step-1-continuity-equation">Step 1: Continuity Equation<a class="headerlink" href="#step-1-continuity-equation" title="Permanent link">&para;</a></h3>
+<p>For <span class="arithmatex">\(N \to \infty\)</span> oscillators with density <span class="arithmatex">\(f(\theta, \omega, t)\)</span>
+on <span class="arithmatex">\(S^1\)</span>, the continuity equation reads:</p>
+<div class="arithmatex">\[\frac{\partial f}{\partial t} + \frac{\partial}{\partial \theta}\big(f \cdot v(\theta, \omega, t)\big) = 0\]</div>
+<p>where <span class="arithmatex">\(v = \omega + K R \sin(\psi - \theta)\)</span> is the velocity field
+from the Kuramoto model with mean-field coupling.</p>
+<h3 id="step-2-fourier-expansion">Step 2: Fourier Expansion<a class="headerlink" href="#step-2-fourier-expansion" title="Permanent link">&para;</a></h3>
+<p>The density admits a Fourier series in <span class="arithmatex">\(\theta\)</span>:</p>
+<div class="arithmatex">\[f(\theta, \omega, t) = \frac{1}{2\pi}\left[1 + \sum_{n=1}^{\infty} \hat{f}_n(\omega, t) e^{in\theta} + \text{c.c.}\right]\]</div>
+<p>Substituting into the continuity equation yields an infinite hierarchy
+of ODEs for the Fourier coefficients <span class="arithmatex">\(\hat{f}_n\)</span>.</p>
+<h3 id="step-3-the-ansatz">Step 3: The Ansatz<a class="headerlink" href="#step-3-the-ansatz" title="Permanent link">&para;</a></h3>
+<p>Ott and Antonsen (2008) observed that if we restrict to the manifold:</p>
+<div class="arithmatex">\[\hat{f}_n(\omega, t) = \alpha(\omega, t)^n\]</div>
+<p>then the infinite hierarchy <strong>collapses</strong> to a single ODE for <span class="arithmatex">\(\alpha\)</span>:</p>
+<div class="arithmatex">\[\dot{\alpha} = -i\omega\alpha + \frac{K}{2}(\bar{z}\alpha^2 - z)\]</div>
+<p>where <span class="arithmatex">\(z = R e^{i\psi}\)</span> is the Kuramoto order parameter, defined by:</p>
+<div class="arithmatex">\[z(t) = \int_{-\infty}^{\infty} \int_0^{2\pi} e^{i\theta} f(\theta, \omega, t)\,d\theta\,d\omega\]</div>
+<h3 id="step-4-lorentzian-closure">Step 4: Lorentzian Closure<a class="headerlink" href="#step-4-lorentzian-closure" title="Permanent link">&para;</a></h3>
+<p>For <span class="arithmatex">\(g(\omega) = \frac{\Delta/\pi}{(\omega - \omega_0)^2 + \Delta^2}\)</span>,
+the integral over <span class="arithmatex">\(\omega\)</span> can be evaluated by closing the contour in
+the lower half-plane, picking up the single pole at <span class="arithmatex">\(\omega = \omega_0 - i\Delta\)</span>:</p>
+<div class="arithmatex">\[z(t) = \overline{\alpha(\omega_0 - i\Delta, t)}\]</div>
+<p>This yields the closed ODE:</p>
+<div class="arithmatex">\[\dot{z} = -(\Delta + i\omega_0)z + \frac{K}{2}(z - |z|^2 z)\]</div>
+<p>The key insight is that the Lorentzian distribution has a single
+pole in the lower half-plane, which makes the contour integral exact.
+Distributions with multiple poles (e.g., bimodal) or no poles
+(e.g., Gaussian, which has an essential singularity) break the closure.</p>
+<hr />
+<h2 id="rust-implementation-details">Rust Implementation Details<a class="headerlink" href="#rust-implementation-details" title="Permanent link">&para;</a></h2>
+<h3 id="oa_deriv-inner-loop-kernel">oa_deriv — Inner Loop Kernel<a class="headerlink" href="#oa_deriv-inner-loop-kernel" title="Permanent link">&para;</a></h3>
+<p>The derivative function <code>oa_deriv</code> computes both real and imaginary
+parts of <span class="arithmatex">\(f(z)\)</span> without heap allocation:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">fn</span><span class="w"> </span><span class="nf">oa_deriv</span><span class="p">(</span><span class="n">re</span><span class="p">:</span><span class="w"> </span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="n">im</span><span class="p">:</span><span class="w"> </span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="n">omega_0</span><span class="p">:</span><span class="w"> </span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="n">delta</span><span class="p">:</span><span class="w"> </span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="n">half_k</span><span class="p">:</span><span class="w"> </span><span class="kt">f64</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="p">(</span><span class="kt">f64</span><span class="p">,</span><span class="w"> </span><span class="kt">f64</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">abs_sq</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">re</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">re</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">im</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">im</span><span class="p">;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">lin_re</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="n">delta</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">re</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">omega_0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">im</span><span class="p">;</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">lin_im</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="n">delta</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">im</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">omega_0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">re</span><span class="p">;</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">cubic_factor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">half_k</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mf">1.0</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">abs_sq</span><span class="p">);</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="p">(</span><span class="n">lin_re</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">cubic_factor</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">re</span><span class="p">,</span><span class="w"> </span><span class="n">lin_im</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">cubic_factor</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">im</span><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>Each RK4 step calls <code>oa_deriv</code> 4 times (k1-k4), for a total of
+~40 floating-point operations per step. The Rust compiler inlines
+this function and uses SSE2/AVX for the multiply-adds.</p>
+<h3 id="fit_lorentzian-robust-estimation">fit_lorentzian — Robust Estimation<a class="headerlink" href="#fit_lorentzian-robust-estimation" title="Permanent link">&para;</a></h3>
+<p>The Lorentzian fitting uses order statistics rather than
+maximum-likelihood estimation:
+- <strong>Median</strong> for <span class="arithmatex">\(\omega_0\)</span>: breakdown point 50%, robust to outliers
+- <strong>IQR/2</strong> for <span class="arithmatex">\(\Delta\)</span>: exploits the exact relationship <span class="arithmatex">\(\text{IQR} = 2\Delta\)</span>
+  for a Cauchy distribution</p>
+<p>The sort is <span class="arithmatex">\(O(n \log n)\)</span>, but <span class="arithmatex">\(n\)</span> is the number of oscillators
+(typically <span class="arithmatex">\(\leq 10{,}000\)</span>), so the cost is negligible compared to
+the integration.</p>
+<h3 id="ffi-transfer">FFI Transfer<a class="headerlink" href="#ffi-transfer" title="Permanent link">&para;</a></h3>
+<p>The <code>oa_run</code> function returns a tuple <code>(f64, f64, f64, f64)</code>, which
+PyO3 converts to a Python tuple with zero-copy semantics (scalar
+values only, no array allocation). The <code>fit_lorentzian</code> function
+accepts a <code>PyReadonlyArray1&lt;f64&gt;</code> reference, avoiding any data copy
+from NumPy to Rust.</p>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="issue-r-does-not-converge">Issue: R Does Not Converge<a class="headerlink" href="#issue-r-does-not-converge" title="Permanent link">&para;</a></h3>
+<p><strong>Symptom:</strong> After many steps, <span class="arithmatex">\(R\)</span> oscillates or drifts instead of
+settling to <span class="arithmatex">\(R_{ss}\)</span>.</p>
+<p><strong>Diagnosis:</strong> Check whether <span class="arithmatex">\(\omega_0 \neq 0\)</span>. In the rotating frame,
+<span class="arithmatex">\(R\)</span> converges while <span class="arithmatex">\(\psi\)</span> rotates at frequency <span class="arithmatex">\(\omega_0\)</span>. The complex
+<span class="arithmatex">\(z\)</span> traces a circle of radius <span class="arithmatex">\(R_{ss}\)</span>, so <span class="arithmatex">\(R = |z|\)</span> converges even
+though <span class="arithmatex">\(z\)</span> itself does not settle to a fixed point.</p>
+<p>If <span class="arithmatex">\(R\)</span> truly oscillates, verify that <span class="arithmatex">\(K \Delta t &lt; 4\)</span> (RK4 stability
+bound). For <span class="arithmatex">\(K = 100\)</span> and <span class="arithmatex">\(\Delta t = 0.01\)</span>, <span class="arithmatex">\(K \Delta t = 1.0\)</span> is safe.</p>
+<h3 id="issue-predict_from_oscillators-returns-r-0-for-clearly-coupled-system">Issue: predict_from_oscillators Returns R ≈ 0 for Clearly Coupled System<a class="headerlink" href="#issue-predict_from_oscillators-returns-r-0-for-clearly-coupled-system" title="Permanent link">&para;</a></h3>
+<p><strong>Diagnosis:</strong> The Lorentzian fit via IQR assumes unimodal,
+heavy-tailed <span class="arithmatex">\(g(\omega)\)</span>. For bimodal or Gaussian distributions,
+the estimated <span class="arithmatex">\(\Delta\)</span> may be too large, yielding <span class="arithmatex">\(K_c &gt; K\)</span>.</p>
+<p><strong>Solution:</strong> Manually set <span class="arithmatex">\((\omega_0, \Delta)\)</span> from known distribution
+parameters rather than using the automatic fitting.</p>
+<h3 id="issue-r_ss-0-despite-supercritical-k">Issue: R_ss = 0 Despite Supercritical K<a class="headerlink" href="#issue-r_ss-0-despite-supercritical-k" title="Permanent link">&para;</a></h3>
+<p><strong>Diagnosis:</strong> The <code>steady_state_R</code> function requires <code>K &gt; 2Δ</code>.
+If you pass <code>K</code> as the total coupling but the per-pair coupling
+is <span class="arithmatex">\(K/N\)</span>, you need to use the per-pair value multiplied by <span class="arithmatex">\(N\)</span>
+(i.e., the effective global coupling strength).</p>
+<h3 id="issue-mismatch-between-oa-and-full-simulation">Issue: Mismatch Between OA and Full Simulation<a class="headerlink" href="#issue-mismatch-between-oa-and-full-simulation" title="Permanent link">&para;</a></h3>
+<p><strong>Diagnosis:</strong> Common causes:
+1. Non-Lorentzian frequency distribution (OA is approximate)
+2. Finite-<span class="arithmatex">\(N\)</span> fluctuations (<span class="arithmatex">\(R\)</span> deviates by <span class="arithmatex">\(\sim 1/\sqrt{N}\)</span>)
+3. Phase frustration (<span class="arithmatex">\(\alpha_{ij} \neq 0\)</span>) — OA assumes zero frustration
+4. Non-global coupling (sparse <span class="arithmatex">\(K_{ij}\)</span>) — OA assumes all-to-all</p>
+<p>For cases 1-2, the mismatch should decrease with larger <span class="arithmatex">\(N\)</span> and
+Lorentzian-like distributions. For cases 3-4, the OA reduction is
+not applicable.</p>
+<hr />
+<h2 id="integration-with-other-spo-modules">Integration with Other SPO Modules<a class="headerlink" href="#integration-with-other-spo-modules" title="Permanent link">&para;</a></h2>
+<h3 id="with-updeengine">With UPDEEngine<a class="headerlink" href="#with-updeengine" title="Permanent link">&para;</a></h3>
+<p>The <code>OttAntonsenReduction</code> validates full simulations:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Quick check: will this parameter set synchronise?</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">oa</span> <span class="o">=</span> <span class="n">OttAntonsenReduction</span><span class="p">(</span><span class="n">omega_0</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">K</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">if</span> <span class="n">oa</span><span class="o">.</span><span class="n">steady_state_R</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">:</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="c1"># Worth running the expensive N-oscillator simulation</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">engine</span> <span class="o">=</span> <span class="n">UPDEEngine</span><span class="p">(</span><span class="n">n_oscillators</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="c1"># ... run full sim ...</span>
+</code></pre></div>
+<h3 id="with-ssgf-costs">With SSGF Costs<a class="headerlink" href="#with-ssgf-costs" title="Permanent link">&para;</a></h3>
+<p>The predicted <span class="arithmatex">\(R_{ss}\)</span> can initialise the SSGF sync deficit cost:</p>
+<div class="arithmatex">\[C_1 = 1 - R \approx 1 - R_{ss}\]</div>
+<p>This provides a baseline expectation for the geometry optimisation.
+If the full simulation yields <span class="arithmatex">\(R &lt; R_{ss}\)</span>, the geometry is
+suboptimal and the SSGF engine should increase the learning rate.</p>
+<h3 id="with-regimemanager">With RegimeManager<a class="headerlink" href="#with-regimemanager" title="Permanent link">&para;</a></h3>
+<p>The OA reduction enables fast regime classification:</p>
+<table>
+<thead>
+<tr>
+<th><span class="arithmatex">\(K / K_c\)</span></th>
+<th>Regime</th>
+<th><span class="arithmatex">\(R_{ss}\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="arithmatex">\(&lt; 0.5\)</span></td>
+<td>Incoherent</td>
+<td>0</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(0.5 - 1.0\)</span></td>
+<td>Subcritical</td>
+<td>0</td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(1.0 - 1.5\)</span></td>
+<td>Onset</td>
+<td><span class="arithmatex">\(0 - 0.58\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(1.5 - 3.0\)</span></td>
+<td>Partial sync</td>
+<td><span class="arithmatex">\(0.58 - 0.82\)</span></td>
+</tr>
+<tr>
+<td><span class="arithmatex">\(&gt; 3.0\)</span></td>
+<td>Full sync</td>
+<td><span class="arithmatex">\(&gt; 0.82\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The supervisor can use these thresholds to decide whether to engage
+geometry control or whether the current coupling is sufficient.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

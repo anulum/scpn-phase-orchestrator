@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anulum.li/scpn-phase-orchestrator/binding-spec.schema.json",
+  "title": "BindingSpec",
+  "description": "Domain binding specification for the SCPN Phase Orchestrator.",
+  "type": "object",
+  "required": [
+    "name",
+    "version",
+    "safety_tier",
+    "sample_period_s",
+    "control_period_s",
+    "layers",
+    "oscillator_families",
+    "coupling",
+    "objectives"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string"
+    },
+    "safety_tier": {
+      "type": "string",
+      "enum": ["research", "clinical", "consumer", "production"]
+    },
+    "sample_period_s": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "control_period_s": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "index"],
+        "properties": {
+          "name": { "type": "string" },
+          "index": { "type": "integer", "minimum": 0 },
+          "oscillator_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "oscillator_families": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["channel", "extractor_type"],
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": ["P", "I", "S"]
+          },
+          "extractor_type": {
+            "type": "string",
+            "enum": [
+              "physical", "informational", "symbolic",
+              "hilbert", "wavelet", "zero_crossing",
+              "event", "ring", "graph"
+            ]
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "coupling": {
+      "type": "object",
+      "required": ["base_strength", "decay_alpha"],
+      "properties": {
+        "base_strength": { "type": "number", "minimum": 0 },
+        "decay_alpha": { "type": "number", "minimum": 0 },
+        "templates": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "drivers": {
+      "type": "object",
+      "properties": {
+        "physical": { "type": "object" },
+        "informational": { "type": "object" },
+        "symbolic": { "type": "object" }
+      }
+    },
+    "objectives": {
+      "type": "object",
+      "required": ["good_layers", "bad_layers"],
+      "properties": {
+        "good_layers": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "bad_layers": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "good_weight": { "type": "number", "minimum": 0, "default": 1.0 },
+        "bad_weight": { "type": "number", "minimum": 0, "default": 1.0 }
+      }
+    },
+    "boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "variable", "severity"],
+        "properties": {
+          "name": { "type": "string" },
+          "variable": { "type": "string" },
+          "lower": { "type": ["number", "null"] },
+          "upper": { "type": ["number", "null"] },
+          "severity": {
+            "type": "string",
+            "enum": ["soft", "hard"]
+          }
+        }
+      }
+    },
+    "actuators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "knob", "scope", "limits"],
+        "properties": {
+          "name": { "type": "string" },
+          "knob": {
+            "type": "string",
+            "enum": ["K", "alpha", "zeta", "Psi"]
+          },
+          "scope": { "type": "string" },
+          "limits": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    },
+    "imprint_model": {
+      "type": ["object", "null"],
+      "properties": {
+        "decay_rate": { "type": "number", "minimum": 0 },
+        "saturation": { "type": "number", "exclusiveMinimum": 0 },
+        "modulates": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "geometry_prior": {
+      "type": ["object", "null"],
+      "properties": {
+        "constraint_type": { "type": "string" },
+        "params": { "type": "object" }
+      }
+    },
+    "policy": {
+      "type": "string",
+      "description": "Path to policy YAML file, relative to binding spec."
+    }
+  }
+}
