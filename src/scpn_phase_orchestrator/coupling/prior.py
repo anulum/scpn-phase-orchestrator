@@ -61,10 +61,19 @@ class UniversalPrior:
         self._decay_alpha_mean = decay_alpha_mean
         self._decay_alpha_std = decay_alpha_std
 
-    def sample(self, rng: np.random.Generator | None = None) -> CouplingPrior:
-        """Draw a random coupling configuration from the prior."""
+    def sample(
+        self,
+        rng: np.random.Generator | None = None,
+        seed: int | None = None,
+    ) -> CouplingPrior:
+        """Draw a random coupling configuration from the prior.
+
+        Pass ``rng`` for an explicit generator, or ``seed`` to create a
+        seeded one. If neither is given, a fresh unseeded generator is used
+        (NOT reproducible across sessions).
+        """
         if rng is None:
-            rng = np.random.default_rng()
+            rng = np.random.default_rng(seed)
         K = max(0.01, rng.normal(self._K_base_mean, self._K_base_std))
         alpha = max(0.01, rng.normal(self._decay_alpha_mean, self._decay_alpha_std))
         return CouplingPrior(K_base=K, decay_alpha=alpha, K_c_estimate=0.0)

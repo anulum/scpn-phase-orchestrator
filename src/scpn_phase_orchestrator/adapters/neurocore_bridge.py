@@ -78,6 +78,7 @@ class NeurocoreBridge:
         spike_threshold_hz: float = 40.0,
         noise_std: float = 0.0,
         backend: str = "auto",
+        seed: int | None = None,
     ) -> None:
         self._n_layers = n_layers
         self._n_per = neurons_per_layer
@@ -99,7 +100,7 @@ class NeurocoreBridge:
             self._v = np.full(self._n_total, _V_REST)
             self._refractory = np.zeros(self._n_total, dtype=np.int32)
             self._noise_std = noise_std
-            self._rng = np.random.default_rng()
+            self._rng = np.random.default_rng(seed)
         elif backend == "scalar":
             if not HAS_NEUROCORE:  # pragma: no cover
                 msg = "sc-neurocore not installed. pip install sc-neurocore"
