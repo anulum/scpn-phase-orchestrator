@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  checks: write  # required by rustsec/audit-check to post results
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
