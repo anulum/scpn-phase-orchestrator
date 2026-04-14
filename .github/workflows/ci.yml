@@ -74,7 +74,7 @@ jobs:
         run: mv .coverage .coverage.test
       - name: Upload coverage data (test)
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-data-test
           path: .coverage.test
@@ -110,7 +110,7 @@ jobs:
           coverage xml -o coverage-python.xml
           coverage report
       - name: Upload merged coverage XML
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-xml-merged
           path: coverage-python.xml
@@ -196,7 +196,7 @@ jobs:
           mv .coverage .coverage.ffi
       - name: Upload coverage data (ffi, ubuntu only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-data-ffi
           path: .coverage.ffi
@@ -261,7 +261,7 @@ jobs:
       - name: Compare against baseline (informational)
         run: python bench/compare_baseline.py bench/baseline.json bench/current.json
         continue-on-error: true
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: benchmark-results
           path: bench/current.json
