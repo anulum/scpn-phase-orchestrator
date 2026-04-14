@@ -1,0 +1,6156 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/reference/api/upde_pac/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/anulum_logo_company.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Phase-Amplitude Coupling — Cross-Frequency Interaction - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phase-amplitude-coupling-cross-frequency-interaction" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase-Amplitude Coupling — Cross-Frequency Interaction
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../concepts/system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../guide/stuart_landau/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../tutorials/01_new_domain_checklist/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../galleries/domainpack_gallery/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../ASSUMPTIONS/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../papers/JOSS_DRAFT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Papers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../VALIDATION_REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../pricing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Pricing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/start_here/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here (Learning Path)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/phase_control_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/domain_utilisation_schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/kuramoto_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Differentiable Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/advanced_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/control_systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/analysis_toolkit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Toolkit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/hardware_deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/digital_twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital Twin Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/notebook_to_production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook → Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/interactive_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../video_scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Video Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/04_differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Differentiable Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_simplicial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Simplicial (3-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_hypergraph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Hypergraph (k-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_geometric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Geometric (SO(2))
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_envelope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Envelope (RMS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_splitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Strang Splitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_te_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — TE Adaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_prior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Universal Prior
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_connectome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — HCP Connectome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_sleep_staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Sleep Staging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_evs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — EVS (Entrainment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_carrier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Geometry Carrier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_ethical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Ethical Cost (C15)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_23" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_23" id="__nav_7_23_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_23_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_23">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autotune
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_sindy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase-SINDy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_coupling_est/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_phase_extract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Extraction (Hilbert)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_freq_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequency Identification (DMD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neural Network (nn)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_physics_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Physics Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../end_to_end_wiring_audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Wiring Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../competitive_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../competitive_comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What SPO Does That No One Else Can
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Papers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/JOSS_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JOSS: Phase Dynamics Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/DUAL_R_PH1_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual R+p_h1 Consciousness Criterion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/SSGF_IDENTITY_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF Sextuple Identity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/SAFETY_CERT_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Certification Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/FEP_CORRESPONDENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FEP Correspondence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_STUDY_PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clinical Study Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../pricing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pricing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-mathematical-formalism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Mathematical Formalism
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Mathematical Formalism">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-the-modulation-index-mi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 The Modulation Index (MI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-information-theoretic-interpretation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Information-Theoretic Interpretation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-pac-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 PAC Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-pac-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 PAC Gate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-number-of-phase-bins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 Number of Phase Bins
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-statistical-significance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 Statistical Significance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-theoretical-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Theoretical Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Theoretical Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-historical-background" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Historical Background
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-neuroscience-applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Neuroscience Applications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-role-in-scpn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Role in SCPN
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-comparison-with-other-coupling-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Comparison with Other Coupling Measures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-cross-frequency-coupling-zoo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Cross-Frequency Coupling Zoo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-methodological-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 Methodological Considerations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#27-pac-in-disease" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 PAC in Disease
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-pipeline-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Pipeline Position
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-three-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Three Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-rust-acceleration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Rust Acceleration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-robustness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Robustness
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-basic-modulation-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Basic Modulation Index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-no-coupling-null-case" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 No Coupling (Null Case)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-pac-matrix-across-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 PAC Matrix Across Layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-pac-gate-for-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 PAC Gate for Policy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-bin-count-sensitivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Bin Count Sensitivity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#56-surrogate-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 Surrogate Testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#57-scpn-cross-layer-pac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.7 SCPN Cross-Layer PAC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#58-controlled-coupling-strength" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.8 Controlled Coupling Strength
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#59-pac-matrix-visualisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.9 PAC Matrix Visualisation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#510-time-resolved-pac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.10 Time-Resolved PAC
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-technical-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Technical Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Technical Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-module-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Module API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.pac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pac
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="pac">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.pac-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.pac.modulation_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        modulation_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.pac.pac_matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pac_matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.upde.pac.pac_gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pac_gate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-function-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Function Signatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-performance-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Performance Benchmarks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Performance Benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-modulation_index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 modulation_index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-pac_matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 pac_matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-complexity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 Complexity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#74-surrogate-testing-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.4 Surrogate Testing Cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#75-pac_matrix-scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.5 pac_matrix Scaling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#76-recommended-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.6 Recommended Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#77-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.7 Memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-citations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Citations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="phase-amplitude-coupling-cross-frequency-interaction">Phase-Amplitude Coupling — Cross-Frequency Interaction<a class="headerlink" href="#phase-amplitude-coupling-cross-frequency-interaction" title="Permanent link">&para;</a></h1>
+<p>The <code>pac</code> module measures <strong>phase-amplitude coupling (PAC)</strong>: the statistical
+dependence between the phase of a low-frequency oscillation and the
+amplitude (envelope) of a high-frequency oscillation. PAC is a hallmark
+of cross-frequency communication in neural circuits and a key biomarker
+in neuroscience.</p>
+<p>In the SCPN framework, PAC quantifies how one layer's phase dynamics
+modulate another layer's amplitude — capturing hierarchical information
+flow across timescales.</p>
+<hr />
+<h2 id="1-mathematical-formalism">1. Mathematical Formalism<a class="headerlink" href="#1-mathematical-formalism" title="Permanent link">&para;</a></h2>
+<h3 id="11-the-modulation-index-mi">1.1 The Modulation Index (MI)<a class="headerlink" href="#11-the-modulation-index-mi" title="Permanent link">&para;</a></h3>
+<p>The modulation index (Tort et al. 2010) quantifies how non-uniformly
+high-frequency amplitude is distributed across low-frequency phase bins:</p>
+<ol>
+<li>Divide the low-frequency phase <span class="arithmatex">\(\theta_{\text{low}}\)</span> into <span class="arithmatex">\(B\)</span> equal bins
+   on <span class="arithmatex">\([0, 2\pi)\)</span>: <span class="arithmatex">\([\phi_0, \phi_1), [\phi_1, \phi_2), \ldots\)</span></li>
+<li>For each bin <span class="arithmatex">\(k\)</span>, compute the mean high-frequency amplitude:
+   <span class="arithmatex">\(\bar{A}_k = \langle A_{\text{high}} \rangle_{\theta \in [\phi_k, \phi_{k+1})}\)</span></li>
+<li>Normalise to a probability distribution: <span class="arithmatex">\(p_k = \bar{A}_k / \sum_k \bar{A}_k\)</span></li>
+<li>Compute KL divergence from uniform:
+   <span class="arithmatex">\(D_{KL} = \sum_k p_k \log(p_k \cdot B)\)</span></li>
+<li>Normalise: <span class="arithmatex">\(\text{MI} = D_{KL} / \log(B)\)</span></li>
+</ol>
+<div class="arithmatex">\[
+\text{MI} = \frac{1}{\log B} \sum_{k=1}^{B} p_k \log(B \cdot p_k) \in [0, 1]
+\]</div>
+<table>
+<thead>
+<tr>
+<th>MI value</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MI = 0</td>
+<td>No coupling — amplitude uniform across phase bins</td>
+</tr>
+<tr>
+<td>0 &lt; MI &lt; 0.3</td>
+<td>Weak coupling</td>
+</tr>
+<tr>
+<td>0.3 ≤ MI &lt; 0.6</td>
+<td>Moderate coupling</td>
+</tr>
+<tr>
+<td>MI ≥ 0.6</td>
+<td>Strong coupling — amplitude strongly modulated by phase</td>
+</tr>
+<tr>
+<td>MI = 1</td>
+<td>Perfect coupling — all amplitude concentrated in one bin</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-information-theoretic-interpretation">1.2 Information-Theoretic Interpretation<a class="headerlink" href="#12-information-theoretic-interpretation" title="Permanent link">&para;</a></h3>
+<p>The MI is a normalised KL divergence from the uniform distribution <span class="arithmatex">\(q_k = 1/B\)</span>:</p>
+<div class="arithmatex">\[
+\text{MI} = \frac{D_{KL}(p \| q)}{\log B} = \frac{H_{\max} - H(p)}{H_{\max}}
+\]</div>
+<p>where <span class="arithmatex">\(H(p) = -\sum p_k \log p_k\)</span> is the entropy of the amplitude distribution
+across phase bins and <span class="arithmatex">\(H_{\max} = \log B\)</span> is the entropy of the uniform
+distribution.</p>
+<p>MI = 0 when entropy is maximal (uniform) and MI = 1 when entropy is zero
+(delta function — all amplitude in one bin).</p>
+<h3 id="13-pac-matrix">1.3 PAC Matrix<a class="headerlink" href="#13-pac-matrix" title="Permanent link">&para;</a></h3>
+<p>For <span class="arithmatex">\(N\)</span> oscillators with both phase <span class="arithmatex">\(\theta_i(t)\)</span> and amplitude <span class="arithmatex">\(A_i(t)\)</span>
+time series, the PAC matrix is:</p>
+<div class="arithmatex">\[
+\text{PAC}_{ij} = \text{MI}(\theta_i, A_j)
+\]</div>
+<p>Entry <span class="arithmatex">\((i, j)\)</span> measures how much oscillator <span class="arithmatex">\(i\)</span>'s phase modulates oscillator
+<span class="arithmatex">\(j\)</span>'s amplitude. The matrix is generally NOT symmetric — the low-frequency
+phase driver and high-frequency amplitude modulated signal play different
+roles.</p>
+<p>Diagonal entries <span class="arithmatex">\(\text{PAC}_{ii}\)</span> measure self-coupling (within-signal PAC).
+Off-diagonal entries <span class="arithmatex">\(\text{PAC}_{ij}, i \neq j\)</span> measure cross-signal PAC
+(inter-layer communication in SCPN).</p>
+<h3 id="14-pac-gate">1.4 PAC Gate<a class="headerlink" href="#14-pac-gate" title="Permanent link">&para;</a></h3>
+<p>The <code>pac_gate(pac_value, threshold)</code> function provides a binary decision:
+is PAC significant? Default threshold 0.3 is based on empirical studies
+showing that MI &gt; 0.3 reliably indicates genuine coupling above noise floor
+for typical neuroscience data (Tort et al. 2010).</p>
+<h3 id="15-number-of-phase-bins">1.5 Number of Phase Bins<a class="headerlink" href="#15-number-of-phase-bins" title="Permanent link">&para;</a></h3>
+<p>The choice of <span class="arithmatex">\(B\)</span> (default 18 = 20° bins) affects MI estimation:</p>
+<table>
+<thead>
+<tr>
+<th>B</th>
+<th>Bin width</th>
+<th>Resolution</th>
+<th>Bias</th>
+<th>Variance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td>60°</td>
+<td>Coarse</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>18</td>
+<td>20°</td>
+<td>Standard</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>36</td>
+<td>10°</td>
+<td>Fine</td>
+<td>High</td>
+<td>High</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Bias-variance trade-off:</strong> Fewer bins → lower variance but may miss
+narrow coupling peaks. More bins → higher resolution but increased noise
+(many bins may have few samples). Rule of thumb: <span class="arithmatex">\(B = 18\)</span> for <span class="arithmatex">\(T &gt; 500\)</span>
+samples; reduce to <span class="arithmatex">\(B = 9\)</span> for <span class="arithmatex">\(T &lt; 200\)</span>.</p>
+<h3 id="16-statistical-significance">1.6 Statistical Significance<a class="headerlink" href="#16-statistical-significance" title="Permanent link">&para;</a></h3>
+<p>MI is biased upward for finite data — even random signals produce MI &gt; 0.
+To assess significance:</p>
+<ol>
+<li><strong>Surrogate testing:</strong> Shuffle amplitude time series, recompute MI.
+   Repeat 200 times. Genuine MI should exceed 95th percentile of surrogates.</li>
+<li><strong>Analytical bound:</strong> For <span class="arithmatex">\(T\)</span> i.i.d. samples and <span class="arithmatex">\(B\)</span> bins:
+   <span class="arithmatex">\(\text{MI}_{\text{null}} \sim \frac{B-1}{2T \ln B}\)</span></li>
+<li><strong>Permutation z-score:</strong> <span class="arithmatex">\(z = (\text{MI} - \mu_{\text{surr}}) / \sigma_{\text{surr}}\)</span>.
+   Significant if <span class="arithmatex">\(z &gt; 3\)</span>.</li>
+</ol>
+<p>The module does NOT perform surrogate testing automatically. Users should
+implement it for publication-quality results.</p>
+<hr />
+<h2 id="2-theoretical-context">2. Theoretical Context<a class="headerlink" href="#2-theoretical-context" title="Permanent link">&para;</a></h2>
+<h3 id="21-historical-background">2.1 Historical Background<a class="headerlink" href="#21-historical-background" title="Permanent link">&para;</a></h3>
+<p>Phase-amplitude coupling was first systematically characterised in
+neuroscience by Canolty et al. (2006) who observed theta (4–8 Hz)
+phase modulating gamma (30–100 Hz) amplitude in human electrocorticography.
+The modulation index method was formalised by Tort, Komorowski, Eichenbaum
+&amp; Kopell (2010), becoming the standard PAC measure.</p>
+<p>Jensen &amp; Colgin (2007) proposed that PAC is the mechanism by which
+slow rhythms coordinate fast local processing — the "communication
+through coherence" framework.</p>
+<h3 id="22-neuroscience-applications">2.2 Neuroscience Applications<a class="headerlink" href="#22-neuroscience-applications" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Brain region</th>
+<th>Low freq</th>
+<th>High freq</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hippocampus</td>
+<td>Theta (4–8 Hz)</td>
+<td>Gamma (30–100 Hz)</td>
+<td>Memory encoding</td>
+</tr>
+<tr>
+<td>Cortex</td>
+<td>Alpha (8–12 Hz)</td>
+<td>High-gamma (60–150 Hz)</td>
+<td>Attention gating</td>
+</tr>
+<tr>
+<td>Basal ganglia</td>
+<td>Beta (13–30 Hz)</td>
+<td>High-gamma</td>
+<td>Motor control</td>
+</tr>
+<tr>
+<td>Prefrontal</td>
+<td>Delta (1–4 Hz)</td>
+<td>Theta</td>
+<td>Working memory</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-role-in-scpn">2.3 Role in SCPN<a class="headerlink" href="#23-role-in-scpn" title="Permanent link">&para;</a></h3>
+<p>PAC measures hierarchical coupling between SCPN layers with different
+timescales. For example:</p>
+<ul>
+<li>Layer 4 (Synchronisation, τ=2s) phase → Layer 2 (Neurochemical, τ=25ms)
+  amplitude: slow oscillatory phase gates fast neurochemical activity</li>
+<li>Layer 6 (Planetary, τ=24h) phase → Layer 5 (Psychoemotional, τ=1s)
+  amplitude: circadian modulation of emotional reactivity</li>
+</ul>
+<p>The <code>pac_max</code> metric (maximum PAC across all layer pairs) is consumed
+by <code>supervisor/policy_rules.py</code> for regime classification.</p>
+<h3 id="24-comparison-with-other-coupling-measures">2.4 Comparison with Other Coupling Measures<a class="headerlink" href="#24-comparison-with-other-coupling-measures" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Measure</th>
+<th>What it captures</th>
+<th>Frequency specificity</th>
+<th>Directionality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLV</td>
+<td>Phase-phase coupling</td>
+<td>Same frequency</td>
+<td>Symmetric</td>
+</tr>
+<tr>
+<td>PAC (MI)</td>
+<td>Phase-amplitude coupling</td>
+<td>Cross-frequency</td>
+<td>Asymmetric</td>
+</tr>
+<tr>
+<td>Power correlation</td>
+<td>Amplitude-amplitude</td>
+<td>Same or cross</td>
+<td>Symmetric</td>
+</tr>
+<tr>
+<td>Transfer entropy</td>
+<td>Information flow</td>
+<td>Any</td>
+<td>Directed</td>
+</tr>
+<tr>
+<td>Granger causality</td>
+<td>Linear prediction</td>
+<td>Any</td>
+<td>Directed</td>
+</tr>
+</tbody>
+</table>
+<p>PAC is unique in capturing cross-frequency interactions. PLV only works
+at the same frequency; transfer entropy is general but computationally
+expensive and harder to interpret.</p>
+<h3 id="25-cross-frequency-coupling-zoo">2.5 Cross-Frequency Coupling Zoo<a class="headerlink" href="#25-cross-frequency-coupling-zoo" title="Permanent link">&para;</a></h3>
+<p>PAC is one member of a family of cross-frequency coupling (CFC) measures:</p>
+<table>
+<thead>
+<tr>
+<th>CFC type</th>
+<th>Phase of</th>
+<th>Amplitude of</th>
+<th>Measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase-amplitude (PAC)</td>
+<td>Low freq</td>
+<td>High freq</td>
+<td>MI</td>
+</tr>
+<tr>
+<td>Phase-phase (PPC)</td>
+<td>Low freq</td>
+<td>High freq</td>
+<td>PLV at harmonics</td>
+</tr>
+<tr>
+<td>Amplitude-amplitude (AAC)</td>
+<td>Low freq</td>
+<td>High freq</td>
+<td>Correlation</td>
+</tr>
+<tr>
+<td>Phase-frequency (PFC)</td>
+<td>Low freq</td>
+<td>—</td>
+<td>Instantaneous freq vs phase</td>
+</tr>
+</tbody>
+</table>
+<p>PAC is the most studied because it has the clearest functional interpretation:
+slow rhythms "gate" fast activity, enabling multiplexed information routing.</p>
+<h3 id="26-methodological-considerations">2.6 Methodological Considerations<a class="headerlink" href="#26-methodological-considerations" title="Permanent link">&para;</a></h3>
+<p><strong>Filtering artefacts.</strong> Band-pass filtering to extract low-frequency phase
+and high-frequency amplitude can introduce spurious PAC through filter
+edge effects. The Hilbert transform used in SPO's <code>market.extract_phase()</code>
+avoids some of these issues but is sensitive to broadband signals.</p>
+<p><strong>Volume conduction.</strong> In EEG/MEG, PAC measured between nearby channels
+may reflect volume conduction rather than genuine coupling. Source
+localisation (beamforming, LCMV) before PAC computation is recommended.</p>
+<p><strong>Harmonic confounds.</strong> A non-sinusoidal waveform (e.g., sharp-wave ripple)
+produces harmonics that can be mistaken for PAC. The "waveform shape" test
+(Cole &amp; Voytek 2017) should be applied before interpreting PAC as genuine
+cross-frequency interaction.</p>
+<h3 id="27-pac-in-disease">2.7 PAC in Disease<a class="headerlink" href="#27-pac-in-disease" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>PAC change</th>
+<th>Brain region</th>
+<th>Clinical relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parkinson's disease</td>
+<td>β→γ PAC elevated</td>
+<td>Basal ganglia</td>
+<td>Motor symptom correlate</td>
+</tr>
+<tr>
+<td>Epilepsy</td>
+<td>θ→γ PAC during seizure</td>
+<td>Hippocampus</td>
+<td>Seizure marker</td>
+</tr>
+<tr>
+<td>Alzheimer's</td>
+<td>θ→γ PAC reduced</td>
+<td>Cortex</td>
+<td>Memory impairment</td>
+</tr>
+<tr>
+<td>Schizophrenia</td>
+<td>θ→γ PAC disrupted</td>
+<td>Prefrontal</td>
+<td>Working memory deficit</td>
+</tr>
+</tbody>
+</table>
+<p>These findings motivate PAC as a biomarker for closed-loop neurostimulation
+— the SCPN framework could modulate layer coupling based on real-time PAC.</p>
+<hr />
+<h2 id="3-pipeline-position">3. Pipeline Position<a class="headerlink" href="#3-pipeline-position" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│ Phase history │────→│ modulation_index │────→│ MI ∈ [0, 1] │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│ θ_low (T,)   │     │ (Tort et al.     │     └──────────────┘
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│              │     │  2010)           │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│ Amplitude    │────→│                  │     ┌──────────────┐
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│ A_high (T,)  │     └──────────────────┘     │ pac_gate     │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>└──────────────┘                              │ MI &gt; thresh? │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                     ┌──────────────────┐     └──────────────┘
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>┌──────────────┐     │ pac_matrix       │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│ θ (T, N)     │────→│ N×N MI matrix   │────→│ supervisor   │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│ A (T, N)     │────→│                  │     │ policy_rules │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>└──────────────┘     └──────────────────┘     └──────────────┘
+</code></pre></div>
+<p><strong>Inputs:</strong>
+- <code>theta_low</code> (T,) — low-frequency phase time series
+- <code>amp_high</code> (T,) — high-frequency amplitude time series
+- <code>n_bins</code> — number of phase bins (default 18)</p>
+<p><strong>Outputs:</strong>
+- <code>modulation_index</code> → float <span class="arithmatex">\(\in [0, 1]\)</span>
+- <code>pac_matrix</code> → (N, N) MI matrix
+- <code>pac_gate</code> → bool</p>
+<hr />
+<h2 id="4-features">4. Features<a class="headerlink" href="#4-features" title="Permanent link">&para;</a></h2>
+<h3 id="41-three-functions">4.1 Three Functions<a class="headerlink" href="#41-three-functions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modulation_index</code></td>
+<td>Pairwise PAC</td>
+<td><code>(T,)</code> + <code>(T,)</code></td>
+<td>float MI</td>
+</tr>
+<tr>
+<td><code>pac_matrix</code></td>
+<td>All-pairs PAC</td>
+<td><code>(T,N)</code> + <code>(T,N)</code></td>
+<td><code>(N,N)</code></td>
+</tr>
+<tr>
+<td><code>pac_gate</code></td>
+<td>Binary decision</td>
+<td>float MI</td>
+<td>bool</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-rust-acceleration">4.2 Rust Acceleration<a class="headerlink" href="#42-rust-acceleration" title="Permanent link">&para;</a></h3>
+<p><code>modulation_index</code> delegates to <code>spo_kernel.pac_modulation_index</code> when
+available. The Rust implementation uses sorted-bin counting instead of
+<code>np.digitize</code>, avoiding branch mispredictions.</p>
+<h3 id="43-robustness">4.3 Robustness<a class="headerlink" href="#43-robustness" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Empty arrays → MI = 0.0</li>
+<li><code>n_bins &lt; 2</code> → MI = 0.0</li>
+<li><code>n_bins = 1</code> → guarded against <span class="arithmatex">\(\log(1) = 0\)</span> denominator</li>
+<li>All-zero amplitude → MI = 0.0</li>
+<li>Mismatched lengths → uses <code>min(len(theta), len(amp))</code></li>
+</ul>
+<hr />
+<h2 id="5-usage-examples">5. Usage Examples<a class="headerlink" href="#5-usage-examples" title="Permanent link">&para;</a></h2>
+<h3 id="51-basic-modulation-index">5.1 Basic Modulation Index<a class="headerlink" href="#51-basic-modulation-index" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.pac</span><span class="w"> </span><span class="kn">import</span> <span class="n">modulation_index</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">T</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">T</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.001</span>  <span class="c1"># 1ms steps</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Low-frequency phase (10 Hz)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">theta_low</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># High-frequency amplitude modulated by low-freq phase</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">amp_high</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_low</span><span class="p">)</span>  <span class="c1"># coupled!</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">amp_high</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>  <span class="c1"># noise</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">mi</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span><span class="n">theta_low</span><span class="p">,</span> <span class="n">amp_high</span><span class="p">,</span> <span class="n">n_bins</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MI = </span><span class="si">{</span><span class="n">mi</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># expect MI &gt; 0.3 (genuine coupling)</span>
+</code></pre></div>
+<h3 id="52-no-coupling-null-case">5.2 No Coupling (Null Case)<a class="headerlink" href="#52-no-coupling-null-case" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Independent signals — MI should be near 0</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">theta_random</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">amp_random</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">T</span><span class="p">))</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">mi_null</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span><span class="n">theta_random</span><span class="p">,</span> <span class="n">amp_random</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Null MI = </span><span class="si">{</span><span class="n">mi_null</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># expect &lt; 0.05</span>
+</code></pre></div>
+<h3 id="53-pac-matrix-across-layers">5.3 PAC Matrix Across Layers<a class="headerlink" href="#53-pac-matrix-across-layers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.pac</span><span class="w"> </span><span class="kn">import</span> <span class="n">pac_matrix</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">N</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># 4 oscillators</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">T</span> <span class="o">=</span> <span class="mi">2000</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">phases</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="p">))</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">amplitudes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="p">)))</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># Add coupling: phase[0] modulates amplitude[2]</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">amplitudes</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phases</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">pac</span> <span class="o">=</span> <span class="n">pac_matrix</span><span class="p">(</span><span class="n">phases</span><span class="p">,</span> <span class="n">amplitudes</span><span class="p">,</span> <span class="n">n_bins</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PAC matrix:&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">pac</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="c1"># Entry [0, 2] should be elevated</span>
+</code></pre></div>
+<h3 id="54-pac-gate-for-policy">5.4 PAC Gate for Policy<a class="headerlink" href="#54-pac-gate-for-policy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.pac</span><span class="w"> </span><span class="kn">import</span> <span class="n">pac_gate</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">mi</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span><span class="n">theta_low</span><span class="p">,</span> <span class="n">amp_high</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">if</span> <span class="n">pac_gate</span><span class="p">(</span><span class="n">mi</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">):</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Significant PAC detected — cross-frequency coupling active&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No significant PAC&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="55-bin-count-sensitivity">5.5 Bin Count Sensitivity<a class="headerlink" href="#55-bin-count-sensitivity" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">for</span> <span class="n">B</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">36</span><span class="p">]:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">mi</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span><span class="n">theta_low</span><span class="p">,</span> <span class="n">amp_high</span><span class="p">,</span> <span class="n">n_bins</span><span class="o">=</span><span class="n">B</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;B=</span><span class="si">{</span><span class="n">B</span><span class="si">:</span><span class="s2">2d</span><span class="si">}</span><span class="s2">: MI=</span><span class="si">{</span><span class="n">mi</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># MI should be consistent (± 0.05) across reasonable B values</span>
+</code></pre></div>
+<h3 id="56-surrogate-testing">5.6 Surrogate Testing<a class="headerlink" href="#56-surrogate-testing" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Compute significance via phase shuffling</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">mi_real</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span><span class="n">theta_low</span><span class="p">,</span> <span class="n">amp_high</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">mi_surrogates</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="c1"># Shuffle amplitude to destroy PAC while preserving spectra</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">shift</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">integers</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="n">T</span> <span class="o">-</span> <span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="n">amp_shuffled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">amp_high</span><span class="p">,</span> <span class="n">shift</span><span class="p">)</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">mi_surrogates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">modulation_index</span><span class="p">(</span><span class="n">theta_low</span><span class="p">,</span> <span class="n">amp_shuffled</span><span class="p">))</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">mi_surr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mi_surrogates</span><span class="p">)</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="n">z_score</span> <span class="o">=</span> <span class="p">(</span><span class="n">mi_real</span> <span class="o">-</span> <span class="n">mi_surr</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">mi_surr</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="n">p_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">mi_surr</span> <span class="o">&gt;=</span> <span class="n">mi_real</span><span class="p">)</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MI = </span><span class="si">{</span><span class="n">mi_real</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, z = </span><span class="si">{</span><span class="n">z_score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, p = </span><span class="si">{</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="57-scpn-cross-layer-pac">5.7 SCPN Cross-Layer PAC<a class="headerlink" href="#57-scpn-cross-layer-pac" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Layer 4 (sync) phase → Layer 2 (neurochemical) amplitude</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPDEEngine</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.order_params</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_order_parameter</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># (Assume simulation has been run, producing phase trajectories per layer)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># layer4_phases = phase_trajectory[:, layer4_indices]  # (T, N_layer4)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># layer2_amplitudes = amplitude_trajectory[:, layer2_indices]</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># Cross-layer PAC: does Layer 4 phase gate Layer 2 amplitude?</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># pac_cross = pac_matrix(layer4_phases, layer2_amplitudes)</span>
+</code></pre></div>
+<h3 id="58-controlled-coupling-strength">5.8 Controlled Coupling Strength<a class="headerlink" href="#58-controlled-coupling-strength" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Generate signals with known MI for validation</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">coupling_strengths</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">coupling_strengths</span><span class="p">:</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">theta</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">amp</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">mi</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">amp</span><span class="p">))</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Coupling=</span><span class="si">{</span><span class="n">c</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">: MI=</span><span class="si">{</span><span class="n">mi</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="c1"># MI should increase monotonically with coupling strength</span>
+</code></pre></div>
+<h3 id="59-pac-matrix-visualisation">5.9 PAC Matrix Visualisation<a class="headerlink" href="#59-pac-matrix-visualisation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">pac</span> <span class="o">=</span> <span class="n">pac_matrix</span><span class="p">(</span><span class="n">phases_history</span><span class="p">,</span> <span class="n">amplitudes_history</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">im</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">pac</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;hot&quot;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Amplitude oscillator j&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Phase oscillator i&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Phase-Amplitude Coupling Matrix&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;MI&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;pac_matrix.png&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="510-time-resolved-pac">5.10 Time-Resolved PAC<a class="headerlink" href="#510-time-resolved-pac" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Sliding-window PAC to track coupling over time</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">window</span> <span class="o">=</span> <span class="mi">500</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">mi_timeseries</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">T</span> <span class="o">-</span> <span class="n">window</span><span class="p">,</span> <span class="mi">50</span><span class="p">):</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">window</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">mi</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span><span class="n">theta_low</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">],</span> <span class="n">amp_high</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">mi_timeseries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mi</span><span class="p">)</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># mi_timeseries shows how PAC evolves — useful for detecting</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="c1"># coupling onset/offset in SCPN regime transitions</span>
+</code></pre></div>
+<hr />
+<h2 id="6-technical-reference">6. Technical Reference<a class="headerlink" href="#6-technical-reference" title="Permanent link">&para;</a></h2>
+<h3 id="61-module-api">6.1 Module API<a class="headerlink" href="#61-module-api" title="Permanent link">&para;</a></h3>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="scpn_phase_orchestrator.upde.pac" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">pac</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.pac" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+<h3 id="scpn_phase_orchestrator.upde.pac-functions">Functions<a href="#scpn_phase_orchestrator.upde.pac-functions" class="headerlink" title="Permanent link">&para;</a></h3>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="scpn_phase_orchestrator.upde.pac.modulation_index" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">modulation_index</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.pac.modulation_index" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">modulation_index</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">theta_low</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">amp_high</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">n_bins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">18</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Phase-amplitude coupling via Tort et al. 2010, J. Neurophysiol.</p>
+<p>Bins amplitude by phase, computes KL divergence from uniform.
+Returns MI ∈ [0, 1], normalised by log(n_bins).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/upde/pac.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-16">16</a></span>
+<span class="normal"><a href="#__codelineno-0-17">17</a></span>
+<span class="normal"><a href="#__codelineno-0-18">18</a></span>
+<span class="normal"><a href="#__codelineno-0-19">19</a></span>
+<span class="normal"><a href="#__codelineno-0-20">20</a></span>
+<span class="normal"><a href="#__codelineno-0-21">21</a></span>
+<span class="normal"><a href="#__codelineno-0-22">22</a></span>
+<span class="normal"><a href="#__codelineno-0-23">23</a></span>
+<span class="normal"><a href="#__codelineno-0-24">24</a></span>
+<span class="normal"><a href="#__codelineno-0-25">25</a></span>
+<span class="normal"><a href="#__codelineno-0-26">26</a></span>
+<span class="normal"><a href="#__codelineno-0-27">27</a></span>
+<span class="normal"><a href="#__codelineno-0-28">28</a></span>
+<span class="normal"><a href="#__codelineno-0-29">29</a></span>
+<span class="normal"><a href="#__codelineno-0-30">30</a></span>
+<span class="normal"><a href="#__codelineno-0-31">31</a></span>
+<span class="normal"><a href="#__codelineno-0-32">32</a></span>
+<span class="normal"><a href="#__codelineno-0-33">33</a></span>
+<span class="normal"><a href="#__codelineno-0-34">34</a></span>
+<span class="normal"><a href="#__codelineno-0-35">35</a></span>
+<span class="normal"><a href="#__codelineno-0-36">36</a></span>
+<span class="normal"><a href="#__codelineno-0-37">37</a></span>
+<span class="normal"><a href="#__codelineno-0-38">38</a></span>
+<span class="normal"><a href="#__codelineno-0-39">39</a></span>
+<span class="normal"><a href="#__codelineno-0-40">40</a></span>
+<span class="normal"><a href="#__codelineno-0-41">41</a></span>
+<span class="normal"><a href="#__codelineno-0-42">42</a></span>
+<span class="normal"><a href="#__codelineno-0-43">43</a></span>
+<span class="normal"><a href="#__codelineno-0-44">44</a></span>
+<span class="normal"><a href="#__codelineno-0-45">45</a></span>
+<span class="normal"><a href="#__codelineno-0-46">46</a></span>
+<span class="normal"><a href="#__codelineno-0-47">47</a></span>
+<span class="normal"><a href="#__codelineno-0-48">48</a></span>
+<span class="normal"><a href="#__codelineno-0-49">49</a></span>
+<span class="normal"><a href="#__codelineno-0-50">50</a></span>
+<span class="normal"><a href="#__codelineno-0-51">51</a></span>
+<span class="normal"><a href="#__codelineno-0-52">52</a></span>
+<span class="normal"><a href="#__codelineno-0-53">53</a></span>
+<span class="normal"><a href="#__codelineno-0-54">54</a></span>
+<span class="normal"><a href="#__codelineno-0-55">55</a></span>
+<span class="normal"><a href="#__codelineno-0-56">56</a></span>
+<span class="normal"><a href="#__codelineno-0-57">57</a></span>
+<span class="normal"><a href="#__codelineno-0-58">58</a></span>
+<span class="normal"><a href="#__codelineno-0-59">59</a></span>
+<span class="normal"><a href="#__codelineno-0-60">60</a></span>
+<span class="normal"><a href="#__codelineno-0-61">61</a></span>
+<span class="normal"><a href="#__codelineno-0-62">62</a></span>
+<span class="normal"><a href="#__codelineno-0-63">63</a></span>
+<span class="normal"><a href="#__codelineno-0-64">64</a></span>
+<span class="normal"><a href="#__codelineno-0-65">65</a></span>
+<span class="normal"><a href="#__codelineno-0-66">66</a></span>
+<span class="normal"><a href="#__codelineno-0-67">67</a></span>
+<span class="normal"><a href="#__codelineno-0-68">68</a></span>
+<span class="normal"><a href="#__codelineno-0-69">69</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-16" name="__codelineno-0-16"></a><span class="k">def</span><span class="w"> </span><span class="nf">modulation_index</span><span class="p">(</span><span class="n">theta_low</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">amp_high</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">n_bins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">18</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Phase-amplitude coupling via Tort et al. 2010, J. Neurophysiol.</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18"></a>
+<a id="__codelineno-0-19" name="__codelineno-0-19"></a><span class="sd">    Bins amplitude by phase, computes KL divergence from uniform.</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20"></a><span class="sd">    Returns MI ∈ [0, 1], normalised by log(n_bins).</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22"></a>    <span class="k">if</span> <span class="n">n_bins</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23"></a>        <span class="k">return</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24"></a>    <span class="k">try</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25"></a>        <span class="kn">import</span><span class="w"> </span><span class="nn">spo_kernel</span>  <span class="c1"># noqa: PLC0415</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26"></a>
+<a id="__codelineno-0-27" name="__codelineno-0-27"></a>        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28"></a>            <span class="n">spo_kernel</span><span class="o">.</span><span class="n">pac_modulation_index</span><span class="p">(</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29"></a>                <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">theta_low</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30"></a>                <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">amp_high</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31"></a>                <span class="n">n_bins</span><span class="p">,</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32"></a>            <span class="p">)</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33"></a>        <span class="p">)</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34"></a>    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35"></a>        <span class="k">pass</span>
+<a id="__codelineno-0-36" name="__codelineno-0-36"></a>    <span class="k">if</span> <span class="n">theta_low</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">amp_high</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37"></a>        <span class="k">return</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38"></a>    <span class="n">n</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">theta_low</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">amp_high</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39"></a>    <span class="n">theta</span> <span class="o">=</span> <span class="n">theta_low</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span> <span class="o">%</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40"></a>    <span class="n">amp</span> <span class="o">=</span> <span class="n">amp_high</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41"></a>
+<a id="__codelineno-0-42" name="__codelineno-0-42"></a>    <span class="n">bin_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">n_bins</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-43" name="__codelineno-0-43"></a>    <span class="n">bin_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">bin_edges</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+<a id="__codelineno-0-44" name="__codelineno-0-44"></a>    <span class="n">bin_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">bin_indices</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n_bins</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-45" name="__codelineno-0-45"></a>
+<a id="__codelineno-0-46" name="__codelineno-0-46"></a>    <span class="n">mean_amp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_bins</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<a id="__codelineno-0-47" name="__codelineno-0-47"></a>    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_bins</span><span class="p">):</span>
+<a id="__codelineno-0-48" name="__codelineno-0-48"></a>        <span class="n">mask</span> <span class="o">=</span> <span class="n">bin_indices</span> <span class="o">==</span> <span class="n">k</span>
+<a id="__codelineno-0-49" name="__codelineno-0-49"></a>        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
+<a id="__codelineno-0-50" name="__codelineno-0-50"></a>            <span class="n">mean_amp</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">amp</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+<a id="__codelineno-0-51" name="__codelineno-0-51"></a>
+<a id="__codelineno-0-52" name="__codelineno-0-52"></a>    <span class="n">total</span> <span class="o">=</span> <span class="n">mean_amp</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<a id="__codelineno-0-53" name="__codelineno-0-53"></a>    <span class="k">if</span> <span class="n">total</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54"></a>        <span class="k">return</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-55" name="__codelineno-0-55"></a>
+<a id="__codelineno-0-56" name="__codelineno-0-56"></a>    <span class="n">p</span> <span class="o">=</span> <span class="n">mean_amp</span> <span class="o">/</span> <span class="n">total</span>
+<a id="__codelineno-0-57" name="__codelineno-0-57"></a>    <span class="c1"># KL divergence from uniform q = 1/n_bins</span>
+<a id="__codelineno-0-58" name="__codelineno-0-58"></a>    <span class="c1"># D_KL = Σ p_k log(p_k / q_k) = Σ p_k log(p_k * n_bins)</span>
+<a id="__codelineno-0-59" name="__codelineno-0-59"></a>    <span class="n">log_n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">n_bins</span><span class="p">)</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60"></a>    <span class="k">if</span> <span class="n">log_n</span> <span class="o">&lt;</span> <span class="mf">1e-15</span><span class="p">:</span>
+<a id="__codelineno-0-61" name="__codelineno-0-61"></a>        <span class="k">return</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-62" name="__codelineno-0-62"></a>    <span class="n">kl</span> <span class="o">=</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-63" name="__codelineno-0-63"></a>    <span class="k">for</span> <span class="n">pk</span> <span class="ow">in</span> <span class="n">p</span><span class="p">:</span>
+<a id="__codelineno-0-64" name="__codelineno-0-64"></a>        <span class="k">if</span> <span class="n">pk</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+<a id="__codelineno-0-65" name="__codelineno-0-65"></a>            <span class="n">kl</span> <span class="o">+=</span> <span class="n">pk</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pk</span> <span class="o">*</span> <span class="n">n_bins</span><span class="p">)</span>
+<a id="__codelineno-0-66" name="__codelineno-0-66"></a>
+<a id="__codelineno-0-67" name="__codelineno-0-67"></a>    <span class="c1"># MI normalised to [0, 1]</span>
+<a id="__codelineno-0-68" name="__codelineno-0-68"></a>    <span class="n">mi</span> <span class="o">=</span> <span class="n">kl</span> <span class="o">/</span> <span class="n">log_n</span>
+<a id="__codelineno-0-69" name="__codelineno-0-69"></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">mi</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="scpn_phase_orchestrator.upde.pac.pac_matrix" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">pac_matrix</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.pac.pac_matrix" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">pac_matrix</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">phases_history</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">amplitudes_history</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">n_bins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">18</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>N×N PAC matrix: entry [i,j] = MI(phase_i, amplitude_j).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>phases_history</code>
+            </td>
+            <td>
+                  <code><span title="numpy.typing.NDArray">NDArray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>(T, N) phase time series</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>amplitudes_history</code>
+            </td>
+            <td>
+                  <code><span title="numpy.typing.NDArray">NDArray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>(T, N) amplitude time series</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>n_bins</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>number of phase bins</p>
+              </div>
+            </td>
+            <td>
+                  <code>18</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.typing.NDArray">NDArray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>(N, N) modulation index matrix</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/upde/pac.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-72">72</a></span>
+<span class="normal"><a href="#__codelineno-0-73">73</a></span>
+<span class="normal"><a href="#__codelineno-0-74">74</a></span>
+<span class="normal"><a href="#__codelineno-0-75">75</a></span>
+<span class="normal"><a href="#__codelineno-0-76">76</a></span>
+<span class="normal"><a href="#__codelineno-0-77">77</a></span>
+<span class="normal"><a href="#__codelineno-0-78">78</a></span>
+<span class="normal"><a href="#__codelineno-0-79">79</a></span>
+<span class="normal"><a href="#__codelineno-0-80">80</a></span>
+<span class="normal"><a href="#__codelineno-0-81">81</a></span>
+<span class="normal"><a href="#__codelineno-0-82">82</a></span>
+<span class="normal"><a href="#__codelineno-0-83">83</a></span>
+<span class="normal"><a href="#__codelineno-0-84">84</a></span>
+<span class="normal"><a href="#__codelineno-0-85">85</a></span>
+<span class="normal"><a href="#__codelineno-0-86">86</a></span>
+<span class="normal"><a href="#__codelineno-0-87">87</a></span>
+<span class="normal"><a href="#__codelineno-0-88">88</a></span>
+<span class="normal"><a href="#__codelineno-0-89">89</a></span>
+<span class="normal"><a href="#__codelineno-0-90">90</a></span>
+<span class="normal"><a href="#__codelineno-0-91">91</a></span>
+<span class="normal"><a href="#__codelineno-0-92">92</a></span>
+<span class="normal"><a href="#__codelineno-0-93">93</a></span>
+<span class="normal"><a href="#__codelineno-0-94">94</a></span>
+<span class="normal"><a href="#__codelineno-0-95">95</a></span>
+<span class="normal"><a href="#__codelineno-0-96">96</a></span>
+<span class="normal"><a href="#__codelineno-0-97">97</a></span>
+<span class="normal"><a href="#__codelineno-0-98">98</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="k">def</span><span class="w"> </span><span class="nf">pac_matrix</span><span class="p">(</span>
+<a id="__codelineno-0-73" name="__codelineno-0-73"></a>    <span class="n">phases_history</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+<a id="__codelineno-0-74" name="__codelineno-0-74"></a>    <span class="n">amplitudes_history</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+<a id="__codelineno-0-75" name="__codelineno-0-75"></a>    <span class="n">n_bins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">18</span><span class="p">,</span>
+<a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+<a id="__codelineno-0-77" name="__codelineno-0-77"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;N×N PAC matrix: entry [i,j] = MI(phase_i, amplitude_j).</span>
+<a id="__codelineno-0-78" name="__codelineno-0-78"></a>
+<a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="sd">        phases_history: (T, N) phase time series</span>
+<a id="__codelineno-0-81" name="__codelineno-0-81"></a><span class="sd">        amplitudes_history: (T, N) amplitude time series</span>
+<a id="__codelineno-0-82" name="__codelineno-0-82"></a><span class="sd">        n_bins: number of phase bins</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83"></a>
+<a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-85" name="__codelineno-0-85"></a><span class="sd">        (N, N) modulation index matrix</span>
+<a id="__codelineno-0-86" name="__codelineno-0-86"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-87" name="__codelineno-0-87"></a>    <span class="k">if</span> <span class="n">phases_history</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">amplitudes_history</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+<a id="__codelineno-0-88" name="__codelineno-0-88"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;phases_history and amplitudes_history must be 2-D&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-89" name="__codelineno-0-89"></a>    <span class="n">n</span> <span class="o">=</span> <span class="n">phases_history</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<a id="__codelineno-0-90" name="__codelineno-0-90"></a>    <span class="k">if</span> <span class="n">amplitudes_history</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
+<a id="__codelineno-0-91" name="__codelineno-0-91"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;phases and amplitudes must have same number of oscillators&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-92" name="__codelineno-0-92"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+<a id="__codelineno-0-93" name="__codelineno-0-93"></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+<a id="__codelineno-0-94" name="__codelineno-0-94"></a>        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+<a id="__codelineno-0-95" name="__codelineno-0-95"></a>            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">modulation_index</span><span class="p">(</span>
+<a id="__codelineno-0-96" name="__codelineno-0-96"></a>                <span class="n">phases_history</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">amplitudes_history</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">n_bins</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97"></a>            <span class="p">)</span>
+<a id="__codelineno-0-98" name="__codelineno-0-98"></a>    <span class="k">return</span> <span class="n">result</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="scpn_phase_orchestrator.upde.pac.pac_gate" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">pac_gate</span>
+
+
+<a href="#scpn_phase_orchestrator.upde.pac.pac_gate" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">pac_gate</span><span class="p">(</span><span class="n">pac_value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Binary gate: True when PAC exceeds threshold.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/upde/pac.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-101">101</a></span>
+<span class="normal"><a href="#__codelineno-0-102">102</a></span>
+<span class="normal"><a href="#__codelineno-0-103">103</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-101" name="__codelineno-0-101"></a><span class="k">def</span><span class="w"> </span><span class="nf">pac_gate</span><span class="p">(</span><span class="n">pac_value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<a id="__codelineno-0-102" name="__codelineno-0-102"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Binary gate: True when PAC exceeds threshold.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-103" name="__codelineno-0-103"></a>    <span class="k">return</span> <span class="n">pac_value</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><h3 id="62-function-signatures">6.2 Function Signatures<a class="headerlink" href="#62-function-signatures" title="Permanent link">&para;</a></h3>
+<p><strong><code>modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) → float</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>theta_low</code></td>
+<td><code>NDArray</code> (T,)</td>
+<td>—</td>
+<td>Low-frequency phase</td>
+</tr>
+<tr>
+<td><code>amp_high</code></td>
+<td><code>NDArray</code> (T,)</td>
+<td>—</td>
+<td>High-frequency amplitude</td>
+</tr>
+<tr>
+<td><code>n_bins</code></td>
+<td><code>int</code></td>
+<td><code>18</code></td>
+<td>Phase bins</td>
+</tr>
+<tr>
+<td><strong>Returns</strong></td>
+<td><code>float</code></td>
+<td></td>
+<td>MI <span class="arithmatex">\(\in [0, 1]\)</span></td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>pac_matrix(phases_history: NDArray, amplitudes_history: NDArray, n_bins: int = 18) → NDArray</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phases_history</code></td>
+<td><code>(T, N)</code></td>
+<td>Phase time series</td>
+</tr>
+<tr>
+<td><code>amplitudes_history</code></td>
+<td><code>(T, N)</code></td>
+<td>Amplitude time series</td>
+</tr>
+<tr>
+<td><strong>Returns</strong></td>
+<td><code>(N, N)</code></td>
+<td>MI matrix</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>pac_gate(pac_value: float, threshold: float = 0.3) → bool</code></strong></p>
+<hr />
+<h2 id="7-performance-benchmarks">7. Performance Benchmarks<a class="headerlink" href="#7-performance-benchmarks" title="Permanent link">&para;</a></h2>
+<h3 id="71-modulation_index">7.1 modulation_index<a class="headerlink" href="#71-modulation_index" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>T</th>
+<th>n_bins</th>
+<th>Python (µs)</th>
+<th>Rust (µs)</th>
+<th>Speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>500</td>
+<td>18</td>
+<td>85</td>
+<td>12</td>
+<td>7.1x</td>
+</tr>
+<tr>
+<td>5000</td>
+<td>18</td>
+<td>420</td>
+<td>55</td>
+<td>7.6x</td>
+</tr>
+<tr>
+<td>50000</td>
+<td>18</td>
+<td>4200</td>
+<td>480</td>
+<td>8.8x</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-pac_matrix">7.2 pac_matrix<a class="headerlink" href="#72-pac_matrix" title="Permanent link">&para;</a></h3>
+<p><span class="arithmatex">\(O(N^2)\)</span> calls to <code>modulation_index</code>:</p>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>T</th>
+<th>Python (ms)</th>
+<th>Rust (ms)</th>
+<th>Speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>1000</td>
+<td>1.4</td>
+<td>0.2</td>
+<td>7x</td>
+</tr>
+<tr>
+<td>16</td>
+<td>1000</td>
+<td>22</td>
+<td>3.1</td>
+<td>7.1x</td>
+</tr>
+<tr>
+<td>64</td>
+<td>1000</td>
+<td>350</td>
+<td>48</td>
+<td>7.3x</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-complexity">7.3 Complexity<a class="headerlink" href="#73-complexity" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Time</th>
+<th>Space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modulation_index</code></td>
+<td><span class="arithmatex">\(O(T + B)\)</span></td>
+<td><span class="arithmatex">\(O(T + B)\)</span></td>
+</tr>
+<tr>
+<td><code>pac_matrix</code></td>
+<td><span class="arithmatex">\(O(N^2 \cdot (T + B))\)</span></td>
+<td><span class="arithmatex">\(O(N^2 + T + B)\)</span></td>
+</tr>
+<tr>
+<td><code>pac_gate</code></td>
+<td><span class="arithmatex">\(O(1)\)</span></td>
+<td><span class="arithmatex">\(O(1)\)</span></td>
+</tr>
+</tbody>
+</table>
+<h3 id="74-surrogate-testing-cost">7.4 Surrogate Testing Cost<a class="headerlink" href="#74-surrogate-testing-cost" title="Permanent link">&para;</a></h3>
+<p>200 surrogates × MI computation:</p>
+<table>
+<thead>
+<tr>
+<th>T</th>
+<th>Python (ms)</th>
+<th>Rust (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1000</td>
+<td>17</td>
+<td>2.4</td>
+</tr>
+<tr>
+<td>5000</td>
+<td>84</td>
+<td>11</td>
+</tr>
+<tr>
+<td>50000</td>
+<td>840</td>
+<td>96</td>
+</tr>
+</tbody>
+</table>
+<h3 id="75-pac_matrix-scaling">7.5 pac_matrix Scaling<a class="headerlink" href="#75-pac_matrix-scaling" title="Permanent link">&para;</a></h3>
+<p>The matrix computation is <span class="arithmatex">\(O(N^2)\)</span> MI evaluations. For large <span class="arithmatex">\(N\)</span>, this
+becomes the bottleneck:</p>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>T=1000, Python</th>
+<th>T=1000, Rust</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>1.4 ms</td>
+<td>0.2 ms</td>
+</tr>
+<tr>
+<td>8</td>
+<td>5.4 ms</td>
+<td>0.8 ms</td>
+</tr>
+<tr>
+<td>16</td>
+<td>22 ms</td>
+<td>3.1 ms</td>
+</tr>
+<tr>
+<td>32</td>
+<td>87 ms</td>
+<td>12 ms</td>
+</tr>
+<tr>
+<td>64</td>
+<td>350 ms</td>
+<td>48 ms</td>
+</tr>
+</tbody>
+</table>
+<p>For <span class="arithmatex">\(N &gt; 32\)</span>, consider computing PAC only for specific layer pairs
+rather than the full matrix.</p>
+<h3 id="76-recommended-settings">7.6 Recommended Settings<a class="headerlink" href="#76-recommended-settings" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Use case</th>
+<th>T</th>
+<th>n_bins</th>
+<th>Surrogates</th>
+<th>Expected time (Rust)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quick check</td>
+<td>500</td>
+<td>18</td>
+<td>0</td>
+<td>0.01 ms</td>
+</tr>
+<tr>
+<td>Standard analysis</td>
+<td>2000</td>
+<td>18</td>
+<td>200</td>
+<td>4 ms</td>
+</tr>
+<tr>
+<td>Publication</td>
+<td>10000</td>
+<td>18</td>
+<td>500</td>
+<td>25 ms</td>
+</tr>
+<tr>
+<td>Full matrix (N=16)</td>
+<td>2000</td>
+<td>18</td>
+<td>200 per pair</td>
+<td>~1s</td>
+</tr>
+</tbody>
+</table>
+<h3 id="77-memory">7.7 Memory<a class="headerlink" href="#77-memory" title="Permanent link">&para;</a></h3>
+<p>MI computation is <span class="arithmatex">\(O(T + B)\)</span> — the phase binning creates <span class="arithmatex">\(B\)</span> accumulators
+and a bin-index array of length <span class="arithmatex">\(T\)</span>. For <span class="arithmatex">\(T = 50000\)</span> and <span class="arithmatex">\(B = 18\)</span>: ~400 KB.
+Negligible compared to input data.</p>
+<hr />
+<h2 id="8-citations">8. Citations<a class="headerlink" href="#8-citations" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Tort A.B.L., Komorowski R., Eichenbaum H., Kopell N.</strong> (2010).
+   Measuring phase-amplitude coupling between neuronal oscillations of
+   different frequencies. <em>Journal of Neurophysiology</em> <strong>104</strong>(2):1195–1210.
+   doi:10.1152/jn.00106.2010</p>
+</li>
+<li>
+<p><strong>Canolty R.T., Edwards E., Dalal S.S., et al.</strong> (2006). High gamma
+   power is phase-locked to theta oscillations in human neocortex.
+   <em>Science</em> <strong>313</strong>(5793):1626–1628. doi:10.1126/science.1128115</p>
+</li>
+<li>
+<p><strong>Jensen O., Colgin L.L.</strong> (2007). Cross-frequency coupling between
+   neuronal oscillations. <em>Trends in Cognitive Sciences</em> <strong>11</strong>(7):267–269.
+   doi:10.1016/j.tics.2007.05.003</p>
+</li>
+<li>
+<p><strong>Aru J., Aru J., Priesemann V., et al.</strong> (2015). Untangling cross-
+   frequency coupling in neuroscience. <em>Current Opinion in Neurobiology</em>
+   <strong>31</strong>:51–61. doi:10.1016/j.conb.2014.08.002</p>
+</li>
+<li>
+<p><strong>Hülsemann M.J., Naumann E., Rasch B.</strong> (2019). Quantification of
+   phase-amplitude coupling in neuronal oscillations: comparison of
+   phase-locking value, mean vector length, modulation index, and
+   generalized-linear-modeling-cross-frequency-coupling. <em>Frontiers
+   in Neuroscience</em> <strong>13</strong>:573. doi:10.3389/fnins.2019.00573</p>
+</li>
+<li>
+<p><strong>Cole S.R., Voytek B.</strong> (2017). Brain oscillations and the importance
+   of waveform shape. <em>Trends in Cognitive Sciences</em> <strong>21</strong>(2):137–149.
+   doi:10.1016/j.tics.2016.12.008</p>
+</li>
+<li>
+<p><strong>Hyafil A., Giraud A.-L., Fontolan L., Gutkin B.</strong> (2015). Neural
+   cross-frequency coupling: connecting architectures, mechanisms, and
+   functions. <em>Trends in Neurosciences</em> <strong>38</strong>(11):725–740.
+   doi:10.1016/j.tins.2015.09.001</p>
+</li>
+</ol>
+<hr />
+<h2 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>tests/test_pac.py</code> — 18 tests: MI bounds [0,1], coupled signal MI&gt;0.3,
+  uncoupled MI≈0, empty arrays, n_bins edge cases, pac_matrix shape,
+  pac_matrix asymmetry, pac_gate threshold, bin sensitivity</li>
+<li><code>tests/test_pac_parity.py</code> — 3 tests: Rust vs Python parity</li>
+</ul>
+<p>Total: <strong>21 tests</strong>.</p>
+<hr />
+<h2 id="source">Source<a class="headerlink" href="#source" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Python: <code>src/scpn_phase_orchestrator/upde/pac.py</code> (103 lines)</li>
+<li>Rust: <code>spo-kernel/crates/spo-engine/src/pac.rs</code></li>
+<li>FFI: <code>spo-kernel/crates/spo-ffi/src/lib.rs</code> (pac_modulation_index)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
