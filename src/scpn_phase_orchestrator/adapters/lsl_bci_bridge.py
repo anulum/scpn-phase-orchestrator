@@ -75,7 +75,13 @@ class LSLBCIBridge:
     def start(self) -> None:
         """Start the background capture thread."""
         if self._inlet is None and not self.connect():
-            raise RuntimeError(f"Could not connect to LSL stream: {self.stream_name}")
+            # Do not echo the configured stream_name — keep the error
+            # message independent of the user-configured identifier so
+            # shared logs never broadcast deployment topology.
+            raise RuntimeError(
+                "Could not connect to configured LSL stream "
+                "(check stream configuration)"
+            )
 
         self._running = True
         self._thread.start()

@@ -86,10 +86,14 @@ class TestGetInstantaneousPhase:
 
 class TestStartWithoutInlet:
     def test_start_without_connect_raises(self) -> None:
-        bridge = LSLBCIBridge()
+        bridge = LSLBCIBridge(stream_name="TOPOLOGY_DETAIL")
         if not HAS_LSL:
-            with pytest.raises(RuntimeError, match="Could not connect"):
+            with pytest.raises(RuntimeError) as excinfo:
                 bridge.start()
+            msg = str(excinfo.value)
+            assert "Could not connect" in msg
+            # Stream name must not be echoed (may reveal deployment topology).
+            assert "TOPOLOGY_DETAIL" not in msg
 
 
 class TestStopIdempotent:

@@ -111,8 +111,14 @@ class TestRemanentiaBridge:
 
     def test_url_scheme_validation(self) -> None:
         bad = RemanentiaBridge(remanentia_url="file:///etc/passwd")
-        with pytest.raises(ValueError, match="Refusing non-HTTP"):
+        with pytest.raises(ValueError) as excinfo:
             bad._get("/health")
+        msg = str(excinfo.value)
+        assert "Refusing" in msg
+        # Offending URL must not be echoed in the error (may contain a
+        # malicious scheme or caller payload).
+        assert "/etc/passwd" not in msg
+        assert "file://" not in msg
 
     def test_entity_count_offline(self) -> None:
         bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)

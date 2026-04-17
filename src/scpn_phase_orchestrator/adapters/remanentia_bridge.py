@@ -79,7 +79,11 @@ class RemanentiaBridge:
         """Execute a urllib request, enforcing http(s) scheme."""
         url = req.full_url
         if not url.startswith(("http://", "https://")):
-            raise ValueError(f"Refusing non-HTTP URL: {url}")
+            # Reject without echoing the offending URL — it may contain a
+            # malicious scheme or caller-supplied payload.
+            raise ValueError(
+                "Refusing request: only http:// and https:// URLs are allowed"
+            )
         with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
             result: dict = json.loads(resp.read())
             return result
