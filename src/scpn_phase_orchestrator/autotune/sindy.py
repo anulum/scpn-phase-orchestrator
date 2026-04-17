@@ -32,6 +32,10 @@ class PhaseSINDy:
     """
 
     def __init__(self, threshold: float = 0.05, max_iter: int = 10):
+        if threshold < 0.0:
+            raise ValueError(f"threshold must be non-negative, got {threshold}")
+        if max_iter < 1:
+            raise ValueError(f"max_iter must be >= 1, got {max_iter}")
         self.threshold = threshold
         self.max_iter = max_iter
         self.coefficients: list[np.ndarray] = []

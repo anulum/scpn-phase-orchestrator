@@ -31,6 +31,8 @@ class MetricBuffer:
     """Fixed-size ring buffer of (timestamp, value) pairs for one service."""
 
     def __init__(self, maxlen: int = 64):
+        if maxlen < 1:
+            raise ValueError(f"maxlen must be >= 1, got {maxlen}")
         self._maxlen = maxlen
         self._buf: deque[tuple[float, float]] = deque(maxlen=maxlen)
 

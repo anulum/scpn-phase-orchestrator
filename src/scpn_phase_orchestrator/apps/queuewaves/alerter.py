@@ -72,6 +72,10 @@ class WebhookAlerter:
     """Posts anomaly alerts to configured webhook sinks with deduplication."""
 
     def __init__(self, sinks: list[AlertSink], cooldown_seconds: float = 300.0):
+        if cooldown_seconds < 0.0:
+            raise ValueError(
+                f"cooldown_seconds must be non-negative, got {cooldown_seconds}"
+            )
         self._sinks = sinks
         self._cooldown = cooldown_seconds
         self._last_fired: dict[str, float] = {}

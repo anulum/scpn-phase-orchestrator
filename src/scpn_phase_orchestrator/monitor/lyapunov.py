@@ -47,6 +47,10 @@ class LyapunovGuard:
     """
 
     def __init__(self, basin_threshold: float = np.pi / 2):
+        if basin_threshold <= 0.0:
+            raise ValueError(
+                f"basin_threshold must be positive, got {basin_threshold}"
+            )
         self._basin_threshold = basin_threshold
         self._prev_V: float | None = None
 

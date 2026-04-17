@@ -44,6 +44,8 @@ class EventBus:
     """Pub/sub bus for regime events with bounded history."""
 
     def __init__(self, maxlen: int = 200) -> None:
+        if maxlen < 1:
+            raise ValueError(f"maxlen must be >= 1, got {maxlen}")
         self._subscribers: list = []
         self._history: deque[RegimeEvent] = deque(maxlen=maxlen)
 
