@@ -88,3 +88,9 @@ mojo/libattnres_mojo.so
 go/liborder_params.so
 go/liborder_params.h
 mojo/order_params_mojo
+
+# pac compiled artefacts
+go/libpac.so
+go/libpac.h
+mojo/pac_mojo
+mojo/order_params_mojo

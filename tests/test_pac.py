@@ -82,7 +82,7 @@ class TestPACMatrix:
             pac_matrix(np.zeros(10), np.zeros(10))
 
     def test_mismatched_n_raises(self) -> None:
-        with pytest.raises(ValueError, match="same number"):
+        with pytest.raises(ValueError, match="same shape"):
             pac_matrix(np.zeros((10, 3)), np.zeros((10, 4)))
 
 

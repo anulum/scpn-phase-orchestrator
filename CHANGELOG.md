@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-17 — PAC multi-backend)
+- Julia port `julia/pac.jl`, Go port `go/pac.go` (→ `libpac.so`),
+  Mojo port `mojo/pac.mojo` (→ `pac_mojo` executable) for Tort 2010
+  phase-amplitude coupling.
+- Python bridges `upde/_pac_julia.py`, `upde/_pac_go.py`,
+  `upde/_pac_mojo.py`.
+- `upde/pac.py` now exposes `ACTIVE_BACKEND` / `AVAILABLE_BACKENDS`
+  and dispatches `modulation_index` / `pac_matrix` fastest-first
+  across the five backends.
+- `tests/test_pac_backends.py` — per-backend parity (Rust/Julia/Go
+  bit-exact, Mojo ≤ 1e-10).
+- `tests/test_pac_stability.py` — MI bounded in [0, 1], monotonic in
+  modulation depth, diagonal-vs-off for locked signals. Marked
+  `pytest.mark.slow`.
+- `benchmarks/pac_benchmark.py` — multi-backend wall-clock harness.
+
+### Added (2026-04-17 — order_params multi-backend)
+- Julia port `julia/order_params.jl`, Go port `go/order_params.go`
+  (→ `liborder_params.so`), Mojo port `mojo/order_params.mojo`
+  (→ `order_params_mojo` executable).
+- PyO3 export for `compute_layer_coherence`.
+- `upde/order_params.py` upgraded to five-backend dispatcher.
+- 39 new tests (20 algorithm + 13 per-backend parity + 6 stability).
+
 ### Changed — AttnRes upgraded to full multi-head (2026-04-17)
 
 Following the new ``feedback_no_simplistic_models.md`` rule, the
