@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
@@ -6,7 +7,6 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coverage regression guard
 
-#!/usr/bin/env python
 """Coverage regression guard for scpn-phase-orchestrator."""
 
 from __future__ import annotations
@@ -126,7 +126,12 @@ def load_thresholds(path: Path) -> dict[str, object]:
 def evaluate(summary: CoverageSummary, thresholds: dict[str, object]) -> list[str]:
     failures: list[str] = []
 
-    global_min = float(thresholds["global_min_line_rate"])
+    global_raw = thresholds["global_min_line_rate"]
+    if not isinstance(global_raw, (int, float)):
+        raise TypeError(
+            f"global_min_line_rate must be numeric, got {type(global_raw).__name__}"
+        )
+    global_min = float(global_raw)
     if summary.line_rate_pct < global_min:
         failures.append(
             f"Global line coverage {summary.line_rate_pct:.2f}% "
