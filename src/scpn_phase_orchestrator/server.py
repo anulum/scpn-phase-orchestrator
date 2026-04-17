@@ -31,11 +31,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import threading
 from pathlib import Path
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
@@ -383,9 +386,16 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         adapters) register cleanup here so a graceful shutdown never
         leaks a descriptor.
         """
+        logger.info(
+            "spo server startup: spec=%s n_osc=%d amplitude_mode=%s",
+            spec.name,
+            sim.n_osc,
+            sim.amplitude_mode,
+        )
         try:
             yield
         finally:
+            logger.info("spo server shutdown: spec=%s", spec.name)
             with sim._lock:
                 sim.event_bus.clear()
 
@@ -414,13 +424,22 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     async def post_step() -> dict:
         """Handle POST /api/step — advance simulation one tick."""
         with sim._lock:
-            return sim.step()
+            snap = sim.step()
+        logger.debug(
+            "api.step: step=%d R_global=%.4f regime=%s",
+            snap.get("step", -1),
+            snap.get("R_global", float("nan")),
+            snap.get("regime", ""),
+        )
+        return snap
 
     @app.post("/api/reset", dependencies=[Depends(_require_auth)])
     async def post_reset() -> dict:
         """Handle POST /api/reset — reset simulation to initial state."""
         with sim._lock:
-            return sim.reset()
+            snap = sim.reset()
+        logger.info("api.reset: step=%d regime=%s", snap.get("step", 0), snap.get("regime", ""))
+        return snap
 
     @app.get("/api/config")
     async def get_config() -> dict:

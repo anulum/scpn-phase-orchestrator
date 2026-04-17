@@ -18,6 +18,7 @@ with a mocked context.
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Iterator
 from typing import Any
@@ -29,6 +30,8 @@ from scpn_phase_orchestrator.grpc_gen import (
     StateResponse,
 )
 from scpn_phase_orchestrator.server import SimulationState
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["PhaseStreamServicer", "HAS_GRPC"]
 
@@ -88,13 +91,23 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         with self._lock:
             for _ in range(n):
                 self._sim.step()
-            return _snap_to_response(self._sim.snapshot())
+            response = _snap_to_response(self._sim.snapshot())
+        logger.debug(
+            "grpc.Step: n_steps=%d step=%d R_global=%.4f regime=%s",
+            n,
+            response.step,
+            response.R_global,
+            response.regime,
+        )
+        return response
 
     def Reset(self, request: Any, context: Any) -> StateResponse:
         """gRPC unary RPC: reset simulation and return fresh state."""
         with self._lock:
             self._sim.reset()
-            return _snap_to_response(self._sim.snapshot())
+            response = _snap_to_response(self._sim.snapshot())
+        logger.info("grpc.Reset: step=%d regime=%s", response.step, response.regime)
+        return response
 
     def GetConfig(self, request: Any, context: Any) -> ConfigResponse:
         """gRPC unary RPC: return engine configuration."""
