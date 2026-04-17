@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -31,6 +32,7 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_order_parameter,
     compute_plv,
 )
+from scpn_phase_orchestrator.upde.pac import modulation_index
 
 __all__ = ["PipelineSnapshot", "PhaseComputePipeline"]
 
@@ -122,6 +124,16 @@ class PhaseComputePipeline:
         rng = np.random.default_rng(42)
         self._phases = rng.uniform(0, TWO_PI, self._n_osc)
         self._omegas = np.ones(self._n_osc, dtype=np.float64)
+        self._amplitudes = np.ones(self._n_osc, dtype=np.float64)
+
+        # Rolling history of (phase, amplitude) samples per oscillator for
+        # phase-amplitude coupling estimation. 32 samples is the minimum
+        # window size at which modulation_index (18-bin histogram) produces a
+        # stable estimate; deeper windows trade memory for smoother PAC.
+        self._pac_window = 32
+        self._subcritical_threshold = 0.1
+        self._phase_history: list[NDArray] = []
+        self._amplitude_history: list[NDArray] = []
 
         self._layer_osc_ranges: dict[int, list[int]] = {}
         osc_idx = 0
@@ -170,6 +182,7 @@ class PhaseComputePipeline:
             if states:
                 self._phases[i] = states[0].theta
                 self._omegas[i] = max(states[0].omega, 0.01)
+                self._amplitudes[i] = float(states[0].amplitude)
 
         # 2. Imprint-modulated coupling
         eff_knm = self._imprint_model.modulate_coupling(
@@ -223,23 +236,59 @@ class PhaseComputePipeline:
                     plv_mat[li, lj] = plv
                     plv_mat[lj, li] = plv
 
-        # 7. Boundary observation
+        # 7. Amplitude-derived metrics
+        # PhysicalExtractor.amplitude is the Hilbert envelope of the raw
+        # service signal; even for phase-only UPDE integration we surface
+        # these to keep the policy engine metric chain unbroken.
+        mean_amp = float(np.mean(self._amplitudes)) if self._n_osc else 0.0
+        if self._n_osc:
+            sub_count = int(np.sum(self._amplitudes < self._subcritical_threshold))
+            sub_frac = sub_count / self._n_osc
+        else:
+            sub_frac = 0.0
+
+        self._phase_history.append(self._phases.copy())
+        self._amplitude_history.append(self._amplitudes.copy())
+        if len(self._phase_history) > self._pac_window:
+            self._phase_history.pop(0)
+            self._amplitude_history.pop(0)
+
+        pac_max_val = 0.0
+        if len(self._phase_history) >= self._pac_window and self._n_osc:
+            ph_hist = np.asarray(self._phase_history)
+            am_hist = np.asarray(self._amplitude_history)
+            pac_vals = [
+                modulation_index(ph_hist[:, i], am_hist[:, i])
+                for i in range(self._n_osc)
+            ]
+            pac_max_val = float(max(pac_vals)) if pac_vals else 0.0
+
+        # 8. Boundary observation
         mean_r = float(np.mean([ls.R for ls in layer_states])) if layer_states else 0.0
         upde_state = UPDEState(
             layers=layer_states,
             cross_layer_alignment=plv_mat,
             stability_proxy=mean_r,
             regime_id=self._regime_manager.current_regime.value,
+            mean_amplitude=mean_amp,
+            pac_max=pac_max_val,
+            subcritical_fraction=sub_frac,
         )
-        obs_values = {"R": mean_r, "R_bad": r_bad}
+        obs_values = {
+            "R": mean_r,
+            "R_bad": r_bad,
+            "mean_amplitude": mean_amp,
+            "pac_max": pac_max_val,
+            "subcritical_fraction": sub_frac,
+        }
         for i, ls in enumerate(layer_states):
             obs_values[f"R_{i}"] = ls.R
         boundary_state = self._boundary_observer.observe(obs_values)
 
-        # 8. Supervisor actions
+        # 9. Supervisor actions
         actions = self._supervisor.decide(upde_state, boundary_state)
 
-        # 9. Imprint update
+        # 10. Imprint update
         exposure = np.array(
             [
                 layer_states[i].R
@@ -251,7 +300,7 @@ class PhaseComputePipeline:
             self._imprint_state, exposure, self._spec.sample_period_s
         )
 
-        # 10. Build snapshot
+        # 11. Build snapshot
         svc_snapshots = []
         for i, svc_name in enumerate(self._service_names):
             svc_snapshots.append(
@@ -260,7 +309,7 @@ class PhaseComputePipeline:
                     layer=self._service_layer_map.get(svc_name, "unknown"),
                     phase=float(self._phases[i]),
                     omega=float(self._omegas[i]),
-                    amplitude=1.0,
+                    amplitude=float(self._amplitudes[i]),
                     imprint=float(self._imprint_state.m_k[i]),
                 )
             )
