@@ -148,30 +148,32 @@ def _load_rust() -> _BackendFn:
     return cast("_BackendFn", attnres_modulate_rust)
 
 
-def _load_mojo() -> _BackendFn:  # pragma: no cover — not yet ported
-    # The old single-equation Mojo kernel was removed per
-    # feedback_no_simplistic_models.md; the full multi-head port is a
-    # future item tracked in project_spo_todo.md. Until it lands the
-    # loader raises so the dispatcher falls through to the next
-    # available backend.
-    raise ImportError(
-        "Mojo multi-head AttnRes backend not yet implemented — see "
-        "project_spo_todo.md Phase 3"
+def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    from scpn_phase_orchestrator.coupling._attnres_mojo import (
+        _ensure_exe,
+        attnres_modulate_mojo,
     )
 
+    _ensure_exe()
+    return attnres_modulate_mojo
 
-def _load_julia() -> _BackendFn:  # pragma: no cover — not yet ported
-    raise ImportError(
-        "Julia multi-head AttnRes backend not yet implemented — see "
-        "project_spo_todo.md Phase 3"
+
+def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    import juliacall  # type: ignore[import-untyped]  # noqa: F401
+
+    from scpn_phase_orchestrator.coupling._attnres_julia import (
+        attnres_modulate_julia,
     )
 
+    return attnres_modulate_julia
 
-def _load_go() -> _BackendFn:  # pragma: no cover — not yet ported
-    raise ImportError(
-        "Go multi-head AttnRes backend not yet implemented — see "
-        "project_spo_todo.md Phase 3"
+
+def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
+    from scpn_phase_orchestrator.coupling._attnres_go import (
+        attnres_modulate_go,
     )
+
+    return attnres_modulate_go
 
 
 _LOADERS: dict[str, Callable[[], _BackendFn]] = {
