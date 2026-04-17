@@ -32,5 +32,9 @@ harness = false
 name = "parallel_bench"
 harness = false
 
+[[bench]]
+name = "monitors_bench"
+harness = false
+
 [lints]
 workspace = true
