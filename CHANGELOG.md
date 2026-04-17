@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — AttnRes upgraded to full multi-head (2026-04-17)
+
+Following the new ``feedback_no_simplistic_models.md`` rule, the
+Phase-3 AttnRes spike was upgraded from a single-equation Hebbian
+proxy to the full arXiv:2603.15031 Transformer architecture:
+
+- **Full multi-head implementation** — Fourier-feature phase
+  embedding (``d_model = 8``), ``H = 4`` attention heads with
+  learnable Q/K/V projections (seeded Xavier init via new
+  ``default_projections()``), scaled dot-product softmax attention
+  (paper-faithful full-N scope; optional ``block_size`` local mask),
+  output projection ``W_O``, symmetric cosine-similarity
+  aggregation onto ``K_nm``.
+- **All 5 backends re-ported** — Rust, Julia, Go, Mojo, Python all
+  now carry the full multi-head kernel. Parity: bit-exact
+  (5.55e-17) for Rust/Julia/Go; 1.55e-14 for Mojo (text-protocol
+  rounding budget).
+- **PyO3 signature extended** to carry the four projection buffers
+  plus ``n_heads`` and a signed ``block_size`` (``-1`` = unbounded
+  full attention).
+- **Test coverage** — 20 algorithm tests, 14 per-backend parity
+  tests, 3 stability tests (marked slow); 37 AttnRes-specific
+  tests total, all pass.
+- **Old single-head ports deleted** per the option-B clause in the
+  new rule: the simplified kernels would have shipped as toys
+  alongside the full model, so they were removed from main rather
+  than left to decay.
+
 ### Added — AttnRes multi-language fallback chain (Phase-3 spike)
 - `coupling/attention_residuals.py` — new ``attnres_modulate`` pure
   function plus multi-backend dispatcher following the global
