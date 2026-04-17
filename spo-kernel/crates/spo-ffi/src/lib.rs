@@ -1474,6 +1474,27 @@ fn plv(phases_a: PyReadonlyArray1<'_, f64>, phases_b: PyReadonlyArray1<'_, f64>)
 }
 
 #[pyfunction]
+fn compute_layer_coherence_rust(
+    phases: PyReadonlyArray1<'_, f64>,
+    indices: PyReadonlyArray1<'_, i64>,
+) -> PyResult<f64> {
+    let ph = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let raw = indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let idx: Vec<usize> = raw
+        .iter()
+        .map(|&i| {
+            usize::try_from(i)
+                .map_err(|_| PyValueError::new_err(format!("invalid index {i}")))
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(order_params::compute_layer_coherence(ph, &idx))
+}
+
+#[pyfunction]
 fn ring_phase(state_index: usize, n_states: usize) -> f64 {
     symbolic::ring_phase(state_index, n_states)
 }
@@ -3447,6 +3468,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;
     m.add_function(wrap_pyfunction!(plv, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_layer_coherence_rust, m)?)?;
     m.add_function(wrap_pyfunction!(ring_phase, m)?)?;
     m.add_function(wrap_pyfunction!(event_phase, m)?)?;
     m.add_function(wrap_pyfunction!(physical_extract, m)?)?;
