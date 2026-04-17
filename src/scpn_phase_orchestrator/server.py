@@ -366,6 +366,7 @@ fetchState().then(render);
 def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
+        from collections.abc import AsyncIterator
         from contextlib import asynccontextmanager
 
         from fastapi import Depends, FastAPI, Header, HTTPException
@@ -378,7 +379,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     sim = SimulationState(spec)
 
     @asynccontextmanager
-    async def _lifespan(_app: FastAPI):
+    async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         """Release engine resources when the process shuts down.
 
         The simulation state itself is held in-process (numpy arrays), but
