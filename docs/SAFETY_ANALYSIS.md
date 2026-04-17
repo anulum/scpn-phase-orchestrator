@@ -1,6 +1,7 @@
 # Safety Analysis — SCPN Phase Orchestrator
 
-SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+SPDX-License-Identifier: AGPL-3.0-or-later
+Commercial license available
 
 First-of-its-kind safety analysis for Kuramoto-based oscillator control
 in industrial settings.
