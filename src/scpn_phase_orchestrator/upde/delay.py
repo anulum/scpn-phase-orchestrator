@@ -35,6 +35,8 @@ class DelayBuffer:
     """
 
     def __init__(self, n_oscillators: int, max_delay_steps: int):
+        if n_oscillators < 1:
+            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
         if max_delay_steps < 1:
             raise ValueError(f"max_delay_steps must be >= 1, got {max_delay_steps}")
         self._n = n_oscillators
@@ -68,6 +70,12 @@ class DelayedEngine:
     """
 
     def __init__(self, n_oscillators: int, dt: float, delay_steps: int = 1):
+        if n_oscillators < 1:
+            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
+        if dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {dt}")
+        if delay_steps < 1:
+            raise ValueError(f"delay_steps must be >= 1, got {delay_steps}")
         self._n = n_oscillators
         self._dt = dt
         self._delay_steps = delay_steps

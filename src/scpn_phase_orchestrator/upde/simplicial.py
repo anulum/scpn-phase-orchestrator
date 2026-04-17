@@ -42,6 +42,12 @@ class SimplicialEngine:
     """
 
     def __init__(self, n_oscillators: int, dt: float, sigma2: float = 0.0):
+        if n_oscillators < 1:
+            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
+        if dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {dt}")
+        if sigma2 < 0.0:
+            raise ValueError(f"sigma2 must be non-negative, got {sigma2}")
         self._n = n_oscillators
         self._dt = dt
         self._sigma2 = sigma2

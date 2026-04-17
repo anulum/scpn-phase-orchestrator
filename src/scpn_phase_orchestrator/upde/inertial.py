@@ -25,6 +25,10 @@ TWO_PI = 2.0 * np.pi
 
 class InertialKuramotoEngine:
     def __init__(self, n: int, dt: float = 0.01) -> None:
+        if n < 1:
+            raise ValueError(f"n must be >= 1, got {n}")
+        if dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {dt}")
         self._n = n
         self._dt = dt
         if _HAS_RUST:

@@ -54,6 +54,8 @@ class OttAntonsenReduction:
     def __init__(self, omega_0: float, delta: float, K: float, dt: float = 0.01):
         if delta < 0:
             raise ValueError(f"delta (half-width) must be non-negative, got {delta}")
+        if dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {dt}")
         self._omega_0 = omega_0
         self._delta = delta
         self._K = K

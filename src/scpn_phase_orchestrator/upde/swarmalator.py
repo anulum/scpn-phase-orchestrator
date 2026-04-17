@@ -27,6 +27,12 @@ __all__ = ["SwarmalatorEngine"]
 
 class SwarmalatorEngine:
     def __init__(self, n_agents: int, dim: int = 2, dt: float = 0.01):
+        if n_agents < 1:
+            raise ValueError(f"n_agents must be >= 1, got {n_agents}")
+        if dim < 1:
+            raise ValueError(f"dim must be >= 1, got {dim}")
+        if dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {dt}")
         self._n = n_agents
         self._dim = dim
         self._dt = dt
