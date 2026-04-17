@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import threading
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -79,6 +81,11 @@ class UPDEEngine:
             self._ks = [np.empty(n_oscillators, dtype=np.float64) for _ in range(7)]
             self._err_buf = np.empty(n_oscillators, dtype=np.float64)
 
+        # Serialise concurrent step()/run() callers on this instance — the
+        # pre-allocated scratch arrays above are not safe to share. Reentrant
+        # so that run() → step() within the same thread does not deadlock.
+        self._lock = threading.RLock()
+
     @property
     def last_dt(self) -> float:
         """Actual dt used on the last accepted step (relevant for rk45)."""
@@ -113,22 +120,23 @@ class UPDEEngine:
             raise ValueError("knm contains NaN/Inf")
         if not np.all(np.isfinite(alpha)):
             raise ValueError("alpha contains NaN/Inf")
-        if self._rust is not None:  # pragma: no cover
-            return np.asarray(
-                self._rust.step(
-                    np.ascontiguousarray(phases.ravel()),
-                    np.ascontiguousarray(omegas.ravel()),
-                    np.ascontiguousarray(knm.ravel()),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha.ravel()),
+        with self._lock:
+            if self._rust is not None:  # pragma: no cover
+                return np.asarray(
+                    self._rust.step(
+                        np.ascontiguousarray(phases.ravel()),
+                        np.ascontiguousarray(omegas.ravel()),
+                        np.ascontiguousarray(knm.ravel()),
+                        float(zeta),
+                        float(psi),
+                        np.ascontiguousarray(alpha.ravel()),
+                    )
                 )
-            )
-        if self._method == "euler":
-            return self._euler_step(phases, omegas, knm, zeta, psi, alpha)
-        if self._method == "rk45":
-            return self._rk45_step(phases, omegas, knm, zeta, psi, alpha)
-        return self._rk4_step(phases, omegas, knm, zeta, psi, alpha)
+            if self._method == "euler":
+                return self._euler_step(phases, omegas, knm, zeta, psi, alpha)
+            if self._method == "rk45":
+                return self._rk45_step(phases, omegas, knm, zeta, psi, alpha)
+            return self._rk4_step(phases, omegas, knm, zeta, psi, alpha)
 
     def run(
         self,
@@ -141,22 +149,23 @@ class UPDEEngine:
         n_steps: int,
     ) -> NDArray:
         """Run n_steps, return final phases. Uses Rust batch API when available."""
-        if self._rust is not None:  # pragma: no cover
-            return np.asarray(
-                self._rust.run(
-                    np.ascontiguousarray(phases.ravel()),
-                    np.ascontiguousarray(omegas.ravel()),
-                    np.ascontiguousarray(knm.ravel()),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha.ravel()),
-                    n_steps,
+        with self._lock:
+            if self._rust is not None:  # pragma: no cover
+                return np.asarray(
+                    self._rust.run(
+                        np.ascontiguousarray(phases.ravel()),
+                        np.ascontiguousarray(omegas.ravel()),
+                        np.ascontiguousarray(knm.ravel()),
+                        float(zeta),
+                        float(psi),
+                        np.ascontiguousarray(alpha.ravel()),
+                        n_steps,
+                    )
                 )
-            )
-        p = phases.copy()
-        for _ in range(n_steps):
-            p = self.step(p, omegas, knm, zeta, psi, alpha)
-        return p
+            p = phases.copy()
+            for _ in range(n_steps):
+                p = self.step(p, omegas, knm, zeta, psi, alpha)
+            return p
 
     def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
