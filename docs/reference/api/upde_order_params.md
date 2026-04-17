@@ -564,8 +564,65 @@ Total: **31 tests** covering all three functions.
 
 ---
 
+## Multi-backend fallback chain
+
+Since the 2026-04-17 migration to the AttnRes-level module standard,
+``order_params`` ships with five language-backed implementations for
+every kernel. The dispatcher resolves the fastest available backend
+at import time and exposes the choice as ``ACTIVE_BACKEND`` /
+``AVAILABLE_BACKENDS``.
+
+| Position | Backend | Build |
+|---|---|---|
+| 1 | Rust | `maturin develop -m spo-kernel/crates/spo-ffi/Cargo.toml --release` |
+| 2 | Mojo | `mojo build mojo/order_params.mojo -o mojo/order_params_mojo -Xlinker -lm` |
+| 3 | Julia | `juliacall` + `julia/order_params.jl` |
+| 4 | Go | `cd go && go build -buildmode=c-shared -o liborder_params.so order_params.go` |
+| 5 | Python | always present |
+
+### Parity (measured vs NumPy reference)
+
+| Backend | `compute_order_parameter` | `compute_plv` | `compute_layer_coherence` |
+|---|---|---|---|
+| Rust | 0.00e+00 | 2.78e-17 | 0.00e+00 |
+| Mojo | 0.00e+00 | 2.78e-17 | 0.00e+00 |
+| Julia | 0.00e+00 | 2.78e-17 | 0.00e+00 |
+| Go | 5.55e-17 | 2.78e-17 | 0.00e+00 |
+| Python | 0 (reference) | 0 (reference) | 0 (reference) |
+
+Tests in ``tests/test_order_params_backends.py`` enforce
+``atol = 1e-12`` for Rust/Julia/Go and ``atol = 1e-13`` for Mojo.
+
+### Measured benchmark
+
+Output from
+``PYTHONPATH=src python benchmarks/order_params_benchmark.py --sizes 16 256 4096 --calls 200``:
+
+| N | Rust | Mojo | Julia | Go | Python |
+|---|---|---|---|---|---|
+| 16 | **0.006 ms** | 107.959 ms | 47.225 ms | 0.125 ms | 0.035 ms |
+| 256 | **0.006 ms** | 111.165 ms | 0.039 ms | 0.018 ms | 0.027 ms |
+| 4096 | **0.063 ms** | 88.459 ms | 0.147 ms | 0.138 ms | 0.196 ms |
+
+Rust wins every row. Julia catches Go at ``N ≥ 256`` after JIT
+warm-up. Mojo's ``~100 ms`` per-call subprocess floor disqualifies
+it from the hot loop until Mojo 0.27+ stabilises the ctypes-shared-
+library path.
+
+---
+
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/order_params.py` (76 lines)
+- Python dispatcher: `src/scpn_phase_orchestrator/upde/order_params.py`
+- Python bridges: `upde/_order_params_julia.py`,
+  `upde/_order_params_go.py`, `upde/_order_params_mojo.py`
 - Rust: `spo-kernel/crates/spo-engine/src/order_params.rs`
-- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (order_parameter, plv bindings)
+- Julia: `julia/order_params.jl`
+- Go: `go/order_params.go`
+- Mojo: `mojo/order_params.mojo`
+- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (`order_parameter`,
+  `plv`, `compute_layer_coherence_rust`)
+- Tests: `tests/test_order_params.py`,
+  `tests/test_order_params_backends.py`,
+  `tests/test_order_params_stability.py`
+- Benchmark: `benchmarks/order_params_benchmark.py`
