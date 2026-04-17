@@ -6,29 +6,28 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Tests for the SPDX header normaliser
 
-"""Unit tests for ``tools/normalise_spdx_headers.py``.
+"""Unit tests for ``tools/normalise_spdx_headers.py`` (pure-function paths).
 
 The normaliser was applied once to 642 files — any future edit to the
 split regex, typo constant, or exclusion set needs to fall into a net
 of sanity tests so the next sweep does not silently corrupt files.
 
-Covered paths:
+This file covers the pattern-matching and discovery surface:
 
 * ``split_prefixed`` — matches ``# ... | Commercial license available``
   and ``// ... | Commercial license available`` openers, preserves the
   exact prefix (inc. trailing space) in both output lines.
 * ``split_bare`` — rejects commented lines; accepts bare (YAML/TOML)
   lines and preserves leading whitespace.
-* ``HEADER_SCAN_LIMIT`` — splits only within the first 10 lines.
-* Typo fix — ``protoscience@anylum.li`` → ``protoscience@anulum.li``
-  wherever it appears, independent of the split.
 * ``_is_excluded`` — ``.venv``-style prefixes and known build dirs are
   excluded.
 * ``iter_repo_files`` — filters by ``INCLUDE_SUFFIXES``.
-* ``normalise_file`` — dry-run does not touch the file; apply rewrites
-  it atomically.
-* ``verify`` — returns 0 when clean, 1 when any residual merged line
-  or typo remains.
+* ``FileResult`` — ``changed`` reflects either split or typo.
+
+The I/O-touching paths (``normalise_file`` apply / dry-run,
+``HEADER_SCAN_LIMIT`` boundary, ``verify`` exit codes) live in
+``test_tools_normalise_spdx_io.py`` to keep both suites under the
+no-monoliths soft limit.
 """
 
 from __future__ import annotations
@@ -37,8 +36,6 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
-
-import pytest
 
 TOOLS_DIR = Path(__file__).resolve().parents[1] / "tools"
 
@@ -161,136 +158,11 @@ def test_iter_repo_files_skips_excluded_dirs(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------
-# normalise_file
-# ---------------------------------------------------------------------
-
-
-def _sample_merged(typo: bool = False) -> str:
-    email = "protoscience@" + "any" + "lum.li" if typo else "protoscience@anulum.li"
-    return (
-        "# SPDX-License-Identifier: AGPL-3.0-or-later "
-        "| Commercial license available\n"
-        "# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.\n"
-        "# © Code 2020–2026 Miroslav Šotek. All rights reserved.\n"
-        "# ORCID: 0009-0009-3560-0851\n"
-        f"# Contact: www.anulum.li | {email}\n"
-        "# SCPN Phase Orchestrator — example\n\n"
-        "print('hello')\n"
-    )
-
-
-def test_dry_run_does_not_modify_file(tmp_path: Path) -> None:
-    f = tmp_path / "sample.py"
-    original = _sample_merged()
-    f.write_text(original, encoding="utf-8")
-    result = mod.normalise_file(f, apply=False)
-    assert result.spdx_split is True
-    assert f.read_text(encoding="utf-8") == original
-
-
-def test_apply_splits_and_fixes_typo(tmp_path: Path) -> None:
-    f = tmp_path / "sample.py"
-    f.write_text(_sample_merged(typo=True), encoding="utf-8")
-    result = mod.normalise_file(f, apply=True)
-    assert result.spdx_split is True
-    assert result.typo_fixes == 1
-    content = f.read_text(encoding="utf-8")
-    assert "SPDX-License-Identifier: AGPL-3.0-or-later\n" in content
-    assert "Commercial license available\n" in content
-    assert "| Commercial license available" not in content
-    assert "protoscience@" + "any" + "lum.li" not in content
-    assert "protoscience@anulum.li" in content
-
-
-def test_deep_merged_line_not_split(tmp_path: Path) -> None:
-    """Merged SPDX past HEADER_SCAN_LIMIT stays put — the header-only
-    invariant keeps the tool focused and avoids touching user strings."""
-    padding = "\n".join(f"# pad line {i}" for i in range(15)) + "\n"
-    merged = (
-        "# SPDX-License-Identifier: AGPL-3.0-or-later "
-        "| Commercial license available\n"
-    )
-    content = padding + merged
-    f = tmp_path / "deep.py"
-    f.write_text(content, encoding="utf-8")
-    result = mod.normalise_file(f, apply=True)
-    assert result.spdx_split is False
-    assert f.read_text(encoding="utf-8") == content
-
-
-def test_typo_anywhere_is_fixed_even_without_split(tmp_path: Path) -> None:
-    """The typo fix runs independently of the SPDX split — files that
-    are already split but contain the old email still get corrected."""
-    typo = "protoscience@" + "any" + "lum.li"
-    content = (
-        "# SPDX-License-Identifier: AGPL-3.0-or-later\n"
-        "# Commercial license available\n"
-        f"# Contact: {typo}\n\n"
-        "print('ok')\n"
-    )
-    f = tmp_path / "already_split.py"
-    f.write_text(content, encoding="utf-8")
-    result = mod.normalise_file(f, apply=True)
-    assert result.spdx_split is False
-    assert result.typo_fixes == 1
-    assert typo not in f.read_text(encoding="utf-8")
-    assert "protoscience@anulum.li" in f.read_text(encoding="utf-8")
-
-
-def test_no_change_file_reports_no_change(tmp_path: Path) -> None:
-    content = "# SPDX-License-Identifier: MIT\n\nprint('x')\n"
-    f = tmp_path / "unrelated.py"
-    f.write_text(content, encoding="utf-8")
-    result = mod.normalise_file(f, apply=True)
-    assert result.spdx_split is False
-    assert result.typo_fixes == 0
-    assert result.changed is False
-    assert f.read_text(encoding="utf-8") == content
-
-
-# ---------------------------------------------------------------------
-# verify
-# ---------------------------------------------------------------------
-
-
-def test_verify_clean_returns_zero(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    f = tmp_path / "a.py"
-    f.write_text(
-        "# SPDX-License-Identifier: AGPL-3.0-or-later\n"
-        "# Commercial license available\n",
-        encoding="utf-8",
-    )
-    assert mod.verify(tmp_path) == 0
-    assert "All files normalised" in capsys.readouterr().out
-
-
-def test_verify_detects_residual_merged(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    f = tmp_path / "residual.py"
-    f.write_text(
-        "# SPDX-License-Identifier: AGPL-3.0-or-later "
-        "| Commercial license available\n",
-        encoding="utf-8",
-    )
-    assert mod.verify(tmp_path) == 1
-    assert "still contain merged SPDX" in capsys.readouterr().out
-
-
-def test_verify_detects_typo(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    f = tmp_path / "typo.py"
-    typo = "protoscience@" + "any" + "lum.li"
-    f.write_text(f"# Contact: {typo}\n", encoding="utf-8")
-    assert mod.verify(tmp_path) == 1
-    assert "still contain" in capsys.readouterr().out
-
-
-# ---------------------------------------------------------------------
 # FileResult
+#
+# ``normalise_file`` and ``verify`` I/O paths moved to the companion
+# file ``test_tools_normalise_spdx_io.py`` to keep each suite under the
+# no-monoliths soft limit.
 # ---------------------------------------------------------------------
 
 

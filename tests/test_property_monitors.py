@@ -173,25 +173,36 @@ def _steady_state_r(
 @given(seed=st.integers(min_value=0, max_value=2**31 - 1))
 @settings(max_examples=5, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_kuramoto_k_monotonicity_supercritical(seed: int) -> None:
-    """Increasing K_base above K_c grows the steady-state order parameter.
+    """Increasing K grows the steady-state order parameter.
 
-    With narrow Lorentzian-like frequency spread (γ ≈ 0.05) the critical
-    coupling sits near K_c ≈ 0.1; at K = 0.4 the ensemble is already in
-    the partially-synchronised regime, and R(K=1.0) > R(K=0.4) is robust
-    across seeds.
+    SPO's coupling matrix stores the per-edge coupling (not the
+    normalised ``K/N``) so the test uses per-edge values. Empirically
+    for this all-to-all N=32 mesh with Gaussian frequencies of spread
+    σ = 3 rad/s, R transitions around k_edge ≈ 0.08 — well-characterised
+    behaviour in the Kuramoto literature. Two test points at k_edge =
+    0.0625 (transitional, R ≈ 0.2) and 0.3125 (deep saturation,
+    R ≈ 0.95) give a ~0.6 R-gap, an order of magnitude larger than any
+    realistic finite-sample drift. Strict ``R_strong > R_weak`` holds
+    with no tolerance; a 0.2 minimum gap is also enforced.
     """
     n = 32
     rng = np.random.default_rng(seed)
-    # Narrow, seed-deterministic natural frequencies
-    omegas = (rng.standard_cauchy(n) * 0.05).astype(np.float64)
-    omegas = np.clip(omegas, -0.2, 0.2)
+    # Wide Gaussian frequencies (σ = 3 rad/s) to expose a real K→R
+    # transition band within reachable coupling strengths.
+    omegas = (rng.standard_normal(n) * 3.0).astype(np.float64)
 
-    r_weak = _steady_state_r(n, k_base=0.4, omegas=omegas, seed=seed)
-    r_strong = _steady_state_r(n, k_base=1.0, omegas=omegas, seed=seed)
-    # Small tolerance: 200-sample steady-state mean has a few-percent drift.
-    assert r_strong > r_weak - 0.05, (
-        f"R(K=1.0)={r_strong:.3f} must be ≥ R(K=0.4)={r_weak:.3f} - 0.05 "
-        f"at supercritical coupling"
+    r_weak = _steady_state_r(n, k_base=2.0 / n, omegas=omegas, seed=seed)
+    r_strong = _steady_state_r(n, k_base=10.0 / n, omegas=omegas, seed=seed)
+    assert r_strong > r_weak, (
+        f"R(K=10/n)={r_strong:.3f} must exceed R(K=2/n)={r_weak:.3f} "
+        f"for all seeds"
+    )
+    # Tighter invariant: the deep-saturation regime should lift R by at
+    # least 0.2 above the transitional case across all seeds.
+    assert r_strong - r_weak > 0.2, (
+        f"R-gap R(K=10/n)-R(K=2/n) = {r_strong - r_weak:.3f} is smaller "
+        f"than the 0.2 physical minimum for a 5× K spread across the "
+        f"transition band"
     )
 
 
