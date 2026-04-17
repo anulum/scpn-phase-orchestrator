@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -159,6 +160,31 @@ def test_no_matplotlib_guard() -> None:
     plot = CoherencePlot([])
     with pytest.raises((ValueError, ImportError)):
         plot.plot_r_timeline("/dev/null")
+
+
+def test_matplotlib_not_imported_on_module_import() -> None:
+    """Importing plots module must not load matplotlib (V8 lazy-import).
+
+    Verifies the module can be imported on CLI/server paths that never plot
+    anything, without paying the matplotlib backend init cost.
+    """
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; import scpn_phase_orchestrator.reporting.plots as _; "
+            'print("loaded" if "matplotlib" in sys.modules else "absent")',
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "absent", (
+        f"matplotlib was loaded on module import: {result.stdout!r}"
+    )
 
 
 class TestReportingPlotsPipelineWiring:
