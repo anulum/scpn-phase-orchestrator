@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — Rust Path Expansion (36 → 53 spo-engine modules)
 - 17 new Rust engine modules: simplicial, hypergraph, geometric, envelope, reduction, splitting, te_adaptive, prior, ethical, sleep_staging, evs, sindy, coupling_est, phase_extract, carrier, connectome, freq_id
-- 17 Superior-level documentation pages (567+ lines each, 8 mandatory sections, verified benchmarks) for all new Rust modules
+- 17 new reference documentation pages (567+ lines each, 8 sections, verified benchmarks) for all new Rust modules
 - Python `_HAS_RUST` auto-select wiring for 15 of 17 modules (coupling_est and phase_extract disabled — LAPACK/FFT faster)
 - Rust test count: 243 → 567 (+324 tests across 17 modules)
 - spo-ffi bindings: ~387 lines of new FFI wrapper functions
