@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-17 — transfer_entropy multi-backend)
+- `julia/transfer_entropy.jl`, `go/transfer_entropy.go`
+  (→ `libtransfer_entropy.so`), `mojo/transfer_entropy.mojo`
+  (→ `transfer_entropy_mojo`) implementing Schreiber 2000 phase
+  transfer entropy (pairwise and full matrix).
+- Python bridges `monitor/_te_julia.py`, `monitor/_te_go.py`,
+  `monitor/_te_mojo.py`.
+- `monitor/transfer_entropy.py` upgraded to five-backend dispatcher.
+- 14 new tests (8 per-backend parity + 6 stability/slow).
+- `benchmarks/transfer_entropy_benchmark.py` multi-backend harness.
+- `docs/reference/api/monitor_transfer_entropy.md` (600 lines)
+  covering Schreiber TE formalism, 5-backend chain, measured
+  benchmarks, physical invariants, comparisons with Granger / PLV /
+  PID.
+
 ### Added (2026-04-17 — NPE multi-backend)
 - `julia/npe.jl`, `go/npe.go` (→ `libnpe.so`), `mojo/npe.mojo`
   (→ `npe_mojo`) implementing the normalised persistent entropy

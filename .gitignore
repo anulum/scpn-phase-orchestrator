@@ -99,3 +99,8 @@ mojo/order_params_mojo
 go/libnpe.so
 go/libnpe.h
 mojo/npe_mojo
+
+# transfer_entropy compiled artefacts
+go/libtransfer_entropy.so
+go/libtransfer_entropy.h
+mojo/transfer_entropy_mojo
