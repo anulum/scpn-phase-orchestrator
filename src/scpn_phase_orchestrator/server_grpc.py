@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -17,7 +18,6 @@ with a mocked context.
 
 from __future__ import annotations
 
-import threading
 import time
 from collections.abc import Iterator
 from typing import Any
@@ -70,7 +70,10 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
 
     def __init__(self, sim: SimulationState) -> None:
         self._sim = sim
-        self._lock = threading.Lock()
+        # Share the SimulationState mutex so gRPC threads and FastAPI async
+        # handlers serialise against the same lock. A servicer-local lock
+        # would leave the HTTP side free to race on shared engine state.
+        self._lock = sim._lock
 
     # -- unary RPCs -----------------------------------------------------------
 

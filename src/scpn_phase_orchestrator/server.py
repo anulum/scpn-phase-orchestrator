@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -31,6 +32,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -76,7 +78,11 @@ class SimulationState:
 
     def __init__(self, spec: BindingSpec) -> None:
         self.spec = spec
-        self._lock = asyncio.Lock()
+        # threading.Lock so FastAPI async handlers and the gRPC servicer
+        # (thread-pool worker) serialise against the *same* mutex. An
+        # asyncio.Lock would only protect the event loop and leave gRPC
+        # threads free to race on the shared engine state.
+        self._lock = threading.Lock()
         self.n_osc = sum(len(ly.oscillator_ids) for ly in spec.layers)
         self.coupling = CouplingBuilder().build(
             self.n_osc,
@@ -383,19 +389,19 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     @app.get("/api/state")
     async def get_state() -> dict:
         """Handle GET /api/state — return current simulation snapshot."""
-        async with sim._lock:
+        with sim._lock:
             return sim.snapshot()
 
     @app.post("/api/step", dependencies=[Depends(_require_auth)])
     async def post_step() -> dict:
         """Handle POST /api/step — advance simulation one tick."""
-        async with sim._lock:
+        with sim._lock:
             return sim.step()
 
     @app.post("/api/reset", dependencies=[Depends(_require_auth)])
     async def post_reset() -> dict:
         """Handle POST /api/reset — reset simulation to initial state."""
-        async with sim._lock:
+        with sim._lock:
             return sim.reset()
 
     @app.get("/api/config")
@@ -419,7 +425,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             MetricsExporter,
         )
 
-        async with sim._lock:
+        with sim._lock:
             snap = sim.snapshot()
         exporter = MetricsExporter()
         upde_state = UPDEState(
@@ -438,7 +444,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         """Deep health check — verifies engine, monitor, and regime subsystems."""
         checks: dict[str, str] = {}
         try:
-            async with sim._lock:
+            with sim._lock:
                 snap = sim.snapshot()
             checks["engine"] = "ok" if snap.get("step", -1) >= 0 else "degraded"
             r_val = snap.get("R_global", float("nan"))
@@ -456,7 +462,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         await websocket.accept()
         try:
             while True:
-                async with sim._lock:
+                with sim._lock:
                     state = sim.snapshot()
                 await websocket.send_text(json.dumps(state))
                 await asyncio.sleep(spec.sample_period_s)
