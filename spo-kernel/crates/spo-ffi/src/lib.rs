@@ -1382,13 +1382,22 @@ impl PyStuartLandauStepper {
 // ─── AttnRes Coupling Modulation ───────────────────────────────────
 
 #[pyfunction]
-#[pyo3(signature = (knm, theta, n, block_size, temperature, lambda_))]
+#[pyo3(signature = (
+    knm, theta, w_q, w_k, w_v, w_o,
+    n, n_heads, block_size, temperature, lambda_,
+))]
+#[allow(clippy::too_many_arguments)]
 fn attnres_modulate_rust<'py>(
     py: Python<'py>,
     knm: PyReadonlyArray1<'py, f64>,
     theta: PyReadonlyArray1<'py, f64>,
+    w_q: PyReadonlyArray1<'py, f64>,
+    w_k: PyReadonlyArray1<'py, f64>,
+    w_v: PyReadonlyArray1<'py, f64>,
+    w_o: PyReadonlyArray1<'py, f64>,
     n: usize,
-    block_size: usize,
+    n_heads: usize,
+    block_size: i64,
     temperature: f64,
     lambda_: f64,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
@@ -1398,9 +1407,14 @@ fn attnres_modulate_rust<'py>(
     let t = theta
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let out =
-        spo_engine::attnres::attnres_modulate(k, t, n, block_size, temperature, lambda_)
-            .map_err(PyValueError::new_err)?;
+    let wq = w_q.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wk = w_k.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wv = w_v.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wo = w_o.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let out = spo_engine::attnres::attnres_modulate(
+        k, t, wq, wk, wv, wo, n, n_heads, block_size, temperature, lambda_,
+    )
+    .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, out))
 }
 
