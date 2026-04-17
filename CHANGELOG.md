@@ -27,6 +27,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ServiceSnapshot.amplitude` reports the real Hilbert envelope
   instead of a hard-coded 1.0.
 
+### Added — criterion bench suite expansion
+- `spo-kernel/crates/spo-engine/benches/parallel_bench.rs` extended
+  to cover all salvaged Rayon compute paths (chimera, bifurcation,
+  dimension, poincare, market, coupling_est, sindy, kaplan_yorke).
+- `spo-kernel/crates/spo-engine/benches/monitors_bench.rs` (new) —
+  8 sequential compute paths (spectral, lyapunov, transfer_entropy,
+  embedding, recurrence, hodge, entropy_prod, pid).
+- `spo-kernel/crates/spo-engine/benches/utility_bench.rs` (new) —
+  12 remaining compute paths (basin_stability, itpc, ei_balance,
+  splitting, imprint, npe, evs, phase_extract, carrier, ethical,
+  connectome, oa_run).
+- Coverage across 4 bench binaries is now ~24 spo-engine modules.
+
+### Changed — type discipline
+- `src/scpn_phase_orchestrator/server.py` `_lifespan` annotated
+  `AsyncIterator[None]` (was missing a return type).
+- `tools/benchmark_summary.py` rewritten to use an argv list plus
+  `env=` parameter in place of `shell=True` with a `noqa: S602`
+  suppression; canonical SPDX header added (the file had none).
+- `tools/coverage_guard.py` shebang moved to line 1 (was at line 9
+  after SPDX, where the kernel does not honour it); `evaluate()`
+  narrows the `dict[str, object]` global threshold via isinstance
+  rather than casting directly.
+- `tools/generate_header.py` modernised matplotlib calls:
+  `add_axes` / `imshow extent` take float tuples; `plt.cm.cool`
+  replaced with `plt.get_cmap("cool")`.
+- `tools/gpu_benchmark.py` `BENCHMARKS` annotated
+  `list[tuple[str, Callable[[], dict]]]`.
+- Combined `mypy src/scpn_phase_orchestrator tools/` reaches 176
+  files, 0 errors (from 16).
+
 ### Added — cross-platform tooling
 - `tools/normalise_spdx_headers.py` — one-shot normaliser that
   converts the 6-line merged SPDX variant to the canonical 7-line
@@ -103,6 +134,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   descriptive language replaces them.
 - Incidental `protoscience@anylum.li` email typo corrected to
   `protoscience@anulum.li` in 9 files.
+
+### Tests — Phase-7 property-based invariants
+- `test_property_monitors.py` (new, 6 tests) — PID non-negativity and
+  empty-group zero-return; phase transfer entropy bounded by
+  `log(n_bins)` for independent signals and for self-TE; Kuramoto
+  supercritical monotonicity (R at K=1.0 is at least R at K=0.4 within
+  a narrow frequency spread) and incoherent-state ceiling at K=0.
+- `test_property_engine.py` (new, 4 tests) — UPDE ``step`` is
+  equivariant under oscillator-index permutations (compared modulo
+  2π on the torus); identity permutation is fixed bit-for-bit;
+  Dense↔Sparse CSR parity for both Euler and RK4 across Hypothesis
+  sparsity masks (10–90%).
+
+### Tests — CI-tool defensive coverage
+- `test_bench_compare_baseline.py` (new, 14 tests) — the CI
+  benchmark-regression guard is now under test: PASS/FAIL branches,
+  list + dict baseline layouts, missing-key / zero-baseline skip,
+  CLI argv length and malformed JSON surfaces.
+- `test_tools_normalise_spdx.py` (new, 23 tests) — SPDX split logic
+  (`#` / `//` / bare), typo fix, `HEADER_SCAN_LIMIT`, excluded dirs
+  and `.venv` prefixes, iter filter, dry-run vs apply atomicity,
+  verify mode exit codes.
+- `test_tools_coverage_guard.py` (new, 32 tests) — validator bounds
+  (NaN/Inf rejected), domain parser (Windows-style paths included),
+  Cobertura XML parser, thresholds schema, per-global / per-domain /
+  per-file evaluation branches, main() integration.
+- `test_tools_check_version_sync.py` (new, 9 tests) — pyproject /
+  CITATION / Cargo version extraction; nested `[dependencies]
+  version = ...` not mis-matched; mismatch and missing-file exits.
+- `test_tools_check_module_linkage.py` (new, 15 tests) — module
+  discovery (`__init__.py` excluded), import-path construction,
+  linkage via dotted import or `test_<stem>` reference, allowlist
+  schema validation, stale-entry detection, `--allow-stale-allowlist`
+  bypass.
 
 ### Tests — S6 THIN file strengthening
 - `test_ffi_parity.py` 4 → 15 (Sakaguchi lag, external drive,
