@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import shutil
-import subprocess  # noqa: S404
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -114,11 +114,12 @@ COVERAGE_CHECK: tuple[str, list[str], Path] = (
 
 def run_gate(name: str, cmd: list[str], cwd: Path) -> bool:
     t0 = time.monotonic()
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         cmd,
         cwd=cwd,
         capture_output=True,
         text=True,
+        check=False,
     )
     elapsed = time.monotonic() - t0
     if result.returncode == 0:
