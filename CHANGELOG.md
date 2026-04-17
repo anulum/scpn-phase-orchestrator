@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — AttnRes multi-language fallback chain (Phase-3 spike)
+- `coupling/attention_residuals.py` — new ``attnres_modulate`` pure
+  function plus multi-backend dispatcher following the global
+  fastest-first rule (Rust → Mojo → Julia → Go → Python). Two public
+  attributes ``ACTIVE_BACKEND`` and ``AVAILABLE_BACKENDS`` let callers
+  see which backends loaded on the current host.
+- `spo-kernel/crates/spo-engine/src/attnres.rs` — Rust implementation
+  with single-scratch-buffer design, no Rayon (measured slower at
+  SPO-realistic N ≤ 64), 11 pure-Rust unit tests, criterion bench in
+  ``utility_bench``. PyO3 binding returns
+  ``Bound<PyArray1<f64>>`` directly to avoid Vec → PyList overhead.
+- `julia/attnres.jl` + `coupling/_attnres_julia.py` — Julia port with
+  lazy ``juliacall`` bridge. Bit-exact parity with the NumPy reference.
+- `go/attnres.go` + `coupling/_attnres_go.py` — Go port compiled to
+  c-shared ``libattnres.so``; ctypes bridge. Bit-exact parity.
+- `mojo/attnres.mojo` + `coupling/_attnres_mojo.py` — Mojo port with
+  subprocess bridge using a single-line text protocol (Mojo 0.26
+  ``UnsafePointer`` C-ABI is in transition; documented upgrade path
+  to ``@export(ABI="C")`` + shared library once the pointer surface
+  stabilises in 0.27+). Parity within 7.72e-15.
+- `benchmarks/attnres_modulation_benchmark.py` — multi-backend
+  overhead measurement against the baseline ``UPDEEngine.step``.
+  Verified Rust speedup of 2.5–4.5× over the NumPy fallback on
+  N ∈ {16, 64, 128, 256}.
+- `tests/test_attention_residuals.py` (17 tests) + new
+  `tests/test_attention_residuals_backends.py` (13 tests) —
+  per-backend parity, symmetry, zero-diagonal, no-new-edges,
+  block-window, lambda=0 identity, contract failures, R-within-5 %
+  validation against the baseline.
+- New global rule at
+  `feedback_fallback_chain_ordering.md` — every multi-language
+  compute dispatcher across GOTM orders backends fastest-first.
+
+### Changed — type discipline (continued)
+- `attention_residuals.py` dispatcher uses a canonical
+  ``_BackendFn`` Callable alias so loader functions are strictly
+  typed; the only remaining ``type: ignore`` is on the juliacall
+  import (juliacall ships no py.typed marker) and is documented
+  inline with its reason.
+
 ### Security
 - `adapters/modbus_tls.py` no longer echoes the full private-key or
   certificate path in `ConnectionError` messages — only the filename.

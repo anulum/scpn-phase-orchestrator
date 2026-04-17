@@ -36,6 +36,8 @@ boost on their existing K_ij.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -52,14 +54,23 @@ __all__ = ["ACTIVE_BACKEND", "AVAILABLE_BACKENDS", "attnres_modulate"]
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
+# Canonical signature every backend must satisfy.
+_BackendFn = Callable[[NDArray, NDArray, int, int, float, float], NDArray]
 
-def _load_rust():  # type: ignore[no-untyped-def]
+
+def _load_rust() -> _BackendFn:
+    # ``spo_kernel`` is the PyO3-built extension module; maturin does
+    # not emit .pyi stubs, so the imported callable is ``Any`` to mypy.
+    # Explicit cast to the contract type keeps the dispatcher strictly
+    # typed without suppressing the warning globally.
+    from typing import cast
+
     from spo_kernel import attnres_modulate_rust
 
-    return attnres_modulate_rust
+    return cast("_BackendFn", attnres_modulate_rust)
 
 
-def _load_mojo():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
+def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
     # Also probe the compiled executable — the module loads fine even
     # when the binary is missing, so the existence check drops us
     # through to the next backend rather than surfacing a runtime
@@ -73,10 +84,14 @@ def _load_mojo():  # type: ignore[no-untyped-def]  # pragma: no cover — toolch
     return attnres_modulate_mojo
 
 
-def _load_julia():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
+def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
     # Probe the *actual* toolchain at resolve time, not just the wrapper
     # module — the wrapper module itself has no import-time dependency
-    # on juliacall.
+    # on juliacall. The ``# type: ignore[import-untyped]`` is required
+    # because juliacall ships no py.typed marker, not a suppressed lint
+    # failure. The ``noqa: F401`` flags the unused import as
+    # deliberate — we only need the side-effect of loading juliacall,
+    # and its success is what gates this backend.
     import juliacall  # type: ignore[import-untyped]  # noqa: F401
 
     from scpn_phase_orchestrator.coupling._attnres_julia import (
@@ -86,7 +101,7 @@ def _load_julia():  # type: ignore[no-untyped-def]  # pragma: no cover — toolc
     return attnres_modulate_julia
 
 
-def _load_go():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
+def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
     from scpn_phase_orchestrator.coupling._attnres_go import (
         attnres_modulate_go,
     )
@@ -94,7 +109,7 @@ def _load_go():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchai
     return attnres_modulate_go
 
 
-_LOADERS = {
+_LOADERS: dict[str, Callable[[], _BackendFn]] = {
     "rust": _load_rust,
     "mojo": _load_mojo,
     "julia": _load_julia,

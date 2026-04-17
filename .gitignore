@@ -72,6 +72,10 @@ HANDOVER_*.md
 BACKUP/
 ARCHIVE/
 
+# Agent metadata dropped by cross-agent tooling — tracked locally,
+# never committed to this repo
+.agent_metadata.json
+
 # AttnRes compiled artefacts — rebuilt on demand from their source
 go/libattnres.so
 go/libattnres.h
