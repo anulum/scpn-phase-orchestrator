@@ -7,18 +7,20 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Generate Python gRPC stubs from proto
 
+# Thin compatibility wrapper; the cross-platform implementation lives in
+# generate_grpc.py so Windows developers can run it without WSL.
+
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PROTO_DIR="${REPO_ROOT}/proto"
-OUT_DIR="${REPO_ROOT}/src/scpn_phase_orchestrator/grpc_gen"
 
-mkdir -p "${OUT_DIR}"
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON=python3
+elif command -v python >/dev/null 2>&1; then
+    PYTHON=python
+else
+    echo "No python interpreter found on PATH" >&2
+    exit 1
+fi
 
-python -m grpc_tools.protoc \
-    -I "${PROTO_DIR}" \
-    --python_out="${OUT_DIR}" \
-    --grpc_python_out="${OUT_DIR}" \
-    "${PROTO_DIR}/spo.proto"
-
-echo "Generated stubs in ${OUT_DIR}"
+exec "${PYTHON}" "${REPO_ROOT}/tools/generate_grpc.py" "$@"
