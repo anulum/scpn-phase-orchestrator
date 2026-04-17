@@ -71,3 +71,9 @@ HANDOVER_*.md
 # Local backups — never committed
 BACKUP/
 ARCHIVE/
+
+# AttnRes compiled artefacts — rebuilt on demand from their source
+go/libattnres.so
+go/libattnres.h
+mojo/attnres_mojo
+mojo/libattnres_mojo.so

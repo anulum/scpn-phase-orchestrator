@@ -60,10 +60,16 @@ def _load_rust():  # type: ignore[no-untyped-def]
 
 
 def _load_mojo():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.coupling._attnres_mojo import (  # type: ignore[import-not-found]
+    # Also probe the compiled executable — the module loads fine even
+    # when the binary is missing, so the existence check drops us
+    # through to the next backend rather than surfacing a runtime
+    # error mid-integration.
+    from scpn_phase_orchestrator.coupling._attnres_mojo import (
+        _ensure_exe,
         attnres_modulate_mojo,
     )
 
+    _ensure_exe()
     return attnres_modulate_mojo
 
 
@@ -71,7 +77,7 @@ def _load_julia():  # type: ignore[no-untyped-def]  # pragma: no cover — toolc
     # Probe the *actual* toolchain at resolve time, not just the wrapper
     # module — the wrapper module itself has no import-time dependency
     # on juliacall.
-    import juliacall  # type: ignore[import-not-found]  # noqa: F401
+    import juliacall  # type: ignore[import-untyped]  # noqa: F401
 
     from scpn_phase_orchestrator.coupling._attnres_julia import (
         attnres_modulate_julia,
@@ -81,7 +87,7 @@ def _load_julia():  # type: ignore[no-untyped-def]  # pragma: no cover — toolc
 
 
 def _load_go():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.coupling._attnres_go import (  # type: ignore[import-not-found]
+    from scpn_phase_orchestrator.coupling._attnres_go import (
         attnres_modulate_go,
     )
 
