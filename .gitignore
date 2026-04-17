@@ -83,3 +83,8 @@ go/libattnres.so
 go/libattnres.h
 mojo/attnres_mojo
 mojo/libattnres_mojo.so
+
+# order_params compiled artefacts
+go/liborder_params.so
+go/liborder_params.h
+mojo/order_params_mojo
