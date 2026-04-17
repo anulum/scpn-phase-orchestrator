@@ -7,6 +7,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- `adapters/modbus_tls.py` no longer echoes the full private-key or
+  certificate path in `ConnectionError` messages — only the filename.
+- `binding/loader.py` scrubs paths from YAML / JSON / missing-file
+  errors via `path.name` + `OSError.strerror`.
+- `adapters/lsl_bci_bridge.py` stops echoing the configured
+  `stream_name` in the "Could not connect" RuntimeError.
+- `adapters/remanentia_bridge.py` stops echoing the offending URL
+  when rejecting a non-http(s) scheme.
+- `modbus_tls` enables `CERT_REQUIRED` + hostname verification when
+  a CA bundle is configured (previously `CERT_NONE` by default).
+
+### Added — amplitude metric chain in QueueWaves pipeline
+- `PhaseComputePipeline.tick()` now populates `mean_amplitude`,
+  `subcritical_fraction`, and `pac_max` on the emitted `UPDEState`
+  using a 32-tick rolling window of Hilbert amplitudes. Policy rules
+  referencing those metrics now fire as documented.
+- `ServiceSnapshot.amplitude` reports the real Hilbert envelope
+  instead of a hard-coded 1.0.
+
+### Added — cross-platform tooling
+- `tools/normalise_spdx_headers.py` — one-shot normaliser that
+  converts the 6-line merged SPDX variant to the canonical 7-line
+  form with `--dry-run` / `--apply` / `--verify` modes. Applied to
+  632 files in this release.
+- `tools/generate_grpc.py` — cross-platform Python port of
+  `generate_grpc.sh`, callable from Windows without WSL.
+
+### Added — FPGA synthesisable Verilog
+- `KuramotoVerilogCompiler` now emits Q16.16 fixed-point Verilog that
+  instantiates `cordic_sincos` from `spo-fpga/kuramoto_core.v` for
+  every non-zero K_ij entry — replacing the previous simulation-only
+  `$sin(...)` placeholder. 30-case test suite covers encoding,
+  module structure, synthesisability, CORDIC instantiation and the
+  summation chain.
+
+### Added — observability
+- Structured `logging.getLogger(__name__)` instrumentation on
+  `server.py` (lifespan startup / shutdown, api.reset, api.step),
+  `server_grpc.py` (Step / Reset RPCs) and `supervisor/policy.py`
+  (regime + action count + knob list extras on every `decide()` call).
+
+### Added — concurrent-safety primitives
+- `threading.RLock()` around `UPDEEngine.step/run` and
+  `StuartLandauEngine.step` so shared pre-allocated scratch arrays
+  cannot be corrupted by concurrent callers (multi-client gRPC /
+  WebSocket deployments).
+- `SimulationState._lock` unified to `threading.Lock`; REST and gRPC
+  now serialise against the same mutex.
+- `GaianMeshNode` gained `__enter__` / `__exit__` so
+  `with GaianMeshNode(...)` releases sockets on exit, including on
+  exception paths. FastAPI `create_app` installs an
+  `asynccontextmanager` lifespan that clears the event bus on
+  shutdown.
+
+### Added — constructor validation
+- `UPDEEngine`, `SwarmalatorEngine`, `SimplicialEngine`, `DelayBuffer`,
+  `DelayedEngine`, `InertialKuramotoEngine`, `OttAntonsenReduction`,
+  `JaxUPDEEngine`, `JaxStuartLandauEngine` raise `ValueError` on
+  non-positive `n` / `dt`, negative `sigma²`, zero dim, unknown
+  integration method.
+- `WebhookAlerter.cooldown_seconds`, `MetricBuffer.maxlen`,
+  `PhaseSINDy.threshold / max_iter`, `LyapunovGuard.basin_threshold`,
+  `EventBus.maxlen`, `PGBO.cost_weights` all gain up-front validation.
+
+### Performance
+- `reporting/plots.py` defers the matplotlib import to the first
+  plot call. Importing `CoherencePlot` no longer triggers matplotlib
+  backend init or font cache loading on CLI / server paths.
+- Salvaged Rayon parallelisation for `chimera::local_order_parameter`,
+  `bifurcation::trace_sync_transition`, `dimension`, `market`,
+  `poincare`, `coupling_est`, `sindy`, `spo-wasm`, `active_inference`
+  from the stalled perf branches. Tests + SPDX / ORCID / Contact
+  headers preserved throughout. Dedicated criterion benchmarks added
+  in `spo-engine/benches/parallel_bench.rs`.
+
+### Fixed
+- `pac_matrix_compute` docstring now matches the implementation
+  (row-major, not column-major). Callers must pass `ravel(order="C")`.
+- `spo-engine/benches/upde_bench.rs` failed to compile; three call
+  sites now pass `&mut cs.knm` to match the `UPDEStepper.step/run`
+  mutability contract.
+- 26 ruff errors and 8 cargo warnings introduced by this session's
+  commits — all cleaned. `cargo check --all` and
+  `ruff check src/ tests/ tools/` are zero-warning.
+
+### Changed
+- SPDX headers normalised to canonical 7-line format across 632
+  files (Python, Rust, YAML, TOML, Shell, Markdown). The previous
+  6-line merged `SPDX-License-Identifier: ... | Commercial license
+  available` variant is no longer present in-repo.
+- `docs/reference/api/{coupling,monitor,upde}.md`, CHANGELOG and
+  README no longer use internal quality tier names ("Superior",
+  "Superior-level"). Neutral descriptive language replaces them.
+- Incidental `protoscience@anylum.li` email typo corrected to
+  `protoscience@anulum.li` in 9 files.
+
+### Tests — S6 THIN file strengthening
+- `test_ffi_parity.py` 4 → 15 (Sakaguchi lag, external drive,
+  negative / asymmetric coupling, N=64 scale, degenerate zero state,
+  run() batch, determinism, N=1 / antiphase / full-sync order
+  parameters).
+- `test_pac_parity.py` 3 → 14 (true Python ↔ Rust parity restored;
+  parametrised bin counts; degenerate n_bins < 2; constant amplitude;
+  fully synchronous; short series; matrix shape + diagonal).
+- `test_sindy.py` 1 → 8 (zero-coupling sparsification; N=5 stability;
+  threshold sparsifier contract; equation-dump format; empty input).
+- `test_sparse_engine.py` 3 → 9 (zero CSR parity, RK45 50% density,
+  fully-dense parity, Sakaguchi lag, invalid method, N=1 decouple).
+- `test_sheaf_engine.py` 2 → 7 (zero restriction maps, D=1 long-run
+  parity, per-dim external drive, single oscillator, wrap contract).
+- `test_semantic_compiler.py` 2 → 12 (default layers / base freq;
+  fusion / cell keyword routing; case-insensitive regex; decade
+  scaling; eight oscillators per layer; empty prompt fallback).
+- `test_quantum_bridge.py` 2 → 17 (constructor guards; import_artifact
+  defaults and edges; import_knm validation; round-trip).
+- `test_active_inference_agent.py` 2 → 11 (directionality,
+  target_r bounds, learning rate effect, repeated-call stability).
+- `test_viz_streamer.py` 2 → 11 (defaults, primitives, empty
+  containers, multi-dim, list-of-arrays, numpy dtypes, broadcast
+  no-client and before-start fast paths, deep nesting).
+- `test_lsl_bridge.py` 3 → 12 (constructor defaults,
+  HAS_LSL=False short-circuit, no-stream-found case, stop-before-start
+  idempotence, pure / noisy / empty phase extraction, scrubbed
+  error message).
+
 ### Added — Rust Path Expansion (36 → 53 spo-engine modules)
 - 17 new Rust engine modules: simplicial, hypergraph, geometric, envelope, reduction, splitting, te_adaptive, prior, ethical, sleep_staging, evs, sindy, coupling_est, phase_extract, carrier, connectome, freq_id
 - 17 new reference documentation pages (567+ lines each, 8 sections, verified benchmarks) for all new Rust modules
