@@ -363,6 +363,8 @@ fetchState().then(render);
 def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
+        from contextlib import asynccontextmanager
+
         from fastapi import Depends, FastAPI, Header, HTTPException
         from fastapi.responses import HTMLResponse
     except ImportError as exc:
@@ -371,7 +373,23 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
 
     spec = load_binding_spec(spec_path)
     sim = SimulationState(spec)
-    app = FastAPI(title="SPO Dashboard", version="0.5.0")
+
+    @asynccontextmanager
+    async def _lifespan(_app: "FastAPI"):
+        """Release engine resources when the process shuts down.
+
+        The simulation state itself is held in-process (numpy arrays), but
+        future integrations (gRPC channels, database handles, external
+        adapters) register cleanup here so a graceful shutdown never
+        leaks a descriptor.
+        """
+        try:
+            yield
+        finally:
+            with sim._lock:
+                sim.event_bus.clear()
+
+    app = FastAPI(title="SPO Dashboard", version="0.5.0", lifespan=_lifespan)
 
     _api_key = os.environ.get("SPO_API_KEY")
 
