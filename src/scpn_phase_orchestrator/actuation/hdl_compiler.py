@@ -94,7 +94,7 @@ class KuramotoVerilogCompiler:
         self.cordic_stages = cordic_stages
 
     def compile(self, knm: NDArray, omegas: NDArray, dt: float) -> str:
-        """Generate a synthesisable Verilog module for the mesh.
+        r"""Generate a synthesisable Verilog module for the mesh.
 
         The returned string is a complete module suitable for writing to a
         ``.v`` file and feeding to the synthesis step of an FPGA tool.

@@ -38,8 +38,6 @@ from pathlib import Path
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
-
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
@@ -72,6 +70,8 @@ except ImportError:  # pragma: no cover
     WebSocketDisconnect = None  # type: ignore[assignment,misc]  # pragma: no cover
 
 __all__ = ["create_app", "SimulationState"]
+
+logger = logging.getLogger(__name__)
 
 TWO_PI = 2.0 * np.pi
 
@@ -378,7 +378,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     sim = SimulationState(spec)
 
     @asynccontextmanager
-    async def _lifespan(_app: "FastAPI"):
+    async def _lifespan(_app: FastAPI):
         """Release engine resources when the process shuts down.
 
         The simulation state itself is held in-process (numpy arrays), but
@@ -438,7 +438,11 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         """Handle POST /api/reset — reset simulation to initial state."""
         with sim._lock:
             snap = sim.reset()
-        logger.info("api.reset: step=%d regime=%s", snap.get("step", 0), snap.get("regime", ""))
+        logger.info(
+            "api.reset: step=%d regime=%s",
+            snap.get("step", 0),
+            snap.get("regime", ""),
+        )
         return snap
 
     @app.get("/api/config")

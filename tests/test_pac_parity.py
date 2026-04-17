@@ -153,8 +153,8 @@ def test_pac_matrix_bounded_and_shape(spo):
     amps = np.abs(np.sin(phases)) + 0.1
 
     rust_flat = spo.pac_matrix_compute(
-        phases.ravel(order="F"),
-        amps.ravel(order="F"),
+        phases.ravel(order="C"),
+        amps.ravel(order="C"),
         t,
         n,
         18,
@@ -166,13 +166,13 @@ def test_pac_matrix_bounded_and_shape(spo):
     assert np.all(rust_mat <= 1.0)
 
 
-def test_pac_matrix_diagonal_close_to_scalar_mi(spo):
-    """M[i, i] (θ_i, amp_i) must be close to scalar pac_modulation_index.
+def test_pac_matrix_diagonal_matches_scalar_mi(spo):
+    """M[i, i] (θ_i, amp_i) must equal scalar pac_modulation_index byte-for-byte.
 
-    The matrix kernel and scalar kernel use slightly different binning
-    internals (matrix pre-allocates histogram buffers across the N×N
-    sweep), so allow ~1e-3 histogram drift but reject order-of-magnitude
-    divergence.
+    The matrix and scalar kernels share the same histogram binning code
+    (`modulation_index` in pac.rs), so once the caller supplies data in
+    the row-major (C order) layout that pac_matrix expects, the diagonal
+    must match the scalar result to machine precision.
     """
     n = 3
     t = 500
@@ -181,8 +181,8 @@ def test_pac_matrix_diagonal_close_to_scalar_mi(spo):
     amps = np.abs(np.sin(phases)) + 0.1
 
     rust_flat = spo.pac_matrix_compute(
-        phases.ravel(order="F"),
-        amps.ravel(order="F"),
+        phases.ravel(order="C"),
+        amps.ravel(order="C"),
         t,
         n,
         18,
@@ -193,8 +193,8 @@ def test_pac_matrix_diagonal_close_to_scalar_mi(spo):
         theta_i = np.ascontiguousarray(phases[:, i])
         amp_i = np.ascontiguousarray(amps[:, i])
         scalar_mi = spo.pac_modulation_index(theta_i, amp_i, 18)
-        assert abs(rust_mat[i, i] - scalar_mi) < 2e-3, (
-            f"diag {i}: matrix={rust_mat[i, i]:.6f} vs scalar={scalar_mi:.6f}"
+        assert abs(rust_mat[i, i] - scalar_mi) < 1e-12, (
+            f"diag {i}: matrix={rust_mat[i, i]:.9f} vs scalar={scalar_mi:.9f}"
         )
 
 

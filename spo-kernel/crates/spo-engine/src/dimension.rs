@@ -320,7 +320,6 @@ pub fn kaplan_yorke_dimension(exponents: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::f64::consts::TAU;
 
     #[test]
     fn test_correlation_integral_identical() {

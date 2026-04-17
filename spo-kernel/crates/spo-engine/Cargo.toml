@@ -28,5 +28,9 @@ proptest = { workspace = true }
 name = "upde_bench"
 harness = false
 
+[[bench]]
+name = "parallel_bench"
+harness = false
+
 [lints]
 workspace = true

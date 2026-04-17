@@ -14,8 +14,8 @@ into two lines
     <prefix> SPDX-License-Identifier: AGPL-3.0-or-later
     <prefix> Commercial license available
 
-Also corrects the ``protoscience@<typo>`` Contact email typo to ``protoscience@anulum.li``
-wherever it occurs in the file.
+Also corrects the ``protoscience@<typo>`` Contact email typo to
+``protoscience@anulum.li`` wherever it occurs in the file.
 
 Usage::
 
@@ -29,9 +29,9 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -53,7 +53,9 @@ PREFIXED_PATTERN = re.compile(
     r"SPDX-License-Identifier: AGPL-3\.0-or-later \| Commercial license available\s*$",
 )
 
-MERGED_BARE = "SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available"
+MERGED_BARE = (
+    "SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available"
+)
 # Defined via concatenation so the script's own source does not contain the
 # literal typo and therefore does not self-match during a sweep.
 TYPO = "protoscience@" + "any" + "lum.li"
@@ -216,9 +218,15 @@ def run_normalise(apply: bool) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--dry-run", action="store_true", help="report changes without writing")
+    group.add_argument(
+        "--dry-run", action="store_true", help="report changes without writing"
+    )
     group.add_argument("--apply", action="store_true", help="write changes")
-    group.add_argument("--verify", action="store_true", help="check no merged variant remains")
+    group.add_argument(
+        "--verify",
+        action="store_true",
+        help="check no merged variant remains",
+    )
     args = parser.parse_args()
 
     if args.verify:

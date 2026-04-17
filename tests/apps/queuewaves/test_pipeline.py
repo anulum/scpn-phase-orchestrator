@@ -110,7 +110,6 @@ def test_pipeline_wires_amplitude_metrics_into_upde_state(
     Verifies the metric chain Extractor.amplitude → UPDEState is unbroken.
     """
     pipe = PhaseComputePipeline(minimal_config)
-    rng = np.random.default_rng(7)
     dt = minimal_config.scrape_interval_s
     t = np.arange(16) * dt
     # Amplitude-modulated carrier — guarantees non-zero Hilbert envelope.
@@ -143,7 +142,6 @@ def test_pipeline_pac_max_nonzero_after_window(
     computable. Verify it is non-negative and the history buffer is bounded.
     """
     pipe = PhaseComputePipeline(minimal_config)
-    rng = np.random.default_rng(11)
     dt = minimal_config.scrape_interval_s
     for tick_i in range(pipe._pac_window + 3):
         t = np.arange(16) * dt + tick_i * dt * 16

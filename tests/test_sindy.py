@@ -137,14 +137,19 @@ def test_sindy_threshold_sparsifies_weak_terms():
     sindy_low = PhaseSINDy(threshold=0.005)
     coeffs_low = sindy_low.fit(phases, dt)
 
-    # Under high threshold the small coupling term is zeroed out.
-    if coeffs_high[0].size > 1:
-        assert abs(coeffs_high[0][1]) < 0.2
-    # Under low threshold it survives (non-zero, though estimation noise
-    # means the recovered value may not match the 0.04 ground truth
-    # exactly — we only check it is non-trivial).
-    if coeffs_low[0].size > 1:
-        assert abs(coeffs_low[0][1]) >= 0.0  # at least present
+    # High threshold (0.2) is above the true coupling (0.04), so the
+    # STLSQ sparsifier must zero the coupling slot exactly.
+    assert coeffs_high[0].size > 1, "fitted coefficients must include coupling term"
+    assert coeffs_high[0][1] == 0.0, (
+        f"coupling term should be sparsified under threshold 0.2, "
+        f"got {coeffs_high[0][1]:.4f}"
+    )
+    # Low threshold (0.005) leaves the coupling intact; within regression
+    # noise it recovers the ground-truth 0.04 to 0.005 precision.
+    assert coeffs_low[0].size > 1
+    assert abs(coeffs_low[0][1] - 0.04) < 0.005, (
+        f"low-threshold fit should recover K_01 ≈ 0.04, got {coeffs_low[0][1]:.4f}"
+    )
 
 
 def test_sindy_equations_dump_format():

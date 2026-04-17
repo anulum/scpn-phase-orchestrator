@@ -40,7 +40,10 @@ class TestSupervisorPolicyLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         policy = SupervisorPolicy(RegimeManager())
-        caplog.set_level(logging.INFO, logger="scpn_phase_orchestrator.supervisor.policy")
+        caplog.set_level(
+            logging.INFO,
+            logger="scpn_phase_orchestrator.supervisor.policy",
+        )
         state = _make_state("nominal", stability=0.9)
         boundary = BoundaryState(violations=[])
 
@@ -63,7 +66,10 @@ class TestSupervisorPolicyLogging:
         aggregators can index decisions by knob.
         """
         policy = SupervisorPolicy(RegimeManager())
-        caplog.set_level(logging.INFO, logger="scpn_phase_orchestrator.supervisor.policy")
+        caplog.set_level(
+            logging.INFO,
+            logger="scpn_phase_orchestrator.supervisor.policy",
+        )
         state = _make_state("degraded", stability=0.2)
         # Force DEGRADED: we stub the regime manager to emit degraded.
         policy._regime_manager.evaluate = lambda *_a, **_k: Regime.DEGRADED  # type: ignore[assignment]
