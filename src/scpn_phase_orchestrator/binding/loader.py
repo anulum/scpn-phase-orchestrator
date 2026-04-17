@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -48,10 +49,13 @@ def _require(data: dict, key: str, context: str = "") -> Any:
 def load_binding_spec(path: str | Path) -> BindingSpec:
     """Load a BindingSpec from a YAML or JSON file."""
     path = Path(path)
+    # Filename only in surfaced error messages — full filesystem paths must
+    # not leak into logs or API clients.
     try:
         raw = path.read_text(encoding="utf-8")
     except (FileNotFoundError, PermissionError, IsADirectoryError) as exc:
-        raise BindingLoadError(f"cannot read {path}: {exc}") from exc
+        reason = exc.strerror or type(exc).__name__
+        raise BindingLoadError(f"cannot read {path.name}: {reason}") from exc
 
     if path.suffix in (".yaml", ".yml"):
         import yaml
@@ -59,12 +63,16 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         try:
             data = yaml.safe_load(raw)
         except yaml.YAMLError as exc:
-            raise BindingLoadError(f"YAML parse error in {path}: {exc}") from exc
+            raise BindingLoadError(
+                f"YAML parse error in {path.name}: {exc}"
+            ) from exc
     elif path.suffix == ".json":
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise BindingLoadError(f"JSON parse error in {path}: {exc}") from exc
+            raise BindingLoadError(
+                f"JSON parse error in {path.name}: {exc}"
+            ) from exc
     else:
         raise BindingLoadError(f"Unsupported file extension: {path.suffix}")
 

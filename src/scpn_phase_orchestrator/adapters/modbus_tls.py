@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -63,10 +64,12 @@ class SecureModbusAdapter:
         self._client = self._connect()
 
     def _build_tls_context(self) -> ssl.SSLContext:
+        # Filename only in the raised message — full paths to key material
+        # must never surface in error strings that may reach logs or clients.
         if not self._cert.exists():
-            raise ConnectionError(f"TLS certificate not found: {self._cert}")
+            raise ConnectionError(f"TLS certificate not found: {self._cert.name}")
         if not self._key.exists():
-            raise ConnectionError(f"TLS key not found: {self._key}")
+            raise ConnectionError(f"TLS key not found: {self._key.name}")
         try:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ctx.load_cert_chain(certfile=str(self._cert), keyfile=str(self._key))
