@@ -21,6 +21,7 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
+use spo_engine::attnres::attnres_modulate;
 use spo_engine::basin_stability::basin_stability;
 use spo_engine::carrier::decode;
 use spo_engine::connectome::load_hcp_connectome;
@@ -270,8 +271,26 @@ fn bench_oa_run(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_attnres_modulate(c: &mut Criterion) {
+    // State-dependent coupling modulation: O(N²) per call.
+    let mut group = c.benchmark_group("attnres_modulate");
+    for &n in &[16usize, 64, 128, 256] {
+        let knm = ring_knm(n, 0.3);
+        let theta: Vec<f64> = (0..n).map(|i| i as f64 * 0.13).collect();
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &_n| {
+            b.iter(|| {
+                let r = attnres_modulate(&knm, &theta, n, 4, 0.1, 0.5)
+                    .expect("valid attnres_modulate arguments");
+                criterion::black_box(r);
+            });
+        });
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
+    bench_attnres_modulate,
     bench_basin_stability,
     bench_compute_itpc,
     bench_ei_balance,

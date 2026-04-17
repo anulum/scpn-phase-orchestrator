@@ -39,7 +39,82 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["attnres_modulate"]
+__all__ = ["ACTIVE_BACKEND", "AVAILABLE_BACKENDS", "attnres_modulate"]
+
+# Fastest-first fallback chain. Each entry is a ``(name, loader)`` pair;
+# the loader either returns a callable with the
+# ``(knm_flat, theta, n, block_size, temperature, lambda_) → flat``
+# signature, or raises ``ImportError`` / ``RuntimeError`` when its
+# toolchain is not available on this host. Python is always the
+# terminal fallback so the feature still works without any compiled
+# backend. Order follows the global rule
+# ``feedback_fallback_chain_ordering.md`` — Rust → Mojo → Julia → Go → Python.
+
+_BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
+
+
+def _load_rust():  # type: ignore[no-untyped-def]
+    from spo_kernel import attnres_modulate_rust
+
+    return attnres_modulate_rust
+
+
+def _load_mojo():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
+    from scpn_phase_orchestrator.coupling._attnres_mojo import (  # type: ignore[import-not-found]
+        attnres_modulate_mojo,
+    )
+
+    return attnres_modulate_mojo
+
+
+def _load_julia():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
+    # Probe the *actual* toolchain at resolve time, not just the wrapper
+    # module — the wrapper module itself has no import-time dependency
+    # on juliacall.
+    import juliacall  # type: ignore[import-not-found]  # noqa: F401
+
+    from scpn_phase_orchestrator.coupling._attnres_julia import (
+        attnres_modulate_julia,
+    )
+
+    return attnres_modulate_julia
+
+
+def _load_go():  # type: ignore[no-untyped-def]  # pragma: no cover — toolchain-gated
+    from scpn_phase_orchestrator.coupling._attnres_go import (  # type: ignore[import-not-found]
+        attnres_modulate_go,
+    )
+
+    return attnres_modulate_go
+
+
+_LOADERS = {
+    "rust": _load_rust,
+    "mojo": _load_mojo,
+    "julia": _load_julia,
+    "go": _load_go,
+}
+
+
+def _resolve_backends() -> tuple[str, list[str]]:
+    """Probe each candidate backend. Return ``(active, available)``.
+
+    ``available`` lists every backend whose toolchain is present, in
+    fastest-first order. ``active`` is the head of that list, or
+    ``"python"`` when no compiled backend loads.
+    """
+    available: list[str] = []
+    for name in _BACKEND_NAMES[:-1]:  # every non-python backend
+        try:
+            _LOADERS[name]()
+        except (ImportError, RuntimeError, OSError):
+            continue
+        available.append(name)
+    available.append("python")  # terminal fallback
+    return available[0], available
+
+
+ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _softmax_row(logits: NDArray, mask: NDArray) -> NDArray:
@@ -117,6 +192,16 @@ def attnres_modulate(
     if lambda_ == 0.0:
         return knm.copy()
 
+    if ACTIVE_BACKEND != "python":
+        backend_fn = _LOADERS[ACTIVE_BACKEND]()
+        knm_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        theta_flat = np.ascontiguousarray(theta, dtype=np.float64)
+        return np.asarray(
+            backend_fn(knm_flat, theta_flat, n, block_size, temperature, lambda_),
+            dtype=np.float64,
+        ).reshape(n, n)
+
+    # ────── Python / NumPy fallback ──────
     # Phase-coherence logits: cos(θ_j - θ_i) / temperature.
     # Broadcasting: theta[None, :] - theta[:, None] → (N, N).
     diff = theta[np.newaxis, :] - theta[:, np.newaxis]

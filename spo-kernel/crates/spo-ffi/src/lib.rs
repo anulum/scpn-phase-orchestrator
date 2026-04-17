@@ -1379,6 +1379,31 @@ impl PyStuartLandauStepper {
     }
 }
 
+// ─── AttnRes Coupling Modulation ───────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (knm, theta, n, block_size, temperature, lambda_))]
+fn attnres_modulate_rust<'py>(
+    py: Python<'py>,
+    knm: PyReadonlyArray1<'py, f64>,
+    theta: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    block_size: usize,
+    temperature: f64,
+    lambda_: f64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let t = theta
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let out =
+        spo_engine::attnres::attnres_modulate(k, t, n, block_size, temperature, lambda_)
+            .map_err(PyValueError::new_err)?;
+    Ok(PyArray1::from_vec(py, out))
+}
+
 // ─── PAC Functions ──────────────────────────────────────────────────
 
 #[pyfunction]
@@ -3403,6 +3428,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPetriNet>()?;
     m.add_class::<PyRuleEngine>()?;
     m.add_class::<PyLIFEnsemble>()?;
+    m.add_function(wrap_pyfunction!(attnres_modulate_rust, m)?)?;
     m.add_function(wrap_pyfunction!(pac_modulation_index, m)?)?;
     m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;

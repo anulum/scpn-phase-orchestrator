@@ -36,6 +36,8 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling.attention_residuals import (
+    ACTIVE_BACKEND,
+    AVAILABLE_BACKENDS,
     attnres_modulate,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -246,3 +248,51 @@ def test_deterministic_same_inputs() -> None:
     a = attnres_modulate(knm, theta, lambda_=0.3)
     b = attnres_modulate(knm, theta, lambda_=0.3)
     np.testing.assert_array_equal(a, b)
+
+
+# ---------------------------------------------------------------------
+# Multi-backend dispatcher
+# ---------------------------------------------------------------------
+
+
+class TestDispatcher:
+    def test_python_is_always_available(self) -> None:
+        """The NumPy fallback is always present as the terminal entry."""
+        assert "python" in AVAILABLE_BACKENDS
+        assert AVAILABLE_BACKENDS[-1] == "python"
+
+    def test_active_backend_is_first_available(self) -> None:
+        assert AVAILABLE_BACKENDS[0] == ACTIVE_BACKEND
+
+    def test_fastest_first_ordering(self) -> None:
+        """Canonical order from the global fallback-chain rule:
+        Rust → Mojo → Julia → Go → Python."""
+        canonical = ["rust", "mojo", "julia", "go", "python"]
+        indices = [canonical.index(b) for b in AVAILABLE_BACKENDS]
+        assert indices == sorted(indices), (
+            f"AVAILABLE_BACKENDS {AVAILABLE_BACKENDS} is not in "
+            f"fastest-first canonical order {canonical}"
+        )
+
+    def test_rust_python_bit_parity(self) -> None:
+        """When the Rust backend is active, its output must match the
+        NumPy fallback to floating-point precision (any drift would
+        silently change physics depending on the wheel's presence)."""
+        if "rust" not in AVAILABLE_BACKENDS:
+            pytest.skip("Rust backend not built on this host")
+
+        from scpn_phase_orchestrator.coupling import attention_residuals as mod
+
+        knm = _symmetric_knm(12, seed=42)
+        theta = np.random.default_rng(7).uniform(0.0, TWO_PI, size=12)
+
+        # Force the Python path via monkey-patch of ACTIVE_BACKEND.
+        saved = mod.ACTIVE_BACKEND
+        try:
+            mod.ACTIVE_BACKEND = "python"
+            py_result = mod.attnres_modulate(knm, theta, lambda_=0.5)
+        finally:
+            mod.ACTIVE_BACKEND = saved
+
+        rust_result = attnres_modulate(knm, theta, lambda_=0.5)
+        np.testing.assert_allclose(py_result, rust_result, atol=1e-12)

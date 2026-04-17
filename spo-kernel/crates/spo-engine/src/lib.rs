@@ -43,6 +43,7 @@ pub use stuart_landau::StuartLandauStepper;
 pub use swarmalator::SwarmalatorStepper;
 pub use upde::UPDEStepper;
 
+pub mod attnres;
 pub mod basin_stability;
 pub mod bifurcation;
 pub mod carrier;
