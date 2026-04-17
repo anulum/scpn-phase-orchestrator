@@ -99,8 +99,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   6-line merged `SPDX-License-Identifier: ... | Commercial license
   available` variant is no longer present in-repo.
 - `docs/reference/api/{coupling,monitor,upde}.md`, CHANGELOG and
-  README no longer use internal quality tier names ("Superior",
-  "Superior-level"). Neutral descriptive language replaces them.
+  README no longer use internal quality tier names. Neutral
+  descriptive language replaces them.
 - Incidental `protoscience@anylum.li` email typo corrected to
   `protoscience@anulum.li` in 9 files.
 
