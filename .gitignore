@@ -94,3 +94,8 @@ go/libpac.so
 go/libpac.h
 mojo/pac_mojo
 mojo/order_params_mojo
+
+# npe compiled artefacts
+go/libnpe.so
+go/libnpe.h
+mojo/npe_mojo

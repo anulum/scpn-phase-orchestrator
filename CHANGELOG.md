@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-17 — NPE multi-backend)
+- `julia/npe.jl`, `go/npe.go` (→ `libnpe.so`), `mojo/npe.mojo`
+  (→ `npe_mojo`) implementing the normalised persistent entropy
+  and the circular phase-distance matrix.
+- Python bridges `monitor/_npe_julia.py`, `monitor/_npe_go.py`,
+  `monitor/_npe_mojo.py`.
+- `monitor/npe.py` upgraded to five-backend dispatcher.
+- 17 new tests (12 per-backend parity + 5 stability/slow).
+- `benchmarks/npe_benchmark.py` multi-backend harness.
+
 ### Added (2026-04-17 — PAC multi-backend)
 - Julia port `julia/pac.jl`, Go port `go/pac.go` (→ `libpac.so`),
   Mojo port `mojo/pac.mojo` (→ `pac_mojo` executable) for Tort 2010
