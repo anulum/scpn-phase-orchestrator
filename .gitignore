@@ -129,3 +129,8 @@ mojo/entropy_prod_mojo
 go/libdimension.so
 go/libdimension.h
 mojo/dimension_mojo
+
+# chimera compiled artefacts
+go/libchimera.so
+go/libchimera.h
+mojo/chimera_mojo

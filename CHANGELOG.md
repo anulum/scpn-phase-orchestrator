@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — chimera multi-backend)
+- `julia/chimera.jl`, `go/chimera.go` (→ `libchimera.so`),
+  `mojo/chimera.mojo` (→ `chimera_mojo`) implementing the
+  Kuramoto & Battogtokh 2002 local order parameter per oscillator.
+- Python bridges `monitor/_chimera_julia.py`,
+  `monitor/_chimera_go.py`, `monitor/_chimera_mojo.py`.
+- `monitor/chimera.py` upgraded to five-backend dispatcher.
+  Classification thresholds + partition stay Python-side.
+- 24 new tests — `tests/test_chimera_algorithm.py` (13 algorithmic
+  + Hypothesis + exact uniform-circle identity),
+  `tests/test_chimera_backends.py` (8 cross-backend parity with
+  Hypothesis sweeps for Rust / Go), `tests/test_chimera_stability.py`
+  (3 long-run invariants incl. narrow-kernel ring chimera,
+  `pytest.mark.slow`).
+- `benchmarks/chimera_benchmark.py` multi-backend wall-clock
+  harness.
+- `docs/reference/api/monitor_chimera.md` (420 lines) with
+  Kuramoto-Battogtokh formalism, per-backend build notes,
+  measured benchmarks, failure modes, and references.
+
 ### Added (2026-04-18 — dimension multi-backend)
 - `julia/dimension.jl`, `go/dimension.go`
   (→ `libdimension.so`), `mojo/dimension.mojo`
