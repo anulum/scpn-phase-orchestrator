@@ -169,3 +169,8 @@ mojo/hodge_mojo
 go/libenvelope.so
 go/libenvelope.h
 mojo/envelope_mojo
+
+# swarmalator compiled artefacts
+go/libswarmalator.so
+go/libswarmalator.h
+mojo/swarmalator_mojo

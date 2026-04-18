@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — swarmalator multi-backend)
+- `julia/swarmalator.jl`, `go/swarmalator.go`
+  (→ `libswarmalator.so`), `mojo/swarmalator.mojo`
+  (→ `swarmalator_mojo`) implementing the O(N²·d) swarmalator
+  step (O'Keeffe & Strogatz 2017) with position attraction /
+  repulsion coupled to Kuramoto-style phase dynamics.
+- Python bridges `upde/_swarmalator_{julia,go,mojo}.py`.
+- `upde/swarmalator.py` upgraded to five-backend dispatcher.
+  `SwarmalatorEngine` keeps ``(n_agents, dim, dt)`` state;
+  the step itself stays stateless ``(pos, phases, omegas) →
+  (new_pos, new_phases)``.
+- Python reference fallback re-aligned to the Rust kernel:
+  repulse uses ``b / (dist · d²ₛᵤₘ + eps)`` (pre-eps squared
+  sum), not the earlier ``b / (dist³ + eps)`` variant. The two
+  agree as ``eps → 0`` but drift at small distances; all four
+  non-Rust backends now match Rust exactly.
+- 19 new tests — `tests/test_swarmalator_algorithm.py` (11
+  algorithmic + Hypothesis: phase wrap invariant, translation
+  invariance of velocity, coincident-agents regularisation,
+  ``k = 0`` decouples phases from positions),
+  `tests/test_swarmalator_backends.py` (8 cross-backend parity
+  with Hypothesis sweeps for Rust / Go).
+- Parity: Rust 5.5e-17, Julia 0.0 exact, Go 2.8e-17, Mojo
+  1.1e-16 (all under the 1e-9 tolerance).
+- `benchmarks/swarmalator_benchmark.py` — per-backend wall-clock
+  harness at ``N ∈ {8, 32, 128}``, ``dim=2``, 5 calls.
+
+### Added (2026-04-18 — retrofitted per-backend benchmarks)
+- `benchmarks/psychedelic_benchmark.py`,
+  `benchmarks/hodge_benchmark.py`,
+  `benchmarks/envelope_benchmark.py` — per-backend wall-clock
+  harnesses for the three earlier migrations whose
+  benchmark step had been skipped. Each sweeps a representative
+  size range and records ``ms_per_call`` for every available
+  backend.
+
 ### Added (2026-04-18 — envelope multi-backend)
 - `julia/envelope.jl`, `go/envelope.go` (→ `libenvelope.so`),
   `mojo/envelope.mojo` (→ `envelope_mojo`) implementing
