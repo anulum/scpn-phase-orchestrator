@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — embedding primitives multi-backend)
+- `julia/embedding.jl`, `go/embedding.go` (→ `libembedding.so`),
+  `mojo/embedding.mojo` (→ `embedding_mojo`) implementing three
+  delay-embedding primitives: `delay_embed`, `mutual_information`
+  (Fraser-Swinney 1986), `nearest_neighbor_distances` (k=1 brute
+  kNN for FNN).
+- Python bridges `monitor/_embedding_julia.py`,
+  `monitor/_embedding_go.py`, `monitor/_embedding_mojo.py`.
+- `monitor/embedding.py` upgraded to five-backend dispatcher.
+  Rust has no standalone MI or kNN FFI — the dispatcher falls
+  through to the next available backend for those two, while
+  keeping Rust's native `optimal_delay_rust` and
+  `optimal_dimension_rust` fast paths for the wrappers.
+- 25 new tests — `tests/test_embedding_algorithm.py` (12
+  algorithmic + Hypothesis), `tests/test_embedding_backends.py`
+  (10 cross-backend parity including Rust-active MI/NN
+  fall-through), `tests/test_embedding_stability.py` (3 long-run
+  invariants, `pytest.mark.slow`).
+- Parity: `delay_embed` array-exact, `nearest_neighbor_distances`
+  within 3e-17 and array-exact indices, `mutual_information`
+  within 1e-9 (histogram bin-edge rounding vs `np.histogram2d`).
+
 ### Added (2026-04-18 — recurrence multi-backend)
 - `julia/recurrence.jl`, `go/recurrence.go`
   (→ `librecurrence.so`), `mojo/recurrence.mojo`

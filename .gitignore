@@ -144,3 +144,8 @@ mojo/winding_mojo
 go/librecurrence.so
 go/librecurrence.h
 mojo/recurrence_mojo
+
+# embedding compiled artefacts
+go/libembedding.so
+go/libembedding.h
+mojo/embedding_mojo
