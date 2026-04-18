@@ -194,3 +194,8 @@ mojo/hypergraph_mojo
 go/libsimplicial.so
 go/libsimplicial.h
 mojo/simplicial_mojo
+
+# splitting compiled artefacts
+go/libsplitting.so
+go/libsplitting.h
+mojo/splitting_mojo

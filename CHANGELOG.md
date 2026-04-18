@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — splitting multi-backend)
+- `julia/splitting.jl`, `go/splitting.go` (→ `libsplitting.so`),
+  `mojo/splitting.mojo` (→ `splitting_mojo`) implementing the
+  Strang second-order operator splitting integrator
+  (Hairer-Lubich-Wanner 2006, *Geometric Numerical Integration*
+  §II.5). Scheme: A(dt/2) → B(dt) → A(dt/2) with A = exact
+  rotation by ω and B = RK4 on the coupling-only derivative.
+- Python bridges `upde/_splitting_{julia,go,mojo}.py`.
+- `upde/splitting.py` upgraded to five-backend dispatcher on the
+  composite ``run(phases, omegas, knm, ζ, ψ, α, n_steps)``
+  kernel. Python reference realigned to the Rust sincos
+  expansion (plus the ``ζ·sin(ψ−θ) = ζ·sin(ψ)·cos(θ) −
+  ζ·cos(ψ)·sin(θ)`` identity) for bit-exact parity.
+- 25 new tests — `tests/test_splitting_algorithm.py` (13 incl.
+  Hypothesis: constructor validation, K=0 exact-rotation
+  collapse, zero-coupling-zero-drive fixed point, ζ-forcing
+  linearisation, run-matches-stepped composition),
+  `tests/test_splitting_backends.py` (9 cross-backend parity
+  for alpha=0 / alpha≠0 regimes with Hypothesis sweeps for
+  Rust / Go), `tests/test_splitting_stability.py` (4 long-run
+  invariants including the Strang promise that the pure-ω
+  direction carries **zero truncation error**, verified over
+  1000 Euler steps).
+- Constructor now accepts negative ``dt`` so the pre-existing
+  symplectic-reversibility test in ``test_splitting.py``
+  continues to work: Strang is time-reversible, and negative
+  ``dt`` falls through to the Python reference because the
+  Rust/Julia/Go/Mojo kernels all validate ``dt > 0``.
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python under {alpha=0, alpha≠0} × {ζ=0, ζ>0}; Mojo ≤ 2.8e-17.
+- `benchmarks/splitting_benchmark.py` rewritten as a per-backend
+  wall-clock harness at ``N ∈ {8, 32, 128}``. Rust outperforms
+  every other backend at all sizes (0.07 ms at N=8, 5.72 ms at
+  N=128) because the splitting kernel is sequential — no
+  ``par_iter_mut`` thread-pool overhead, unlike the hypergraph
+  and simplicial kernels.
+
 ### Added (2026-04-18 — simplicial multi-backend)
 - `julia/simplicial.jl`, `go/simplicial.go`
   (→ `libsimplicial.so`), `mojo/simplicial.mojo`
