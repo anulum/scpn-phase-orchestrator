@@ -179,3 +179,8 @@ mojo/swarmalator_mojo
 go/libbasin_stability.so
 go/libbasin_stability.h
 mojo/basin_stability_mojo
+
+# inertial compiled artefacts
+go/libinertial.so
+go/libinertial.h
+mojo/inertial_mojo

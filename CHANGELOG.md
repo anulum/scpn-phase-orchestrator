@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — inertial multi-backend)
+- `julia/inertial.jl`, `go/inertial.go` (→ `libinertial.so`),
+  `mojo/inertial.mojo` (→ `inertial_mojo`) implementing the
+  second-order (swing-equation) Kuramoto RK4 stepper
+  (Filatrella-Nielsen-Mallick 2008).
+- Python bridges `upde/_inertial_{julia,go,mojo}.py`.
+- `upde/inertial.py` upgraded to five-backend dispatcher. The
+  Python reference was realigned to use the same
+  ``sin(θ_j − θ_i) = sin(θ_j)·cos(θ_i) − cos(θ_j)·sin(θ_i)``
+  expansion as the Rust kernel (``spo-engine/src/inertial.rs``),
+  giving bit-exact parity across Rust / Julia / Go / Python. Mojo
+  drifts only by the subprocess text-round-trip epsilon.
+- 21 new tests — `tests/test_inertial_algorithm.py` (13 incl.
+  Hypothesis: RK4 exactness under zero coupling + zero damping,
+  exponential ω-decay under damping, phase wrap, shapes, helpers)
+  and `tests/test_inertial_backends.py` (8 cross-backend +
+  multi-step parity with Hypothesis sweeps for Rust / Go).
+- Parity measured 0.0 bit-exact across Rust / Julia / Go / Python
+  and 1.7e-18 on Mojo for one RK4 step on the canonical N=8
+  all-to-all test problem.
+- `benchmarks/inertial_benchmark.py` rewritten as a per-backend
+  wall-clock harness at ``N ∈ {8, 32, 128}`` (the earlier single-
+  backend stub is replaced; no historical numbers are lost since
+  it printed only a single throughput figure).
+
 ### Added (2026-04-18 — basin_stability multi-backend)
 - `julia/basin_stability.jl`, `go/basin_stability.go`
   (→ `libbasin_stability.so`), `mojo/basin_stability.mojo`
