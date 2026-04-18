@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — upde engine multi-backend)
+- `julia/upde_engine.jl`, `go/upde_engine.go`
+  (→ `libupde_engine.so`), `mojo/upde_engine.mojo`
+  (→ `upde_engine_mojo`) implementing the Sakaguchi-Kuramoto UPDE
+  batched integrator with Euler, RK4 and Dormand-Prince RK45 with
+  adaptive step-size control.
+- Python bridges `upde/_engine_julia.py`, `upde/_engine_go.py`,
+  `upde/_engine_mojo.py`.
+- Module-level `upde_run` stateless kernel in `upde/engine.py` with
+  5-backend dispatcher (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`).
+  `UPDEEngine.run` now routes through `upde_run` so every available
+  toolchain is exercised.
+- Python reference `_upde_run_python` with RK4 / Euler substepping
+  + inline Dormand-Prince tableau matching
+  `spo-engine/src/upde.rs` bit-for-bit (verified against Rust to
+  1e-12, Mojo to 1e-6).
+- 42 new tests — `tests/test_upde_run_algorithm.py` (13
+  algorithmic properties incl. Hypothesis),
+  `tests/test_upde_run_backends.py` (26 cross-backend parity across
+  3 methods × multiple seeds), `tests/test_upde_run_stability.py` (3
+  long-run invariants, `pytest.mark.slow`).
+- `benchmarks/upde_engine_benchmark.py` multi-backend wall-clock
+  harness across sizes × methods.
+- `docs/reference/api/upde_engine.md` extended with 5-backend
+  section + measured benchmark table on the local host.
+
 ### Added (2026-04-18 — lyapunov spectrum multi-backend)
 - `julia/lyapunov.jl`, `go/lyapunov.go` (→ `liblyapunov.so`),
   `mojo/lyapunov.mojo` (→ `lyapunov_mojo`) implementing the Benettin

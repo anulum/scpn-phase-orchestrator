@@ -109,3 +109,8 @@ mojo/transfer_entropy_mojo
 go/liblyapunov.so
 go/liblyapunov.h
 mojo/lyapunov_mojo
+
+# upde_engine compiled artefacts
+go/libupde_engine.so
+go/libupde_engine.h
+mojo/upde_engine_mojo

@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -16,7 +18,326 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
 
-__all__ = ["UPDEEngine"]
+__all__ = [
+    "ACTIVE_BACKEND",
+    "AVAILABLE_BACKENDS",
+    "UPDEEngine",
+    "upde_run",
+]
+
+
+_BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
+
+
+def _load_rust_fn() -> Callable[..., NDArray]:
+    from spo_kernel import PyUPDEStepper  # noqa: F401
+
+    def _rust_run(
+        phases: NDArray,
+        omegas: NDArray,
+        knm: NDArray,
+        alpha: NDArray,
+        zeta: float,
+        psi: float,
+        dt: float,
+        n_steps: int,
+        method: str,
+        n_substeps: int,
+        atol: float,
+        rtol: float,
+    ) -> NDArray:
+        n = int(phases.size)
+        stepper = PyUPDEStepper(
+            n, dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
+        )
+        return np.asarray(
+            stepper.run(
+                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                float(zeta),
+                float(psi),
+                np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
+                int(n_steps),
+            ),
+            dtype=np.float64,
+        )
+
+    return cast("Callable[..., NDArray]", _rust_run)
+
+
+def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+    from scpn_phase_orchestrator.upde._engine_mojo import (
+        _ensure_exe,
+        upde_run_mojo,
+    )
+
+    _ensure_exe()
+    return upde_run_mojo
+
+
+def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+    import juliacall  # type: ignore[import-untyped]  # noqa: F401
+
+    from scpn_phase_orchestrator.upde._engine_julia import upde_run_julia
+
+    return upde_run_julia
+
+
+def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+    from scpn_phase_orchestrator.upde._engine_go import upde_run_go
+
+    return upde_run_go
+
+
+_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+    "rust": _load_rust_fn,
+    "mojo": _load_mojo_fn,
+    "julia": _load_julia_fn,
+    "go": _load_go_fn,
+}
+
+
+def _resolve_backends() -> tuple[str, list[str]]:
+    available: list[str] = []
+    for name in _BACKEND_NAMES[:-1]:
+        try:
+            _LOADERS[name]()
+        except (ImportError, RuntimeError, OSError):
+            continue
+        available.append(name)
+    available.append("python")
+    return available[0], available
+
+
+ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+
+
+def _dispatch() -> Callable[..., NDArray] | None:
+    if ACTIVE_BACKEND == "python":
+        return None
+    return _LOADERS[ACTIVE_BACKEND]()
+
+
+def _compute_derivative_py(
+    theta: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+) -> NDArray:
+    diff = theta[np.newaxis, :] - theta[:, np.newaxis] - alpha
+    coupling = np.sum(knm * np.sin(diff), axis=1)
+    driving = zeta * np.sin(psi - theta) if zeta != 0.0 else 0.0
+    return cast("NDArray", omegas + coupling + driving)
+
+
+# Dormand-Prince (1980) Butcher tableau, shared with
+# spo-engine/src/dp_tableau.rs. Named as module-level constants so the
+# RK45 body stays under the mega-function line count.
+_DP_A21 = 1 / 5
+_DP_A31, _DP_A32 = 3 / 40, 9 / 40
+_DP_A41, _DP_A42, _DP_A43 = 44 / 45, -56 / 15, 32 / 9
+_DP_A51, _DP_A52 = 19372 / 6561, -25360 / 2187
+_DP_A53, _DP_A54 = 64448 / 6561, -212 / 729
+_DP_A61, _DP_A62, _DP_A63, _DP_A64, _DP_A65 = (
+    9017 / 3168, -355 / 33, 46732 / 5247, 49 / 176, -5103 / 18656,
+)
+_DP_B5 = (35 / 384, 0.0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0.0)
+_DP_B4 = (
+    5179 / 57600, 0.0, 7571 / 16695, 393 / 640,
+    -92097 / 339200, 187 / 2100, 1 / 40,
+)
+
+
+def _dp_stages(
+    phases: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+) -> tuple[NDArray, NDArray, NDArray]:
+    """Seven Dormand-Prince stages; returns ``(y5, y4, k1)``."""
+    k1 = _compute_derivative_py(phases, omegas, knm, alpha, zeta, psi)
+    k2 = _compute_derivative_py(
+        phases + dt * _DP_A21 * k1, omegas, knm, alpha, zeta, psi,
+    )
+    k3 = _compute_derivative_py(
+        phases + dt * (_DP_A31 * k1 + _DP_A32 * k2),
+        omegas, knm, alpha, zeta, psi,
+    )
+    k4 = _compute_derivative_py(
+        phases + dt * (_DP_A41 * k1 + _DP_A42 * k2 + _DP_A43 * k3),
+        omegas, knm, alpha, zeta, psi,
+    )
+    k5 = _compute_derivative_py(
+        phases + dt * (
+            _DP_A51 * k1 + _DP_A52 * k2 + _DP_A53 * k3 + _DP_A54 * k4
+        ),
+        omegas, knm, alpha, zeta, psi,
+    )
+    k6 = _compute_derivative_py(
+        phases + dt * (
+            _DP_A61 * k1 + _DP_A62 * k2 + _DP_A63 * k3
+            + _DP_A64 * k4 + _DP_A65 * k5
+        ),
+        omegas, knm, alpha, zeta, psi,
+    )
+    y5 = phases + dt * (
+        _DP_B5[0] * k1 + _DP_B5[2] * k3 + _DP_B5[3] * k4
+        + _DP_B5[4] * k5 + _DP_B5[5] * k6
+    )
+    k7 = _compute_derivative_py(y5, omegas, knm, alpha, zeta, psi)
+    y4 = phases + dt * (
+        _DP_B4[0] * k1 + _DP_B4[2] * k3 + _DP_B4[3] * k4
+        + _DP_B4[4] * k5 + _DP_B4[5] * k6 + _DP_B4[6] * k7
+    )
+    return y5, y4, k1
+
+
+def _rk45_step_py(
+    phases: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+    atol: float,
+    rtol: float,
+    dt_config: float,
+    last_dt: float,
+) -> tuple[NDArray, float]:
+    """One Dormand-Prince RK45 step mirroring spo-engine/src/upde.rs."""
+    dt = last_dt
+    for _ in range(4):
+        y5, y4, _k1 = _dp_stages(
+            phases, omegas, knm, alpha, zeta, psi, dt
+        )
+        err = np.abs(y5 - y4)
+        scale = atol + rtol * np.maximum(np.abs(phases), np.abs(y5))
+        err_norm = float(np.max(err / scale))
+        if err_norm <= 1.0:
+            factor = (
+                min(0.9 * err_norm ** (-0.2), 5.0) if err_norm > 0.0 else 5.0
+            )
+            return y5, min(dt * factor, dt_config * 10.0)
+        dt = dt * max(0.9 * err_norm ** (-0.25), 0.2)
+    return y5, dt
+
+
+def _rk4_substep_py(
+    phases: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+) -> NDArray:
+    k1 = _compute_derivative_py(phases, omegas, knm, alpha, zeta, psi)
+    k2 = _compute_derivative_py(
+        phases + 0.5 * dt * k1, omegas, knm, alpha, zeta, psi
+    )
+    k3 = _compute_derivative_py(
+        phases + 0.5 * dt * k2, omegas, knm, alpha, zeta, psi
+    )
+    k4 = _compute_derivative_py(
+        phases + dt * k3, omegas, knm, alpha, zeta, psi
+    )
+    return cast(
+        "NDArray", phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+    )
+
+
+def _upde_run_python(
+    phases: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
+    method: str,
+    n_substeps: int,
+    atol: float,
+    rtol: float,
+) -> NDArray:
+    """Python fallback matching the Rust kernel's step / substep / wrap."""
+    if method not in ("euler", "rk4", "rk45"):
+        raise ValueError(f"unknown method {method!r}")
+    if n_substeps < 1:
+        raise ValueError("n_substeps must be ≥ 1")
+    phases = phases.copy()
+    last_dt = dt
+    sub_dt = dt / n_substeps
+    for _ in range(n_steps):
+        if method == "rk45":
+            phases, last_dt = _rk45_step_py(
+                phases, omegas, knm, alpha, zeta, psi,
+                atol, rtol, dt, last_dt,
+            )
+        elif method == "rk4":
+            for _ in range(n_substeps):
+                phases = _rk4_substep_py(
+                    phases, omegas, knm, alpha, zeta, psi, sub_dt
+                )
+        else:  # euler
+            for _ in range(n_substeps):
+                deriv = _compute_derivative_py(
+                    phases, omegas, knm, alpha, zeta, psi
+                )
+                phases = phases + sub_dt * deriv
+        phases = phases % TWO_PI
+    return phases
+
+
+def upde_run(
+    phases: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
+    method: str = "euler",
+    n_substeps: int = 1,
+    atol: float = 1e-6,
+    rtol: float = 1e-3,
+) -> NDArray:
+    """Stateless batched UPDE integrator.
+
+    Dispatches to the first available backend per the SPO chain
+    (Rust → Mojo → Julia → Go → Python). Every backend runs the same
+    algorithm: ``method ∈ {"euler", "rk4", "rk45"}`` with ``n_substeps``
+    applied to the fixed-step methods; RK45 is adaptive with
+    ``(atol, rtol)`` tolerances. Phases are wrapped to ``[0, 2π)``
+    after each outer step.
+    """
+    p = np.ascontiguousarray(phases, dtype=np.float64)
+    o = np.ascontiguousarray(omegas, dtype=np.float64)
+    k = np.ascontiguousarray(knm, dtype=np.float64)
+    a = np.ascontiguousarray(alpha, dtype=np.float64)
+    backend_fn = _dispatch()
+    if backend_fn is None:
+        return _upde_run_python(
+            p, o, k, a, float(zeta), float(psi), float(dt),
+            int(n_steps), method, int(n_substeps),
+            float(atol), float(rtol),
+        )
+    return np.asarray(
+        backend_fn(
+            p, o, k, a,
+            float(zeta), float(psi), float(dt),
+            int(n_steps), method, int(n_substeps),
+            float(atol), float(rtol),
+        ),
+        dtype=np.float64,
+    )
 
 
 class UPDEEngine:
@@ -148,24 +469,16 @@ class UPDEEngine:
         alpha: NDArray,
         n_steps: int,
     ) -> NDArray:
-        """Run n_steps, return final phases. Uses Rust batch API when available."""
+        """Run n_steps, return final phases. Dispatches to the fastest
+        available backend via the module-level ``upde_run``."""
         with self._lock:
-            if self._rust is not None:  # pragma: no cover
-                return np.asarray(
-                    self._rust.run(
-                        np.ascontiguousarray(phases.ravel()),
-                        np.ascontiguousarray(omegas.ravel()),
-                        np.ascontiguousarray(knm.ravel()),
-                        float(zeta),
-                        float(psi),
-                        np.ascontiguousarray(alpha.ravel()),
-                        n_steps,
-                    )
-                )
-            p = phases.copy()
-            for _ in range(n_steps):
-                p = self.step(p, omegas, knm, zeta, psi, alpha)
-            return p
+            return upde_run(
+                phases, omegas, knm, alpha,
+                float(zeta), float(psi),
+                self._dt, int(n_steps),
+                self._method, 1,
+                self._atol, self._rtol,
+            )
 
     def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
