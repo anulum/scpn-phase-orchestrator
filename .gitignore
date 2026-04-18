@@ -199,3 +199,8 @@ mojo/simplicial_mojo
 go/libsplitting.so
 go/libsplitting.h
 mojo/splitting_mojo
+
+# reduction (Ott-Antonsen) compiled artefacts
+go/libreduction.so
+go/libreduction.h
+mojo/reduction_mojo

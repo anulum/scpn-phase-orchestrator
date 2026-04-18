@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — reduction (Ott-Antonsen) multi-backend)
+- `julia/reduction.jl`, `go/reduction.go` (→ `libreduction.so`),
+  `mojo/reduction.mojo` (→ `reduction_mojo`) implementing the
+  Ott-Antonsen mean-field RK4 integrator for the complex-scalar
+  ODE ``dz/dt = −(Δ + iω₀)·z + (K/2)·(z − |z|²·z)``
+  (Ott & Antonsen 2008, *Chaos* 18(3):037113).
+- Python bridges `upde/_reduction_{julia,go,mojo}.py`.
+- `upde/reduction.py` upgraded to five-backend dispatcher on the
+  composite ``run(z0, n_steps)`` kernel via ``_run_scalar``.
+  Python reference realigned to the Rust operation order
+  (``half_k = K/2`` factoring + explicit real/imaginary
+  decomposition of the cubic term) for bit-exact parity.
+- The scalar-output helpers ``K_c``, ``steady_state_R``, and
+  ``predict_from_oscillators`` stay Python + optional Rust —
+  O(1) arithmetic and O(N) percentile work do not benefit from
+  multi-language chains.
+- 26 new tests — `tests/test_reduction_algorithm.py` (14 incl.
+  Hypothesis: constructor validation, ``K_c = 2Δ`` analytic
+  relation, ``R_ss = √(1 − 2Δ/K)`` above criticality, zero
+  below, trajectory convergence check, z=0 fixed point,
+  Lorentzian fit from samples), `tests/test_reduction_backends.py`
+  (8 cross-backend parity incl. subcritical + Hypothesis sweeps
+  for Rust / Go), `tests/test_reduction_stability.py` (4
+  long-run invariants: unit-disc invariance, subcritical
+  attraction, supercritical convergence, monotone radius
+  decay below criticality).
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python after 500 RK4 steps; Mojo ≤ 1.1e-16.
+- Regression check: pre-existing test_ott_antonsen.py (12),
+  test_upde_engine_validation.py (19), test_upde_math.py (25),
+  test_stress_scale.py (10) — 66 tests still pass.
+- `benchmarks/reduction_benchmark.py` — per-backend wall-clock
+  harness at ``n_steps ∈ {500, 5000, 50000}``. Rust leads at
+  every size (1.82 ms vs Julia 1.92 ms vs Go 1.86 ms for
+  50k steps — the native compiled backends cluster within 6 %
+  of each other, Python is 27× slower, Mojo's subprocess
+  overhead dominates small workloads).
+
 ### Added (2026-04-18 — splitting multi-backend)
 - `julia/splitting.jl`, `go/splitting.go` (→ `libsplitting.so`),
   `mojo/splitting.mojo` (→ `splitting_mojo`) implementing the
