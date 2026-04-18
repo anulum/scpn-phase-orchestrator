@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — envelope multi-backend)
+- `julia/envelope.jl`, `go/envelope.go` (→ `libenvelope.so`),
+  `mojo/envelope.mojo` (→ `envelope_mojo`) implementing
+  sliding-window RMS (O(T) cumulative-sum form) + modulation depth.
+- Python bridges `upde/_envelope_{julia,go,mojo}.py`.
+- `upde/envelope.py` upgraded to five-backend dispatcher on the
+  1-D path. The 2-D batched ``(T, N)`` path stays pure NumPy (Rust
+  FFI is 1-D-only; vectorised NumPy is already near-optimal).
+- Python fallback handles the ``window > T`` edge case (all-zero
+  output to match Rust canonical behaviour); parity tests restrict
+  Hypothesis to the physically meaningful ``window ≤ T`` regime.
+- 20 new tests — `tests/test_envelope_algorithm.py` (12 algorithmic
+  + Hypothesis), `tests/test_envelope_backends.py` (8 cross-backend
+  parity with Hypothesis sweeps for Rust / Go).
+- Parity bit-equivalent (0.0 exact) on Rust / Julia / Go; 3.3e-15
+  on Mojo.
+
 ### Added (2026-04-18 — hodge multi-backend)
 - `julia/hodge.jl`, `go/hodge.go` (→ `libhodge.so`),
   `mojo/hodge.mojo` (→ `hodge_mojo`) implementing the Hodge

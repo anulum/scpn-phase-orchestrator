@@ -164,3 +164,8 @@ mojo/psychedelic_mojo
 go/libhodge.so
 go/libhodge.h
 mojo/hodge_mojo
+
+# envelope compiled artefacts
+go/libenvelope.so
+go/libenvelope.h
+mojo/envelope_mojo
