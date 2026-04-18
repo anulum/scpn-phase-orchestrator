@@ -159,3 +159,8 @@ mojo/poincare_mojo
 go/libpsychedelic.so
 go/libpsychedelic.h
 mojo/psychedelic_mojo
+
+# hodge compiled artefacts
+go/libhodge.so
+go/libhodge.h
+mojo/hodge_mojo

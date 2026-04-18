@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — hodge multi-backend)
+- `julia/hodge.jl`, `go/hodge.go` (→ `libhodge.so`),
+  `mojo/hodge.mojo` (→ `hodge_mojo`) implementing the Hodge
+  decomposition of coupling dynamics into symmetric (gradient),
+  antisymmetric (curl), and harmonic (residual) per-oscillator
+  components (Jiang et al. 2011).
+- Python bridges `coupling/_hodge_{julia,go,mojo}.py`.
+- `coupling/hodge.py` upgraded to five-backend dispatcher.
+- 15 new tests — `tests/test_hodge_algorithm.py` (8 algorithmic +
+  Hypothesis incl. symmetric-K → zero curl, antisymmetric-K → zero
+  gradient, gradient+curl+harmonic reconstructs total),
+  `tests/test_hodge_backends.py` (7 cross-backend parity with
+  Hypothesis sweeps for Rust / Go).
+- Parity measured bit-equivalent (4.4e-16) on Rust/Julia/Go.
+  Mojo 8.9e-16.
+
 ### Added (2026-04-18 — psychedelic entropy multi-backend)
 - `julia/psychedelic.jl`, `go/psychedelic.go`
   (→ `libpsychedelic.so`), `mojo/psychedelic.mojo`
