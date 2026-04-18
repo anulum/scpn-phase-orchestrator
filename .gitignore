@@ -139,3 +139,8 @@ mojo/chimera_mojo
 go/libwinding.so
 go/libwinding.h
 mojo/winding_mojo
+
+# recurrence compiled artefacts
+go/librecurrence.so
+go/librecurrence.h
+mojo/recurrence_mojo

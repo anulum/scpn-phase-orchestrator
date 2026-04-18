@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — recurrence multi-backend)
+- `julia/recurrence.jl`, `go/recurrence.go`
+  (→ `librecurrence.so`), `mojo/recurrence.mojo`
+  (→ `recurrence_mojo`) implementing the Eckmann 1987 recurrence
+  matrix and cross-recurrence matrix with both euclidean and
+  angular (chord-distance) metrics.
+- Python bridges `monitor/_recurrence_julia.py`,
+  `monitor/_recurrence_go.py`, `monitor/_recurrence_mojo.py`.
+- `monitor/recurrence.py` upgraded to five-backend dispatcher.
+  `rqa` and `cross_rqa` now always use the dispatched matrix and
+  a Python-side line-length analysis for uniform behaviour across
+  backends.
+- Rewrote `benchmarks/recurrence_benchmark.py` as a multi-backend
+  wall-clock harness (was a Rust-only Criterion-style print).
+- 29 new tests — `tests/test_recurrence_algorithm.py` (14
+  algorithmic + Hypothesis incl. angular-metric correctness),
+  `tests/test_recurrence_backends.py` (12 cross-backend parity
+  with **array-exact** boolean equality; both metrics),
+  `tests/test_recurrence_stability.py` (3 long-run invariants,
+  `pytest.mark.slow`).
+- `docs/reference/api/monitor_recurrence.md` (475 lines) with
+  Eckmann / Marwan formalism, per-backend build notes, measured
+  benchmarks, failure modes, and references.
+
 ### Added (2026-04-18 — winding multi-backend)
 - `julia/winding.jl`, `go/winding.go` (→ `libwinding.so`),
   `mojo/winding.mojo` (→ `winding_mojo`) implementing the
