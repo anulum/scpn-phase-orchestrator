@@ -39,27 +39,6 @@ __all__ = [
 ]
 
 
-def _validate_inputs(
-    n: int,
-    phases: NDArray, omegas: NDArray, knm: NDArray, alpha: NDArray,
-    zeta: float, psi: float,
-) -> None:
-    """Shape and NaN/Inf guards for :meth:`UPDEEngine.step`."""
-    if not (np.isfinite(zeta) and np.isfinite(psi)):
-        raise ValueError("zeta and psi must be finite")
-    checks = (
-        ("phases", phases, (n,)),
-        ("omegas", omegas, (n,)),
-        ("knm", knm, (n, n)),
-        ("alpha", alpha, (n, n)),
-    )
-    for name, arr, shape in checks:
-        if arr.shape != shape:
-            raise ValueError(f"{name}.shape={arr.shape}, expected {shape}")
-        if not np.all(np.isfinite(arr)):
-            raise ValueError(f"{name} contains NaN/Inf")
-
-
 class UPDEEngine:
     """Kuramoto UPDE integrator with pre-allocated scratch arrays.
 
@@ -142,7 +121,7 @@ class UPDEEngine:
         alpha: NDArray,
     ) -> NDArray:
         """Advance phases by one timestep, return new phases in [0, 2*pi)."""
-        _validate_inputs(self._n, phases, omegas, knm, alpha, zeta, psi)
+        self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
         with self._lock:
             if self._rust is not None:  # pragma: no cover
                 return np.asarray(
@@ -187,6 +166,29 @@ class UPDEEngine:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         return compute_order_parameter(phases)
+
+    def _validate_inputs(
+        self,
+        phases: NDArray, omegas: NDArray, knm: NDArray, alpha: NDArray,
+        zeta: float, psi: float,
+    ) -> None:
+        """Shape and NaN/Inf guards shared by :meth:`step`."""
+        if not (np.isfinite(zeta) and np.isfinite(psi)):
+            raise ValueError("zeta and psi must be finite")
+        n = self._n
+        checks = (
+            ("phases", phases, (n,)),
+            ("omegas", omegas, (n,)),
+            ("knm", knm, (n, n)),
+            ("alpha", alpha, (n, n)),
+        )
+        for name, arr, shape in checks:
+            if arr.shape != shape:
+                raise ValueError(
+                    f"{name}.shape={arr.shape}, expected {shape}"
+                )
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"{name} contains NaN/Inf")
 
     def _derivative(
         self,
@@ -249,6 +251,24 @@ class UPDEEngine:
         result: NDArray = (phases + (dt / 6.0) * weighted) % TWO_PI
         return result
 
+    def _rk45_stage_vector(
+        self,
+        phases: NDArray,
+        omegas: NDArray,
+        knm: NDArray,
+        zeta: float,
+        psi: float,
+        alpha: NDArray,
+        dt: float,
+    ) -> None:
+        """Evaluate all 7 Dormand-Prince stages into ``self._ks``."""
+        A = self._DP_A
+        ks = self._ks
+        ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
+        for i in range(1, 7):
+            stage = phases + dt * np.dot(A[i, :i], np.array(ks[:i]))
+            ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
+
     def _rk45_step(
         self,
         phases: NDArray,
@@ -261,15 +281,10 @@ class UPDEEngine:
         """Dormand-Prince RK45 with embedded error estimation and adaptive dt."""
         dt = self._last_dt
         max_reject = 3
-        A = self._DP_A
         ks = self._ks
 
         for _ in range(max_reject + 1):
-            # Evaluate all 7 Dormand-Prince stages.
-            ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
-            for i in range(1, 7):
-                stage = phases + dt * np.dot(A[i, :i], np.array(ks[:i]))
-                ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
+            self._rk45_stage_vector(phases, omegas, knm, zeta, psi, alpha, dt)
             ks_arr = np.array(ks)
             y5 = phases + dt * np.dot(self._DP_B5, ks_arr)
             y4 = phases + dt * np.dot(self._DP_B4, ks_arr)
