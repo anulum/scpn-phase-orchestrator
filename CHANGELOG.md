@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — geometric (torus) multi-backend)
+- `julia/geometric.jl`, `go/geometric.go` (→ `libgeometric.so`),
+  `mojo/geometric.mojo` (→ `geometric_mojo`) implementing the
+  torus-preserving symplectic Euler integrator on
+  ``T^N = (S¹)^N``. Each phase is lifted to ``z_i = exp(iθ_i)``
+  and advanced by the exponential map
+  ``z_i → z_i·exp(i·ω_eff_i·dt)``, eliminating the ``mod 2π``
+  discontinuity artefacts of standard integrators.
+- Python bridges `upde/_geometric_{julia,go,mojo}.py`.
+- `upde/geometric.py` upgraded to five-backend dispatcher on
+  the composite ``run(phases, omegas, knm, ζ, ψ, α, n_steps)``
+  kernel. Python reference realigned to the Rust kernel's
+  sincos expansion (``sin(θ_j − θ_i) = z_im[j]·z_re[i] −
+  z_re[j]·z_im[i]``) and keeps ``(z_re, z_im)`` state between
+  steps (no per-step atan2 round-trip).
+- 25 new tests — `tests/test_geometric_algorithm.py` (12 incl.
+  Hypothesis, zero-coupling pure rotation, zero-everywhere
+  fixed point, ζ-forcing linearisation, torus preservation),
+  `tests/test_geometric_backends.py` (9 cross-backend parity
+  for α=0 / α≠0 regimes with Hypothesis sweeps for Rust / Go),
+  `tests/test_geometric_stability.py` (4 long-run invariants).
+- Regression-green: pre-existing ``test_torus_engine.py``,
+  ``test_torus_engine_deep.py``, ``test_engine_parity.py``,
+  ``test_coverage_sprint2_4.py``, ``test_pipeline_wiring_audit.py``,
+  ``test_upde_math.py`` — 112 tests still pass. A private
+  ``_derivative`` helper is retained on ``TorusEngine`` for the
+  inspection tests in ``test_torus_engine_deep``.
+- Parity: bit-exact 0.0 across Rust / Julia / Go / Python on
+  the α=0 branch; ≈1e-15 on the α≠0 branch (atan2 per-step
+  reconstruction). Mojo ≤ 9e-16.
+- `benchmarks/geometric_benchmark.py` — per-backend wall-clock
+  harness at ``N ∈ {8, 32, 128}``. Go / Julia outperform Rust
+  for N ≥ 32 (same rayon fork-join finding as hypergraph and
+  simplicial); at N=128 Julia leads at 1.69 ms vs Rust 2.99 ms.
+  Canonical Rust → Mojo → Julia → Go → Python ordering
+  retained per ``feedback_fallback_chain_ordering.md``.
+
 ### Added (2026-04-18 — reduction (Ott-Antonsen) multi-backend)
 - `julia/reduction.jl`, `go/reduction.go` (→ `libreduction.so`),
   `mojo/reduction.mojo` (→ `reduction_mojo`) implementing the

@@ -204,3 +204,8 @@ mojo/splitting_mojo
 go/libreduction.so
 go/libreduction.h
 mojo/reduction_mojo
+
+# geometric (torus) compiled artefacts
+go/libgeometric.so
+go/libgeometric.h
+mojo/geometric_mojo
