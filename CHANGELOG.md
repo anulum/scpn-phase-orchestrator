@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — winding multi-backend)
+- `julia/winding.jl`, `go/winding.go` (→ `libwinding.so`),
+  `mojo/winding.mojo` (→ `winding_mojo`) implementing the
+  cumulative winding-number tracker (integer int64 output).
+- Python bridges `monitor/_winding_julia.py`,
+  `monitor/_winding_go.py`, `monitor/_winding_mojo.py`.
+- `monitor/winding.py` upgraded to five-backend dispatcher.
+- 20 new tests — `tests/test_winding_algorithm.py` (10
+  algorithmic + Hypothesis), `tests/test_winding_backends.py` (7
+  cross-backend parity with **array-exact** integer equality
+  across every backend), `tests/test_winding_stability.py` (3
+  long-run invariants incl. additivity across splits, N=64×T=10000
+  stress, noise robustness; `pytest.mark.slow`).
+- `benchmarks/winding_benchmark.py` multi-backend wall-clock
+  harness.
+- `docs/reference/api/monitor_winding.md` (395 lines) with winding
+  formalism, per-backend build notes, measured benchmarks, failure
+  modes, and references.
+
 ### Added (2026-04-18 — chimera multi-backend)
 - `julia/chimera.jl`, `go/chimera.go` (→ `libchimera.so`),
   `mojo/chimera.mojo` (→ `chimera_mojo`) implementing the

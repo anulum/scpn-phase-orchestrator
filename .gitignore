@@ -134,3 +134,8 @@ mojo/dimension_mojo
 go/libchimera.so
 go/libchimera.h
 mojo/chimera_mojo
+
+# winding compiled artefacts
+go/libwinding.so
+go/libwinding.h
+mojo/winding_mojo
