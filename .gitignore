@@ -124,3 +124,8 @@ mojo/itpc_mojo
 go/libentropy_prod.so
 go/libentropy_prod.h
 mojo/entropy_prod_mojo
+
+# dimension compiled artefacts
+go/libdimension.so
+go/libdimension.h
+mojo/dimension_mojo

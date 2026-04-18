@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — dimension multi-backend)
+- `julia/dimension.jl`, `go/dimension.go`
+  (→ `libdimension.so`), `mojo/dimension.mojo`
+  (→ `dimension_mojo`) implementing the Grassberger-Procaccia 1983
+  correlation integral and Kaplan-Yorke 1979 dimension.
+- Python bridges `monitor/_dimension_julia.py`,
+  `monitor/_dimension_go.py`, `monitor/_dimension_mojo.py`.
+- `monitor/dimension.py` upgraded to five-backend dispatcher.
+  Pair-subsampling RNG is now Python-owned and threaded through to
+  every non-Rust backend for deterministic cross-backend parity on
+  the full-pairs branch; Rust retains its in-kernel RNG for API
+  stability.
+- 28 new tests — `tests/test_dimension_algorithm.py` (14
+  algorithmic + Hypothesis + analytic KY limits),
+  `tests/test_dimension_backends.py` (11 cross-backend parity with
+  Hypothesis sweeps for Rust / Go), `tests/test_dimension_stability.py`
+  (3 long-run invariants, `pytest.mark.slow`).
+- `benchmarks/dimension_benchmark.py` multi-backend wall-clock
+  harness.
+- `docs/reference/api/monitor_dimension.md` (457 lines) with
+  Grassberger-Procaccia + Kaplan-Yorke formalism, per-backend build
+  notes, measured benchmarks, failure modes, and references.
+
 ### Added (2026-04-18 — entropy_prod multi-backend)
 - `julia/entropy_prod.jl`, `go/entropy_prod.go`
   (→ `libentropy_prod.so`), `mojo/entropy_prod.mojo`
