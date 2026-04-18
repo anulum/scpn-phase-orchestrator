@@ -149,3 +149,8 @@ mojo/recurrence_mojo
 go/libembedding.so
 go/libembedding.h
 mojo/embedding_mojo
+
+# poincare compiled artefacts
+go/libpoincare.so
+go/libpoincare.h
+mojo/poincare_mojo

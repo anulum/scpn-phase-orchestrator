@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — poincare multi-backend)
+- `julia/poincare.jl`, `go/poincare.go` (→ `libpoincare.so`),
+  `mojo/poincare.mojo` (→ `poincare_mojo`) implementing the
+  generic hyperplane Poincaré section and the phase-oscillator
+  variant (2π wrap detection) with linear interpolation.
+- Python bridges `monitor/_poincare_julia.py`,
+  `monitor/_poincare_go.py`, `monitor/_poincare_mojo.py`.
+- `monitor/poincare.py` upgraded to five-backend dispatcher with a
+  caller-preallocated output convention: both kernels return
+  ``(crossings_flat, times, n_crossings)`` where the output
+  buffers are sized to ``T * d`` / ``T * N`` (worst case) and the
+  dispatcher reshapes the populated prefix.
+- 19 new tests — `tests/test_poincare_algorithm.py` (10
+  algorithmic + Hypothesis + direction filtering),
+  `tests/test_poincare_backends.py` (5 cross-backend parity with
+  array-exact crossing counts and 1e-9 coord tolerances),
+  `tests/test_poincare_stability.py` (4 long-run invariants,
+  `pytest.mark.slow`).
+- Parity measured bit-exact across Rust / Julia / Go and 1.5e-18
+  on Mojo (subprocess text round-trip).
+
 ### Added (2026-04-18 — embedding primitives multi-backend)
 - `julia/embedding.jl`, `go/embedding.go` (→ `libembedding.so`),
   `mojo/embedding.mojo` (→ `embedding_mojo`) implementing three
