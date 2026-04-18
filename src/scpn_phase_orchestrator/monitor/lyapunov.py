@@ -217,6 +217,43 @@ def _kuramoto_jacobian(
     return J
 
 
+def _rk4_step(
+    phases: NDArray,
+    Q: NDArray,
+    omegas: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    dt: float,
+    zeta: float,
+    psi: float,
+) -> tuple[NDArray, NDArray]:
+    """One classical RK4 step on the joint (phases, Q) state."""
+
+    def rhs(p: NDArray, q: NDArray) -> tuple[NDArray, NDArray]:
+        return (
+            _kuramoto_rhs(p, omegas, knm, alpha, zeta, psi),
+            _kuramoto_jacobian(p, knm, alpha, zeta, psi) @ q,
+        )
+
+    k1p, k1q = rhs(phases, Q)
+    k2p, k2q = rhs(phases + 0.5 * dt * k1p, Q + 0.5 * dt * k1q)
+    k3p, k3q = rhs(phases + 0.5 * dt * k2p, Q + 0.5 * dt * k2q)
+    k4p, k4q = rhs(phases + dt * k3p, Q + dt * k3q)
+    new_phases = (
+        phases + (dt / 6.0) * (k1p + 2.0 * k2p + 2.0 * k3p + k4p)
+    ) % (2.0 * np.pi)
+    new_Q = Q + (dt / 6.0) * (k1q + 2.0 * k2q + 2.0 * k3q + k4q)
+    return new_phases, new_Q
+
+
+def _row_qr_log_diag(Q: NDArray) -> tuple[NDArray, NDArray]:
+    """Row-oriented QR — returns the reorthonormalised Q and ``log|R_ii|``
+    floored at ``log(1e-300)`` to avoid ``−inf``."""
+    Q_t, R = np.linalg.qr(Q.T)
+    diag = np.maximum(np.abs(np.diag(R)), 1e-300)
+    return Q_t.T, np.log(diag)
+
+
 def _lyapunov_spectrum_python(
     phases_init: NDArray,
     omegas: NDArray,
@@ -228,12 +265,12 @@ def _lyapunov_spectrum_python(
     zeta: float,
     psi: float,
 ) -> NDArray:
-    """Benettin 1980 Lyapunov spectrum via RK4 + Modified Gram-Schmidt.
+    """Benettin 1980 Lyapunov spectrum via RK4 + row-oriented MGS.
 
-    Matches the Rust kernel line-for-line: RK4 evaluates Kuramoto +
-    tangent-space Jacobian at four stages, phases are wrapped to
-    ``[0, 2π)`` after each full step, and the driver ``−ζ cos(Ψ − θ_i)``
-    contributes to the Jacobian diagonal.
+    Matches the Rust kernel line-for-line: RK4 on the joint
+    ``(phases, Q)`` state, phases wrapped to ``[0, 2π)`` after each
+    step, and the driver ``−ζ cos(Ψ − θ_i)`` enters the Jacobian
+    diagonal. Periodic QR (Rust convention: orthonormalise rows of Q).
     """
     n = len(phases_init)
     phases = phases_init.copy()
@@ -241,53 +278,15 @@ def _lyapunov_spectrum_python(
     exponents = np.zeros(n, dtype=np.float64)
     n_qr = 0
     total_time = 0.0
-    two_pi = 2.0 * np.pi
-
     for step in range(n_steps):
-        # --- RK4 stage 1 -------------------------------------------------
-        k1_p = _kuramoto_rhs(phases, omegas, knm, alpha, zeta, psi)
-        k1_q = _kuramoto_jacobian(phases, knm, alpha, zeta, psi) @ Q
-
-        # --- RK4 stage 2 -------------------------------------------------
-        phases2 = phases + 0.5 * dt * k1_p
-        Q2 = Q + 0.5 * dt * k1_q
-        k2_p = _kuramoto_rhs(phases2, omegas, knm, alpha, zeta, psi)
-        k2_q = _kuramoto_jacobian(phases2, knm, alpha, zeta, psi) @ Q2
-
-        # --- RK4 stage 3 -------------------------------------------------
-        phases3 = phases + 0.5 * dt * k2_p
-        Q3 = Q + 0.5 * dt * k2_q
-        k3_p = _kuramoto_rhs(phases3, omegas, knm, alpha, zeta, psi)
-        k3_q = _kuramoto_jacobian(phases3, knm, alpha, zeta, psi) @ Q3
-
-        # --- RK4 stage 4 -------------------------------------------------
-        phases4 = phases + dt * k3_p
-        Q4 = Q + dt * k3_q
-        k4_p = _kuramoto_rhs(phases4, omegas, knm, alpha, zeta, psi)
-        k4_q = _kuramoto_jacobian(phases4, knm, alpha, zeta, psi) @ Q4
-
-        # --- Combine + wrap ----------------------------------------------
-        phases = (
-            phases + (dt / 6.0) * (k1_p + 2.0 * k2_p + 2.0 * k3_p + k4_p)
-        ) % two_pi
-        Q = Q + (dt / 6.0) * (k1_q + 2.0 * k2_q + 2.0 * k3_q + k4_q)
+        phases, Q = _rk4_step(phases, Q, omegas, knm, alpha, dt, zeta, psi)
         total_time += dt
-
-        # --- Periodic QR reorthogonalisation -----------------------------
-        # Row convention: the j-th row of Q is the j-th perturbation
-        # vector (matches the Rust kernel's Modified Gram-Schmidt).
-        # NumPy's QR is column-oriented, so operate on Q.T.
         if (step + 1) % qr_interval == 0:
-            Q_t, R = np.linalg.qr(Q.T)
-            Q = Q_t.T
-            diag = np.abs(np.diag(R))
-            diag = np.maximum(diag, 1e-300)
-            exponents += np.log(diag)
+            Q, log_diag = _row_qr_log_diag(Q)
+            exponents += log_diag
             n_qr += 1
-
     if n_qr > 0:
         exponents /= total_time
-
     return np.sort(exponents)[::-1]
 
 
@@ -330,46 +329,31 @@ def lyapunov_spectrum(
     Returns:
         (N,) array of Lyapunov exponents, sorted descending.
     """
+    p = np.ascontiguousarray(phases_init, dtype=np.float64)
+    o = np.ascontiguousarray(omegas, dtype=np.float64)
+    k = np.ascontiguousarray(knm, dtype=np.float64)
+    a = np.ascontiguousarray(alpha, dtype=np.float64)
     backend_fn = _dispatch()
-    if backend_fn is not None:
-        if ACTIVE_BACKEND == "rust":
-            return np.asarray(
-                backend_fn(
-                    np.ascontiguousarray(phases_init, dtype=np.float64),
-                    np.ascontiguousarray(omegas, dtype=np.float64),
-                    np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
-                    dt,
-                    n_steps,
-                    qr_interval,
-                    zeta,
-                    psi,
-                ),
-                dtype=np.float64,
-            )
+    if backend_fn is None:
+        return _lyapunov_spectrum_python(
+            p, o, k, a, float(dt), int(n_steps), int(qr_interval),
+            float(zeta), float(psi),
+        )
+    # Rust PyO3 binding takes flat (N*N,) row-major k/alpha; the other
+    # backends accept the 2-D forms directly.
+    if ACTIVE_BACKEND == "rust":
         return np.asarray(
             backend_fn(
-                np.ascontiguousarray(phases_init, dtype=np.float64),
-                np.ascontiguousarray(omegas, dtype=np.float64),
-                np.ascontiguousarray(knm, dtype=np.float64),
-                np.ascontiguousarray(alpha, dtype=np.float64),
-                float(dt),
-                int(n_steps),
-                int(qr_interval),
-                float(zeta),
-                float(psi),
+                p, o, k.ravel(), a.ravel(),
+                dt, n_steps, qr_interval, zeta, psi,
             ),
             dtype=np.float64,
         )
-
-    return _lyapunov_spectrum_python(
-        np.ascontiguousarray(phases_init, dtype=np.float64),
-        np.ascontiguousarray(omegas, dtype=np.float64),
-        np.ascontiguousarray(knm, dtype=np.float64),
-        np.ascontiguousarray(alpha, dtype=np.float64),
-        float(dt),
-        int(n_steps),
-        int(qr_interval),
-        float(zeta),
-        float(psi),
+    return np.asarray(
+        backend_fn(
+            p, o, k, a,
+            float(dt), int(n_steps), int(qr_interval),
+            float(zeta), float(psi),
+        ),
+        dtype=np.float64,
     )
