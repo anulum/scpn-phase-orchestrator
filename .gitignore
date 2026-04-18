@@ -154,3 +154,8 @@ mojo/embedding_mojo
 go/libpoincare.so
 go/libpoincare.h
 mojo/poincare_mojo
+
+# psychedelic compiled artefacts
+go/libpsychedelic.so
+go/libpsychedelic.h
+mojo/psychedelic_mojo

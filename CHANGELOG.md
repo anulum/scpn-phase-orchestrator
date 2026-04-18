@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — psychedelic entropy multi-backend)
+- `julia/psychedelic.jl`, `go/psychedelic.go`
+  (→ `libpsychedelic.so`), `mojo/psychedelic.mojo`
+  (→ `psychedelic_mojo`) implementing the circular-phase Shannon
+  entropy kernel (wrap to ``[0, 2π)`` + histogram + entropy in nats).
+- Python bridges `monitor/_psychedelic_{julia,go,mojo}.py`.
+- `monitor/psychedelic.py` upgraded to five-backend dispatcher for
+  `entropy_from_phases`. `reduce_coupling` and
+  `simulate_psychedelic_trajectory` stay as they are —
+  `reduce_coupling` is a scalar matrix multiplication, not a compute
+  kernel, and `simulate_psychedelic_trajectory` is a wrapper that
+  composes `UPDEEngine.run`, `compute_itpc`, `detect_chimera`,
+  and the new `entropy_from_phases` dispatcher.
+- 16 new tests — `tests/test_psychedelic_algorithm.py` (9
+  algorithmic + Hypothesis incl. translation invariance,
+  log(n_bins) upper bound, n_bins parameter effect),
+  `tests/test_psychedelic_backends.py` (7 cross-backend parity,
+  Hypothesis sweeps for Rust / Go).
+- Parity measured at 4.4e-16 on Rust / Julia / Go and 1.2e-12 on
+  Mojo (under the 1e-9 tolerance).
+
 ### Added (2026-04-18 — poincare multi-backend)
 - `julia/poincare.jl`, `go/poincare.go` (→ `libpoincare.so`),
   `mojo/poincare.mojo` (→ `poincare_mojo`) implementing the
