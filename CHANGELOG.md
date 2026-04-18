@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — simplicial multi-backend)
+- `julia/simplicial.jl`, `go/simplicial.go`
+  (→ `libsimplicial.so`), `mojo/simplicial.mojo`
+  (→ `simplicial_mojo`) implementing pairwise + 3-body
+  all-to-all simplicial Kuramoto (Gambuzza et al. 2023,
+  Tang et al. 2025) using the closed-form
+  ``Σ_{j,k} sin(θ_j + θ_k − 2θ_i) = 2 · S_i · C_i``
+  identity with two global sin/cos sums — O(N²) total.
+- Python bridges `upde/_simplicial_{julia,go,mojo}.py`.
+- `upde/simplicial.py` upgraded to five-backend dispatcher
+  on the ``run(phases, omegas, knm, ζ, ψ, α, n_steps)``
+  composite; pairwise path uses the Rust kernel's sincos
+  expansion on the alpha-zero branch for bit-exact parity.
+- 29 new tests — `tests/test_simplicial_algorithm.py` (14
+  incl. Hypothesis: constructor validation, σ₂=0 Kuramoto
+  limit, brute-force ``2·S_i·C_i`` identity check on N=4,
+  ζ-forcing), `tests/test_simplicial_backends.py` (11
+  cross-backend parity for {alpha=0, alpha≠0, σ₂=0} regimes
+  with Hypothesis sweeps for Rust / Go),
+  `tests/test_simplicial_stability.py` (4 long-run invariants).
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python under every combination of {alpha=0, alpha≠0} ×
+  {σ₂=0, σ₂>0} × {ζ=0, ζ>0}; Mojo agrees within the
+  subprocess text-round-trip epsilon.
+- `benchmarks/simplicial_benchmark.py` rewritten as a
+  per-backend wall-clock harness at
+  ``N ∈ {8, 32, 128}``, ``σ₂=0.5``. Measured numbers mirror
+  the hypergraph finding: Go / Julia outperform Rust on small
+  N because rayon fork-join overhead in the Rust
+  ``par_iter_mut`` path dominates the O(N²) per-step compute.
+  Canonical Rust → Mojo → Julia → Go → Python ordering is
+  retained per ``feedback_fallback_chain_ordering.md``.
+
 ### Added (2026-04-18 — hypergraph multi-backend)
 - `julia/hypergraph.jl`, `go/hypergraph.go`
   (→ `libhypergraph.so`), `mojo/hypergraph.mojo`

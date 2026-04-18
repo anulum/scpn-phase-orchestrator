@@ -1,28 +1,95 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Simplicial multi-backend benchmark
+
+"""Per-backend wall-clock benchmark for
+``upde.simplicial.SimplicialEngine.run`` (pairwise + 3-body
+all-to-all simplicial coupling)."""
+
+from __future__ import annotations
+
+import argparse
+import json
 import time
+from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
+from scpn_phase_orchestrator.upde import simplicial as s_mod
+from scpn_phase_orchestrator.upde.simplicial import (
+    ACTIVE_BACKEND,
+    AVAILABLE_BACKENDS,
+    SimplicialEngine,
+)
 
 
-def run_simplicial_bench(n=1000, n_steps=100):
+def _bench(backend: str, theta, omegas, knm, alpha, n: int, sigma2: float,
+           n_steps: int, calls: int) -> float:
+    saved = s_mod.ACTIVE_BACKEND
+    try:
+        s_mod.ACTIVE_BACKEND = backend
+        eng = SimplicialEngine(n, 0.01, sigma2=sigma2)
+        eng.run(theta, omegas, knm, 0.0, 0.0, alpha, n_steps=1)  # warm
+        t0 = time.perf_counter()
+        for _ in range(calls):
+            eng.run(theta, omegas, knm, 0.0, 0.0, alpha, n_steps=n_steps)
+        return time.perf_counter() - t0
+    finally:
+        s_mod.ACTIVE_BACKEND = saved
+
+
+def bench_at(n: int, sigma2: float, n_steps: int, calls: int) -> dict:
     rng = np.random.default_rng(42)
-    phases = rng.uniform(0, 2 * np.pi, n)
+    theta = rng.uniform(0, 2 * np.pi, n)
     omegas = np.ones(n)
     knm = rng.uniform(0, 0.5 / n, (n, n))
+    np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
+    row: dict = {
+        "N": n, "sigma2": sigma2, "n_steps": n_steps,
+        "calls": calls, "available": AVAILABLE_BACKENDS,
+    }
+    for backend in AVAILABLE_BACKENDS:
+        t = _bench(backend, theta, omegas, knm, alpha,
+                   n, sigma2, n_steps, calls)
+        row[f"{backend}_ms_per_call"] = (t / calls) * 1000.0
+    return row
 
-    engine = SimplicialEngine(n, dt=0.01, sigma2=0.5)
 
-    t0 = time.perf_counter()
-    for _ in range(n_steps):
-        phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
-    elapsed = time.perf_counter() - t0
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--sizes", type=int, nargs="+", default=[8, 32, 128])
+    parser.add_argument("--sigma2", type=float, default=0.5)
+    parser.add_argument("--n-steps", type=int, default=50)
+    parser.add_argument("--calls", type=int, default=5)
+    args = parser.parse_args()
 
-    R, _ = compute_order_parameter(phases)
-    print(f"Simplicial Engine (N={n}): {n_steps / elapsed:.1f} steps/s, R={R:.4f}")
+    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}\n")
+    header = f"{'N':>4} {'σ₂':>5} {'nsteps':>7} {'calls':>6}"
+    for b in AVAILABLE_BACKENDS:
+        header += f" {b + '_ms':>12}"
+    print(header)
+    print("-" * len(header))
+    results: list[dict] = []
+    for n in args.sizes:
+        row = bench_at(n, args.sigma2, args.n_steps, args.calls)
+        results.append(row)
+        line = (f"{n:>4} {args.sigma2:>5.2f} {args.n_steps:>7} "
+                f"{args.calls:>6}")
+        for b in AVAILABLE_BACKENDS:
+            line += f" {row[f'{b}_ms_per_call']:>12.4f}"
+        print(line)
+    if args.output:
+        args.output.write_text(
+            json.dumps({"results": results}, indent=2), encoding="utf-8"
+        )
+    return 0
 
 
 if __name__ == "__main__":
-    run_simplicial_bench(n=1000)
+    raise SystemExit(main())
