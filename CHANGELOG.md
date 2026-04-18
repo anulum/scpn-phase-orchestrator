@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — basin_stability multi-backend)
+- `julia/basin_stability.jl`, `go/basin_stability.go`
+  (→ `libbasin_stability.so`), `mojo/basin_stability.mojo`
+  (→ `basin_stability_mojo`) implementing the one-trial Kuramoto
+  ``steady_state_r`` kernel (explicit Euler, transient discarded,
+  time-averaged order parameter).
+- Python bridges `upde/_basin_stability_{julia,go,mojo}.py`.
+- `upde/basin_stability.py` upgraded to five-backend dispatcher on
+  the single-trial kernel. Rust's ``steady_state_r_rust`` FFI is
+  now the active path; ``basin_stability(...)`` owns the Monte
+  Carlo loop + RNG in Python (``np.random.default_rng(seed)``) and
+  calls the dispatched trial kernel once per IC. This is the
+  ``dimension`` pattern — Python owns randomness so the compute
+  primitive stays deterministic and parity-testable.
+- 26 new tests — `tests/test_basin_stability_algorithm.py` (16
+  algorithmic + Hypothesis incl. physics limits, threshold
+  monotonicity, ``multi_basin_stability`` keys, shape / bounds /
+  determinism), `tests/test_basin_stability_backends.py` (10
+  cross-backend parity with Hypothesis sweeps for Rust / Go).
+- Parity measured bit-exact (0.0) across all five backends for
+  the canonical all-to-all test problem.
+- `benchmarks/basin_stability_benchmark.py` — per-backend
+  wall-clock harness at ``N ∈ {8, 32, 64}``, ``n_transient=200``,
+  ``n_measure=100``.
+
 ### Added (2026-04-18 — swarmalator multi-backend)
 - `julia/swarmalator.jl`, `go/swarmalator.go`
   (→ `libswarmalator.so`), `mojo/swarmalator.mojo`

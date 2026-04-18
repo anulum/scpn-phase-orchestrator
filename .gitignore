@@ -174,3 +174,8 @@ mojo/envelope_mojo
 go/libswarmalator.so
 go/libswarmalator.h
 mojo/swarmalator_mojo
+
+# basin_stability compiled artefacts
+go/libbasin_stability.so
+go/libbasin_stability.h
+mojo/basin_stability_mojo
