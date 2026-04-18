@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — itpc multi-backend)
+- `julia/itpc.jl`, `go/itpc.go` (→ `libitpc.so`), `mojo/itpc.mojo`
+  (→ `itpc_mojo`) implementing Lachaux 1999 inter-trial phase
+  coherence (`compute_itpc` + `itpc_persistence`).
+- Python bridges `monitor/_itpc_julia.py`, `monitor/_itpc_go.py`,
+  `monitor/_itpc_mojo.py`.
+- `monitor/itpc.py` upgraded to five-backend dispatcher
+  (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`).
+- 31 new tests — `tests/test_itpc_algorithm.py` (18 algorithmic +
+  Hypothesis), `tests/test_itpc_backends.py` (10 cross-backend
+  parity at 1e-12 for Rust / Julia / Go, 1e-9 for Mojo),
+  `tests/test_itpc_stability.py` (3 long-run invariants,
+  `pytest.mark.slow`).
+- `benchmarks/itpc_benchmark.py` multi-backend wall-clock harness.
+- `docs/reference/api/monitor_itpc.md` (453 lines) with Lachaux
+  1999 formalism, per-backend build notes, measured benchmarks on
+  the local host, and failure-mode audit.
+
 ### Added (2026-04-18 — upde engine multi-backend)
 - `julia/upde_engine.jl`, `go/upde_engine.go`
   (→ `libupde_engine.so`), `mojo/upde_engine.mojo`

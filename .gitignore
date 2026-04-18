@@ -114,3 +114,8 @@ mojo/lyapunov_mojo
 go/libupde_engine.so
 go/libupde_engine.h
 mojo/upde_engine_mojo
+
+# itpc compiled artefacts
+go/libitpc.so
+go/libitpc.h
+mojo/itpc_mojo
