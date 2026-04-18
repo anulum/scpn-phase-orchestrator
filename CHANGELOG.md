@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — entropy_prod multi-backend)
+- `julia/entropy_prod.jl`, `go/entropy_prod.go`
+  (→ `libentropy_prod.so`), `mojo/entropy_prod.mojo`
+  (→ `entropy_prod_mojo`) implementing the overdamped-Kuramoto
+  dissipation rate Σ (dθ/dt)² · dt.
+- Python bridges `monitor/_entropy_prod_julia.py`,
+  `monitor/_entropy_prod_go.py`, `monitor/_entropy_prod_mojo.py`.
+- `monitor/entropy_prod.py` upgraded to five-backend dispatcher
+  (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`).
+- 21 new tests — `tests/test_entropy_prod_algorithm.py` (11
+  algorithmic + Hypothesis + dispatcher), `tests/test_entropy_prod_backends.py`
+  (7 cross-backend parity at 1e-12 / 1e-9),
+  `tests/test_entropy_prod_stability.py` (3 long-run invariants
+  including a UPDEEngine-coupled synchronisation trace,
+  `pytest.mark.slow`).
+- `benchmarks/entropy_prod_benchmark.py` multi-backend wall-clock
+  harness across N ∈ {16, 64, 256, 1024}.
+- `docs/reference/api/monitor_entropy_prod.md` (548 lines) with
+  Acebrón 2005 formalism, per-backend build notes, measured
+  benchmarks on the local host, failure-mode audit, and references.
+
 ### Added (2026-04-18 — itpc multi-backend)
 - `julia/itpc.jl`, `go/itpc.go` (→ `libitpc.so`), `mojo/itpc.mojo`
   (→ `itpc_mojo`) implementing Lachaux 1999 inter-trial phase

@@ -119,3 +119,8 @@ mojo/upde_engine_mojo
 go/libitpc.so
 go/libitpc.h
 mojo/itpc_mojo
+
+# entropy_prod compiled artefacts
+go/libentropy_prod.so
+go/libentropy_prod.h
+mojo/entropy_prod_mojo
