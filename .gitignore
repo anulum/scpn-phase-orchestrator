@@ -217,3 +217,8 @@ mojo/market_mojo
 
 # Mojo FFI reference binaries (source tracked, binaries build on demand)
 mojo/_lapack_test
+
+# spectral (graph Laplacian eig) compiled artefacts
+go/libspectral.so
+go/libspectral.h
+mojo/spectral_mojo

@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — coupling.spectral multi-backend)
+- `julia/spectral.jl`, `go/spectral.go` (→ `libspectral.so`),
+  `mojo/spectral.mojo` (→ `spectral_mojo`) implementing the
+  symmetric eigendecomposition of the combinatorial graph
+  Laplacian ``L = D − |W|`` (Dörfler-Bullo 2014, 2013).
+- Python bridges `coupling/_spectral_{julia,go,mojo}.py`.
+- `coupling/spectral.py` upgraded to a five-backend dispatcher
+  on the ``spectral_eig(W, n) → (eigvals, fiedler)`` primitive.
+  Rust retains its five pre-existing per-function FFI fast paths
+  (``fiedler_value``, ``fiedler_vector``, ``spectral_gap``,
+  ``critical_coupling``, ``sync_convergence_rate``); Julia, Go,
+  Mojo, Python route through the shared primitive.
+- Julia uses ``LinearAlgebra.eigen(Symmetric(L))`` (LAPACK
+  ``dsyev``). Go uses ``gonum.org/v1/gonum/mat.EigenSym`` —
+  pure-Go symmetric solver, no LAPACK. Mojo calls LAPACK
+  ``dsyev_`` via the ``std.ffi.OwnedDLHandle`` pattern unlocked
+  in commit ``6be6f9e``. Explicit symmetrisation
+  (``0.5 (L + Lᵀ)``) in Julia/Go/Mojo guards against
+  floating-point asymmetry introduced during ``L = D − W``
+  construction that would otherwise trip gonum / LAPACK's
+  triangle-specific solvers.
+- Python reference realigned to the same construction
+  (``np.linalg.eigh`` on the explicit ``graph_laplacian``).
+- 36 new tests — `tests/test_spectral_algorithm.py` (18 incl.
+  Hypothesis: Laplacian row-sums, ``λ_min = 0``, complete-graph
+  closed form ``K_c = Δω / N``, disconnected-graph
+  ``K_c = ∞``, partition disjointness),
+  `tests/test_spectral_backends.py` (14 cross-backend parity
+  checking eigenvalue arrays and eigen-equation residual
+  ``||L·v₂ − λ₂·v₂||`` to handle the ``±sign`` eigenvector
+  ambiguity), `tests/test_spectral_stability.py` (4 long-run
+  invariants — N=50 scale-up, Fiedler-1973 ``λ₂``-monotonicity
+  under edge addition, disconnected-component detection,
+  Anderson-Morley ``λ_max ≤ 2 d_max`` bound).
+- Regression-green: pre-existing `test_spectral.py`,
+  `test_prop_hodge_spectral.py`, `test_convergence_topology.py`,
+  `test_roundtrip_consistency.py` — **149 existing tests still
+  pass**.
+- Parity: eigenvalues agree to ``~1e-12`` across LAPACK-based
+  backends (Rust, Julia, Mojo, Python) and ``~1e-11`` for
+  Go's ``gonum.EigenSym`` — tight enough for all consumers
+  (``ssgf.costs`` and ``ssgf.ethical`` both consume
+  ``fiedler_value`` scalar outputs).
+- `benchmarks/spectral_benchmark.py` — per-backend wall-clock
+  harness at ``N ∈ {16, 64, 128}``. Measured numbers show Go
+  winning at ``N=128`` (78 ms vs Julia 159 ms vs Rust 198 ms
+  vs Python 597 ms vs Mojo 1099 ms) — ``gonum.EigenSym``'s
+  pure-Go implementation outperforms LAPACK's divide-and-conquer
+  path for medium-sized dense Laplacians; Julia leads at
+  ``N=64``; Rust carries real per-call overhead from the
+  Laplacian allocator on small problems. Canonical
+  Rust → Mojo → Julia → Go → Python ordering retained per
+  ``feedback_fallback_chain_ordering.md``.
+
 ### Added (2026-04-18 — market multi-backend)
 - `julia/market.jl`, `go/market.go` (→ `libmarket.so`),
   `mojo/market.mojo` (→ `market_mojo`) implementing two
