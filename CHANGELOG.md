@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (2026-04-18 — bifurcation DRY refactor)
+- `upde/bifurcation.py` now delegates its single-trial Kuramoto
+  integrator to :func:`basin_stability.steady_state_r` instead
+  of carrying a local duplicate. The Python-composite branch of
+  ``trace_sync_transition`` / ``find_critical_coupling``
+  therefore inherits the full 5-backend dispatcher (Rust / Mojo
+  / Julia / Go / Python) automatically.
+- The two composite Rust fast paths
+  (``trace_sync_transition_rust``,
+  ``find_critical_coupling_bif_rust``) are preserved: they batch
+  the whole ``K``-sweep inside Rust, amortising per-``K``
+  boundary overhead better than N_points × dispatch calls.
+- Pre-existing ``test_bifurcation.py`` (16) still passes; added
+  ``tests/test_bifurcation_dispatch.py`` (3) which forces the
+  Python composite branch and verifies each per-``K`` trial
+  actually routes through ``basin_stability.steady_state_r``.
+
 ### Added (2026-04-18 — geometric (torus) multi-backend)
 - `julia/geometric.jl`, `go/geometric.go` (→ `libgeometric.so`),
   `mojo/geometric.mojo` (→ `geometric_mojo`) implementing the

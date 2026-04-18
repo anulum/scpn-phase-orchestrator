@@ -6,18 +6,32 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Bifurcation analysis for Kuramoto networks
 
-"""Bifurcation continuation for Kuramoto synchronization transitions.
+"""Bifurcation continuation for Kuramoto synchronisation transitions.
 
-Traces steady-state order parameter R as a function of coupling strength K
-using pseudo-arclength continuation. Detects critical coupling K_c where
-the incoherent state (R≈0) bifurcates to partial synchronization (R>0).
+Traces steady-state order parameter ``R`` as a function of coupling
+strength ``K`` using pseudo-arclength continuation (Keller 1977).
+Detects critical coupling ``K_c`` where the incoherent state
+``R ≈ 0`` bifurcates to partial synchronisation ``R > 0``.
 
-Analytical reference: K_c = 2 / (π g(0)) for Lorentzian g(ω) with
-half-width Δ → K_c = 2Δ (Kuramoto 1975, Strogatz 2000).
+Analytical reference: ``K_c = 2 / (π g(0))`` for Lorentzian ``g(ω)``
+with half-width ``Δ`` → ``K_c = 2Δ`` (Kuramoto 1975, Strogatz 2000).
 
-Numerical continuation follows Keller 1977, "Numerical Solution of
-Bifurcation and Nonlinear Eigenvalue Problems" via the predictor-corrector
-pseudo-arclength method.
+5-backend chain via delegation
+------------------------------
+The single-trial kernel ``steady_state_r(phases, omegas, knm,
+alpha, k_scale, dt, n_transient, n_measure) → R`` is already
+dispatched across Rust / Mojo / Julia / Go / Python in
+:mod:`scpn_phase_orchestrator.upde.basin_stability`. This module
+delegates to it rather than re-implementing the Euler trial
+integrator, which means every ``trace_sync_transition`` /
+``find_critical_coupling`` call in the Python-composite branch
+inherits the full fallback chain for free.
+
+The two composite Rust kernels — ``trace_sync_transition_rust``
+(batched K-sweep) and ``find_critical_coupling_bif_rust`` (binary
+search inside Rust) — are preserved as one-shot fast paths: a
+single FFI call amortises the per-K boundary overhead better than
+the N_points × dispatch-call path.
 """
 
 from __future__ import annotations
@@ -27,26 +41,27 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.upde.basin_stability import (
+    steady_state_r as _dispatched_steady_state_r,
+)
+
 try:
     from spo_kernel import (
         find_critical_coupling_bif_rust as _rust_find_kc,
     )
     from spo_kernel import (
-        steady_state_r_rust as _rust_ssr,
-    )
-    from spo_kernel import (
         trace_sync_transition_rust as _rust_trace,
     )
 
-    _HAS_RUST = True
+    _HAS_COMPOSITE_RUST = True
 except ImportError:
-    _HAS_RUST = False
+    _HAS_COMPOSITE_RUST = False
 
 __all__ = [
-    "BifurcationPoint",
     "BifurcationDiagram",
-    "trace_sync_transition",
+    "BifurcationPoint",
     "find_critical_coupling",
+    "trace_sync_transition",
 ]
 
 
@@ -71,7 +86,7 @@ class BifurcationDiagram:
         return np.array([p.R for p in self.points])
 
 
-def _steady_state_R(
+def _steady_state_R_dispatch(
     phases_init: NDArray,
     omegas: NDArray,
     K_scale: float,
@@ -81,47 +96,18 @@ def _steady_state_R(
     n_transient: int,
     n_measure: int,
 ) -> float:
-    """Run Kuramoto to steady state and return time-averaged R."""
-    if _HAS_RUST:
-        n = len(omegas)
-        p = np.ascontiguousarray(phases_init, dtype=np.float64)
-        o = np.ascontiguousarray(omegas, dtype=np.float64)
-        k = np.ascontiguousarray(
-            knm_template.ravel(),
-            dtype=np.float64,
-        )
-        a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
-        return float(
-            _rust_ssr(
-                p,
-                o,
-                k,
-                a,
-                n,
-                K_scale,
-                dt,
-                n_transient,
-                n_measure,
-            )
-        )
+    """Thin wrapper around the 5-backend-dispatched kernel.
 
-    knm = knm_template * K_scale
-    phases = phases_init.copy()
-
-    for _ in range(n_transient):
-        diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
-        coupling = np.sum(knm * np.sin(diff), axis=1)
-        phases = phases + dt * (omegas + coupling)
-
-    R_sum = 0.0
-    for _ in range(n_measure):
-        diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
-        coupling = np.sum(knm * np.sin(diff), axis=1)
-        phases = phases + dt * (omegas + coupling)
-        z = np.mean(np.exp(1j * phases))
-        R_sum += float(np.abs(z))
-
-    return R_sum / n_measure
+    Shipped as a module-private helper so the ``trace_*`` /
+    ``find_*`` functions stay Python-only at the Python level;
+    the multi-language work happens inside
+    ``basin_stability.steady_state_r``.
+    """
+    return _dispatched_steady_state_r(
+        phases_init, omegas, knm_template, alpha=alpha,
+        k_scale=K_scale, dt=dt,
+        n_transient=n_transient, n_measure=n_measure,
+    )
 
 
 def trace_sync_transition(
@@ -135,25 +121,18 @@ def trace_sync_transition(
     n_measure: int = 500,
     seed: int = 42,
 ) -> BifurcationDiagram:
-    """Trace R(K) for the Kuramoto synchronization transition.
+    """Trace R(K) for the Kuramoto synchronisation transition.
 
-    Sweeps coupling strength K from K_range[0] to K_range[1], running the
-    full ODE to steady state at each point. Returns a BifurcationDiagram
-    with (K, R) pairs and the estimated critical coupling K_c.
+    Sweeps coupling strength ``K`` from ``K_range[0]`` to
+    ``K_range[1]``, running the ODE to steady state at each point,
+    and returns a :class:`BifurcationDiagram` with the ``(K, R)``
+    pairs plus the estimated critical coupling ``K_c``.
 
-    Args:
-        omegas: (N,) natural frequencies
-        knm_template: (N, N) coupling topology (default: all-to-all / N)
-        alpha: (N, N) phase lags (default: zeros)
-        K_range: (K_min, K_max) sweep range
-        n_points: number of K values to sample
-        dt: integration timestep
-        n_transient: steps to discard before measuring R
-        n_measure: steps to average R over
-        seed: RNG seed for initial phases
-
-    Returns:
-        BifurcationDiagram with K_critical estimated from R threshold crossing.
+    When the Rust composite kernel is available, the whole sweep
+    is batched into a single FFI call. Otherwise the function
+    loops in Python and each trial is dispatched through the
+    5-backend chain inherited from
+    :func:`basin_stability.steady_state_r`.
     """
     n = len(omegas)
     rng = np.random.default_rng(seed)
@@ -167,46 +146,35 @@ def trace_sync_transition(
     phases_init = rng.uniform(0, 2 * np.pi, n)
     diagram = BifurcationDiagram()
 
-    if _HAS_RUST:
+    if _HAS_COMPOSITE_RUST:
         o = np.ascontiguousarray(omegas, dtype=np.float64)
         k = np.ascontiguousarray(knm_template.ravel(), dtype=np.float64)
         a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
         p = np.ascontiguousarray(phases_init, dtype=np.float64)
         kv, rv, kc = _rust_trace(
-            o,
-            k,
-            a,
-            n,
-            p,
-            K_range[0],
-            K_range[1],
-            n_points,
-            dt,
-            n_transient,
-            n_measure,
+            o, k, a, n, p,
+            K_range[0], K_range[1], n_points,
+            dt, n_transient, n_measure,
         )
         kv = np.asarray(kv)
         rv = np.asarray(rv)
         for i in range(len(kv)):
             diagram.points.append(
-                BifurcationPoint(K=float(kv[i]), R=float(rv[i]), stable=True),
+                BifurcationPoint(
+                    K=float(kv[i]), R=float(rv[i]), stable=True,
+                ),
             )
         if not np.isnan(kc):
             diagram.K_critical = float(kc)
         return diagram
 
+    # Composite Rust unavailable — loop in Python, each trial
+    # dispatched through the basin_stability 5-backend chain.
     K_values = np.linspace(K_range[0], K_range[1], n_points)
-
     for K_val in K_values:
-        R = _steady_state_R(
-            phases_init,
-            omegas,
-            K_val,
-            knm_template,
-            alpha,
-            dt,
-            n_transient,
-            n_measure,
+        R = _steady_state_R_dispatch(
+            phases_init, omegas, K_val, knm_template, alpha,
+            dt, n_transient, n_measure,
         )
         diagram.points.append(
             BifurcationPoint(K=float(K_val), R=R, stable=True),
@@ -214,7 +182,9 @@ def trace_sync_transition(
 
     R_arr = diagram.R_values
     threshold = 0.1
-    crossings = np.where((R_arr[:-1] < threshold) & (R_arr[1:] >= threshold))[0]
+    crossings = np.where(
+        (R_arr[:-1] < threshold) & (R_arr[1:] >= threshold),
+    )[0]
     if len(crossings) > 0:
         idx = crossings[0]
         K_lo, K_hi = float(K_values[idx]), float(K_values[idx + 1])
@@ -224,7 +194,6 @@ def trace_sync_transition(
             diagram.K_critical = K_lo + frac * (K_hi - K_lo)
         else:
             diagram.K_critical = K_hi
-
     return diagram
 
 
@@ -237,12 +206,12 @@ def find_critical_coupling(
     tol: float = 0.05,
     seed: int = 42,
 ) -> float:
-    """Binary search for critical coupling K_c where R crosses threshold.
+    """Binary search for the critical coupling ``K_c`` at which
+    ``R`` crosses a 0.1 threshold.
 
-    More precise than trace_sync_transition for finding K_c alone.
-
-    Returns:
-        K_c estimate (float). NaN if no transition found in [0, 20].
+    More precise than :func:`trace_sync_transition` when only
+    ``K_c`` is needed. Returns ``nan`` if no transition is found
+    in ``[0, 20]``.
     """
     n = len(omegas)
     rng = np.random.default_rng(seed)
@@ -254,52 +223,32 @@ def find_critical_coupling(
     alpha = np.zeros((n, n))
     phases_init = rng.uniform(0, 2 * np.pi, n)
 
-    if _HAS_RUST:
+    if _HAS_COMPOSITE_RUST:
         o = np.ascontiguousarray(omegas, dtype=np.float64)
         k = np.ascontiguousarray(knm_template.ravel(), dtype=np.float64)
         a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
         p = np.ascontiguousarray(phases_init, dtype=np.float64)
         return float(
             _rust_find_kc(
-                o,
-                k,
-                a,
-                n,
-                p,
-                dt,
-                n_transient,
-                n_measure,
-                tol,
-            )
+                o, k, a, n, p, dt, n_transient, n_measure, tol,
+            ),
         )
 
     threshold = 0.1
     K_lo, K_hi = 0.0, 20.0
 
-    R_hi = _steady_state_R(
-        phases_init,
-        omegas,
-        K_hi,
-        knm_template,
-        alpha,
-        dt,
-        n_transient,
-        n_measure,
+    R_hi = _steady_state_R_dispatch(
+        phases_init, omegas, K_hi, knm_template, alpha,
+        dt, n_transient, n_measure,
     )
     if R_hi < threshold:
         return float("nan")
 
     for _ in range(30):
         K_mid = (K_lo + K_hi) / 2
-        R_mid = _steady_state_R(
-            phases_init,
-            omegas,
-            K_mid,
-            knm_template,
-            alpha,
-            dt,
-            n_transient,
-            n_measure,
+        R_mid = _steady_state_R_dispatch(
+            phases_init, omegas, K_mid, knm_template, alpha,
+            dt, n_transient, n_measure,
         )
         if R_mid < threshold:
             K_lo = K_mid
