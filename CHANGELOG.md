@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — hypergraph multi-backend)
+- `julia/hypergraph.jl`, `go/hypergraph.go`
+  (→ `libhypergraph.so`), `mojo/hypergraph.mojo`
+  (→ `hypergraph_mojo`) implementing the generalised k-body
+  Kuramoto stepper (Tanaka-Aoyagi 2011, Skardal-Arenas 2019,
+  Bick et al. 2023) with an optional dense pairwise ``K`` term
+  and external ``(ζ, ψ)`` drive.
+- Python bridges `upde/_hypergraph_{julia,go,mojo}.py`.
+- `upde/hypergraph.py` upgraded to five-backend dispatcher
+  operating on the ``run(phases, omegas, n_steps, …)`` entry
+  point (composite-step batching matches the Rust FFI).
+- Python reference realigned to the Rust sincos expansion
+  ``sin(θ_j − θ_i) = s_j·c_i − c_j·s_i`` on the ``alpha == 0``
+  fast path; nonzero alpha uses the direct ``sin(diff)`` form
+  in all five backends, matching Rust bit-for-bit.
+- 29 new tests — `tests/test_hypergraph_algorithm.py` (13 incl.
+  Hypothesis: Hyperedge API, phase wrap, zero-coupling rotation,
+  pairwise-only Kuramoto limit, triadic fixed-point preservation,
+  near-sync local stability, ζ-forcing),
+  `tests/test_hypergraph_backends.py` (11 cross-backend parity
+  for pairwise / alpha≠0 / no-pairwise regimes with Hypothesis
+  sweeps for Rust / Go),
+  `tests/test_hypergraph_stability.py` (5 long-run invariants).
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python on pairwise+triadic+4-body ICs with alpha=0,
+  alpha≠0, and ζ≠0; Mojo agrees within the subprocess
+  text-round-trip epsilon.
+- `benchmarks/hypergraph_benchmark.py` rewritten as a per-backend
+  wall-clock harness at ``N ∈ {8, 32, 64}`` with 2·N random
+  triadic edges. Measured numbers show Go outperforming Rust
+  for small N: the kernel's inner loop is mostly sequential
+  hyperedge accumulation, so the rayon fork-join overhead in
+  the Rust ``par_iter_mut`` path dominates at sub-O(10⁴) work
+  per step. The canonical Rust → Mojo → Julia → Go → Python
+  ordering is retained per
+  ``feedback_fallback_chain_ordering.md``; the benchmark
+  records what actually happens on this workload.
+
 ### Added (2026-04-18 — inertial multi-backend)
 - `julia/inertial.jl`, `go/inertial.go` (→ `libinertial.so`),
   `mojo/inertial.mojo` (→ `inertial_mojo`) implementing the

@@ -184,3 +184,8 @@ mojo/basin_stability_mojo
 go/libinertial.so
 go/libinertial.h
 mojo/inertial_mojo
+
+# hypergraph compiled artefacts
+go/libhypergraph.so
+go/libhypergraph.h
+mojo/hypergraph_mojo
