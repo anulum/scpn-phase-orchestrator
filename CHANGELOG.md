@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — market multi-backend)
+- `julia/market.jl`, `go/market.go` (→ `libmarket.so`),
+  `mojo/market.mojo` (→ `market_mojo`) implementing two
+  financial-Kuramoto compute kernels:
+  * ``market_order_parameter(phases, T, N) → R[T]`` — per-row
+    Kuramoto order parameter, ``O(T · N)``.
+  * ``market_plv(phases, T, N, window) → PLV[n_windows, N, N]``
+    — rolling phase-locking-value matrix with a sincos
+    precompute that eliminates trig from the inner loop,
+    ``O((T − W + 1) · N² · W)``.
+- Python bridges `upde/_market_{julia,go,mojo}.py`.
+- `upde/market.py` upgraded to five-backend dispatcher for both
+  kernels; ``extract_phase`` (scipy ``hilbert``) stays Python-
+  side because the compiled backends do not ship an FFT;
+  ``detect_regimes`` and ``sync_warning`` remain ``O(T)``
+  masking / comparison operations.
+- 33 new tests — `tests/test_market_algorithm.py` (18 incl.
+  Hypothesis: locked-ensemble ``R ≈ 1``, uniform-ensemble
+  ``R ≈ 0``, PLV diagonal == 1, PLV bounds, regime
+  classification, crossing detection, Hilbert shape invariants),
+  `tests/test_market_backends.py` (10 cross-backend parity for
+  both kernels with Hypothesis sweeps for Rust / Go),
+  `tests/test_market_stability.py` (5 long-run invariants:
+  bounds over T=5000, PLV symmetry, locked subpopulation
+  staying near PLV = 1, empty-input edge case).
+- Parity measured at ``~1e-15`` tolerance — identity-level drift
+  between the native-backend sincos form and the Python
+  reference's ``|np.mean(exp(iθ))|``; mathematically identical
+  but with different rounding accumulation.
+- Regression-green: pre-existing ``test_market.py`` (18 tests)
+  still passes.
+- `benchmarks/market_benchmark.py` — per-backend wall-clock
+  harness for both kernels. Rust leads at production sizes
+  (PLV at ``T=500, N=16, W=50``: 16.76 ms Rust vs 24.75 ms
+  Julia vs 36.43 ms Go vs 30.45 ms Python). Go wins only on
+  the small ``T=100, N=8, W=20`` PLV problem where the rayon
+  fork-join overhead dominates.
+
 ### Changed (2026-04-18 — bifurcation DRY refactor)
 - `upde/bifurcation.py` now delegates its single-trial Kuramoto
   integrator to :func:`basin_stability.steady_state_r` instead

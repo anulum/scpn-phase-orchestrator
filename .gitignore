@@ -209,3 +209,8 @@ mojo/reduction_mojo
 go/libgeometric.so
 go/libgeometric.h
 mojo/geometric_mojo
+
+# market (financial R/PLV) compiled artefacts
+go/libmarket.so
+go/libmarket.h
+mojo/market_mojo
