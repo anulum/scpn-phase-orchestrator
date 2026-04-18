@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — lyapunov spectrum multi-backend)
+- `julia/lyapunov.jl`, `go/lyapunov.go` (→ `liblyapunov.so`),
+  `mojo/lyapunov.mojo` (→ `lyapunov_mojo`) implementing the Benettin
+  1980 / Shimada-Nagashima 1979 spectrum with RK4 integration and
+  periodic row-oriented Modified Gram-Schmidt.
+- Python bridges `monitor/_lyapunov_julia.py`, `monitor/_lyapunov_go.py`,
+  `monitor/_lyapunov_mojo.py`.
+- `monitor/lyapunov.py` upgraded to five-backend dispatcher
+  (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`). `LyapunovGuard` is
+  preserved unchanged as a stateful single-backend observer.
+- Reference Python kernel switched from forward Euler + coupling-only
+  Jacobian to RK4 + driver-diagonal Jacobian + row-oriented QR so all
+  backends (Rust, Mojo, Julia, Go, Python) agree bit-for-bit on the
+  same problem instance.
+- 32 new tests — `tests/test_lyapunov_algorithm.py` (14 algorithmic
+  properties + Hypothesis), `tests/test_lyapunov_backends.py` (15
+  cross-backend parity, including driver and phase-lag cases),
+  `tests/test_lyapunov_stability.py` (3 long-run invariants, marked
+  `pytest.mark.slow`).
+- `benchmarks/lyapunov_benchmark.py` multi-backend wall-clock harness
+  (warm-up + sized sweep at `N ∈ {4, 8, 16, 32}`).
+- `docs/reference/api/monitor_lyapunov.md` (643 lines) covering the
+  variational equation, Benettin algorithm, row-MGS convention,
+  per-backend build notes, measured benchmarks on the local host,
+  failure modes, and references.
+
 ### Added (2026-04-17 — transfer_entropy multi-backend)
 - `julia/transfer_entropy.jl`, `go/transfer_entropy.go`
   (→ `libtransfer_entropy.so`), `mojo/transfer_entropy.mojo`

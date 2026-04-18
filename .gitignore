@@ -104,3 +104,8 @@ mojo/npe_mojo
 go/libtransfer_entropy.so
 go/libtransfer_entropy.h
 mojo/transfer_entropy_mojo
+
+# lyapunov compiled artefacts
+go/liblyapunov.so
+go/liblyapunov.h
+mojo/lyapunov_mojo
