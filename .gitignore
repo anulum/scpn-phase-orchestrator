@@ -214,3 +214,6 @@ mojo/geometric_mojo
 go/libmarket.so
 go/libmarket.h
 mojo/market_mojo
+
+# Mojo FFI reference binaries (source tracked, binaries build on demand)
+mojo/_lapack_test
