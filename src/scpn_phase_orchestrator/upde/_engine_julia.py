@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["upde_run_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "upde_engine.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "upde_engine.jl"
 _JULIA_MODULE: Any | None = None
 
 

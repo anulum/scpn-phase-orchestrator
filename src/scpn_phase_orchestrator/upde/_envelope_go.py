@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["envelope_modulation_depth_go", "extract_envelope_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libenvelope.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libenvelope.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -38,7 +36,8 @@ def _load_lib() -> ctypes.CDLL:
     lib.ExtractEnvelope.restype = ctypes.c_int
     lib.ExtractEnvelope.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]
     lib.EnvelopeModulationDepth.restype = ctypes.c_int

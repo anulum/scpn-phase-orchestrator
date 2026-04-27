@@ -93,9 +93,7 @@ class TestOrderParameter:
 class TestPLV:
     @given(a=phase_arrays, b=phase_arrays)
     @settings(max_examples=20, deadline=None)
-    def test_plv_bounded_unit_interval(
-        self, a: np.ndarray, b: np.ndarray
-    ) -> None:
+    def test_plv_bounded_unit_interval(self, a: np.ndarray, b: np.ndarray) -> None:
         n = min(a.size, b.size)
         val = compute_plv(a[:n], b[:n])
         assert 0.0 <= val <= 1.0 + 1e-12
@@ -132,17 +130,13 @@ class TestPLV:
 
 class TestLayerCoherence:
     def test_full_synchrony_of_subset(self) -> None:
-        phases = np.array(
-            [0.0, 0.1, np.pi, np.pi + 0.1, 2.0, 3.0], dtype=np.float64
-        )
+        phases = np.array([0.0, 0.1, np.pi, np.pi + 0.1, 2.0, 3.0], dtype=np.float64)
         r = compute_layer_coherence(phases, np.array([0, 1], dtype=np.int64))
         assert r > 0.99
 
     def test_empty_mask_returns_zero(self) -> None:
         phases = np.array([0.0, 1.0, 2.0])
-        assert (
-            compute_layer_coherence(phases, np.array([], dtype=np.int64)) == 0.0
-        )
+        assert compute_layer_coherence(phases, np.array([], dtype=np.int64)) == 0.0
 
     def test_bool_mask_supported(self) -> None:
         phases = np.array([0.0, np.pi, 0.05, np.pi + 0.05])

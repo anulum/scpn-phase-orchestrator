@@ -81,9 +81,7 @@ class TestQuantumBridgeAdapterLocal:
 
     def test_import_knm_initialises_zero_alpha(self):
         bridge = QuantumControlBridge(n_oscillators=3)
-        knm = np.array(
-            [[0.0, 0.4, 0.1], [0.4, 0.0, 0.2], [0.1, 0.2, 0.0]]
-        )
+        knm = np.array([[0.0, 0.4, 0.1], [0.4, 0.0, 0.2], [0.1, 0.2, 0.0]])
         coupling = bridge.import_knm(knm)
         assert np.all(coupling.alpha == 0.0)
 

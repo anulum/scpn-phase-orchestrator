@@ -40,9 +40,7 @@ def _reset(prev: str) -> None:
     pac_mod.ACTIVE_BACKEND = prev
 
 
-def _reference_mi(
-    theta: np.ndarray, amp: np.ndarray, n_bins: int
-) -> float:
+def _reference_mi(theta: np.ndarray, amp: np.ndarray, n_bins: int) -> float:
     prev = _force("python")
     try:
         return modulation_index(theta, amp, n_bins)
@@ -50,9 +48,7 @@ def _reference_mi(
         _reset(prev)
 
 
-def _reference_matrix(
-    phases: np.ndarray, amps: np.ndarray, n_bins: int
-) -> np.ndarray:
+def _reference_matrix(phases: np.ndarray, amps: np.ndarray, n_bins: int) -> np.ndarray:
     prev = _force("python")
     try:
         return pac_matrix(phases, amps, n_bins)
@@ -77,9 +73,7 @@ class TestRustParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(max_examples=15, deadline=None)
-    def test_modulation_index_bit_exact(
-        self, n: int, n_bins: int, seed: int
-    ) -> None:
+    def test_modulation_index_bit_exact(self, n: int, n_bins: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         theta = rng.uniform(0.0, TWO_PI, size=n)
         amp = 1.0 + 0.5 * np.cos(theta) + 0.1 * rng.standard_normal(n)
@@ -164,9 +158,7 @@ class TestGoParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_modulation_index(
-        self, n: int, n_bins: int, seed: int
-    ) -> None:
+    def test_modulation_index(self, n: int, n_bins: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         theta = rng.uniform(0.0, TWO_PI, size=n)
         amp = 1.0 + 0.5 * np.cos(theta)

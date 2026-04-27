@@ -41,14 +41,9 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo npe returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo npe returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def phase_distance_matrix_mojo(phases: NDArray) -> NDArray:
@@ -60,9 +55,7 @@ def phase_distance_matrix_mojo(phases: NDArray) -> NDArray:
     tokens.extend(repr(float(x)) for x in p.tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n * n:
-        raise ValueError(
-            f"Mojo PDM returned {len(result)} values, expected {n * n}"
-        )
+        raise ValueError(f"Mojo PDM returned {len(result)} values, expected {n * n}")
     return np.array(result, dtype=np.float64)
 
 

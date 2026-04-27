@@ -77,7 +77,9 @@ class TestPLVSymmetry:
         # plv[w] must equal plv[w].T for every window.
         for w in range(plv.shape[0]):
             np.testing.assert_allclose(
-                plv[w], plv[w].T, atol=1e-12,
+                plv[w],
+                plv[w].T,
+                atol=1e-12,
             )
 
 

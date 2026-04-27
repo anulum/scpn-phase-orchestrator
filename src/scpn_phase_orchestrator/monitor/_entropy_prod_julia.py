@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["entropy_production_rate_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "entropy_prod.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "entropy_prod.jl"
 _JULIA_MODULE: Any | None = None
 
 

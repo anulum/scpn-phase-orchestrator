@@ -6,8 +6,8 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — WASM bindings (Optimized)
 
-use wasm_bindgen::prelude::*;
 use js_sys::Float64Array;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmEngine {

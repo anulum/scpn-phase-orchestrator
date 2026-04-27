@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["winding_numbers_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libwinding.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libwinding.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -46,7 +44,9 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def winding_numbers_go(
-    phases_flat: NDArray, t: int, n: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
 ) -> NDArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)

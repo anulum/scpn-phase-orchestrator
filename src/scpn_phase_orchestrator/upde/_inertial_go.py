@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["inertial_step_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libinertial.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libinertial.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -43,7 +41,8 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_double,
+        ctypes.c_int,
+        ctypes.c_double,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
     ]
@@ -77,7 +76,8 @@ def inertial_step_go(
         km.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ine.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         dmp.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)), ctypes.c_double(float(dt)),
+        ctypes.c_int(int(n)),
+        ctypes.c_double(float(dt)),
         new_theta.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         new_omega_dot.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )

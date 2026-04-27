@@ -213,10 +213,11 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             np.testing.assert_allclose(
-                itpc_v, ref_itpc, atol=tolerances[backend],
+                itpc_v,
+                ref_itpc,
+                atol=tolerances[backend],
                 err_msg=f"{backend} ITPC diverged from python",
             )
             assert abs(pers_v - ref_pers) <= tolerances[backend], (
-                f"{backend} persistence diverged: "
-                f"{pers_v} vs {ref_pers}"
+                f"{backend} persistence diverged: {pers_v} vs {ref_pers}"
             )

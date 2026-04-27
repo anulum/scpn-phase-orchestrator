@@ -128,9 +128,7 @@ def compute_itpc(phases_trials: NDArray) -> NDArray:
     backend_fn = _dispatch("itpc")
     if backend_fn is not None:
         if ACTIVE_BACKEND == "rust":
-            fn_rust = cast(
-                "Callable[[NDArray, int, int], NDArray]", backend_fn
-            )
+            fn_rust = cast("Callable[[NDArray, int, int], NDArray]", backend_fn)
             flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
             return np.asarray(fn_rust(flat, n_trials, n_tp), dtype=np.float64)
         fn = cast("Callable[[NDArray, int, int], NDArray]", backend_fn)
@@ -173,9 +171,7 @@ def itpc_persistence(
     backend_fn = _dispatch("persistence")
     if backend_fn is not None:
         if ACTIVE_BACKEND == "rust":
-            fn_rust = cast(
-                "Callable[[NDArray, int, int, NDArray], float]", backend_fn
-            )
+            fn_rust = cast("Callable[[NDArray, int, int, NDArray], float]", backend_fn)
             return float(
                 fn_rust(
                     np.ascontiguousarray(phases.ravel(), dtype=np.float64),
@@ -185,9 +181,7 @@ def itpc_persistence(
                 )
             )
         fn = cast("Callable[[NDArray, int, int, NDArray], float]", backend_fn)
-        return float(
-            fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx)
-        )
+        return float(fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx))
 
     itpc_full = compute_itpc(phases)
     valid = pause_idx[(pause_idx >= 0) & (pause_idx < itpc_full.size)]

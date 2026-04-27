@@ -89,9 +89,7 @@ class TestRustParity:
         np.testing.assert_allclose(result, ref, atol=1e-12)
 
     def test_driver_path(self) -> None:
-        phases, omegas, knm, alpha, kwargs = _problem(
-            3, zeta=0.6, psi=0.4
-        )
+        phases, omegas, knm, alpha, kwargs = _problem(3, zeta=0.6, psi=0.4)
         ref = _reference(phases, omegas, knm, alpha, **kwargs)
         prev = _force("rust")
         try:
@@ -178,9 +176,7 @@ class TestCrossBackendConsistency:
     )
     @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
     def test_all_backends_agree(self, method: str) -> None:
-        phases, omegas, knm, alpha, kwargs = _problem(
-            2026, zeta=0.3, psi=0.2
-        )
+        phases, omegas, knm, alpha, kwargs = _problem(2026, zeta=0.3, psi=0.2)
         kwargs["method"] = method
         ref = _reference(phases, omegas, knm, alpha, **kwargs)
         tolerances = {
@@ -197,7 +193,9 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             np.testing.assert_allclose(
-                result, ref, atol=tolerances[backend],
+                result,
+                ref,
+                atol=tolerances[backend],
                 err_msg=f"{backend} / {method} diverged from python",
             )
 

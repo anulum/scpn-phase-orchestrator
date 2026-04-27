@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["simplicial_run_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "simplicial.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "simplicial.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -55,7 +53,11 @@ def simplicial_run_julia(
         np.ascontiguousarray(omegas, dtype=np.float64),
         np.ascontiguousarray(knm_flat, dtype=np.float64),
         np.ascontiguousarray(alpha_flat, dtype=np.float64),
-        int(n), float(zeta), float(psi),
-        float(sigma2), float(dt), int(n_steps),
+        int(n),
+        float(zeta),
+        float(psi),
+        float(sigma2),
+        float(dt),
+        int(n_steps),
     )
     return np.asarray(result, dtype=np.float64)

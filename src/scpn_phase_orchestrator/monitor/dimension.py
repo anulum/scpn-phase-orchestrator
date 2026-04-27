@@ -139,7 +139,9 @@ class CorrelationDimensionResult:
 
 
 def _prepare_pair_indices(
-    total_t: int, max_pairs: int, seed: int,
+    total_t: int,
+    max_pairs: int,
+    seed: int,
 ) -> tuple[NDArray, NDArray] | None:
     """Pre-select pair indices for non-Rust correlation-integral paths.
 
@@ -203,7 +205,11 @@ def correlation_integral(
         return np.asarray(
             fn_rust(
                 np.ascontiguousarray(traj.ravel(), dtype=np.float64),
-                t, d, eps_sorted, int(max_pairs), int(seed),
+                t,
+                d,
+                eps_sorted,
+                int(max_pairs),
+                int(seed),
             ),
             dtype=np.float64,
         )
@@ -221,19 +227,21 @@ def correlation_integral(
         return np.asarray(
             fn(
                 np.ascontiguousarray(traj.ravel(), dtype=np.float64),
-                t, d, idx_i, idx_j, eps_sorted,
+                t,
+                d,
+                idx_i,
+                idx_j,
+                eps_sorted,
             ),
             dtype=np.float64,
         )
 
     diffs = traj[idx_i] - traj[idx_j]
-    dists = np.sqrt(np.sum(diffs ** 2, axis=1))
+    dists = np.sqrt(np.sum(diffs**2, axis=1))
     n_pairs_actual = len(dists)
     if n_pairs_actual == 0:
         return np.zeros(eps_sorted.size, dtype=np.float64)
-    return np.array(
-        [np.sum(dists < eps) / n_pairs_actual for eps in eps_sorted]
-    )
+    return np.array([np.sum(dists < eps) / n_pairs_actual for eps in eps_sorted])
 
 
 def correlation_dimension(

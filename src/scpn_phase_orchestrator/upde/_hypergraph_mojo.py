@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "hypergraph_run_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "hypergraph_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "hypergraph_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -55,10 +53,14 @@ def hypergraph_run_mojo(
     tokens: list[str] = [
         "HGRUN",
         str(int(n)),
-        str(int(en.size)), str(int(eo.size)),
-        str(int(kn.size)), str(int(al.size)),
-        repr(float(zeta)), repr(float(psi)),
-        repr(float(dt)), str(int(n_steps)),
+        str(int(en.size)),
+        str(int(eo.size)),
+        str(int(kn.size)),
+        str(int(al.size)),
+        repr(float(zeta)),
+        repr(float(psi)),
+        repr(float(dt)),
+        str(int(n_steps)),
     ]
     tokens.extend(repr(float(x)) for x in np.asarray(phases).ravel().tolist())
     tokens.extend(repr(float(x)) for x in np.asarray(omegas).ravel().tolist())
@@ -68,17 +70,17 @@ def hypergraph_run_mojo(
     tokens.extend(repr(float(x)) for x in kn.tolist())
     tokens.extend(repr(float(x)) for x in al.tolist())
     proc = subprocess.run(
-        [str(exe)], input=" ".join(tokens) + "\n",
-        capture_output=True, text=True, check=False,
+        [str(exe)],
+        input=" ".join(tokens) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo hypergraph exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo hypergraph exit {proc.returncode}: {proc.stderr.strip()}"
         )
     lines = proc.stdout.strip().splitlines()
     if len(lines) != n:
-        raise ValueError(
-            f"Mojo HGRUN returned {len(lines)} lines, expected {n}"
-        )
+        raise ValueError(f"Mojo HGRUN returned {len(lines)} lines, expected {n}")
     return np.array([float(x) for x in lines], dtype=np.float64)

@@ -56,8 +56,12 @@ def _reference_R(n: int, strength: float, seed: int) -> float:
     phases = rng.uniform(0, 2 * np.pi, n)
     with _force_backend("python"):
         return steady_state_r(
-            phases, omegas, knm,
-            dt=0.01, n_transient=200, n_measure=100,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=200,
+            n_measure=100,
         )
 
 
@@ -70,8 +74,12 @@ def _backend_R(backend: str, n: int, strength: float, seed: int) -> float:
     phases = rng.uniform(0, 2 * np.pi, n)
     with _force_backend(backend):
         return steady_state_r(
-            phases, omegas, knm,
-            dt=0.01, n_transient=200, n_measure=100,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=200,
+            n_measure=100,
         )
 
 
@@ -109,13 +117,25 @@ class TestBasinStabilityParity:
         knm = _all_to_all(n, strength=2.5)
         with _force_backend("python"):
             ref = basin_stability(
-                omegas, knm, dt=0.01, n_transient=100, n_measure=50,
-                n_samples=6, R_threshold=0.5, seed=42,
+                omegas,
+                knm,
+                dt=0.01,
+                n_transient=100,
+                n_measure=50,
+                n_samples=6,
+                R_threshold=0.5,
+                seed=42,
             )
         with _force_backend(backend):
             got = basin_stability(
-                omegas, knm, dt=0.01, n_transient=100, n_measure=50,
-                n_samples=6, R_threshold=0.5, seed=42,
+                omegas,
+                knm,
+                dt=0.01,
+                n_transient=100,
+                n_measure=50,
+                n_samples=6,
+                R_threshold=0.5,
+                seed=42,
             )
         np.testing.assert_allclose(got.R_final, ref.R_final, atol=1e-10)
         assert got.S_B == ref.S_B
@@ -141,7 +161,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, n, strength, seed):
@@ -157,7 +178,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, n, strength, seed):

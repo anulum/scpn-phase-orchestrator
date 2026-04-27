@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "inertial_step_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "inertial_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "inertial_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -50,21 +48,20 @@ def inertial_step_mojo(
     for arr in (inertia, damping):
         tokens.extend(repr(float(x)) for x in np.asarray(arr).ravel().tolist())
     proc = subprocess.run(
-        [str(exe)], input=" ".join(tokens) + "\n",
-        capture_output=True, text=True, check=False,
+        [str(exe)],
+        input=" ".join(tokens) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
-        raise ValueError(
-            f"Mojo inertial exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
-        )
+        raise ValueError(f"Mojo inertial exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.strip().splitlines()
     if len(lines) != 2 * n:
-        raise ValueError(
-            f"Mojo INERT returned {len(lines)} lines, expected {2 * n}"
-        )
+        raise ValueError(f"Mojo INERT returned {len(lines)} lines, expected {2 * n}")
     new_theta = np.array([float(x) for x in lines[:n]], dtype=np.float64)
     new_omega_dot = np.array(
-        [float(x) for x in lines[n:]], dtype=np.float64,
+        [float(x) for x in lines[n:]],
+        dtype=np.float64,
     )
     return new_theta, new_omega_dot

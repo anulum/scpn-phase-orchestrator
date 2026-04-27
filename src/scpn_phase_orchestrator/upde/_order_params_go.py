@@ -88,8 +88,7 @@ def plv_go(phases_a: NDArray, phases_b: NDArray) -> float:
     lib = _load_lib()
     if phases_a.size != phases_b.size:
         raise ValueError(
-            f"PLV requires equal-length arrays, got "
-            f"{phases_a.size} vs {phases_b.size}"
+            f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
         )
     a64 = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
     b64 = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)

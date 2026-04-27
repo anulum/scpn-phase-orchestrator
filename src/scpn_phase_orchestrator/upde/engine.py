@@ -154,11 +154,18 @@ class UPDEEngine:
         available backend via the module-level ``upde_run``."""
         with self._lock:
             return upde_run(
-                phases, omegas, knm, alpha,
-                float(zeta), float(psi),
-                self._dt, int(n_steps),
-                self._method, 1,
-                self._atol, self._rtol,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                float(zeta),
+                float(psi),
+                self._dt,
+                int(n_steps),
+                self._method,
+                1,
+                self._atol,
+                self._rtol,
             )
 
     def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
@@ -169,8 +176,12 @@ class UPDEEngine:
 
     def _validate_inputs(
         self,
-        phases: NDArray, omegas: NDArray, knm: NDArray, alpha: NDArray,
-        zeta: float, psi: float,
+        phases: NDArray,
+        omegas: NDArray,
+        knm: NDArray,
+        alpha: NDArray,
+        zeta: float,
+        psi: float,
     ) -> None:
         """Shape and NaN/Inf guards shared by :meth:`step`."""
         if not (np.isfinite(zeta) and np.isfinite(psi)):
@@ -184,9 +195,7 @@ class UPDEEngine:
         )
         for name, arr, shape in checks:
             if arr.shape != shape:
-                raise ValueError(
-                    f"{name}.shape={arr.shape}, expected {shape}"
-                )
+                raise ValueError(f"{name}.shape={arr.shape}, expected {shape}")
             if not np.all(np.isfinite(arr)):
                 raise ValueError(f"{name} contains NaN/Inf")
 

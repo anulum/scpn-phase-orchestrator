@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["market_order_parameter_julia", "market_plv_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "market.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "market.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -38,22 +36,30 @@ def _ensure() -> Any:
 
 
 def market_order_parameter_julia(
-    phases_flat: NDArray, t: int, n: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
 ) -> NDArray:
     jl = _ensure()
     result = jl.market_order_parameter(
         np.ascontiguousarray(phases_flat, dtype=np.float64),
-        int(t), int(n),
+        int(t),
+        int(n),
     )
     return np.asarray(result, dtype=np.float64)
 
 
 def market_plv_julia(
-    phases_flat: NDArray, t: int, n: int, window: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
+    window: int,
 ) -> NDArray:
     jl = _ensure()
     result = jl.market_plv(
         np.ascontiguousarray(phases_flat, dtype=np.float64),
-        int(t), int(n), int(window),
+        int(t),
+        int(n),
+        int(window),
     )
     return np.asarray(result, dtype=np.float64)

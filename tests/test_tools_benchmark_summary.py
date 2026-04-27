@@ -95,9 +95,7 @@ class TestRunBench:
 
     def test_args_and_env_forwarded_to_subprocess(self, tmp_path: Path) -> None:
         env = {"PYTHONPATH": str(tmp_path / "src")}
-        with patch.object(
-            mod.subprocess, "run", return_value=_completed(0)
-        ) as run:
+        with patch.object(mod.subprocess, "run", return_value=_completed(0)) as run:
             mod.run_bench(["python", "-c", "pass"], env=env)
         call = run.call_args
         assert call.args[0] == ["python", "-c", "pass"]
@@ -124,15 +122,11 @@ class TestMain:
         # All 9 hardcoded benchmarks run.
         assert out.count("Running ") == 9
 
-    def test_any_failure_returns_one(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_any_failure_returns_one(self, capsys: pytest.CaptureFixture[str]) -> None:
         """A single failing sub-benchmark → exit 1; subsequent runs
         still execute (no fail-fast at this layer)."""
 
-        def fake_run(
-            args: list[str], **_: object
-        ) -> subprocess.CompletedProcess[str]:
+        def fake_run(args: list[str], **_: object) -> subprocess.CompletedProcess[str]:
             if "sparse_benchmark.py" in args[1]:
                 raise subprocess.CalledProcessError(
                     returncode=1, cmd=args, stderr="nope"

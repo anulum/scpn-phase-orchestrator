@@ -19,9 +19,7 @@ from numpy.typing import NDArray
 
 __all__ = ["phase_te_go", "te_matrix_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libtransfer_entropy.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libtransfer_entropy.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -56,9 +54,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def phase_te_go(
-    source: NDArray, target: NDArray, n_bins: int
-) -> float:
+def phase_te_go(source: NDArray, target: NDArray, n_bins: int) -> float:
     lib = _load_lib()
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)

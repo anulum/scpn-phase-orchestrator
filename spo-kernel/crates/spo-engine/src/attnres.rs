@@ -75,15 +75,15 @@ pub fn attnres_modulate(
         ));
     }
     let per_head = w_q.len() / n_heads; // = d_model * d_head
-    // Use w_o: (H·d_head, d_model) == (n_heads * d_head) rows × d_model cols
-    // → w_o.len() = n_heads * d_head * d_model, and per_head = d_model * d_head,
-    // so w_o.len() == n_heads * per_head. That doesn't pin d_model; we rely on
-    // the caller shapes. The NumPy side always passes d_model = PHASE_EMBED_DIM
-    // (default 8). We infer d_model via gcd-ish: w_q is (H, D, D_h) so per_head =
-    // D * D_h, and w_o is (H·D_h, D) so w_o.len() = H * D_h * D → D · D_h = D * D_h
-    // must hold; we need a second hint. Require w_v, w_k, w_k match w_q in length
-    // and w_o.len() == H * per_head. Then resolve D_h = w_o.len() / (H·D). The
-    // caller always ships d_model divisible by H, so D_h = D / H.
+                                        // Use w_o: (H·d_head, d_model) == (n_heads * d_head) rows × d_model cols
+                                        // → w_o.len() = n_heads * d_head * d_model, and per_head = d_model * d_head,
+                                        // so w_o.len() == n_heads * per_head. That doesn't pin d_model; we rely on
+                                        // the caller shapes. The NumPy side always passes d_model = PHASE_EMBED_DIM
+                                        // (default 8). We infer d_model via gcd-ish: w_q is (H, D, D_h) so per_head =
+                                        // D * D_h, and w_o is (H·D_h, D) so w_o.len() = H * D_h * D → D · D_h = D * D_h
+                                        // must hold; we need a second hint. Require w_v, w_k, w_k match w_q in length
+                                        // and w_o.len() == H * per_head. Then resolve D_h = w_o.len() / (H·D). The
+                                        // caller always ships d_model divisible by H, so D_h = D / H.
     if w_k.len() != w_q.len() || w_v.len() != w_q.len() {
         return Err("w_k / w_v must match w_q in length".into());
     }
@@ -166,8 +166,7 @@ pub fn attnres_modulate(
                 }
                 let mut dot = 0.0_f64;
                 for e in 0..d_head {
-                    dot += q[h * n * d_head + i * d_head + e]
-                        * k[h * n * d_head + j * d_head + e];
+                    dot += q[h * n * d_head + i * d_head + e] * k[h * n * d_head + j * d_head + e];
                 }
                 row_logits[j] = dot * inv_scale;
                 any_unmasked = true;
@@ -211,8 +210,7 @@ pub fn attnres_modulate(
             for e in 0..d_head {
                 let mut s = 0.0_f64;
                 for j in 0..n {
-                    s += attn[h * n * n + i * n + j]
-                        * v[h * n * d_head + j * d_head + e];
+                    s += attn[h * n * n + i * n + j] * v[h * n * d_head + j * d_head + e];
                 }
                 concat[i * concat_width + h * d_head + e] = s;
             }
@@ -340,9 +338,7 @@ mod tests {
         let knm = ring_knm(n, 0.3);
         let theta: Vec<f64> = (0..n).map(|i| (i as f64) * 0.3).collect();
         let (q, k, v, o) = identity_projections(n_heads, d_model);
-        let out =
-            attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.5)
-                .unwrap();
+        let out = attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.5).unwrap();
         for i in 0..n {
             for j in 0..n {
                 assert!(
@@ -361,9 +357,7 @@ mod tests {
         let knm = ring_knm(n, 0.2);
         let theta = vec![0.0; n];
         let (q, k, v, o) = identity_projections(n_heads, d_model);
-        let out =
-            attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.5)
-                .unwrap();
+        let out = attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.5).unwrap();
         for i in 0..n {
             assert_eq!(out[i * n + i], 0.0);
         }
@@ -377,9 +371,7 @@ mod tests {
         let knm = ring_knm(n, 0.2);
         let theta: Vec<f64> = (0..n).map(|i| i as f64 * 0.4).collect();
         let (q, k, v, o) = identity_projections(n_heads, d_model);
-        let out =
-            attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.0)
-                .unwrap();
+        let out = attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.0).unwrap();
         assert_eq!(out, knm);
     }
 
@@ -393,9 +385,7 @@ mod tests {
         knm[2 * n + 0] = 0.0;
         let theta: Vec<f64> = (0..n).map(|i| i as f64 * 0.2).collect();
         let (q, k, v, o) = identity_projections(n_heads, d_model);
-        let out =
-            attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.5)
-                .unwrap();
+        let out = attnres_modulate(&knm, &theta, &q, &k, &v, &o, n, n_heads, -1, 1.0, 0.5).unwrap();
         assert_eq!(out[0 * n + 2], 0.0);
         assert_eq!(out[2 * n + 0], 0.0);
     }
@@ -404,12 +394,10 @@ mod tests {
     fn shape_mismatches_rejected() {
         let (q, k, v, o) = identity_projections(2, 4);
         assert!(
-            attnres_modulate(&[0.0; 9], &[0.0; 4], &q, &k, &v, &o, 4, 2, -1, 1.0, 0.5)
-                .is_err()
+            attnres_modulate(&[0.0; 9], &[0.0; 4], &q, &k, &v, &o, 4, 2, -1, 1.0, 0.5).is_err()
         );
         assert!(
-            attnres_modulate(&[0.0; 16], &[0.0; 3], &q, &k, &v, &o, 4, 2, -1, 1.0, 0.5)
-                .is_err()
+            attnres_modulate(&[0.0; 16], &[0.0; 3], &q, &k, &v, &o, 4, 2, -1, 1.0, 0.5).is_err()
         );
     }
 
@@ -417,28 +405,13 @@ mod tests {
     fn invalid_hyperparams_rejected() {
         let (q, k, v, o) = identity_projections(2, 4);
         assert!(
-            attnres_modulate(&[0.0; 16], &[0.0; 4], &q, &k, &v, &o, 4, 0, -1, 1.0, 0.5)
-                .is_err()
+            attnres_modulate(&[0.0; 16], &[0.0; 4], &q, &k, &v, &o, 4, 0, -1, 1.0, 0.5).is_err()
         );
         assert!(
-            attnres_modulate(&[0.0; 16], &[0.0; 4], &q, &k, &v, &o, 4, 2, -1, 0.0, 0.5)
-                .is_err()
+            attnres_modulate(&[0.0; 16], &[0.0; 4], &q, &k, &v, &o, 4, 2, -1, 0.0, 0.5).is_err()
         );
         assert!(
-            attnres_modulate(
-                &[0.0; 16],
-                &[0.0; 4],
-                &q,
-                &k,
-                &v,
-                &o,
-                4,
-                2,
-                -1,
-                1.0,
-                -0.1
-            )
-            .is_err()
+            attnres_modulate(&[0.0; 16], &[0.0; 4], &q, &k, &v, &o, 4, 2, -1, 1.0, -0.1).is_err()
         );
     }
 }

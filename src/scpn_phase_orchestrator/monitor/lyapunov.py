@@ -128,9 +128,7 @@ class LyapunovGuard:
 
     def __init__(self, basin_threshold: float = np.pi / 2):
         if basin_threshold <= 0.0:
-            raise ValueError(
-                f"basin_threshold must be positive, got {basin_threshold}"
-            )
+            raise ValueError(f"basin_threshold must be positive, got {basin_threshold}")
         self._basin_threshold = basin_threshold
         self._prev_V: float | None = None
 
@@ -239,9 +237,9 @@ def _rk4_step(
     k2p, k2q = rhs(phases + 0.5 * dt * k1p, Q + 0.5 * dt * k1q)
     k3p, k3q = rhs(phases + 0.5 * dt * k2p, Q + 0.5 * dt * k2q)
     k4p, k4q = rhs(phases + dt * k3p, Q + dt * k3q)
-    new_phases = (
-        phases + (dt / 6.0) * (k1p + 2.0 * k2p + 2.0 * k3p + k4p)
-    ) % (2.0 * np.pi)
+    new_phases = (phases + (dt / 6.0) * (k1p + 2.0 * k2p + 2.0 * k3p + k4p)) % (
+        2.0 * np.pi
+    )
     new_Q = Q + (dt / 6.0) * (k1q + 2.0 * k2q + 2.0 * k3q + k4q)
     return new_phases, new_Q
 
@@ -336,24 +334,44 @@ def lyapunov_spectrum(
     backend_fn = _dispatch()
     if backend_fn is None:
         return _lyapunov_spectrum_python(
-            p, o, k, a, float(dt), int(n_steps), int(qr_interval),
-            float(zeta), float(psi),
+            p,
+            o,
+            k,
+            a,
+            float(dt),
+            int(n_steps),
+            int(qr_interval),
+            float(zeta),
+            float(psi),
         )
     # Rust PyO3 binding takes flat (N*N,) row-major k/alpha; the other
     # backends accept the 2-D forms directly.
     if ACTIVE_BACKEND == "rust":
         return np.asarray(
             backend_fn(
-                p, o, k.ravel(), a.ravel(),
-                dt, n_steps, qr_interval, zeta, psi,
+                p,
+                o,
+                k.ravel(),
+                a.ravel(),
+                dt,
+                n_steps,
+                qr_interval,
+                zeta,
+                psi,
             ),
             dtype=np.float64,
         )
     return np.asarray(
         backend_fn(
-            p, o, k, a,
-            float(dt), int(n_steps), int(qr_interval),
-            float(zeta), float(psi),
+            p,
+            o,
+            k,
+            a,
+            float(dt),
+            int(n_steps),
+            int(qr_interval),
+            float(zeta),
+            float(psi),
         ),
         dtype=np.float64,
     )

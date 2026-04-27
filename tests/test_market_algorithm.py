@@ -60,7 +60,8 @@ class TestOrderParameter:
     def test_uniform_ensemble_gives_R_zero(self):
         T, N = 5, 1000
         phases = np.tile(
-            np.linspace(0, 2 * np.pi, N, endpoint=False), (T, 1),
+            np.linspace(0, 2 * np.pi, N, endpoint=False),
+            (T, 1),
         )
         R = market_order_parameter(phases)
         assert R.shape == (T,)
@@ -91,7 +92,9 @@ class TestPLV:
         assert plv.shape == (T - W + 1, N, N)
         for w in range(T - W + 1):
             np.testing.assert_allclose(
-                np.diag(plv[w]), 1.0, atol=1e-12,
+                np.diag(plv[w]),
+                1.0,
+                atol=1e-12,
             )
 
     @_python
@@ -181,7 +184,8 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=8, deadline=None,
+        max_examples=8,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_order_parameter_shape_and_bounds(self, t, n, seed):

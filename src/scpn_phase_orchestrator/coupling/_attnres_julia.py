@@ -59,7 +59,16 @@ def attnres_modulate_julia(
     the Rust / Go / Mojo FFIs."""
     jl_mod = _ensure_julia_loaded()
     result = jl_mod.attnres_modulate(
-        knm_flat, theta, w_q, w_k, w_v, w_o,
-        n, n_heads, block_size, temperature, lambda_,
+        knm_flat,
+        theta,
+        w_q,
+        w_k,
+        w_v,
+        w_o,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
     )
     return np.asarray(result, dtype=np.float64)

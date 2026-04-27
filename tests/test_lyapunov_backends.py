@@ -83,9 +83,7 @@ class TestRustParity:
         np.testing.assert_allclose(result, ref, atol=1e-12)
 
     def test_driver_path(self) -> None:
-        phases, omegas, knm, alpha, kwargs = _problem(
-            3, zeta=1.7, psi=0.6
-        )
+        phases, omegas, knm, alpha, kwargs = _problem(3, zeta=1.7, psi=0.6)
         ref = _reference(phases, omegas, knm, alpha, **kwargs)
         prev = _force("rust")
         try:
@@ -131,9 +129,7 @@ class TestGoParity:
         np.testing.assert_allclose(result, ref, atol=1e-12)
 
     def test_driver_and_phase_lag(self) -> None:
-        phases, omegas, knm, alpha, kwargs = _problem(
-            5, zeta=1.1, psi=-0.4
-        )
+        phases, omegas, knm, alpha, kwargs = _problem(5, zeta=1.1, psi=-0.4)
         ref = _reference(phases, omegas, knm, alpha, **kwargs)
         prev = _force("go")
         try:
@@ -168,9 +164,7 @@ class TestCrossBackendConsistency:
         reason="Only Python fallback available",
     )
     def test_all_backends_agree(self) -> None:
-        phases, omegas, knm, alpha, kwargs = _problem(
-            2026, zeta=0.5, psi=0.2
-        )
+        phases, omegas, knm, alpha, kwargs = _problem(2026, zeta=0.5, psi=0.2)
         ref = _reference(phases, omegas, knm, alpha, **kwargs)
         tolerances = {
             "rust": 1e-12,
@@ -182,13 +176,13 @@ class TestCrossBackendConsistency:
         for backend in AVAILABLE_BACKENDS:
             prev = _force(backend)
             try:
-                result = lyapunov_spectrum(
-                    phases, omegas, knm, alpha, **kwargs
-                )
+                result = lyapunov_spectrum(phases, omegas, knm, alpha, **kwargs)
             finally:
                 _reset(prev)
             np.testing.assert_allclose(
-                result, ref, atol=tolerances[backend],
+                result,
+                ref,
+                atol=tolerances[backend],
                 err_msg=f"{backend} diverged from python reference",
             )
 

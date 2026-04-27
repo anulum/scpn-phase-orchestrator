@@ -83,7 +83,7 @@ def test_nn_reciprocity_top2():
     for i, j in enumerate(idx):
         # Is i among j's two nearest neighbours? Compute locally.
         diffs = emb - emb[int(j)]
-        dists = np.sqrt(np.sum(diffs ** 2, axis=1))
+        dists = np.sqrt(np.sum(diffs**2, axis=1))
         dists[int(j)] = np.inf
         order = np.argsort(dists)
         if i in order[:2]:

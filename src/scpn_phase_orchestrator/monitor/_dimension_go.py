@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["correlation_integral_go", "kaplan_yorke_dimension_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libdimension.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libdimension.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -38,7 +36,8 @@ def _load_lib() -> ctypes.CDLL:
     lib.CorrelationIntegral.restype = ctypes.c_int
     lib.CorrelationIntegral.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_longlong),
         ctypes.POINTER(ctypes.c_longlong),
         ctypes.c_int,
@@ -72,7 +71,8 @@ def correlation_integral_go(
     out = np.zeros(eps.size, dtype=np.float64)
     rc = lib.CorrelationIntegral(
         traj.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(d)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(d)),
         ii.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         jj.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         ctypes.c_int(int(ii.size)),

@@ -132,16 +132,11 @@ class TestDetectChimera:
         """|coherent| + |incoherent| + boundary = N."""
         rng = np.random.default_rng(7)
         n = 32
-        phases = np.concatenate(
-            [np.zeros(n // 2), rng.uniform(0, TWO_PI, n // 2)]
-        )
+        phases = np.concatenate([np.zeros(n // 2), rng.uniform(0, TWO_PI, n // 2)])
         state = detect_chimera(phases, _all_to_all(n))
         boundary = int(round(state.chimera_index * n))
         assert (
-            len(state.coherent_indices)
-            + len(state.incoherent_indices)
-            + boundary
-            == n
+            len(state.coherent_indices) + len(state.incoherent_indices) + boundary == n
         )
 
     @_python

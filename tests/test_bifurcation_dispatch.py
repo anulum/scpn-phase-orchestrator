@@ -40,7 +40,9 @@ class TestPythonCompositeUsesDispatchedKernel:
             return orig(*args, **kwargs)
 
         monkeypatch.setattr(
-            bif, "_dispatched_steady_state_r", _spy,
+            bif,
+            "_dispatched_steady_state_r",
+            _spy,
         )
 
     def test_trace_invokes_dispatched_kernel(self, monkeypatch):
@@ -49,8 +51,12 @@ class TestPythonCompositeUsesDispatchedKernel:
         omegas = np.array([1.0, 1.2, 0.9, 1.1])
         diagram = bif.trace_sync_transition(
             omegas,
-            K_range=(0.0, 2.0), n_points=5,
-            dt=0.01, n_transient=50, n_measure=30, seed=7,
+            K_range=(0.0, 2.0),
+            n_points=5,
+            dt=0.01,
+            n_transient=50,
+            n_measure=30,
+            seed=7,
         )
         assert len(diagram.points) == 5
         assert len(calls) == 5  # one per K sample
@@ -63,8 +69,11 @@ class TestPythonCompositeUsesDispatchedKernel:
         omegas = np.array([1.0, 1.2, 0.9, 1.1])
         kc = bif.find_critical_coupling(
             omegas,
-            dt=0.01, n_transient=50, n_measure=30,
-            tol=0.1, seed=7,
+            dt=0.01,
+            n_transient=50,
+            n_measure=30,
+            tol=0.1,
+            seed=7,
         )
         # At least the initial K=20 probe + one bisection step.
         assert len(calls) >= 2
@@ -80,8 +89,12 @@ class TestPythonCompositeUsesDispatchedKernel:
         omegas = np.zeros(5)  # identical oscillators
         diagram = bif.trace_sync_transition(
             omegas,
-            K_range=(0.0, 3.0), n_points=4,
-            dt=0.01, n_transient=100, n_measure=50, seed=1,
+            K_range=(0.0, 3.0),
+            n_points=4,
+            dt=0.01,
+            n_transient=100,
+            n_measure=50,
+            seed=1,
         )
         r_vals = diagram.R_values
         # Monotone growth from the K=0 baseline to the locked

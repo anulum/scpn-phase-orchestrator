@@ -100,7 +100,10 @@ class TestRun:
         pos, phases, omegas = _problem(3)
         eng = SwarmalatorEngine(16, 2, 0.01)
         final_pos, final_ph, pos_traj, phase_traj = eng.run(
-            pos, phases, omegas, n_steps=5,
+            pos,
+            phases,
+            omegas,
+            n_steps=5,
         )
         assert final_pos.shape == (16, 2)
         assert final_ph.shape == (16,)

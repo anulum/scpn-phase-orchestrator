@@ -82,13 +82,31 @@ impl PyActiveInferenceAgent {
         Ok(Self { inner })
     }
 
-        fn control<'py>(
+    #[pyo3(signature = (phases = None, r_obs = None, psi_obs = None, dt = 0.0))]
+    fn control<'py>(
         &mut self,
         _py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
+        phases: Option<PyReadonlyArray1<'py, f64>>,
+        r_obs: Option<f64>,
+        psi_obs: Option<f64>,
+        dt: f64,
     ) -> (f64, f64) {
-        let p = phases.as_slice().unwrap_or(&[]);
-        self.inner.control(p)
+        if let Some(phases) = phases {
+            let p = phases.as_slice().unwrap_or(&[]);
+            return self.inner.control(p);
+        }
+
+        let _ = dt;
+        let r_obs = r_obs.unwrap_or(self.inner.target_r);
+        let psi_obs = psi_obs.unwrap_or(0.0);
+        let error = r_obs - self.inner.target_r;
+        let zeta = (error.abs() * 10.0 * self.inner.lr).clamp(0.0, 5.0);
+        let psi = if error > 0.0 {
+            (psi_obs + std::f64::consts::PI).rem_euclid(2.0 * std::f64::consts::PI)
+        } else {
+            psi_obs
+        };
+        (zeta, psi)
     }
 
     #[getter]
@@ -1407,12 +1425,30 @@ fn attnres_modulate_rust<'py>(
     let t = theta
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let wq = w_q.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let wk = w_k.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let wv = w_v.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let wo = w_o.as_slice().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wq = w_q
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wk = w_k
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wv = w_v
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wo = w_o
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let out = spo_engine::attnres::attnres_modulate(
-        k, t, wq, wk, wv, wo, n, n_heads, block_size, temperature, lambda_,
+        k,
+        t,
+        wq,
+        wk,
+        wv,
+        wo,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
     )
     .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, out))
@@ -1487,8 +1523,7 @@ fn compute_layer_coherence_rust(
     let idx: Vec<usize> = raw
         .iter()
         .map(|&i| {
-            usize::try_from(i)
-                .map_err(|_| PyValueError::new_err(format!("invalid index {i}")))
+            usize::try_from(i).map_err(|_| PyValueError::new_err(format!("invalid index {i}")))
         })
         .collect::<Result<_, _>>()?;
     Ok(order_params::compute_layer_coherence(ph, &idx))

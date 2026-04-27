@@ -22,9 +22,7 @@ __all__ = [
     "extract_envelope_mojo",
 ]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "envelope_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "envelope_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -39,13 +37,14 @@ def _ensure_exe() -> Path:
 def _run(payload: str) -> list[str]:
     exe = _ensure_exe()
     proc = subprocess.run(
-        [str(exe)], input=payload,
-        capture_output=True, text=True, check=False,
+        [str(exe)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
-        raise ValueError(
-            f"Mojo envelope exit {proc.returncode}: {proc.stderr.strip()}"
-        )
+        raise ValueError(f"Mojo envelope exit {proc.returncode}: {proc.stderr.strip()}")
     return [line for line in proc.stdout.strip().splitlines() if line]
 
 
@@ -54,7 +53,9 @@ def extract_envelope_mojo(amps: NDArray, window: int) -> NDArray:
     if a.size == 0:
         return np.zeros(0, dtype=np.float64)
     tokens: list[str] = [
-        "RMS", str(int(a.size)), str(int(window)),
+        "RMS",
+        str(int(a.size)),
+        str(int(window)),
     ]
     tokens.extend(repr(float(x)) for x in a.tolist())
     lines = _run(" ".join(tokens) + "\n")

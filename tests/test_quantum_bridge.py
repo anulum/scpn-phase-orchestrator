@@ -74,9 +74,7 @@ class TestImportArtifactEdges:
     def test_missing_fidelity_defaults_to_zero(self):
         """``fidelity`` key is optional; absent → stability_proxy = 0."""
         bridge = QuantumControlBridge(n_oscillators=2)
-        state = bridge.import_artifact(
-            {"phases": [0.0, np.pi], "regime": "NOMINAL"}
-        )
+        state = bridge.import_artifact({"phases": [0.0, np.pi], "regime": "NOMINAL"})
         assert state.stability_proxy == 0.0
 
     def test_missing_regime_defaults_to_nominal(self):

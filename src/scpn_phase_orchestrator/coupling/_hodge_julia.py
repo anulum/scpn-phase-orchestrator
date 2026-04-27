@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["hodge_decomposition_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "hodge.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "hodge.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -38,7 +36,9 @@ def _ensure() -> Any:
 
 
 def hodge_decomposition_julia(
-    knm_flat: NDArray, phases: NDArray, n: int,
+    knm_flat: NDArray,
+    phases: NDArray,
+    n: int,
 ) -> tuple[NDArray, NDArray, NDArray]:
     jl = _ensure()
     g, c, h = jl.hodge_decomposition(

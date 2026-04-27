@@ -75,9 +75,7 @@ def _integrate_attnres(
 ) -> np.ndarray:
     """Run n_steps of AttnRes-modulated Kuramoto integration."""
     for _ in range(n_steps):
-        knm_mod = attnres_modulate(
-            knm, phases, block_size=block_size, lambda_=lambda_
-        )
+        knm_mod = attnres_modulate(knm, phases, block_size=block_size, lambda_=lambda_)
         phases = engine.step(phases, omegas, knm_mod, 0.0, 0.0, alpha)
     return phases
 
@@ -168,8 +166,7 @@ def test_attnres_perturbation_decay(seed: int) -> None:
     # Accept up to +0.05 to absorb near-critical noise; a genuinely
     # unstable configuration would show λ_max ≫ 0.05.
     assert slope <= 0.05, (
-        f"λ_max ≈ {slope:.4f} exceeds the 0.05 stability budget "
-        f"for seed={seed}"
+        f"λ_max ≈ {slope:.4f} exceeds the 0.05 stability budget for seed={seed}"
     )
 
 
@@ -211,9 +208,7 @@ def test_attnres_frozen_k_lyapunov_agrees() -> None:
 
     # Integrate AttnRes to steady state, then freeze K.
     engine = UPDEEngine(n_oscillators=n, dt=dt, method="euler")
-    phases_ss = _integrate_attnres(
-        engine, phases0, omegas, knm, alpha, 400
-    )
+    phases_ss = _integrate_attnres(engine, phases0, omegas, knm, alpha, 400)
     knm_frozen = attnres_modulate(knm, phases_ss, lambda_=0.5)
     modulated = lyapunov_spectrum(
         phases_ss,

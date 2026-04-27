@@ -94,7 +94,5 @@ def attnres_modulate_go(
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
-        raise ValueError(
-            f"Go AttnResModulate returned error code {rc}"
-        )
+        raise ValueError(f"Go AttnResModulate returned error code {rc}")
     return out

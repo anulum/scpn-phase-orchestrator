@@ -74,8 +74,7 @@ class TestLongRunInvariants:
         pos, ph, om = _problem(2, 16, 2)
         eng = SwarmalatorEngine(16, 2, 0.01)
         _, _, _, phase_traj = eng.run(pos, ph, om, n_steps=300)
-        rs = np.array([eng.order_parameter(phase_traj[i])
-                       for i in range(0, 300, 10)])
+        rs = np.array([eng.order_parameter(phase_traj[i]) for i in range(0, 300, 10)])
         assert np.all(rs >= 0.0)
         assert np.all(rs <= 1.0 + 1e-12)
 
@@ -91,7 +90,14 @@ class TestLongRunInvariants:
         n_steps = 500
         eng = SwarmalatorEngine(8, 2, dt)
         fin_pos, fin_ph, _, _ = eng.run(
-            pos, ph, om, a=0.0, b=0.0, j=0.0, k=0.0, n_steps=n_steps,
+            pos,
+            ph,
+            om,
+            a=0.0,
+            b=0.0,
+            j=0.0,
+            k=0.0,
+            n_steps=n_steps,
         )
         np.testing.assert_allclose(fin_pos, pos, atol=1e-12)
         expected = (ph + n_steps * dt * om) % TWO_PI

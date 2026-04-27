@@ -164,9 +164,7 @@ class TestCrossBackendConsistency:
         for backend in AVAILABLE_BACKENDS:
             prev = _force(backend)
             try:
-                got = entropy_production_rate(
-                    phases, omegas, knm, 0.5, 0.01
-                )
+                got = entropy_production_rate(phases, omegas, knm, 0.5, 0.01)
             finally:
                 _reset(prev)
             assert abs(got - ref) <= tolerances[backend], (

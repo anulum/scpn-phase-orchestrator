@@ -98,11 +98,9 @@ class TestAnalyticLimits:
     @_python
     def test_opposite_phases_cancel(self):
         """Pairs of antiphase oscillators cancel: ITPC → 0."""
-        phases = np.array(
-            [[0.0] * 5 + [math.pi] * 5] * 2
-        ).reshape(4, 5)
+        phases = np.array([[0.0] * 5 + [math.pi] * 5] * 2).reshape(4, 5)
         # Construction: 2 trials at 0, 2 trials at π → mean exp = 0.
-        phases = np.array([[0.0]*5, [math.pi]*5, [0.0]*5, [math.pi]*5])
+        phases = np.array([[0.0] * 5, [math.pi] * 5, [0.0] * 5, [math.pi] * 5])
         out = compute_itpc(phases)
         assert np.all(out < 1e-12)
 

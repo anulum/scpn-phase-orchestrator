@@ -59,9 +59,7 @@ fn bench_basin_stability(c: &mut Criterion) {
         let omegas: Vec<f64> = (0..n).map(|i| 1.0 + 0.05 * i as f64).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
-                let r = basin_stability(
-                    &omegas, &knm, &alpha, n, 0.01, 100, 50, 16, 0.5, 42,
-                );
+                let r = basin_stability(&omegas, &knm, &alpha, n, 0.01, 100, 50, 16, 0.5, 42);
                 criterion::black_box(r);
             });
         });
@@ -117,9 +115,7 @@ fn bench_splitting_run(c: &mut Criterion) {
         let phases: Vec<f64> = (0..n).map(|i| i as f64 * 0.1).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
             b.iter(|| {
-                let r = splitting_run(
-                    &phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.01, 100,
-                );
+                let r = splitting_run(&phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.01, 100);
                 criterion::black_box(r);
             });
         });
@@ -131,10 +127,8 @@ fn bench_imprint_update(c: &mut Criterion) {
     // Plasticity tick: per-step exposure update on N units.
     let mut group = c.benchmark_group("imprint_update");
     for &n in &[16usize, 128, 1024] {
-        let mut model = ImprintModel::new(n, 0.01, 1.5)
-            .expect("valid ImprintModel arguments");
-        let exposure: Vec<f64> =
-            (0..n).map(|i| 0.5 + 0.01 * i as f64).collect();
+        let mut model = ImprintModel::new(n, 0.01, 1.5).expect("valid ImprintModel arguments");
+        let exposure: Vec<f64> = (0..n).map(|i| 0.5 + 0.01 * i as f64).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
             b.iter(|| {
                 model.update(&exposure, 0.01);
@@ -171,9 +165,7 @@ fn bench_evs_frequency_specificity(c: &mut Criterion) {
             &params,
             |b, _| {
                 b.iter(|| {
-                    let r = frequency_specificity(
-                        &phases, n_trials, n_tp, 1.5, 3.0,
-                    );
+                    let r = frequency_specificity(&phases, n_trials, n_tp, 1.5, 3.0);
                     criterion::black_box(r);
                 });
             },
@@ -228,9 +220,8 @@ fn bench_compute_ethical_cost(c: &mut Criterion) {
         let phases: Vec<f64> = (0..n).map(|i| i as f64 * 0.13).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
-                let r = compute_ethical_cost(
-                    &phases, &knm, n, 1.0, 0.5, 0.1, 0.1, 1.0, 0.3, 0.1, 5.0,
-                );
+                let r =
+                    compute_ethical_cost(&phases, &knm, n, 1.0, 0.5, 0.1, 0.1, 1.0, 0.3, 0.1, 5.0);
                 criterion::black_box(r);
             });
         });
@@ -261,8 +252,7 @@ fn bench_oa_run(c: &mut Criterion) {
             &n_steps,
             |b, &n_steps| {
                 b.iter(|| {
-                    let r =
-                        oa_run(0.5, 0.0, 1.0, 0.1, 0.5, 0.01, n_steps);
+                    let r = oa_run(0.5, 0.0, 1.0, 0.1, 0.5, 0.01, n_steps);
                     criterion::black_box(r);
                 });
             },

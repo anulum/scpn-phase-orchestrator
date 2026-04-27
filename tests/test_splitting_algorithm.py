@@ -146,7 +146,8 @@ class TestOrderParameter:
     def test_perfectly_locked(self):
         eng = SplittingEngine(10, 0.01)
         assert eng.order_parameter(np.full(10, 2.1)) == pytest.approx(
-            1.0, abs=1e-12,
+            1.0,
+            abs=1e-12,
         )
 
     @_python
@@ -163,7 +164,8 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=8, deadline=None,
+        max_examples=8,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_finite_output(self, n, seed):

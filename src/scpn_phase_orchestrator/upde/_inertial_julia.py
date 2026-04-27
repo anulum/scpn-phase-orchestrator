@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["inertial_step_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "inertial.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "inertial.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -55,7 +53,8 @@ def inertial_step_julia(
         np.ascontiguousarray(knm_flat, dtype=np.float64),
         np.ascontiguousarray(inertia, dtype=np.float64),
         np.ascontiguousarray(damping, dtype=np.float64),
-        int(n), float(dt),
+        int(n),
+        float(dt),
     )
     return (
         np.asarray(new_theta, dtype=np.float64),

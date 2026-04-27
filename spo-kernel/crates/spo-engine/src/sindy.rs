@@ -39,13 +39,16 @@ pub fn sindy_fit(
     let mut result = vec![0.0; n_osc * n_osc];
 
     // Parallelize over oscillators
-    result.par_chunks_mut(n_osc).enumerate().for_each(|(i, res_row)| {
-        let (library, target) = build_library(phases, &theta_dot, n_osc, t_eff, i);
-        let xi = stlsq_node(&library, &target, t_eff, n_osc, threshold, max_iter);
-        for j in 0..n_osc {
-            res_row[j] = xi[j];
-        }
-    });
+    result
+        .par_chunks_mut(n_osc)
+        .enumerate()
+        .for_each(|(i, res_row)| {
+            let (library, target) = build_library(phases, &theta_dot, n_osc, t_eff, i);
+            let xi = stlsq_node(&library, &target, t_eff, n_osc, threshold, max_iter);
+            for j in 0..n_osc {
+                res_row[j] = xi[j];
+            }
+        });
 
     result
 }
@@ -54,22 +57,28 @@ pub fn sindy_fit(
 fn compute_theta_dot(phases: &[f64], n_osc: usize, n_time: usize, dt: f64) -> Vec<f64> {
     let t_eff = n_time - 1;
     let mut theta_dot = vec![0.0; n_osc * t_eff];
-    
+
     // Use chunks if we change layout, but let is keep layout and use a different approach.
     // Or just parallelize over time steps tt? No, dependencies between tt.
     // Let is stick to sequential for theta_dot as it is O(N*T) while STLSQ is O(N^2 * T) or more.
-    
+
     for i in 0..n_osc {
         let mut prev = phases[i];
         for tt in 0..t_eff {
             let curr = phases[(tt + 1) * n_osc + i];
             let mut diff = curr - prev;
-            if diff > PI { diff -= TAU; }
-            else if diff < -PI { diff += TAU; }
+            if diff > PI {
+                diff -= TAU;
+            } else if diff < -PI {
+                diff += TAU;
+            }
             // Repeat once more for edge cases
-            if diff > PI { diff -= TAU; }
-            else if diff < -PI { diff += TAU; }
-            
+            if diff > PI {
+                diff -= TAU;
+            } else if diff < -PI {
+                diff += TAU;
+            }
+
             theta_dot[tt * n_osc + i] = diff / dt;
             prev = curr;
         }
@@ -153,7 +162,7 @@ fn stlsq_node(
 /// Least squares via normal equations: (AᵀA)⁻¹ Aᵀ b.
 fn lstsq(a: &[f64], b: &[f64], m: usize, n: usize) -> Vec<f64> {
     let mut ata = vec![0.0; n * n];
-    
+
     // ATA is symmetric, parallelize over rows
     ata.par_chunks_mut(n).enumerate().for_each(|(j, row)| {
         let ai = &a[..]; // Need to access all rows
@@ -174,7 +183,7 @@ fn lstsq(a: &[f64], b: &[f64], m: usize, n: usize) -> Vec<f64> {
         }
         *val = sum;
     });
-    
+
     solve_linear_sys(n, &mut ata, &mut atb)
 }
 

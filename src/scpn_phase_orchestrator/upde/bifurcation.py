@@ -104,9 +104,14 @@ def _steady_state_R_dispatch(
     ``basin_stability.steady_state_r``.
     """
     return _dispatched_steady_state_r(
-        phases_init, omegas, knm_template, alpha=alpha,
-        k_scale=K_scale, dt=dt,
-        n_transient=n_transient, n_measure=n_measure,
+        phases_init,
+        omegas,
+        knm_template,
+        alpha=alpha,
+        k_scale=K_scale,
+        dt=dt,
+        n_transient=n_transient,
+        n_measure=n_measure,
     )
 
 
@@ -152,16 +157,26 @@ def trace_sync_transition(
         a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
         p = np.ascontiguousarray(phases_init, dtype=np.float64)
         kv, rv, kc = _rust_trace(
-            o, k, a, n, p,
-            K_range[0], K_range[1], n_points,
-            dt, n_transient, n_measure,
+            o,
+            k,
+            a,
+            n,
+            p,
+            K_range[0],
+            K_range[1],
+            n_points,
+            dt,
+            n_transient,
+            n_measure,
         )
         kv = np.asarray(kv)
         rv = np.asarray(rv)
         for i in range(len(kv)):
             diagram.points.append(
                 BifurcationPoint(
-                    K=float(kv[i]), R=float(rv[i]), stable=True,
+                    K=float(kv[i]),
+                    R=float(rv[i]),
+                    stable=True,
                 ),
             )
         if not np.isnan(kc):
@@ -173,8 +188,14 @@ def trace_sync_transition(
     K_values = np.linspace(K_range[0], K_range[1], n_points)
     for K_val in K_values:
         R = _steady_state_R_dispatch(
-            phases_init, omegas, K_val, knm_template, alpha,
-            dt, n_transient, n_measure,
+            phases_init,
+            omegas,
+            K_val,
+            knm_template,
+            alpha,
+            dt,
+            n_transient,
+            n_measure,
         )
         diagram.points.append(
             BifurcationPoint(K=float(K_val), R=R, stable=True),
@@ -230,7 +251,15 @@ def find_critical_coupling(
         p = np.ascontiguousarray(phases_init, dtype=np.float64)
         return float(
             _rust_find_kc(
-                o, k, a, n, p, dt, n_transient, n_measure, tol,
+                o,
+                k,
+                a,
+                n,
+                p,
+                dt,
+                n_transient,
+                n_measure,
+                tol,
             ),
         )
 
@@ -238,8 +267,14 @@ def find_critical_coupling(
     K_lo, K_hi = 0.0, 20.0
 
     R_hi = _steady_state_R_dispatch(
-        phases_init, omegas, K_hi, knm_template, alpha,
-        dt, n_transient, n_measure,
+        phases_init,
+        omegas,
+        K_hi,
+        knm_template,
+        alpha,
+        dt,
+        n_transient,
+        n_measure,
     )
     if R_hi < threshold:
         return float("nan")
@@ -247,8 +282,14 @@ def find_critical_coupling(
     for _ in range(30):
         K_mid = (K_lo + K_hi) / 2
         R_mid = _steady_state_R_dispatch(
-            phases_init, omegas, K_mid, knm_template, alpha,
-            dt, n_transient, n_measure,
+            phases_init,
+            omegas,
+            K_mid,
+            knm_template,
+            alpha,
+            dt,
+            n_transient,
+            n_measure,
         )
         if R_mid < threshold:
             K_lo = K_mid

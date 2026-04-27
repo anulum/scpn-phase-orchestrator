@@ -49,9 +49,15 @@ def _problem(seed: int, n: int = 6, alpha_nonzero: bool = False):
     return theta, omegas, knm, alpha
 
 
-def _run_backend(backend: str, seed: int, n: int = 6, n_steps: int = 20,
-                 zeta: float = 0.0, psi: float = 0.0,
-                 alpha_nonzero: bool = False):
+def _run_backend(
+    backend: str,
+    seed: int,
+    n: int = 6,
+    n_steps: int = 20,
+    zeta: float = 0.0,
+    psi: float = 0.0,
+    alpha_nonzero: bool = False,
+):
     if backend not in sp_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     theta, omegas, knm, alpha = _problem(seed, n, alpha_nonzero)
@@ -84,24 +90,18 @@ class TestAlphaZero:
 
 class TestAlphaNonZero:
     def test_rust(self):
-        ref = _run_backend("python", 4, alpha_nonzero=True,
-                           zeta=0.5, psi=1.1)
-        got = _run_backend("rust", 4, alpha_nonzero=True,
-                           zeta=0.5, psi=1.1)
+        ref = _run_backend("python", 4, alpha_nonzero=True, zeta=0.5, psi=1.1)
+        got = _run_backend("rust", 4, alpha_nonzero=True, zeta=0.5, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
 
     def test_julia(self):
-        ref = _run_backend("python", 5, alpha_nonzero=True,
-                           zeta=0.5, psi=1.1)
-        got = _run_backend("julia", 5, alpha_nonzero=True,
-                           zeta=0.5, psi=1.1)
+        ref = _run_backend("python", 5, alpha_nonzero=True, zeta=0.5, psi=1.1)
+        got = _run_backend("julia", 5, alpha_nonzero=True, zeta=0.5, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
 
     def test_go(self):
-        ref = _run_backend("python", 6, alpha_nonzero=True,
-                           zeta=0.5, psi=1.1)
-        got = _run_backend("go", 6, alpha_nonzero=True,
-                           zeta=0.5, psi=1.1)
+        ref = _run_backend("python", 6, alpha_nonzero=True, zeta=0.5, psi=1.1)
+        got = _run_backend("go", 6, alpha_nonzero=True, zeta=0.5, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
 
 
@@ -111,7 +111,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, n, seed):
@@ -126,7 +127,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, n, seed):

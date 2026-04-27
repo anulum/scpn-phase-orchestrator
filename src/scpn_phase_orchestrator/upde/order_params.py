@@ -129,12 +129,16 @@ def _resolve_backends() -> tuple[str, list[str]]:
 
 
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+_HAS_RUST = ACTIVE_BACKEND == "rust"
 
 
 def _dispatch(fn_name: str) -> object:
-    if ACTIVE_BACKEND == "python":
+    if ACTIVE_BACKEND == "python" or (ACTIVE_BACKEND == "rust" and not _HAS_RUST):
         return None
-    return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    try:
+        return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    except (ImportError, RuntimeError, OSError):
+        return None
 
 
 # ---------------------------------------------------------------------
@@ -152,9 +156,7 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
         return (0.0, 0.0)
     backend_fn = _dispatch("order_parameter")
     if backend_fn is not None:
-        fn = cast(
-            "Callable[[NDArray], tuple[float, float]]", backend_fn
-        )
+        fn = cast("Callable[[NDArray], tuple[float, float]]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         r, psi = fn(p)
         return float(r), float(psi)
@@ -173,26 +175,19 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
         return 0.0
     if phases_a.size != phases_b.size:
         raise ValueError(
-            f"PLV requires equal-length arrays, got "
-            f"{phases_a.size} vs {phases_b.size}"
+            f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
         )
     backend_fn = _dispatch("plv")
     if backend_fn is not None:
-        fn = cast(
-            "Callable[[NDArray, NDArray], float]", backend_fn
-        )
+        fn = cast("Callable[[NDArray, NDArray], float]", backend_fn)
         a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
         b = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
         return float(fn(a, b))
 
-    return float(
-        np.abs(np.mean(np.exp(1j * (phases_a - phases_b))))
-    )
+    return float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b)))))
 
 
-def compute_layer_coherence(
-    phases: NDArray, layer_mask: NDArray
-) -> float:
+def compute_layer_coherence(phases: NDArray, layer_mask: NDArray) -> float:
     """Order parameter R for the subset of oscillators selected by
     ``layer_mask`` (boolean mask *or* integer index array)."""
     mask = np.asarray(layer_mask)
@@ -204,9 +199,7 @@ def compute_layer_coherence(
         return 0.0
     backend_fn = _dispatch("layer_coherence")
     if backend_fn is not None:
-        fn = cast(
-            "Callable[[NDArray, NDArray], float]", backend_fn
-        )
+        fn = cast("Callable[[NDArray, NDArray], float]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         return float(fn(p, indices))
 

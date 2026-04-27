@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["spectral_eig_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libspectral.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libspectral.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -47,7 +45,8 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def spectral_eig_go(
-    knm_flat: NDArray, n: int,
+    knm_flat: NDArray,
+    n: int,
 ) -> tuple[NDArray, NDArray]:
     lib = _load_lib()
     k = np.ascontiguousarray(knm_flat, dtype=np.float64)

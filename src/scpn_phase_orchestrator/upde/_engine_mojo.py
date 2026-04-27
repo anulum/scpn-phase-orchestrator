@@ -20,9 +20,7 @@ __all__ = ["_ensure_exe", "upde_run_mojo"]
 
 _METHOD_IDS = {"euler": 0, "rk4": 1, "rk45": 2}
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "upde_engine_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "upde_engine_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -45,14 +43,9 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo upde_engine returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo upde_engine returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def upde_run_mojo(
@@ -92,7 +85,5 @@ def upde_run_mojo(
     tokens.extend(repr(float(x)) for x in alpha.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
-        raise ValueError(
-            f"Mojo RUN returned {len(result)} values, expected {n}"
-        )
+        raise ValueError(f"Mojo RUN returned {len(result)} values, expected {n}")
     return np.array(result, dtype=np.float64)

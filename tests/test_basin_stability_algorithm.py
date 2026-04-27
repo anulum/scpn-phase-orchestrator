@@ -64,8 +64,12 @@ class TestSteadyStateRKernel:
         knm = _all_to_all(n, strength=10.0)
         phases = np.full(n, 1.3)
         r = steady_state_r(
-            phases, omegas, knm, dt=0.01,
-            n_transient=200, n_measure=100,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=200,
+            n_measure=100,
         )
         assert r > 0.99
 
@@ -76,8 +80,12 @@ class TestSteadyStateRKernel:
         knm = np.zeros((n, n))
         phases = np.linspace(0.0, TWO_PI, n, endpoint=False)
         r = steady_state_r(
-            phases, omegas, knm, dt=0.01,
-            n_transient=500, n_measure=500,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=500,
+            n_measure=500,
         )
         assert r < 0.9
 
@@ -88,8 +96,12 @@ class TestSteadyStateRKernel:
         knm = _all_to_all(n)
         phases = np.zeros(n)
         r = steady_state_r(
-            phases, omegas, knm, dt=0.01,
-            n_transient=10, n_measure=0,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=10,
+            n_measure=0,
         )
         assert r == 0.0
 
@@ -101,8 +113,12 @@ class TestSteadyStateRKernel:
         rng = np.random.default_rng(1)
         phases = rng.uniform(0, TWO_PI, n)
         r = steady_state_r(
-            phases, omegas, knm, dt=0.01,
-            n_transient=200, n_measure=100,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=200,
+            n_measure=100,
         )
         assert 0.0 <= r <= 1.0 + 1e-12
 
@@ -114,9 +130,14 @@ class TestBasinStability:
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=10.0)
         result = basin_stability(
-            omegas, knm,
-            dt=0.01, n_transient=300, n_measure=100,
-            n_samples=20, R_threshold=0.8, seed=42,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=300,
+            n_measure=100,
+            n_samples=20,
+            R_threshold=0.8,
+            seed=42,
         )
         assert isinstance(result, BasinStabilityResult)
         assert result.S_B > 0.5
@@ -129,9 +150,14 @@ class TestBasinStability:
         omegas = np.linspace(0.5, 3.5, n)
         knm = np.zeros((n, n))
         result = basin_stability(
-            omegas, knm,
-            dt=0.01, n_transient=300, n_measure=100,
-            n_samples=15, R_threshold=0.9, seed=7,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=300,
+            n_measure=100,
+            n_samples=15,
+            R_threshold=0.9,
+            seed=7,
         )
         assert result.S_B <= 0.2
 
@@ -141,9 +167,14 @@ class TestBasinStability:
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=2.0)
         result = basin_stability(
-            omegas, knm,
-            dt=0.01, n_transient=200, n_measure=100,
-            n_samples=10, R_threshold=0.5, seed=3,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=200,
+            n_measure=100,
+            n_samples=10,
+            R_threshold=0.5,
+            seed=3,
         )
         assert 0.0 <= result.S_B <= 1.0
         assert result.R_final.shape == (10,)
@@ -156,12 +187,24 @@ class TestBasinStability:
         omegas = np.array([1.0, 1.5, 2.0, 2.5])
         knm = _all_to_all(n, strength=3.0)
         r1 = basin_stability(
-            omegas, knm, dt=0.01, n_transient=150, n_measure=80,
-            n_samples=10, R_threshold=0.5, seed=123,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=150,
+            n_measure=80,
+            n_samples=10,
+            R_threshold=0.5,
+            seed=123,
         )
         r2 = basin_stability(
-            omegas, knm, dt=0.01, n_transient=150, n_measure=80,
-            n_samples=10, R_threshold=0.5, seed=123,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=150,
+            n_measure=80,
+            n_samples=10,
+            R_threshold=0.5,
+            seed=123,
         )
         assert r1.S_B == r2.S_B
         assert r1.n_converged == r2.n_converged
@@ -173,12 +216,24 @@ class TestBasinStability:
         omegas = np.array([1.0, 2.0, 3.0, 4.0])
         knm = _all_to_all(n, strength=3.0)
         r_low = basin_stability(
-            omegas, knm, dt=0.01, n_transient=200, n_measure=100,
-            n_samples=15, R_threshold=0.3, seed=42,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=200,
+            n_measure=100,
+            n_samples=15,
+            R_threshold=0.3,
+            seed=42,
         )
         r_high = basin_stability(
-            omegas, knm, dt=0.01, n_transient=200, n_measure=100,
-            n_samples=15, R_threshold=0.9, seed=42,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=200,
+            n_measure=100,
+            n_samples=15,
+            R_threshold=0.9,
+            seed=42,
         )
         assert r_low.S_B >= r_high.S_B
 
@@ -190,12 +245,17 @@ class TestMultiBasinStability:
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=4.0)
         results = multi_basin_stability(
-            omegas, knm, dt=0.01, n_transient=150, n_measure=80,
-            n_samples=12, R_thresholds=(0.3, 0.6, 0.9), seed=5,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=150,
+            n_measure=80,
+            n_samples=12,
+            R_thresholds=(0.3, 0.6, 0.9),
+            seed=5,
         )
         assert set(results.keys()) == {"R>=0.30", "R>=0.60", "R>=0.90"}
-        sb_vals = [results[k].S_B for k in
-                   ("R>=0.30", "R>=0.60", "R>=0.90")]
+        sb_vals = [results[k].S_B for k in ("R>=0.30", "R>=0.60", "R>=0.90")]
         assert sb_vals[0] >= sb_vals[1] >= sb_vals[2]
 
     @_python
@@ -205,8 +265,14 @@ class TestMultiBasinStability:
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=3.0)
         results = multi_basin_stability(
-            omegas, knm, dt=0.01, n_transient=120, n_measure=60,
-            n_samples=8, R_thresholds=(0.3, 0.8), seed=11,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=120,
+            n_measure=60,
+            n_samples=8,
+            R_thresholds=(0.3, 0.8),
+            seed=11,
         )
         r1 = results["R>=0.30"].R_final
         r2 = results["R>=0.80"].R_final
@@ -221,15 +287,22 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=8, deadline=None,
+        max_examples=8,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_sb_in_unit_interval(self, n, strength, seed):
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=strength)
         result = basin_stability(
-            omegas, knm, dt=0.01, n_transient=80, n_measure=40,
-            n_samples=6, R_threshold=0.5, seed=seed,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=80,
+            n_measure=40,
+            n_samples=6,
+            R_threshold=0.5,
+            seed=seed,
         )
         assert 0.0 <= result.S_B <= 1.0
         assert np.all(np.isfinite(result.R_final))
@@ -251,16 +324,30 @@ class TestInputShapes:
         omegas = np.ones(n)
         knm = _all_to_all(n)
         r_no_alpha = basin_stability(
-            omegas, knm, dt=0.01, n_transient=60, n_measure=30,
-            n_samples=4, R_threshold=0.5, seed=1,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=60,
+            n_measure=30,
+            n_samples=4,
+            R_threshold=0.5,
+            seed=1,
         )
         r_zero_alpha = basin_stability(
-            omegas, knm, alpha=np.zeros((n, n)),
-            dt=0.01, n_transient=60, n_measure=30,
-            n_samples=4, R_threshold=0.5, seed=1,
+            omegas,
+            knm,
+            alpha=np.zeros((n, n)),
+            dt=0.01,
+            n_transient=60,
+            n_measure=30,
+            n_samples=4,
+            R_threshold=0.5,
+            seed=1,
         )
         np.testing.assert_allclose(
-            r_no_alpha.R_final, r_zero_alpha.R_final, atol=1e-15,
+            r_no_alpha.R_final,
+            r_zero_alpha.R_final,
+            atol=1e-15,
         )
 
     @_python
@@ -269,8 +356,14 @@ class TestInputShapes:
         omegas = np.ones(n)
         knm = _all_to_all(n)
         result = basin_stability(
-            omegas, knm, dt=0.01, n_transient=20, n_measure=10,
-            n_samples=0, R_threshold=0.5, seed=1,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=20,
+            n_measure=10,
+            n_samples=0,
+            R_threshold=0.5,
+            seed=1,
         )
         assert result.S_B == 0.0
         assert result.n_samples == 0

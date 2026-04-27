@@ -109,9 +109,7 @@ class TestRunGate:
         assert len(out.strip().splitlines()) == 1
 
     def test_subprocess_run_receives_expected_args(self, tmp_path: Path) -> None:
-        with patch.object(
-            mod.subprocess, "run", return_value=_completed(0)
-        ) as run:
+        with patch.object(mod.subprocess, "run", return_value=_completed(0)) as run:
             mod.run_gate("cargo-fmt", ["cargo", "fmt", "--check"], tmp_path)
         kwargs = run.call_args.kwargs
         assert kwargs["cwd"] == tmp_path
@@ -126,9 +124,7 @@ class TestRunGate:
 
 
 class TestMain:
-    def test_all_pass_returns_zero(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_all_pass_returns_zero(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Every gate passes → exit 0 + ALL CLEAR banner."""
         with (
             patch.object(mod.shutil, "which", return_value=None),  # no cargo
@@ -140,9 +136,7 @@ class TestMain:
         assert rc == 0
         assert "ALL CLEAR" in out
 
-    def test_first_failure_fails_fast(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_first_failure_fails_fast(self, capsys: pytest.CaptureFixture[str]) -> None:
         """A failing gate short-circuits the rest (fail-fast)."""
         calls: list[list[str]] = []
 

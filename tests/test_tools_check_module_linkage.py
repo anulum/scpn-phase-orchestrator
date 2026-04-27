@@ -108,9 +108,7 @@ def test_linked_by_import_path(tmp_path: Path) -> None:
             ),
         },
     )
-    unlinked = mod.collect_unlinked_modules(
-        source_root=src_root, test_root=test_root
-    )
+    unlinked = mod.collect_unlinked_modules(source_root=src_root, test_root=test_root)
     assert unlinked == []
 
 
@@ -120,9 +118,7 @@ def test_linked_by_test_stem(tmp_path: Path) -> None:
         tmp_path,
         {"test_engine.py": "# references test_engine implicitly\n"},
     )
-    unlinked = mod.collect_unlinked_modules(
-        source_root=src_root, test_root=test_root
-    )
+    unlinked = mod.collect_unlinked_modules(source_root=src_root, test_root=test_root)
     assert unlinked == []
 
 
@@ -130,20 +126,14 @@ def test_unlinked_module_reported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
-    src_root = _scratch_package(
-        tmp_path, ["upde/engine.py", "monitor/orphan.py"]
-    )
+    src_root = _scratch_package(tmp_path, ["upde/engine.py", "monitor/orphan.py"])
     test_root = _scratch_tests(
         tmp_path,
         {
-            "test_engine.py": (
-                "from scpn_phase_orchestrator.upde.engine import X\n"
-            ),
+            "test_engine.py": ("from scpn_phase_orchestrator.upde.engine import X\n"),
         },
     )
-    unlinked = mod.collect_unlinked_modules(
-        source_root=src_root, test_root=test_root
-    )
+    unlinked = mod.collect_unlinked_modules(source_root=src_root, test_root=test_root)
     assert len(unlinked) == 1
     assert unlinked[0].endswith("monitor/orphan.py")
 
@@ -203,9 +193,7 @@ def test_load_allowlist_entry_not_object(tmp_path: Path) -> None:
 
 def test_load_allowlist_empty_path_rejected(tmp_path: Path) -> None:
     f = tmp_path / "allow.json"
-    f.write_text(
-        json.dumps({"allowlisted_modules": [{"path": ""}]}), encoding="utf-8"
-    )
+    f.write_text(json.dumps({"allowlisted_modules": [{"path": ""}]}), encoding="utf-8")
     with pytest.raises(ValueError, match="non-empty string"):
         mod.load_allowlist(f)
 

@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["phase_poincare_go", "poincare_section_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libpoincare.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libpoincare.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -38,17 +36,21 @@ def _load_lib() -> ctypes.CDLL:
     lib.PoincareSection.restype = ctypes.c_int
     lib.PoincareSection.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_double, ctypes.c_int,
+        ctypes.c_double,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
     ]
     lib.PhasePoincare.restype = ctypes.c_int
     lib.PhasePoincare.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
-        ctypes.c_int, ctypes.c_double,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_double,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
     ]
@@ -57,8 +59,12 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def poincare_section_go(
-    traj_flat: NDArray, t: int, d: int,
-    normal: NDArray, offset: float, direction_id: int,
+    traj_flat: NDArray,
+    t: int,
+    d: int,
+    normal: NDArray,
+    offset: float,
+    direction_id: int,
 ) -> tuple[NDArray, NDArray, int]:
     lib = _load_lib()
     traj = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
@@ -67,7 +73,8 @@ def poincare_section_go(
     times = np.zeros(t, dtype=np.float64)
     n_cr = lib.PoincareSection(
         traj.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(d)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(d)),
         nrm.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_double(float(offset)),
         ctypes.c_int(int(direction_id)),
@@ -78,8 +85,11 @@ def poincare_section_go(
 
 
 def phase_poincare_go(
-    phases_flat: NDArray, t: int, n: int,
-    oscillator_idx: int, section_phase: float,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
+    oscillator_idx: int,
+    section_phase: float,
 ) -> tuple[NDArray, NDArray, int]:
     lib = _load_lib()
     phases = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
@@ -87,7 +97,8 @@ def phase_poincare_go(
     times = np.zeros(t, dtype=np.float64)
     n_cr = lib.PhasePoincare(
         phases.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(n)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(n)),
         ctypes.c_int(int(oscillator_idx)),
         ctypes.c_double(float(section_phase)),
         crossings.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),

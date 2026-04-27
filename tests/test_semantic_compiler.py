@@ -43,14 +43,14 @@ def test_default_base_frequency_for_unknown_discipline():
 
 
 def test_fusion_keyword_routes_to_grid_frequency():
-    """"fusion" is a grid-class keyword → 50 Hz base (plasma tokamak)."""
+    """ "fusion" is a grid-class keyword → 50 Hz base (plasma tokamak)."""
     compiler = SemanticDomainCompiler()
     spec = compiler.compile("A 2-layer fusion reactor plasma system")
     assert spec.layers[0].omegas[0] == 50.0
 
 
 def test_cell_keyword_routes_to_bio_frequency():
-    """"cell" is a bio keyword → 10 Hz base."""
+    """ "cell" is a bio keyword → 10 Hz base."""
     compiler = SemanticDomainCompiler()
     spec = compiler.compile("A 3-layer cellular oscillator network")
     assert spec.layers[0].omegas[0] == 10.0

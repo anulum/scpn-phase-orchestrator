@@ -74,8 +74,7 @@ def test_mi_monotonic_in_modulation_depth() -> None:
         mi = modulation_index(theta, amp, 18)
         # Allow tiny noise backslide (Tort MI is stochastic for small n).
         assert mi >= last - 0.005, (
-            f"MI non-monotonic: depth={depth}, "
-            f"mi={mi:.4f} vs last={last:.4f}"
+            f"MI non-monotonic: depth={depth}, mi={mi:.4f} vs last={last:.4f}"
         )
         last = mi
 

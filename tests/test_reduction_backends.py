@@ -37,9 +37,17 @@ def _force_backend(name: str):
         r_mod.ACTIVE_BACKEND = prev
 
 
-def _run(backend: str, *, z_re: float = 0.2, z_im: float = 0.1,
-         omega_0: float = 0.5, delta: float = 0.1, K: float = 1.0,
-         dt: float = 0.01, n_steps: int = 500):
+def _run(
+    backend: str,
+    *,
+    z_re: float = 0.2,
+    z_im: float = 0.1,
+    omega_0: float = 0.5,
+    delta: float = 0.1,
+    K: float = 1.0,
+    dt: float = 0.01,
+    n_steps: int = 500,
+):
     if backend not in r_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     red = OttAntonsenReduction(omega_0=omega_0, delta=delta, K=K, dt=dt)
@@ -95,7 +103,8 @@ class TestHypothesisParity:
         n_steps=st.integers(min_value=10, max_value=500),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, delta, K_ratio, n_steps):
@@ -113,7 +122,8 @@ class TestHypothesisParity:
         n_steps=st.integers(min_value=10, max_value=500),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, delta, K_ratio, n_steps):

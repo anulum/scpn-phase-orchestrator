@@ -98,9 +98,7 @@ class TestStuartLandauEngineLocking:
     def test_lock_attribute_exists(self, sl_engine: StuartLandauEngine) -> None:
         assert hasattr(sl_engine, "_lock")
 
-    def test_concurrent_step_is_race_free(
-        self, sl_engine: StuartLandauEngine
-    ) -> None:
+    def test_concurrent_step_is_race_free(self, sl_engine: StuartLandauEngine) -> None:
         rng = np.random.default_rng(2)
         n = 4
         state = np.concatenate(

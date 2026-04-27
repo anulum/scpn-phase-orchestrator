@@ -89,8 +89,7 @@ def test_deep_merged_line_not_split(tmp_path: Path) -> None:
     invariant keeps the tool focused and avoids touching user strings."""
     padding = "\n".join(f"# pad line {i}" for i in range(15)) + "\n"
     merged = (
-        "# SPDX-License-Identifier: AGPL-3.0-or-later "
-        "| Commercial license available\n"
+        "# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available\n"
     )
     content = padding + merged
     f = tmp_path / "deep.py"
@@ -153,8 +152,7 @@ def test_verify_detects_residual_merged(
 ) -> None:
     f = tmp_path / "residual.py"
     f.write_text(
-        "# SPDX-License-Identifier: AGPL-3.0-or-later "
-        "| Commercial license available\n",
+        "# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available\n",
         encoding="utf-8",
     )
     assert mod.verify(tmp_path) == 1

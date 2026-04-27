@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["spectral_eig_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "spectral.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "spectral.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -38,7 +36,8 @@ def _ensure() -> Any:
 
 
 def spectral_eig_julia(
-    knm_flat: NDArray, n: int,
+    knm_flat: NDArray,
+    n: int,
 ) -> tuple[NDArray, NDArray]:
     jl = _ensure()
     eigvals, fiedler = jl.spectral_eig(

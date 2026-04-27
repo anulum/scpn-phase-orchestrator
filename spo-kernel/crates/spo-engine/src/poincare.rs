@@ -15,8 +15,8 @@
 //!   Poincaré 1899, "Les méthodes nouvelles de la mécanique céleste".
 //!   Strogatz 2015, "Nonlinear Dynamics and Chaos", Ch. 8.
 
-use std::f64::consts::PI;
 use rayon::prelude::*;
+use std::f64::consts::PI;
 
 /// Direction of crossing detection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,44 +57,64 @@ pub fn poincare_section(
     direction: CrossingDirection,
 ) -> Result<PoincareResult, String> {
     if traj_flat.len() != t * d {
-        return Err(format!("trajectory length {} != T*d = {}", traj_flat.len(), t * d));
+        return Err(format!(
+            "trajectory length {} != T*d = {}",
+            traj_flat.len(),
+            t * d
+        ));
     }
     if normal.len() != d {
         return Err(format!("normal length {} != d = {d}", normal.len()));
     }
 
     let norm = normal.iter().map(|&v| v * v).sum::<f64>().sqrt();
-    if norm < 1e-15 { return Err("normal vector has zero length".into()); }
+    if norm < 1e-15 {
+        return Err("normal vector has zero length".into());
+    }
     let n_hat: Vec<f64> = normal.iter().map(|&v| v / norm).collect();
 
     // Parallel distance computation
-    let signed_dist: Vec<f64> = (0..t).into_par_iter().map(|i| {
-        let mut dot = 0.0;
-        let row = &traj_flat[i * d .. (i + 1) * d];
-        for k in 0..d { dot += row[k] * n_hat[k]; }
-        dot - offset
-    }).collect();
+    let signed_dist: Vec<f64> = (0..t)
+        .into_par_iter()
+        .map(|i| {
+            let mut dot = 0.0;
+            let row = &traj_flat[i * d..(i + 1) * d];
+            for k in 0..d {
+                dot += row[k] * n_hat[k];
+            }
+            dot - offset
+        })
+        .collect();
 
     // Parallel crossing detection and interpolation
-    let results: Vec<(Vec<f64>, f64)> = (0..t - 1).into_par_iter().filter_map(|i| {
-        let d0 = signed_dist[i];
-        let d1 = signed_dist[i + 1];
-        let is_crossing = match direction {
-            CrossingDirection::Positive => d0 < 0.0 && d1 >= 0.0,
-            CrossingDirection::Negative => d0 > 0.0 && d1 <= 0.0,
-            CrossingDirection::Both => d0 * d1 < 0.0,
-        };
-        if is_crossing {
-            let alpha = if (d1 - d0).abs() > 1e-15 { -d0 / (d1 - d0) } else { 0.5 };
-            let mut cross = Vec::with_capacity(d);
-            let p0 = &traj_flat[i * d .. (i + 1) * d];
-            let p1 = &traj_flat[(i + 1) * d .. (i + 2) * d];
-            for k in 0..d { cross.push(p0[k] + alpha * (p1[k] - p0[k])); }
-            Some((cross, i as f64 + alpha))
-        } else {
-            None
-        }
-    }).collect();
+    let results: Vec<(Vec<f64>, f64)> = (0..t - 1)
+        .into_par_iter()
+        .filter_map(|i| {
+            let d0 = signed_dist[i];
+            let d1 = signed_dist[i + 1];
+            let is_crossing = match direction {
+                CrossingDirection::Positive => d0 < 0.0 && d1 >= 0.0,
+                CrossingDirection::Negative => d0 > 0.0 && d1 <= 0.0,
+                CrossingDirection::Both => d0 * d1 < 0.0,
+            };
+            if is_crossing {
+                let alpha = if (d1 - d0).abs() > 1e-15 {
+                    -d0 / (d1 - d0)
+                } else {
+                    0.5
+                };
+                let mut cross = Vec::with_capacity(d);
+                let p0 = &traj_flat[i * d..(i + 1) * d];
+                let p1 = &traj_flat[(i + 1) * d..(i + 2) * d];
+                for k in 0..d {
+                    cross.push(p0[k] + alpha * (p1[k] - p0[k]));
+                }
+                Some((cross, i as f64 + alpha))
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let n_crossings = results.len();
     let mut crossings = Vec::with_capacity(n_crossings * d);
@@ -104,7 +124,11 @@ pub fn poincare_section(
         crossing_times.push(ct);
     }
 
-    Ok(PoincareResult { crossings, crossing_times, n_crossings })
+    Ok(PoincareResult {
+        crossings,
+        crossing_times,
+        n_crossings,
+    })
 }
 
 /// Poincaré section for phase oscillator trajectories.
@@ -128,7 +152,11 @@ pub fn phase_poincare(
     section_phase: f64,
 ) -> Result<PoincareResult, String> {
     if phases_flat.len() != t * n {
-        return Err(format!("phases length {} != T*N = {}", phases_flat.len(), t * n));
+        return Err(format!(
+            "phases length {} != T*N = {}",
+            phases_flat.len(),
+            t * n
+        ));
     }
     if oscillator_idx >= n {
         return Err(format!("oscillator_idx {oscillator_idx} >= N = {n}"));
@@ -151,20 +179,28 @@ pub fn phase_poincare(
     }
 
     // Parallel shifted phases and crossing detection
-    let shifted: Vec<f64> = unwrapped.par_iter().map(|&v| ((v - section_phase) % two_pi + two_pi) % two_pi).collect();
+    let shifted: Vec<f64> = unwrapped
+        .par_iter()
+        .map(|&v| ((v - section_phase) % two_pi + two_pi) % two_pi)
+        .collect();
 
-    let results: Vec<(Vec<f64>, f64)> = (0..t - 1).into_par_iter().filter_map(|i| {
-        if shifted[i] > PI && shifted[i + 1] < PI {
-            let alpha = (shifted[i] / (shifted[i] - shifted[i + 1] + two_pi)).clamp(0.0, 1.0);
-            let mut cross = Vec::with_capacity(n);
-            let p0 = &phases_flat[i * n .. (i + 1) * n];
-            let p1 = &phases_flat[(i + 1) * n .. (i + 2) * n];
-            for k in 0..n { cross.push(p0[k] + alpha * (p1[k] - p0[k])); }
-            Some((cross, i as f64 + alpha))
-        } else {
-            None
-        }
-    }).collect();
+    let results: Vec<(Vec<f64>, f64)> = (0..t - 1)
+        .into_par_iter()
+        .filter_map(|i| {
+            if shifted[i] > PI && shifted[i + 1] < PI {
+                let alpha = (shifted[i] / (shifted[i] - shifted[i + 1] + two_pi)).clamp(0.0, 1.0);
+                let mut cross = Vec::with_capacity(n);
+                let p0 = &phases_flat[i * n..(i + 1) * n];
+                let p1 = &phases_flat[(i + 1) * n..(i + 2) * n];
+                for k in 0..n {
+                    cross.push(p0[k] + alpha * (p1[k] - p0[k]));
+                }
+                Some((cross, i as f64 + alpha))
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let n_crossings = results.len();
     let mut crossings = Vec::with_capacity(n_crossings * n);
@@ -174,7 +210,11 @@ pub fn phase_poincare(
         crossing_times.push(ct);
     }
 
-    Ok(PoincareResult { crossings, crossing_times, n_crossings })
+    Ok(PoincareResult {
+        crossings,
+        crossing_times,
+        n_crossings,
+    })
 }
 
 #[cfg(test)]

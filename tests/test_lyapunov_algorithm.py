@@ -68,9 +68,7 @@ def _random_problem(
 class TestShapeAndOrdering:
     @_with_python_backend
     def test_returns_n_exponents(self):
-        phases, omegas, knm, alpha = _random_problem(
-            np.random.default_rng(42), n=6
-        )
+        phases, omegas, knm, alpha = _random_problem(np.random.default_rng(42), n=6)
         spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=200)
         assert spec.shape == (6,)
 
@@ -113,9 +111,7 @@ class TestAnalyticLimits:
         knm = np.full((n, n), 4.0)
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        spec = lyapunov_spectrum(
-            phases, omegas, knm, alpha, dt=0.005, n_steps=1500
-        )
+        spec = lyapunov_spectrum(phases, omegas, knm, alpha, dt=0.005, n_steps=1500)
         # Transverse exponents λ_2..λ_N should all be negative.
         assert np.all(spec[1:] < -0.1)
 
@@ -144,9 +140,7 @@ class TestDriverResponse:
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
 
-        free = lyapunov_spectrum(
-            phases, omegas, knm, alpha, n_steps=800, zeta=0.0
-        )
+        free = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=800, zeta=0.0)
         driven = lyapunov_spectrum(
             phases, omegas, knm, alpha, n_steps=800, zeta=2.5, psi=0.3
         )
@@ -211,12 +205,8 @@ class TestRK4Convergence:
         knm = rng.uniform(0.3, 0.8, size=(n, n))
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n, n))
-        coarse = lyapunov_spectrum(
-            phases, omegas, knm, alpha, dt=0.02, n_steps=500
-        )
-        fine = lyapunov_spectrum(
-            phases, omegas, knm, alpha, dt=0.01, n_steps=1000
-        )
+        coarse = lyapunov_spectrum(phases, omegas, knm, alpha, dt=0.02, n_steps=500)
+        fine = lyapunov_spectrum(phases, omegas, knm, alpha, dt=0.01, n_steps=1000)
         # Expect spectra to agree within 10⁻¹ for this timestep pair —
         # exponents are long-time averages so they respond to integrator
         # accuracy through the trajectory, not through a single step.
@@ -239,9 +229,7 @@ class TestRandomProperty:
         phases, omegas, knm, alpha = _random_problem(
             rng, n=n, coupling=0.8, alpha_amp=0.1
         )
-        spec = lyapunov_spectrum(
-            phases, omegas, knm, alpha, n_steps=200
-        )
+        spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=200)
         assert spec.shape == (n,)
         assert np.all(np.isfinite(spec))
         for i in range(n - 1):

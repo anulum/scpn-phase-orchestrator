@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["local_order_parameter_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libchimera.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libchimera.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -46,7 +44,9 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def local_order_parameter_go(
-    phases: NDArray, knm_flat: NDArray, n: int,
+    phases: NDArray,
+    knm_flat: NDArray,
+    n: int,
 ) -> NDArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

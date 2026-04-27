@@ -22,9 +22,7 @@ __all__ = [
     "recurrence_matrix_mojo",
 ]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "recurrence_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "recurrence_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -47,30 +45,29 @@ def _run(payload: str) -> list[int]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo recurrence returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo recurrence returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        int(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [int(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def recurrence_matrix_mojo(
-    traj_flat: NDArray, t: int, d: int, epsilon: float, angular: bool,
+    traj_flat: NDArray,
+    t: int,
+    d: int,
+    epsilon: float,
+    angular: bool,
 ) -> NDArray:
     tokens: list[str] = [
         "REC",
-        str(int(t)), str(int(d)), str(int(angular)),
+        str(int(t)),
+        str(int(d)),
+        str(int(angular)),
         repr(float(epsilon)),
     ]
     tokens.extend(repr(float(x)) for x in traj_flat.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != t * t:
-        raise ValueError(
-            f"Mojo REC returned {len(result)} values, expected {t * t}"
-        )
+        raise ValueError(f"Mojo REC returned {len(result)} values, expected {t * t}")
     return np.array(result, dtype=np.uint8)
 
 
@@ -84,14 +81,14 @@ def cross_recurrence_matrix_mojo(
 ) -> NDArray:
     tokens: list[str] = [
         "CROSS",
-        str(int(t)), str(int(d)), str(int(angular)),
+        str(int(t)),
+        str(int(d)),
+        str(int(angular)),
         repr(float(epsilon)),
     ]
     tokens.extend(repr(float(x)) for x in traj_a_flat.ravel().tolist())
     tokens.extend(repr(float(x)) for x in traj_b_flat.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != t * t:
-        raise ValueError(
-            f"Mojo CROSS returned {len(result)} values, expected {t * t}"
-        )
+        raise ValueError(f"Mojo CROSS returned {len(result)} values, expected {t * t}")
     return np.array(result, dtype=np.uint8)

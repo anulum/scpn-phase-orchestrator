@@ -15,9 +15,7 @@ from typing import Any
 
 __all__ = ["oa_run_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "reduction.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "reduction.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -45,10 +43,12 @@ def oa_run_julia(
 ) -> tuple[float, float, float, float]:
     jl = _ensure()
     result = jl.oa_run(
-        float(z_re), float(z_im),
-        float(omega_0), float(delta),
-        float(k_coupling), float(dt),
+        float(z_re),
+        float(z_im),
+        float(omega_0),
+        float(delta),
+        float(k_coupling),
+        float(dt),
         int(n_steps),
     )
-    return (float(result[0]), float(result[1]),
-            float(result[2]), float(result[3]))
+    return (float(result[0]), float(result[1]), float(result[2]), float(result[3]))

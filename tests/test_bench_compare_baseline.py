@@ -39,9 +39,7 @@ def _write_json(path: Path, obj: Any) -> None:
     path.write_text(json.dumps(obj), encoding="utf-8")
 
 
-def _run(
-    baseline_path: Path, current_path: Path
-) -> subprocess.CompletedProcess[str]:
+def _run(baseline_path: Path, current_path: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(COMPARE_SCRIPT), str(baseline_path), str(current_path)],
         capture_output=True,

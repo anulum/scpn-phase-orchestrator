@@ -124,14 +124,10 @@ def phase_distance_matrix(phases: NDArray) -> NDArray:
         return np.asarray(flat, dtype=np.float64).reshape(n, n)
 
     diff = phases[:, np.newaxis] - phases[np.newaxis, :]
-    return np.asarray(
-        np.abs(np.arctan2(np.sin(diff), np.cos(diff))), dtype=np.float64
-    )
+    return np.asarray(np.abs(np.arctan2(np.sin(diff), np.cos(diff))), dtype=np.float64)
 
 
-def compute_npe(
-    phases: NDArray, max_radius: float | None = None
-) -> float:
+def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
     """Normalised Persistent Entropy from H₀ persistence diagram.
 
     ``NPE = H(p) / log(|p|)`` where ``p_i = lifetime_i / Σ lifetimes``

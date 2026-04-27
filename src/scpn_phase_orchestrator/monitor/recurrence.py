@@ -54,7 +54,11 @@ def _load_rust_fns() -> dict[str, object]:
     )
 
     def _rust_rm(
-        traj_flat: NDArray, t: int, d: int, epsilon: float, angular: bool,
+        traj_flat: NDArray,
+        t: int,
+        d: int,
+        epsilon: float,
+        angular: bool,
     ) -> NDArray:
         return np.asarray(
             recurrence_matrix_rust(traj_flat, t, d, epsilon, angular),
@@ -62,12 +66,21 @@ def _load_rust_fns() -> dict[str, object]:
         )
 
     def _rust_cross(
-        a_flat: NDArray, b_flat: NDArray, t: int, d: int,
-        epsilon: float, angular: bool,
+        a_flat: NDArray,
+        b_flat: NDArray,
+        t: int,
+        d: int,
+        epsilon: float,
+        angular: bool,
     ) -> NDArray:
         return np.asarray(
             cross_recurrence_matrix_rust(
-                a_flat, b_flat, t, d, epsilon, angular,
+                a_flat,
+                b_flat,
+                t,
+                d,
+                epsilon,
+                angular,
             ),
             dtype=np.uint8,
         )
@@ -183,9 +196,7 @@ def recurrence_matrix(
 
     backend_fn = _dispatch("rm")
     if backend_fn is not None:
-        fn = cast(
-            "Callable[[NDArray, int, int, float, bool], NDArray]", backend_fn
-        )
+        fn = cast("Callable[[NDArray, int, int, float, bool], NDArray]", backend_fn)
         out = np.asarray(fn(flat, t, d, float(epsilon), angular), dtype=np.uint8)
         return out.reshape(t, t).astype(bool)
 
@@ -194,7 +205,7 @@ def recurrence_matrix(
         dist = np.sqrt(np.sum(4 * np.sin(diff / 2) ** 2, axis=2))
     else:
         diff = traj[:, np.newaxis, :] - traj[np.newaxis, :, :]
-        dist = np.sqrt(np.sum(diff ** 2, axis=2))
+        dist = np.sqrt(np.sum(diff**2, axis=2))
     result: NDArray = dist <= epsilon
     return result
 
@@ -218,9 +229,7 @@ def cross_recurrence_matrix(
         b = b[:, np.newaxis]
     t, d = int(a.shape[0]), int(a.shape[1])
     if b.shape != a.shape:
-        raise ValueError(
-            f"trajectories must match: a={a.shape} b={b.shape}"
-        )
+        raise ValueError(f"trajectories must match: a={a.shape} b={b.shape}")
     angular = metric == "angular"
     a_flat = np.ascontiguousarray(a.ravel(), dtype=np.float64)
     b_flat = np.ascontiguousarray(b.ravel(), dtype=np.float64)
@@ -242,7 +251,7 @@ def cross_recurrence_matrix(
         dist = np.sqrt(np.sum(4 * np.sin(diff / 2) ** 2, axis=2))
     else:
         diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
-        dist = np.sqrt(np.sum(diff ** 2, axis=2))
+        dist = np.sqrt(np.sum(diff**2, axis=2))
     result: NDArray = dist <= epsilon
     return result
 
@@ -284,7 +293,10 @@ def _vertical_lines(R: NDArray, v_min: int = 2) -> list[int]:
 
 
 def _rqa_from_matrix(
-    R: NDArray, l_min: int, v_min: int, exclude_main_diag: bool,
+    R: NDArray,
+    l_min: int,
+    v_min: int,
+    exclude_main_diag: bool,
 ) -> RQAResult:
     """Shared line-analysis path — consumed by both :func:`rqa` and
     :func:`cross_rqa` after the dispatched matrix is obtained."""

@@ -44,7 +44,7 @@ Dörfler & Bullo 2013, *IEEE Proc.* 102(10):1539-1564.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -72,11 +72,12 @@ def graph_laplacian(knm: NDArray) -> NDArray:
     w = np.abs(knm)
     np.fill_diagonal(w, 0.0)
     degrees = w.sum(axis=1)
-    return np.diag(degrees) - w
+    return cast("NDArray", np.diag(degrees) - w)
 
 
 def _python_spectral_eig(
-    knm_flat: NDArray, n: int,
+    knm_flat: NDArray,
+    n: int,
 ) -> tuple[NDArray, NDArray]:
     W = knm_flat.reshape(n, n)
     L = graph_laplacian(W)
@@ -114,9 +115,7 @@ def _load_mojo_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
     return spectral_eig_mojo
 
 
-def _load_julia_primitive() -> (
-    Callable[[NDArray, int], tuple[NDArray, NDArray]]
-):
+def _load_julia_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
     # pragma: no cover — toolchain
     import juliacall  # type: ignore[import-untyped]  # noqa: F401
 
@@ -127,9 +126,7 @@ def _load_julia_primitive() -> (
     return spectral_eig_julia
 
 
-def _load_go_primitive() -> (
-    Callable[[NDArray, int], tuple[NDArray, NDArray]]
-):
+def _load_go_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.coupling._spectral_go import (
         spectral_eig_go,
@@ -268,7 +265,9 @@ def spectral_gap(knm: NDArray) -> float:
 
 
 def sync_convergence_rate(
-    knm: NDArray, omegas: NDArray, gamma_max: float = 0.0,
+    knm: NDArray,
+    omegas: NDArray,
+    gamma_max: float = 0.0,
 ) -> float:
     """Estimated convergence rate
     ``μ = K_eff · λ₂ · cos(γ_max) / N``

@@ -192,9 +192,13 @@ class TestSpectralGap:
 class TestSyncConvergenceRate:
     @_python
     def test_returns_zero_for_empty(self):
-        assert sync_convergence_rate(
-            np.zeros((0, 0)), np.zeros(0),
-        ) == 0.0
+        assert (
+            sync_convergence_rate(
+                np.zeros((0, 0)),
+                np.zeros(0),
+            )
+            == 0.0
+        )
 
     @_python
     def test_positive_for_connected(self):
@@ -213,7 +217,8 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_eigvals_ascending_and_nonneg(self, n, seed):

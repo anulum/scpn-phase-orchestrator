@@ -22,9 +22,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "lyapunov_spectrum_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "lyapunov_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "lyapunov_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -47,14 +45,9 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo lyapunov returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo lyapunov returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def lyapunov_spectrum_mojo(
@@ -84,7 +77,5 @@ def lyapunov_spectrum_mojo(
     tokens.extend(repr(float(x)) for x in alpha.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
-        raise ValueError(
-            f"Mojo SPEC returned {len(result)} values, expected {n}"
-        )
+        raise ValueError(f"Mojo SPEC returned {len(result)} values, expected {n}")
     return np.array(result, dtype=np.float64)

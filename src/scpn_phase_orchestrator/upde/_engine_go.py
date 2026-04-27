@@ -20,9 +20,7 @@ __all__ = ["upde_run_go"]
 
 _METHOD_IDS = {"euler": 0, "rk4": 1, "rk45": 2}
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libupde_engine.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libupde_engine.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -43,15 +41,15 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),  # omegas
         ctypes.POINTER(ctypes.c_double),  # knm
         ctypes.POINTER(ctypes.c_double),  # alpha
-        ctypes.c_int,                     # n
-        ctypes.c_double,                  # zeta
-        ctypes.c_double,                  # psi
-        ctypes.c_double,                  # dt
-        ctypes.c_int,                     # n_steps
-        ctypes.c_int,                     # method (0/1/2)
-        ctypes.c_int,                     # n_substeps
-        ctypes.c_double,                  # atol
-        ctypes.c_double,                  # rtol
+        ctypes.c_int,  # n
+        ctypes.c_double,  # zeta
+        ctypes.c_double,  # psi
+        ctypes.c_double,  # dt
+        ctypes.c_int,  # n_steps
+        ctypes.c_int,  # method (0/1/2)
+        ctypes.c_int,  # n_substeps
+        ctypes.c_double,  # atol
+        ctypes.c_double,  # rtol
     ]
     _LIB = lib
     return lib

@@ -83,14 +83,22 @@ def _load_rust_fn() -> Callable[..., tuple[float, float, float, float]]:
     from spo_kernel import oa_run_rust
 
     def _rust(
-        z_re: float, z_im: float,
-        omega_0: float, delta: float, k_coupling: float,
-        dt: float, n_steps: int,
+        z_re: float,
+        z_im: float,
+        omega_0: float,
+        delta: float,
+        k_coupling: float,
+        dt: float,
+        n_steps: int,
     ) -> tuple[float, float, float, float]:
         re, im, r, psi = oa_run_rust(
-            float(z_re), float(z_im),
-            float(omega_0), float(delta), float(k_coupling),
-            float(dt), int(n_steps),
+            float(z_re),
+            float(z_im),
+            float(omega_0),
+            float(delta),
+            float(k_coupling),
+            float(dt),
+            int(n_steps),
         )
         return float(re), float(im), float(r), float(psi)
 
@@ -124,9 +132,7 @@ def _load_go_fn() -> Callable[..., tuple[float, float, float, float]]:
     return oa_run_go
 
 
-_LOADERS: dict[
-    str, Callable[[], Callable[..., tuple[float, float, float, float]]]
-] = {
+_LOADERS: dict[str, Callable[[], Callable[..., tuple[float, float, float, float]]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -149,17 +155,18 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> (
-    Callable[..., tuple[float, float, float, float]] | None
-):
+def _dispatch() -> Callable[..., tuple[float, float, float, float]] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
 
 
 def _oa_deriv(
-    re: float, im: float,
-    omega_0: float, delta: float, half_k: float,
+    re: float,
+    im: float,
+    omega_0: float,
+    delta: float,
+    half_k: float,
 ) -> tuple[float, float]:
     abs_sq = re * re + im * im
     lin_re = -delta * re + omega_0 * im
@@ -169,9 +176,13 @@ def _oa_deriv(
 
 
 def _python_oa_run(
-    z_re: float, z_im: float,
-    omega_0: float, delta: float, k_coupling: float,
-    dt: float, n_steps: int,
+    z_re: float,
+    z_im: float,
+    omega_0: float,
+    delta: float,
+    k_coupling: float,
+    dt: float,
+    n_steps: int,
 ) -> tuple[float, float, float, float]:
     """Python reference matching the Rust kernel exactly.
 
@@ -184,21 +195,31 @@ def _python_oa_run(
     for _ in range(n_steps):
         k1r, k1i = _oa_deriv(re, im, omega_0, delta, half_k)
         k2r, k2i = _oa_deriv(
-            re + 0.5 * dt * k1r, im + 0.5 * dt * k1i,
-            omega_0, delta, half_k,
+            re + 0.5 * dt * k1r,
+            im + 0.5 * dt * k1i,
+            omega_0,
+            delta,
+            half_k,
         )
         k3r, k3i = _oa_deriv(
-            re + 0.5 * dt * k2r, im + 0.5 * dt * k2i,
-            omega_0, delta, half_k,
+            re + 0.5 * dt * k2r,
+            im + 0.5 * dt * k2i,
+            omega_0,
+            delta,
+            half_k,
         )
         k4r, k4i = _oa_deriv(
-            re + dt * k3r, im + dt * k3i,
-            omega_0, delta, half_k,
+            re + dt * k3r,
+            im + dt * k3i,
+            omega_0,
+            delta,
+            half_k,
         )
         re += (dt / 6.0) * (k1r + 2.0 * k2r + 2.0 * k3r + k4r)
         im += (dt / 6.0) * (k1i + 2.0 * k2i + 2.0 * k3i + k4i)
     r = (re * re + im * im) ** 0.5
     import math
+
     psi = math.atan2(im, re)
     return re, im, r, psi
 
@@ -215,12 +236,14 @@ class OttAntonsenReduction:
     """
 
     def __init__(
-        self, omega_0: float, delta: float, K: float, dt: float = 0.01,
+        self,
+        omega_0: float,
+        delta: float,
+        K: float,
+        dt: float = 0.01,
     ):
         if delta < 0:
-            raise ValueError(
-                f"delta (half-width) must be non-negative, got {delta}"
-            )
+            raise ValueError(f"delta (half-width) must be non-negative, got {delta}")
         if dt <= 0.0:
             raise ValueError(f"dt must be positive, got {dt}")
         self._omega_0 = omega_0
@@ -254,23 +277,36 @@ class OttAntonsenReduction:
         return OAState(z=complex(re, im), R=r, psi=psi, K_c=self.K_c)
 
     def _run_scalar(
-        self, z_re: float, z_im: float, n_steps: int,
+        self,
+        z_re: float,
+        z_im: float,
+        n_steps: int,
     ) -> tuple[float, float, float, float]:
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(
-                z_re, z_im,
-                self._omega_0, self._delta, self._K,
-                self._dt, int(n_steps),
+                z_re,
+                z_im,
+                self._omega_0,
+                self._delta,
+                self._K,
+                self._dt,
+                int(n_steps),
             )
         return _python_oa_run(
-            z_re, z_im,
-            self._omega_0, self._delta, self._K,
-            self._dt, int(n_steps),
+            z_re,
+            z_im,
+            self._omega_0,
+            self._delta,
+            self._K,
+            self._dt,
+            int(n_steps),
         )
 
     def predict_from_oscillators(
-        self, omegas: NDArray, K: float,
+        self,
+        omegas: NDArray,
+        K: float,
     ) -> OAState:
         """Fit Lorentzian to ``omegas`` (median → ω₀,
         IQR/2 → Δ), run OA reduction ~10 time units from a

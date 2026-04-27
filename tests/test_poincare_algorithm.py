@@ -125,7 +125,9 @@ class TestPhasePoincare:
         expected_period = 2 * math.pi / omega  # ≈ 62.83 samples
         if len(res.return_times) > 0:
             np.testing.assert_allclose(
-                res.return_times, expected_period, atol=1.5,
+                res.return_times,
+                expected_period,
+                atol=1.5,
             )
 
     @_python

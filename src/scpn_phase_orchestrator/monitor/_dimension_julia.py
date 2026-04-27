@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["correlation_integral_julia", "kaplan_yorke_dimension_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "dimension.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "dimension.jl"
 _JULIA_MODULE: Any | None = None
 
 

@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["compute_itpc_go", "itpc_persistence_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libitpc.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libitpc.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -37,13 +35,15 @@ def _load_lib() -> ctypes.CDLL:
     lib.ComputeITPC.restype = ctypes.c_int
     lib.ComputeITPC.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]
     lib.ITPCPersistence.restype = ctypes.c_int
     lib.ITPCPersistence.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_longlong),
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
@@ -52,9 +52,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def compute_itpc_go(
-    phases_flat: NDArray, n_trials: int, n_tp: int
-) -> NDArray:
+def compute_itpc_go(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     out = np.zeros(n_tp, dtype=np.float64)

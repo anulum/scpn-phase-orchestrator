@@ -154,16 +154,33 @@ def upde_run(
     backend_fn = _dispatch()
     if backend_fn is None:
         return upde_run_python(
-            p, o, k, a, float(zeta), float(psi), float(dt),
-            int(n_steps), method, int(n_substeps),
-            float(atol), float(rtol),
+            p,
+            o,
+            k,
+            a,
+            float(zeta),
+            float(psi),
+            float(dt),
+            int(n_steps),
+            method,
+            int(n_substeps),
+            float(atol),
+            float(rtol),
         )
     return np.asarray(
         backend_fn(
-            p, o, k, a,
-            float(zeta), float(psi), float(dt),
-            int(n_steps), method, int(n_substeps),
-            float(atol), float(rtol),
+            p,
+            o,
+            k,
+            a,
+            float(zeta),
+            float(psi),
+            float(dt),
+            int(n_steps),
+            method,
+            int(n_substeps),
+            float(atol),
+            float(rtol),
         ),
         dtype=np.float64,
     )

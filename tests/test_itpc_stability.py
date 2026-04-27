@@ -68,7 +68,9 @@ def test_global_shift_invariance():
     base = rng.uniform(0.0, TWO_PI, (50, 120))
     shifted = (base + 1.234) % TWO_PI
     np.testing.assert_allclose(
-        compute_itpc(base), compute_itpc(shifted), atol=1e-10,
+        compute_itpc(base),
+        compute_itpc(shifted),
+        atol=1e-10,
     )
 
 

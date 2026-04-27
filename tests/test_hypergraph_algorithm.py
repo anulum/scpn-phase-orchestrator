@@ -191,7 +191,8 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=8, deadline=None,
+        max_examples=8,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_run_finite_output(self, n, seed):

@@ -53,9 +53,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def modulation_index_go(
-    theta_low: NDArray, amp_high: NDArray, n_bins: int
-) -> float:
+def modulation_index_go(theta_low: NDArray, amp_high: NDArray, n_bins: int) -> float:
     lib = _load_lib()
     t = np.ascontiguousarray(theta_low.ravel(), dtype=np.float64)
     a = np.ascontiguousarray(amp_high.ravel(), dtype=np.float64)

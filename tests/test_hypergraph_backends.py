@@ -51,8 +51,16 @@ def _problem(seed: int, n: int = 6):
     return theta, omega, knm
 
 
-def _run_backend(backend: str, seed: int, n: int = 6, n_steps: int = 20,
-                 *, alpha=None, zeta: float = 0.0, psi: float = 0.0):
+def _run_backend(
+    backend: str,
+    seed: int,
+    n: int = 6,
+    n_steps: int = 20,
+    *,
+    alpha=None,
+    zeta: float = 0.0,
+    psi: float = 0.0,
+):
     if backend not in h_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     theta, omega, knm = _problem(seed, n)
@@ -61,8 +69,13 @@ def _run_backend(backend: str, seed: int, n: int = 6, n_steps: int = 20,
     eng.add_edge((1, 3, 4, 5), strength=0.25)
     with _force_backend(backend):
         return eng.run(
-            theta, omega, n_steps=n_steps,
-            pairwise_knm=knm, alpha=alpha, zeta=zeta, psi=psi,
+            theta,
+            omega,
+            n_steps=n_steps,
+            pairwise_knm=knm,
+            alpha=alpha,
+            zeta=zeta,
+            psi=psi,
         )
 
 
@@ -98,8 +111,12 @@ class TestAlphaNonZero:
         alpha = rng.uniform(-0.3, 0.3, (n, n))
         np.fill_diagonal(alpha, 0.0)
         return _run_backend(
-            backend, seed, n=n,
-            alpha=alpha, zeta=0.5, psi=1.2,
+            backend,
+            seed,
+            n=n,
+            alpha=alpha,
+            zeta=0.5,
+            psi=1.2,
         )
 
     def test_rust_alpha(self):
@@ -151,7 +168,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, n, seed):
@@ -166,7 +184,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, n, seed):

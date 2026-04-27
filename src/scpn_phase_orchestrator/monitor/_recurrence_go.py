@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["cross_recurrence_matrix_go", "recurrence_matrix_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "librecurrence.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "librecurrence.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -38,16 +36,20 @@ def _load_lib() -> ctypes.CDLL:
     lib.RecurrenceMatrix.restype = ctypes.c_int
     lib.RecurrenceMatrix.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
-        ctypes.c_double, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_double,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_ubyte),
     ]
     lib.CrossRecurrenceMatrix.restype = ctypes.c_int
     lib.CrossRecurrenceMatrix.argtypes = [
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
-        ctypes.c_double, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_double,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_ubyte),
     ]
     _LIB = lib
@@ -55,15 +57,21 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def recurrence_matrix_go(
-    traj_flat: NDArray, t: int, d: int, epsilon: float, angular: bool,
+    traj_flat: NDArray,
+    t: int,
+    d: int,
+    epsilon: float,
+    angular: bool,
 ) -> NDArray:
     lib = _load_lib()
     p = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
     out = np.zeros(t * t, dtype=np.uint8)
     rc = lib.RecurrenceMatrix(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(d)),
-        ctypes.c_double(float(epsilon)), ctypes.c_int(int(angular)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(d)),
+        ctypes.c_double(float(epsilon)),
+        ctypes.c_int(int(angular)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)),
     )
     if rc != 0:
@@ -86,8 +94,10 @@ def cross_recurrence_matrix_go(
     rc = lib.CrossRecurrenceMatrix(
         a.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         b.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(d)),
-        ctypes.c_double(float(epsilon)), ctypes.c_int(int(angular)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(d)),
+        ctypes.c_double(float(epsilon)),
+        ctypes.c_int(int(angular)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)),
     )
     if rc != 0:

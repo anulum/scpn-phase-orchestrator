@@ -46,7 +46,11 @@ pub fn correlation_integral(
     seed: u64,
 ) -> Result<Vec<f64>, String> {
     if trajectory.len() != t * d {
-        return Err(format!("trajectory length {} != T*d={}", trajectory.len(), t * d));
+        return Err(format!(
+            "trajectory length {} != T*d={}",
+            trajectory.len(),
+            t * d
+        ));
     }
     if t < 2 {
         return Ok(vec![0.0; epsilons.len()]);
@@ -56,48 +60,60 @@ pub fn correlation_integral(
 
     let dists = if total_pairs <= max_pairs {
         // Parallel computation of all unique pairs
-        let results: Vec<Vec<f64>> = (0..t).into_par_iter().map(|i| {
-            let mut local_dists = Vec::with_capacity(t - i - 1);
-            let ti = &trajectory[i * d .. (i + 1) * d];
-            for j in (i + 1)..t {
-                let tj = &trajectory[j * d .. (j + 1) * d];
-                let mut dist_sq = 0.0;
-                for k in 0..d {
-                    let diff = ti[k] - tj[k];
-                    dist_sq += diff * diff;
+        let results: Vec<Vec<f64>> = (0..t)
+            .into_par_iter()
+            .map(|i| {
+                let mut local_dists = Vec::with_capacity(t - i - 1);
+                let ti = &trajectory[i * d..(i + 1) * d];
+                for j in (i + 1)..t {
+                    let tj = &trajectory[j * d..(j + 1) * d];
+                    let mut dist_sq = 0.0;
+                    for k in 0..d {
+                        let diff = ti[k] - tj[k];
+                        dist_sq += diff * diff;
+                    }
+                    local_dists.push(dist_sq.sqrt());
                 }
-                local_dists.push(dist_sq.sqrt());
-            }
-            local_dists
-        }).collect();
+                local_dists
+            })
+            .collect();
         results.into_iter().flatten().collect::<Vec<f64>>()
     } else {
         // Parallel subsampled pairs
         let n_chunks = rayon::current_num_threads().max(1);
         let pairs_per_chunk = max_pairs / n_chunks;
-        
-        let results: Vec<Vec<f64>> = (0..n_chunks).into_par_iter().map(|c| {
-            let mut local_dists = Vec::with_capacity(pairs_per_chunk);
-            let mut rng_state = seed ^ (c as u64).wrapping_mul(0x9e3779b97f4a7c15);
-            let mut count = 0;
-            while count < pairs_per_chunk {
-                rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
-                let i = ((rng_state >> 33) as usize) % t;
-                rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
-                let j = ((rng_state >> 33) as usize) % t;
-                if i == j { continue; }
-                let ti = &trajectory[i * d .. (i + 1) * d];
-                let tj = &trajectory[j * d .. (j + 1) * d];
-                let mut dist_sq = 0.0;
-                for k in 0..d {
-                    let diff = ti[k] - tj[k];
-                    dist_sq += diff * diff;
+
+        let results: Vec<Vec<f64>> = (0..n_chunks)
+            .into_par_iter()
+            .map(|c| {
+                let mut local_dists = Vec::with_capacity(pairs_per_chunk);
+                let mut rng_state = seed ^ (c as u64).wrapping_mul(0x9e3779b97f4a7c15);
+                let mut count = 0;
+                while count < pairs_per_chunk {
+                    rng_state = rng_state
+                        .wrapping_mul(6364136223846793005)
+                        .wrapping_add(1442695040888963407);
+                    let i = ((rng_state >> 33) as usize) % t;
+                    rng_state = rng_state
+                        .wrapping_mul(6364136223846793005)
+                        .wrapping_add(1442695040888963407);
+                    let j = ((rng_state >> 33) as usize) % t;
+                    if i == j {
+                        continue;
+                    }
+                    let ti = &trajectory[i * d..(i + 1) * d];
+                    let tj = &trajectory[j * d..(j + 1) * d];
+                    let mut dist_sq = 0.0;
+                    for k in 0..d {
+                        let diff = ti[k] - tj[k];
+                        dist_sq += diff * diff;
+                    }
+                    local_dists.push(dist_sq.sqrt());
+                    count += 1;
                 }
-                local_dists.push(dist_sq.sqrt());
-                count += 1;
-            }
-            local_dists
-        }).collect();
+                local_dists
+            })
+            .collect();
         results.into_iter().flatten().collect()
     };
 
@@ -115,28 +131,36 @@ pub fn correlation_integral(
 /// Uses up to 200 randomly sampled points for efficiency.
 #[must_use]
 pub fn attractor_diameter(trajectory: &[f64], t: usize, d: usize) -> f64 {
-    if t <= 1 || d == 0 { return 0.0; }
+    if t <= 1 || d == 0 {
+        return 0.0;
+    }
     let sample_size = t.min(200);
     let step = if t > 200 { t / 200 } else { 1 };
-    
-    let max_dist = (0..sample_size).into_par_iter().map(|si| {
-        let i = si * step;
-        let ti = &trajectory[i * d .. (i + 1) * d];
-        let mut local_max = 0.0;
-        for sj in (si + 1)..sample_size {
-            let j = sj * step;
-            let tj = &trajectory[j * d .. (j + 1) * d];
-            let mut dist_sq = 0.0;
-            for k in 0..d {
-                let diff = ti[k] - tj[k];
-                dist_sq += diff * diff;
+
+    let max_dist = (0..sample_size)
+        .into_par_iter()
+        .map(|si| {
+            let i = si * step;
+            let ti = &trajectory[i * d..(i + 1) * d];
+            let mut local_max = 0.0;
+            for sj in (si + 1)..sample_size {
+                let j = sj * step;
+                let tj = &trajectory[j * d..(j + 1) * d];
+                let mut dist_sq = 0.0;
+                for k in 0..d {
+                    let diff = ti[k] - tj[k];
+                    dist_sq += diff * diff;
+                }
+                let dist = dist_sq.sqrt();
+                if dist > local_max {
+                    local_max = dist;
+                }
             }
-            let dist = dist_sq.sqrt();
-            if dist > local_max { local_max = dist; }
-        }
-        local_max
-    }).max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)).unwrap_or(0.0);
-    
+            local_max
+        })
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+        .unwrap_or(0.0);
+
     max_dist
 }
 

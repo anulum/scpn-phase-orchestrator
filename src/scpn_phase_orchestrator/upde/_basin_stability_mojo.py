@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "steady_state_r_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "basin_stability_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "basin_stability_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -46,30 +44,27 @@ def steady_state_r_mojo(
 ) -> float:
     exe = _ensure_exe()
     tokens: list[str] = [
-        "STEADY", str(int(n)),
-        repr(float(k_scale)), repr(float(dt)),
-        str(int(n_transient)), str(int(n_measure)),
+        "STEADY",
+        str(int(n)),
+        repr(float(k_scale)),
+        repr(float(dt)),
+        str(int(n_transient)),
+        str(int(n_measure)),
     ]
-    tokens.extend(
-        repr(float(x)) for x in np.asarray(phases_init).ravel().tolist()
-    )
-    tokens.extend(
-        repr(float(x)) for x in np.asarray(omegas).ravel().tolist()
-    )
-    tokens.extend(
-        repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist()
-    )
-    tokens.extend(
-        repr(float(x)) for x in np.asarray(alpha_flat).ravel().tolist()
-    )
+    tokens.extend(repr(float(x)) for x in np.asarray(phases_init).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in np.asarray(omegas).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
+    tokens.extend(repr(float(x)) for x in np.asarray(alpha_flat).ravel().tolist())
     proc = subprocess.run(
-        [str(exe)], input=" ".join(tokens) + "\n",
-        capture_output=True, text=True, check=False,
+        [str(exe)],
+        input=" ".join(tokens) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo basin_stability exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo basin_stability exit {proc.returncode}: {proc.stderr.strip()}"
         )
     line = proc.stdout.strip()
     if not line:

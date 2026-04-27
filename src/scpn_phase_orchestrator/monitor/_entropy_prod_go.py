@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["entropy_production_rate_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libentropy_prod.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libentropy_prod.so"
 _LIB: ctypes.CDLL | None = None
 
 

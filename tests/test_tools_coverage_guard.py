@@ -185,10 +185,9 @@ def test_load_coverage_parses_line_rate_and_domain(tmp_path: Path) -> None:
     # upde = 2/3 covered ≈ 66.67; monitor = 2/2 = 100
     assert summary.domain_line_rate_pct["upde"] == pytest.approx(2 / 3 * 100)
     assert summary.domain_line_rate_pct["monitor"] == 100.0
-    assert (
-        summary.file_line_rate_pct["src/scpn_phase_orchestrator/upde/engine.py"]
-        == pytest.approx(2 / 3 * 100)
-    )
+    assert summary.file_line_rate_pct[
+        "src/scpn_phase_orchestrator/upde/engine.py"
+    ] == pytest.approx(2 / 3 * 100)
 
 
 def test_load_coverage_missing_file(tmp_path: Path) -> None:
@@ -200,10 +199,10 @@ def test_load_coverage_skips_empty_filename(tmp_path: Path) -> None:
     xml = tmp_path / "cov.xml"
     xml.write_text(
         '<coverage line-rate="1.0" lines-covered="1" lines-valid="1">'
-        '<packages><package><classes>'
+        "<packages><package><classes>"
         '<class filename="" line-rate="1.0">'
         '<lines><line number="1" hits="1"/></lines></class>'
-        '</classes></package></packages></coverage>',
+        "</classes></package></packages></coverage>",
         encoding="utf-8",
     )
     summary = mod.load_coverage(xml)
@@ -328,9 +327,7 @@ def test_evaluate_flags_file_regression() -> None:
         summary,
         {
             "global_min_line_rate": 92.0,
-            "file_min_line_rate": {
-                "src/scpn_phase_orchestrator/upde/engine.py": 90.0
-            },
+            "file_min_line_rate": {"src/scpn_phase_orchestrator/upde/engine.py": 90.0},
         },
     )
     assert len(failures) == 1
@@ -374,9 +371,7 @@ def test_main_returns_zero_on_pass(
         ],
     )
     thresholds = tmp_path / "t.json"
-    thresholds.write_text(
-        json.dumps({"global_min_line_rate": 90.0}), encoding="utf-8"
-    )
+    thresholds.write_text(json.dumps({"global_min_line_rate": 90.0}), encoding="utf-8")
     rc = mod.main(["--coverage-xml", str(xml), "--thresholds", str(thresholds)])
     assert rc == 0
     assert "Coverage guard passed" in capsys.readouterr().out
@@ -397,9 +392,7 @@ def test_main_returns_one_on_fail(
         ],
     )
     thresholds = tmp_path / "t.json"
-    thresholds.write_text(
-        json.dumps({"global_min_line_rate": 95.0}), encoding="utf-8"
-    )
+    thresholds.write_text(json.dumps({"global_min_line_rate": 95.0}), encoding="utf-8")
     rc = mod.main(["--coverage-xml", str(xml), "--thresholds", str(thresholds)])
     assert rc == 1
     assert "Coverage guard FAILED" in capsys.readouterr().out

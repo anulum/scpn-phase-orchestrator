@@ -32,6 +32,7 @@ and the direct ``atan2 + sin(diff)`` form otherwise.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -52,9 +53,15 @@ def _load_rust_fn() -> Callable[..., NDArray]:
     from spo_kernel import torus_run_rust
 
     def _rust(
-        phases: NDArray, omegas: NDArray,
-        knm_flat: NDArray, alpha_flat: NDArray,
-        n: int, zeta: float, psi: float, dt: float, n_steps: int,
+        phases: NDArray,
+        omegas: NDArray,
+        knm_flat: NDArray,
+        alpha_flat: NDArray,
+        n: int,
+        zeta: float,
+        psi: float,
+        dt: float,
+        n_steps: int,
     ) -> NDArray:
         return np.asarray(
             torus_run_rust(
@@ -62,8 +69,11 @@ def _load_rust_fn() -> Callable[..., NDArray]:
                 np.ascontiguousarray(omegas, dtype=np.float64),
                 np.ascontiguousarray(knm_flat, dtype=np.float64),
                 np.ascontiguousarray(alpha_flat, dtype=np.float64),
-                int(n), float(zeta), float(psi),
-                float(dt), int(n_steps),
+                int(n),
+                float(zeta),
+                float(psi),
+                float(dt),
+                int(n_steps),
             ),
             dtype=np.float64,
         )
@@ -128,9 +138,15 @@ def _dispatch() -> Callable[..., NDArray] | None:
 
 
 def _python_torus_run(
-    phases: NDArray, omegas: NDArray,
-    knm_flat: NDArray, alpha_flat: NDArray,
-    n: int, zeta: float, psi: float, dt: float, n_steps: int,
+    phases: NDArray,
+    omegas: NDArray,
+    knm_flat: NDArray,
+    alpha_flat: NDArray,
+    n: int,
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
 ) -> NDArray:
     """Python reference matching the Rust kernel exactly.
 
@@ -176,7 +192,7 @@ def _python_torus_run(
         z_re = np.where(nonzero, nr / np.where(nonzero, norm, 1.0), nr)
         z_im = np.where(nonzero, ni / np.where(nonzero, norm, 1.0), ni)
 
-    return np.arctan2(z_im, z_re) % TWO_PI
+    return cast("NDArray", np.arctan2(z_im, z_re) % TWO_PI)
 
 
 class TorusEngine:
@@ -188,9 +204,7 @@ class TorusEngine:
 
     def __init__(self, n_oscillators: int, dt: float):
         if n_oscillators < 1:
-            raise ValueError(
-                f"n_oscillators must be >= 1, got {n_oscillators}"
-            )
+            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
         if dt <= 0.0:
             raise ValueError(f"dt must be positive, got {dt}")
         self._n = n_oscillators
@@ -225,16 +239,24 @@ class TorusEngine:
             return backend_fn(
                 np.ascontiguousarray(phases, dtype=np.float64),
                 np.ascontiguousarray(omegas, dtype=np.float64),
-                knm_flat, alpha_flat,
-                self._n, float(zeta), float(psi),
-                float(self._dt), int(n_steps),
+                knm_flat,
+                alpha_flat,
+                self._n,
+                float(zeta),
+                float(psi),
+                float(self._dt),
+                int(n_steps),
             )
         return _python_torus_run(
             np.ascontiguousarray(phases, dtype=np.float64),
             np.ascontiguousarray(omegas, dtype=np.float64),
-            knm_flat, alpha_flat,
-            self._n, float(zeta), float(psi),
-            float(self._dt), int(n_steps),
+            knm_flat,
+            alpha_flat,
+            self._n,
+            float(zeta),
+            float(psi),
+            float(self._dt),
+            int(n_steps),
         )
 
     def order_parameter(self, phases: NDArray) -> float:
@@ -262,4 +284,4 @@ class TorusEngine:
         result = omegas + coupling
         if zeta != 0.0:
             result = result + zeta * np.sin(psi - theta)
-        return result
+        return cast("NDArray", result)

@@ -117,12 +117,13 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 def _dispatch(fn_name: str) -> object:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    try:
+        return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+    except (ImportError, RuntimeError, OSError):
+        return None
 
 
-def modulation_index(
-    theta_low: NDArray, amp_high: NDArray, n_bins: int = 18
-) -> float:
+def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) -> float:
     """Phase-amplitude coupling via Tort et al. 2010, J. Neurophysiol.
 
     Bins amplitude by phase, computes KL divergence from uniform,
@@ -185,14 +186,10 @@ def pac_matrix(
         n_bins: number of phase bins.
     """
     if phases_history.ndim != 2 or amplitudes_history.ndim != 2:
-        raise ValueError(
-            "phases_history and amplitudes_history must be 2-D"
-        )
+        raise ValueError("phases_history and amplitudes_history must be 2-D")
     t, n = phases_history.shape
     if amplitudes_history.shape != (t, n):
-        raise ValueError(
-            "phases and amplitudes must have the same shape"
-        )
+        raise ValueError("phases and amplitudes must have the same shape")
 
     backend_fn = _dispatch("pac_matrix")
     if backend_fn is not None:
@@ -201,12 +198,8 @@ def pac_matrix(
             backend_fn,
         )
         flat = fn(
-            np.ascontiguousarray(
-                phases_history.ravel(), dtype=np.float64
-            ),
-            np.ascontiguousarray(
-                amplitudes_history.ravel(), dtype=np.float64
-            ),
+            np.ascontiguousarray(phases_history.ravel(), dtype=np.float64),
+            np.ascontiguousarray(amplitudes_history.ravel(), dtype=np.float64),
             t,
             n,
             n_bins,

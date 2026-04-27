@@ -35,9 +35,7 @@ def _ensure_julia_loaded() -> Any:
     return _JULIA_MODULE
 
 
-def modulation_index_julia(
-    theta_low: NDArray, amp_high: NDArray, n_bins: int
-) -> float:
+def modulation_index_julia(theta_low: NDArray, amp_high: NDArray, n_bins: int) -> float:
     jl = _ensure_julia_loaded()
     return float(
         jl.modulation_index(

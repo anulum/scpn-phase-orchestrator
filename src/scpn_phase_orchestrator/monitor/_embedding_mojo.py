@@ -23,9 +23,7 @@ __all__ = [
     "nearest_neighbor_distances_mojo",
 ]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "embedding_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "embedding_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -48,19 +46,23 @@ def _run(payload: str) -> list[str]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo embedding returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo embedding returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
     return [line for line in proc.stdout.strip().splitlines() if line]
 
 
 def delay_embed_mojo(
-    signal: NDArray, delay: int, dimension: int,
+    signal: NDArray,
+    delay: int,
+    dimension: int,
 ) -> NDArray:
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     t = int(s.size)
     tokens: list[str] = [
-        "DE", str(t), str(int(delay)), str(int(dimension)),
+        "DE",
+        str(t),
+        str(int(delay)),
+        str(int(dimension)),
     ]
     tokens.extend(repr(float(x)) for x in s.tolist())
     result = _run(" ".join(tokens) + "\n")
@@ -68,12 +70,17 @@ def delay_embed_mojo(
 
 
 def mutual_information_mojo(
-    signal: NDArray, lag: int, n_bins: int,
+    signal: NDArray,
+    lag: int,
+    n_bins: int,
 ) -> float:
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     t = int(s.size)
     tokens: list[str] = [
-        "MI", str(t), str(int(lag)), str(int(n_bins)),
+        "MI",
+        str(t),
+        str(int(lag)),
+        str(int(n_bins)),
     ]
     tokens.extend(repr(float(x)) for x in s.tolist())
     result = _run(" ".join(tokens) + "\n")
@@ -81,16 +88,16 @@ def mutual_information_mojo(
 
 
 def nearest_neighbor_distances_mojo(
-    embedded: NDArray, t: int, m: int,
+    embedded: NDArray,
+    t: int,
+    m: int,
 ) -> tuple[NDArray, NDArray]:
     e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
     tokens: list[str] = ["NN", str(int(t)), str(int(m))]
     tokens.extend(repr(float(x)) for x in e.tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != 2 * t:
-        raise ValueError(
-            f"Mojo NN returned {len(result)} lines, expected {2 * t}"
-        )
+        raise ValueError(f"Mojo NN returned {len(result)} lines, expected {2 * t}")
     dist = np.array([float(x) for x in result[:t]], dtype=np.float64)
     idx = np.array([int(x) for x in result[t:]], dtype=np.int64)
     return dist, idx

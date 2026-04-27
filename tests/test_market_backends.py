@@ -58,8 +58,7 @@ def _op_backend(backend: str, seed: int, T: int = 40, N: int = 5):
         return market_order_parameter(phases)
 
 
-def _plv_backend(backend: str, seed: int, T: int = 40, N: int = 5,
-                 W: int = 10):
+def _plv_backend(backend: str, seed: int, T: int = 40, N: int = 5, W: int = 10):
     if backend not in m_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     phases = _problem(seed, T, N)
@@ -118,7 +117,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_op_rust_hypothesis(self, T, N, seed):
@@ -135,7 +135,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=5, deadline=None,
+        max_examples=5,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_plv_go_hypothesis(self, T, N, W, seed):

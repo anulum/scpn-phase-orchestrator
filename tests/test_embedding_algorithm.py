@@ -143,7 +143,11 @@ class TestHypothesis:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_delay_embed_round_trip(
-        self, t: int, delay: int, dim: int, seed: int,
+        self,
+        t: int,
+        delay: int,
+        dim: int,
+        seed: int,
     ):
         rng = np.random.default_rng(seed)
         sig = rng.normal(0, 1, t)
@@ -154,9 +158,7 @@ class TestHypothesis:
         assert emb.shape == (t_eff, dim)
         # Each column k is the signal shifted by k·delay.
         for k in range(dim):
-            np.testing.assert_array_equal(
-                emb[:, k], sig[k * delay : k * delay + t_eff]
-            )
+            np.testing.assert_array_equal(emb[:, k], sig[k * delay : k * delay + t_eff])
 
 
 class TestDispatcherSurface:

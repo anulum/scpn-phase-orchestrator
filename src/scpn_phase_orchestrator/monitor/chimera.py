@@ -178,9 +178,7 @@ def detect_chimera(phases: NDArray, knm: NDArray) -> ChimeraState:
 
     r_local = local_order_parameter(phases, knm)
     coherent = [int(i) for i in range(n) if r_local[i] > _COHERENT_THRESHOLD]
-    incoherent = [
-        int(i) for i in range(n) if r_local[i] < _INCOHERENT_THRESHOLD
-    ]
+    incoherent = [int(i) for i in range(n) if r_local[i] < _INCOHERENT_THRESHOLD]
     boundary = n - len(coherent) - len(incoherent)
     chimera_index = boundary / n if n > 0 else 0.0
     return ChimeraState(

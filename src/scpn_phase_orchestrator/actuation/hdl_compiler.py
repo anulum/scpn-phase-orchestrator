@@ -149,8 +149,7 @@ class KuramotoVerilogCompiler:
 
         for i, j, k_ij in active_edges:
             lines.append(
-                f"    localparam signed [WIDTH-1:0] K_{i}_{j} = "
-                f"{_hex_q16_16(k_ij)};"
+                f"    localparam signed [WIDTH-1:0] K_{i}_{j} = {_hex_q16_16(k_ij)};"
             )
 
         # State registers + output wiring
@@ -161,9 +160,7 @@ class KuramotoVerilogCompiler:
         # CORDIC instances for every active edge
         for i, j, _ in active_edges:
             lines.append(f"    wire signed [WIDTH-1:0] diff_{i}_{j};")
-            lines.append(
-                f"    assign diff_{i}_{j} = theta_{j} - theta_{i};"
-            )
+            lines.append(f"    assign diff_{i}_{j} = theta_{j} - theta_{i};")
             lines.append(f"    wire signed [WIDTH-1:0] sin_{i}_{j};")
             lines.append(f"    wire signed [WIDTH-1:0] cos_{i}_{j};  // unused")
             lines.append(
@@ -185,13 +182,11 @@ class KuramotoVerilogCompiler:
         for i, j, _ in active_edges:
             lines.append(f"    wire signed [2*WIDTH-1:0] prod_{i}_{j};")
             lines.append(
-                f"    assign prod_{i}_{j} = $signed(K_{i}_{j}) * "
-                f"$signed(sin_{i}_{j});"
+                f"    assign prod_{i}_{j} = $signed(K_{i}_{j}) * $signed(sin_{i}_{j});"
             )
             lines.append(f"    wire signed [WIDTH-1:0] term_{i}_{j};")
             lines.append(
-                f"    assign term_{i}_{j} = "
-                f"prod_{i}_{j}[2*WIDTH-1:{_FRAC_BITS}];"
+                f"    assign term_{i}_{j} = prod_{i}_{j}[2*WIDTH-1:{_FRAC_BITS}];"
             )
 
         # Aggregate sum per oscillator (ω_i + Σ_j term_ij)
@@ -204,13 +199,11 @@ class KuramotoVerilogCompiler:
             lines.append(f"    assign dtheta_{i} = " + " + ".join(row_terms) + ";")
             lines.append(f"    wire signed [2*WIDTH-1:0] dtheta_dt_{i};")
             lines.append(
-                f"    assign dtheta_dt_{i} = "
-                f"$signed(dtheta_{i}) * $signed(DT_Q);"
+                f"    assign dtheta_dt_{i} = $signed(dtheta_{i}) * $signed(DT_Q);"
             )
             lines.append(f"    wire signed [WIDTH-1:0] dtheta_scaled_{i};")
             lines.append(
-                f"    assign dtheta_scaled_{i} = "
-                f"dtheta_dt_{i}[2*WIDTH-1:{_FRAC_BITS}];"
+                f"    assign dtheta_scaled_{i} = dtheta_dt_{i}[2*WIDTH-1:{_FRAC_BITS}];"
             )
 
         # Sequential Euler update (Q16.16)
@@ -221,9 +214,7 @@ class KuramotoVerilogCompiler:
             lines.append(f"            theta_{i} <= {self.width}'sd0;")
         lines.append("        end else begin")
         for i in range(self.n):
-            lines.append(
-                f"            theta_{i} <= theta_{i} + dtheta_scaled_{i};"
-            )
+            lines.append(f"            theta_{i} <= theta_{i} + dtheta_scaled_{i};")
         lines.append("        end")
         lines.append("    end")
         lines.append("endmodule")

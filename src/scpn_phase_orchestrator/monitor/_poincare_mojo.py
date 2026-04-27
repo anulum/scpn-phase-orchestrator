@@ -22,9 +22,7 @@ __all__ = [
     "poincare_section_mojo",
 ]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "poincare_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "poincare_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -47,8 +45,7 @@ def _run(payload: str) -> list[str]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo poincare returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo poincare returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
     return [line for line in proc.stdout.strip().splitlines() if line]
 
@@ -73,11 +70,18 @@ def _parse(lines: list[str], dim: int, t: int) -> tuple[NDArray, NDArray, int]:
 
 
 def poincare_section_mojo(
-    traj_flat: NDArray, t: int, d: int,
-    normal: NDArray, offset: float, direction_id: int,
+    traj_flat: NDArray,
+    t: int,
+    d: int,
+    normal: NDArray,
+    offset: float,
+    direction_id: int,
 ) -> tuple[NDArray, NDArray, int]:
     tokens: list[str] = [
-        "SEC", str(int(t)), str(int(d)), str(int(direction_id)),
+        "SEC",
+        str(int(t)),
+        str(int(d)),
+        str(int(direction_id)),
         repr(float(offset)),
     ]
     tokens.extend(repr(float(x)) for x in normal.ravel().tolist())
@@ -86,12 +90,18 @@ def poincare_section_mojo(
 
 
 def phase_poincare_mojo(
-    phases_flat: NDArray, t: int, n: int,
-    oscillator_idx: int, section_phase: float,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
+    oscillator_idx: int,
+    section_phase: float,
 ) -> tuple[NDArray, NDArray, int]:
     tokens: list[str] = [
-        "PHASE", str(int(t)), str(int(n)),
-        str(int(oscillator_idx)), repr(float(section_phase)),
+        "PHASE",
+        str(int(t)),
+        str(int(n)),
+        str(int(oscillator_idx)),
+        repr(float(section_phase)),
     ]
     tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())
     return _parse(_run(" ".join(tokens) + "\n"), n, t)

@@ -67,9 +67,7 @@ def _force_backend(
     return np.asarray(out, dtype=np.float64)
 
 
-def _python_reference(
-    knm: np.ndarray, theta: np.ndarray, **kw: object
-) -> np.ndarray:
+def _python_reference(knm: np.ndarray, theta: np.ndarray, **kw: object) -> np.ndarray:
     return _force_backend("python", knm, theta, **kw)
 
 

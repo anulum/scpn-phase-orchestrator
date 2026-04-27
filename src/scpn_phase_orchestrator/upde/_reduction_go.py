@@ -15,9 +15,7 @@ from pathlib import Path
 
 __all__ = ["oa_run_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libreduction.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libreduction.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -34,9 +32,12 @@ def _load_lib() -> ctypes.CDLL:
     lib = ctypes.CDLL(str(_LIB_PATH))
     lib.OARun.restype = ctypes.c_int
     lib.OARun.argtypes = [
-        ctypes.c_double, ctypes.c_double,
-        ctypes.c_double, ctypes.c_double,
-        ctypes.c_double, ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
@@ -69,8 +70,10 @@ def oa_run_go(
         ctypes.c_double(float(k_coupling)),
         ctypes.c_double(float(dt)),
         ctypes.c_int(int(n_steps)),
-        ctypes.byref(re), ctypes.byref(im),
-        ctypes.byref(r), ctypes.byref(psi),
+        ctypes.byref(re),
+        ctypes.byref(im),
+        ctypes.byref(r),
+        ctypes.byref(psi),
     )
     if rc != 0:
         raise ValueError(f"Go OARun rc={rc}")

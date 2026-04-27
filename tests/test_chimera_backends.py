@@ -168,7 +168,9 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             np.testing.assert_allclose(
-                got, ref, atol=tolerances[backend],
+                got,
+                ref,
+                atol=tolerances[backend],
                 err_msg=f"{backend} diverged from python reference",
             )
 

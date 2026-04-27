@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["hypergraph_run_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libhypergraph.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libhypergraph.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -43,10 +41,15 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_longlong),
         ctypes.POINTER(ctypes.c_longlong),
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
-        ctypes.POINTER(ctypes.c_double), ctypes.c_int,
-        ctypes.POINTER(ctypes.c_double), ctypes.c_int,
-        ctypes.c_double, ctypes.c_double, ctypes.c_double,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_double),
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_double),
+        ctypes.c_int,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]
@@ -79,11 +82,13 @@ def hypergraph_run_go(
     out = np.zeros(int(n), dtype=np.float64)
     knm_ptr = (
         knm.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-        if knm.size else ctypes.cast(0, ctypes.POINTER(ctypes.c_double))
+        if knm.size
+        else ctypes.cast(0, ctypes.POINTER(ctypes.c_double))
     )
     alpha_ptr = (
         alpha.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-        if alpha.size else ctypes.cast(0, ctypes.POINTER(ctypes.c_double))
+        if alpha.size
+        else ctypes.cast(0, ctypes.POINTER(ctypes.c_double))
     )
     rc = lib.HypergraphRun(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -92,9 +97,12 @@ def hypergraph_run_go(
         en.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         eo.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
         es.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(en.size)), ctypes.c_int(int(eo.size)),
-        knm_ptr, ctypes.c_int(int(knm.size)),
-        alpha_ptr, ctypes.c_int(int(alpha.size)),
+        ctypes.c_int(int(en.size)),
+        ctypes.c_int(int(eo.size)),
+        knm_ptr,
+        ctypes.c_int(int(knm.size)),
+        alpha_ptr,
+        ctypes.c_int(int(alpha.size)),
         ctypes.c_double(float(zeta)),
         ctypes.c_double(float(psi)),
         ctypes.c_double(float(dt)),

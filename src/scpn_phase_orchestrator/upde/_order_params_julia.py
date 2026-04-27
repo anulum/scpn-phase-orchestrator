@@ -27,9 +27,7 @@ __all__ = [
     "layer_coherence_julia",
 ]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "order_params.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "order_params.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -48,9 +46,7 @@ def _ensure_julia_loaded() -> Any:
 
 def order_parameter_julia(phases: NDArray) -> tuple[float, float]:
     jl = _ensure_julia_loaded()
-    r, psi = jl.order_parameter(
-        np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-    )
+    r, psi = jl.order_parameter(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
     return float(r), float(psi)
 
 

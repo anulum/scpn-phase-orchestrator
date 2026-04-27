@@ -22,9 +22,7 @@ __all__ = [
     "nearest_neighbor_distances_go",
 ]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libembedding.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libembedding.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -42,19 +40,24 @@ def _load_lib() -> ctypes.CDLL:
     lib.DelayEmbed.restype = ctypes.c_int
     lib.DelayEmbed.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]
     lib.MutualInformation.restype = ctypes.c_int
     lib.MutualInformation.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]
     lib.NearestNeighborDistances.restype = ctypes.c_int
     lib.NearestNeighborDistances.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_longlong),
     ]
@@ -63,7 +66,9 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def delay_embed_go(
-    signal: NDArray, delay: int, dimension: int,
+    signal: NDArray,
+    delay: int,
+    dimension: int,
 ) -> NDArray:
     lib = _load_lib()
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
@@ -82,7 +87,9 @@ def delay_embed_go(
 
 
 def mutual_information_go(
-    signal: NDArray, lag: int, n_bins: int,
+    signal: NDArray,
+    lag: int,
+    n_bins: int,
 ) -> float:
     lib = _load_lib()
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
@@ -100,7 +107,9 @@ def mutual_information_go(
 
 
 def nearest_neighbor_distances_go(
-    embedded: NDArray, t: int, m: int,
+    embedded: NDArray,
+    t: int,
+    m: int,
 ) -> tuple[NDArray, NDArray]:
     lib = _load_lib()
     e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
@@ -108,7 +117,8 @@ def nearest_neighbor_distances_go(
     idx = np.zeros(t, dtype=np.int64)
     rc = lib.NearestNeighborDistances(
         e.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(m)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(m)),
         dist.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         idx.ctypes.data_as(ctypes.POINTER(ctypes.c_longlong)),
     )

@@ -81,9 +81,7 @@ def test_staged_chimera_on_local_coupling_ring():
         for i in range(n):
             for off in (-2, -1, 1, 2):
                 knm[i, (i + off) % n] = 1.0
-        phases = np.concatenate(
-            [np.zeros(n // 2), rng.uniform(0, TWO_PI, n // 2)]
-        )
+        phases = np.concatenate([np.zeros(n // 2), rng.uniform(0, TWO_PI, n // 2)])
         state = detect_chimera(phases, knm)
         if state.coherent_indices and state.incoherent_indices:
             successes += 1

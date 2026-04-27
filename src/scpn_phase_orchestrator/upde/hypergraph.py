@@ -84,11 +84,18 @@ def _load_rust_fn() -> Callable[..., NDArray]:
     from spo_kernel import hypergraph_run_rust
 
     def _rust(
-        phases: NDArray, omegas: NDArray, n: int,
-        edge_nodes: NDArray, edge_offsets: NDArray,
+        phases: NDArray,
+        omegas: NDArray,
+        n: int,
+        edge_nodes: NDArray,
+        edge_offsets: NDArray,
         edge_strengths: NDArray,
-        knm_flat: NDArray, alpha_flat: NDArray,
-        zeta: float, psi: float, dt: float, n_steps: int,
+        knm_flat: NDArray,
+        alpha_flat: NDArray,
+        zeta: float,
+        psi: float,
+        dt: float,
+        n_steps: int,
     ) -> NDArray:
         return np.asarray(
             hypergraph_run_rust(
@@ -100,7 +107,10 @@ def _load_rust_fn() -> Callable[..., NDArray]:
                 np.ascontiguousarray(edge_strengths, dtype=np.float64),
                 np.ascontiguousarray(knm_flat, dtype=np.float64),
                 np.ascontiguousarray(alpha_flat, dtype=np.float64),
-                float(zeta), float(psi), float(dt), int(n_steps),
+                float(zeta),
+                float(psi),
+                float(dt),
+                int(n_steps),
             ),
             dtype=np.float64,
         )
@@ -169,11 +179,18 @@ def _dispatch() -> Callable[..., NDArray] | None:
 
 
 def _python_run(
-    phases: NDArray, omegas: NDArray, n: int,
-    edge_nodes: NDArray, edge_offsets: NDArray,
+    phases: NDArray,
+    omegas: NDArray,
+    n: int,
+    edge_nodes: NDArray,
+    edge_offsets: NDArray,
     edge_strengths: NDArray,
-    knm_flat: NDArray, alpha_flat: NDArray,
-    zeta: float, psi: float, dt: float, n_steps: int,
+    knm_flat: NDArray,
+    alpha_flat: NDArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
 ) -> NDArray:
     """Python reference aligned to the Rust kernel.
 
@@ -193,6 +210,8 @@ def _python_run(
     for _ in range(n_steps):
         deriv = om.copy()
         if has_pairwise:
+            if knm is None:
+                raise RuntimeError("pairwise coupling matrix was not initialised")
             s = np.sin(p)
             c = np.cos(p)
             if alpha_zero:
@@ -203,16 +222,15 @@ def _python_run(
                 )
                 deriv += np.sum(knm * sin_diff, axis=1)
             else:
+                if alpha is None:
+                    raise RuntimeError("phase frustration matrix was not initialised")
                 diff = p[np.newaxis, :] - p[:, np.newaxis] - alpha
                 deriv += np.sum(knm * np.sin(diff), axis=1)
         if zeta != 0.0:
             deriv += zeta * np.sin(psi - p)
         for e in range(n_edges):
             start = int(edge_offsets[e])
-            stop = (
-                int(edge_offsets[e + 1])
-                if e + 1 < n_edges else int(edge_nodes.size)
-            )
+            stop = int(edge_offsets[e + 1]) if e + 1 < n_edges else int(edge_nodes.size)
             nodes = edge_nodes[start:stop]
             k = stop - start
             phase_sum = float(np.sum(p[nodes]))
@@ -282,9 +300,13 @@ class HypergraphEngine:
     ) -> NDArray:
         """One explicit-Euler step."""
         return self.run(
-            phases, omegas, n_steps=1,
-            pairwise_knm=pairwise_knm, alpha=alpha,
-            zeta=zeta, psi=psi,
+            phases,
+            omegas,
+            n_steps=1,
+            pairwise_knm=pairwise_knm,
+            alpha=alpha,
+            zeta=zeta,
+            psi=psi,
         )
 
     def run(
@@ -315,15 +337,29 @@ class HypergraphEngine:
             return backend_fn(
                 np.ascontiguousarray(phases, dtype=np.float64),
                 np.ascontiguousarray(omegas, dtype=np.float64),
-                self._n, en, eo, es, knm_flat, alpha_flat,
-                float(zeta), float(psi), float(self._dt),
+                self._n,
+                en,
+                eo,
+                es,
+                knm_flat,
+                alpha_flat,
+                float(zeta),
+                float(psi),
+                float(self._dt),
                 int(n_steps),
             )
         return _python_run(
             np.ascontiguousarray(phases, dtype=np.float64),
             np.ascontiguousarray(omegas, dtype=np.float64),
-            self._n, en, eo, es, knm_flat, alpha_flat,
-            float(zeta), float(psi), float(self._dt),
+            self._n,
+            en,
+            eo,
+            es,
+            knm_flat,
+            alpha_flat,
+            float(zeta),
+            float(psi),
+            float(self._dt),
             int(n_steps),
         )
 

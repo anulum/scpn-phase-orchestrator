@@ -185,14 +185,10 @@ def test_order_parameter_within_five_percent(seed: int) -> None:
         phases = rng.uniform(0.0, TWO_PI, size=n).astype(np.float64)
         engine = UPDEEngine(n_oscillators=n, dt=dt, method="euler")
         for _ in range(n_warmup):
-            phases = engine.step(
-                phases, omegas, knm_fn(phases), 0.0, 0.0, alpha
-            )
+            phases = engine.step(phases, omegas, knm_fn(phases), 0.0, 0.0, alpha)
         rs: list[float] = []
         for _ in range(n_measure):
-            phases = engine.step(
-                phases, omegas, knm_fn(phases), 0.0, 0.0, alpha
-            )
+            phases = engine.step(phases, omegas, knm_fn(phases), 0.0, 0.0, alpha)
             r, _ = compute_order_parameter(phases)
             rs.append(float(r))
         return float(np.mean(rs))
@@ -223,21 +219,15 @@ class TestContractFailures:
 
     def test_block_size_zero_rejected(self) -> None:
         with pytest.raises(ValueError, match="block_size"):
-            attnres_modulate(
-                _symmetric_knm(4), np.zeros(4), block_size=0
-            )
+            attnres_modulate(_symmetric_knm(4), np.zeros(4), block_size=0)
 
     def test_temperature_zero_rejected(self) -> None:
         with pytest.raises(ValueError, match="temperature"):
-            attnres_modulate(
-                _symmetric_knm(4), np.zeros(4), temperature=0.0
-            )
+            attnres_modulate(_symmetric_knm(4), np.zeros(4), temperature=0.0)
 
     def test_negative_lambda_rejected(self) -> None:
         with pytest.raises(ValueError, match="lambda_"):
-            attnres_modulate(
-                _symmetric_knm(4), np.zeros(4), lambda_=-0.1
-            )
+            attnres_modulate(_symmetric_knm(4), np.zeros(4), lambda_=-0.1)
 
 
 # ---------------------------------------------------------------------

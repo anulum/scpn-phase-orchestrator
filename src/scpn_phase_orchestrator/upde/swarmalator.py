@@ -46,16 +46,26 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     from spo_kernel import PySwarmalatorStepper
 
     def _rust(
-        pos: NDArray, phases: NDArray, omegas: NDArray,
-        n: int, dim: int,
-        a: float, b: float, j: float, k: float, dt: float,
+        pos: NDArray,
+        phases: NDArray,
+        omegas: NDArray,
+        n: int,
+        dim: int,
+        a: float,
+        b: float,
+        j: float,
+        k: float,
+        dt: float,
     ) -> tuple[NDArray, NDArray]:
         stepper = PySwarmalatorStepper(int(n), int(dim), float(dt))
         new_pos, new_phases = stepper.step(
             np.ascontiguousarray(pos.ravel(), dtype=np.float64),
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
             np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-            float(a), float(b), float(j), float(k),
+            float(a),
+            float(b),
+            float(j),
+            float(k),
         )
         return (
             np.asarray(new_pos, dtype=np.float64).reshape(n, dim),
@@ -126,9 +136,16 @@ def _dispatch() -> Callable[..., tuple[NDArray, NDArray]] | None:
 
 
 def _python_step(
-    pos: NDArray, phases: NDArray, omegas: NDArray,
-    n: int, dim: int,
-    a: float, b: float, j: float, k: float, dt: float,
+    pos: NDArray,
+    phases: NDArray,
+    omegas: NDArray,
+    n: int,
+    dim: int,
+    a: float,
+    b: float,
+    j: float,
+    k: float,
+    dt: float,
 ) -> tuple[NDArray, NDArray]:
     """Python reference matching the Rust kernel exactly.
 
@@ -143,15 +160,19 @@ def _python_step(
     new_phases = phases.copy()
     for i in range(n):
         diff = pos - pos[i]
-        d2 = np.sum(diff ** 2, axis=1)  # pre-eps
+        d2 = np.sum(diff**2, axis=1)  # pre-eps
         dist = np.sqrt(d2 + eps)
         cos_diff = np.cos(phases - phases[i])
         sin_diff = np.sin(phases - phases[i])
         attract = (a + j * cos_diff) / dist
         repulse = b / (dist * d2 + eps)  # Rust semantics
-        vel = np.sum(
-            diff * (attract - repulse)[:, np.newaxis], axis=0,
-        ) / n
+        vel = (
+            np.sum(
+                diff * (attract - repulse)[:, np.newaxis],
+                axis=0,
+            )
+            / n
+        )
         new_pos[i] = pos[i] + dt * vel
         dth = omegas[i] + k * float(np.mean(sin_diff / dist))
         new_phases[i] = (phases[i] + dt * dth) % TWO_PI
@@ -190,14 +211,28 @@ class SwarmalatorEngine:
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(
-                pos, phases, omegas,
-                self._n, self._dim,
-                a, b, j, k, self._dt,
+                pos,
+                phases,
+                omegas,
+                self._n,
+                self._dim,
+                a,
+                b,
+                j,
+                k,
+                self._dt,
             )
         return _python_step(
-            pos, phases, omegas,
-            self._n, self._dim,
-            a, b, j, k, self._dt,
+            pos,
+            phases,
+            omegas,
+            self._n,
+            self._dim,
+            a,
+            b,
+            j,
+            k,
+            self._dt,
         )
 
     def run(
@@ -216,7 +251,13 @@ class SwarmalatorEngine:
         phase_traj = np.empty((n_steps, self._n))
         for i in range(n_steps):
             curr_pos, curr_phases = self.step(
-                curr_pos, curr_phases, omegas, a, b, j, k,
+                curr_pos,
+                curr_phases,
+                omegas,
+                a,
+                b,
+                j,
+                k,
             )
             pos_traj[i] = curr_pos
             phase_traj[i] = curr_phases

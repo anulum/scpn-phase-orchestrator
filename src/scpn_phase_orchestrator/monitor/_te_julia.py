@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["phase_te_julia", "te_matrix_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "transfer_entropy.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "transfer_entropy.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -37,9 +35,7 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def phase_te_julia(
-    source: NDArray, target: NDArray, n_bins: int
-) -> float:
+def phase_te_julia(source: NDArray, target: NDArray, n_bins: int) -> float:
     jl = _ensure()
     return float(
         jl.phase_transfer_entropy(

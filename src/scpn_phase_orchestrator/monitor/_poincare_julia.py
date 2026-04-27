@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["phase_poincare_julia", "poincare_section_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "poincare.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "poincare.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -48,9 +46,11 @@ def poincare_section_julia(
     jl = _ensure()
     cr, times, n_cr = jl.poincare_section(
         np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
-        int(t), int(d),
+        int(t),
+        int(d),
         np.ascontiguousarray(normal.ravel(), dtype=np.float64),
-        float(offset), int(direction_id),
+        float(offset),
+        int(direction_id),
     )
     return (
         np.asarray(cr, dtype=np.float64),
@@ -69,8 +69,10 @@ def phase_poincare_julia(
     jl = _ensure()
     cr, times, n_cr = jl.phase_poincare(
         np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
-        int(t), int(n),
-        int(oscillator_idx), float(section_phase),
+        int(t),
+        int(n),
+        int(oscillator_idx),
+        float(section_phase),
     )
     return (
         np.asarray(cr, dtype=np.float64),

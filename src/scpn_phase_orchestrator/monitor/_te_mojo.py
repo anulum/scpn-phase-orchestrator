@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["phase_te_mojo", "te_matrix_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "transfer_entropy_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "transfer_entropy_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -46,16 +44,10 @@ def _run(payload: str) -> list[float]:
             f"Mojo transfer_entropy returned exit {proc.returncode}: "
             f"{proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def phase_te_mojo(
-    source: NDArray, target: NDArray, n_bins: int
-) -> float:
+def phase_te_mojo(source: NDArray, target: NDArray, n_bins: int) -> float:
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
     n = int(min(s.size, t.size))

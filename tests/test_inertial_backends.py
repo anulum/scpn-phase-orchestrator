@@ -45,9 +45,7 @@ def _problem(n: int, seed: int):
         rng.uniform(0, 2 * np.pi, n),
         rng.normal(0, 0.1, n),
         rng.normal(0, 0.5, n),
-        (lambda k: (np.fill_diagonal(k, 0), k)[1])(
-            rng.uniform(0, 0.5, (n, n))
-        ),
+        (lambda k: (np.fill_diagonal(k, 0), k)[1])(rng.uniform(0, 0.5, (n, n))),
         np.ones(n),
         np.ones(n) * 0.1,
     )
@@ -99,7 +97,13 @@ class TestMultiStepParity:
         eng = InertialKuramotoEngine(n, 0.01)
         with _force_backend(backend):
             fin_th, fin_od, _, _ = eng.run(
-                theta, od, p, k, m, d, n_steps=steps,
+                theta,
+                od,
+                p,
+                k,
+                m,
+                d,
+                n_steps=steps,
             )
         return fin_th, fin_od
 
@@ -122,7 +126,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, n, seed):
@@ -138,7 +143,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, n, seed):

@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["swarmalator_step_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "swarmalator.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "swarmalator.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -38,17 +36,29 @@ def _ensure() -> Any:
 
 
 def swarmalator_step_julia(
-    pos: NDArray, phases: NDArray, omegas: NDArray,
-    n: int, dim: int,
-    a: float, b: float, j: float, k: float, dt: float,
+    pos: NDArray,
+    phases: NDArray,
+    omegas: NDArray,
+    n: int,
+    dim: int,
+    a: float,
+    b: float,
+    j: float,
+    k: float,
+    dt: float,
 ) -> tuple[NDArray, NDArray]:
     jl = _ensure()
     new_pos_flat, new_phases = jl.swarmalator_step(
         np.ascontiguousarray(pos.ravel(), dtype=np.float64),
         np.ascontiguousarray(phases.ravel(), dtype=np.float64),
         np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-        int(n), int(dim),
-        float(a), float(b), float(j), float(k), float(dt),
+        int(n),
+        int(dim),
+        float(a),
+        float(b),
+        float(j),
+        float(k),
+        float(dt),
     )
     return (
         np.asarray(new_pos_flat, dtype=np.float64).reshape(n, dim),

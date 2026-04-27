@@ -138,9 +138,8 @@ fn bench_dimension_correlation_integral(c: &mut Criterion) {
         let epsilons: Vec<f64> = (1..=16).map(|k| 0.02 * k as f64).collect();
         group.bench_with_input(BenchmarkId::from_parameter(t), &t, |b, &t| {
             b.iter(|| {
-                let r =
-                    correlation_integral(&trajectory, t, d, &epsilons, 16, 0)
-                        .expect("valid correlation_integral arguments");
+                let r = correlation_integral(&trajectory, t, d, &epsilons, 16, 0)
+                    .expect("valid correlation_integral arguments");
                 criterion::black_box(r);
             });
         });
@@ -167,19 +166,12 @@ fn bench_poincare_section(c: &mut Criterion) {
     let d = 1usize;
     let normal = vec![1.0];
     for &t in &[512usize, 2048, 8192] {
-        let trajectory: Vec<f64> =
-            (0..t).map(|i| (i as f64 * 0.05).sin()).collect();
+        let trajectory: Vec<f64> = (0..t).map(|i| (i as f64 * 0.05).sin()).collect();
         group.bench_with_input(BenchmarkId::from_parameter(t), &t, |b, &t| {
             b.iter(|| {
-                let result = poincare_section(
-                    &trajectory,
-                    t,
-                    d,
-                    &normal,
-                    0.0,
-                    CrossingDirection::Both,
-                )
-                .expect("valid poincare_section arguments");
+                let result =
+                    poincare_section(&trajectory, t, d, &normal, 0.0, CrossingDirection::Both)
+                        .expect("valid poincare_section arguments");
                 criterion::black_box(result);
             });
         });
@@ -228,8 +220,9 @@ fn bench_market_plv(c: &mut Criterion) {
 
 fn bench_market_detect_regimes(c: &mut Criterion) {
     // regime classification scales linearly with T.
-    let r_series: Vec<f64> =
-        (0..4096).map(|i| 0.5 + 0.4 * (i as f64 * 0.01).sin()).collect();
+    let r_series: Vec<f64> = (0..4096)
+        .map(|i| 0.5 + 0.4 * (i as f64 * 0.01).sin())
+        .collect();
     c.bench_function("market_detect_regimes_n4096", |b| {
         b.iter(|| {
             let out = detect_regimes(&r_series, 0.8, 0.2);

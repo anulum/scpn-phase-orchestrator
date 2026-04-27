@@ -74,7 +74,9 @@ class TestHodge:
         diff = phases[np.newaxis, :] - phases[:, np.newaxis]
         total = np.sum(k * np.cos(diff), axis=1)
         np.testing.assert_allclose(
-            res.gradient + res.curl + res.harmonic, total, atol=1e-12,
+            res.gradient + res.curl + res.harmonic,
+            total,
+            atol=1e-12,
         )
 
     @_python

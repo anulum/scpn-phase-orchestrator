@@ -35,9 +35,7 @@ def _reset(prev: str) -> None:
     te_mod.ACTIVE_BACKEND = prev
 
 
-def _reference_te(
-    src: np.ndarray, tgt: np.ndarray, n_bins: int
-) -> float:
+def _reference_te(src: np.ndarray, tgt: np.ndarray, n_bins: int) -> float:
     prev = _force("python")
     try:
         return phase_transfer_entropy(src, tgt, n_bins)
@@ -45,9 +43,7 @@ def _reference_te(
         _reset(prev)
 
 
-def _reference_matrix(
-    series: np.ndarray, n_bins: int
-) -> np.ndarray:
+def _reference_matrix(series: np.ndarray, n_bins: int) -> np.ndarray:
     prev = _force("python")
     try:
         return transfer_entropy_matrix(series, n_bins)

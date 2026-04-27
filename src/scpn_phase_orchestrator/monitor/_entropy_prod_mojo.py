@@ -17,9 +17,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "entropy_production_rate_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "entropy_prod_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "entropy_prod_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -42,8 +40,7 @@ def _run(payload: str) -> float:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo entropy_prod returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo entropy_prod returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
     line = proc.stdout.strip().splitlines()[0]
     return float(line)
@@ -60,7 +57,10 @@ def entropy_production_rate_mojo(
     if n == 0 or dt <= 0.0:
         return 0.0
     tokens: list[str] = [
-        "EP", str(n), repr(float(alpha)), repr(float(dt)),
+        "EP",
+        str(n),
+        repr(float(alpha)),
+        repr(float(dt)),
     ]
     tokens.extend(repr(float(x)) for x in phases.ravel().tolist())
     tokens.extend(repr(float(x)) for x in omegas.ravel().tolist())

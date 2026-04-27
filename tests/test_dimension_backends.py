@@ -228,7 +228,9 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             np.testing.assert_allclose(
-                got_ci, ref_ci, atol=tolerances[backend],
+                got_ci,
+                ref_ci,
+                atol=tolerances[backend],
                 err_msg=f"{backend} CI diverged from python",
             )
             assert abs(got_ky - ref_ky) <= tolerances[backend], (

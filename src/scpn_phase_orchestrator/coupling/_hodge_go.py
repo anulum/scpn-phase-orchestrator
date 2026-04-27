@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["hodge_decomposition_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libhodge.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libhodge.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -48,7 +46,9 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def hodge_decomposition_go(
-    knm_flat: NDArray, phases: NDArray, n: int,
+    knm_flat: NDArray,
+    phases: NDArray,
+    n: int,
 ) -> tuple[NDArray, NDArray, NDArray]:
     lib = _load_lib()
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)

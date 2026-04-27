@@ -6,8 +6,8 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Active Inference Control Agent
 
-use spo_types::{SpoError, SpoResult};
 use spo_engine::order_params::compute_order_parameter;
+use spo_types::{SpoError, SpoResult};
 
 /// Active Inference agent for control of phase synchronisation.
 pub struct ActiveInferenceAgent {
@@ -21,9 +21,13 @@ pub struct ActiveInferenceAgent {
 
 impl ActiveInferenceAgent {
     pub fn new(n_hidden: usize, target_r: f64, lr: f64) -> SpoResult<Self> {
-        if n_hidden == 0 { return Err(SpoError::InvalidConfig("n_hidden > 0".into())); }
+        if n_hidden == 0 {
+            return Err(SpoError::InvalidConfig("n_hidden > 0".into()));
+        }
         Ok(Self {
-            n_hidden, target_r, lr,
+            n_hidden,
+            target_r,
+            lr,
             state: vec![0.0; n_hidden],
             sin_state: vec![0.0; n_hidden],
             cos_state: vec![0.0; n_hidden],
@@ -32,7 +36,9 @@ impl ActiveInferenceAgent {
 
     pub fn control(&mut self, phases: &[f64]) -> (f64, f64) {
         let n = phases.len();
-        if n == 0 { return (0.0, 0.0); }
+        if n == 0 {
+            return (0.0, 0.0);
+        }
         let nh = self.n_hidden;
 
         for i in 0..nh {
@@ -49,10 +55,13 @@ impl ActiveInferenceAgent {
             let si = self.sin_state[i];
             let mut internal_coupling = 0.0;
             for j in 0..nh {
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
                 internal_coupling += self.sin_state[j] * ci - self.cos_state[j] * si;
             }
-            let d_state = self.lr * (error * (psi_obs - self.state[i]).sin() + internal_coupling / nh as f64);
+            let d_state =
+                self.lr * (error * (psi_obs - self.state[i]).sin() + internal_coupling / nh as f64);
             self.state[i] = (self.state[i] + d_state).rem_euclid(2.0 * std::f64::consts::PI);
         }
 
@@ -66,6 +75,10 @@ impl ActiveInferenceAgent {
         (zeta, psi)
     }
 
-    pub fn state(&self) -> &[f64] { &self.state }
-    pub fn reset(&mut self) { self.state.fill(0.0); }
+    pub fn state(&self) -> &[f64] {
+        &self.state
+    }
+    pub fn reset(&mut self) {
+        self.state.fill(0.0);
+    }
 }

@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "local_order_parameter_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "chimera_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "chimera_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -43,18 +41,15 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo chimera returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo chimera returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def local_order_parameter_mojo(
-    phases: NDArray, knm_flat: NDArray, n: int,
+    phases: NDArray,
+    knm_flat: NDArray,
+    n: int,
 ) -> NDArray:
     if n == 0:
         return np.zeros(0, dtype=np.float64)
@@ -63,7 +58,5 @@ def local_order_parameter_mojo(
     tokens.extend(repr(float(x)) for x in knm_flat.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
-        raise ValueError(
-            f"Mojo CHI returned {len(result)} values, expected {n}"
-        )
+        raise ValueError(f"Mojo CHI returned {len(result)} values, expected {n}")
     return np.array(result, dtype=np.float64)

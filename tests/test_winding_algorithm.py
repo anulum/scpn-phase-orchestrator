@@ -105,9 +105,7 @@ class TestEdgeCases:
     def test_winding_vector_alias(self):
         omegas = np.array([1.0, -1.0])
         traj = _rotator(omegas, 150, 0.05)
-        assert np.array_equal(
-            winding_vector(traj), winding_numbers(traj)
-        )
+        assert np.array_equal(winding_vector(traj), winding_numbers(traj))
 
 
 class TestHypothesis:
@@ -122,9 +120,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_bounded_by_trajectory_length(
-        self, t: int, n: int, seed: int
-    ):
+    def test_bounded_by_trajectory_length(self, t: int, n: int, seed: int):
         """|w_i| ≤ T — each step contributes at most one full
         wrap, so cumulative winding cannot exceed T in magnitude."""
         rng = np.random.default_rng(seed)

@@ -63,16 +63,12 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         try:
             data = yaml.safe_load(raw)
         except yaml.YAMLError as exc:
-            raise BindingLoadError(
-                f"YAML parse error in {path.name}: {exc}"
-            ) from exc
+            raise BindingLoadError(f"YAML parse error in {path.name}: {exc}") from exc
     elif path.suffix == ".json":
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise BindingLoadError(
-                f"JSON parse error in {path.name}: {exc}"
-            ) from exc
+            raise BindingLoadError(f"JSON parse error in {path.name}: {exc}") from exc
     else:
         raise BindingLoadError(f"Unsupported file extension: {path.suffix}")
 

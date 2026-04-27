@@ -101,18 +101,9 @@ fn bench_lyapunov_spectrum(c: &mut Criterion) {
         let phases_init: Vec<f64> = (0..n).map(|i| i as f64 * 0.13).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
             b.iter(|| {
-                let r = lyapunov_spectrum(
-                    &phases_init,
-                    &omegas,
-                    &knm,
-                    &alpha,
-                    0.01,
-                    200,
-                    20,
-                    0.0,
-                    0.0,
-                )
-                .expect("valid lyapunov_spectrum arguments");
+                let r =
+                    lyapunov_spectrum(&phases_init, &omegas, &knm, &alpha, 0.01, 200, 20, 0.0, 0.0)
+                        .expect("valid lyapunov_spectrum arguments");
                 criterion::black_box(r);
             });
         });
@@ -140,9 +131,7 @@ fn bench_transfer_entropy_matrix(c: &mut Criterion) {
     let mut group = c.benchmark_group("transfer_entropy_matrix");
     for &params in &[(8usize, 200usize), (16, 400)] {
         let (n, t) = params;
-        let series: Vec<f64> = (0..n * t)
-            .map(|i| (i as f64 * 0.07).sin())
-            .collect();
+        let series: Vec<f64> = (0..n * t).map(|i| (i as f64 * 0.07).sin()).collect();
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("n{n}_t{t}")),
             &params,
@@ -167,8 +156,7 @@ fn bench_delay_embed(c: &mut Criterion) {
             &(delay, dim),
             |b, _| {
                 b.iter(|| {
-                    let r = delay_embed(&signal, delay, dim)
-                        .expect("valid delay_embed arguments");
+                    let r = delay_embed(&signal, delay, dim).expect("valid delay_embed arguments");
                     criterion::black_box(r);
                 });
             },
@@ -197,12 +185,10 @@ fn bench_rqa(c: &mut Criterion) {
     // RQA over a precomputed recurrence matrix.
     let t = 128usize;
     let trajectory = signal_sin(t, 0.1);
-    let recurrence =
-        recurrence_matrix(&trajectory, t, 1, 0.2, false).unwrap();
+    let recurrence = recurrence_matrix(&trajectory, t, 1, 0.2, false).unwrap();
     c.bench_function("rqa_t128", |b| {
         b.iter(|| {
-            let r = rqa(&recurrence, t, 2, 2, true)
-                .expect("valid rqa arguments");
+            let r = rqa(&recurrence, t, 2, 2, true).expect("valid rqa arguments");
             criterion::black_box(r);
         });
     });
@@ -246,26 +232,18 @@ fn bench_pid_redundancy_synergy(c: &mut Criterion) {
         let phases: Vec<f64> = (0..n).map(|i| i as f64 * 0.5).collect();
         let group_a: Vec<usize> = (0..n / 2).collect();
         let group_b: Vec<usize> = (n / 2..n).collect();
-        group.bench_with_input(
-            BenchmarkId::new("redundancy", n),
-            &n,
-            |b, _| {
-                b.iter(|| {
-                    let r = redundancy(&phases, &group_a, &group_b, 16);
-                    criterion::black_box(r);
-                });
-            },
-        );
-        group.bench_with_input(
-            BenchmarkId::new("synergy", n),
-            &n,
-            |b, _| {
-                b.iter(|| {
-                    let s = synergy(&phases, &group_a, &group_b, 16);
-                    criterion::black_box(s);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("redundancy", n), &n, |b, _| {
+            b.iter(|| {
+                let r = redundancy(&phases, &group_a, &group_b, 16);
+                criterion::black_box(r);
+            });
+        });
+        group.bench_with_input(BenchmarkId::new("synergy", n), &n, |b, _| {
+            b.iter(|| {
+                let s = synergy(&phases, &group_a, &group_b, 16);
+                criterion::black_box(s);
+            });
+        });
     }
     group.finish();
 }

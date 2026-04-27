@@ -82,15 +82,12 @@ def attnres_modulate_mojo(
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo attnres returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo attnres returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
     result = np.array(
         [float(line) for line in proc.stdout.strip().splitlines() if line],
         dtype=np.float64,
     )
     if result.size != n * n:
-        raise ValueError(
-            f"Mojo returned {result.size} values, expected {n * n}"
-        )
+        raise ValueError(f"Mojo returned {result.size} values, expected {n * n}")
     return result

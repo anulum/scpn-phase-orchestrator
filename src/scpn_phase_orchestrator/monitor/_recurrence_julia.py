@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["cross_recurrence_matrix_julia", "recurrence_matrix_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "recurrence.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "recurrence.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -38,7 +36,11 @@ def _ensure() -> Any:
 
 
 def recurrence_matrix_julia(
-    traj_flat: NDArray, t: int, d: int, epsilon: float, angular: bool,
+    traj_flat: NDArray,
+    t: int,
+    d: int,
+    epsilon: float,
+    angular: bool,
 ) -> NDArray:
     jl = _ensure()
     return np.asarray(

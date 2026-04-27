@@ -26,9 +26,7 @@ __all__ = [
     "layer_coherence_mojo",
 ]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "order_params_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "order_params_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -51,14 +49,9 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo order_params returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo order_params returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def order_parameter_mojo(phases: NDArray) -> tuple[float, float]:
@@ -78,8 +71,7 @@ def plv_mojo(phases_a: NDArray, phases_b: NDArray) -> float:
         return 0.0
     if phases_a.size != phases_b.size:
         raise ValueError(
-            f"PLV requires equal-length arrays, got "
-            f"{phases_a.size} vs {phases_b.size}"
+            f"PLV requires equal-length arrays, got {phases_a.size} vs {phases_b.size}"
         )
     a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
     b = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)

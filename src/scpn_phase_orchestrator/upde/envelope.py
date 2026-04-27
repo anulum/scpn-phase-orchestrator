@@ -149,7 +149,8 @@ def _extract_1d_python(amps: NDArray, window: int) -> NDArray:
 
 
 def extract_envelope(
-    amplitudes_history: NDArray, window: int = 10,
+    amplitudes_history: NDArray,
+    window: int = 10,
 ) -> NDArray:
     """Sliding-window RMS envelope.
 
@@ -171,7 +172,8 @@ def extract_envelope(
         backend_fn = _dispatch("extract")
         if backend_fn is not None:
             fn = cast(
-                "Callable[[NDArray, int], NDArray]", backend_fn,
+                "Callable[[NDArray, int], NDArray]",
+                backend_fn,
             )
             return np.asarray(
                 fn(amplitudes_history, int(window)),

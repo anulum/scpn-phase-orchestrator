@@ -99,9 +99,7 @@ class TestCorrelationIntegral:
 class TestKaplanYorke:
     @_python
     def test_all_negative_gives_zero(self):
-        assert kaplan_yorke_dimension(
-            np.array([-0.1, -0.3, -0.7])
-        ) == 0.0
+        assert kaplan_yorke_dimension(np.array([-0.1, -0.3, -0.7])) == 0.0
 
     @_python
     def test_all_positive_gives_N(self):
@@ -111,10 +109,7 @@ class TestKaplanYorke:
     @_python
     def test_sorted_vs_unsorted_same_result(self):
         le = np.array([0.1, -0.3, 0.2, -0.05])
-        assert (
-            kaplan_yorke_dimension(le)
-            == kaplan_yorke_dimension(np.sort(le))
-        )
+        assert kaplan_yorke_dimension(le) == kaplan_yorke_dimension(np.sort(le))
 
     @_python
     def test_empty_input_returns_zero(self):

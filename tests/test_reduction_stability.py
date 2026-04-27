@@ -47,7 +47,10 @@ class TestOAManifoldInvariant:
         generic seed for 20 000 steps and check ``R`` never
         leaves the unit disc."""
         red = OttAntonsenReduction(
-            omega_0=0.5, delta=0.2, K=1.0, dt=0.01,
+            omega_0=0.5,
+            delta=0.2,
+            K=1.0,
+            dt=0.01,
         )
         r_max = 0.0
         z = complex(0.3, 0.2)
@@ -63,10 +66,17 @@ class TestSubcriticalAttraction:
     def test_multiple_seeds_decay_below_critical(self):
         """Below K_c all seeds must decay towards z = 0."""
         red = OttAntonsenReduction(
-            omega_0=0.0, delta=1.0, K=1.5, dt=0.01,
+            omega_0=0.0,
+            delta=1.0,
+            K=1.5,
+            dt=0.01,
         )
-        for seed in (complex(0.5, 0.0), complex(0.0, 0.5),
-                     complex(0.3, 0.3), complex(0.6, -0.2)):
+        for seed in (
+            complex(0.5, 0.0),
+            complex(0.0, 0.5),
+            complex(0.3, 0.3),
+            complex(0.6, -0.2),
+        ):
             state = red.run(seed, n_steps=5000)
             assert state.R < 0.05
 
@@ -80,11 +90,18 @@ class TestSupercriticalConvergence:
         delta = 0.1
         K = 1.0
         red = OttAntonsenReduction(
-            omega_0=0.0, delta=delta, K=K, dt=0.01,
+            omega_0=0.0,
+            delta=delta,
+            K=K,
+            dt=0.01,
         )
         R_ss = red.steady_state_R()
-        for seed in (complex(0.05, 0.0), complex(0.0, 0.05),
-                     complex(0.2, 0.1), complex(-0.1, 0.1)):
+        for seed in (
+            complex(0.05, 0.0),
+            complex(0.0, 0.05),
+            complex(0.2, 0.1),
+            complex(-0.1, 0.1),
+        ):
             state = red.run(seed, n_steps=8000)
             assert pytest.approx(R_ss, abs=5e-3) == state.R
 
@@ -96,7 +113,10 @@ class TestRelaxationMonotonicity:
         for a real-axis seed with ω_0 = 0 (trajectory is
         confined to the real axis; dR/dt = −Δ·R below K_c)."""
         red = OttAntonsenReduction(
-            omega_0=0.0, delta=1.0, K=1.5, dt=0.01,
+            omega_0=0.0,
+            delta=1.0,
+            K=1.5,
+            dt=0.01,
         )
         r_prev = math.inf
         z = complex(0.4, 0.0)

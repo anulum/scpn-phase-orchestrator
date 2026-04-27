@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["steady_state_r_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libbasin_stability.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libbasin_stability.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -42,8 +40,10 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.c_int,
-        ctypes.c_double, ctypes.c_double,
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_int,
+        ctypes.c_int,
     ]
     _LIB = lib
     return lib

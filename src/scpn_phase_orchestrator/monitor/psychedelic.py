@@ -149,7 +149,9 @@ def entropy_from_phases(phases: NDArray, n_bins: int = 36) -> float:
 
     wrapped = phases % (2.0 * np.pi)
     counts, _ = np.histogram(
-        wrapped, bins=int(n_bins), range=(0, 2.0 * np.pi),
+        wrapped,
+        bins=int(n_bins),
+        range=(0, 2.0 * np.pi),
     )
     total = counts.sum()
     if total == 0:

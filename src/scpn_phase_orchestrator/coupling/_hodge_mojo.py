@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "hodge_decomposition_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "hodge_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "hodge_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -33,7 +31,9 @@ def _ensure_exe() -> Path:
 
 
 def hodge_decomposition_mojo(
-    knm_flat: NDArray, phases: NDArray, n: int,
+    knm_flat: NDArray,
+    phases: NDArray,
+    n: int,
 ) -> tuple[NDArray, NDArray, NDArray]:
     exe = _ensure_exe()
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
@@ -42,21 +42,21 @@ def hodge_decomposition_mojo(
     tokens.extend(repr(float(x)) for x in k.tolist())
     tokens.extend(repr(float(x)) for x in p.tolist())
     proc = subprocess.run(
-        [str(exe)], input=" ".join(tokens) + "\n",
-        capture_output=True, text=True, check=False,
+        [str(exe)],
+        input=" ".join(tokens) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
-        raise ValueError(
-            f"Mojo hodge exit {proc.returncode}: {proc.stderr.strip()}"
-        )
+        raise ValueError(f"Mojo hodge exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.strip().splitlines()
     if len(lines) != 3 * n:
-        raise ValueError(
-            f"Mojo HODGE returned {len(lines)} lines, expected {3 * n}"
-        )
+        raise ValueError(f"Mojo HODGE returned {len(lines)} lines, expected {3 * n}")
     gradient = np.array([float(x) for x in lines[:n]], dtype=np.float64)
     curl = np.array([float(x) for x in lines[n : 2 * n]], dtype=np.float64)
     harmonic = np.array(
-        [float(x) for x in lines[2 * n : 3 * n]], dtype=np.float64,
+        [float(x) for x in lines[2 * n : 3 * n]],
+        dtype=np.float64,
     )
     return gradient, curl, harmonic

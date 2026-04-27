@@ -174,8 +174,11 @@ class TestCrossBackendConsistency:
         ref_env = _ref_env(amps, 10)
         ref_mod = _ref_mod(amps)
         tolerances = {
-            "rust": 1e-12, "julia": 1e-12, "go": 1e-12,
-            "mojo": 1e-9, "python": 0.0,
+            "rust": 1e-12,
+            "julia": 1e-12,
+            "go": 1e-12,
+            "mojo": 1e-9,
+            "python": 0.0,
         }
         for backend in AVAILABLE_BACKENDS:
             prev = _force(backend)

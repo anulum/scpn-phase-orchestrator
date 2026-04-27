@@ -52,9 +52,14 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     from spo_kernel import inertial_step_rust
 
     def _rust(
-        theta: NDArray, omega_dot: NDArray, power: NDArray,
-        knm_flat: NDArray, inertia: NDArray, damping: NDArray,
-        n: int, dt: float,
+        theta: NDArray,
+        omega_dot: NDArray,
+        power: NDArray,
+        knm_flat: NDArray,
+        inertia: NDArray,
+        damping: NDArray,
+        n: int,
+        dt: float,
     ) -> tuple[NDArray, NDArray]:
         new_th, new_od = inertial_step_rust(
             np.ascontiguousarray(theta, dtype=np.float64),
@@ -63,7 +68,8 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
             np.ascontiguousarray(knm_flat, dtype=np.float64),
             np.ascontiguousarray(inertia, dtype=np.float64),
             np.ascontiguousarray(damping, dtype=np.float64),
-            int(n), float(dt),
+            int(n),
+            float(dt),
         )
         return (
             np.asarray(new_th, dtype=np.float64),
@@ -132,9 +138,14 @@ def _dispatch() -> Callable[..., tuple[NDArray, NDArray]] | None:
 
 
 def _python_step(
-    theta: NDArray, omega_dot: NDArray, power: NDArray,
-    knm_flat: NDArray, inertia: NDArray, damping: NDArray,
-    n: int, dt: float,
+    theta: NDArray,
+    omega_dot: NDArray,
+    power: NDArray,
+    knm_flat: NDArray,
+    inertia: NDArray,
+    damping: NDArray,
+    n: int,
+    dt: float,
 ) -> tuple[NDArray, NDArray]:
     """Python reference using the same ``sin(θ_j − θ_i) =
     s_j·c_i − c_j·s_i`` expansion as the Rust kernel."""
@@ -144,8 +155,9 @@ def _python_step(
         s = np.sin(th)
         c = np.cos(th)
         # sin(θ_j − θ_i) = s_j · c_i − c_j · s_i  (row-i, col-j)
-        sin_diff = s[np.newaxis, :] * c[:, np.newaxis] \
-            - c[np.newaxis, :] * s[:, np.newaxis]
+        sin_diff = (
+            s[np.newaxis, :] * c[:, np.newaxis] - c[np.newaxis, :] * s[:, np.newaxis]
+        )
         coupling = np.sum(knm * sin_diff, axis=1)
         accel = (power + coupling - damping * od) / inertia
         return od, accel
@@ -154,9 +166,7 @@ def _python_step(
     k2t, k2o = deriv(theta + 0.5 * dt * k1t, omega_dot + 0.5 * dt * k1o)
     k3t, k3o = deriv(theta + 0.5 * dt * k2t, omega_dot + 0.5 * dt * k2o)
     k4t, k4o = deriv(theta + dt * k3t, omega_dot + dt * k3o)
-    new_theta = (
-        theta + (dt / 6.0) * (k1t + 2 * k2t + 2 * k3t + k4t)
-    ) % TWO_PI
+    new_theta = (theta + (dt / 6.0) * (k1t + 2 * k2t + 2 * k3t + k4t)) % TWO_PI
     new_omega = omega_dot + (dt / 6.0) * (k1o + 2 * k2o + 2 * k3o + k4o)
     return new_theta, new_omega
 
@@ -190,9 +200,14 @@ class InertialKuramotoEngine:
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(
-                theta, omega_dot, power,
-                knm_flat, inertia, damping,
-                self._n, self._dt,
+                theta,
+                omega_dot,
+                power,
+                knm_flat,
+                inertia,
+                damping,
+                self._n,
+                self._dt,
             )
         return _python_step(
             np.asarray(theta, dtype=np.float64),
@@ -201,7 +216,8 @@ class InertialKuramotoEngine:
             knm_flat,
             np.asarray(inertia, dtype=np.float64),
             np.asarray(damping, dtype=np.float64),
-            self._n, self._dt,
+            self._n,
+            self._dt,
         )
 
     def run(

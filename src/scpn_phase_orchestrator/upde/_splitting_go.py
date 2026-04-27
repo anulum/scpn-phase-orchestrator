@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["splitting_run_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libsplitting.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libsplitting.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -42,7 +40,9 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.c_int,
-        ctypes.c_double, ctypes.c_double, ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]

@@ -41,19 +41,12 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo pac returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo pac returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def modulation_index_mojo(
-    theta_low: NDArray, amp_high: NDArray, n_bins: int
-) -> float:
+def modulation_index_mojo(theta_low: NDArray, amp_high: NDArray, n_bins: int) -> float:
     t = np.ascontiguousarray(theta_low.ravel(), dtype=np.float64)
     a = np.ascontiguousarray(amp_high.ravel(), dtype=np.float64)
     n = int(min(t.size, a.size))

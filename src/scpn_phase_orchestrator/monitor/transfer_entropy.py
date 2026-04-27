@@ -134,15 +134,11 @@ def _conditional_entropy(
     return h
 
 
-def phase_transfer_entropy(
-    source: NDArray, target: NDArray, n_bins: int = 16
-) -> float:
+def phase_transfer_entropy(source: NDArray, target: NDArray, n_bins: int = 16) -> float:
     """Transfer entropy ``TE(X → Y)`` on binned phase series."""
     backend_fn = _dispatch("phase_te")
     if backend_fn is not None:
-        fn = cast(
-            "Callable[[NDArray, NDArray, int], float]", backend_fn
-        )
+        fn = cast("Callable[[NDArray, NDArray, int], float]", backend_fn)
         return float(
             fn(
                 np.ascontiguousarray(source, dtype=np.float64),
@@ -167,9 +163,7 @@ def phase_transfer_entropy(
     return max(0.0, h_y_yt - h_y_yt_x)
 
 
-def transfer_entropy_matrix(
-    phase_series: NDArray, n_bins: int = 16
-) -> NDArray:
+def transfer_entropy_matrix(phase_series: NDArray, n_bins: int = 16) -> NDArray:
     """Pairwise TE matrix; entry ``[i, j] = TE(i → j)`` for all
     oscillator pairs with zero diagonal."""
     if phase_series.ndim != 2:
@@ -180,13 +174,9 @@ def transfer_entropy_matrix(
     n_osc, n_time = phase_series.shape
     backend_fn = _dispatch("te_matrix")
     if backend_fn is not None:
-        fn = cast(
-            "Callable[[NDArray, int, int, int], NDArray]", backend_fn
-        )
+        fn = cast("Callable[[NDArray, int, int, int], NDArray]", backend_fn)
         flat = fn(
-            np.ascontiguousarray(
-                phase_series.ravel(), dtype=np.float64
-            ),
+            np.ascontiguousarray(phase_series.ravel(), dtype=np.float64),
             n_osc,
             n_time,
             n_bins,

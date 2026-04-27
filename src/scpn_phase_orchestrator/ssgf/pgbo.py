@@ -51,9 +51,7 @@ class PGBO:
         if len(cost_weights) < 1:
             raise ValueError("cost_weights must contain at least one weight")
         if any(w < 0.0 for w in cost_weights):
-            raise ValueError(
-                f"cost_weights must be non-negative, got {cost_weights}"
-            )
+            raise ValueError(f"cost_weights must be non-negative, got {cost_weights}")
         self._weights = cost_weights
         self._step = 0
         self._history: list[PGBOSnapshot] = []

@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["envelope_modulation_depth_julia", "extract_envelope_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "envelope.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "envelope.jl"
 _JULIA_MODULE: Any | None = None
 
 

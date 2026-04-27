@@ -15,9 +15,7 @@ from pathlib import Path
 
 __all__ = ["_ensure_exe", "oa_run_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "reduction_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "reduction_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -41,26 +39,29 @@ def oa_run_mojo(
     exe = _ensure_exe()
     tokens = [
         "OARUN",
-        repr(float(z_re)), repr(float(z_im)),
-        repr(float(omega_0)), repr(float(delta)),
-        repr(float(k_coupling)), repr(float(dt)),
+        repr(float(z_re)),
+        repr(float(z_im)),
+        repr(float(omega_0)),
+        repr(float(delta)),
+        repr(float(k_coupling)),
+        repr(float(dt)),
         str(int(n_steps)),
     ]
     proc = subprocess.run(
-        [str(exe)], input=" ".join(tokens) + "\n",
-        capture_output=True, text=True, check=False,
+        [str(exe)],
+        input=" ".join(tokens) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
-        raise ValueError(
-            f"Mojo OARUN exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
-        )
+        raise ValueError(f"Mojo OARUN exit {proc.returncode}: {proc.stderr.strip()}")
     lines = proc.stdout.strip().splitlines()
     if len(lines) != 4:
-        raise ValueError(
-            f"Mojo OARUN returned {len(lines)} lines, expected 4"
-        )
+        raise ValueError(f"Mojo OARUN returned {len(lines)} lines, expected 4")
     return (
-        float(lines[0]), float(lines[1]),
-        float(lines[2]), float(lines[3]),
+        float(lines[0]),
+        float(lines[1]),
+        float(lines[2]),
+        float(lines[3]),
     )

@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "winding_numbers_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "winding_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "winding_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -43,18 +41,15 @@ def _run(payload: str) -> list[int]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo winding returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo winding returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        int(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [int(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def winding_numbers_mojo(
-    phases_flat: NDArray, t: int, n: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
 ) -> NDArray:
     if n == 0 or t < 2:
         return np.zeros(n, dtype=np.int64)
@@ -62,7 +57,5 @@ def winding_numbers_mojo(
     tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n:
-        raise ValueError(
-            f"Mojo WIND returned {len(result)} values, expected {n}"
-        )
+        raise ValueError(f"Mojo WIND returned {len(result)} values, expected {n}")
     return np.array(result, dtype=np.int64)

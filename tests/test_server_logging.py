@@ -49,9 +49,7 @@ class TestSupervisorPolicyLogging:
 
         actions = policy.decide(state, boundary)
 
-        records = [
-            r for r in caplog.records if r.name.endswith("supervisor.policy")
-        ]
+        records = [r for r in caplog.records if r.name.endswith("supervisor.policy")]
         assert records, "supervisor.decide did not emit a log record"
         rec = records[-1]
         assert "regime=" in rec.getMessage()
@@ -78,18 +76,14 @@ class TestSupervisorPolicyLogging:
         actions = policy.decide(state, BoundaryState(violations=[]))
         assert all(isinstance(a, ControlAction) for a in actions)
 
-        records = [
-            r for r in caplog.records if r.name.endswith("supervisor.policy")
-        ]
+        records = [r for r in caplog.records if r.name.endswith("supervisor.policy")]
         assert records
         rec = records[-1]
         assert rec.knobs == [a.knob for a in actions]
 
 
 class TestServerGrpcLogging:
-    def test_reset_emits_info_log(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_reset_emits_info_log(self, caplog: pytest.LogCaptureFixture) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml"
         )

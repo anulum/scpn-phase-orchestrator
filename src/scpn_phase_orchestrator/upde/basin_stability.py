@@ -76,8 +76,11 @@ def _load_rust_fn() -> Callable[..., float]:
                 np.ascontiguousarray(omegas, dtype=np.float64),
                 np.ascontiguousarray(knm_flat, dtype=np.float64),
                 np.ascontiguousarray(alpha_flat, dtype=np.float64),
-                int(n), float(k_scale), float(dt),
-                int(n_transient), int(n_measure),
+                int(n),
+                float(k_scale),
+                float(dt),
+                int(n_transient),
+                int(n_measure),
             )
         )
 
@@ -211,16 +214,29 @@ def steady_state_r(
     phases_in = np.ascontiguousarray(phases_init, dtype=np.float64)
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(backend_fn(
-            phases_in, np.ascontiguousarray(omegas, dtype=np.float64),
-            knm_flat, alpha_flat,
-            N, float(k_scale), float(dt),
-            int(n_transient), int(n_measure),
-        ))
+        return float(
+            backend_fn(
+                phases_in,
+                np.ascontiguousarray(omegas, dtype=np.float64),
+                knm_flat,
+                alpha_flat,
+                N,
+                float(k_scale),
+                float(dt),
+                int(n_transient),
+                int(n_measure),
+            )
+        )
     return _python_steady_state_r(
-        phases_in, omegas, knm_flat, alpha_flat,
-        N, float(k_scale), float(dt),
-        int(n_transient), int(n_measure),
+        phases_in,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        N,
+        float(k_scale),
+        float(dt),
+        int(n_transient),
+        int(n_measure),
     )
 
 
@@ -260,16 +276,30 @@ def _monte_carlo_R_finals(
     for i in range(n_samples):
         phases_init = rng.uniform(0, 2 * np.pi, n)
         if backend_fn is not None:
-            R_finals[i] = float(backend_fn(
-                phases_init,
-                np.ascontiguousarray(omegas, dtype=np.float64),
-                knm_flat, alpha_flat,
-                n, 1.0, dt, n_transient, n_measure,
-            ))
+            R_finals[i] = float(
+                backend_fn(
+                    phases_init,
+                    np.ascontiguousarray(omegas, dtype=np.float64),
+                    knm_flat,
+                    alpha_flat,
+                    n,
+                    1.0,
+                    dt,
+                    n_transient,
+                    n_measure,
+                )
+            )
         else:
             R_finals[i] = _python_steady_state_r(
-                phases_init, omegas, knm_flat, alpha_flat,
-                n, 1.0, dt, n_transient, n_measure,
+                phases_init,
+                omegas,
+                knm_flat,
+                alpha_flat,
+                n,
+                1.0,
+                dt,
+                n_transient,
+                n_measure,
             )
     return R_finals
 
@@ -314,9 +344,14 @@ def basin_stability(
 
     R_finals = _monte_carlo_R_finals(
         np.ascontiguousarray(omegas, dtype=np.float64),
-        knm_flat, alpha_flat,
-        N, float(dt), int(n_transient), int(n_measure),
-        int(n_samples), int(seed),
+        knm_flat,
+        alpha_flat,
+        N,
+        float(dt),
+        int(n_transient),
+        int(n_measure),
+        int(n_samples),
+        int(seed),
     )
     n_converged = int(np.sum(R_finals >= R_threshold))
     return BasinStabilityResult(
@@ -356,9 +391,14 @@ def multi_basin_stability(
 
     R_finals = _monte_carlo_R_finals(
         np.ascontiguousarray(omegas, dtype=np.float64),
-        knm_flat, alpha_flat,
-        N, float(dt), int(n_transient), int(n_measure),
-        int(n_samples), int(seed),
+        knm_flat,
+        alpha_flat,
+        N,
+        float(dt),
+        int(n_transient),
+        int(n_measure),
+        int(n_samples),
+        int(seed),
     )
     results: dict[str, BasinStabilityResult] = {}
     for thresh in R_thresholds:

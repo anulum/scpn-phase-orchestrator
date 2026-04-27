@@ -164,8 +164,11 @@ class TestCrossBackendConsistency:
         pos, phases, omegas = _problem(2026, 20, 2)
         ref_p, ref_ph = _reference_step(pos, phases, omegas, 20, 2)
         tolerances = {
-            "rust": 1e-12, "julia": 1e-12, "go": 1e-12,
-            "mojo": 1e-9, "python": 0.0,
+            "rust": 1e-12,
+            "julia": 1e-12,
+            "go": 1e-12,
+            "mojo": 1e-9,
+            "python": 0.0,
         }
         for backend in AVAILABLE_BACKENDS:
             prev = _force(backend)

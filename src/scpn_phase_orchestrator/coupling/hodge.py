@@ -46,7 +46,9 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
     from spo_kernel import hodge_decomposition_rust
 
     def _rust(
-        knm_flat: NDArray, phases: NDArray, n: int,
+        knm_flat: NDArray,
+        phases: NDArray,
+        n: int,
     ) -> tuple[NDArray, NDArray, NDArray]:
         g, c, h = hodge_decomposition_rust(
             np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),
@@ -60,7 +62,8 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
         )
 
     return cast(
-        "Callable[..., tuple[NDArray, NDArray, NDArray]]", _rust,
+        "Callable[..., tuple[NDArray, NDArray, NDArray]]",
+        _rust,
     )
 
 
@@ -96,7 +99,8 @@ def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
 
 
 _LOADERS: dict[
-    str, Callable[[], Callable[..., tuple[NDArray, NDArray, NDArray]]],
+    str,
+    Callable[[], Callable[..., tuple[NDArray, NDArray, NDArray]]],
 ] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,

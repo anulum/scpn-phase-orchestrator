@@ -125,6 +125,5 @@ def test_uniform_r_follows_sqrt_n_law(n: int) -> None:
     r_mean = float(np.mean(rs))
     expected_ceiling = 5.0 / np.sqrt(n)
     assert r_mean < expected_ceiling, (
-        f"R̄ = {r_mean:.3f} exceeds finite-N ceiling "
-        f"{expected_ceiling:.3f} at N={n}"
+        f"R̄ = {r_mean:.3f} exceeds finite-N ceiling {expected_ceiling:.3f} at N={n}"
     )

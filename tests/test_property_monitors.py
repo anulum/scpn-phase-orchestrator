@@ -194,8 +194,7 @@ def test_kuramoto_k_monotonicity_supercritical(seed: int) -> None:
     r_weak = _steady_state_r(n, k_base=2.0 / n, omegas=omegas, seed=seed)
     r_strong = _steady_state_r(n, k_base=10.0 / n, omegas=omegas, seed=seed)
     assert r_strong > r_weak, (
-        f"R(K=10/n)={r_strong:.3f} must exceed R(K=2/n)={r_weak:.3f} "
-        f"for all seeds"
+        f"R(K=10/n)={r_strong:.3f} must exceed R(K=2/n)={r_weak:.3f} for all seeds"
     )
     # Tighter invariant: the deep-saturation regime should lift R by at
     # least 0.2 above the transitional case across all seeds.

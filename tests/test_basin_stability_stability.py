@@ -64,8 +64,14 @@ class TestLongRunMonteCarlo:
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=5.0)
         result = basin_stability(
-            omegas, knm, dt=0.01, n_transient=600, n_measure=200,
-            n_samples=30, R_threshold=0.8, seed=101,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=600,
+            n_measure=200,
+            n_samples=30,
+            R_threshold=0.8,
+            seed=101,
         )
         assert result.S_B >= 0.8
 
@@ -76,7 +82,11 @@ class TestLongRunMonteCarlo:
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=3.0)
         results = multi_basin_stability(
-            omegas, knm, dt=0.01, n_transient=400, n_measure=150,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=400,
+            n_measure=150,
             n_samples=20,
             R_thresholds=(0.1, 0.3, 0.5, 0.7, 0.9),
             seed=77,
@@ -101,9 +111,15 @@ class TestAlphaNonZero:
         alpha = np.full((n, n), 0.4)
         np.fill_diagonal(alpha, 0.0)
         result = basin_stability(
-            omegas, knm, alpha=alpha,
-            dt=0.01, n_transient=300, n_measure=100,
-            n_samples=10, R_threshold=0.5, seed=5,
+            omegas,
+            knm,
+            alpha=alpha,
+            dt=0.01,
+            n_transient=300,
+            n_measure=100,
+            n_samples=10,
+            R_threshold=0.5,
+            seed=5,
         )
         assert 0.0 <= result.S_B <= 1.0
 
@@ -115,9 +131,15 @@ class TestAlphaNonZero:
         alpha = np.full((n, n), 0.2)
         np.fill_diagonal(alpha, 0.0)
         results = multi_basin_stability(
-            omegas, knm, alpha=alpha,
-            dt=0.01, n_transient=250, n_measure=100,
-            n_samples=8, R_thresholds=(0.3, 0.7), seed=9,
+            omegas,
+            knm,
+            alpha=alpha,
+            dt=0.01,
+            n_transient=250,
+            n_measure=100,
+            n_samples=8,
+            R_thresholds=(0.3, 0.7),
+            seed=9,
         )
         for res in results.values():
             assert 0.0 <= res.S_B <= 1.0
@@ -135,12 +157,21 @@ class TestSteadyStateRAlphaBranch:
         np.fill_diagonal(alpha, 0.0)
         phases = np.zeros(n)  # locked start
         r_no_lag = steady_state_r(
-            phases, omegas, knm, dt=0.01,
-            n_transient=300, n_measure=100,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=300,
+            n_measure=100,
         )
         r_with_lag = steady_state_r(
-            phases, omegas, knm, alpha=alpha, dt=0.01,
-            n_transient=300, n_measure=100,
+            phases,
+            omegas,
+            knm,
+            alpha=alpha,
+            dt=0.01,
+            n_transient=300,
+            n_measure=100,
         )
         # Both are bounded in [0, 1]; with lag, R should be lower
         # (or equal in the degenerate case) than the no-lag value.

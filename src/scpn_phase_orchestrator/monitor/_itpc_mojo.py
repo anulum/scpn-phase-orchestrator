@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "compute_itpc_mojo", "itpc_persistence_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "itpc_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "itpc_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -43,28 +41,19 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo itpc returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo itpc returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def compute_itpc_mojo(
-    phases_flat: NDArray, n_trials: int, n_tp: int
-) -> NDArray:
+def compute_itpc_mojo(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray:
     if n_trials == 0 or n_tp == 0:
         return np.zeros(n_tp, dtype=np.float64)
     tokens: list[str] = ["ITPC", str(n_trials), str(n_tp)]
     tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n_tp:
-        raise ValueError(
-            f"Mojo ITPC returned {len(result)} values, expected {n_tp}"
-        )
+        raise ValueError(f"Mojo ITPC returned {len(result)} values, expected {n_tp}")
     return np.array(result, dtype=np.float64)
 
 
@@ -78,7 +67,10 @@ def itpc_persistence_mojo(
     if idx.size == 0:
         return 0.0
     tokens: list[str] = [
-        "PERS", str(n_trials), str(n_tp), str(int(idx.size)),
+        "PERS",
+        str(n_trials),
+        str(n_tp),
+        str(int(idx.size)),
     ]
     tokens.extend(str(int(x)) for x in idx.tolist())
     tokens.extend(repr(float(x)) for x in phases_flat.ravel().tolist())

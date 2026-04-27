@@ -39,7 +39,9 @@ def _reset(prev: str) -> None:
 
 
 def _reference_rm(
-    traj: np.ndarray, epsilon: float, metric: str = "euclidean",
+    traj: np.ndarray,
+    epsilon: float,
+    metric: str = "euclidean",
 ) -> np.ndarray:
     prev = _force("python")
     try:
@@ -49,7 +51,9 @@ def _reference_rm(
 
 
 def _reference_cross(
-    a: np.ndarray, b: np.ndarray, epsilon: float,
+    a: np.ndarray,
+    b: np.ndarray,
+    epsilon: float,
 ) -> np.ndarray:
     prev = _force("python")
     try:
@@ -207,7 +211,8 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             np.testing.assert_array_equal(
-                got, ref,
+                got,
+                ref,
                 err_msg=f"{backend} RM diverged from python",
             )
 
@@ -226,6 +231,7 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             np.testing.assert_array_equal(
-                got, ref,
+                got,
+                ref,
                 err_msg=f"{backend} CROSS diverged from python",
             )

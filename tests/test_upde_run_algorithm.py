@@ -58,23 +58,31 @@ def _problem(rng: np.random.Generator, n: int):
 class TestShape:
     @_python
     def test_output_shape(self):
-        phases, omegas, knm, alpha = _problem(
-            np.random.default_rng(0), n=5
-        )
+        phases, omegas, knm, alpha = _problem(np.random.default_rng(0), n=5)
         out = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.1, psi=0.2, dt=0.01, n_steps=30,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.1,
+            psi=0.2,
+            dt=0.01,
+            n_steps=30,
         )
         assert out.shape == (5,)
 
     @_python
     def test_wrapped_in_two_pi(self):
-        phases, omegas, knm, alpha = _problem(
-            np.random.default_rng(1), n=4
-        )
+        phases, omegas, knm, alpha = _problem(np.random.default_rng(1), n=4)
         out = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.02, n_steps=100,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.02,
+            n_steps=100,
         )
         assert np.all(out >= 0.0)
         assert np.all(out < TWO_PI + 1e-12)
@@ -83,37 +91,50 @@ class TestShape:
 class TestMethodDispatch:
     @_python
     def test_unknown_method_rejected(self):
-        phases, omegas, knm, alpha = _problem(
-            np.random.default_rng(0), n=3
-        )
+        phases, omegas, knm, alpha = _problem(np.random.default_rng(0), n=3)
         with pytest.raises(ValueError, match="unknown method"):
             upde_run(
-                phases, omegas, knm, alpha,
-                zeta=0.0, psi=0.0, dt=0.01, n_steps=10,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                zeta=0.0,
+                psi=0.0,
+                dt=0.01,
+                n_steps=10,
                 method="heun",
             )
 
     @_python
     def test_n_substeps_floor(self):
-        phases, omegas, knm, alpha = _problem(
-            np.random.default_rng(0), n=3
-        )
+        phases, omegas, knm, alpha = _problem(np.random.default_rng(0), n=3)
         with pytest.raises(ValueError, match="n_substeps"):
             upde_run(
-                phases, omegas, knm, alpha,
-                zeta=0.0, psi=0.0, dt=0.01, n_steps=5,
-                method="euler", n_substeps=0,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                zeta=0.0,
+                psi=0.0,
+                dt=0.01,
+                n_steps=5,
+                method="euler",
+                n_substeps=0,
             )
 
     @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
     @_python
     def test_three_methods_all_finite(self, method: str):
-        phases, omegas, knm, alpha = _problem(
-            np.random.default_rng(7), n=4
-        )
+        phases, omegas, knm, alpha = _problem(np.random.default_rng(7), n=4)
         out = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.2, psi=0.1, dt=0.01, n_steps=50,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.2,
+            psi=0.1,
+            dt=0.01,
+            n_steps=50,
             method=method,
         )
         assert np.all(np.isfinite(out))
@@ -123,23 +144,41 @@ class TestSubstepping:
     @_python
     def test_euler_more_substeps_closer_to_rk4(self):
         """More Euler substeps approach the RK4 solution (higher order)."""
-        phases, omegas, knm, alpha = _problem(
-            np.random.default_rng(11), n=4
-        )
+        phases, omegas, knm, alpha = _problem(np.random.default_rng(11), n=4)
         ref = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.01, n_steps=50,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.01,
+            n_steps=50,
             method="rk4",
         )
         coarse = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.01, n_steps=50,
-            method="euler", n_substeps=1,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.01,
+            n_steps=50,
+            method="euler",
+            n_substeps=1,
         )
         fine = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.01, n_steps=50,
-            method="euler", n_substeps=8,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.01,
+            n_steps=50,
+            method="euler",
+            n_substeps=8,
         )
         d_coarse = float(np.max(np.abs(coarse - ref)))
         d_fine = float(np.max(np.abs(fine - ref)))
@@ -162,8 +201,14 @@ class TestAttractor:
         # Account for wrap: compare complex-mean magnitudes.
         init_R = float(np.abs(np.mean(np.exp(1j * phases))))
         out = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.005, n_steps=800,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.005,
+            n_steps=800,
             method="rk4",
         )
         final_R = float(np.abs(np.mean(np.exp(1j * out))))
@@ -182,8 +227,14 @@ class TestDriverPulling:
         alpha = np.zeros((n, n))
         psi = 1.0
         out = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=3.0, psi=psi, dt=0.005, n_steps=500,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=3.0,
+            psi=psi,
+            dt=0.005,
+            n_steps=500,
             method="rk4",
         )
         # Distance to ψ in the circular metric.
@@ -203,20 +254,30 @@ class TestInputValidation:
         rng = np.random.default_rng(seed)
         phases, omegas, knm, alpha = _problem(rng, n=5)
         out = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.2, psi=0.3, dt=0.01, n_steps=20,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.2,
+            psi=0.3,
+            dt=0.01,
+            n_steps=20,
             method="rk4",
         )
         assert np.all(np.isfinite(out))
 
     @_python
     def test_zero_n_steps(self):
-        phases, omegas, knm, alpha = _problem(
-            np.random.default_rng(3), n=3
-        )
+        phases, omegas, knm, alpha = _problem(np.random.default_rng(3), n=3)
         out = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.01, n_steps=0,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.01,
+            n_steps=0,
         )
         # With n_steps=0 nothing is integrated; output is a wrap-only
         # copy of the input.
@@ -232,19 +293,41 @@ class TestRK45Tolerances:
         n = 3
         phases, omegas, knm, alpha = _problem(rng, n=n)
         ref = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.1, psi=0.0, dt=0.001, n_steps=500,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.1,
+            psi=0.0,
+            dt=0.001,
+            n_steps=500,
             method="rk4",
         )
         loose = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.1, psi=0.0, dt=0.01, n_steps=50,
-            method="rk45", atol=1e-2, rtol=1e-2,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.1,
+            psi=0.0,
+            dt=0.01,
+            n_steps=50,
+            method="rk45",
+            atol=1e-2,
+            rtol=1e-2,
         )
         tight = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.1, psi=0.0, dt=0.01, n_steps=50,
-            method="rk45", atol=1e-10, rtol=1e-10,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.1,
+            psi=0.0,
+            dt=0.01,
+            n_steps=50,
+            method="rk45",
+            atol=1e-10,
+            rtol=1e-10,
         )
         d_loose = float(np.max(np.abs(loose - ref)))
         d_tight = float(np.max(np.abs(tight - ref)))

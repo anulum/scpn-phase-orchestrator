@@ -41,9 +41,7 @@ class TestGenerateGrpcScript:
         assert lines[0] == "# SPDX-License-Identifier: AGPL-3.0-or-later"
         assert lines[1] == "# Commercial license available"
 
-    @pytest.mark.skipif(
-        not _HAS_GRPC_TOOLS, reason="grpcio-tools not installed"
-    )
+    @pytest.mark.skipif(not _HAS_GRPC_TOOLS, reason="grpcio-tools not installed")
     def test_protoc_invocation_produces_stubs(self, tmp_path: Path) -> None:
         """The underlying protoc call must regenerate the two expected
         modules (spo_pb2.py, spo_pb2_grpc.py) in a fresh output directory.
@@ -65,9 +63,7 @@ class TestGenerateGrpcScript:
         assert (out / "spo_pb2.py").exists()
         assert (out / "spo_pb2_grpc.py").exists()
 
-    @pytest.mark.skipif(
-        not _HAS_GRPC_TOOLS, reason="grpcio-tools not installed"
-    )
+    @pytest.mark.skipif(not _HAS_GRPC_TOOLS, reason="grpcio-tools not installed")
     def test_script_help_flag_exits_zero(self) -> None:
         """`python generate_grpc.py --help` must render argparse usage
         without trying to run protoc.

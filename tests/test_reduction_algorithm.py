@@ -54,7 +54,10 @@ class TestConstructor:
     def test_rejects_non_positive_dt(self):
         with pytest.raises(ValueError, match="dt"):
             OttAntonsenReduction(
-                omega_0=0.0, delta=0.1, K=1.0, dt=0.0,
+                omega_0=0.0,
+                delta=0.1,
+                K=1.0,
+                dt=0.0,
             )
 
 
@@ -69,7 +72,8 @@ class TestAnalyticalSteadyState:
         """K = 3Δ → R_ss = √(1 − 2/3) = √(1/3) ≈ 0.5774."""
         red = OttAntonsenReduction(omega_0=0.0, delta=1.0, K=3.0)
         assert red.steady_state_R() == pytest.approx(
-            math.sqrt(1.0 / 3.0), abs=1e-12,
+            math.sqrt(1.0 / 3.0),
+            abs=1e-12,
         )
 
     @_python
@@ -92,7 +96,10 @@ class TestTrajectoryConvergence:
         delta = 0.1
         K = 1.0
         red = OttAntonsenReduction(
-            omega_0=0.0, delta=delta, K=K, dt=0.01,
+            omega_0=0.0,
+            delta=delta,
+            K=K,
+            dt=0.01,
         )
         state = red.run(complex(0.05, 0.0), n_steps=5000)
         assert pytest.approx(red.steady_state_R(), abs=5e-3) == state.R
@@ -102,7 +109,10 @@ class TestTrajectoryConvergence:
         """Below criticality, ``R`` decays towards zero
         regardless of initial seed."""
         red = OttAntonsenReduction(
-            omega_0=0.0, delta=1.0, K=1.5, dt=0.01,
+            omega_0=0.0,
+            delta=1.0,
+            K=1.5,
+            dt=0.01,
         )
         state = red.run(complex(0.5, 0.0), n_steps=3000)
         assert state.R < 0.05
@@ -112,7 +122,10 @@ class TestStep:
     @_python
     def test_step_advances_trajectory(self):
         red = OttAntonsenReduction(
-            omega_0=0.5, delta=0.1, K=1.0, dt=0.01,
+            omega_0=0.5,
+            delta=0.1,
+            K=1.0,
+            dt=0.01,
         )
         z0 = complex(0.2, 0.1)
         z1 = red.step(z0)
@@ -123,7 +136,10 @@ class TestStep:
         """z = 0 is always a fixed point: derivative evaluates
         to 0 at origin irrespective of Δ, ω₀, K."""
         red = OttAntonsenReduction(
-            omega_0=0.5, delta=0.1, K=1.0, dt=0.01,
+            omega_0=0.5,
+            delta=0.1,
+            K=1.0,
+            dt=0.01,
         )
         state = red.run(complex(0.0, 0.0), n_steps=100)
         assert pytest.approx(0.0, abs=1e-14) == state.R
@@ -138,7 +154,10 @@ class TestPredictFromOscillators:
             np.pi * (rng.uniform(0, 1, 2000) - 0.5),
         )
         red = OttAntonsenReduction(
-            omega_0=0.0, delta=0.0, K=0.0, dt=0.01,
+            omega_0=0.0,
+            delta=0.0,
+            K=0.0,
+            dt=0.01,
         )
         state = red.predict_from_oscillators(omegas, K=1.0)
         assert isinstance(state, OAState)
@@ -153,16 +172,19 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_r_bounded_in_unit_interval(self, delta, K_ratio, seed):
         K = K_ratio * delta
         rng = np.random.default_rng(seed)
-        z0 = complex(0.1 * rng.standard_normal(),
-                     0.1 * rng.standard_normal())
+        z0 = complex(0.1 * rng.standard_normal(), 0.1 * rng.standard_normal())
         red = OttAntonsenReduction(
-            omega_0=0.0, delta=delta, K=K, dt=0.01,
+            omega_0=0.0,
+            delta=delta,
+            K=K,
+            dt=0.01,
         )
         state = red.run(z0, n_steps=1000)
         assert 0.0 <= state.R <= 1.0 + 1e-10

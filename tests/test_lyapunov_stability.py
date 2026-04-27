@@ -58,8 +58,13 @@ def test_long_run_all_attracting():
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
     spec = lyapunov_spectrum(
-        phases, omegas, knm, alpha,
-        dt=0.005, n_steps=10_000, qr_interval=20,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        dt=0.005,
+        n_steps=10_000,
+        qr_interval=20,
     )
     # All exponents should be strongly negative under contracting coupling.
     assert np.all(spec < -0.5)
@@ -84,8 +89,13 @@ def test_sum_tracks_trace_of_jacobian():
     np.fill_diagonal(alpha, 0.0)
 
     spec = lyapunov_spectrum(
-        phases, omegas, knm, alpha,
-        dt=0.01, n_steps=5000, qr_interval=10,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        dt=0.01,
+        n_steps=5000,
+        qr_interval=10,
     )
 
     # Evolve a second trajectory with the same RK4 to sample tr J.
@@ -120,8 +130,13 @@ def test_kaplan_yorke_dimension_bounded():
     alpha = np.zeros((n, n))
 
     spec = lyapunov_spectrum(
-        phases, omegas, knm, alpha,
-        dt=0.01, n_steps=5000, qr_interval=20,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        dt=0.01,
+        n_steps=5000,
+        qr_interval=20,
     )
     running = 0.0
     dim_ky = 0.0

@@ -55,18 +55,24 @@ def _load_rust_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
         return np.asarray(
             market_order_parameter_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
-                int(t), int(n),
+                int(t),
+                int(n),
             ),
             dtype=np.float64,
         )
 
     def _rust_plv(
-        phases_flat: NDArray, t: int, n: int, window: int,
+        phases_flat: NDArray,
+        t: int,
+        n: int,
+        window: int,
     ) -> NDArray:
         return np.asarray(
             market_plv_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
-                int(t), int(n), int(window),
+                int(t),
+                int(n),
+                int(window),
             ),
             dtype=np.float64,
         )
@@ -133,9 +139,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> (
-    tuple[Callable[..., NDArray], Callable[..., NDArray]] | None
-):
+def _dispatch() -> tuple[Callable[..., NDArray], Callable[..., NDArray]] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -155,7 +159,9 @@ def extract_phase(series: NDArray) -> NDArray:
 
 
 def _python_market_order_parameter(
-    phases_flat: NDArray, t: int, n: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
 ) -> NDArray:
     if t == 0 or n == 0:
         return np.empty(0, dtype=np.float64)
@@ -181,7 +187,10 @@ def market_order_parameter(phases: NDArray) -> NDArray:
 
 
 def _python_market_plv(
-    phases_flat: NDArray, t: int, n: int, window: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
+    window: int,
 ) -> NDArray:
     if t < window or n == 0 or window == 0:
         return np.empty(0, dtype=np.float64)
@@ -190,7 +199,7 @@ def _python_market_plv(
     out = np.empty(n_windows * n * n, dtype=np.float64)
     inv_w = 1.0 / window
     for w in range(n_windows):
-        chunk = phases[w:w + window]  # (window, n)
+        chunk = phases[w : w + window]  # (window, n)
         s = np.sin(chunk)
         c = np.cos(chunk)
         # cos(θ_j − θ_i) = c_j·c_i + s_j·s_i → sum over window
@@ -198,7 +207,7 @@ def _python_market_plv(
         sum_cos = (c.T @ c + s.T @ s) * inv_w
         sum_sin = (s.T @ c - c.T @ s) * inv_w
         plv_mat = np.sqrt(sum_cos * sum_cos + sum_sin * sum_sin)
-        out[w * n * n:(w + 1) * n * n] = plv_mat.ravel()
+        out[w * n * n : (w + 1) * n * n] = plv_mat.ravel()
     return out
 
 
@@ -215,8 +224,7 @@ def market_plv(phases: NDArray, window: int = 50) -> NDArray:
     dispatched = _dispatch()
     if dispatched is not None:
         _, plv_fn = dispatched
-        result_flat = np.asarray(plv_fn(flat, T, N, int(window)),
-                                 dtype=np.float64)
+        result_flat = np.asarray(plv_fn(flat, T, N, int(window)), dtype=np.float64)
     else:
         result_flat = _python_market_plv(flat, T, N, int(window))
     if result_flat.size == 0:
@@ -238,6 +246,7 @@ def detect_regimes(
     R = np.asarray(R, dtype=np.float64)
     try:
         from spo_kernel import detect_regimes_rust as _rust_regimes
+
         flat = np.ascontiguousarray(R.ravel())
         return np.asarray(_rust_regimes(flat, sync_threshold, desync_threshold))
     except ImportError:

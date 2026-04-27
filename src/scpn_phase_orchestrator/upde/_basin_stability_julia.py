@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["steady_state_r_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "basin_stability.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "basin_stability.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -54,7 +52,10 @@ def steady_state_r_julia(
         np.ascontiguousarray(omegas, dtype=np.float64),
         np.ascontiguousarray(knm_flat, dtype=np.float64),
         np.ascontiguousarray(alpha_flat, dtype=np.float64),
-        int(n), float(k_scale), float(dt),
-        int(n_transient), int(n_measure),
+        int(n),
+        float(k_scale),
+        float(dt),
+        int(n_transient),
+        int(n_measure),
     )
     return float(r)

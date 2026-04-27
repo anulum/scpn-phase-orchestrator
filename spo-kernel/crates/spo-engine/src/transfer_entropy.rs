@@ -185,9 +185,7 @@ mod tests {
     #[test]
     fn test_driven_signal_positive_te() {
         // Target = lagged copy of source → positive TE
-        let src: Vec<f64> = (0..200)
-            .map(|i| (i as f64 * 0.2).sin() * PI + PI)
-            .collect();
+        let src: Vec<f64> = (0..200).map(|i| (i as f64 * 0.2).sin() * PI + PI).collect();
         let mut tgt = vec![0.0];
         tgt.extend_from_slice(&src[..199]); // target = source shifted by 1
         let te = phase_transfer_entropy(&src, &tgt, 16);
@@ -242,9 +240,7 @@ mod tests {
     fn test_asymmetric_te() {
         // X drives Y but Y does not drive X → TE(X→Y) > TE(Y→X)
         let n = 200;
-        let src: Vec<f64> = (0..n)
-            .map(|i| (i as f64 * 0.15).sin() * PI + PI)
-            .collect();
+        let src: Vec<f64> = (0..n).map(|i| (i as f64 * 0.15).sin() * PI + PI).collect();
         let mut tgt = vec![src[0]];
         for i in 1..n {
             // target follows source with noise

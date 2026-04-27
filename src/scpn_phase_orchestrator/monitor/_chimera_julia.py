@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["local_order_parameter_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "chimera.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "chimera.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -38,7 +36,9 @@ def _ensure() -> Any:
 
 
 def local_order_parameter_julia(
-    phases: NDArray, knm_flat: NDArray, n: int,
+    phases: NDArray,
+    knm_flat: NDArray,
+    n: int,
 ) -> NDArray:
     jl = _ensure()
     return np.asarray(

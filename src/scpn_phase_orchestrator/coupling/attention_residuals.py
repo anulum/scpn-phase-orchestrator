@@ -96,9 +96,7 @@ def default_projections(
     ``w_o`` is ``(H · d_head, d_model)``.
     """
     if d_model % n_heads != 0:
-        msg = (
-            f"d_model={d_model} not divisible by n_heads={n_heads}"
-        )
+        msg = f"d_model={d_model} not divisible by n_heads={n_heads}"
         raise ValueError(msg)
     d_head = d_model // n_heads
     rng = np.random.default_rng(seed)
@@ -109,9 +107,7 @@ def default_projections(
     w_q = (rng.standard_normal(shape_qkv) * scale).astype(np.float64)
     w_k = (rng.standard_normal(shape_qkv) * scale).astype(np.float64)
     w_v = (rng.standard_normal(shape_qkv) * scale).astype(np.float64)
-    w_o = (
-        rng.standard_normal((n_heads * d_head, d_model)) * scale
-    ).astype(np.float64)
+    w_o = (rng.standard_normal((n_heads * d_head, d_model)) * scale).astype(np.float64)
     return w_q, w_k, w_v, w_o
 
 
@@ -363,9 +359,7 @@ def attnres_modulate(
         raise ValueError(f"knm must be square 2-D; got shape {knm.shape}")
     n = knm.shape[0]
     if theta.shape != (n,):
-        raise ValueError(
-            f"theta shape {theta.shape} does not match knm (N={n})"
-        )
+        raise ValueError(f"theta shape {theta.shape} does not match knm (N={n})")
     if temperature <= 0.0:
         raise ValueError(f"temperature must be > 0, got {temperature}")
     if lambda_ < 0.0:
@@ -376,9 +370,7 @@ def attnres_modulate(
         )
 
     if any(p is None for p in (w_q, w_k, w_v, w_o)):
-        d_q, d_k, d_v, d_o = default_projections(
-            n_heads=n_heads, seed=projection_seed
-        )
+        d_q, d_k, d_v, d_o = default_projections(n_heads=n_heads, seed=projection_seed)
         w_q = d_q if w_q is None else w_q
         w_k = d_k if w_k is None else w_k
         w_v = d_v if w_v is None else w_v
@@ -390,19 +382,13 @@ def attnres_modulate(
             f"w_q / w_k / w_v shape mismatch: {w_q.shape}, {w_k.shape}, {w_v.shape}"
         )
     if w_q.shape[0] != n_heads:
-        raise ValueError(
-            f"w_q leading dim {w_q.shape[0]} != n_heads={n_heads}"
-        )
+        raise ValueError(f"w_q leading dim {w_q.shape[0]} != n_heads={n_heads}")
     d_model = w_q.shape[1]
     d_head = w_q.shape[2]
     if d_model != n_heads * d_head:
-        raise ValueError(
-            f"d_model {d_model} != n_heads {n_heads} · d_head {d_head}"
-        )
+        raise ValueError(f"d_model {d_model} != n_heads {n_heads} · d_head {d_head}")
     if w_o.shape != (n_heads * d_head, d_model):
-        raise ValueError(
-            f"w_o shape {w_o.shape} != ({n_heads * d_head}, {d_model})"
-        )
+        raise ValueError(f"w_o shape {w_o.shape} != ({n_heads * d_head}, {d_model})")
 
     knm64 = np.asarray(knm, dtype=np.float64)
     if lambda_ == 0.0:

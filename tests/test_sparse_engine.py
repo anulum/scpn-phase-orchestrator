@@ -225,9 +225,7 @@ class TestSparseEngineEdgeCases:
         row_ptr, col, kv, av = dense_to_csr(knm, alpha)
 
         p_dense = dense.step(phases.copy(), omegas, knm, 0.0, 0.0, alpha)
-        p_sparse = sparse.step(
-            phases.copy(), omegas, row_ptr, col, kv, 0.0, 0.0, av
-        )
+        p_sparse = sparse.step(phases.copy(), omegas, row_ptr, col, kv, 0.0, 0.0, av)
         np.testing.assert_allclose(p_dense, p_sparse, atol=1e-8)
 
     def test_invalid_method_rejected(self):

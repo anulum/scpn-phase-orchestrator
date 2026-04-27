@@ -175,7 +175,8 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=8, deadline=None,
+        max_examples=8,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_finite_output(self, n, sigma2, seed):
@@ -201,12 +202,16 @@ class TestOrderParameter:
     def test_locked(self):
         eng = SimplicialEngine(10, 0.01, sigma2=0.0)
         assert eng.order_parameter(np.full(10, 1.3)) == pytest.approx(
-            1.0, abs=1e-12,
+            1.0,
+            abs=1e-12,
         )
 
     @_python
     def test_uniform_near_zero(self):
         eng = SimplicialEngine(1000, 0.01, sigma2=0.0)
-        assert eng.order_parameter(
-            np.linspace(0, TWO_PI, 1000, endpoint=False),
-        ) < 1e-10
+        assert (
+            eng.order_parameter(
+                np.linspace(0, TWO_PI, 1000, endpoint=False),
+            )
+            < 1e-10
+        )

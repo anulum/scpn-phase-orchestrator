@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "entropy_from_phases_mojo"]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "psychedelic_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "psychedelic_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -38,8 +36,11 @@ def entropy_from_phases_mojo(phases: NDArray, n_bins: int) -> float:
     tokens: list[str] = ["ENT", str(int(p.size)), str(int(n_bins))]
     tokens.extend(repr(float(x)) for x in p.tolist())
     proc = subprocess.run(
-        [str(exe)], input=" ".join(tokens) + "\n",
-        capture_output=True, text=True, check=False,
+        [str(exe)],
+        input=" ".join(tokens) + "\n",
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if proc.returncode != 0:
         raise ValueError(

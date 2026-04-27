@@ -169,9 +169,7 @@ def test_external_drive_parity(spo):
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
     ru = phases.copy()
     for _ in range(30):
-        ru = np.asarray(
-            rust.step(ru, omegas, knm.ravel(), zeta, psi, alpha.ravel())
-        )
+        ru = np.asarray(rust.step(ru, omegas, knm.ravel(), zeta, psi, alpha.ravel()))
     np.testing.assert_allclose(py, ru, atol=1e-8)
 
 
@@ -194,9 +192,7 @@ def test_negative_coupling_parity(spo):
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
     ru = phases.copy()
     for _ in range(30):
-        ru = np.asarray(
-            rust.step(ru, omegas, knm.ravel(), 0.0, 0.0, alpha.ravel())
-        )
+        ru = np.asarray(rust.step(ru, omegas, knm.ravel(), 0.0, 0.0, alpha.ravel()))
     np.testing.assert_allclose(py, ru, atol=1e-8)
 
 
@@ -219,9 +215,7 @@ def test_asymmetric_coupling_parity(spo):
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
     ru = phases.copy()
     for _ in range(40):
-        ru = np.asarray(
-            rust.step(ru, omegas, knm.ravel(), 0.0, 0.0, alpha.ravel())
-        )
+        ru = np.asarray(rust.step(ru, omegas, knm.ravel(), 0.0, 0.0, alpha.ravel()))
     np.testing.assert_allclose(py, ru, atol=1e-8)
 
 
@@ -315,9 +309,7 @@ def test_determinism_same_seed(spo):
         rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
         p = phases.copy()
         for _ in range(50):
-            p = np.asarray(
-                rust.step(p, omegas, knm.ravel(), 0.0, 0.0, alpha.ravel())
-            )
+            p = np.asarray(rust.step(p, omegas, knm.ravel(), 0.0, 0.0, alpha.ravel()))
         return p
 
     a = run_once()

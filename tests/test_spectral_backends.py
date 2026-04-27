@@ -41,7 +41,7 @@ from scpn_phase_orchestrator.coupling.spectral import (
 
 TOL_LAPACK = 1e-12
 TOL_GONUM = 1e-11  # gonum EigenSym vs LAPACK
-TOL_MOJO = 1e-10   # subprocess text round-trip on top of LAPACK
+TOL_MOJO = 1e-10  # subprocess text round-trip on top of LAPACK
 
 
 @contextlib.contextmanager
@@ -160,7 +160,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, n, seed):
@@ -175,7 +176,8 @@ class TestHypothesisParity:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=6, deadline=None,
+        max_examples=6,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, n, seed):

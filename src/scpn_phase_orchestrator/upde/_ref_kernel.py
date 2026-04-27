@@ -39,12 +39,21 @@ _DP_A41, _DP_A42, _DP_A43 = 44 / 45, -56 / 15, 32 / 9
 _DP_A51, _DP_A52 = 19372 / 6561, -25360 / 2187
 _DP_A53, _DP_A54 = 64448 / 6561, -212 / 729
 _DP_A61, _DP_A62, _DP_A63, _DP_A64, _DP_A65 = (
-    9017 / 3168, -355 / 33, 46732 / 5247, 49 / 176, -5103 / 18656,
+    9017 / 3168,
+    -355 / 33,
+    46732 / 5247,
+    49 / 176,
+    -5103 / 18656,
 )
 _DP_B5 = (35 / 384, 0.0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0.0)
 _DP_B4 = (
-    5179 / 57600, 0.0, 7571 / 16695, 393 / 640,
-    -92097 / 339200, 187 / 2100, 1 / 40,
+    5179 / 57600,
+    0.0,
+    7571 / 16695,
+    393 / 640,
+    -92097 / 339200,
+    187 / 2100,
+    1 / 40,
 )
 
 
@@ -74,37 +83,62 @@ def _dp_stages(
     """Seven Dormand-Prince stages; returns ``(y5, y4)``."""
     k1 = _compute_derivative(phases, omegas, knm, alpha, zeta, psi)
     k2 = _compute_derivative(
-        phases + dt * _DP_A21 * k1, omegas, knm, alpha, zeta, psi,
+        phases + dt * _DP_A21 * k1,
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
     )
     k3 = _compute_derivative(
         phases + dt * (_DP_A31 * k1 + _DP_A32 * k2),
-        omegas, knm, alpha, zeta, psi,
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
     )
     k4 = _compute_derivative(
         phases + dt * (_DP_A41 * k1 + _DP_A42 * k2 + _DP_A43 * k3),
-        omegas, knm, alpha, zeta, psi,
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
     )
     k5 = _compute_derivative(
-        phases + dt * (
-            _DP_A51 * k1 + _DP_A52 * k2 + _DP_A53 * k3 + _DP_A54 * k4
-        ),
-        omegas, knm, alpha, zeta, psi,
+        phases + dt * (_DP_A51 * k1 + _DP_A52 * k2 + _DP_A53 * k3 + _DP_A54 * k4),
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
     )
     k6 = _compute_derivative(
-        phases + dt * (
-            _DP_A61 * k1 + _DP_A62 * k2 + _DP_A63 * k3
-            + _DP_A64 * k4 + _DP_A65 * k5
-        ),
-        omegas, knm, alpha, zeta, psi,
+        phases
+        + dt
+        * (_DP_A61 * k1 + _DP_A62 * k2 + _DP_A63 * k3 + _DP_A64 * k4 + _DP_A65 * k5),
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
     )
     y5 = phases + dt * (
-        _DP_B5[0] * k1 + _DP_B5[2] * k3 + _DP_B5[3] * k4
-        + _DP_B5[4] * k5 + _DP_B5[5] * k6
+        _DP_B5[0] * k1
+        + _DP_B5[2] * k3
+        + _DP_B5[3] * k4
+        + _DP_B5[4] * k5
+        + _DP_B5[5] * k6
     )
     k7 = _compute_derivative(y5, omegas, knm, alpha, zeta, psi)
     y4 = phases + dt * (
-        _DP_B4[0] * k1 + _DP_B4[2] * k3 + _DP_B4[3] * k4
-        + _DP_B4[4] * k5 + _DP_B4[5] * k6 + _DP_B4[6] * k7
+        _DP_B4[0] * k1
+        + _DP_B4[2] * k3
+        + _DP_B4[3] * k4
+        + _DP_B4[4] * k5
+        + _DP_B4[5] * k6
+        + _DP_B4[6] * k7
     )
     return y5, y4
 
@@ -129,9 +163,7 @@ def _rk45_step(
         scale = atol + rtol * np.maximum(np.abs(phases), np.abs(y5))
         err_norm = float(np.max(err / scale))
         if err_norm <= 1.0:
-            factor = (
-                min(0.9 * err_norm ** (-0.2), 5.0) if err_norm > 0.0 else 5.0
-            )
+            factor = min(0.9 * err_norm ** (-0.2), 5.0) if err_norm > 0.0 else 5.0
             return y5, min(dt * factor, dt_config * 10.0)
         dt = dt * max(0.9 * err_norm ** (-0.25), 0.2)
     return y5, dt
@@ -147,18 +179,10 @@ def _rk4_substep(
     dt: float,
 ) -> NDArray:
     k1 = _compute_derivative(phases, omegas, knm, alpha, zeta, psi)
-    k2 = _compute_derivative(
-        phases + 0.5 * dt * k1, omegas, knm, alpha, zeta, psi
-    )
-    k3 = _compute_derivative(
-        phases + 0.5 * dt * k2, omegas, knm, alpha, zeta, psi
-    )
-    k4 = _compute_derivative(
-        phases + dt * k3, omegas, knm, alpha, zeta, psi
-    )
-    return cast(
-        "NDArray", phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
-    )
+    k2 = _compute_derivative(phases + 0.5 * dt * k1, omegas, knm, alpha, zeta, psi)
+    k3 = _compute_derivative(phases + 0.5 * dt * k2, omegas, knm, alpha, zeta, psi)
+    k4 = _compute_derivative(phases + dt * k3, omegas, knm, alpha, zeta, psi)
+    return cast("NDArray", phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4))
 
 
 def upde_run_python(
@@ -186,19 +210,23 @@ def upde_run_python(
     for _ in range(n_steps):
         if method == "rk45":
             phases, last_dt = _rk45_step(
-                phases, omegas, knm, alpha, zeta, psi,
-                atol, rtol, dt, last_dt,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                zeta,
+                psi,
+                atol,
+                rtol,
+                dt,
+                last_dt,
             )
         elif method == "rk4":
             for _ in range(n_substeps):
-                phases = _rk4_substep(
-                    phases, omegas, knm, alpha, zeta, psi, sub_dt
-                )
+                phases = _rk4_substep(phases, omegas, knm, alpha, zeta, psi, sub_dt)
         else:  # euler
             for _ in range(n_substeps):
-                deriv = _compute_derivative(
-                    phases, omegas, knm, alpha, zeta, psi
-                )
+                deriv = _compute_derivative(phases, omegas, knm, alpha, zeta, psi)
                 phases = phases + sub_dt * deriv
         phases = phases % TWO_PI
     return phases

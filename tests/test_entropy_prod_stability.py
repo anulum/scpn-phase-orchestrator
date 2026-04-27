@@ -62,12 +62,16 @@ def test_dissipation_falls_during_synchronisation():
 
     sigmas: list[float] = []
     for _ in range(8):
-        sigmas.append(
-            entropy_production_rate(phases, omegas, knm, 1.0, 0.005)
-        )
+        sigmas.append(entropy_production_rate(phases, omegas, knm, 1.0, 0.005))
         phases = upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.005, n_steps=200,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.005,
+            n_steps=200,
             method="rk4",
         )
 

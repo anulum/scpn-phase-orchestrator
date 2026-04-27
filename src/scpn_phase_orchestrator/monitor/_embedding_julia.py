@@ -22,9 +22,7 @@ __all__ = [
     "nearest_neighbor_distances_julia",
 ]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "embedding.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "embedding.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -42,37 +40,46 @@ def _ensure() -> Any:
 
 
 def delay_embed_julia(
-    signal: NDArray, delay: int, dimension: int,
+    signal: NDArray,
+    delay: int,
+    dimension: int,
 ) -> NDArray:
     jl = _ensure()
     return np.asarray(
         jl.delay_embed(
             np.ascontiguousarray(signal.ravel(), dtype=np.float64),
-            int(delay), int(dimension),
+            int(delay),
+            int(dimension),
         ),
         dtype=np.float64,
     )
 
 
 def mutual_information_julia(
-    signal: NDArray, lag: int, n_bins: int,
+    signal: NDArray,
+    lag: int,
+    n_bins: int,
 ) -> float:
     jl = _ensure()
     return float(
         jl.mutual_information(
             np.ascontiguousarray(signal.ravel(), dtype=np.float64),
-            int(lag), int(n_bins),
+            int(lag),
+            int(n_bins),
         )
     )
 
 
 def nearest_neighbor_distances_julia(
-    embedded: NDArray, t: int, m: int,
+    embedded: NDArray,
+    t: int,
+    m: int,
 ) -> tuple[NDArray, NDArray]:
     jl = _ensure()
     dist, idx = jl.nearest_neighbor_distances(
         np.ascontiguousarray(embedded.ravel(), dtype=np.float64),
-        int(t), int(m),
+        int(t),
+        int(m),
     )
     return (
         np.asarray(dist, dtype=np.float64),

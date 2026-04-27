@@ -143,9 +143,7 @@ def entropy_production_rate(
         return 0.0
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(
-            backend_fn(phases, omegas, knm, float(alpha), float(dt))
-        )
+        return float(backend_fn(phases, omegas, knm, float(alpha), float(dt)))
 
     diff = phases[np.newaxis, :] - phases[:, np.newaxis]
     coupling = np.sum(knm * np.sin(diff), axis=1)

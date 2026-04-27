@@ -56,12 +56,8 @@ class TestNonNegativity:
     @_python
     def test_random_inputs_non_negative(self):
         for seed in range(10):
-            phases, omegas, knm = _random_problem(
-                np.random.default_rng(seed), n=6
-            )
-            sigma = entropy_production_rate(
-                phases, omegas, knm, alpha=0.5, dt=0.01
-            )
+            phases, omegas, knm = _random_problem(np.random.default_rng(seed), n=6)
+            sigma = entropy_production_rate(phases, omegas, knm, alpha=0.5, dt=0.01)
             assert sigma >= 0.0
 
 
@@ -84,7 +80,7 @@ class TestFixedPoint:
         omegas = np.full(n, 0.5)
         knm = np.zeros((n, n))
         sigma = entropy_production_rate(phases, omegas, knm, 0.0, 0.01)
-        expected = n * (0.5 ** 2) * 0.01
+        expected = n * (0.5**2) * 0.01
         assert abs(sigma - expected) < 1e-15
 
 
@@ -135,9 +131,12 @@ class TestScaling:
 class TestEdgeCases:
     @_python
     def test_zero_n_returns_zero(self):
-        assert entropy_production_rate(
-            np.array([]), np.array([]), np.zeros((0, 0)), 0.5, 0.01
-        ) == 0.0
+        assert (
+            entropy_production_rate(
+                np.array([]), np.array([]), np.zeros((0, 0)), 0.5, 0.01
+            )
+            == 0.0
+        )
 
     @_python
     def test_non_positive_dt_returns_zero(self):
@@ -145,9 +144,16 @@ class TestEdgeCases:
         omegas = np.ones(3)
         knm = np.zeros((3, 3))
         assert entropy_production_rate(phases, omegas, knm, 0.5, 0.0) == 0.0
-        assert entropy_production_rate(
-            phases, omegas, knm, 0.5, -0.1,
-        ) == 0.0
+        assert (
+            entropy_production_rate(
+                phases,
+                omegas,
+                knm,
+                0.5,
+                -0.1,
+            )
+            == 0.0
+        )
 
 
 class TestHypothesis:
@@ -161,14 +167,10 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_random_input_finite_non_negative(
-        self, n: int, seed: int
-    ) -> None:
+    def test_random_input_finite_non_negative(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases, omegas, knm = _random_problem(rng, n=n)
-        sigma = entropy_production_rate(
-            phases, omegas, knm, alpha=0.5, dt=0.01
-        )
+        sigma = entropy_production_rate(phases, omegas, knm, alpha=0.5, dt=0.01)
         assert math.isfinite(sigma)
         assert sigma >= 0.0
 

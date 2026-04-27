@@ -181,7 +181,9 @@ class EmbeddingResult:
 
 
 def delay_embed(
-    signal: NDArray, delay: int, dimension: int,
+    signal: NDArray,
+    delay: int,
+    dimension: int,
 ) -> NDArray:
     """Time-delay embedding: ``v(t) = [x(t), x(t+τ), x(t+2τ), …]``."""
     s = np.asarray(signal, dtype=np.float64).ravel()
@@ -207,7 +209,9 @@ def delay_embed(
 
 
 def mutual_information(
-    signal: NDArray, lag: int, n_bins: int = 32,
+    signal: NDArray,
+    lag: int,
+    n_bins: int = 32,
 ) -> float:
     """Fraser-Swinney 1986 average mutual information at ``lag``."""
     s = np.asarray(signal, dtype=np.float64).ravel()
@@ -264,7 +268,7 @@ def nearest_neighbor_distances(
     nn_idx = np.zeros(t, dtype=np.int64)
     for i in range(t):
         diffs = e - e[i]
-        dists = np.sqrt(np.sum(diffs ** 2, axis=1))
+        dists = np.sqrt(np.sum(diffs**2, axis=1))
         dists[i] = np.inf
         j = int(np.argmin(dists))
         nn_dist[i] = dists[j]
@@ -273,7 +277,9 @@ def nearest_neighbor_distances(
 
 
 def optimal_delay(
-    signal: NDArray, max_lag: int = 100, n_bins: int = 32,
+    signal: NDArray,
+    max_lag: int = 100,
+    n_bins: int = 32,
 ) -> int:
     """First local minimum of :func:`mutual_information` vs ``lag``."""
     s = np.asarray(signal, dtype=np.float64).ravel()
@@ -286,14 +292,9 @@ def optimal_delay(
         return int(fn(s, int(max_lag), int(n_bins)))
 
     max_lag = min(int(max_lag), s.size // 2)
-    mi_values = np.array(
-        [mutual_information(s, lag, n_bins) for lag in range(max_lag)]
-    )
+    mi_values = np.array([mutual_information(s, lag, n_bins) for lag in range(max_lag)])
     for i in range(1, len(mi_values) - 1):
-        if (
-            mi_values[i] < mi_values[i - 1]
-            and mi_values[i] < mi_values[i + 1]
-        ):
+        if mi_values[i] < mi_values[i - 1] and mi_values[i] < mi_values[i + 1]:
             return i
     return 1
 
@@ -354,13 +355,17 @@ def optimal_dimension(
 
 
 def auto_embed(
-    signal: NDArray, max_lag: int = 100, max_dim: int = 10,
+    signal: NDArray,
+    max_lag: int = 100,
+    max_dim: int = 10,
 ) -> EmbeddingResult:
     """``optimal_delay`` ∘ ``optimal_dimension`` ∘ ``delay_embed``."""
     tau = optimal_delay(signal, max_lag)
     m = optimal_dimension(signal, tau, max_dim)
     traj = delay_embed(signal, tau, m)
     return EmbeddingResult(
-        trajectory=traj, delay=tau, dimension=m,
+        trajectory=traj,
+        delay=tau,
+        dimension=m,
         T_effective=int(traj.shape[0]),
     )

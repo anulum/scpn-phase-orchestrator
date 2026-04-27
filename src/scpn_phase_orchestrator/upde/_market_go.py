@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["market_order_parameter_go", "market_plv_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libmarket.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libmarket.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -38,13 +36,16 @@ def _load_lib() -> ctypes.CDLL:
     lib.MarketOrderParameter.restype = ctypes.c_int
     lib.MarketOrderParameter.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]
     lib.MarketPLV.restype = ctypes.c_int
     lib.MarketPLV.argtypes = [
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
     ]
     _LIB = lib
@@ -52,14 +53,17 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def market_order_parameter_go(
-    phases_flat: NDArray, t: int, n: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
 ) -> NDArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat, dtype=np.float64)
     out = np.zeros(int(t), dtype=np.float64)
     rc = lib.MarketOrderParameter(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(n)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(n)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
@@ -68,7 +72,10 @@ def market_order_parameter_go(
 
 
 def market_plv_go(
-    phases_flat: NDArray, t: int, n: int, window: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
+    window: int,
 ) -> NDArray:
     lib = _load_lib()
     n_windows = int(t) - int(window) + 1
@@ -76,7 +83,8 @@ def market_plv_go(
     out = np.zeros(n_windows * int(n) * int(n), dtype=np.float64)
     rc = lib.MarketPLV(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)), ctypes.c_int(int(n)),
+        ctypes.c_int(int(t)),
+        ctypes.c_int(int(n)),
         ctypes.c_int(int(window)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )

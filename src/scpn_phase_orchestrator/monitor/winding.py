@@ -130,7 +130,7 @@ def winding_numbers(phases_history: NDArray) -> NDArray:
     dtheta = np.diff(phases_history, axis=0)
     dtheta_wrapped = (dtheta + np.pi) % TWO_PI - np.pi
     cumulative = np.sum(dtheta_wrapped, axis=0)
-    return np.floor(cumulative / TWO_PI).astype(np.int64)
+    return cast("NDArray", np.floor(cumulative / TWO_PI).astype(np.int64))
 
 
 def winding_vector(phases_history: NDArray) -> NDArray:

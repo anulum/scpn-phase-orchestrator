@@ -162,6 +162,7 @@ class TestCrossBackendConsistency:
             finally:
                 _reset(prev)
             np.testing.assert_array_equal(
-                got, ref,
+                got,
+                ref,
                 err_msg=f"{backend} diverged from python reference",
             )

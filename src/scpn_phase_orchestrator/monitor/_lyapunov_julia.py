@@ -23,9 +23,7 @@ from numpy.typing import NDArray
 
 __all__ = ["lyapunov_spectrum_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "lyapunov.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "lyapunov.jl"
 _JULIA_MODULE: Any | None = None
 
 

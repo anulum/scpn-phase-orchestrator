@@ -48,9 +48,7 @@ def _python(func):
 def test_additivity_up_to_boundary_rounding():
     omegas = np.array([1.0, -2.0, 0.3, 3.7])
     t, dt = 500, 0.03
-    hist = (
-        omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt
-    ) % TWO_PI
+    hist = (omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt) % TWO_PI
 
     full = winding_numbers(hist)
     half = winding_numbers(hist[: t // 2])
@@ -80,9 +78,7 @@ def test_noise_does_not_flip_sign():
     rng = np.random.default_rng(3)
     omegas = np.array([0.5, -0.5, 2.0, -2.0])
     t, dt = 400, 0.05
-    clean = (
-        omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt
-    ) % TWO_PI
+    clean = (omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt) % TWO_PI
     noisy = (clean + rng.normal(0.0, 0.01, clean.shape)) % TWO_PI
     w_clean = winding_numbers(clean)
     w_noisy = winding_numbers(noisy)

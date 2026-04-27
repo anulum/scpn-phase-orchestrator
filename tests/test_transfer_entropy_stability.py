@@ -75,6 +75,4 @@ def test_te_matrix_asymmetric_for_directed_coupling() -> None:
 
 def test_te_short_series_returns_zero() -> None:
     """Length < 3 cannot form a 1-step estimator; returns 0."""
-    assert phase_transfer_entropy(
-        np.array([0.0, 1.0]), np.array([0.0, 1.0]), 16
-    ) == 0.0
+    assert phase_transfer_entropy(np.array([0.0, 1.0]), np.array([0.0, 1.0]), 16) == 0.0

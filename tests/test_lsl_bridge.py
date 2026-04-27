@@ -132,9 +132,10 @@ def test_start_without_lsl_raises_scrubbed_message():
     """start() when pylsl is absent must raise RuntimeError without leaking
     the configured stream_name (T3 scrub regression)."""
     bridge = LSLBCIBridge(stream_name="OPERATOR_IDENT")
-    with patch(
-        "scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", False
-    ), pytest.raises(RuntimeError) as exc:
+    with (
+        patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", False),
+        pytest.raises(RuntimeError) as exc,
+    ):
         bridge.start()
     assert "OPERATOR_IDENT" not in str(exc.value)
     assert "Could not connect" in str(exc.value)

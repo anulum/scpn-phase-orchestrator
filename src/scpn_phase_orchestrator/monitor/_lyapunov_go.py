@@ -23,9 +23,7 @@ from numpy.typing import NDArray
 
 __all__ = ["lyapunov_spectrum_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "liblyapunov.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "liblyapunov.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -46,12 +44,12 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),  # omegas
         ctypes.POINTER(ctypes.c_double),  # knm_flat
         ctypes.POINTER(ctypes.c_double),  # alpha_flat
-        ctypes.c_int,                     # n
-        ctypes.c_double,                  # dt
-        ctypes.c_int,                     # n_steps
-        ctypes.c_int,                     # qr_interval
-        ctypes.c_double,                  # zeta
-        ctypes.c_double,                  # psi
+        ctypes.c_int,  # n
+        ctypes.c_double,  # dt
+        ctypes.c_int,  # n_steps
+        ctypes.c_int,  # qr_interval
+        ctypes.c_double,  # zeta
+        ctypes.c_double,  # psi
         ctypes.POINTER(ctypes.c_double),  # out
     ]
     _LIB = lib

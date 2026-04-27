@@ -85,11 +85,15 @@ class TestPoincareSectionParity:
             )
             if len(ref.crossings) > 0:
                 np.testing.assert_allclose(
-                    got.crossings, ref.crossings, atol=1e-9,
+                    got.crossings,
+                    ref.crossings,
+                    atol=1e-9,
                     err_msg=f"{backend} crossing coords diverged",
                 )
                 np.testing.assert_allclose(
-                    got.crossing_times, ref.crossing_times, atol=1e-9,
+                    got.crossing_times,
+                    ref.crossing_times,
+                    atol=1e-9,
                     err_msg=f"{backend} crossing times diverged",
                 )
 
@@ -112,10 +116,14 @@ class TestPhasePoincareParity:
             )
             if len(ref.crossings) > 0:
                 np.testing.assert_allclose(
-                    got.crossings, ref.crossings, atol=1e-9,
+                    got.crossings,
+                    ref.crossings,
+                    atol=1e-9,
                     err_msg=f"{backend} phase crossings diverged",
                 )
                 np.testing.assert_allclose(
-                    got.crossing_times, ref.crossing_times, atol=1e-9,
+                    got.crossing_times,
+                    ref.crossing_times,
+                    atol=1e-9,
                     err_msg=f"{backend} phase times diverged",
                 )

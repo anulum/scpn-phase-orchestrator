@@ -42,6 +42,7 @@ bit-for-bit. Nonzero alpha falls back to the direct
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -62,9 +63,15 @@ def _load_rust_fn() -> Callable[..., NDArray]:
     from spo_kernel import splitting_run_rust
 
     def _rust(
-        phases: NDArray, omegas: NDArray,
-        knm_flat: NDArray, alpha_flat: NDArray,
-        n: int, zeta: float, psi: float, dt: float, n_steps: int,
+        phases: NDArray,
+        omegas: NDArray,
+        knm_flat: NDArray,
+        alpha_flat: NDArray,
+        n: int,
+        zeta: float,
+        psi: float,
+        dt: float,
+        n_steps: int,
     ) -> NDArray:
         # The Rust FFI reads N from ``phases.len()`` and ignores the
         # positional ``_n`` argument (hence the leading underscore in
@@ -75,8 +82,11 @@ def _load_rust_fn() -> Callable[..., NDArray]:
                 np.ascontiguousarray(omegas, dtype=np.float64),
                 np.ascontiguousarray(knm_flat, dtype=np.float64),
                 np.ascontiguousarray(alpha_flat, dtype=np.float64),
-                int(n), float(zeta), float(psi),
-                float(dt), int(n_steps),
+                int(n),
+                float(zeta),
+                float(psi),
+                float(dt),
+                int(n_steps),
             ),
             dtype=np.float64,
         )
@@ -145,16 +155,19 @@ def _dispatch() -> Callable[..., NDArray] | None:
 
 
 def _coupling_deriv(
-    theta: NDArray, knm: NDArray, alpha: NDArray,
-    zeta: float, psi: float, alpha_zero: bool,
+    theta: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+    alpha_zero: bool,
 ) -> NDArray:
     s = np.sin(theta)
     c = np.cos(theta)
     if alpha_zero:
         # sin(θ_j − θ_i) = s_j·c_i − c_j·s_i
         sin_diff = (
-            s[np.newaxis, :] * c[:, np.newaxis]
-            - c[np.newaxis, :] * s[:, np.newaxis]
+            s[np.newaxis, :] * c[:, np.newaxis] - c[np.newaxis, :] * s[:, np.newaxis]
         )
         out = np.sum(knm * sin_diff, axis=1)
     else:
@@ -163,30 +176,56 @@ def _coupling_deriv(
     if zeta != 0.0:
         # ζ · sin(ψ − θ) = ζ·sin(ψ)·cos(θ) − ζ·cos(ψ)·sin(θ)
         out = out + zeta * np.sin(psi) * c - zeta * np.cos(psi) * s
-    return out
+    return cast("NDArray", out)
 
 
 def _rk4_coupling(
-    p: NDArray, knm: NDArray, alpha: NDArray,
-    zeta: float, psi: float, dt: float, alpha_zero: bool,
+    p: NDArray,
+    knm: NDArray,
+    alpha: NDArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    alpha_zero: bool,
 ) -> NDArray:
     k1 = _coupling_deriv(p, knm, alpha, zeta, psi, alpha_zero)
     k2 = _coupling_deriv(
-        (p + 0.5 * dt * k1) % TWO_PI, knm, alpha, zeta, psi, alpha_zero,
+        (p + 0.5 * dt * k1) % TWO_PI,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        alpha_zero,
     )
     k3 = _coupling_deriv(
-        (p + 0.5 * dt * k2) % TWO_PI, knm, alpha, zeta, psi, alpha_zero,
+        (p + 0.5 * dt * k2) % TWO_PI,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        alpha_zero,
     )
     k4 = _coupling_deriv(
-        (p + dt * k3) % TWO_PI, knm, alpha, zeta, psi, alpha_zero,
+        (p + dt * k3) % TWO_PI,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        alpha_zero,
     )
-    return (p + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+    return cast("NDArray", (p + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI)
 
 
 def _python_run(
-    phases: NDArray, omegas: NDArray,
-    knm_flat: NDArray, alpha_flat: NDArray,
-    n: int, zeta: float, psi: float, dt: float, n_steps: int,
+    phases: NDArray,
+    omegas: NDArray,
+    knm_flat: NDArray,
+    alpha_flat: NDArray,
+    n: int,
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
 ) -> NDArray:
     """Python reference aligned to the Rust kernel exactly.
 
@@ -215,9 +254,7 @@ class SplittingEngine:
 
     def __init__(self, n_oscillators: int, dt: float):
         if n_oscillators < 1:
-            raise ValueError(
-                f"n_oscillators must be >= 1, got {n_oscillators}"
-            )
+            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
         if dt == 0.0:
             raise ValueError(f"dt must be non-zero, got {dt}")
         # Negative dt is intentional for symplectic-reversibility
@@ -258,16 +295,24 @@ class SplittingEngine:
             return backend_fn(
                 np.ascontiguousarray(phases, dtype=np.float64),
                 np.ascontiguousarray(omegas, dtype=np.float64),
-                knm_flat, alpha_flat,
-                self._n, float(zeta), float(psi),
-                float(self._dt), int(n_steps),
+                knm_flat,
+                alpha_flat,
+                self._n,
+                float(zeta),
+                float(psi),
+                float(self._dt),
+                int(n_steps),
             )
         return _python_run(
             np.ascontiguousarray(phases, dtype=np.float64),
             np.ascontiguousarray(omegas, dtype=np.float64),
-            knm_flat, alpha_flat,
-            self._n, float(zeta), float(psi),
-            float(self._dt), int(n_steps),
+            knm_flat,
+            alpha_flat,
+            self._n,
+            float(zeta),
+            float(psi),
+            float(self._dt),
+            int(n_steps),
         )
 
     def order_parameter(self, phases: NDArray) -> float:

@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["swarmalator_step_go"]
 
-_LIB_PATH = (
-    Path(__file__).resolve().parents[3] / "go" / "libswarmalator.so"
-)
+_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libswarmalator.so"
 _LIB: ctypes.CDLL | None = None
 
 
@@ -40,9 +38,13 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
-        ctypes.c_double, ctypes.c_double, ctypes.c_double,
-        ctypes.c_double, ctypes.c_double,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
+        ctypes.c_double,
         ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
     ]
@@ -51,9 +53,16 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def swarmalator_step_go(
-    pos: NDArray, phases: NDArray, omegas: NDArray,
-    n: int, dim: int,
-    a: float, b: float, j: float, k: float, dt: float,
+    pos: NDArray,
+    phases: NDArray,
+    omegas: NDArray,
+    n: int,
+    dim: int,
+    a: float,
+    b: float,
+    j: float,
+    k: float,
+    dt: float,
 ) -> tuple[NDArray, NDArray]:
     lib = _load_lib()
     p = np.ascontiguousarray(pos.ravel(), dtype=np.float64)
@@ -65,9 +74,12 @@ def swarmalator_step_go(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ph.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         om.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(n)), ctypes.c_int(int(dim)),
-        ctypes.c_double(float(a)), ctypes.c_double(float(b)),
-        ctypes.c_double(float(j)), ctypes.c_double(float(k)),
+        ctypes.c_int(int(n)),
+        ctypes.c_int(int(dim)),
+        ctypes.c_double(float(a)),
+        ctypes.c_double(float(b)),
+        ctypes.c_double(float(j)),
+        ctypes.c_double(float(k)),
         ctypes.c_double(float(dt)),
         new_pos.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         new_phases.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),

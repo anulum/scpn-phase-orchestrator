@@ -192,7 +192,6 @@ class TestSecureModbusAdapterTLS:
             with pytest.raises(ConnectionError, match="connection failed"):
                 SecureModbusAdapter("localhost", 802, cert, key)
 
-
     def test_missing_cert_error_does_not_leak_full_path(self, tmp_path):
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 

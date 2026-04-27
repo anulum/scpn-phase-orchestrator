@@ -60,7 +60,13 @@ class TestLongRunInvariants:
         damping = np.ones(n) * 0.1
         eng = InertialKuramotoEngine(n, 0.01)
         _, _, theta_traj, _ = eng.run(
-            theta, omega, power, knm, inertia, damping, n_steps=400,
+            theta,
+            omega,
+            power,
+            knm,
+            inertia,
+            damping,
+            n_steps=400,
         )
         assert np.all(theta_traj >= 0.0)
         assert np.all(theta_traj < TWO_PI + 1e-12)
@@ -78,7 +84,13 @@ class TestLongRunInvariants:
         damping = np.ones(n) * 0.5
         eng = InertialKuramotoEngine(n, 0.01)
         _, _, _, omega_traj = eng.run(
-            theta, omega, power, knm, inertia, damping, n_steps=300,
+            theta,
+            omega,
+            power,
+            knm,
+            inertia,
+            damping,
+            n_steps=300,
         )
         assert np.all(np.isfinite(omega_traj))
 
@@ -97,7 +109,13 @@ class TestLongRunInvariants:
         damping = np.ones(n) * 3.0
         eng = InertialKuramotoEngine(n, 0.01)
         _, final_omega, _, _ = eng.run(
-            theta, omega, power, knm, inertia, damping, n_steps=300,
+            theta,
+            omega,
+            power,
+            knm,
+            inertia,
+            damping,
+            n_steps=300,
         )
         assert np.all(np.abs(final_omega) < 1e-2)
 
@@ -116,7 +134,13 @@ class TestLongRunInvariants:
         damping = np.zeros(n)
         eng = InertialKuramotoEngine(n, 0.01)
         _, final_omega, _, _ = eng.run(
-            theta, omega, power, knm, inertia, damping, n_steps=200,
+            theta,
+            omega,
+            power,
+            knm,
+            inertia,
+            damping,
+            n_steps=200,
         )
         np.testing.assert_allclose(final_omega, omega, atol=1e-12)
 
@@ -139,7 +163,13 @@ class TestHelpersLongRun:
         eng = InertialKuramotoEngine(n, 0.01)
         r0 = eng.coherence(theta)
         final_theta, _, _, _ = eng.run(
-            theta, omega, power, knm, inertia, damping, n_steps=500,
+            theta,
+            omega,
+            power,
+            knm,
+            inertia,
+            damping,
+            n_steps=500,
         )
         r_final = eng.coherence(final_theta)
         assert r_final > r0

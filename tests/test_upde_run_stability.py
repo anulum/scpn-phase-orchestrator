@@ -56,8 +56,14 @@ def test_strong_coupling_reaches_R_above_0p95():
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
     out = upde_run(
-        phases, omegas, knm, alpha,
-        zeta=0.0, psi=0.0, dt=0.005, n_steps=3000,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta=0.0,
+        psi=0.0,
+        dt=0.005,
+        n_steps=3000,
         method="rk4",
     )
     R = float(np.abs(np.mean(np.exp(1j * out))))
@@ -74,8 +80,14 @@ def test_synchronised_stays_synchronised():
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
     out = upde_run(
-        phases, omegas, knm, alpha,
-        zeta=0.0, psi=0.0, dt=0.01, n_steps=5000,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta=0.0,
+        psi=0.0,
+        dt=0.01,
+        n_steps=5000,
         method="rk4",
     )
     R = float(np.abs(np.mean(np.exp(1j * out))))
@@ -95,8 +107,14 @@ def test_rk45_does_not_blow_up():
     alpha = rng.uniform(-0.3, 0.3, size=(n, n))
     np.fill_diagonal(alpha, 0.0)
     out = upde_run(
-        phases, omegas, knm, alpha,
-        zeta=0.2, psi=0.3, dt=0.01, n_steps=10_000,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta=0.2,
+        psi=0.3,
+        dt=0.01,
+        n_steps=10_000,
         method="rk45",
     )
     assert np.all(np.isfinite(out))

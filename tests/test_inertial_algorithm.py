@@ -102,7 +102,7 @@ class TestStep:
         dt = 0.01
         eng = InertialKuramotoEngine(n, dt)
         new_th, new_od = eng.step(theta, omega, power, knm, inertia, damping)
-        expected_th = (theta + omega * dt + 0.5 * power * dt ** 2) % TWO_PI
+        expected_th = (theta + omega * dt + 0.5 * power * dt**2) % TWO_PI
         expected_od = omega + power * dt
         np.testing.assert_allclose(new_th, expected_th, atol=1e-14)
         np.testing.assert_allclose(new_od, expected_od, atol=1e-14)
@@ -121,7 +121,13 @@ class TestStep:
         damping = np.ones(n) * 2.0
         eng = InertialKuramotoEngine(n, 0.01)
         _, _, _, omega_traj = eng.run(
-            theta, omega_init, power, knm, inertia, damping, n_steps=50,
+            theta,
+            omega_init,
+            power,
+            knm,
+            inertia,
+            damping,
+            n_steps=50,
         )
         # After t=0.5, analytical ω = exp(-1.0) ≈ 0.368
         assert np.all(np.abs(omega_traj[-1]) < 0.5)
@@ -133,7 +139,13 @@ class TestRun:
         theta, od, p, k, m, d = _problem(3)
         eng = InertialKuramotoEngine(8, 0.01)
         final_th, final_od, th_traj, od_traj = eng.run(
-            theta, od, p, k, m, d, n_steps=5,
+            theta,
+            od,
+            p,
+            k,
+            m,
+            d,
+            n_steps=5,
         )
         assert final_th.shape == (8,)
         assert final_od.shape == (8,)
@@ -159,7 +171,8 @@ class TestHelpers:
         eng = InertialKuramotoEngine(3, 0.01)
         omega = np.array([0.1, -0.5, 0.2])
         assert eng.frequency_deviation(omega) == pytest.approx(
-            0.5 / TWO_PI, abs=1e-12,
+            0.5 / TWO_PI,
+            abs=1e-12,
         )
 
 
@@ -170,7 +183,8 @@ class TestHypothesis:
         seed=st.integers(min_value=0, max_value=2**31 - 1),
     )
     @settings(
-        max_examples=10, deadline=None,
+        max_examples=10,
+        deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_finite_output(self, n, seed):

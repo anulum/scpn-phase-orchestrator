@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["compute_itpc_julia", "itpc_persistence_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "itpc.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "itpc.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -37,9 +35,7 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def compute_itpc_julia(
-    phases_flat: NDArray, n_trials: int, n_tp: int
-) -> NDArray:
+def compute_itpc_julia(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray:
     jl = _ensure()
     return np.asarray(
         jl.compute_itpc(

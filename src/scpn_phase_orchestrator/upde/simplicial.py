@@ -62,10 +62,16 @@ def _load_rust_fn() -> Callable[..., NDArray]:
     from spo_kernel import simplicial_run_rust
 
     def _rust(
-        phases: NDArray, omegas: NDArray,
-        knm_flat: NDArray, alpha_flat: NDArray,
-        n: int, zeta: float, psi: float, sigma2: float,
-        dt: float, n_steps: int,
+        phases: NDArray,
+        omegas: NDArray,
+        knm_flat: NDArray,
+        alpha_flat: NDArray,
+        n: int,
+        zeta: float,
+        psi: float,
+        sigma2: float,
+        dt: float,
+        n_steps: int,
     ) -> NDArray:
         return np.asarray(
             simplicial_run_rust(
@@ -73,8 +79,12 @@ def _load_rust_fn() -> Callable[..., NDArray]:
                 np.ascontiguousarray(omegas, dtype=np.float64),
                 np.ascontiguousarray(knm_flat, dtype=np.float64),
                 np.ascontiguousarray(alpha_flat, dtype=np.float64),
-                int(n), float(zeta), float(psi), float(sigma2),
-                float(dt), int(n_steps),
+                int(n),
+                float(zeta),
+                float(psi),
+                float(sigma2),
+                float(dt),
+                int(n_steps),
             ),
             dtype=np.float64,
         )
@@ -143,10 +153,16 @@ def _dispatch() -> Callable[..., NDArray] | None:
 
 
 def _python_run(
-    phases: NDArray, omegas: NDArray,
-    knm_flat: NDArray, alpha_flat: NDArray,
-    n: int, zeta: float, psi: float, sigma2: float,
-    dt: float, n_steps: int,
+    phases: NDArray,
+    omegas: NDArray,
+    knm_flat: NDArray,
+    alpha_flat: NDArray,
+    n: int,
+    zeta: float,
+    psi: float,
+    sigma2: float,
+    dt: float,
+    n_steps: int,
 ) -> NDArray:
     """Python reference aligned to the Rust kernel exactly.
 
@@ -198,9 +214,7 @@ class SimplicialEngine:
 
     def __init__(self, n_oscillators: int, dt: float, sigma2: float = 0.0):
         if n_oscillators < 1:
-            raise ValueError(
-                f"n_oscillators must be >= 1, got {n_oscillators}"
-            )
+            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
         if dt <= 0.0:
             raise ValueError(f"dt must be positive, got {dt}")
         if sigma2 < 0.0:
@@ -247,16 +261,26 @@ class SimplicialEngine:
             return backend_fn(
                 np.ascontiguousarray(phases, dtype=np.float64),
                 np.ascontiguousarray(omegas, dtype=np.float64),
-                knm_flat, alpha_flat,
-                self._n, float(zeta), float(psi), float(self._sigma2),
-                float(self._dt), int(n_steps),
+                knm_flat,
+                alpha_flat,
+                self._n,
+                float(zeta),
+                float(psi),
+                float(self._sigma2),
+                float(self._dt),
+                int(n_steps),
             )
         return _python_run(
             np.ascontiguousarray(phases, dtype=np.float64),
             np.ascontiguousarray(omegas, dtype=np.float64),
-            knm_flat, alpha_flat,
-            self._n, float(zeta), float(psi), float(self._sigma2),
-            float(self._dt), int(n_steps),
+            knm_flat,
+            alpha_flat,
+            self._n,
+            float(zeta),
+            float(psi),
+            float(self._sigma2),
+            float(self._dt),
+            int(n_steps),
         )
 
     def order_parameter(self, phases: NDArray) -> float:

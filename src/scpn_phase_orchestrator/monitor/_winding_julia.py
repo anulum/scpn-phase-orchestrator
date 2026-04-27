@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["winding_numbers_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "winding.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "winding.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -38,7 +36,9 @@ def _ensure() -> Any:
 
 
 def winding_numbers_julia(
-    phases_flat: NDArray, t: int, n: int,
+    phases_flat: NDArray,
+    t: int,
+    n: int,
 ) -> NDArray:
     jl = _ensure()
     return np.asarray(

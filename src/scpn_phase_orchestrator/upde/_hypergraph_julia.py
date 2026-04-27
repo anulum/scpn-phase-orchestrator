@@ -18,9 +18,7 @@ from numpy.typing import NDArray
 
 __all__ = ["hypergraph_run_julia"]
 
-_JULIA_FILE = (
-    Path(__file__).resolve().parents[3] / "julia" / "hypergraph.jl"
-)
+_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "hypergraph.jl"
 _JULIA_MODULE: Any | None = None
 
 
@@ -61,6 +59,9 @@ def hypergraph_run_julia(
         np.ascontiguousarray(edge_strengths, dtype=np.float64),
         np.ascontiguousarray(knm_flat, dtype=np.float64),
         np.ascontiguousarray(alpha_flat, dtype=np.float64),
-        float(zeta), float(psi), float(dt), int(n_steps),
+        float(zeta),
+        float(psi),
+        float(dt),
+        int(n_steps),
     )
     return np.asarray(result, dtype=np.float64)

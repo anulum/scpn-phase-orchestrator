@@ -87,7 +87,11 @@ class TestDelayEmbedParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_all_backends_exact(
-        self, t: int, delay: int, dim: int, seed: int,
+        self,
+        t: int,
+        delay: int,
+        dim: int,
+        seed: int,
     ):
         if t - (dim - 1) * delay <= 0:
             return
@@ -100,7 +104,8 @@ class TestDelayEmbedParity:
             finally:
                 _reset(prev)
             np.testing.assert_array_equal(
-                got, ref,
+                got,
+                ref,
                 err_msg=f"{backend} delay_embed diverged",
             )
 
@@ -109,7 +114,9 @@ class TestMutualInformationParity:
     @pytest.mark.parametrize("seed", [0, 42])
     @pytest.mark.parametrize("lag", [1, 5, 20])
     def test_non_python_backends_match(
-        self, seed: int, lag: int,
+        self,
+        seed: int,
+        lag: int,
     ) -> None:
         sig = _signal(seed)
         ref = _reference_mi(sig, lag, 16)
@@ -121,9 +128,7 @@ class TestMutualInformationParity:
                 got = mutual_information(sig, lag, 16)
             finally:
                 _reset(prev)
-            assert abs(got - ref) < 1e-9, (
-                f"{backend} MI diverged: {got} vs {ref}"
-            )
+            assert abs(got - ref) < 1e-9, f"{backend} MI diverged: {got} vs {ref}"
 
 
 class TestNearestNeighborParity:
@@ -141,11 +146,14 @@ class TestNearestNeighborParity:
             finally:
                 _reset(prev)
             np.testing.assert_allclose(
-                dist, ref_dist, atol=1e-9,
+                dist,
+                ref_dist,
+                atol=1e-9,
                 err_msg=f"{backend} NN dist diverged",
             )
             np.testing.assert_array_equal(
-                idx, ref_idx,
+                idx,
+                ref_idx,
                 err_msg=f"{backend} NN idx diverged",
             )
 

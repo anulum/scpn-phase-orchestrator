@@ -15,6 +15,12 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0+unknown"
 
+from scpn_phase_orchestrator.artifacts.qpu_data import (
+    QPUDataArtifact,
+    compile_domain_to_qpu_artifact,
+    emit_qpu_data_artifact,
+    validate_qpu_data_artifact,
+)
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
@@ -44,6 +50,7 @@ __all__ = [
     "CouplingBuilder",
     "PhaseExtractor",
     "PhaseState",
+    "QPUDataArtifact",
     "RegimeManager",
     "SPOError",
     "SparseUPDEEngine",
@@ -51,7 +58,10 @@ __all__ = [
     "StuartLandauEngine",
     "SupervisorPolicy",
     "UPDEEngine",
+    "compile_domain_to_qpu_artifact",
+    "emit_qpu_data_artifact",
     "find_critical_coupling",
     "lyapunov_spectrum",
     "trace_sync_transition",
+    "validate_qpu_data_artifact",
 ]

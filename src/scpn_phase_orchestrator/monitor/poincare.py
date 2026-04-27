@@ -49,15 +49,21 @@ def _load_rust_fns() -> dict[str, object]:
     from spo_kernel import phase_poincare_rust, poincare_section_rust
 
     def _rust_section(
-        traj_flat: NDArray, t: int, d: int,
-        normal: NDArray, offset: float, direction_id: int,
+        traj_flat: NDArray,
+        t: int,
+        d: int,
+        normal: NDArray,
+        offset: float,
+        direction_id: int,
     ) -> tuple[NDArray, NDArray, int]:
         dir_str = {0: "positive", 1: "negative", 2: "both"}[int(direction_id)]
         cr, times, n_cr = poincare_section_rust(
             np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
-            int(t), int(d),
+            int(t),
+            int(d),
             np.ascontiguousarray(normal.ravel(), dtype=np.float64),
-            float(offset), dir_str,
+            float(offset),
+            dir_str,
         )
         cr_arr = np.asarray(cr, dtype=np.float64)
         times_arr = np.asarray(times, dtype=np.float64)
@@ -68,13 +74,18 @@ def _load_rust_fns() -> dict[str, object]:
         return pad_cr, pad_times, int(n_cr)
 
     def _rust_phase(
-        phases_flat: NDArray, t: int, n: int,
-        oscillator_idx: int, section_phase: float,
+        phases_flat: NDArray,
+        t: int,
+        n: int,
+        oscillator_idx: int,
+        section_phase: float,
     ) -> tuple[NDArray, NDArray, int]:
         cr, times, n_cr = phase_poincare_rust(
             np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
-            int(t), int(n),
-            int(oscillator_idx), float(section_phase),
+            int(t),
+            int(n),
+            int(oscillator_idx),
+            float(section_phase),
         )
         cr_arr = np.asarray(cr, dtype=np.float64)
         times_arr = np.asarray(times, dtype=np.float64)
@@ -208,7 +219,12 @@ def poincare_section(
             backend_fn,
         )
         cr_flat, times, n_cr = fn(
-            traj.ravel(), t, d, norm_vec, float(offset), int(direction_id),
+            traj.ravel(),
+            t,
+            d,
+            norm_vec,
+            float(offset),
+            int(direction_id),
         )
         return _assemble_result(cr_flat, times, n_cr, d)
 
@@ -246,7 +262,10 @@ def return_times(
 ) -> NDArray:
     """Shortcut: return only the return-time sequence."""
     return poincare_section(
-        trajectory, normal, offset, direction="positive",
+        trajectory,
+        normal,
+        offset,
+        direction="positive",
     ).return_times
 
 
@@ -266,13 +285,15 @@ def phase_poincare(
     backend_fn = _dispatch("phase")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray, int, int, int, float], "
-            "tuple[NDArray, NDArray, int]]",
+            "Callable[[NDArray, int, int, int, float], tuple[NDArray, NDArray, int]]",
             backend_fn,
         )
         cr_flat, times, n_cr = fn(
-            phases.ravel(), t, n,
-            int(oscillator_idx), float(section_phase),
+            phases.ravel(),
+            t,
+            n,
+            int(oscillator_idx),
+            float(section_phase),
         )
         return _assemble_result(cr_flat, times, n_cr, n)
 

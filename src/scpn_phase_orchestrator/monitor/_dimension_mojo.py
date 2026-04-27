@@ -22,9 +22,7 @@ __all__ = [
     "kaplan_yorke_dimension_mojo",
 ]
 
-_EXE_PATH = (
-    Path(__file__).resolve().parents[3] / "mojo" / "dimension_mojo"
-)
+_EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "dimension_mojo"
 
 
 def _ensure_exe() -> Path:
@@ -47,14 +45,9 @@ def _run(payload: str) -> list[float]:
     )
     if proc.returncode != 0:
         raise ValueError(
-            f"Mojo dimension returned exit {proc.returncode}: "
-            f"{proc.stderr.strip()}"
+            f"Mojo dimension returned exit {proc.returncode}: {proc.stderr.strip()}"
         )
-    return [
-        float(line)
-        for line in proc.stdout.strip().splitlines()
-        if line
-    ]
+    return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
 def correlation_integral_mojo(
@@ -68,7 +61,11 @@ def correlation_integral_mojo(
     n_p = int(idx_i.size)
     n_k = int(epsilons.size)
     tokens: list[str] = [
-        "CI", str(int(t)), str(int(d)), str(n_p), str(n_k),
+        "CI",
+        str(int(t)),
+        str(int(d)),
+        str(n_p),
+        str(n_k),
     ]
     tokens.extend(str(int(x)) for x in idx_i.ravel().tolist())
     tokens.extend(str(int(x)) for x in idx_j.ravel().tolist())
@@ -76,9 +73,7 @@ def correlation_integral_mojo(
     tokens.extend(repr(float(x)) for x in traj_flat.ravel().tolist())
     result = _run(" ".join(tokens) + "\n")
     if len(result) != n_k:
-        raise ValueError(
-            f"Mojo CI returned {len(result)} values, expected {n_k}"
-        )
+        raise ValueError(f"Mojo CI returned {len(result)} values, expected {n_k}")
     return np.array(result, dtype=np.float64)
 
 
