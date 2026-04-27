@@ -20,6 +20,11 @@ pub struct ActiveInferenceAgent {
 }
 
 impl ActiveInferenceAgent {
+    /// Create an active inference controller.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `n_hidden` is zero.
     pub fn new(n_hidden: usize, target_r: f64, lr: f64) -> SpoResult<Self> {
         if n_hidden == 0 {
             return Err(SpoError::InvalidConfig("n_hidden > 0".into()));
@@ -75,6 +80,7 @@ impl ActiveInferenceAgent {
         (zeta, psi)
     }
 
+    #[must_use]
     pub fn state(&self) -> &[f64] {
         &self.state
     }

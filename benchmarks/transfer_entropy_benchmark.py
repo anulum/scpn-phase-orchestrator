@@ -28,9 +28,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
 TWO_PI = 2.0 * np.pi
 
 
-def _bench(
-    backend: str, src: np.ndarray, tgt: np.ndarray, calls: int
-) -> float:
+def _bench(backend: str, src: np.ndarray, tgt: np.ndarray, calls: int) -> float:
     saved = te_mod.ACTIVE_BACKEND
     try:
         te_mod.ACTIVE_BACKEND = backend
@@ -56,9 +54,7 @@ def bench_at(n: int, calls: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument(
-        "--sizes", type=int, nargs="+", default=[200, 1000, 5000]
-    )
+    parser.add_argument("--sizes", type=int, nargs="+", default=[200, 1000, 5000])
     parser.add_argument("--calls", type=int, default=50)
     args = parser.parse_args()
 

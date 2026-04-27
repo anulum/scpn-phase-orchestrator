@@ -47,7 +47,9 @@ def bench_at(n: int, calls: int) -> dict:
     np.fill_diagonal(knm, 0.0)
     phases = rng.uniform(0, TWO_PI, n)
     row: dict = {
-        "N": n, "calls": calls, "available": AVAILABLE_BACKENDS,
+        "N": n,
+        "calls": calls,
+        "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
         t = _bench(backend, knm, phases, calls)

@@ -61,12 +61,8 @@ def bench_at(n: int, n_calls: int) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--output", type=Path, default=None, help="JSON results file."
-    )
-    parser.add_argument(
-        "--sizes", type=int, nargs="+", default=[16, 256, 4096, 65536]
-    )
+    parser.add_argument("--output", type=Path, default=None, help="JSON results file.")
+    parser.add_argument("--sizes", type=int, nargs="+", default=[16, 256, 4096, 65536])
     parser.add_argument("--calls", type=int, default=500)
     args = parser.parse_args()
 

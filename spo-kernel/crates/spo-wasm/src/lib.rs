@@ -20,6 +20,7 @@ pub struct WasmEngine {
 #[wasm_bindgen]
 impl WasmEngine {
     #[wasm_bindgen(constructor)]
+    #[must_use]
     pub fn new(n: usize) -> Self {
         Self {
             n,
@@ -33,6 +34,7 @@ impl WasmEngine {
         new_phases.copy_to(&mut self.phases);
     }
 
+    #[must_use]
     pub fn get_phases(&self) -> Float64Array {
         unsafe { Float64Array::view(&self.phases) }
     }
@@ -62,10 +64,10 @@ impl WasmEngine {
         let ks = coupling * r;
         let omegas_vec = omegas.to_vec();
 
-        for i in 0..n {
+        for (i, omega) in omegas_vec.iter().copied().enumerate().take(n) {
             // sin(psi - theta) = s_psi * cos_theta - c_psi * sin_theta
             let coupling_term = ks * (s_psi * self.cos_theta[i] - c_psi * self.sin_theta[i]);
-            self.phases[i] += (omegas_vec[i] + coupling_term) * dt;
+            self.phases[i] += (omega + coupling_term) * dt;
         }
 
         r

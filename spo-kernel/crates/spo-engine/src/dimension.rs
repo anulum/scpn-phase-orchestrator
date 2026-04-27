@@ -137,7 +137,7 @@ pub fn attractor_diameter(trajectory: &[f64], t: usize, d: usize) -> f64 {
     let sample_size = t.min(200);
     let step = if t > 200 { t / 200 } else { 1 };
 
-    let max_dist = (0..sample_size)
+    (0..sample_size)
         .into_par_iter()
         .map(|si| {
             let i = si * step;
@@ -159,9 +159,7 @@ pub fn attractor_diameter(trajectory: &[f64], t: usize, d: usize) -> f64 {
             local_max
         })
         .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-        .unwrap_or(0.0);
-
-    max_dist
+        .unwrap_or(0.0)
 }
 
 /// Correlation dimension result.

@@ -30,7 +30,10 @@ def _bench(backend: str, n_steps: int, calls: int) -> float:
     try:
         r_mod.ACTIVE_BACKEND = backend
         red = OttAntonsenReduction(
-            omega_0=0.5, delta=0.1, K=1.0, dt=0.01,
+            omega_0=0.5,
+            delta=0.1,
+            K=1.0,
+            dt=0.01,
         )
         red.run(complex(0.2, 0.1), n_steps=1)  # warm
         t0 = time.perf_counter()
@@ -43,7 +46,8 @@ def _bench(backend: str, n_steps: int, calls: int) -> float:
 
 def bench_at(n_steps: int, calls: int) -> dict:
     row: dict = {
-        "n_steps": n_steps, "calls": calls,
+        "n_steps": n_steps,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
@@ -56,7 +60,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
-        "--n-steps", type=int, nargs="+", default=[500, 5000, 50000],
+        "--n-steps",
+        type=int,
+        nargs="+",
+        default=[500, 5000, 50000],
     )
     parser.add_argument("--calls", type=int, default=10)
     args = parser.parse_args()

@@ -35,18 +35,43 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 
-EXCLUDE_DIRS = frozenset({
-    ".git", "BACKUP", "ARCHIVE", "node_modules", "site",
-    "wasm-pkg", "target", "__pycache__",
-    ".mypy_cache", ".ruff_cache", "htmlcov", ".pytest_cache",
-    "build", "dist", "ml.350.context", "experiments_archive",
-})
+EXCLUDE_DIRS = frozenset(
+    {
+        ".git",
+        "BACKUP",
+        "ARCHIVE",
+        "node_modules",
+        "site",
+        "wasm-pkg",
+        "target",
+        "__pycache__",
+        ".mypy_cache",
+        ".ruff_cache",
+        "htmlcov",
+        ".pytest_cache",
+        "build",
+        "dist",
+        "ml.350.context",
+        "experiments_archive",
+    }
+)
 
 VENV_PREFIXES = ("venv", ".venv")
 
-INCLUDE_SUFFIXES = frozenset({
-    ".py", ".rs", ".sh", ".yml", ".yaml", ".toml", ".md", ".js", ".ts", ".v",
-})
+INCLUDE_SUFFIXES = frozenset(
+    {
+        ".py",
+        ".rs",
+        ".sh",
+        ".yml",
+        ".yaml",
+        ".toml",
+        ".md",
+        ".js",
+        ".ts",
+        ".v",
+    }
+)
 
 PREFIXED_PATTERN = re.compile(
     r"^(?P<prefix>(?:#|//) ?)"

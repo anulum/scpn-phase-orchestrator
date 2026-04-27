@@ -28,7 +28,9 @@ TWO_PI = 2.0 * np.pi
 
 
 def _bench(
-    backend: str, phases: np.ndarray, calls: int,
+    backend: str,
+    phases: np.ndarray,
+    calls: int,
 ) -> float:
     saved = it_mod.ACTIVE_BACKEND
     try:
@@ -60,12 +62,8 @@ def bench_at(n_trials: int, n_tp: int, calls: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument(
-        "--n-trials-list", type=int, nargs="+", default=[20, 100, 500]
-    )
-    parser.add_argument(
-        "--n-tp-list", type=int, nargs="+", default=[100, 500]
-    )
+    parser.add_argument("--n-trials-list", type=int, nargs="+", default=[20, 100, 500])
+    parser.add_argument("--n-tp-list", type=int, nargs="+", default=[100, 500])
     parser.add_argument("--calls", type=int, default=5)
     args = parser.parse_args()
 

@@ -43,7 +43,10 @@ def bench_at(t: int, d: int, epsilon: float, calls: int) -> dict:
     rng = np.random.default_rng(42)
     traj = rng.normal(0, 1, (t, d))
     row: dict = {
-        "T": t, "d": d, "epsilon": epsilon, "calls": calls,
+        "T": t,
+        "d": d,
+        "epsilon": epsilon,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
@@ -55,9 +58,7 @@ def bench_at(t: int, d: int, epsilon: float, calls: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument(
-        "--T-list", type=int, nargs="+", default=[30, 100, 300]
-    )
+    parser.add_argument("--T-list", type=int, nargs="+", default=[30, 100, 300])
     parser.add_argument("--d", type=int, default=3)
     parser.add_argument("--epsilon", type=float, default=0.8)
     parser.add_argument("--calls", type=int, default=5)

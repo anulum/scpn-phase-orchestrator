@@ -50,8 +50,14 @@ def _symmetric_knm(n: int, strength: float, seed: int) -> np.ndarray:
 
 
 def _bench_with_backend(
-    backend: str, n: int, n_steps: int, engine: UPDEEngine,
-    phases0: np.ndarray, omegas: np.ndarray, knm: np.ndarray, alpha: np.ndarray,
+    backend: str,
+    n: int,
+    n_steps: int,
+    engine: UPDEEngine,
+    phases0: np.ndarray,
+    omegas: np.ndarray,
+    knm: np.ndarray,
+    alpha: np.ndarray,
 ) -> float:
     """Return wall-clock seconds for `n_steps` of AttnRes-modulated integration
     using the named backend."""
@@ -61,9 +67,7 @@ def _bench_with_backend(
         phases = phases0.copy()
         t0 = time.perf_counter()
         for _ in range(n_steps):
-            knm_mod = attnres_modulate(
-                knm, phases, block_size=4, lambda_=0.5
-            )
+            knm_mod = attnres_modulate(knm, phases, block_size=4, lambda_=0.5)
             phases = engine.step(phases, omegas, knm_mod, 0.0, 0.0, alpha)
         return time.perf_counter() - t0
     finally:

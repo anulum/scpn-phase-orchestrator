@@ -254,3 +254,4 @@ fail_under = 95  # CI uses --cov-fail-under=0 in test/ffi-test; coverage-guard c
 
 [tool.bandit]
 exclude_dirs = ["tests"]
+skips = ["B404", "B603"]

@@ -43,7 +43,9 @@ def bench_at(n: int, window: int, calls: int) -> dict:
     rng = np.random.default_rng(42)
     amps = np.abs(rng.normal(1.0, 0.3, n))
     row: dict = {
-        "N": n, "window": window, "calls": calls,
+        "N": n,
+        "window": window,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:

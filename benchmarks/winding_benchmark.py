@@ -59,9 +59,7 @@ def bench_at(t: int, n: int, calls: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument(
-        "--T-list", type=int, nargs="+", default=[500, 2000, 10000]
-    )
+    parser.add_argument("--T-list", type=int, nargs="+", default=[500, 2000, 10000])
     parser.add_argument("--N", type=int, default=16)
     parser.add_argument("--calls", type=int, default=5)
     args = parser.parse_args()

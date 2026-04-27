@@ -27,8 +27,17 @@ from scpn_phase_orchestrator.upde.simplicial import (
 )
 
 
-def _bench(backend: str, theta, omegas, knm, alpha, n: int, sigma2: float,
-           n_steps: int, calls: int) -> float:
+def _bench(
+    backend: str,
+    theta,
+    omegas,
+    knm,
+    alpha,
+    n: int,
+    sigma2: float,
+    n_steps: int,
+    calls: int,
+) -> float:
     saved = s_mod.ACTIVE_BACKEND
     try:
         s_mod.ACTIVE_BACKEND = backend
@@ -50,12 +59,14 @@ def bench_at(n: int, sigma2: float, n_steps: int, calls: int) -> dict:
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
     row: dict = {
-        "N": n, "sigma2": sigma2, "n_steps": n_steps,
-        "calls": calls, "available": AVAILABLE_BACKENDS,
+        "N": n,
+        "sigma2": sigma2,
+        "n_steps": n_steps,
+        "calls": calls,
+        "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
-        t = _bench(backend, theta, omegas, knm, alpha,
-                   n, sigma2, n_steps, calls)
+        t = _bench(backend, theta, omegas, knm, alpha, n, sigma2, n_steps, calls)
         row[f"{backend}_ms_per_call"] = (t / calls) * 1000.0
     return row
 
@@ -79,8 +90,7 @@ def main() -> int:
     for n in args.sizes:
         row = bench_at(n, args.sigma2, args.n_steps, args.calls)
         results.append(row)
-        line = (f"{n:>4} {args.sigma2:>5.2f} {args.n_steps:>7} "
-                f"{args.calls:>6}")
+        line = f"{n:>4} {args.sigma2:>5.2f} {args.n_steps:>7} {args.calls:>6}"
         for b in AVAILABLE_BACKENDS:
             line += f" {row[f'{b}_ms_per_call']:>12.4f}"
         print(line)

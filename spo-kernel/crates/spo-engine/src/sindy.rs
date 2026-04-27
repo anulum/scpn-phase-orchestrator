@@ -45,9 +45,7 @@ pub fn sindy_fit(
         .for_each(|(i, res_row)| {
             let (library, target) = build_library(phases, &theta_dot, n_osc, t_eff, i);
             let xi = stlsq_node(&library, &target, t_eff, n_osc, threshold, max_iter);
-            for j in 0..n_osc {
-                res_row[j] = xi[j];
-            }
+            res_row[..n_osc].copy_from_slice(&xi[..n_osc]);
         });
 
     result
@@ -165,11 +163,10 @@ fn lstsq(a: &[f64], b: &[f64], m: usize, n: usize) -> Vec<f64> {
 
     // ATA is symmetric, parallelize over rows
     ata.par_chunks_mut(n).enumerate().for_each(|(j, row)| {
-        let ai = &a[..]; // Need to access all rows
         for k in 0..n {
             let mut sum = 0.0;
             for i in 0..m {
-                sum += ai[i * n + j] * ai[i * n + k];
+                sum += a[i * n + j] * a[i * n + k];
             }
             row[k] = sum;
         }

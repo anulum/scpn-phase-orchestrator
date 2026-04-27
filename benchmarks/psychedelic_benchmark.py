@@ -45,7 +45,9 @@ def bench_at(n: int, n_bins: int, calls: int) -> dict:
     rng = np.random.default_rng(42)
     phases = rng.uniform(0.0, TWO_PI, n)
     row: dict = {
-        "N": n, "n_bins": n_bins, "calls": calls,
+        "N": n,
+        "n_bins": n_bins,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:

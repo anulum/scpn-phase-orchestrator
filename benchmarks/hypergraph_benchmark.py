@@ -41,8 +41,9 @@ def _make_problem(n: int, seed: int = 42):
     return theta, omega, knm, edges
 
 
-def _bench(backend: str, theta, omega, knm, edges, n: int,
-           n_steps: int, calls: int) -> float:
+def _bench(
+    backend: str, theta, omega, knm, edges, n: int, n_steps: int, calls: int
+) -> float:
     saved = h_mod.ACTIVE_BACKEND
     try:
         h_mod.ACTIVE_BACKEND = backend
@@ -61,8 +62,11 @@ def _bench(backend: str, theta, omega, knm, edges, n: int,
 def bench_at(n: int, n_steps: int, calls: int) -> dict:
     theta, omega, knm, edges = _make_problem(n)
     row: dict = {
-        "N": n, "n_steps": n_steps, "calls": calls,
-        "n_edges": len(edges), "available": AVAILABLE_BACKENDS,
+        "N": n,
+        "n_steps": n_steps,
+        "calls": calls,
+        "n_edges": len(edges),
+        "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
         t = _bench(backend, theta, omega, knm, edges, n, n_steps, calls)
@@ -88,8 +92,7 @@ def main() -> int:
     for n in args.sizes:
         row = bench_at(n, args.n_steps, args.calls)
         results.append(row)
-        line = (f"{n:>4} {args.n_steps:>7} {row['n_edges']:>4} "
-                f"{args.calls:>6}")
+        line = f"{n:>4} {args.n_steps:>7} {row['n_edges']:>4} {args.calls:>6}"
         for b in AVAILABLE_BACKENDS:
             line += f" {row[f'{b}_ms_per_call']:>12.4f}"
         print(line)

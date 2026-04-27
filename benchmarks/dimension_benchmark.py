@@ -27,7 +27,10 @@ from scpn_phase_orchestrator.monitor.dimension import (
 
 
 def _bench(
-    backend: str, traj: np.ndarray, eps: np.ndarray, calls: int,
+    backend: str,
+    traj: np.ndarray,
+    eps: np.ndarray,
+    calls: int,
 ) -> float:
     saved = dim_mod.ACTIVE_BACKEND
     try:
@@ -46,7 +49,10 @@ def bench_at(t: int, d: int, n_k: int, calls: int) -> dict:
     traj = rng.normal(0, 1, (t, d))
     eps = np.logspace(-1, 0.5, n_k)
     row: dict = {
-        "T": t, "d": d, "n_k": n_k, "calls": calls,
+        "T": t,
+        "d": d,
+        "n_k": n_k,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
@@ -58,9 +64,7 @@ def bench_at(t: int, d: int, n_k: int, calls: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument(
-        "--T-list", type=int, nargs="+", default=[50, 150, 400]
-    )
+    parser.add_argument("--T-list", type=int, nargs="+", default=[50, 150, 400])
     parser.add_argument("--d", type=int, default=3)
     parser.add_argument("--n-k", type=int, default=20)
     parser.add_argument("--calls", type=int, default=5)

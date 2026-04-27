@@ -32,20 +32,29 @@ def _all_to_all(n: int, strength: float = 2.0) -> np.ndarray:
     return k
 
 
-def _bench(backend: str, phases, omegas, knm, n_transient, n_measure,
-           calls: int) -> float:
+def _bench(
+    backend: str, phases, omegas, knm, n_transient, n_measure, calls: int
+) -> float:
     saved = b_mod.ACTIVE_BACKEND
     try:
         b_mod.ACTIVE_BACKEND = backend
         steady_state_r(
-            phases, omegas, knm, dt=0.01,
-            n_transient=n_transient, n_measure=n_measure,
+            phases,
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=n_transient,
+            n_measure=n_measure,
         )
         t0 = time.perf_counter()
         for _ in range(calls):
             steady_state_r(
-                phases, omegas, knm, dt=0.01,
-                n_transient=n_transient, n_measure=n_measure,
+                phases,
+                omegas,
+                knm,
+                dt=0.01,
+                n_transient=n_transient,
+                n_measure=n_measure,
             )
         return time.perf_counter() - t0
     finally:
@@ -58,12 +67,14 @@ def bench_at(n: int, n_transient: int, n_measure: int, calls: int) -> dict:
     omegas = np.ones(n)
     knm = _all_to_all(n, strength=2.0)
     row: dict = {
-        "N": n, "n_transient": n_transient, "n_measure": n_measure,
-        "calls": calls, "available": AVAILABLE_BACKENDS,
+        "N": n,
+        "n_transient": n_transient,
+        "n_measure": n_measure,
+        "calls": calls,
+        "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
-        t = _bench(backend, phases, omegas, knm,
-                   n_transient, n_measure, calls)
+        t = _bench(backend, phases, omegas, knm, n_transient, n_measure, calls)
         row[f"{backend}_ms_per_call"] = (t / calls) * 1000.0
     return row
 
@@ -87,8 +98,7 @@ def main() -> int:
     for n in args.sizes:
         row = bench_at(n, args.n_transient, args.n_measure, args.calls)
         results.append(row)
-        line = (f"{n:>4} {args.n_transient:>5} {args.n_measure:>5} "
-                f"{args.calls:>6}")
+        line = f"{n:>4} {args.n_transient:>5} {args.n_measure:>5} {args.calls:>6}"
         for b in AVAILABLE_BACKENDS:
             line += f" {row[f'{b}_ms_per_call']:>12.4f}"
         print(line)

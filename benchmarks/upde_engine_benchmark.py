@@ -48,15 +48,27 @@ def _bench(
         # Warm-up amortises juliacall init, rayon thread pool, subprocess
         # fork, etc.
         upde_run(
-            phases, omegas, knm, alpha,
-            zeta=0.0, psi=0.0, dt=0.01, n_steps=n_steps,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            dt=0.01,
+            n_steps=n_steps,
             method=method,
         )
         t0 = time.perf_counter()
         for _ in range(calls):
             upde_run(
-                phases, omegas, knm, alpha,
-                zeta=0.0, psi=0.0, dt=0.01, n_steps=n_steps,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                zeta=0.0,
+                psi=0.0,
+                dt=0.01,
+                n_steps=n_steps,
                 method=method,
             )
         return time.perf_counter() - t0
@@ -86,8 +98,14 @@ def bench_at(n: int, method: str, n_steps: int, calls: int) -> dict:
     }
     for backend in AVAILABLE_BACKENDS:
         t = _bench(
-            backend, phases, omegas, knm, alpha,
-            method, n_steps, calls,
+            backend,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            method,
+            n_steps,
+            calls,
         )
         row[f"{backend}_ms_per_call"] = (t / calls) * 1000.0
     return row
@@ -96,9 +114,7 @@ def bench_at(n: int, method: str, n_steps: int, calls: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument(
-        "--sizes", type=int, nargs="+", default=[8, 32, 64]
-    )
+    parser.add_argument("--sizes", type=int, nargs="+", default=[8, 32, 64])
     parser.add_argument(
         "--methods",
         type=str,
@@ -120,9 +136,7 @@ def main() -> int:
         for method in args.methods:
             row = bench_at(n, method, args.n_steps, args.calls)
             results.append(row)
-            line = (
-                f"{n:>4} {method:>6} {args.n_steps:>6} {args.calls:>6}"
-            )
+            line = f"{n:>4} {method:>6} {args.n_steps:>6} {args.calls:>6}"
             for b in AVAILABLE_BACKENDS:
                 line += f" {row[f'{b}_ms_per_call']:>12.4f}"
             print(line)

@@ -26,8 +26,9 @@ from scpn_phase_orchestrator.upde.geometric import (
 )
 
 
-def _bench(backend: str, theta, omegas, knm, alpha, n: int,
-           n_steps: int, calls: int) -> float:
+def _bench(
+    backend: str, theta, omegas, knm, alpha, n: int, n_steps: int, calls: int
+) -> float:
     saved = g_mod.ACTIVE_BACKEND
     try:
         g_mod.ACTIVE_BACKEND = backend
@@ -49,12 +50,13 @@ def bench_at(n: int, n_steps: int, calls: int) -> dict:
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
     row: dict = {
-        "N": n, "n_steps": n_steps, "calls": calls,
+        "N": n,
+        "n_steps": n_steps,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
-        t = _bench(backend, theta, omegas, knm, alpha,
-                   n, n_steps, calls)
+        t = _bench(backend, theta, omegas, knm, alpha, n, n_steps, calls)
         row[f"{backend}_ms_per_call"] = (t / calls) * 1000.0
     return row
 

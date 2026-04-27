@@ -29,7 +29,13 @@ TWO_PI = 2.0 * np.pi
 
 
 def _bench(
-    backend: str, pos, phases, omegas, n: int, dim: int, calls: int,
+    backend: str,
+    pos,
+    phases,
+    omegas,
+    n: int,
+    dim: int,
+    calls: int,
 ) -> float:
     saved = sw_mod.ACTIVE_BACKEND
     try:
@@ -50,7 +56,9 @@ def bench_at(n: int, dim: int, calls: int) -> dict:
     phases = rng.uniform(0, TWO_PI, n)
     omegas = rng.normal(0.5, 0.2, n)
     row: dict = {
-        "N": n, "dim": dim, "calls": calls,
+        "N": n,
+        "dim": dim,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:

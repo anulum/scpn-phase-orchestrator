@@ -60,7 +60,10 @@ def bench_at(t: int, n: int, window: int, calls: int) -> dict:
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, 2 * np.pi, (t, n))
     row: dict = {
-        "T": t, "N": n, "window": window, "calls": calls,
+        "T": t,
+        "N": n,
+        "window": window,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
@@ -76,7 +79,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
-        "--configs", nargs="+", default=["100x8x20", "500x16x50", "2000x8x50"],
+        "--configs",
+        nargs="+",
+        default=["100x8x20", "500x16x50", "2000x8x50"],
         help="Each config is T×N×window, e.g. 500x16x50.",
     )
     parser.add_argument("--calls", type=int, default=3)
@@ -97,7 +102,7 @@ def main() -> int:
     print(header)
     print("-" * len(header))
     results: list[dict] = []
-    for (t, n, w) in configs:
+    for t, n, w in configs:
         row = bench_at(t, n, w, args.calls)
         results.append(row)
         line = f"{t:>6} {n:>4} {args.calls:>6}"
@@ -113,8 +118,7 @@ def main() -> int:
     print(header)
     print("-" * len(header))
     for row in results:
-        line = (f"{row['T']:>6} {row['N']:>4} {row['window']:>4} "
-                f"{args.calls:>6}")
+        line = f"{row['T']:>6} {row['N']:>4} {row['window']:>4} {args.calls:>6}"
         for b in AVAILABLE_BACKENDS:
             line += f" {row[f'{b}_plv_ms']:>10.4f}"
         print(line)

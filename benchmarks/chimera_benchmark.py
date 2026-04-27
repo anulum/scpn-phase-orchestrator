@@ -48,7 +48,9 @@ def bench_at(n: int, density: float, calls: int) -> dict:
     knm = (knm > (1.0 - density)).astype(np.float64) * knm
     np.fill_diagonal(knm, 0.0)
     row: dict = {
-        "n": n, "density": density, "calls": calls,
+        "n": n,
+        "density": density,
+        "calls": calls,
         "available": AVAILABLE_BACKENDS,
     }
     for backend in AVAILABLE_BACKENDS:
@@ -60,9 +62,7 @@ def bench_at(n: int, density: float, calls: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
-    parser.add_argument(
-        "--sizes", type=int, nargs="+", default=[16, 64, 256]
-    )
+    parser.add_argument("--sizes", type=int, nargs="+", default=[16, 64, 256])
     parser.add_argument("--density", type=float, default=0.3)
     parser.add_argument("--calls", type=int, default=10)
     args = parser.parse_args()

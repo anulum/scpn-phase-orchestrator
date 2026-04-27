@@ -376,7 +376,8 @@ def attnres_modulate(
         w_v = d_v if w_v is None else w_v
         w_o = d_o if w_o is None else w_o
 
-    assert w_q is not None and w_k is not None and w_v is not None and w_o is not None
+    if w_q is None or w_k is None or w_v is None or w_o is None:
+        raise ValueError("attention projections must be provided or defaultable")
     if w_q.shape != w_k.shape or w_q.shape != w_v.shape:
         raise ValueError(
             f"w_q / w_k / w_v shape mismatch: {w_q.shape}, {w_k.shape}, {w_v.shape}"
