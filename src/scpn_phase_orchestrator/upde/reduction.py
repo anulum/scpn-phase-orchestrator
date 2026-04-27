@@ -118,8 +118,7 @@ def _load_mojo_fn() -> Callable[..., tuple[float, float, float, float]]:
 
 def _load_julia_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._reduction_julia import oa_run_julia
 
     return oa_run_julia

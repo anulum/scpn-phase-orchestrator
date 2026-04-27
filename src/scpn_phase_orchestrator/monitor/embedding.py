@@ -100,8 +100,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.monitor._embedding_julia import (
         delay_embed_julia,
         mutual_information_julia,

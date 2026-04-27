@@ -94,8 +94,7 @@ def _load_mojo_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
 
 def _load_julia_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
     # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._market_julia import (
         market_order_parameter_julia,
         market_plv_julia,

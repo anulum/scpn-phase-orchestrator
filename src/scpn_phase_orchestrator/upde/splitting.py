@@ -107,8 +107,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:
 
 def _load_julia_fn() -> Callable[..., NDArray]:
     # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._splitting_julia import (
         splitting_run_julia,
     )

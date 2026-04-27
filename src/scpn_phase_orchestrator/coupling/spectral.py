@@ -117,8 +117,7 @@ def _load_mojo_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
 
 def _load_julia_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
     # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.coupling._spectral_julia import (
         spectral_eig_julia,
     )

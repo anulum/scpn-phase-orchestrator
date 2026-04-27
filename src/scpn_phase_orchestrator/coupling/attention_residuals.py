@@ -155,8 +155,7 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 
 def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.coupling._attnres_julia import (
         attnres_modulate_julia,
     )

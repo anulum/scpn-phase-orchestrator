@@ -74,8 +74,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
 
 
 def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.monitor._chimera_julia import (
         local_order_parameter_julia,
     )

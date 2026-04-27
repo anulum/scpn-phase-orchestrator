@@ -66,8 +66,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
 
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._pac_julia import (
         modulation_index_julia,
         pac_matrix_julia,

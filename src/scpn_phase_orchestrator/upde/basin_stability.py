@@ -100,8 +100,7 @@ def _load_mojo_fn() -> Callable[..., float]:
 
 def _load_julia_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._basin_stability_julia import (
         steady_state_r_julia,
     )

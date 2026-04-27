@@ -35,7 +35,7 @@ def _ensure_julia_loaded() -> Any:
     global _JULIA_MODULE
     if _JULIA_MODULE is not None:
         return _JULIA_MODULE
-    from juliacall import Main as JuliaMain  # type: ignore[import-untyped]
+    from juliacall import Main as JuliaMain
 
     if not _JULIA_FILE.exists():
         raise ImportError(f"julia side-file not found: {_JULIA_FILE}")

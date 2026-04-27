@@ -79,8 +79,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._envelope_julia import (
         envelope_modulation_depth_julia,
         extract_envelope_julia,

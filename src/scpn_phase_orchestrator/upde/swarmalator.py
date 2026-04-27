@@ -88,8 +88,7 @@ def _load_mojo_fn() -> Callable[..., tuple[NDArray, NDArray]]:
 
 def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     # pragma: no cover — toolchain
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._swarmalator_julia import (
         swarmalator_step_julia,
     )

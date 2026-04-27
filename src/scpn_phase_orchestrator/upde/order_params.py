@@ -79,8 +79,7 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
 
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
-    import juliacall  # type: ignore[import-untyped]  # noqa: F401
-
+    import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._order_params_julia import (
         layer_coherence_julia,
         order_parameter_julia,
@@ -96,11 +95,13 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
     from scpn_phase_orchestrator.upde._order_params_go import (
+        _load_lib,
         layer_coherence_go,
         order_parameter_go,
         plv_go,
     )
 
+    _load_lib()
     return {
         "order_parameter": order_parameter_go,
         "plv": plv_go,
