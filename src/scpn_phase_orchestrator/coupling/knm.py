@@ -244,6 +244,10 @@ class CouplingBuilder:
             return 0.2
         tau_n = SCPN_LAYER_TIMESCALES[n]
         tau_m = SCPN_LAYER_TIMESCALES[m]
+        if not (
+            np.isfinite(tau_n) and np.isfinite(tau_m) and tau_n > 0.0 and tau_m > 0.0
+        ):
+            raise ValueError("layer timescales must be finite and positive")
         mismatch = abs(np.log(tau_n / tau_m))
         # Adjusted for stiff biological hierarchies (beta=0.05)
         val = k_base / (1.0 + 0.05 * mismatch)

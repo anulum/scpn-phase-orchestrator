@@ -60,6 +60,21 @@ class TestConstructor:
                 dt=0.0,
             )
 
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("omega_0", np.nan),
+            ("delta", np.inf),
+            ("K", -np.inf),
+            ("dt", np.nan),
+        ],
+    )
+    def test_rejects_nonfinite_scalar_parameters(self, field, value):
+        params = {"omega_0": 0.0, "delta": 0.1, "K": 1.0, "dt": 0.01}
+        params[field] = value
+        with pytest.raises(ValueError, match="finite"):
+            OttAntonsenReduction(**params)
+
 
 class TestAnalyticalSteadyState:
     @_python
@@ -85,6 +100,11 @@ class TestAnalyticalSteadyState:
     def test_r_ss_at_critical_is_zero(self):
         """K = K_c = 2Δ → R_ss = 0 (boundary case)."""
         red = OttAntonsenReduction(omega_0=0.0, delta=1.0, K=2.0)
+        assert red.steady_state_R() == 0.0
+
+    @_python
+    def test_r_ss_zero_coupling_no_nan(self):
+        red = OttAntonsenReduction(omega_0=0.0, delta=0.0, K=0.0)
         assert red.steady_state_R() == 0.0
 
 

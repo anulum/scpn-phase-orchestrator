@@ -164,12 +164,15 @@ def extract_envelope(
         Same shape as input; the first ``window − 1`` entries are
         front-padded with the first valid RMS value.
     """
-    if amplitudes_history.size == 0:
-        return amplitudes_history.copy()
+    amplitudes = np.asarray(amplitudes_history, dtype=np.float64)
+    if amplitudes.size == 0:
+        return amplitudes.copy()
     if window < 1:
         raise ValueError(f"window must be >= 1, got {window}")
+    if not np.all(np.isfinite(amplitudes)):
+        raise ValueError("amplitudes_history must contain only finite values")
 
-    if amplitudes_history.ndim == 1:
+    if amplitudes.ndim == 1:
         backend_fn = _dispatch("extract")
         if backend_fn is not None:
             fn = cast(
@@ -177,13 +180,13 @@ def extract_envelope(
                 backend_fn,
             )
             return np.asarray(
-                fn(amplitudes_history, int(window)),
+                fn(amplitudes, int(window)),
                 dtype=np.float64,
             )
-        return _extract_1d_python(amplitudes_history, int(window))
+        return _extract_1d_python(amplitudes, int(window))
 
     # 2-D path stays pure NumPy.
-    sq = amplitudes_history.astype(np.float64) ** 2
+    sq = amplitudes**2
     cs = np.cumsum(sq, axis=0)
     cs = np.vstack([np.zeros((1, sq.shape[1]), dtype=np.float64), cs])
     rms = np.sqrt((cs[window:] - cs[:-window]) / window)

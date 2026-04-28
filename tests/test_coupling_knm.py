@@ -85,6 +85,15 @@ class TestCouplingBuilderAlgebraic:
         np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)
         np.testing.assert_allclose(np.diag(state.knm), 0.0)
         assert np.all(state.knm >= 0.0)
+        assert np.all(np.isfinite(state.knm))
+
+    @pytest.mark.parametrize("bad_tau", [0.0, -1.0, np.nan, np.inf])
+    def test_adjacent_coupling_rejects_nonfinite_timescale(self, monkeypatch, bad_tau):
+        from scpn_phase_orchestrator.coupling import knm as knm_mod
+
+        monkeypatch.setitem(knm_mod.SCPN_LAYER_TIMESCALES, 6, bad_tau)
+        with pytest.raises(ValueError, match="finite and positive"):
+            CouplingBuilder._adjacent_coupling(6, 7, 0.45)
 
     def test_switch_template_preserves_shape(self):
         builder = CouplingBuilder()

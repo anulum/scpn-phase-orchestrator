@@ -45,6 +45,12 @@ class TestExtractEnvelope:
         with pytest.raises(ValueError, match="window must be >= 1"):
             extract_envelope(np.ones(10), window=0)
 
+    @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+    def test_nonfinite_input_rejected_before_rms(self, bad_value) -> None:
+        amp = np.array([1.0, 2.0, bad_value, 4.0])
+        with pytest.raises(ValueError, match="finite"):
+            extract_envelope(amp, window=2)
+
     def test_rms_values_nonnegative(self) -> None:
         rng = np.random.default_rng(0)
         amp = rng.standard_normal(200)
