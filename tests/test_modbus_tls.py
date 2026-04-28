@@ -192,6 +192,63 @@ class TestSecureModbusAdapterTLS:
             with pytest.raises(ConnectionError, match="connection failed"):
                 SecureModbusAdapter("localhost", 802, cert, key)
 
+    def test_connection_failure_does_not_leak_endpoint(self, tmp_path):
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        cert.write_text("dummy-cert")
+        key.write_text("dummy-key")
+
+        mock_client = MagicMock()
+        mock_client.connect.return_value = False
+
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
+            mock_ctx = MagicMock()
+            mock_ssl.SSLContext.return_value = mock_ctx
+            mock_ssl.PROTOCOL_TLS_CLIENT = 2
+            mock_ssl.SSLError = Exception
+
+            from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
+
+            with pytest.raises(ConnectionError) as excinfo:
+                SecureModbusAdapter("plc.internal.example", 802, cert, key)
+            msg = str(excinfo.value)
+            assert "connection failed" in msg
+            assert "plc.internal.example" not in msg
+            assert "802" not in msg
+
+    def test_tls_context_error_does_not_leak_backend_detail(self, tmp_path):
+        cert = tmp_path / "secret" / "client.pem"
+        key = tmp_path / "secret" / "client.key"
+        cert.parent.mkdir()
+        cert.write_text("dummy-cert")
+        key.write_text("dummy-key")
+
+        with patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl:
+            mock_ctx = MagicMock()
+            mock_ctx.load_cert_chain.side_effect = Exception(
+                f"bad certificate path {cert} key {key}"
+            )
+            mock_ssl.SSLContext.return_value = mock_ctx
+            mock_ssl.PROTOCOL_TLS_CLIENT = 2
+            mock_ssl.SSLError = Exception
+
+            from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
+
+            with pytest.raises(ConnectionError) as excinfo:
+                SecureModbusAdapter("localhost", 802, cert, key)
+            msg = str(excinfo.value)
+            assert msg == "TLS context creation failed"
+            assert "secret" not in msg
+            assert "client.pem" not in msg
+            assert "client.key" not in msg
+            assert str(tmp_path) not in msg
+
     def test_missing_cert_error_does_not_leak_full_path(self, tmp_path):
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 

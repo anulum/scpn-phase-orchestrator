@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import pytest
 
-from scpn_phase_orchestrator.apps.queuewaves.config import QueueWavesConfig
+from scpn_phase_orchestrator.apps.queuewaves.config import (
+    QueueWavesConfig,
+    SecurityConfig,
+)
 
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
@@ -75,3 +78,75 @@ def test_state_history_empty(client: TestClient) -> None:
     r = client.get("/api/v1/state/history?n=10")
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_production_requires_api_key_env(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production"),
+    )
+    monkeypatch.delenv("QUEUEWAVES_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="QUEUEWAVES_API_KEY"):
+        create_app(cfg)
+
+
+def test_production_requires_request_api_key(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production"),
+    )
+    monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
+    client = TestClient(create_app(cfg))
+
+    missing = client.get("/api/v1/health")
+    present = client.get("/api/v1/health", headers={"X-API-Key": "test-key"})
+
+    assert missing.status_code == 401
+    assert present.status_code == 200
+
+
+def test_production_rate_limits_requests(
+    minimal_config: QueueWavesConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url=minimal_config.prometheus_url,
+        services=minimal_config.services,
+        scrape_interval_s=minimal_config.scrape_interval_s,
+        buffer_length=minimal_config.buffer_length,
+        thresholds=minimal_config.thresholds,
+        coupling=minimal_config.coupling,
+        alert_sinks=minimal_config.alert_sinks,
+        server=minimal_config.server,
+        security=SecurityConfig(mode="production", rate_limit_per_minute=1),
+    )
+    monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
+    client = TestClient(create_app(cfg))
+    headers = {"X-API-Key": "test-key"}
+
+    first = client.get("/api/v1/health", headers=headers)
+    second = client.get("/api/v1/health", headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 429

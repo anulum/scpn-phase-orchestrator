@@ -10,6 +10,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -29,6 +30,7 @@ from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
     PhaseComputePipeline,
     PipelineSnapshot,
 )
+from scpn_phase_orchestrator.network_security import FixedWindowRateLimiter
 
 _IO_ERRORS: tuple[type[BaseException], ...] = (
     ConnectionError,
@@ -46,7 +48,15 @@ _MAX_HISTORY = 500
 
 def create_app(cfg: QueueWavesConfig) -> object:
     """Build a FastAPI application wired to the given config."""
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect  # noqa: F811
+    from fastapi import (
+        Depends,
+        FastAPI,
+        Header,
+        HTTPException,
+        Request,
+        WebSocket,
+        WebSocketDisconnect,
+    )
     from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
     from fastapi.staticfiles import StaticFiles
 
@@ -59,6 +69,31 @@ def create_app(cfg: QueueWavesConfig) -> object:
     history: deque[PipelineSnapshot] = deque(maxlen=_MAX_HISTORY)
     active_anomalies: list[Any] = []
     ws_clients: set[WebSocket] = set()
+    mode = cfg.security.mode.strip().lower()
+    if mode not in ("development", "production"):
+        raise ValueError("QueueWaves security.mode must be development or production")
+    api_key = os.environ.get(cfg.security.api_key_env)
+    if mode == "production" and not api_key:
+        raise RuntimeError(
+            f"{cfg.security.api_key_env} is required when QueueWaves runs in production"
+        )
+    rate_limit = cfg.security.rate_limit_per_minute if mode == "production" else 0
+    if rate_limit < 0:
+        raise ValueError("QueueWaves rate_limit_per_minute must be non-negative")
+    limiter = FixedWindowRateLimiter(rate_limit) if rate_limit > 0 else None
+
+    async def _require_network_access(
+        request: Request,
+        x_api_key: str | None = Header(None),
+    ) -> None:
+        if api_key is None:
+            identity = request.client.host if request.client is not None else "local"
+        elif x_api_key != api_key:
+            raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
+        else:
+            identity = x_api_key
+        if limiter is not None and not limiter.allow(identity):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
     async def _broadcast(msg: dict[str, Any]) -> None:  # pragma: no cover
         payload = json.dumps(msg)
@@ -139,25 +174,25 @@ def create_app(cfg: QueueWavesConfig) -> object:
 
     # --- REST endpoints ---
 
-    @app.get("/api/v1/health")
+    @app.get("/api/v1/health", dependencies=[Depends(_require_network_access)])
     async def health() -> dict[str, Any]:
         """Handle GET /api/v1/health — liveness check with tick counter."""
         return {"status": "ok", "tick": pipeline.tick_count}
 
-    @app.get("/api/v1/state")
+    @app.get("/api/v1/state", dependencies=[Depends(_require_network_access)])
     async def state() -> Any:
         """Handle GET /api/v1/state — return latest pipeline snapshot."""
         if not history:
             return JSONResponse({"error": "no data yet"}, status_code=503)
         return history[-1].to_dict()  # pragma: no cover — data branch, ASGI thread
 
-    @app.get("/api/v1/state/history")
+    @app.get("/api/v1/state/history", dependencies=[Depends(_require_network_access)])
     async def state_history(n: int = 100) -> list[dict[str, Any]]:
         """Handle GET /api/v1/state/history — return last n snapshots."""
         sliced = list(history)[-n:]
         return [s.to_dict() for s in sliced]
 
-    @app.get("/api/v1/anomalies")
+    @app.get("/api/v1/anomalies", dependencies=[Depends(_require_network_access)])
     async def anomalies() -> list[dict[str, Any]]:
         """Handle GET /api/v1/anomalies — return active anomaly list."""
         return [
@@ -172,7 +207,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
             for a in active_anomalies
         ]
 
-    @app.get("/api/v1/services")
+    @app.get("/api/v1/services", dependencies=[Depends(_require_network_access)])
     async def services() -> list[dict[str, Any]]:
         """Handle GET /api/v1/services — return per-service phase state."""
         if not history:
@@ -189,14 +224,16 @@ def create_app(cfg: QueueWavesConfig) -> object:
             for s in snap.services
         ]
 
-    @app.get("/api/v1/plv")
+    @app.get("/api/v1/plv", dependencies=[Depends(_require_network_access)])
     async def plv() -> dict[str, Any]:
         """Handle GET /api/v1/plv — return cross-layer PLV matrix."""
         if not history:
             return {"matrix": []}
         return {"matrix": history[-1].plv_matrix}  # pragma: no cover
 
-    @app.get("/api/v1/metrics/prometheus")
+    @app.get(
+        "/api/v1/metrics/prometheus", dependencies=[Depends(_require_network_access)]
+    )
     async def prom_metrics() -> PlainTextResponse:
         """Handle GET /api/v1/metrics/prometheus — export Prometheus text metrics."""
         lines: list[str] = []
@@ -215,7 +252,7 @@ def create_app(cfg: QueueWavesConfig) -> object:
                 )
         return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain")
 
-    @app.post("/api/v1/check")
+    @app.post("/api/v1/check", dependencies=[Depends(_require_network_access)])
     async def check() -> Any:
         """One-shot: scrape, analyze, return result."""
         await collector.scrape()
@@ -248,6 +285,14 @@ def create_app(cfg: QueueWavesConfig) -> object:
     @app.websocket("/ws/stream")
     async def ws_stream(websocket: WebSocket) -> None:
         """Read-only observer stream. Incoming messages are ignored (keepalive only)."""
+        if api_key is not None and websocket.headers.get("x-api-key") != api_key:
+            await websocket.close(code=1008, reason="Invalid or missing X-API-Key")
+            return
+        if limiter is not None:
+            identity = websocket.headers.get("x-api-key") or "websocket"
+            if not limiter.allow(identity):
+                await websocket.close(code=1013, reason="Rate limit exceeded")
+                return
         await websocket.accept()
         ws_clients.add(websocket)
         try:

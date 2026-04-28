@@ -164,6 +164,42 @@ class TestFastAPIEndpoints:
         assert "name" in data
         assert "n_oscillators" in data
 
+    def test_production_requires_api_key_env(self, monkeypatch):
+        from scpn_phase_orchestrator.server import create_app
+
+        monkeypatch.setenv("SPO_ENV", "production")
+        monkeypatch.delenv("SPO_API_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="SPO_API_KEY"):
+            create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+
+    def test_production_rejects_missing_api_key(self, monkeypatch):
+        from scpn_phase_orchestrator.server import create_app
+
+        monkeypatch.setenv("SPO_ENV", "production")
+        monkeypatch.setenv("SPO_API_KEY", "test-key")
+        app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+        client = TestClient(app)
+
+        r = client.post("/api/step")
+
+        assert r.status_code == 401
+
+    def test_production_rate_limits_mutations(self, monkeypatch):
+        from scpn_phase_orchestrator.server import create_app
+
+        monkeypatch.setenv("SPO_ENV", "production")
+        monkeypatch.setenv("SPO_API_KEY", "test-key")
+        monkeypatch.setenv("SPO_RATE_LIMIT_PER_MINUTE", "1")
+        app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+        client = TestClient(app)
+        headers = {"X-API-Key": "test-key"}
+
+        first = client.post("/api/step", headers=headers)
+        second = client.post("/api/step", headers=headers)
+
+        assert first.status_code == 200
+        assert second.status_code == 429
+
 
 # Pipeline wiring: SimulationState wraps the full pipeline (binding → engine →
 # order_parameter → policy). TestSimulationState exercises step/status/reset

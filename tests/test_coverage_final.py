@@ -234,7 +234,7 @@ class TestQueueWavesConfigFormat:
 
         cfg = {
             "prometheus_url": "http://localhost:9090",
-            "services": [],
+            "services": [{"name": "svc", "promql": "up", "layer": "micro"}],
             "alert_sinks": [
                 {"url": "https://hooks.slack.com/test", "format": "slack"},
             ],
@@ -252,7 +252,7 @@ class TestQueueWavesConfigFormat:
 
         cfg = {
             "prometheus_url": "http://localhost:9090",
-            "services": [],
+            "services": [{"name": "svc", "promql": "up", "layer": "micro"}],
             "alert_sinks": [
                 {"url": "https://example.com/webhook"},
             ],

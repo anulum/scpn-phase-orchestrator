@@ -69,6 +69,11 @@ alert_sinks:
 server:
   host: 0.0.0.0
   port: 8080
+
+security:
+  mode: production
+  api_key_env: QUEUEWAVES_API_KEY
+  rate_limit_per_minute: 120
 ```
 
 ### Key Fields
@@ -83,6 +88,9 @@ server:
 | `thresholds.plv_cascade` | 0.85 | PLV cascade propagation threshold |
 | `thresholds.imprint_chronic` | 1.5 | Imprint chronic degradation threshold |
 | `thresholds.cooldown_seconds` | 300.0 | Alert deduplication cooldown |
+| `security.mode` | development | `production` requires API key auth and rate limiting |
+| `security.api_key_env` | QUEUEWAVES_API_KEY | Environment variable containing the API key |
+| `security.rate_limit_per_minute` | 120 | Per-key request limit in production mode |
 
 ### ConfigCompiler
 
@@ -99,11 +107,14 @@ server:
 ### Continuous server
 
 ```bash
+export QUEUEWAVES_API_KEY="$(openssl rand -hex 32)"
 spo queuewaves serve --config queuewaves.yaml --host 0.0.0.0 --port 8080
 ```
 
 Starts a FastAPI application. Scrapes Prometheus on each interval, runs the
 UPDE pipeline, detects anomalies, fires alerts, and pushes state over WebSocket.
+When `security.mode: production` is set, REST and WebSocket clients must send
+`X-API-Key: <value of QUEUEWAVES_API_KEY>`.
 
 ### One-shot check
 
@@ -215,5 +226,6 @@ uvicorn scpn_phase_orchestrator.apps.queuewaves.server:create_app \
 ```
 
 QueueWaves is single-process (shared pipeline state). Run behind nginx or
-Traefik for TLS termination. For multiple clusters, run one QueueWaves
-instance per Prometheus source.
+Traefik for TLS termination, set `security.mode: production`, and provide
+`QUEUEWAVES_API_KEY` before binding to non-loopback interfaces. For multiple
+clusters, run one QueueWaves instance per Prometheus source.
