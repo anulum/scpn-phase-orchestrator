@@ -151,7 +151,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             ~/.cargo/registry
@@ -186,7 +186,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             ~/.cargo/registry
@@ -248,7 +248,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # 1.83.0
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             ~/.cargo/registry
