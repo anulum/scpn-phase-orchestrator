@@ -79,7 +79,7 @@ class TestMojoBridgeErrorPaths:
         assert result == 0.0
 
     def test_failed_subprocess_raises_value_error(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Non-zero exit → clean ValueError with stderr surface."""
 
@@ -91,6 +91,9 @@ class TestMojoBridgeErrorPaths:
         def _fake_run(*args, **kwargs):
             return _FakeProc()
 
+        fake_exe = tmp_path / "itpc_mojo"
+        fake_exe.touch()
+        monkeypatch.setattr(_itpc_mojo, "_EXE_PATH", fake_exe)
         monkeypatch.setattr(_itpc_mojo.subprocess, "run", _fake_run)
         # The short-circuit for empty indices would skip _run; use a
         # non-empty call that reaches the subprocess path.

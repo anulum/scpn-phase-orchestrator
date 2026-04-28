@@ -99,9 +99,11 @@ def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray]]:
 def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._swarmalator_go import (
+        _load_lib,
         swarmalator_step_go,
     )
 
+    _load_lib()
     return swarmalator_step_go
 
 

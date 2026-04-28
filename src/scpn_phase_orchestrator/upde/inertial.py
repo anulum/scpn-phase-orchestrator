@@ -102,8 +102,9 @@ def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray]]:
 
 def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._inertial_go import inertial_step_go
+    from scpn_phase_orchestrator.upde._inertial_go import _load_lib, inertial_step_go
 
+    _load_lib()
     return inertial_step_go
 
 

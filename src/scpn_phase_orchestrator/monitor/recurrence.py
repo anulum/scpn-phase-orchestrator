@@ -117,10 +117,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._recurrence_go import (
+        _load_lib,
         cross_recurrence_matrix_go,
         recurrence_matrix_go,
     )
 
+    _load_lib()
     return {
         "rm": recurrence_matrix_go,
         "cross_rm": cross_recurrence_matrix_go,
@@ -186,9 +188,11 @@ def recurrence_matrix(
     Returns:
         ``(T, T)`` boolean array.
     """
-    traj = np.atleast_2d(trajectory)
+    traj = np.asarray(trajectory)
     if traj.ndim == 1:
         traj = traj[:, np.newaxis]
+    elif traj.ndim != 2:
+        raise ValueError(f"trajectory must be 1D or 2D, got shape {traj.shape}")
     t, d = int(traj.shape[0]), int(traj.shape[1])
     angular = metric == "angular"
     flat = np.ascontiguousarray(traj.ravel(), dtype=np.float64)
@@ -220,12 +224,16 @@ def cross_recurrence_matrix(
     ``traj_a`` and ``traj_b`` must have the same length and
     dimensionality.
     """
-    a = np.atleast_2d(traj_a)
-    b = np.atleast_2d(traj_b)
+    a = np.asarray(traj_a)
+    b = np.asarray(traj_b)
     if a.ndim == 1:
         a = a[:, np.newaxis]
+    elif a.ndim != 2:
+        raise ValueError(f"traj_a must be 1D or 2D, got shape {a.shape}")
     if b.ndim == 1:
         b = b[:, np.newaxis]
+    elif b.ndim != 2:
+        raise ValueError(f"traj_b must be 1D or 2D, got shape {b.shape}")
     t, d = int(a.shape[0]), int(a.shape[1])
     if b.shape != a.shape:
         raise ValueError(f"trajectories must match: a={a.shape} b={b.shape}")

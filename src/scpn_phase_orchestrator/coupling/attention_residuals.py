@@ -165,9 +165,11 @@ def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
     from scpn_phase_orchestrator.coupling._attnres_go import (
+        _load_lib,
         attnres_modulate_go,
     )
 
+    _load_lib()
     return attnres_modulate_go
 
 

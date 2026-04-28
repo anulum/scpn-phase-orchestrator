@@ -69,10 +69,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._itpc_go import (
+        _load_lib,
         compute_itpc_go,
         itpc_persistence_go,
     )
 
+    _load_lib()
     return {"itpc": compute_itpc_go, "persistence": itpc_persistence_go}
 
 

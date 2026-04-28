@@ -82,10 +82,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._dimension_go import (
+        _load_lib,
         correlation_integral_go,
         kaplan_yorke_dimension_go,
     )
 
+    _load_lib()
     return {"ci": correlation_integral_go, "ky": kaplan_yorke_dimension_go}
 
 

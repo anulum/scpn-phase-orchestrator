@@ -84,9 +84,11 @@ def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchai
 
 def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._chimera_go import (
+        _load_lib,
         local_order_parameter_go,
     )
 
+    _load_lib()
     return local_order_parameter_go
 
 

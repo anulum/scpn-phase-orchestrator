@@ -102,8 +102,9 @@ def _load_julia_fn() -> Callable[..., NDArray]:
 
 def _load_go_fn() -> Callable[..., NDArray]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._geometric_go import torus_run_go
+    from scpn_phase_orchestrator.upde._geometric_go import _load_lib, torus_run_go
 
+    _load_lib()
     return torus_run_go
 
 

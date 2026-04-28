@@ -77,9 +77,11 @@ def _load_julia_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
 
 def _load_go_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._psychedelic_go import (
+        _load_lib,
         entropy_from_phases_go,
     )
 
+    _load_lib()
     return entropy_from_phases_go
 
 

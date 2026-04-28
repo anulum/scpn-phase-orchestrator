@@ -80,10 +80,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
     from scpn_phase_orchestrator.upde._pac_go import (
+        _load_lib,
         modulation_index_go,
         pac_matrix_go,
     )
 
+    _load_lib()
     return {
         "modulation_index": modulation_index_go,
         "pac_matrix": pac_matrix_go,

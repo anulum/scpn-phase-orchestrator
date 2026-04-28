@@ -116,11 +116,13 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._embedding_go import (
+        _load_lib,
         delay_embed_go,
         mutual_information_go,
         nearest_neighbor_distances_go,
     )
 
+    _load_lib()
     return {
         "de": delay_embed_go,
         "mi": mutual_information_go,

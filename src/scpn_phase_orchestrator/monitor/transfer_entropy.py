@@ -79,10 +79,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
     from scpn_phase_orchestrator.monitor._te_go import (
+        _load_lib,
         phase_te_go,
         te_matrix_go,
     )
 
+    _load_lib()
     return {"phase_te": phase_te_go, "te_matrix": te_matrix_go}
 
 

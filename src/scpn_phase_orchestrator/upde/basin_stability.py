@@ -111,9 +111,11 @@ def _load_julia_fn() -> Callable[..., float]:
 def _load_go_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._basin_stability_go import (
+        _load_lib,
         steady_state_r_go,
     )
 
+    _load_lib()
     return steady_state_r_go
 
 

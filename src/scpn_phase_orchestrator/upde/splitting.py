@@ -118,9 +118,11 @@ def _load_julia_fn() -> Callable[..., NDArray]:
 def _load_go_fn() -> Callable[..., NDArray]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._splitting_go import (
+        _load_lib,
         splitting_run_go,
     )
 
+    _load_lib()
     return splitting_run_go
 
 

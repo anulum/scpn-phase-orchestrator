@@ -121,10 +121,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._poincare_go import (
+        _load_lib,
         phase_poincare_go,
         poincare_section_go,
     )
 
+    _load_lib()
     return {"section": poincare_section_go, "phase": phase_poincare_go}
 
 

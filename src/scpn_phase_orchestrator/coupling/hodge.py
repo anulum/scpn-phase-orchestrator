@@ -91,9 +91,11 @@ def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
 def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.coupling._hodge_go import (
+        _load_lib,
         hodge_decomposition_go,
     )
 
+    _load_lib()
     return hodge_decomposition_go
 
 

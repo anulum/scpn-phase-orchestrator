@@ -142,9 +142,11 @@ def _load_julia_fn() -> Callable[..., NDArray]:
 def _load_go_fn() -> Callable[..., NDArray]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._hypergraph_go import (
+        _load_lib,
         hypergraph_run_go,
     )
 
+    _load_lib()
     return hypergraph_run_go
 
 

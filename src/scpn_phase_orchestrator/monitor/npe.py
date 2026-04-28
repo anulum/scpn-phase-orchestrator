@@ -74,10 +74,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
     from scpn_phase_orchestrator.monitor._npe_go import (
+        _load_lib,
         compute_npe_go,
         phase_distance_matrix_go,
     )
 
+    _load_lib()
     return {
         "phase_distance_matrix": phase_distance_matrix_go,
         "compute_npe": compute_npe_go,

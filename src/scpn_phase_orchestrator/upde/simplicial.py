@@ -116,9 +116,11 @@ def _load_julia_fn() -> Callable[..., NDArray]:
 def _load_go_fn() -> Callable[..., NDArray]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._simplicial_go import (
+        _load_lib,
         simplicial_run_go,
     )
 
+    _load_lib()
     return simplicial_run_go
 
 

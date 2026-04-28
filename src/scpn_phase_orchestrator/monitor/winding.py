@@ -67,9 +67,11 @@ def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchai
 
 def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._winding_go import (
+        _load_lib,
         winding_numbers_go,
     )
 
+    _load_lib()
     return winding_numbers_go
 
 

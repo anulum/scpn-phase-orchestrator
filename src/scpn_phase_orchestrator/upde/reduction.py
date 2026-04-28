@@ -126,8 +126,9 @@ def _load_julia_fn() -> Callable[..., tuple[float, float, float, float]]:
 
 def _load_go_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._reduction_go import oa_run_go
+    from scpn_phase_orchestrator.upde._reduction_go import _load_lib, oa_run_go
 
+    _load_lib()
     return oa_run_go
 
 

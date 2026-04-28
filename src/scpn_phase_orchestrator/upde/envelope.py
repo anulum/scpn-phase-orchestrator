@@ -93,10 +93,12 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._envelope_go import (
+        _load_lib,
         envelope_modulation_depth_go,
         extract_envelope_go,
     )
 
+    _load_lib()
     return {
         "extract": extract_envelope_go,
         "mod": envelope_modulation_depth_go,

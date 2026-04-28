@@ -89,8 +89,9 @@ def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchai
 
 
 def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._engine_go import upde_run_go
+    from scpn_phase_orchestrator.upde._engine_go import _load_lib, upde_run_go
 
+    _load_lib()
     return upde_run_go
 
 

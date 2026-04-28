@@ -128,9 +128,11 @@ def _load_julia_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]
 def _load_go_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.coupling._spectral_go import (
+        _load_lib,
         spectral_eig_go,
     )
 
+    _load_lib()
     return spectral_eig_go
 
 

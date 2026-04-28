@@ -78,9 +78,11 @@ def _load_julia_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
 
 def _load_go_fn() -> Callable[..., float]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._entropy_prod_go import (
+        _load_lib,
         entropy_production_rate_go,
     )
 
+    _load_lib()
     return entropy_production_rate_go
 
 

@@ -106,10 +106,12 @@ def _load_julia_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
 def _load_go_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._market_go import (
+        _load_lib,
         market_order_parameter_go,
         market_plv_go,
     )
 
+    _load_lib()
     return market_order_parameter_go, market_plv_go
 
 
