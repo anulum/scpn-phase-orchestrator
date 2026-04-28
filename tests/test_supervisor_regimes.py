@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import numpy as np
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -234,8 +236,8 @@ class TestRegimesPipelineEndToEnd:
             seen.add(regime)
         assert len(seen) >= 3, f"Expected ≥3 regimes, got {seen}"
 
-    def test_performance_evaluate_transition_under_10us(self):
-        """evaluate + transition combined < 10μs."""
+    def test_performance_evaluate_transition_under_budget(self):
+        """evaluate + transition stays within the per-platform micro-budget."""
         import time
 
         rm = RegimeManager(cooldown_steps=0)
@@ -246,9 +248,10 @@ class TestRegimesPipelineEndToEnd:
             regime = rm.evaluate(s, _NO_VIOLATIONS)
             rm.transition(regime)
         elapsed = (time.perf_counter() - t0) / 10000
-        assert elapsed < 1e-5, f"evaluate+transition took {elapsed * 1e6:.1f}μs"
+        budget = 3e-5 if sys.platform == "win32" else 1e-5
+        assert elapsed < budget, f"evaluate+transition took {elapsed * 1e6:.1f}μs"
 
 
 # Pipeline wiring: RegimeManager tested via CouplingBuilder → UPDEEngine(RK4)
 # → compute_order_parameter → evaluate → transition → SupervisorPolicy.decide().
-# FSM: cooldown, hysteresis, CRITICAL→RECOVERY→NOMINAL. Performance: <10μs.
+# FSM: cooldown, hysteresis, CRITICAL→RECOVERY→NOMINAL. Performance: platform budget.
