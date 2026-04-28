@@ -45,6 +45,16 @@ class PhaseSINDy:
         """Discover equations node-by-node to handle independent coupling."""
         T, N = phases.shape
 
+        if T < 2:
+            self.coefficients = []
+            self.feature_names = []
+            for i in range(N):
+                names = ["1"]
+                names.extend(f"sin(theta_{j} - theta_{i})" for j in range(N) if j != i)
+                self.coefficients.append(np.zeros(len(names), dtype=np.float64))
+                self.feature_names.append(names)
+            return self.coefficients
+
         if _HAS_RUST:
             p_flat = np.ascontiguousarray(phases, dtype=np.float64).ravel()
             result_flat = _rust_sindy_fit(
