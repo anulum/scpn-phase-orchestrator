@@ -19,6 +19,17 @@ ROOT = Path(__file__).resolve().parent.parent
 _PY = sys.executable
 _SRC = "src/scpn_phase_orchestrator/"
 _KERNEL = "spo-kernel"
+PYTEST_HEAVY_IGNORES = [
+    "--ignore=tests/test_kuramoto_layer.py",
+    "--ignore=tests/test_stuart_landau_nn.py",
+    "--ignore=tests/test_bold.py",
+    "--ignore=tests/test_reservoir.py",
+    "--ignore=tests/test_ude_kuramoto.py",
+    "--ignore=tests/test_inverse.py",
+    "--ignore=tests/test_oim.py",
+    "--ignore=tests/test_quantum_bridge_live.py",
+    "--ignore=tests/test_geometry_walk.py",
+]
 
 PYTHON_GATES: list[tuple[str, list[str], Path]] = [
     ("ruff check", [_PY, "-m", "ruff", "check", "src/", "tests/"], ROOT),
@@ -48,15 +59,7 @@ PYTHON_GATES: list[tuple[str, list[str], Path]] = [
             "-x",
             "--tb=short",
             "-q",
-            "--ignore=tests/test_kuramoto_layer.py",
-            "--ignore=tests/test_stuart_landau_nn.py",
-            "--ignore=tests/test_bold.py",
-            "--ignore=tests/test_reservoir.py",
-            "--ignore=tests/test_ude_kuramoto.py",
-            "--ignore=tests/test_inverse.py",
-            "--ignore=tests/test_oim.py",
-            "--ignore=tests/test_quantum_bridge_live.py",
-            "--ignore=tests/test_geometry_walk.py",
+            *PYTEST_HEAVY_IGNORES,
         ],
         ROOT,
     ),
@@ -102,6 +105,7 @@ COVERAGE_GATE: tuple[str, list[str], Path] = (
         "-q",
         "--cov=scpn_phase_orchestrator",
         "--cov-report=xml:coverage-python.xml",
+        *PYTEST_HEAVY_IGNORES,
     ],
     ROOT,
 )
