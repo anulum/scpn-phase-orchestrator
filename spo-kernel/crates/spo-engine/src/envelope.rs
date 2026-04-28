@@ -18,6 +18,9 @@ pub fn extract_envelope(amplitudes: &[f64], window: usize) -> Vec<f64> {
     if t == 0 || window == 0 {
         return amplitudes.to_vec();
     }
+    if amplitudes.iter().any(|v| !v.is_finite()) {
+        return vec![0.0; t];
+    }
 
     // Cumulative sum of squares
     let mut cs = vec![0.0; t + 1];
@@ -104,6 +107,12 @@ mod tests {
         let env = extract_envelope(&[], 5);
         assert!(env.is_empty());
         assert_eq!(envelope_modulation_depth(&[]), 0.0);
+    }
+
+    #[test]
+    fn test_nonfinite_signal_returns_zero_envelope() {
+        let env = extract_envelope(&[1.0, f64::NAN, 2.0], 2);
+        assert_eq!(env, vec![0.0; 3]);
     }
 
     #[test]

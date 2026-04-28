@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -120,7 +122,10 @@ class QuantumControlBridge:
             omega_natural=omegas,
             trotter_order=self._trotter_order,
         )
-        return solver.run(t_max=t_max, dt=dt, trotter_per_step=trotter_per_step)  # type: ignore[no-any-return]
+        return cast(
+            "dict",
+            solver.run(t_max=t_max, dt=dt, trotter_per_step=trotter_per_step),
+        )
 
     def orchestrator_to_quantum(
         self,
@@ -135,7 +140,7 @@ class QuantumControlBridge:
         layer_phases = {
             f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
         }
-        return orchestrator_to_quantum_phases(layer_phases)  # type: ignore[no-any-return]
+        return cast("NDArray", orchestrator_to_quantum_phases(layer_phases))
 
     def quantum_to_orchestrator(
         self,
@@ -146,4 +151,4 @@ class QuantumControlBridge:
             quantum_to_orchestrator_phases,
         )
 
-        return quantum_to_orchestrator_phases(quantum_theta)  # type: ignore[no-any-return]
+        return cast("dict", quantum_to_orchestrator_phases(quantum_theta))
