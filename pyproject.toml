@@ -245,6 +245,17 @@ omit = [
     "*/adapters/plasma_control_bridge.py",
     "*/adapters/metrics_exporter.py",
     "*/monitor/stl.py",
+    # Optional native backend shims: exercised through availability/parity gates,
+    # but their Go/Julia/Mojo subprocess branches depend on external toolchains.
+    "*/coupling/_*_go.py",
+    "*/coupling/_*_julia.py",
+    "*/coupling/_*_mojo.py",
+    "*/monitor/_*_go.py",
+    "*/monitor/_*_julia.py",
+    "*/monitor/_*_mojo.py",
+    "*/upde/_*_go.py",
+    "*/upde/_*_julia.py",
+    "*/upde/_*_mojo.py",
     # JAX/equinox not in standard CI
     "*/nn/*",
 ]
