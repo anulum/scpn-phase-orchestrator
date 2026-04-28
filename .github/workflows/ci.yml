@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: read
-  checks: write  # required by rustsec/audit-check to post results
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -75,7 +74,7 @@ jobs:
         run: mv .coverage .coverage.test
       - name: Upload coverage data (test)
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-data-test
           path: .coverage.test
@@ -84,7 +83,6 @@ jobs:
         if: matrix.python-version == '3.12'
         run: |
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
-          pip install jupyter nbconvert
           jupyter nbconvert --execute --to notebook notebooks/*.ipynb --ExecutePreprocessor.timeout=120
 
   coverage-guard:
@@ -111,7 +109,7 @@ jobs:
           coverage xml -o coverage-python.xml
           coverage report
       - name: Upload merged coverage XML
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-xml-merged
           path: coverage-python.xml
@@ -151,7 +149,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             ~/.cargo/registry
@@ -186,7 +184,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             ~/.cargo/registry
@@ -206,7 +204,7 @@ jobs:
           mv .coverage .coverage.ffi
       - name: Upload coverage data (ffi, ubuntu only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-data-ffi
           path: .coverage.ffi
@@ -216,7 +214,7 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          pip install maturin
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install -e ".[dev,full,plot,otel,queuewaves,nn]"
           pytest tests/ -v --tb=short
@@ -226,13 +224,16 @@ jobs:
         run: |
           python -m venv .venv
           source .venv/Scripts/activate
-          pip install maturin
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install -e ".[dev,full,plot,otel,nn]"
           pytest tests/ -v --tb=short
 
   cargo-audit:
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
@@ -248,7 +249,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # 1.83.0
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             ~/.cargo/registry
@@ -271,7 +272,7 @@ jobs:
       - name: Compare against baseline (informational)
         run: python bench/compare_baseline.py bench/baseline.json bench/current.json
         continue-on-error: true
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: benchmark-results
           path: bench/current.json
