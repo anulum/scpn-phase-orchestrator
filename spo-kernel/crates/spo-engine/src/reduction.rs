@@ -90,6 +90,9 @@ fn oa_deriv(re: f64, im: f64, omega_0: f64, delta: f64, half_k: f64) -> (f64, f6
 /// Analytical steady-state R_ss = √(1 - 2Δ/K) for K > K_c = 2Δ.
 #[must_use]
 pub fn steady_state_r_oa(delta: f64, k_coupling: f64) -> f64 {
+    if !delta.is_finite() || !k_coupling.is_finite() || delta < 0.0 {
+        return 0.0;
+    }
     let k_c = 2.0 * delta;
     if k_coupling <= k_c {
         return 0.0;
@@ -130,6 +133,13 @@ mod tests {
     fn test_steady_state_subcritical() {
         // K < K_c = 2Δ → R = 0
         assert_eq!(steady_state_r_oa(1.0, 1.5), 0.0);
+    }
+
+    #[test]
+    fn test_steady_state_rejects_nonfinite_inputs_without_nan() {
+        assert_eq!(steady_state_r_oa(f64::NAN, 4.0), 0.0);
+        assert_eq!(steady_state_r_oa(1.0, f64::NAN), 0.0);
+        assert_eq!(steady_state_r_oa(f64::INFINITY, 4.0), 0.0);
     }
 
     #[test]

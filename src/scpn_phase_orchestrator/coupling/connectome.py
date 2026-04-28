@@ -49,6 +49,8 @@ def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
         ValueError: If n_regions < 2 or > 80.
     """
     try:
+        # neurolib is optional and currently lacks complete type metadata;
+        # runtime availability is handled by the ModuleNotFoundError branch.
         from neurolib.utils.loadData import (  # type: ignore[import-untyped,import-not-found]
             Dataset,
         )
@@ -141,6 +143,6 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> NDArray:
                 knm[hub, other] += _DMN_HUB_BOOST
 
     # Symmetrise and clean diagonal
-    knm = (knm + knm.T) / 2.0  # type: ignore[assignment]
+    knm = np.asarray((knm + knm.T) / 2.0, dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
     return np.clip(knm, 0, None)

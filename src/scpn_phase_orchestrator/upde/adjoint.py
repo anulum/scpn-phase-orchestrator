@@ -12,6 +12,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -102,13 +104,13 @@ def gradient_knm_jax(  # pragma: no cover — requires JAX
     jax.config.update("jax_enable_x64", True)
 
     @jax.jit
-    def _forward(knm_j):  # type: ignore[no-untyped-def]
+    def _forward(knm_j: Any) -> Any:
         """Euler integration + cost, fully differentiable."""
         theta = jnp.array(phases_init, dtype=jnp.float64)
         om = jnp.array(omegas, dtype=jnp.float64)
         al = jnp.array(alpha, dtype=jnp.float64)
 
-        def _body(_, th):  # type: ignore[no-untyped-def]
+        def _body(_: int, th: Any) -> Any:
             diff = th[jnp.newaxis, :] - th[:, jnp.newaxis] - al
             coupling = jnp.sum(knm_j * jnp.sin(diff), axis=1)
             dtheta = om + coupling

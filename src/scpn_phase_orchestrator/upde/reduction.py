@@ -242,6 +242,8 @@ class OttAntonsenReduction:
         K: float,
         dt: float = 0.01,
     ):
+        if not all(np.isfinite(v) for v in (omega_0, delta, K, dt)):
+            raise ValueError("omega_0, delta, K, and dt must be finite")
         if delta < 0:
             raise ValueError(f"delta (half-width) must be non-negative, got {delta}")
         if dt <= 0.0:

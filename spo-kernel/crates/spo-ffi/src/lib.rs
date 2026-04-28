@@ -3296,6 +3296,11 @@ fn extract_envelope_rust(
     let a = amplitudes
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    if a.iter().any(|v| !v.is_finite()) {
+        return Err(PyValueError::new_err(
+            "amplitudes must contain only finite values",
+        ));
+    }
     let result = envelope::extract_envelope(a, window);
     Ok(PyArray1::from_vec(py, result).into())
 }
@@ -3327,6 +3332,9 @@ fn oa_run_rust(
 
 #[pyfunction]
 fn steady_state_r_oa_rust(delta: f64, k_coupling: f64) -> PyResult<f64> {
+    if !delta.is_finite() || !k_coupling.is_finite() {
+        return Err(PyValueError::new_err("delta and k_coupling must be finite"));
+    }
     Ok(reduction::steady_state_r_oa(delta, k_coupling))
 }
 
