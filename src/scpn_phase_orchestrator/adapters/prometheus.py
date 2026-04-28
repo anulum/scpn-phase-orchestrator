@@ -38,8 +38,8 @@ class PrometheusAdapter:
         try:
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
                 body = json.loads(resp.read())
-        except (URLError, OSError) as exc:
-            raise ConnectionError(f"Prometheus query failed: {exc}") from exc
+        except (URLError, OSError):
+            raise ConnectionError("Prometheus query failed") from None
 
         if body.get("status") != "success":
             raise ValueError(f"Prometheus returned status={body.get('status')}")
@@ -59,8 +59,8 @@ class PrometheusAdapter:
         try:
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
                 body = json.loads(resp.read())
-        except (URLError, OSError) as exc:
-            raise ConnectionError(f"Prometheus query failed: {exc}") from exc
+        except (URLError, OSError):
+            raise ConnectionError("Prometheus query failed") from None
 
         if body.get("status") != "success":
             raise ValueError(f"Prometheus returned status={body.get('status')}")

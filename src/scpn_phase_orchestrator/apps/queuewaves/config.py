@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import isfinite
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yaml
 
@@ -28,11 +30,58 @@ __all__ = [
     "ServiceDef",
     "ThresholdConfig",
     "AlertSink",
+    "SecurityConfig",
     "QueueWavesConfig",
     "ConfigCompiler",
 ]
 
 _LAYER_ORDER = {"micro": 0, "meso": 1, "macro": 2}
+_VALID_CHANNELS = frozenset({"P", "I"})
+_VALID_ALERT_FORMATS = frozenset({"generic", "slack"})
+_VALID_SECURITY_MODES = frozenset({"development", "production"})
+
+
+def _require_non_empty(value: str, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _require_finite_non_negative(value: float, field_name: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} must be finite and non-negative") from exc
+    if not isfinite(parsed) or parsed < 0.0:
+        raise ValueError(f"{field_name} must be finite and non-negative")
+    return parsed
+
+
+def _require_int_range(
+    value: int,
+    field_name: str,
+    minimum: int,
+    maximum: int | None = None,
+) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{field_name} must be an integer")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} must be an integer") from exc
+    if parsed < minimum:
+        raise ValueError(f"{field_name} must be >= {minimum}")
+    if maximum is not None and parsed > maximum:
+        raise ValueError(f"{field_name} must be <= {maximum}")
+    return parsed
+
+
+def _require_http_url(value: str, field_name: str) -> str:
+    parsed_value = _require_non_empty(value, field_name)
+    parsed = urlparse(value)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError(f"{field_name} must be an http(s) URL")
+    return parsed_value
 
 
 @dataclass(frozen=True)
@@ -43,6 +92,16 @@ class ServiceDef:
     promql: str
     layer: str  # micro, meso, macro
     channel: str = "P"  # P(hysical) or I(nformational)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "name", _require_non_empty(self.name, "service.name"))
+        object.__setattr__(
+            self, "promql", _require_non_empty(self.promql, "service.promql")
+        )
+        if self.layer not in _LAYER_ORDER:
+            raise ValueError("service.layer must be micro, meso, or macro")
+        if self.channel not in _VALID_CHANNELS:
+            raise ValueError("service.channel must be P or I")
 
 
 @dataclass(frozen=True)
@@ -55,6 +114,41 @@ class ThresholdConfig:
     imprint_chronic: float = 1.5
     cooldown_seconds: float = 300.0
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "r_bad_warn",
+            _require_finite_non_negative(self.r_bad_warn, "thresholds.r_bad_warn"),
+        )
+        object.__setattr__(
+            self,
+            "r_bad_critical",
+            _require_finite_non_negative(
+                self.r_bad_critical, "thresholds.r_bad_critical"
+            ),
+        )
+        object.__setattr__(
+            self,
+            "plv_cascade",
+            _require_finite_non_negative(self.plv_cascade, "thresholds.plv_cascade"),
+        )
+        object.__setattr__(
+            self,
+            "imprint_chronic",
+            _require_finite_non_negative(
+                self.imprint_chronic, "thresholds.imprint_chronic"
+            ),
+        )
+        object.__setattr__(
+            self,
+            "cooldown_seconds",
+            _require_finite_non_negative(
+                self.cooldown_seconds, "thresholds.cooldown_seconds"
+            ),
+        )
+        if self.r_bad_warn > self.r_bad_critical:
+            raise ValueError("thresholds.r_bad_warn must be <= r_bad_critical")
+
 
 @dataclass(frozen=True)
 class CouplingConfig:
@@ -62,6 +156,16 @@ class CouplingConfig:
 
     strength: float = 0.50
     decay: float = 0.25
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "strength",
+            _require_finite_non_negative(self.strength, "coupling.strength"),
+        )
+        object.__setattr__(
+            self, "decay", _require_finite_non_negative(self.decay, "coupling.decay")
+        )
 
 
 @dataclass(frozen=True)
@@ -71,6 +175,13 @@ class AlertSink:
     url: str
     format: str = "generic"  # "slack" or "generic"
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "url", _require_http_url(self.url, "alert_sinks[].url")
+        )
+        if self.format not in _VALID_ALERT_FORMATS:
+            raise ValueError("alert_sinks[].format must be generic or slack")
+
 
 @dataclass(frozen=True)
 class ServerConfig:
@@ -78,6 +189,37 @@ class ServerConfig:
 
     host: str = "127.0.0.1"
     port: int = 8080
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "host", _require_non_empty(self.host, "server.host"))
+        object.__setattr__(
+            self, "port", _require_int_range(self.port, "server.port", 0, 65535)
+        )
+
+
+@dataclass(frozen=True)
+class SecurityConfig:
+    """QueueWaves production network security policy."""
+
+    mode: str = "development"
+    api_key_env: str = "QUEUEWAVES_API_KEY"
+    rate_limit_per_minute: int = 120
+
+    def __post_init__(self) -> None:
+        if self.mode not in _VALID_SECURITY_MODES:
+            raise ValueError("security.mode must be development or production")
+        object.__setattr__(
+            self,
+            "api_key_env",
+            _require_non_empty(self.api_key_env, "security.api_key_env"),
+        )
+        object.__setattr__(
+            self,
+            "rate_limit_per_minute",
+            _require_int_range(
+                self.rate_limit_per_minute, "security.rate_limit_per_minute", 1
+            ),
+        )
 
 
 @dataclass
@@ -92,6 +234,18 @@ class QueueWavesConfig:
     coupling: CouplingConfig = field(default_factory=CouplingConfig)
     alert_sinks: list[AlertSink] = field(default_factory=list)
     server: ServerConfig = field(default_factory=ServerConfig)
+    security: SecurityConfig = field(default_factory=SecurityConfig)
+
+    def __post_init__(self) -> None:
+        self.prometheus_url = _require_http_url(self.prometheus_url, "prometheus_url")
+        if not self.services:
+            raise ValueError("services must contain at least one service")
+        self.scrape_interval_s = _require_finite_non_negative(
+            self.scrape_interval_s, "scrape_interval_s"
+        )
+        if self.scrape_interval_s <= 0.0:
+            raise ValueError("scrape_interval_s must be > 0")
+        self.buffer_length = _require_int_range(self.buffer_length, "buffer_length", 4)
 
 
 def load_config(path: Path) -> QueueWavesConfig:
@@ -134,6 +288,12 @@ def load_config(path: Path) -> QueueWavesConfig:
         host=srv_raw.get("host", "127.0.0.1"),
         port=srv_raw.get("port", 8080),
     )
+    sec_raw = raw.get("security", {})
+    security_cfg = SecurityConfig(
+        mode=sec_raw.get("mode", "development"),
+        api_key_env=sec_raw.get("api_key_env", "QUEUEWAVES_API_KEY"),
+        rate_limit_per_minute=sec_raw.get("rate_limit_per_minute", 120),
+    )
     return QueueWavesConfig(
         prometheus_url=raw["prometheus_url"],
         services=services,
@@ -143,6 +303,7 @@ def load_config(path: Path) -> QueueWavesConfig:
         coupling=coupling_cfg,
         alert_sinks=sinks,
         server=server_cfg,
+        security=security_cfg,
     )
 
 

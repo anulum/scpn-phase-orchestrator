@@ -12,11 +12,10 @@ Usage:
     spo serve binding_spec.yaml --port 8080
     # Then open http://localhost:8080 in a browser.
 
-    # With API key authentication:
-    SPO_API_KEY=mysecret spo serve binding_spec.yaml --port 8080
+    # Production profile requires API key authentication and rate limiting:
+    SPO_ENV=production SPO_API_KEY=<strong-api-key> spo serve binding_spec.yaml
     # Mutable endpoints (step, reset) require X-API-Key header.
-    # When SPO_API_KEY is unset, mutable endpoints are unrestricted
-    # (development mode — do NOT deploy without setting the key).
+    # Development mode remains local by default; do not deploy it externally.
 
 Endpoints:
     GET  /             HTML dashboard
@@ -59,7 +58,8 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 try:
-    from fastapi import (  # pragma: no cover
+    from fastapi import Request as FastAPIRequest
+    from fastapi import (
         Response,
         WebSocket,
         WebSocketDisconnect,  # pragma: no cover
@@ -375,6 +375,12 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         msg = "fastapi not installed. pip install fastapi uvicorn"
         raise ImportError(msg) from exc
 
+    from scpn_phase_orchestrator.network_security import (
+        FixedWindowRateLimiter,
+        env_int,
+        is_production_mode,
+    )
+
     spec = load_binding_spec(spec_path)
     sim = SimulationState(spec)
 
@@ -403,12 +409,24 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     app = FastAPI(title="SPO Dashboard", version="0.5.0", lifespan=_lifespan)
 
     _api_key = os.environ.get("SPO_API_KEY")
+    _production = is_production_mode("SPO")
+    if _production and not _api_key:
+        raise RuntimeError("SPO_API_KEY is required when SPO_ENV=production")
+    _rate_limit = env_int("SPO_RATE_LIMIT_PER_MINUTE", 120 if _production else 0)
+    _limiter = FixedWindowRateLimiter(_rate_limit) if _rate_limit > 0 else None
 
-    async def _require_auth(x_api_key: str | None = Header(None)) -> None:
+    async def _require_auth(
+        request: FastAPIRequest,
+        x_api_key: str | None = Header(None),
+    ) -> None:
         if _api_key is None:
-            return
-        if x_api_key != _api_key:
+            identity = request.client.host if request.client is not None else "local"
+        elif x_api_key != _api_key:
             raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
+        else:
+            identity = x_api_key
+        if _limiter is not None and not _limiter.allow(identity):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
     @app.get("/", response_class=HTMLResponse)
     async def dashboard() -> str:

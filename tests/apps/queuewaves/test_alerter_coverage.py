@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -74,6 +76,44 @@ def test_async_send_with_sink_post_failure():
         alerter = WebhookAlerter([sink], cooldown_seconds=0.0)
         sent = await alerter.send([_anomaly()])
         assert len(sent) == 1
+
+    asyncio.run(_run())
+
+
+def test_async_send_failure_log_does_not_leak_sink_url(caplog, monkeypatch):
+    """Webhook failures must not echo sink URLs or HTTP exception details."""
+
+    class _FailingClient:
+        def __init__(self, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def post(self, url, json):
+            raise OSError(f"ConnectError {url} PRIVATE_TOPOLOGY")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "httpx",
+        SimpleNamespace(AsyncClient=_FailingClient),
+    )
+
+    async def _run():
+        sink_url = "http://ops.internal.example:8080/hook?tenant=PRIVATE_TOPOLOGY"
+        sink = AlertSink(url=sink_url, format="generic")
+        alerter = WebhookAlerter([sink], cooldown_seconds=0.0)
+        with caplog.at_level("WARNING"):
+            sent = await alerter.send([_anomaly()])
+        assert len(sent) == 1
+        text = caplog.text
+        assert "alert POST failed for configured sink" in text
+        assert "ops.internal.example" not in text
+        assert "PRIVATE_TOPOLOGY" not in text
+        assert "ConnectError" not in text
 
     asyncio.run(_run())
 

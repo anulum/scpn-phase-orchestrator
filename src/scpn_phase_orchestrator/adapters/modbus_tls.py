@@ -81,8 +81,8 @@ class SecureModbusAdapter:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
             return ctx
-        except ssl.SSLError as exc:
-            raise ConnectionError(f"TLS context creation failed: {exc}") from exc
+        except ssl.SSLError:
+            raise ConnectionError("TLS context creation failed") from None
 
     def _connect(self) -> object:
         if ModbusTlsClient is None:
@@ -95,9 +95,7 @@ class SecureModbusAdapter:
             sslctx=self._ctx,
         )
         if not client.connect():
-            raise ConnectionError(
-                f"Modbus TLS connection failed: {self._host}:{self._port}"
-            )
+            raise ConnectionError("Modbus TLS connection failed")
         return client
 
     def read_register(self, address: int) -> int:

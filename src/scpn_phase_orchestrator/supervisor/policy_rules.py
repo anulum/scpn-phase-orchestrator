@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import operator
 from dataclasses import dataclass
+from math import isfinite
 from pathlib import Path
+from typing import Any, NoReturn
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor.regimes import Regime
@@ -32,6 +34,10 @@ _OPS = {
     "<=": operator.le,
     "==": operator.eq,
 }
+
+_MAX_POLICY_RULES = 1000
+_MAX_CONDITIONS_PER_RULE = 32
+_MAX_ACTIONS_PER_RULE = 32
 
 
 @dataclass(frozen=True)
@@ -211,21 +217,94 @@ def _extract_metric(
     return None
 
 
-def _parse_condition(raw: dict) -> PolicyCondition:
+def _policy_error(message: str) -> NoReturn:
+    raise ValueError(f"invalid policy rules: {message}")
+
+
+def _require_mapping(raw: Any, context: str) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        _policy_error(f"{context} must be a mapping")
+    return raw
+
+
+def _require_field(raw: dict[str, Any], key: str, context: str) -> Any:
+    try:
+        return raw[key]
+    except KeyError:
+        _policy_error(f"{context} missing required key {key!r}")
+
+
+def _require_text(raw: dict[str, Any], key: str, context: str) -> str:
+    value = _require_field(raw, key, context)
+    if not isinstance(value, str) or not value:
+        _policy_error(f"{context}.{key} must be a non-empty string")
+    return value
+
+
+def _finite_float(value: Any, context: str) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        _policy_error(f"{context} must be a finite number")
+    if not isfinite(result):
+        _policy_error(f"{context} must be a finite number")
+    return result
+
+
+def _non_negative_float(value: Any, context: str) -> float:
+    result = _finite_float(value, context)
+    if result < 0.0:
+        _policy_error(f"{context} must be non-negative")
+    return result
+
+
+def _non_negative_int(value: Any, context: str) -> int:
+    if isinstance(value, bool):
+        _policy_error(f"{context} must be a non-negative integer")
+    try:
+        result = int(value)
+    except (TypeError, ValueError):
+        _policy_error(f"{context} must be a non-negative integer")
+    if result < 0:
+        _policy_error(f"{context} must be non-negative")
+    return result
+
+
+def _require_sequence(value: Any, context: str) -> list[Any]:
+    if not isinstance(value, list):
+        _policy_error(f"{context} must be a list")
+    return value
+
+
+def _parse_condition(raw: Any) -> PolicyCondition:
+    data = _require_mapping(raw, "condition")
+    op = _require_text(data, "op", "condition")
+    if op not in _OPS:
+        _policy_error("condition.op is unsupported")
+    layer_raw = data.get("layer")
+    if layer_raw is not None:
+        layer = _non_negative_int(layer_raw, "condition.layer")
+    else:
+        layer = None
     return PolicyCondition(
-        metric=raw["metric"],
-        layer=raw.get("layer"),
-        op=raw["op"],
-        threshold=float(raw["threshold"]),
+        metric=_require_text(data, "metric", "condition"),
+        layer=layer,
+        op=op,
+        threshold=_finite_float(
+            _require_field(data, "threshold", "condition"), "condition.threshold"
+        ),
     )
 
 
-def _parse_action(raw: dict) -> PolicyAction:
+def _parse_action(raw: Any) -> PolicyAction:
+    data = _require_mapping(raw, "action")
     return PolicyAction(
-        knob=raw["knob"],
-        scope=raw["scope"],
-        value=float(raw["value"]),
-        ttl_s=float(raw["ttl_s"]),
+        knob=_require_text(data, "knob", "action"),
+        scope=_require_text(data, "scope", "action"),
+        value=_finite_float(_require_field(data, "value", "action"), "action.value"),
+        ttl_s=_non_negative_float(
+            _require_field(data, "ttl_s", "action"), "action.ttl_s"
+        ),
     )
 
 
@@ -238,35 +317,70 @@ def load_policy_rules(path: str | Path) -> list[PolicyRule]:
     import yaml
 
     path = Path(path)
-    raw = path.read_text(encoding="utf-8")
-    data = yaml.safe_load(raw)
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        reason = exc.strerror or type(exc).__name__
+        raise ValueError(f"cannot read policy rules: {reason}") from None
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError:
+        raise ValueError("policy rules YAML parse error") from None
     if not isinstance(data, dict) or "rules" not in data:
         return []
+    rule_data = _require_sequence(data["rules"], "rules")
+    if len(rule_data) > _MAX_POLICY_RULES:
+        _policy_error("too many rules")
     rules: list[PolicyRule] = []
-    for r in data["rules"]:
+    for raw_rule in rule_data:
+        r = _require_mapping(raw_rule, "rule")
         # --- condition(s) ---
         if "conditions" in r:
+            conditions = _require_sequence(r["conditions"], "rule.conditions")
+            if not conditions:
+                _policy_error("rule.conditions must not be empty")
+            if len(conditions) > _MAX_CONDITIONS_PER_RULE:
+                _policy_error("too many rule conditions")
+            logic = r.get("logic", "AND")
+            if not isinstance(logic, str):
+                _policy_error("rule.logic must be a string")
+            logic = logic.upper()
+            if logic not in ("AND", "OR"):
+                _policy_error("rule.logic must be AND or OR")
             cond: PolicyCondition | CompoundCondition = CompoundCondition(
-                conditions=[_parse_condition(c) for c in r["conditions"]],
-                logic=r.get("logic", "AND").upper(),
+                conditions=[_parse_condition(c) for c in conditions],
+                logic=logic,
             )
         else:
-            cond = _parse_condition(r["condition"])
+            cond = _parse_condition(_require_field(r, "condition", "rule"))
 
         # --- action(s) ---
         if "actions" in r:
-            action_list = [_parse_action(a) for a in r["actions"]]
+            actions = _require_sequence(r["actions"], "rule.actions")
+            if not actions:
+                _policy_error("rule.actions must not be empty")
+            if len(actions) > _MAX_ACTIONS_PER_RULE:
+                _policy_error("too many rule actions")
+            action_list = [_parse_action(a) for a in actions]
         else:
-            action_list = [_parse_action(r["action"])]
+            action_list = [_parse_action(_require_field(r, "action", "rule"))]
+
+        regimes = r.get("regime", [])
+        if not isinstance(regimes, list) or not all(
+            isinstance(item, str) and item for item in regimes
+        ):
+            _policy_error("rule.regime must be a list of non-empty strings")
 
         rules.append(
             PolicyRule(
-                name=r["name"],
-                regimes=[s.upper() for s in r.get("regime", [])],
+                name=_require_text(r, "name", "rule"),
+                regimes=[s.upper() for s in regimes],
                 condition=cond,
                 actions=action_list,
-                cooldown_s=float(r.get("cooldown_s", 0.0)),
-                max_fires=int(r.get("max_fires", 0)),
+                cooldown_s=_non_negative_float(
+                    r.get("cooldown_s", 0.0), "rule.cooldown_s"
+                ),
+                max_fires=_non_negative_int(r.get("max_fires", 0), "rule.max_fires"),
             )
         )
     return rules

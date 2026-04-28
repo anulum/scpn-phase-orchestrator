@@ -157,6 +157,52 @@ class TestPrometheusAdapter:
         ):
             adapter.fetch_metric("up", 0, 10, 1)
 
+    def test_fetch_metric_network_error_does_not_leak_endpoint_or_query(self):
+        from urllib.error import URLError
+
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://metrics.internal:9090/private")
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                side_effect=URLError(
+                    "http://metrics.internal:9090/private/api/v1/query_range"
+                    "?query=tenant_secret"
+                ),
+            ),
+            pytest.raises(ConnectionError) as excinfo,
+        ):
+            adapter.fetch_metric("tenant_secret", 0, 10, 1)
+        msg = str(excinfo.value)
+        assert msg == "Prometheus query failed"
+        assert "metrics.internal" not in msg
+        assert "tenant_secret" not in msg
+        assert excinfo.value.__cause__ is None
+
+    def test_fetch_instant_network_error_does_not_leak_endpoint_or_query(self):
+        from urllib.error import URLError
+
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://metrics.internal:9090/private")
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                side_effect=URLError(
+                    "http://metrics.internal:9090/private/api/v1/query"
+                    "?query=tenant_secret"
+                ),
+            ),
+            pytest.raises(ConnectionError) as excinfo,
+        ):
+            adapter.fetch_instant("tenant_secret")
+        msg = str(excinfo.value)
+        assert msg == "Prometheus query failed"
+        assert "metrics.internal" not in msg
+        assert "tenant_secret" not in msg
+        assert excinfo.value.__cause__ is None
+
     def test_fetch_metric_bad_json(self):
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 

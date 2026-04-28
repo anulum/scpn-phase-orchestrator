@@ -112,11 +112,7 @@ class WebhookAlerter:
                         resp = await client.post(sink.url, json=payload)
                         resp.raise_for_status()
                     except _SEND_ERRORS:
-                        logger.warning(
-                            "alert POST failed to %s",
-                            sink.url,
-                            exc_info=True,
-                        )
+                        logger.warning("alert POST failed for configured sink")
         return [a for a, _ in to_send]
 
     def send_sync(self, anomalies: list[Anomaly]) -> list[Anomaly]:
