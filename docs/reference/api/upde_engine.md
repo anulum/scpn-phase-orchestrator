@@ -245,11 +245,34 @@ Every call to `step()` validates:
 
 This prevents silent corruption from propagating through the pipeline.
 
-### 4.3 Rust Acceleration
+### 4.3 Five-backend fallback chain (2026-04-18)
 
-When `spo-kernel` is installed, the engine automatically delegates to
-`PyUPDEStepper` (Rust + Rayon). The Python implementation serves as
-fallback and reference. Selection is automatic via `_HAS_RUST` flag.
+`upde.engine` now exposes a stateless batched kernel `upde_run` that
+dispatches across Rust → Mojo → Julia → Go → Python. The first
+available backend becomes `ACTIVE_BACKEND` at import time; the others
+are available as overrides for tests and benchmarks. `UPDEEngine.run`
+routes through this dispatcher so every available toolchain is used.
+
+| Backend | Probe                                                         | Artefact                         |
+| ------- | ------------------------------------------------------------- | -------------------------------- |
+| Rust    | `from spo_kernel import PyUPDEStepper`                        | `spo_kernel` wheel via maturin.  |
+| Mojo    | `mojo/upde_engine_mojo` executable                            | `mojo build mojo/upde_engine.mojo`. |
+| Julia   | `juliacall` + `julia/upde_engine.jl`                          | Julia 1.11.                      |
+| Go      | `go/libupde_engine.so`                                        | `go build -buildmode=c-shared`.  |
+| Python  | Pure NumPy                                                    | Always available.                |
+
+Parity tolerances against the Python reference:
+
+| Backend    | Tolerance |
+| ---------- | --------- |
+| Rust       | `1e-12`   |
+| Julia      | `1e-12`   |
+| Go         | `1e-12`   |
+| Mojo       | `1e-6`    |
+| Python     | exact     |
+
+The cross-backend parity suite `tests/test_upde_run_backends.py`
+enforces these across all three integrators (Euler, RK4, RK45).
 
 ### 4.4 Pre-allocated Scratch Arrays
 
@@ -428,8 +451,41 @@ adaptive stepping).
 
 ## 7. Performance Benchmarks
 
-All benchmarks from `bench/baseline.json`, measured on Windows 11,
-Python 3.12.5, NumPy 2.2.6, spo-kernel (Rust) backend.
+### 7.0 Five-backend comparison (2026-04-18)
+
+Per-call wall-clock in milliseconds on the local Ubuntu 24.04 host,
+16-thread x86_64, ``dt = 0.01, n_steps = 500``, one warm-up and two
+measured calls. Reproduce with
+`python benchmarks/upde_engine_benchmark.py --sizes 8 32 64 --methods euler rk4 rk45 --n-steps 500`.
+
+| N  | method | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
+| -- | ------ | --------: | --------: | ---------: | ------: | ----------: |
+| 8  | euler  |      0.32 |     44.82 |       0.67 |    0.98 |        3.90 |
+| 8  | rk4    |      0.85 |     52.95 |       1.52 |    3.20 |       22.47 |
+| 8  | rk45   |      1.31 |     57.31 |       1.64 |    3.74 |       50.10 |
+| 32 | euler  |      3.08 |     63.59 |       3.32 |    6.70 |        8.88 |
+| 32 | rk4    |     10.55 |     64.62 |      12.45 |   20.86 |       34.94 |
+| 32 | rk45   |     17.71 |     77.03 |      25.01 |   42.17 |       69.24 |
+| 64 | euler  |     10.77 |     59.49 |      11.96 |   27.71 |       22.90 |
+| 64 | rk4    |     43.98 |    112.90 |      48.93 |  112.63 |      132.38 |
+| 64 | rk45   |     91.94 |    164.18 |     114.44 |  208.41 |      184.49 |
+
+Observations:
+
+* Rust wins everywhere — pre-allocated scratch + rayon + FSAL.
+* Julia is a consistent second after JIT warm-up (1.1–2.7× Rust).
+* Go is single-goroutine; competitive at small ``N``, falls behind
+  Julia from ``N = 32`` onwards.
+* Mojo subprocess overhead floors at ~45 ms; retained for parity, not
+  throughput.
+* Python scales on par with Julia / Go at small ``N`` thanks to
+  NumPy vector ops.
+
+### 7.1 Rust Backend (legacy bench/baseline.json, Windows host)
+
+Pre-migration Rust numbers, kept for historical comparison. Measured
+on Windows 11, Python 3.12.5, NumPy 2.2.6, spo-kernel (Rust)
+backend.
 
 ### 7.1 Rust Backend (spo-kernel)
 

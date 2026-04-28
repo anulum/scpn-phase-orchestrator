@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -30,6 +31,8 @@ class MetricBuffer:
     """Fixed-size ring buffer of (timestamp, value) pairs for one service."""
 
     def __init__(self, maxlen: int = 64):
+        if maxlen < 1:
+            raise ValueError(f"maxlen must be >= 1, got {maxlen}")
         self._maxlen = maxlen
         self._buf: deque[tuple[float, float]] = deque(maxlen=maxlen)
 

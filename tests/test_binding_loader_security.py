@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -195,6 +196,53 @@ class TestTypeCoercion:
             load_binding_spec(p)
 
 
+class TestPathScrubbingInErrors:
+    def test_missing_file_error_does_not_leak_full_path(self, tmp_path: Path) -> None:
+        nested = tmp_path / "vault" / "secrets" / "binding.yaml"
+        with pytest.raises(BindingLoadError) as excinfo:
+            load_binding_spec(nested)
+        msg = str(excinfo.value)
+        assert "binding.yaml" in msg
+        assert "vault" not in msg
+        assert "secrets" not in msg
+        assert str(tmp_path) not in msg
+
+    def test_yaml_parse_error_does_not_leak_full_path(self, tmp_path: Path) -> None:
+        nested_dir = tmp_path / "internal" / "private"
+        nested_dir.mkdir(parents=True)
+        bad = nested_dir / "spec.yaml"
+        bad.write_text("name: test\n  bad indent: [\n", encoding="utf-8")
+        with pytest.raises(BindingLoadError) as excinfo:
+            load_binding_spec(bad)
+        msg = str(excinfo.value)
+        assert "spec.yaml" in msg
+        assert "internal" not in msg
+        assert "private" not in msg
+        assert str(tmp_path) not in msg
+
+    def test_json_parse_error_does_not_leak_full_path(self, tmp_path: Path) -> None:
+        nested_dir = tmp_path / "confidential"
+        nested_dir.mkdir()
+        bad = nested_dir / "spec.json"
+        bad.write_text('{"name":', encoding="utf-8")
+        with pytest.raises(BindingLoadError) as excinfo:
+            load_binding_spec(bad)
+        msg = str(excinfo.value)
+        assert "spec.json" in msg
+        assert "confidential" not in msg
+        assert str(tmp_path) not in msg
+
+    def test_directory_error_does_not_leak_full_path(self, tmp_path: Path) -> None:
+        nested = tmp_path / "secret_dir" / "notafile.yaml"
+        nested.mkdir(parents=True)
+        with pytest.raises(BindingLoadError) as excinfo:
+            load_binding_spec(nested)
+        msg = str(excinfo.value)
+        assert "notafile.yaml" in msg
+        assert "secret_dir" not in msg
+        assert str(tmp_path) not in msg
+
+
 # Pipeline wiring: binding loader security tested via path traversal rejection,
-# schema validation, and malicious input handling. Security is load-bearing
-# infrastructure.
+# schema validation, malicious input handling, and scrubbed error messages.
+# Security is load-bearing infrastructure.

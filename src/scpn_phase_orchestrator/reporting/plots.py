@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -7,24 +8,44 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
-try:
+# Probe availability without actually importing matplotlib — keeps the
+# module import free of backend initialisation cost.
+_HAS_MPL = importlib.util.find_spec("matplotlib") is not None
+
+# Cached module handles, populated on first plot call.
+_plt: Any = None
+_Rectangle: Any = None
+
+
+def _require_matplotlib() -> tuple[Any, Any]:
+    """Lazily import matplotlib, selecting a non-interactive backend.
+
+    Returns the cached ``(pyplot, Rectangle)`` pair. Raises ImportError if
+    matplotlib is not installed. The first call triggers backend init; all
+    subsequent calls are O(1).
+    """
+    global _plt, _Rectangle
+    if _plt is not None:
+        return _plt, _Rectangle
+    if not _HAS_MPL:
+        raise ImportError(
+            "matplotlib required: pip install scpn-phase-orchestrator[plot]"
+        )
     import matplotlib
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
 
-    _HAS_MPL = True
-except ImportError:  # pragma: no cover
-    _HAS_MPL = False
-
-
-def _ensure_agg() -> None:
-    """Switch to Agg backend if running non-interactively (CLI/server)."""
-    if _HAS_MPL and matplotlib.get_backend().lower() not in ("agg", "pdf", "svg"):
+    if matplotlib.get_backend().lower() not in ("agg", "pdf", "svg"):
         matplotlib.use("Agg")
+    _plt = plt
+    _Rectangle = Rectangle
+    return _plt, _Rectangle
 
 
 __all__ = ["CoherencePlot"]
@@ -35,14 +56,6 @@ _REGIME_COLORS = {
     "CRITICAL": "#e74c3c",
     "RECOVERY": "#3498db",
 }
-
-
-def _require_matplotlib() -> None:
-    if not _HAS_MPL:
-        raise ImportError(
-            "matplotlib required: pip install scpn-phase-orchestrator[plot]"
-        )
-    _ensure_agg()
 
 
 class CoherencePlot:
@@ -117,7 +130,7 @@ class CoherencePlot:
     def plot_r_timeline(self, output_path: str | Path) -> Path:
         """Line chart of per-layer R over simulation steps."""
         x, n_layers, series = self._extract_r_series()
-        _require_matplotlib()
+        plt, _ = _require_matplotlib()
 
         fig, ax = plt.subplots(figsize=(10, 4))
         for i in range(n_layers):
@@ -136,7 +149,7 @@ class CoherencePlot:
     def plot_regime_timeline(self, output_path: str | Path) -> Path:
         """Coloured horizontal bands per regime epoch."""
         epochs = self._extract_regime_epochs()
-        _require_matplotlib()
+        plt, Rectangle = _require_matplotlib()
         steps = self._steps
 
         fig, ax = plt.subplots(figsize=(10, 1.5))
@@ -163,7 +176,7 @@ class CoherencePlot:
     def plot_action_audit(self, output_path: str | Path) -> Path:
         """Vertical markers at steps where control actions fired."""
         x_all, r_global, knob_steps = self._extract_actions()
-        _require_matplotlib()
+        plt, _ = _require_matplotlib()
 
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(x_all, r_global, color="#2c3e50", linewidth=0.8, label="R_global")
@@ -196,7 +209,7 @@ class CoherencePlot:
         if the field is absent (phase-only simulation).
         """
         x, amps, sub_frac = self._extract_amplitude()
-        _require_matplotlib()
+        plt, _ = _require_matplotlib()
 
         fig, ax1 = plt.subplots(figsize=(10, 4))
         ax1.plot(x, amps, color="#2980b9", linewidth=1.0, label="mean amplitude")
@@ -234,7 +247,7 @@ class CoherencePlot:
         The matrix should be stored as a flat list with shape (N, N).
         """
         n, mat = self._extract_pac_matrix()
-        _require_matplotlib()
+        plt, _ = _require_matplotlib()
 
         fig, ax = plt.subplots(figsize=(6, 5))
         im = ax.imshow(mat, cmap="viridis", aspect="equal", vmin=0.0)

@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Commercial license available
 // © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 // © Code 2020–2026 Miroslav Šotek. All rights reserved.
 // ORCID: 0009-0009-3560-0851
@@ -14,6 +15,8 @@
 //! - Kuramoto & Battogtokh 2002, Nonlinear Phenom. Complex Syst. 5:380-385.
 //! - Abrams & Strogatz 2004, Phys. Rev. Lett. 93:174102.
 //! - Kemeth et al. 2016, Chaos 26:094815 (chimera classification).
+
+use rayon::prelude::*;
 
 /// Chimera detection result.
 #[derive(Debug, Clone)]
@@ -50,7 +53,9 @@ const INCOHERENT_THRESHOLD: f64 = 0.3;
 #[must_use]
 pub fn local_order_parameter(phases: &[f64], knm: &[f64], n: usize) -> Vec<f64> {
     let mut r_local = vec![0.0_f64; n];
-    for i in 0..n {
+    // Parallelise per-oscillator neighbourhood sums; each row of knm is
+    // read independently so there is no shared-mutability hazard.
+    r_local.par_iter_mut().enumerate().for_each(|(i, val)| {
         let mut re_sum = 0.0_f64;
         let mut im_sum = 0.0_f64;
         let mut count = 0usize;
@@ -66,9 +71,9 @@ pub fn local_order_parameter(phases: &[f64], knm: &[f64], n: usize) -> Vec<f64> 
             let c = count as f64;
             let mean_re = re_sum / c;
             let mean_im = im_sum / c;
-            r_local[i] = (mean_re * mean_re + mean_im * mean_im).sqrt();
+            *val = (mean_re * mean_re + mean_im * mean_im).sqrt();
         }
-    }
+    });
     r_local
 }
 

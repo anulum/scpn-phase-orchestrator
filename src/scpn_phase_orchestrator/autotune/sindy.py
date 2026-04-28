@@ -32,6 +32,10 @@ class PhaseSINDy:
     """
 
     def __init__(self, threshold: float = 0.05, max_iter: int = 10):
+        if threshold < 0.0:
+            raise ValueError(f"threshold must be non-negative, got {threshold}")
+        if max_iter < 1:
+            raise ValueError(f"max_iter must be >= 1, got {max_iter}")
         self.threshold = threshold
         self.max_iter = max_iter
         self.coefficients: list[np.ndarray] = []
@@ -40,6 +44,16 @@ class PhaseSINDy:
     def fit(self, phases: np.ndarray, dt: float) -> list[np.ndarray]:
         """Discover equations node-by-node to handle independent coupling."""
         T, N = phases.shape
+
+        if T < 2:
+            self.coefficients = []
+            self.feature_names = []
+            for i in range(N):
+                names = ["1"]
+                names.extend(f"sin(theta_{j} - theta_{i})" for j in range(N) if j != i)
+                self.coefficients.append(np.zeros(len(names), dtype=np.float64))
+                self.feature_names.append(names)
+            return self.coefficients
 
         if _HAS_RUST:
             p_flat = np.ascontiguousarray(phases, dtype=np.float64).ravel()

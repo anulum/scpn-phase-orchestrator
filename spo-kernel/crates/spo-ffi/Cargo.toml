@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -16,7 +17,17 @@ description = "SCPN Phase Orchestrator — PyO3 Python bindings"
 
 [lib]
 name = "spo_kernel"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# `extension-module` tells PyO3 not to link against libpython — required
+# when building the shipped .so that is loaded by a running Python
+# interpreter (via maturin). It must be disabled for `cargo test` so
+# the test binary can link libpython directly. Idiomatic PyO3 pattern:
+# on by default for the wheel build; turn it off for tests via
+# `cargo test -p spo-ffi --no-default-features`.
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
 
 [dependencies]
 spo-types = { path = "../spo-types" }

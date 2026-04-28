@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -111,6 +112,10 @@ class JaxUPDEEngine:  # pragma: no cover
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
+        if n < 1:
+            raise ValueError(f"n must be >= 1, got {n}")
+        if dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {dt}")
         if method not in ("euler", "rk4"):
             raise ValueError(f"unsupported method {method!r}")
         self._n = n
@@ -150,6 +155,10 @@ class JaxStuartLandauEngine:  # pragma: no cover
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
+        if n < 1:
+            raise ValueError(f"n must be >= 1, got {n}")
+        if dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {dt}")
         self._n = n
         self._dt = dt
         self._sl_rk4 = _build_jax_sl_step()

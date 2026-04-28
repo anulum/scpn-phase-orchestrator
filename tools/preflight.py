@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -9,7 +10,7 @@
 from __future__ import annotations
 
 import shutil
-import subprocess  # noqa: S404
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -113,11 +114,12 @@ COVERAGE_CHECK: tuple[str, list[str], Path] = (
 
 def run_gate(name: str, cmd: list[str], cwd: Path) -> bool:
     t0 = time.monotonic()
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         cmd,
         cwd=cwd,
         capture_output=True,
         text=True,
+        check=False,
     )
     elapsed = time.monotonic() - t0
     if result.returncode == 0:

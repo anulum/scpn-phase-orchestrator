@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Commercial license available
 // © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 // © Code 2020–2026 Miroslav Šotek. All rights reserved.
 // ORCID: 0009-0009-3560-0851
@@ -122,29 +123,34 @@ pub fn trace_sync_transition(
     n_transient: usize,
     n_measure: usize,
 ) -> (Vec<f64>, Vec<f64>, f64) {
-    let mut k_values = Vec::with_capacity(n_points);
-    let mut r_values = Vec::with_capacity(n_points);
+    use rayon::prelude::*;
 
-    for i in 0..n_points {
-        let k = if n_points > 1 {
-            k_min + (k_max - k_min) * i as f64 / (n_points - 1) as f64
-        } else {
-            k_min
-        };
-        k_values.push(k);
-        let r = steady_state_r(
-            phases_init,
-            omegas,
-            knm_flat,
-            alpha_flat,
-            n,
-            k,
-            dt,
-            n_transient,
-            n_measure,
-        );
-        r_values.push(r);
-    }
+    let k_values: Vec<f64> = (0..n_points)
+        .map(|i| {
+            if n_points > 1 {
+                k_min + (k_max - k_min) * i as f64 / (n_points - 1) as f64
+            } else {
+                k_min
+            }
+        })
+        .collect();
+    // Each K is an independent trajectory — parallelise across the sweep.
+    let r_values: Vec<f64> = k_values
+        .par_iter()
+        .map(|&k| {
+            steady_state_r(
+                phases_init,
+                omegas,
+                knm_flat,
+                alpha_flat,
+                n,
+                k,
+                dt,
+                n_transient,
+                n_measure,
+            )
+        })
+        .collect();
 
     // Find K_critical: first crossing of R = 0.1
     let threshold = 0.1;

@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -71,6 +72,10 @@ class WebhookAlerter:
     """Posts anomaly alerts to configured webhook sinks with deduplication."""
 
     def __init__(self, sinks: list[AlertSink], cooldown_seconds: float = 300.0):
+        if cooldown_seconds < 0.0:
+            raise ValueError(
+                f"cooldown_seconds must be non-negative, got {cooldown_seconds}"
+            )
         self._sinks = sinks
         self._cooldown = cooldown_seconds
         self._last_fired: dict[str, float] = {}

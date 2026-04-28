@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Commercial license available
 // © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 // © Code 2020–2026 Miroslav Šotek. All rights reserved.
 // ORCID: 0009-0009-3560-0851
@@ -218,7 +219,7 @@ mod tests {
         let n_tp = 5;
         let mut phases = Vec::with_capacity(n_trials * n_tp);
         let mut x: u64 = 42;
-        for k in 0..n_trials {
+        for _ in 0..n_trials {
             for t in 0..n_tp {
                 x = x.wrapping_mul(6364136223846793005).wrapping_add(1);
                 let noise_scale = (t + 1) as f64 * 0.5; // increasing noise

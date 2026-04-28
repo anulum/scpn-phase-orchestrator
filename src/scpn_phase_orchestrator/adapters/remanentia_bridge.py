@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -78,7 +79,11 @@ class RemanentiaBridge:
         """Execute a urllib request, enforcing http(s) scheme."""
         url = req.full_url
         if not url.startswith(("http://", "https://")):
-            raise ValueError(f"Refusing non-HTTP URL: {url}")
+            # Reject without echoing the offending URL — it may contain a
+            # malicious scheme or caller-supplied payload.
+            raise ValueError(
+                "Refusing request: only http:// and https:// URLs are allowed"
+            )
         with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
             result: dict = json.loads(resp.read())
             return result

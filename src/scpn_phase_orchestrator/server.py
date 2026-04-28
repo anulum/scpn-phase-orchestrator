@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -30,7 +31,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -68,6 +71,8 @@ except ImportError:  # pragma: no cover
 
 __all__ = ["create_app", "SimulationState"]
 
+logger = logging.getLogger(__name__)
+
 TWO_PI = 2.0 * np.pi
 
 
@@ -76,7 +81,11 @@ class SimulationState:
 
     def __init__(self, spec: BindingSpec) -> None:
         self.spec = spec
-        self._lock = asyncio.Lock()
+        # threading.Lock so FastAPI async handlers and the gRPC servicer
+        # (thread-pool worker) serialise against the *same* mutex. An
+        # asyncio.Lock would only protect the event loop and leave gRPC
+        # threads free to race on the shared engine state.
+        self._lock = threading.Lock()
         self.n_osc = sum(len(ly.oscillator_ids) for ly in spec.layers)
         self.coupling = CouplingBuilder().build(
             self.n_osc,
@@ -357,6 +366,9 @@ fetchState().then(render);
 def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     """Create FastAPI app for the given binding spec."""
     try:
+        from collections.abc import AsyncIterator
+        from contextlib import asynccontextmanager
+
         from fastapi import Depends, FastAPI, Header, HTTPException
         from fastapi.responses import HTMLResponse
     except ImportError as exc:
@@ -365,7 +377,30 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
 
     spec = load_binding_spec(spec_path)
     sim = SimulationState(spec)
-    app = FastAPI(title="SPO Dashboard", version="0.5.0")
+
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        """Release engine resources when the process shuts down.
+
+        The simulation state itself is held in-process (numpy arrays), but
+        future integrations (gRPC channels, database handles, external
+        adapters) register cleanup here so a graceful shutdown never
+        leaks a descriptor.
+        """
+        logger.info(
+            "spo server startup: spec=%s n_osc=%d amplitude_mode=%s",
+            spec.name,
+            sim.n_osc,
+            sim.amplitude_mode,
+        )
+        try:
+            yield
+        finally:
+            logger.info("spo server shutdown: spec=%s", spec.name)
+            with sim._lock:
+                sim.event_bus.clear()
+
+    app = FastAPI(title="SPO Dashboard", version="0.5.0", lifespan=_lifespan)
 
     _api_key = os.environ.get("SPO_API_KEY")
 
@@ -383,20 +418,33 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
     @app.get("/api/state")
     async def get_state() -> dict:
         """Handle GET /api/state — return current simulation snapshot."""
-        async with sim._lock:
+        with sim._lock:
             return sim.snapshot()
 
     @app.post("/api/step", dependencies=[Depends(_require_auth)])
     async def post_step() -> dict:
         """Handle POST /api/step — advance simulation one tick."""
-        async with sim._lock:
-            return sim.step()
+        with sim._lock:
+            snap = sim.step()
+        logger.debug(
+            "api.step: step=%d R_global=%.4f regime=%s",
+            snap.get("step", -1),
+            snap.get("R_global", float("nan")),
+            snap.get("regime", ""),
+        )
+        return snap
 
     @app.post("/api/reset", dependencies=[Depends(_require_auth)])
     async def post_reset() -> dict:
         """Handle POST /api/reset — reset simulation to initial state."""
-        async with sim._lock:
-            return sim.reset()
+        with sim._lock:
+            snap = sim.reset()
+        logger.info(
+            "api.reset: step=%d regime=%s",
+            snap.get("step", 0),
+            snap.get("regime", ""),
+        )
+        return snap
 
     @app.get("/api/config")
     async def get_config() -> dict:
@@ -419,7 +467,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             MetricsExporter,
         )
 
-        async with sim._lock:
+        with sim._lock:
             snap = sim.snapshot()
         exporter = MetricsExporter()
         upde_state = UPDEState(
@@ -438,7 +486,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         """Deep health check — verifies engine, monitor, and regime subsystems."""
         checks: dict[str, str] = {}
         try:
-            async with sim._lock:
+            with sim._lock:
                 snap = sim.snapshot()
             checks["engine"] = "ok" if snap.get("step", -1) >= 0 else "degraded"
             r_val = snap.get("R_global", float("nan"))
@@ -456,7 +504,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         await websocket.accept()
         try:
             while True:
-                async with sim._lock:
+                with sim._lock:
                     state = sim.snapshot()
                 await websocket.send_text(json.dumps(state))
                 await asyncio.sleep(spec.sample_period_s)

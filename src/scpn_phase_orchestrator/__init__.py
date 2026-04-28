@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -14,6 +15,12 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0+unknown"
 
+from scpn_phase_orchestrator.artifacts.qpu_data import (
+    QPUDataArtifact,
+    compile_domain_to_qpu_artifact,
+    emit_qpu_data_artifact,
+    validate_qpu_data_artifact,
+)
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
@@ -43,6 +50,7 @@ __all__ = [
     "CouplingBuilder",
     "PhaseExtractor",
     "PhaseState",
+    "QPUDataArtifact",
     "RegimeManager",
     "SPOError",
     "SparseUPDEEngine",
@@ -50,7 +58,10 @@ __all__ = [
     "StuartLandauEngine",
     "SupervisorPolicy",
     "UPDEEngine",
+    "compile_domain_to_qpu_artifact",
+    "emit_qpu_data_artifact",
     "find_critical_coupling",
     "lyapunov_spectrum",
     "trace_sync_transition",
+    "validate_qpu_data_artifact",
 ]

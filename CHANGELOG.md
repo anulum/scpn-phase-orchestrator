@@ -7,9 +7,969 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-04-18 — coupling.spectral multi-backend)
+- `julia/spectral.jl`, `go/spectral.go` (→ `libspectral.so`),
+  `mojo/spectral.mojo` (→ `spectral_mojo`) implementing the
+  symmetric eigendecomposition of the combinatorial graph
+  Laplacian ``L = D − |W|`` (Dörfler-Bullo 2014, 2013).
+- Python bridges `coupling/_spectral_{julia,go,mojo}.py`.
+- `coupling/spectral.py` upgraded to a five-backend dispatcher
+  on the ``spectral_eig(W, n) → (eigvals, fiedler)`` primitive.
+  Rust retains its five pre-existing per-function FFI fast paths
+  (``fiedler_value``, ``fiedler_vector``, ``spectral_gap``,
+  ``critical_coupling``, ``sync_convergence_rate``); Julia, Go,
+  Mojo, Python route through the shared primitive.
+- Julia uses ``LinearAlgebra.eigen(Symmetric(L))`` (LAPACK
+  ``dsyev``). Go uses ``gonum.org/v1/gonum/mat.EigenSym`` —
+  pure-Go symmetric solver, no LAPACK. Mojo calls LAPACK
+  ``dsyev_`` via the ``std.ffi.OwnedDLHandle`` pattern unlocked
+  in commit ``6be6f9e``. Explicit symmetrisation
+  (``0.5 (L + Lᵀ)``) in Julia/Go/Mojo guards against
+  floating-point asymmetry introduced during ``L = D − W``
+  construction that would otherwise trip gonum / LAPACK's
+  triangle-specific solvers.
+- Python reference realigned to the same construction
+  (``np.linalg.eigh`` on the explicit ``graph_laplacian``).
+- 36 new tests — `tests/test_spectral_algorithm.py` (18 incl.
+  Hypothesis: Laplacian row-sums, ``λ_min = 0``, complete-graph
+  closed form ``K_c = Δω / N``, disconnected-graph
+  ``K_c = ∞``, partition disjointness),
+  `tests/test_spectral_backends.py` (14 cross-backend parity
+  checking eigenvalue arrays and eigen-equation residual
+  ``||L·v₂ − λ₂·v₂||`` to handle the ``±sign`` eigenvector
+  ambiguity), `tests/test_spectral_stability.py` (4 long-run
+  invariants — N=50 scale-up, Fiedler-1973 ``λ₂``-monotonicity
+  under edge addition, disconnected-component detection,
+  Anderson-Morley ``λ_max ≤ 2 d_max`` bound).
+- Regression-green: pre-existing `test_spectral.py`,
+  `test_prop_hodge_spectral.py`, `test_convergence_topology.py`,
+  `test_roundtrip_consistency.py` — **149 existing tests still
+  pass**.
+- Parity: eigenvalues agree to ``~1e-12`` across LAPACK-based
+  backends (Rust, Julia, Mojo, Python) and ``~1e-11`` for
+  Go's ``gonum.EigenSym`` — tight enough for all consumers
+  (``ssgf.costs`` and ``ssgf.ethical`` both consume
+  ``fiedler_value`` scalar outputs).
+- `benchmarks/spectral_benchmark.py` — per-backend wall-clock
+  harness at ``N ∈ {16, 64, 128}``. Measured numbers show Go
+  winning at ``N=128`` (78 ms vs Julia 159 ms vs Rust 198 ms
+  vs Python 597 ms vs Mojo 1099 ms) — ``gonum.EigenSym``'s
+  pure-Go implementation outperforms LAPACK's divide-and-conquer
+  path for medium-sized dense Laplacians; Julia leads at
+  ``N=64``; Rust carries real per-call overhead from the
+  Laplacian allocator on small problems. Canonical
+  Rust → Mojo → Julia → Go → Python ordering retained per
+  ``feedback_fallback_chain_ordering.md``.
+
+### Added (2026-04-18 — market multi-backend)
+- `julia/market.jl`, `go/market.go` (→ `libmarket.so`),
+  `mojo/market.mojo` (→ `market_mojo`) implementing two
+  financial-Kuramoto compute kernels:
+  * ``market_order_parameter(phases, T, N) → R[T]`` — per-row
+    Kuramoto order parameter, ``O(T · N)``.
+  * ``market_plv(phases, T, N, window) → PLV[n_windows, N, N]``
+    — rolling phase-locking-value matrix with a sincos
+    precompute that eliminates trig from the inner loop,
+    ``O((T − W + 1) · N² · W)``.
+- Python bridges `upde/_market_{julia,go,mojo}.py`.
+- `upde/market.py` upgraded to five-backend dispatcher for both
+  kernels; ``extract_phase`` (scipy ``hilbert``) stays Python-
+  side because the compiled backends do not ship an FFT;
+  ``detect_regimes`` and ``sync_warning`` remain ``O(T)``
+  masking / comparison operations.
+- 33 new tests — `tests/test_market_algorithm.py` (18 incl.
+  Hypothesis: locked-ensemble ``R ≈ 1``, uniform-ensemble
+  ``R ≈ 0``, PLV diagonal == 1, PLV bounds, regime
+  classification, crossing detection, Hilbert shape invariants),
+  `tests/test_market_backends.py` (10 cross-backend parity for
+  both kernels with Hypothesis sweeps for Rust / Go),
+  `tests/test_market_stability.py` (5 long-run invariants:
+  bounds over T=5000, PLV symmetry, locked subpopulation
+  staying near PLV = 1, empty-input edge case).
+- Parity measured at ``~1e-15`` tolerance — identity-level drift
+  between the native-backend sincos form and the Python
+  reference's ``|np.mean(exp(iθ))|``; mathematically identical
+  but with different rounding accumulation.
+- Regression-green: pre-existing ``test_market.py`` (18 tests)
+  still passes.
+- `benchmarks/market_benchmark.py` — per-backend wall-clock
+  harness for both kernels. Rust leads at production sizes
+  (PLV at ``T=500, N=16, W=50``: 16.76 ms Rust vs 24.75 ms
+  Julia vs 36.43 ms Go vs 30.45 ms Python). Go wins only on
+  the small ``T=100, N=8, W=20`` PLV problem where the rayon
+  fork-join overhead dominates.
+
+### Changed (2026-04-18 — bifurcation DRY refactor)
+- `upde/bifurcation.py` now delegates its single-trial Kuramoto
+  integrator to :func:`basin_stability.steady_state_r` instead
+  of carrying a local duplicate. The Python-composite branch of
+  ``trace_sync_transition`` / ``find_critical_coupling``
+  therefore inherits the full 5-backend dispatcher (Rust / Mojo
+  / Julia / Go / Python) automatically.
+- The two composite Rust fast paths
+  (``trace_sync_transition_rust``,
+  ``find_critical_coupling_bif_rust``) are preserved: they batch
+  the whole ``K``-sweep inside Rust, amortising per-``K``
+  boundary overhead better than N_points × dispatch calls.
+- Pre-existing ``test_bifurcation.py`` (16) still passes; added
+  ``tests/test_bifurcation_dispatch.py`` (3) which forces the
+  Python composite branch and verifies each per-``K`` trial
+  actually routes through ``basin_stability.steady_state_r``.
+
+### Added (2026-04-18 — geometric (torus) multi-backend)
+- `julia/geometric.jl`, `go/geometric.go` (→ `libgeometric.so`),
+  `mojo/geometric.mojo` (→ `geometric_mojo`) implementing the
+  torus-preserving symplectic Euler integrator on
+  ``T^N = (S¹)^N``. Each phase is lifted to ``z_i = exp(iθ_i)``
+  and advanced by the exponential map
+  ``z_i → z_i·exp(i·ω_eff_i·dt)``, eliminating the ``mod 2π``
+  discontinuity artefacts of standard integrators.
+- Python bridges `upde/_geometric_{julia,go,mojo}.py`.
+- `upde/geometric.py` upgraded to five-backend dispatcher on
+  the composite ``run(phases, omegas, knm, ζ, ψ, α, n_steps)``
+  kernel. Python reference realigned to the Rust kernel's
+  sincos expansion (``sin(θ_j − θ_i) = z_im[j]·z_re[i] −
+  z_re[j]·z_im[i]``) and keeps ``(z_re, z_im)`` state between
+  steps (no per-step atan2 round-trip).
+- 25 new tests — `tests/test_geometric_algorithm.py` (12 incl.
+  Hypothesis, zero-coupling pure rotation, zero-everywhere
+  fixed point, ζ-forcing linearisation, torus preservation),
+  `tests/test_geometric_backends.py` (9 cross-backend parity
+  for α=0 / α≠0 regimes with Hypothesis sweeps for Rust / Go),
+  `tests/test_geometric_stability.py` (4 long-run invariants).
+- Regression-green: pre-existing ``test_torus_engine.py``,
+  ``test_torus_engine_deep.py``, ``test_engine_parity.py``,
+  ``test_coverage_sprint2_4.py``, ``test_pipeline_wiring_audit.py``,
+  ``test_upde_math.py`` — 112 tests still pass. A private
+  ``_derivative`` helper is retained on ``TorusEngine`` for the
+  inspection tests in ``test_torus_engine_deep``.
+- Parity: bit-exact 0.0 across Rust / Julia / Go / Python on
+  the α=0 branch; ≈1e-15 on the α≠0 branch (atan2 per-step
+  reconstruction). Mojo ≤ 9e-16.
+- `benchmarks/geometric_benchmark.py` — per-backend wall-clock
+  harness at ``N ∈ {8, 32, 128}``. Go / Julia outperform Rust
+  for N ≥ 32 (same rayon fork-join finding as hypergraph and
+  simplicial); at N=128 Julia leads at 1.69 ms vs Rust 2.99 ms.
+  Canonical Rust → Mojo → Julia → Go → Python ordering
+  retained per ``feedback_fallback_chain_ordering.md``.
+
+### Added (2026-04-18 — reduction (Ott-Antonsen) multi-backend)
+- `julia/reduction.jl`, `go/reduction.go` (→ `libreduction.so`),
+  `mojo/reduction.mojo` (→ `reduction_mojo`) implementing the
+  Ott-Antonsen mean-field RK4 integrator for the complex-scalar
+  ODE ``dz/dt = −(Δ + iω₀)·z + (K/2)·(z − |z|²·z)``
+  (Ott & Antonsen 2008, *Chaos* 18(3):037113).
+- Python bridges `upde/_reduction_{julia,go,mojo}.py`.
+- `upde/reduction.py` upgraded to five-backend dispatcher on the
+  composite ``run(z0, n_steps)`` kernel via ``_run_scalar``.
+  Python reference realigned to the Rust operation order
+  (``half_k = K/2`` factoring + explicit real/imaginary
+  decomposition of the cubic term) for bit-exact parity.
+- The scalar-output helpers ``K_c``, ``steady_state_R``, and
+  ``predict_from_oscillators`` stay Python + optional Rust —
+  O(1) arithmetic and O(N) percentile work do not benefit from
+  multi-language chains.
+- 26 new tests — `tests/test_reduction_algorithm.py` (14 incl.
+  Hypothesis: constructor validation, ``K_c = 2Δ`` analytic
+  relation, ``R_ss = √(1 − 2Δ/K)`` above criticality, zero
+  below, trajectory convergence check, z=0 fixed point,
+  Lorentzian fit from samples), `tests/test_reduction_backends.py`
+  (8 cross-backend parity incl. subcritical + Hypothesis sweeps
+  for Rust / Go), `tests/test_reduction_stability.py` (4
+  long-run invariants: unit-disc invariance, subcritical
+  attraction, supercritical convergence, monotone radius
+  decay below criticality).
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python after 500 RK4 steps; Mojo ≤ 1.1e-16.
+- Regression check: pre-existing test_ott_antonsen.py (12),
+  test_upde_engine_validation.py (19), test_upde_math.py (25),
+  test_stress_scale.py (10) — 66 tests still pass.
+- `benchmarks/reduction_benchmark.py` — per-backend wall-clock
+  harness at ``n_steps ∈ {500, 5000, 50000}``. Rust leads at
+  every size (1.82 ms vs Julia 1.92 ms vs Go 1.86 ms for
+  50k steps — the native compiled backends cluster within 6 %
+  of each other, Python is 27× slower, Mojo's subprocess
+  overhead dominates small workloads).
+
+### Added (2026-04-18 — splitting multi-backend)
+- `julia/splitting.jl`, `go/splitting.go` (→ `libsplitting.so`),
+  `mojo/splitting.mojo` (→ `splitting_mojo`) implementing the
+  Strang second-order operator splitting integrator
+  (Hairer-Lubich-Wanner 2006, *Geometric Numerical Integration*
+  §II.5). Scheme: A(dt/2) → B(dt) → A(dt/2) with A = exact
+  rotation by ω and B = RK4 on the coupling-only derivative.
+- Python bridges `upde/_splitting_{julia,go,mojo}.py`.
+- `upde/splitting.py` upgraded to five-backend dispatcher on the
+  composite ``run(phases, omegas, knm, ζ, ψ, α, n_steps)``
+  kernel. Python reference realigned to the Rust sincos
+  expansion (plus the ``ζ·sin(ψ−θ) = ζ·sin(ψ)·cos(θ) −
+  ζ·cos(ψ)·sin(θ)`` identity) for bit-exact parity.
+- 25 new tests — `tests/test_splitting_algorithm.py` (13 incl.
+  Hypothesis: constructor validation, K=0 exact-rotation
+  collapse, zero-coupling-zero-drive fixed point, ζ-forcing
+  linearisation, run-matches-stepped composition),
+  `tests/test_splitting_backends.py` (9 cross-backend parity
+  for alpha=0 / alpha≠0 regimes with Hypothesis sweeps for
+  Rust / Go), `tests/test_splitting_stability.py` (4 long-run
+  invariants including the Strang promise that the pure-ω
+  direction carries **zero truncation error**, verified over
+  1000 Euler steps).
+- Constructor now accepts negative ``dt`` so the pre-existing
+  symplectic-reversibility test in ``test_splitting.py``
+  continues to work: Strang is time-reversible, and negative
+  ``dt`` falls through to the Python reference because the
+  Rust/Julia/Go/Mojo kernels all validate ``dt > 0``.
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python under {alpha=0, alpha≠0} × {ζ=0, ζ>0}; Mojo ≤ 2.8e-17.
+- `benchmarks/splitting_benchmark.py` rewritten as a per-backend
+  wall-clock harness at ``N ∈ {8, 32, 128}``. Rust outperforms
+  every other backend at all sizes (0.07 ms at N=8, 5.72 ms at
+  N=128) because the splitting kernel is sequential — no
+  ``par_iter_mut`` thread-pool overhead, unlike the hypergraph
+  and simplicial kernels.
+
+### Added (2026-04-18 — simplicial multi-backend)
+- `julia/simplicial.jl`, `go/simplicial.go`
+  (→ `libsimplicial.so`), `mojo/simplicial.mojo`
+  (→ `simplicial_mojo`) implementing pairwise + 3-body
+  all-to-all simplicial Kuramoto (Gambuzza et al. 2023,
+  Tang et al. 2025) using the closed-form
+  ``Σ_{j,k} sin(θ_j + θ_k − 2θ_i) = 2 · S_i · C_i``
+  identity with two global sin/cos sums — O(N²) total.
+- Python bridges `upde/_simplicial_{julia,go,mojo}.py`.
+- `upde/simplicial.py` upgraded to five-backend dispatcher
+  on the ``run(phases, omegas, knm, ζ, ψ, α, n_steps)``
+  composite; pairwise path uses the Rust kernel's sincos
+  expansion on the alpha-zero branch for bit-exact parity.
+- 29 new tests — `tests/test_simplicial_algorithm.py` (14
+  incl. Hypothesis: constructor validation, σ₂=0 Kuramoto
+  limit, brute-force ``2·S_i·C_i`` identity check on N=4,
+  ζ-forcing), `tests/test_simplicial_backends.py` (11
+  cross-backend parity for {alpha=0, alpha≠0, σ₂=0} regimes
+  with Hypothesis sweeps for Rust / Go),
+  `tests/test_simplicial_stability.py` (4 long-run invariants).
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python under every combination of {alpha=0, alpha≠0} ×
+  {σ₂=0, σ₂>0} × {ζ=0, ζ>0}; Mojo agrees within the
+  subprocess text-round-trip epsilon.
+- `benchmarks/simplicial_benchmark.py` rewritten as a
+  per-backend wall-clock harness at
+  ``N ∈ {8, 32, 128}``, ``σ₂=0.5``. Measured numbers mirror
+  the hypergraph finding: Go / Julia outperform Rust on small
+  N because rayon fork-join overhead in the Rust
+  ``par_iter_mut`` path dominates the O(N²) per-step compute.
+  Canonical Rust → Mojo → Julia → Go → Python ordering is
+  retained per ``feedback_fallback_chain_ordering.md``.
+
+### Added (2026-04-18 — hypergraph multi-backend)
+- `julia/hypergraph.jl`, `go/hypergraph.go`
+  (→ `libhypergraph.so`), `mojo/hypergraph.mojo`
+  (→ `hypergraph_mojo`) implementing the generalised k-body
+  Kuramoto stepper (Tanaka-Aoyagi 2011, Skardal-Arenas 2019,
+  Bick et al. 2023) with an optional dense pairwise ``K`` term
+  and external ``(ζ, ψ)`` drive.
+- Python bridges `upde/_hypergraph_{julia,go,mojo}.py`.
+- `upde/hypergraph.py` upgraded to five-backend dispatcher
+  operating on the ``run(phases, omegas, n_steps, …)`` entry
+  point (composite-step batching matches the Rust FFI).
+- Python reference realigned to the Rust sincos expansion
+  ``sin(θ_j − θ_i) = s_j·c_i − c_j·s_i`` on the ``alpha == 0``
+  fast path; nonzero alpha uses the direct ``sin(diff)`` form
+  in all five backends, matching Rust bit-for-bit.
+- 29 new tests — `tests/test_hypergraph_algorithm.py` (13 incl.
+  Hypothesis: Hyperedge API, phase wrap, zero-coupling rotation,
+  pairwise-only Kuramoto limit, triadic fixed-point preservation,
+  near-sync local stability, ζ-forcing),
+  `tests/test_hypergraph_backends.py` (11 cross-backend parity
+  for pairwise / alpha≠0 / no-pairwise regimes with Hypothesis
+  sweeps for Rust / Go),
+  `tests/test_hypergraph_stability.py` (5 long-run invariants).
+- Parity measured bit-exact (0.0) across Rust / Julia / Go /
+  Python on pairwise+triadic+4-body ICs with alpha=0,
+  alpha≠0, and ζ≠0; Mojo agrees within the subprocess
+  text-round-trip epsilon.
+- `benchmarks/hypergraph_benchmark.py` rewritten as a per-backend
+  wall-clock harness at ``N ∈ {8, 32, 64}`` with 2·N random
+  triadic edges. Measured numbers show Go outperforming Rust
+  for small N: the kernel's inner loop is mostly sequential
+  hyperedge accumulation, so the rayon fork-join overhead in
+  the Rust ``par_iter_mut`` path dominates at sub-O(10⁴) work
+  per step. The canonical Rust → Mojo → Julia → Go → Python
+  ordering is retained per
+  ``feedback_fallback_chain_ordering.md``; the benchmark
+  records what actually happens on this workload.
+
+### Added (2026-04-18 — inertial multi-backend)
+- `julia/inertial.jl`, `go/inertial.go` (→ `libinertial.so`),
+  `mojo/inertial.mojo` (→ `inertial_mojo`) implementing the
+  second-order (swing-equation) Kuramoto RK4 stepper
+  (Filatrella-Nielsen-Mallick 2008).
+- Python bridges `upde/_inertial_{julia,go,mojo}.py`.
+- `upde/inertial.py` upgraded to five-backend dispatcher. The
+  Python reference was realigned to use the same
+  ``sin(θ_j − θ_i) = sin(θ_j)·cos(θ_i) − cos(θ_j)·sin(θ_i)``
+  expansion as the Rust kernel (``spo-engine/src/inertial.rs``),
+  giving bit-exact parity across Rust / Julia / Go / Python. Mojo
+  drifts only by the subprocess text-round-trip epsilon.
+- 21 new tests — `tests/test_inertial_algorithm.py` (13 incl.
+  Hypothesis: RK4 exactness under zero coupling + zero damping,
+  exponential ω-decay under damping, phase wrap, shapes, helpers)
+  and `tests/test_inertial_backends.py` (8 cross-backend +
+  multi-step parity with Hypothesis sweeps for Rust / Go).
+- Parity measured 0.0 bit-exact across Rust / Julia / Go / Python
+  and 1.7e-18 on Mojo for one RK4 step on the canonical N=8
+  all-to-all test problem.
+- `benchmarks/inertial_benchmark.py` rewritten as a per-backend
+  wall-clock harness at ``N ∈ {8, 32, 128}`` (the earlier single-
+  backend stub is replaced; no historical numbers are lost since
+  it printed only a single throughput figure).
+
+### Added (2026-04-18 — basin_stability multi-backend)
+- `julia/basin_stability.jl`, `go/basin_stability.go`
+  (→ `libbasin_stability.so`), `mojo/basin_stability.mojo`
+  (→ `basin_stability_mojo`) implementing the one-trial Kuramoto
+  ``steady_state_r`` kernel (explicit Euler, transient discarded,
+  time-averaged order parameter).
+- Python bridges `upde/_basin_stability_{julia,go,mojo}.py`.
+- `upde/basin_stability.py` upgraded to five-backend dispatcher on
+  the single-trial kernel. Rust's ``steady_state_r_rust`` FFI is
+  now the active path; ``basin_stability(...)`` owns the Monte
+  Carlo loop + RNG in Python (``np.random.default_rng(seed)``) and
+  calls the dispatched trial kernel once per IC. This is the
+  ``dimension`` pattern — Python owns randomness so the compute
+  primitive stays deterministic and parity-testable.
+- 26 new tests — `tests/test_basin_stability_algorithm.py` (16
+  algorithmic + Hypothesis incl. physics limits, threshold
+  monotonicity, ``multi_basin_stability`` keys, shape / bounds /
+  determinism), `tests/test_basin_stability_backends.py` (10
+  cross-backend parity with Hypothesis sweeps for Rust / Go).
+- Parity measured bit-exact (0.0) across all five backends for
+  the canonical all-to-all test problem.
+- `benchmarks/basin_stability_benchmark.py` — per-backend
+  wall-clock harness at ``N ∈ {8, 32, 64}``, ``n_transient=200``,
+  ``n_measure=100``.
+
+### Added (2026-04-18 — swarmalator multi-backend)
+- `julia/swarmalator.jl`, `go/swarmalator.go`
+  (→ `libswarmalator.so`), `mojo/swarmalator.mojo`
+  (→ `swarmalator_mojo`) implementing the O(N²·d) swarmalator
+  step (O'Keeffe & Strogatz 2017) with position attraction /
+  repulsion coupled to Kuramoto-style phase dynamics.
+- Python bridges `upde/_swarmalator_{julia,go,mojo}.py`.
+- `upde/swarmalator.py` upgraded to five-backend dispatcher.
+  `SwarmalatorEngine` keeps ``(n_agents, dim, dt)`` state;
+  the step itself stays stateless ``(pos, phases, omegas) →
+  (new_pos, new_phases)``.
+- Python reference fallback re-aligned to the Rust kernel:
+  repulse uses ``b / (dist · d²ₛᵤₘ + eps)`` (pre-eps squared
+  sum), not the earlier ``b / (dist³ + eps)`` variant. The two
+  agree as ``eps → 0`` but drift at small distances; all four
+  non-Rust backends now match Rust exactly.
+- 19 new tests — `tests/test_swarmalator_algorithm.py` (11
+  algorithmic + Hypothesis: phase wrap invariant, translation
+  invariance of velocity, coincident-agents regularisation,
+  ``k = 0`` decouples phases from positions),
+  `tests/test_swarmalator_backends.py` (8 cross-backend parity
+  with Hypothesis sweeps for Rust / Go).
+- Parity: Rust 5.5e-17, Julia 0.0 exact, Go 2.8e-17, Mojo
+  1.1e-16 (all under the 1e-9 tolerance).
+- `benchmarks/swarmalator_benchmark.py` — per-backend wall-clock
+  harness at ``N ∈ {8, 32, 128}``, ``dim=2``, 5 calls.
+
+### Added (2026-04-18 — retrofitted per-backend benchmarks)
+- `benchmarks/psychedelic_benchmark.py`,
+  `benchmarks/hodge_benchmark.py`,
+  `benchmarks/envelope_benchmark.py` — per-backend wall-clock
+  harnesses for the three earlier migrations whose
+  benchmark step had been skipped. Each sweeps a representative
+  size range and records ``ms_per_call`` for every available
+  backend.
+
+### Added (2026-04-18 — envelope multi-backend)
+- `julia/envelope.jl`, `go/envelope.go` (→ `libenvelope.so`),
+  `mojo/envelope.mojo` (→ `envelope_mojo`) implementing
+  sliding-window RMS (O(T) cumulative-sum form) + modulation depth.
+- Python bridges `upde/_envelope_{julia,go,mojo}.py`.
+- `upde/envelope.py` upgraded to five-backend dispatcher on the
+  1-D path. The 2-D batched ``(T, N)`` path stays pure NumPy (Rust
+  FFI is 1-D-only; vectorised NumPy is already near-optimal).
+- Python fallback handles the ``window > T`` edge case (all-zero
+  output to match Rust canonical behaviour); parity tests restrict
+  Hypothesis to the physically meaningful ``window ≤ T`` regime.
+- 20 new tests — `tests/test_envelope_algorithm.py` (12 algorithmic
+  + Hypothesis), `tests/test_envelope_backends.py` (8 cross-backend
+  parity with Hypothesis sweeps for Rust / Go).
+- Parity bit-equivalent (0.0 exact) on Rust / Julia / Go; 3.3e-15
+  on Mojo.
+
+### Added (2026-04-18 — hodge multi-backend)
+- `julia/hodge.jl`, `go/hodge.go` (→ `libhodge.so`),
+  `mojo/hodge.mojo` (→ `hodge_mojo`) implementing the Hodge
+  decomposition of coupling dynamics into symmetric (gradient),
+  antisymmetric (curl), and harmonic (residual) per-oscillator
+  components (Jiang et al. 2011).
+- Python bridges `coupling/_hodge_{julia,go,mojo}.py`.
+- `coupling/hodge.py` upgraded to five-backend dispatcher.
+- 15 new tests — `tests/test_hodge_algorithm.py` (8 algorithmic +
+  Hypothesis incl. symmetric-K → zero curl, antisymmetric-K → zero
+  gradient, gradient+curl+harmonic reconstructs total),
+  `tests/test_hodge_backends.py` (7 cross-backend parity with
+  Hypothesis sweeps for Rust / Go).
+- Parity measured bit-equivalent (4.4e-16) on Rust/Julia/Go.
+  Mojo 8.9e-16.
+
+### Added (2026-04-18 — psychedelic entropy multi-backend)
+- `julia/psychedelic.jl`, `go/psychedelic.go`
+  (→ `libpsychedelic.so`), `mojo/psychedelic.mojo`
+  (→ `psychedelic_mojo`) implementing the circular-phase Shannon
+  entropy kernel (wrap to ``[0, 2π)`` + histogram + entropy in nats).
+- Python bridges `monitor/_psychedelic_{julia,go,mojo}.py`.
+- `monitor/psychedelic.py` upgraded to five-backend dispatcher for
+  `entropy_from_phases`. `reduce_coupling` and
+  `simulate_psychedelic_trajectory` stay as they are —
+  `reduce_coupling` is a scalar matrix multiplication, not a compute
+  kernel, and `simulate_psychedelic_trajectory` is a wrapper that
+  composes `UPDEEngine.run`, `compute_itpc`, `detect_chimera`,
+  and the new `entropy_from_phases` dispatcher.
+- 16 new tests — `tests/test_psychedelic_algorithm.py` (9
+  algorithmic + Hypothesis incl. translation invariance,
+  log(n_bins) upper bound, n_bins parameter effect),
+  `tests/test_psychedelic_backends.py` (7 cross-backend parity,
+  Hypothesis sweeps for Rust / Go).
+- Parity measured at 4.4e-16 on Rust / Julia / Go and 1.2e-12 on
+  Mojo (under the 1e-9 tolerance).
+
+### Added (2026-04-18 — poincare multi-backend)
+- `julia/poincare.jl`, `go/poincare.go` (→ `libpoincare.so`),
+  `mojo/poincare.mojo` (→ `poincare_mojo`) implementing the
+  generic hyperplane Poincaré section and the phase-oscillator
+  variant (2π wrap detection) with linear interpolation.
+- Python bridges `monitor/_poincare_julia.py`,
+  `monitor/_poincare_go.py`, `monitor/_poincare_mojo.py`.
+- `monitor/poincare.py` upgraded to five-backend dispatcher with a
+  caller-preallocated output convention: both kernels return
+  ``(crossings_flat, times, n_crossings)`` where the output
+  buffers are sized to ``T * d`` / ``T * N`` (worst case) and the
+  dispatcher reshapes the populated prefix.
+- 19 new tests — `tests/test_poincare_algorithm.py` (10
+  algorithmic + Hypothesis + direction filtering),
+  `tests/test_poincare_backends.py` (5 cross-backend parity with
+  array-exact crossing counts and 1e-9 coord tolerances),
+  `tests/test_poincare_stability.py` (4 long-run invariants,
+  `pytest.mark.slow`).
+- Parity measured bit-exact across Rust / Julia / Go and 1.5e-18
+  on Mojo (subprocess text round-trip).
+
+### Added (2026-04-18 — embedding primitives multi-backend)
+- `julia/embedding.jl`, `go/embedding.go` (→ `libembedding.so`),
+  `mojo/embedding.mojo` (→ `embedding_mojo`) implementing three
+  delay-embedding primitives: `delay_embed`, `mutual_information`
+  (Fraser-Swinney 1986), `nearest_neighbor_distances` (k=1 brute
+  kNN for FNN).
+- Python bridges `monitor/_embedding_julia.py`,
+  `monitor/_embedding_go.py`, `monitor/_embedding_mojo.py`.
+- `monitor/embedding.py` upgraded to five-backend dispatcher.
+  Rust has no standalone MI or kNN FFI — the dispatcher falls
+  through to the next available backend for those two, while
+  keeping Rust's native `optimal_delay_rust` and
+  `optimal_dimension_rust` fast paths for the wrappers.
+- 25 new tests — `tests/test_embedding_algorithm.py` (12
+  algorithmic + Hypothesis), `tests/test_embedding_backends.py`
+  (10 cross-backend parity including Rust-active MI/NN
+  fall-through), `tests/test_embedding_stability.py` (3 long-run
+  invariants, `pytest.mark.slow`).
+- Parity: `delay_embed` array-exact, `nearest_neighbor_distances`
+  within 3e-17 and array-exact indices, `mutual_information`
+  within 1e-9 (histogram bin-edge rounding vs `np.histogram2d`).
+
+### Added (2026-04-18 — recurrence multi-backend)
+- `julia/recurrence.jl`, `go/recurrence.go`
+  (→ `librecurrence.so`), `mojo/recurrence.mojo`
+  (→ `recurrence_mojo`) implementing the Eckmann 1987 recurrence
+  matrix and cross-recurrence matrix with both euclidean and
+  angular (chord-distance) metrics.
+- Python bridges `monitor/_recurrence_julia.py`,
+  `monitor/_recurrence_go.py`, `monitor/_recurrence_mojo.py`.
+- `monitor/recurrence.py` upgraded to five-backend dispatcher.
+  `rqa` and `cross_rqa` now always use the dispatched matrix and
+  a Python-side line-length analysis for uniform behaviour across
+  backends.
+- Rewrote `benchmarks/recurrence_benchmark.py` as a multi-backend
+  wall-clock harness (was a Rust-only Criterion-style print).
+- 29 new tests — `tests/test_recurrence_algorithm.py` (14
+  algorithmic + Hypothesis incl. angular-metric correctness),
+  `tests/test_recurrence_backends.py` (12 cross-backend parity
+  with **array-exact** boolean equality; both metrics),
+  `tests/test_recurrence_stability.py` (3 long-run invariants,
+  `pytest.mark.slow`).
+- `docs/reference/api/monitor_recurrence.md` (475 lines) with
+  Eckmann / Marwan formalism, per-backend build notes, measured
+  benchmarks, failure modes, and references.
+
+### Added (2026-04-18 — winding multi-backend)
+- `julia/winding.jl`, `go/winding.go` (→ `libwinding.so`),
+  `mojo/winding.mojo` (→ `winding_mojo`) implementing the
+  cumulative winding-number tracker (integer int64 output).
+- Python bridges `monitor/_winding_julia.py`,
+  `monitor/_winding_go.py`, `monitor/_winding_mojo.py`.
+- `monitor/winding.py` upgraded to five-backend dispatcher.
+- 20 new tests — `tests/test_winding_algorithm.py` (10
+  algorithmic + Hypothesis), `tests/test_winding_backends.py` (7
+  cross-backend parity with **array-exact** integer equality
+  across every backend), `tests/test_winding_stability.py` (3
+  long-run invariants incl. additivity across splits, N=64×T=10000
+  stress, noise robustness; `pytest.mark.slow`).
+- `benchmarks/winding_benchmark.py` multi-backend wall-clock
+  harness.
+- `docs/reference/api/monitor_winding.md` (395 lines) with winding
+  formalism, per-backend build notes, measured benchmarks, failure
+  modes, and references.
+
+### Added (2026-04-18 — chimera multi-backend)
+- `julia/chimera.jl`, `go/chimera.go` (→ `libchimera.so`),
+  `mojo/chimera.mojo` (→ `chimera_mojo`) implementing the
+  Kuramoto & Battogtokh 2002 local order parameter per oscillator.
+- Python bridges `monitor/_chimera_julia.py`,
+  `monitor/_chimera_go.py`, `monitor/_chimera_mojo.py`.
+- `monitor/chimera.py` upgraded to five-backend dispatcher.
+  Classification thresholds + partition stay Python-side.
+- 24 new tests — `tests/test_chimera_algorithm.py` (13 algorithmic
+  + Hypothesis + exact uniform-circle identity),
+  `tests/test_chimera_backends.py` (8 cross-backend parity with
+  Hypothesis sweeps for Rust / Go), `tests/test_chimera_stability.py`
+  (3 long-run invariants incl. narrow-kernel ring chimera,
+  `pytest.mark.slow`).
+- `benchmarks/chimera_benchmark.py` multi-backend wall-clock
+  harness.
+- `docs/reference/api/monitor_chimera.md` (420 lines) with
+  Kuramoto-Battogtokh formalism, per-backend build notes,
+  measured benchmarks, failure modes, and references.
+
+### Added (2026-04-18 — dimension multi-backend)
+- `julia/dimension.jl`, `go/dimension.go`
+  (→ `libdimension.so`), `mojo/dimension.mojo`
+  (→ `dimension_mojo`) implementing the Grassberger-Procaccia 1983
+  correlation integral and Kaplan-Yorke 1979 dimension.
+- Python bridges `monitor/_dimension_julia.py`,
+  `monitor/_dimension_go.py`, `monitor/_dimension_mojo.py`.
+- `monitor/dimension.py` upgraded to five-backend dispatcher.
+  Pair-subsampling RNG is now Python-owned and threaded through to
+  every non-Rust backend for deterministic cross-backend parity on
+  the full-pairs branch; Rust retains its in-kernel RNG for API
+  stability.
+- 28 new tests — `tests/test_dimension_algorithm.py` (14
+  algorithmic + Hypothesis + analytic KY limits),
+  `tests/test_dimension_backends.py` (11 cross-backend parity with
+  Hypothesis sweeps for Rust / Go), `tests/test_dimension_stability.py`
+  (3 long-run invariants, `pytest.mark.slow`).
+- `benchmarks/dimension_benchmark.py` multi-backend wall-clock
+  harness.
+- `docs/reference/api/monitor_dimension.md` (457 lines) with
+  Grassberger-Procaccia + Kaplan-Yorke formalism, per-backend build
+  notes, measured benchmarks, failure modes, and references.
+
+### Added (2026-04-18 — entropy_prod multi-backend)
+- `julia/entropy_prod.jl`, `go/entropy_prod.go`
+  (→ `libentropy_prod.so`), `mojo/entropy_prod.mojo`
+  (→ `entropy_prod_mojo`) implementing the overdamped-Kuramoto
+  dissipation rate Σ (dθ/dt)² · dt.
+- Python bridges `monitor/_entropy_prod_julia.py`,
+  `monitor/_entropy_prod_go.py`, `monitor/_entropy_prod_mojo.py`.
+- `monitor/entropy_prod.py` upgraded to five-backend dispatcher
+  (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`).
+- 21 new tests — `tests/test_entropy_prod_algorithm.py` (11
+  algorithmic + Hypothesis + dispatcher), `tests/test_entropy_prod_backends.py`
+  (7 cross-backend parity at 1e-12 / 1e-9),
+  `tests/test_entropy_prod_stability.py` (3 long-run invariants
+  including a UPDEEngine-coupled synchronisation trace,
+  `pytest.mark.slow`).
+- `benchmarks/entropy_prod_benchmark.py` multi-backend wall-clock
+  harness across N ∈ {16, 64, 256, 1024}.
+- `docs/reference/api/monitor_entropy_prod.md` (548 lines) with
+  Acebrón 2005 formalism, per-backend build notes, measured
+  benchmarks on the local host, failure-mode audit, and references.
+
+### Added (2026-04-18 — itpc multi-backend)
+- `julia/itpc.jl`, `go/itpc.go` (→ `libitpc.so`), `mojo/itpc.mojo`
+  (→ `itpc_mojo`) implementing Lachaux 1999 inter-trial phase
+  coherence (`compute_itpc` + `itpc_persistence`).
+- Python bridges `monitor/_itpc_julia.py`, `monitor/_itpc_go.py`,
+  `monitor/_itpc_mojo.py`.
+- `monitor/itpc.py` upgraded to five-backend dispatcher
+  (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`).
+- 31 new tests — `tests/test_itpc_algorithm.py` (18 algorithmic +
+  Hypothesis), `tests/test_itpc_backends.py` (10 cross-backend
+  parity at 1e-12 for Rust / Julia / Go, 1e-9 for Mojo),
+  `tests/test_itpc_stability.py` (3 long-run invariants,
+  `pytest.mark.slow`).
+- `benchmarks/itpc_benchmark.py` multi-backend wall-clock harness.
+- `docs/reference/api/monitor_itpc.md` (453 lines) with Lachaux
+  1999 formalism, per-backend build notes, measured benchmarks on
+  the local host, and failure-mode audit.
+
+### Added (2026-04-18 — upde engine multi-backend)
+- `julia/upde_engine.jl`, `go/upde_engine.go`
+  (→ `libupde_engine.so`), `mojo/upde_engine.mojo`
+  (→ `upde_engine_mojo`) implementing the Sakaguchi-Kuramoto UPDE
+  batched integrator with Euler, RK4 and Dormand-Prince RK45 with
+  adaptive step-size control.
+- Python bridges `upde/_engine_julia.py`, `upde/_engine_go.py`,
+  `upde/_engine_mojo.py`.
+- Module-level `upde_run` stateless kernel in `upde/engine.py` with
+  5-backend dispatcher (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`).
+  `UPDEEngine.run` now routes through `upde_run` so every available
+  toolchain is exercised.
+- Python reference `_upde_run_python` with RK4 / Euler substepping
+  + inline Dormand-Prince tableau matching
+  `spo-engine/src/upde.rs` bit-for-bit (verified against Rust to
+  1e-12, Mojo to 1e-6).
+- 42 new tests — `tests/test_upde_run_algorithm.py` (13
+  algorithmic properties incl. Hypothesis),
+  `tests/test_upde_run_backends.py` (26 cross-backend parity across
+  3 methods × multiple seeds), `tests/test_upde_run_stability.py` (3
+  long-run invariants, `pytest.mark.slow`).
+- `benchmarks/upde_engine_benchmark.py` multi-backend wall-clock
+  harness across sizes × methods.
+- `docs/reference/api/upde_engine.md` extended with 5-backend
+  section + measured benchmark table on the local host.
+
+### Added (2026-04-18 — lyapunov spectrum multi-backend)
+- `julia/lyapunov.jl`, `go/lyapunov.go` (→ `liblyapunov.so`),
+  `mojo/lyapunov.mojo` (→ `lyapunov_mojo`) implementing the Benettin
+  1980 / Shimada-Nagashima 1979 spectrum with RK4 integration and
+  periodic row-oriented Modified Gram-Schmidt.
+- Python bridges `monitor/_lyapunov_julia.py`, `monitor/_lyapunov_go.py`,
+  `monitor/_lyapunov_mojo.py`.
+- `monitor/lyapunov.py` upgraded to five-backend dispatcher
+  (`ACTIVE_BACKEND`, `AVAILABLE_BACKENDS`). `LyapunovGuard` is
+  preserved unchanged as a stateful single-backend observer.
+- Reference Python kernel switched from forward Euler + coupling-only
+  Jacobian to RK4 + driver-diagonal Jacobian + row-oriented QR so all
+  backends (Rust, Mojo, Julia, Go, Python) agree bit-for-bit on the
+  same problem instance.
+- 32 new tests — `tests/test_lyapunov_algorithm.py` (14 algorithmic
+  properties + Hypothesis), `tests/test_lyapunov_backends.py` (15
+  cross-backend parity, including driver and phase-lag cases),
+  `tests/test_lyapunov_stability.py` (3 long-run invariants, marked
+  `pytest.mark.slow`).
+- `benchmarks/lyapunov_benchmark.py` multi-backend wall-clock harness
+  (warm-up + sized sweep at `N ∈ {4, 8, 16, 32}`).
+- `docs/reference/api/monitor_lyapunov.md` (643 lines) covering the
+  variational equation, Benettin algorithm, row-MGS convention,
+  per-backend build notes, measured benchmarks on the local host,
+  failure modes, and references.
+
+### Added (2026-04-17 — transfer_entropy multi-backend)
+- `julia/transfer_entropy.jl`, `go/transfer_entropy.go`
+  (→ `libtransfer_entropy.so`), `mojo/transfer_entropy.mojo`
+  (→ `transfer_entropy_mojo`) implementing Schreiber 2000 phase
+  transfer entropy (pairwise and full matrix).
+- Python bridges `monitor/_te_julia.py`, `monitor/_te_go.py`,
+  `monitor/_te_mojo.py`.
+- `monitor/transfer_entropy.py` upgraded to five-backend dispatcher.
+- 14 new tests (8 per-backend parity + 6 stability/slow).
+- `benchmarks/transfer_entropy_benchmark.py` multi-backend harness.
+- `docs/reference/api/monitor_transfer_entropy.md` (600 lines)
+  covering Schreiber TE formalism, 5-backend chain, measured
+  benchmarks, physical invariants, comparisons with Granger / PLV /
+  PID.
+
+### Added (2026-04-17 — NPE multi-backend)
+- `julia/npe.jl`, `go/npe.go` (→ `libnpe.so`), `mojo/npe.mojo`
+  (→ `npe_mojo`) implementing the normalised persistent entropy
+  and the circular phase-distance matrix.
+- Python bridges `monitor/_npe_julia.py`, `monitor/_npe_go.py`,
+  `monitor/_npe_mojo.py`.
+- `monitor/npe.py` upgraded to five-backend dispatcher.
+- 17 new tests (12 per-backend parity + 5 stability/slow).
+- `benchmarks/npe_benchmark.py` multi-backend harness.
+
+### Added (2026-04-17 — PAC multi-backend)
+- Julia port `julia/pac.jl`, Go port `go/pac.go` (→ `libpac.so`),
+  Mojo port `mojo/pac.mojo` (→ `pac_mojo` executable) for Tort 2010
+  phase-amplitude coupling.
+- Python bridges `upde/_pac_julia.py`, `upde/_pac_go.py`,
+  `upde/_pac_mojo.py`.
+- `upde/pac.py` now exposes `ACTIVE_BACKEND` / `AVAILABLE_BACKENDS`
+  and dispatches `modulation_index` / `pac_matrix` fastest-first
+  across the five backends.
+- `tests/test_pac_backends.py` — per-backend parity (Rust/Julia/Go
+  bit-exact, Mojo ≤ 1e-10).
+- `tests/test_pac_stability.py` — MI bounded in [0, 1], monotonic in
+  modulation depth, diagonal-vs-off for locked signals. Marked
+  `pytest.mark.slow`.
+- `benchmarks/pac_benchmark.py` — multi-backend wall-clock harness.
+
+### Added (2026-04-17 — order_params multi-backend)
+- Julia port `julia/order_params.jl`, Go port `go/order_params.go`
+  (→ `liborder_params.so`), Mojo port `mojo/order_params.mojo`
+  (→ `order_params_mojo` executable).
+- PyO3 export for `compute_layer_coherence`.
+- `upde/order_params.py` upgraded to five-backend dispatcher.
+- 39 new tests (20 algorithm + 13 per-backend parity + 6 stability).
+
+### Changed — AttnRes upgraded to full multi-head (2026-04-17)
+
+Following the new ``feedback_no_simplistic_models.md`` rule, the
+Phase-3 AttnRes spike was upgraded from a single-equation Hebbian
+proxy to the full arXiv:2603.15031 Transformer architecture:
+
+- **Full multi-head implementation** — Fourier-feature phase
+  embedding (``d_model = 8``), ``H = 4`` attention heads with
+  learnable Q/K/V projections (seeded Xavier init via new
+  ``default_projections()``), scaled dot-product softmax attention
+  (paper-faithful full-N scope; optional ``block_size`` local mask),
+  output projection ``W_O``, symmetric cosine-similarity
+  aggregation onto ``K_nm``.
+- **All 5 backends re-ported** — Rust, Julia, Go, Mojo, Python all
+  now carry the full multi-head kernel. Parity: bit-exact
+  (5.55e-17) for Rust/Julia/Go; 1.55e-14 for Mojo (text-protocol
+  rounding budget).
+- **PyO3 signature extended** to carry the four projection buffers
+  plus ``n_heads`` and a signed ``block_size`` (``-1`` = unbounded
+  full attention).
+- **Test coverage** — 20 algorithm tests, 14 per-backend parity
+  tests, 3 stability tests (marked slow); 37 AttnRes-specific
+  tests total, all pass.
+- **Old single-head ports deleted** per the option-B clause in the
+  new rule: the simplified kernels would have shipped as toys
+  alongside the full model, so they were removed from main rather
+  than left to decay.
+
+### Added — AttnRes multi-language fallback chain (Phase-3 spike)
+- `coupling/attention_residuals.py` — new ``attnres_modulate`` pure
+  function plus multi-backend dispatcher following the global
+  fastest-first rule (Rust → Mojo → Julia → Go → Python). Two public
+  attributes ``ACTIVE_BACKEND`` and ``AVAILABLE_BACKENDS`` let callers
+  see which backends loaded on the current host.
+- `spo-kernel/crates/spo-engine/src/attnres.rs` — Rust implementation
+  with single-scratch-buffer design, no Rayon (measured slower at
+  SPO-realistic N ≤ 64), 11 pure-Rust unit tests, criterion bench in
+  ``utility_bench``. PyO3 binding returns
+  ``Bound<PyArray1<f64>>`` directly to avoid Vec → PyList overhead.
+- `julia/attnres.jl` + `coupling/_attnres_julia.py` — Julia port with
+  lazy ``juliacall`` bridge. Bit-exact parity with the NumPy reference.
+- `go/attnres.go` + `coupling/_attnres_go.py` — Go port compiled to
+  c-shared ``libattnres.so``; ctypes bridge. Bit-exact parity.
+- `mojo/attnres.mojo` + `coupling/_attnres_mojo.py` — Mojo port with
+  subprocess bridge using a single-line text protocol (Mojo 0.26
+  ``UnsafePointer`` C-ABI is in transition; documented upgrade path
+  to ``@export(ABI="C")`` + shared library once the pointer surface
+  stabilises in 0.27+). Parity within 7.72e-15.
+- `benchmarks/attnres_modulation_benchmark.py` — multi-backend
+  overhead measurement against the baseline ``UPDEEngine.step``.
+  Verified Rust speedup of 2.5–4.5× over the NumPy fallback on
+  N ∈ {16, 64, 128, 256}.
+- `tests/test_attention_residuals.py` (17 tests) + new
+  `tests/test_attention_residuals_backends.py` (13 tests) —
+  per-backend parity, symmetry, zero-diagonal, no-new-edges,
+  block-window, lambda=0 identity, contract failures, R-within-5 %
+  validation against the baseline.
+- New global rule at
+  `feedback_fallback_chain_ordering.md` — every multi-language
+  compute dispatcher across GOTM orders backends fastest-first.
+
+### Changed — type discipline (continued)
+- `attention_residuals.py` dispatcher uses a canonical
+  ``_BackendFn`` Callable alias so loader functions are strictly
+  typed; the only remaining ``type: ignore`` is on the juliacall
+  import (juliacall ships no py.typed marker) and is documented
+  inline with its reason.
+
+### Security
+- `adapters/modbus_tls.py` no longer echoes the full private-key or
+  certificate path in `ConnectionError` messages — only the filename.
+- `binding/loader.py` scrubs paths from YAML / JSON / missing-file
+  errors via `path.name` + `OSError.strerror`.
+- `adapters/lsl_bci_bridge.py` stops echoing the configured
+  `stream_name` in the "Could not connect" RuntimeError.
+- `adapters/remanentia_bridge.py` stops echoing the offending URL
+  when rejecting a non-http(s) scheme.
+- `modbus_tls` enables `CERT_REQUIRED` + hostname verification when
+  a CA bundle is configured (previously `CERT_NONE` by default).
+
+### Added — amplitude metric chain in QueueWaves pipeline
+- `PhaseComputePipeline.tick()` now populates `mean_amplitude`,
+  `subcritical_fraction`, and `pac_max` on the emitted `UPDEState`
+  using a 32-tick rolling window of Hilbert amplitudes. Policy rules
+  referencing those metrics now fire as documented.
+- `ServiceSnapshot.amplitude` reports the real Hilbert envelope
+  instead of a hard-coded 1.0.
+
+### Added — criterion bench suite expansion
+- `spo-kernel/crates/spo-engine/benches/parallel_bench.rs` extended
+  to cover all salvaged Rayon compute paths (chimera, bifurcation,
+  dimension, poincare, market, coupling_est, sindy, kaplan_yorke).
+- `spo-kernel/crates/spo-engine/benches/monitors_bench.rs` (new) —
+  8 sequential compute paths (spectral, lyapunov, transfer_entropy,
+  embedding, recurrence, hodge, entropy_prod, pid).
+- `spo-kernel/crates/spo-engine/benches/utility_bench.rs` (new) —
+  12 remaining compute paths (basin_stability, itpc, ei_balance,
+  splitting, imprint, npe, evs, phase_extract, carrier, ethical,
+  connectome, oa_run).
+- Coverage across 4 bench binaries is now ~24 spo-engine modules.
+
+### Changed — type discipline
+- `src/scpn_phase_orchestrator/server.py` `_lifespan` annotated
+  `AsyncIterator[None]` (was missing a return type).
+- `tools/benchmark_summary.py` rewritten to use an argv list plus
+  `env=` parameter in place of `shell=True` with a `noqa: S602`
+  suppression; canonical SPDX header added (the file had none).
+- `tools/coverage_guard.py` shebang moved to line 1 (was at line 9
+  after SPDX, where the kernel does not honour it); `evaluate()`
+  narrows the `dict[str, object]` global threshold via isinstance
+  rather than casting directly.
+- `tools/generate_header.py` modernised matplotlib calls:
+  `add_axes` / `imshow extent` take float tuples; `plt.cm.cool`
+  replaced with `plt.get_cmap("cool")`.
+- `tools/gpu_benchmark.py` `BENCHMARKS` annotated
+  `list[tuple[str, Callable[[], dict]]]`.
+- Combined `mypy src/scpn_phase_orchestrator tools/` reaches 176
+  files, 0 errors (from 16).
+
+### Added — cross-platform tooling
+- `tools/normalise_spdx_headers.py` — one-shot normaliser that
+  converts the 6-line merged SPDX variant to the canonical 7-line
+  form with `--dry-run` / `--apply` / `--verify` modes. Applied to
+  632 files in this release.
+- `tools/generate_grpc.py` — cross-platform Python port of
+  `generate_grpc.sh`, callable from Windows without WSL.
+
+### Added — FPGA synthesisable Verilog
+- `KuramotoVerilogCompiler` now emits Q16.16 fixed-point Verilog that
+  instantiates `cordic_sincos` from `spo-fpga/kuramoto_core.v` for
+  every non-zero K_ij entry — replacing the previous simulation-only
+  `$sin(...)` placeholder. 30-case test suite covers encoding,
+  module structure, synthesisability, CORDIC instantiation and the
+  summation chain.
+
+### Added — observability
+- Structured `logging.getLogger(__name__)` instrumentation on
+  `server.py` (lifespan startup / shutdown, api.reset, api.step),
+  `server_grpc.py` (Step / Reset RPCs) and `supervisor/policy.py`
+  (regime + action count + knob list extras on every `decide()` call).
+
+### Added — concurrent-safety primitives
+- `threading.RLock()` around `UPDEEngine.step/run` and
+  `StuartLandauEngine.step` so shared pre-allocated scratch arrays
+  cannot be corrupted by concurrent callers (multi-client gRPC /
+  WebSocket deployments).
+- `SimulationState._lock` unified to `threading.Lock`; REST and gRPC
+  now serialise against the same mutex.
+- `GaianMeshNode` gained `__enter__` / `__exit__` so
+  `with GaianMeshNode(...)` releases sockets on exit, including on
+  exception paths. FastAPI `create_app` installs an
+  `asynccontextmanager` lifespan that clears the event bus on
+  shutdown.
+
+### Added — constructor validation
+- `UPDEEngine`, `SwarmalatorEngine`, `SimplicialEngine`, `DelayBuffer`,
+  `DelayedEngine`, `InertialKuramotoEngine`, `OttAntonsenReduction`,
+  `JaxUPDEEngine`, `JaxStuartLandauEngine` raise `ValueError` on
+  non-positive `n` / `dt`, negative `sigma²`, zero dim, unknown
+  integration method.
+- `WebhookAlerter.cooldown_seconds`, `MetricBuffer.maxlen`,
+  `PhaseSINDy.threshold / max_iter`, `LyapunovGuard.basin_threshold`,
+  `EventBus.maxlen`, `PGBO.cost_weights` all gain up-front validation.
+
+### Performance
+- `reporting/plots.py` defers the matplotlib import to the first
+  plot call. Importing `CoherencePlot` no longer triggers matplotlib
+  backend init or font cache loading on CLI / server paths.
+- Salvaged Rayon parallelisation for `chimera::local_order_parameter`,
+  `bifurcation::trace_sync_transition`, `dimension`, `market`,
+  `poincare`, `coupling_est`, `sindy`, `spo-wasm`, `active_inference`
+  from the stalled perf branches. Tests + SPDX / ORCID / Contact
+  headers preserved throughout. Dedicated criterion benchmarks added
+  in `spo-engine/benches/parallel_bench.rs`.
+
+### Fixed
+- `pac_matrix_compute` docstring now matches the implementation
+  (row-major, not column-major). Callers must pass `ravel(order="C")`.
+- `spo-engine/benches/upde_bench.rs` failed to compile; three call
+  sites now pass `&mut cs.knm` to match the `UPDEStepper.step/run`
+  mutability contract.
+- 26 ruff errors and 8 cargo warnings introduced by this session's
+  commits — all cleaned. `cargo check --all` and
+  `ruff check src/ tests/ tools/` are zero-warning.
+
+### Changed
+- SPDX headers normalised to canonical 7-line format across 632
+  files (Python, Rust, YAML, TOML, Shell, Markdown). The previous
+  6-line merged `SPDX-License-Identifier: ... | Commercial license
+  available` variant is no longer present in-repo.
+- `docs/reference/api/{coupling,monitor,upde}.md`, CHANGELOG and
+  README no longer use internal quality tier names. Neutral
+  descriptive language replaces them.
+- Incidental `protoscience@anylum.li` email typo corrected to
+  `protoscience@anulum.li` in 9 files.
+
+### Tests — Phase-7 property-based invariants
+- `test_property_monitors.py` (new, 6 tests) — PID non-negativity and
+  empty-group zero-return; phase transfer entropy bounded by
+  `log(n_bins)` for independent signals and for self-TE; Kuramoto
+  supercritical monotonicity (R at K=1.0 is at least R at K=0.4 within
+  a narrow frequency spread) and incoherent-state ceiling at K=0.
+- `test_property_engine.py` (new, 4 tests) — UPDE ``step`` is
+  equivariant under oscillator-index permutations (compared modulo
+  2π on the torus); identity permutation is fixed bit-for-bit;
+  Dense↔Sparse CSR parity for both Euler and RK4 across Hypothesis
+  sparsity masks (10–90%).
+
+### Tests — CI-tool defensive coverage
+- `test_bench_compare_baseline.py` (new, 14 tests) — the CI
+  benchmark-regression guard is now under test: PASS/FAIL branches,
+  list + dict baseline layouts, missing-key / zero-baseline skip,
+  CLI argv length and malformed JSON surfaces.
+- `test_tools_normalise_spdx.py` (new, 23 tests) — SPDX split logic
+  (`#` / `//` / bare), typo fix, `HEADER_SCAN_LIMIT`, excluded dirs
+  and `.venv` prefixes, iter filter, dry-run vs apply atomicity,
+  verify mode exit codes.
+- `test_tools_coverage_guard.py` (new, 32 tests) — validator bounds
+  (NaN/Inf rejected), domain parser (Windows-style paths included),
+  Cobertura XML parser, thresholds schema, per-global / per-domain /
+  per-file evaluation branches, main() integration.
+- `test_tools_check_version_sync.py` (new, 9 tests) — pyproject /
+  CITATION / Cargo version extraction; nested `[dependencies]
+  version = ...` not mis-matched; mismatch and missing-file exits.
+- `test_tools_check_module_linkage.py` (new, 15 tests) — module
+  discovery (`__init__.py` excluded), import-path construction,
+  linkage via dotted import or `test_<stem>` reference, allowlist
+  schema validation, stale-entry detection, `--allow-stale-allowlist`
+  bypass.
+
+### Tests — S6 THIN file strengthening
+- `test_ffi_parity.py` 4 → 15 (Sakaguchi lag, external drive,
+  negative / asymmetric coupling, N=64 scale, degenerate zero state,
+  run() batch, determinism, N=1 / antiphase / full-sync order
+  parameters).
+- `test_pac_parity.py` 3 → 14 (true Python ↔ Rust parity restored;
+  parametrised bin counts; degenerate n_bins < 2; constant amplitude;
+  fully synchronous; short series; matrix shape + diagonal).
+- `test_sindy.py` 1 → 8 (zero-coupling sparsification; N=5 stability;
+  threshold sparsifier contract; equation-dump format; empty input).
+- `test_sparse_engine.py` 3 → 9 (zero CSR parity, RK45 50% density,
+  fully-dense parity, Sakaguchi lag, invalid method, N=1 decouple).
+- `test_sheaf_engine.py` 2 → 7 (zero restriction maps, D=1 long-run
+  parity, per-dim external drive, single oscillator, wrap contract).
+- `test_semantic_compiler.py` 2 → 12 (default layers / base freq;
+  fusion / cell keyword routing; case-insensitive regex; decade
+  scaling; eight oscillators per layer; empty prompt fallback).
+- `test_quantum_bridge.py` 2 → 17 (constructor guards; import_artifact
+  defaults and edges; import_knm validation; round-trip).
+- `test_active_inference_agent.py` 2 → 11 (directionality,
+  target_r bounds, learning rate effect, repeated-call stability).
+- `test_viz_streamer.py` 2 → 11 (defaults, primitives, empty
+  containers, multi-dim, list-of-arrays, numpy dtypes, broadcast
+  no-client and before-start fast paths, deep nesting).
+- `test_lsl_bridge.py` 3 → 12 (constructor defaults,
+  HAS_LSL=False short-circuit, no-stream-found case, stop-before-start
+  idempotence, pure / noisy / empty phase extraction, scrubbed
+  error message).
+
 ### Added — Rust Path Expansion (36 → 53 spo-engine modules)
 - 17 new Rust engine modules: simplicial, hypergraph, geometric, envelope, reduction, splitting, te_adaptive, prior, ethical, sleep_staging, evs, sindy, coupling_est, phase_extract, carrier, connectome, freq_id
-- 17 Superior-level documentation pages (567+ lines each, 8 mandatory sections, verified benchmarks) for all new Rust modules
+- 17 new reference documentation pages (567+ lines each, 8 sections, verified benchmarks) for all new Rust modules
 - Python `_HAS_RUST` auto-select wiring for 15 of 17 modules (coupling_est and phase_extract disabled — LAPACK/FFT faster)
 - Rust test count: 243 → 567 (+324 tests across 17 modules)
 - spo-ffi bindings: ~387 lines of new FFI wrapper functions

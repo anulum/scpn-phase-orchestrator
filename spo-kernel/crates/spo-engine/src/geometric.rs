@@ -220,7 +220,6 @@ mod tests {
 
     #[test]
     fn test_external_drive() {
-        let n = 2;
         let phases = vec![0.0, 0.0];
         let omegas = vec![0.0, 0.0];
         let knm = vec![0.0; 4];

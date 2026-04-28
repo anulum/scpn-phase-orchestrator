@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Commercial license available
 // © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 // © Code 2020–2026 Miroslav Šotek. All rights reserved.
 // ORCID: 0009-0009-3560-0851
@@ -23,7 +24,7 @@ fn bench_euler_step_n64(c: &mut Criterion) {
         ..IntegrationConfig::default()
     };
     let mut stepper = UPDEStepper::new(n, config).unwrap();
-    let cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
+    let mut cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
     let omegas: Vec<f64> = (0..n).map(|i| 1.0 + 0.01 * i as f64).collect();
     let mut phases: Vec<f64> = (0..n)
         .map(|i| i as f64 * std::f64::consts::TAU / n as f64)
@@ -32,7 +33,7 @@ fn bench_euler_step_n64(c: &mut Criterion) {
     c.bench_function("euler_step_n64", |b| {
         b.iter(|| {
             stepper
-                .step(&mut phases, &omegas, &cs.knm, 0.0, 0.0, &cs.alpha)
+                .step(&mut phases, &omegas, &mut cs.knm, 0.0, 0.0, &cs.alpha)
                 .unwrap();
         })
     });
@@ -47,7 +48,7 @@ fn bench_rk4_step_n64(c: &mut Criterion) {
         ..IntegrationConfig::default()
     };
     let mut stepper = UPDEStepper::new(n, config).unwrap();
-    let cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
+    let mut cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
     let omegas: Vec<f64> = (0..n).map(|i| 1.0 + 0.01 * i as f64).collect();
     let mut phases: Vec<f64> = (0..n)
         .map(|i| i as f64 * std::f64::consts::TAU / n as f64)
@@ -56,7 +57,7 @@ fn bench_rk4_step_n64(c: &mut Criterion) {
     c.bench_function("rk4_step_n64", |b| {
         b.iter(|| {
             stepper
-                .step(&mut phases, &omegas, &cs.knm, 0.0, 0.0, &cs.alpha)
+                .step(&mut phases, &omegas, &mut cs.knm, 0.0, 0.0, &cs.alpha)
                 .unwrap();
         })
     });
@@ -81,7 +82,7 @@ fn bench_euler_1000_steps_n64(c: &mut Criterion) {
         n_substeps: 1,
         ..IntegrationConfig::default()
     };
-    let cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
+    let mut cs = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap();
     let omegas: Vec<f64> = (0..n).map(|i| 1.0 + 0.01 * i as f64).collect();
 
     c.bench_function("euler_1000steps_n64", |b| {
@@ -91,7 +92,7 @@ fn bench_euler_1000_steps_n64(c: &mut Criterion) {
                 .map(|i| i as f64 * std::f64::consts::TAU / n as f64)
                 .collect();
             stepper
-                .run(&mut phases, &omegas, &cs.knm, 0.0, 0.0, &cs.alpha, 1000)
+                .run(&mut phases, &omegas, &mut cs.knm, 0.0, 0.0, &cs.alpha, 1000)
                 .unwrap();
         })
     });

@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -43,8 +44,8 @@ import os
 import sys
 
 
-def _init_token():
-    from jlclient import jarvisclient
+def _init_token() -> None:
+    from jlclient import jarvisclient  # type: ignore[import-not-found]
 
     token = os.environ.get("JL_API_KEY", "")
     if not token:
@@ -53,9 +54,9 @@ def _init_token():
     jarvisclient.token = token
 
 
-def cmd_balance():
+def cmd_balance() -> object:
     _init_token()
-    from jlclient.jarvisclient import User
+    from jlclient.jarvisclient import User  # type: ignore[import-not-found]
 
     result = User.get_balance()
     balance = result.get("balance", result)
@@ -63,7 +64,7 @@ def cmd_balance():
     return balance
 
 
-def cmd_list():
+def cmd_list() -> None:
     _init_token()
     from jlclient.jarvisclient import Instance
 
@@ -75,7 +76,7 @@ def cmd_list():
         print(f"  ID={inst.machine_id}  Name={inst.name}  Status={inst.status}")
 
 
-def cmd_create():
+def cmd_create() -> None:
     _init_token()
     from jlclient.jarvisclient import Instance, User
 
@@ -110,7 +111,7 @@ def cmd_create():
         print("Check https://cloud.jarvislabs.ai for available GPUs.")
 
 
-def cmd_destroy(instance_id: str):
+def cmd_destroy(instance_id: str) -> None:
     _init_token()
     from jlclient.jarvisclient import Instance
 
@@ -129,7 +130,7 @@ def cmd_destroy(instance_id: str):
     print(f"Instance {instance_id} destroyed.")
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python tools/gpu_launch_jarvislabs.py <command>")
         print("Commands: balance, list, gpus, create, destroy <id>")

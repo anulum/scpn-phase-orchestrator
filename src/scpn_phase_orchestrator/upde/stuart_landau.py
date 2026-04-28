@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -6,6 +7,8 @@
 # SCPN Phase Orchestrator — Stuart-Landau oscillator model
 
 from __future__ import annotations
+
+import threading
 
 import numpy as np
 from numpy.typing import NDArray
@@ -89,6 +92,10 @@ class StuartLandauEngine:
             self._ks = [np.empty(2 * n, dtype=np.float64) for _ in range(7)]
             self._err_buf = np.empty(2 * n, dtype=np.float64)
 
+        # Serialise concurrent step() callers on this instance so the
+        # pre-allocated scratch arrays above are not shared across threads.
+        self._lock = threading.RLock()
+
     @property
     def last_dt(self) -> float:
         """Last accepted timestep (adapts with RK45)."""
@@ -108,28 +115,29 @@ class StuartLandauEngine:
     ) -> NDArray:
         """Advance (θ, r) by one timestep. Returns new state (2N,)."""
         self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
-        if self._use_rust:  # pragma: no cover
-            result = np.asarray(
-                self._rust.step(
-                    np.ascontiguousarray(state),
-                    np.ascontiguousarray(omegas),
-                    np.ascontiguousarray(mu),
-                    np.ascontiguousarray(knm.ravel()),
-                    np.ascontiguousarray(knm_r.ravel()),
-                    zeta,
-                    psi,
-                    np.ascontiguousarray(alpha.ravel()),
-                    epsilon,
+        with self._lock:
+            if self._use_rust:  # pragma: no cover
+                result = np.asarray(
+                    self._rust.step(
+                        np.ascontiguousarray(state),
+                        np.ascontiguousarray(omegas),
+                        np.ascontiguousarray(mu),
+                        np.ascontiguousarray(knm.ravel()),
+                        np.ascontiguousarray(knm_r.ravel()),
+                        zeta,
+                        psi,
+                        np.ascontiguousarray(alpha.ravel()),
+                        epsilon,
+                    )
                 )
-            )
-            self._last_dt = self._rust.last_dt
-            return result
-        p: _Params = (omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
-        if self._method == "euler":
-            return self._euler_step(state, p)
-        if self._method == "rk45":
-            return self._rk45_step(state, p)
-        return self._rk4_step(state, p)
+                self._last_dt = self._rust.last_dt
+                return result
+            p: _Params = (omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
+            if self._method == "euler":
+                return self._euler_step(state, p)
+            if self._method == "rk45":
+                return self._rk45_step(state, p)
+            return self._rk4_step(state, p)
 
     def compute_order_parameter(self, state: NDArray) -> tuple[float, float]:
         """Amplitude-weighted Kuramoto: Z = mean(r_i · exp(i·θ_i))."""

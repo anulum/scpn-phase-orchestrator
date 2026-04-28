@@ -82,8 +82,31 @@ impl PyActiveInferenceAgent {
         Ok(Self { inner })
     }
 
-    fn control(&mut self, r_obs: f64, psi_obs: f64, dt: f64) -> (f64, f64) {
-        self.inner.control(r_obs, psi_obs, dt)
+    #[pyo3(signature = (phases = None, r_obs = None, psi_obs = None, dt = 0.0))]
+    fn control<'py>(
+        &mut self,
+        _py: Python<'py>,
+        phases: Option<PyReadonlyArray1<'py, f64>>,
+        r_obs: Option<f64>,
+        psi_obs: Option<f64>,
+        dt: f64,
+    ) -> (f64, f64) {
+        if let Some(phases) = phases {
+            let p = phases.as_slice().unwrap_or(&[]);
+            return self.inner.control(p);
+        }
+
+        let _ = dt;
+        let r_obs = r_obs.unwrap_or(self.inner.target_r);
+        let psi_obs = psi_obs.unwrap_or(0.0);
+        let error = r_obs - self.inner.target_r;
+        let zeta = (error.abs() * 10.0 * self.inner.lr).clamp(0.0, 5.0);
+        let psi = if error > 0.0 {
+            (psi_obs + std::f64::consts::PI).rem_euclid(2.0 * std::f64::consts::PI)
+        } else {
+            psi_obs
+        };
+        (zeta, psi)
     }
 
     #[getter]
@@ -1374,6 +1397,63 @@ impl PyStuartLandauStepper {
     }
 }
 
+// ─── AttnRes Coupling Modulation ───────────────────────────────────
+
+#[pyfunction]
+#[pyo3(signature = (
+    knm, theta, w_q, w_k, w_v, w_o,
+    n, n_heads, block_size, temperature, lambda_,
+))]
+#[allow(clippy::too_many_arguments)]
+fn attnres_modulate_rust<'py>(
+    py: Python<'py>,
+    knm: PyReadonlyArray1<'py, f64>,
+    theta: PyReadonlyArray1<'py, f64>,
+    w_q: PyReadonlyArray1<'py, f64>,
+    w_k: PyReadonlyArray1<'py, f64>,
+    w_v: PyReadonlyArray1<'py, f64>,
+    w_o: PyReadonlyArray1<'py, f64>,
+    n: usize,
+    n_heads: usize,
+    block_size: i64,
+    temperature: f64,
+    lambda_: f64,
+) -> PyResult<Bound<'py, PyArray1<f64>>> {
+    let k = knm
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let t = theta
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wq = w_q
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wk = w_k
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wv = w_v
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let wo = w_o
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let out = spo_engine::attnres::attnres_modulate(
+        k,
+        t,
+        wq,
+        wk,
+        wv,
+        wo,
+        n,
+        n_heads,
+        block_size,
+        temperature,
+        lambda_,
+    )
+    .map_err(PyValueError::new_err)?;
+    Ok(PyArray1::from_vec(py, out))
+}
+
 // ─── PAC Functions ──────────────────────────────────────────────────
 
 #[pyfunction]
@@ -1427,6 +1507,26 @@ fn plv(phases_a: PyReadonlyArray1<'_, f64>, phases_b: PyReadonlyArray1<'_, f64>)
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     order_params::compute_plv(a, b).map_err(spo_err)
+}
+
+#[pyfunction]
+fn compute_layer_coherence_rust(
+    phases: PyReadonlyArray1<'_, f64>,
+    indices: PyReadonlyArray1<'_, i64>,
+) -> PyResult<f64> {
+    let ph = phases
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let raw = indices
+        .as_slice()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let idx: Vec<usize> = raw
+        .iter()
+        .map(|&i| {
+            usize::try_from(i).map_err(|_| PyValueError::new_err(format!("invalid index {i}")))
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(order_params::compute_layer_coherence(ph, &idx))
 }
 
 #[pyfunction]
@@ -3163,7 +3263,7 @@ fn torus_run_rust(
     omegas: PyReadonlyArray1<f64>,
     knm: PyReadonlyArray1<f64>,
     alpha: PyReadonlyArray1<f64>,
-    n: usize,
+    _n: usize,
     zeta: f64,
     psi: f64,
     dt: f64,
@@ -3247,7 +3347,7 @@ fn splitting_run_rust(
     omegas: PyReadonlyArray1<f64>,
     knm: PyReadonlyArray1<f64>,
     alpha: PyReadonlyArray1<f64>,
-    n: usize,
+    _n: usize,
     zeta: f64,
     psi: f64,
     dt: f64,
@@ -3398,10 +3498,12 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPetriNet>()?;
     m.add_class::<PyRuleEngine>()?;
     m.add_class::<PyLIFEnsemble>()?;
+    m.add_function(wrap_pyfunction!(attnres_modulate_rust, m)?)?;
     m.add_function(wrap_pyfunction!(pac_modulation_index, m)?)?;
     m.add_function(wrap_pyfunction!(pac_matrix_compute, m)?)?;
     m.add_function(wrap_pyfunction!(order_parameter, m)?)?;
     m.add_function(wrap_pyfunction!(plv, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_layer_coherence_rust, m)?)?;
     m.add_function(wrap_pyfunction!(ring_phase, m)?)?;
     m.add_function(wrap_pyfunction!(event_phase, m)?)?;
     m.add_function(wrap_pyfunction!(physical_extract, m)?)?;

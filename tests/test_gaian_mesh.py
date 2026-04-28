@@ -105,3 +105,25 @@ class TestGaianMesh:
         node1.stop()
         node2.stop()
         node3.stop()
+
+    def test_context_manager_starts_and_stops(self):
+        """GaianMeshNode used as a context manager must start threads on
+        enter and close the socket on exit (T4 resource cleanup)."""
+        with GaianMeshNode("ctx_node", port=12020) as node:
+            assert node._running is True
+            # Socket should be bound and usable while the node is alive.
+            time.sleep(0.02)
+        # After exit, networking must have been stopped.
+        assert node._running is False
+        # Second stop() after __exit__ must not raise — idempotent cleanup.
+        node.stop()
+
+    def test_context_manager_releases_socket_on_exception(self):
+        """An exception in the with-body must still trigger stop() so the
+        UDP socket is released."""
+        try:
+            with GaianMeshNode("ctx_err", port=12021) as node:
+                raise RuntimeError("simulated failure")
+        except RuntimeError:
+            pass
+        assert node._running is False

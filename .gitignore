@@ -71,3 +71,154 @@ HANDOVER_*.md
 # Local backups — never committed
 BACKUP/
 ARCHIVE/
+
+# Agent metadata dropped by cross-agent tooling — tracked locally,
+# never committed to this repo
+.agent_metadata.json
+
+# AttnRes compiled artefacts — rebuilt on demand from their source
+# (directories may not exist until the Julia / Go / Mojo multi-head
+# ports land; kept here for when they do).
+go/libattnres.so
+go/libattnres.h
+mojo/attnres_mojo
+mojo/libattnres_mojo.so
+
+# order_params compiled artefacts
+go/liborder_params.so
+go/liborder_params.h
+mojo/order_params_mojo
+
+# pac compiled artefacts
+go/libpac.so
+go/libpac.h
+mojo/pac_mojo
+mojo/order_params_mojo
+
+# npe compiled artefacts
+go/libnpe.so
+go/libnpe.h
+mojo/npe_mojo
+
+# transfer_entropy compiled artefacts
+go/libtransfer_entropy.so
+go/libtransfer_entropy.h
+mojo/transfer_entropy_mojo
+
+# lyapunov compiled artefacts
+go/liblyapunov.so
+go/liblyapunov.h
+mojo/lyapunov_mojo
+
+# upde_engine compiled artefacts
+go/libupde_engine.so
+go/libupde_engine.h
+mojo/upde_engine_mojo
+
+# itpc compiled artefacts
+go/libitpc.so
+go/libitpc.h
+mojo/itpc_mojo
+
+# entropy_prod compiled artefacts
+go/libentropy_prod.so
+go/libentropy_prod.h
+mojo/entropy_prod_mojo
+
+# dimension compiled artefacts
+go/libdimension.so
+go/libdimension.h
+mojo/dimension_mojo
+
+# chimera compiled artefacts
+go/libchimera.so
+go/libchimera.h
+mojo/chimera_mojo
+
+# winding compiled artefacts
+go/libwinding.so
+go/libwinding.h
+mojo/winding_mojo
+
+# recurrence compiled artefacts
+go/librecurrence.so
+go/librecurrence.h
+mojo/recurrence_mojo
+
+# embedding compiled artefacts
+go/libembedding.so
+go/libembedding.h
+mojo/embedding_mojo
+
+# poincare compiled artefacts
+go/libpoincare.so
+go/libpoincare.h
+mojo/poincare_mojo
+
+# psychedelic compiled artefacts
+go/libpsychedelic.so
+go/libpsychedelic.h
+mojo/psychedelic_mojo
+
+# hodge compiled artefacts
+go/libhodge.so
+go/libhodge.h
+mojo/hodge_mojo
+
+# envelope compiled artefacts
+go/libenvelope.so
+go/libenvelope.h
+mojo/envelope_mojo
+
+# swarmalator compiled artefacts
+go/libswarmalator.so
+go/libswarmalator.h
+mojo/swarmalator_mojo
+
+# basin_stability compiled artefacts
+go/libbasin_stability.so
+go/libbasin_stability.h
+mojo/basin_stability_mojo
+
+# inertial compiled artefacts
+go/libinertial.so
+go/libinertial.h
+mojo/inertial_mojo
+
+# hypergraph compiled artefacts
+go/libhypergraph.so
+go/libhypergraph.h
+mojo/hypergraph_mojo
+
+# simplicial compiled artefacts
+go/libsimplicial.so
+go/libsimplicial.h
+mojo/simplicial_mojo
+
+# splitting compiled artefacts
+go/libsplitting.so
+go/libsplitting.h
+mojo/splitting_mojo
+
+# reduction (Ott-Antonsen) compiled artefacts
+go/libreduction.so
+go/libreduction.h
+mojo/reduction_mojo
+
+# geometric (torus) compiled artefacts
+go/libgeometric.so
+go/libgeometric.h
+mojo/geometric_mojo
+
+# market (financial R/PLV) compiled artefacts
+go/libmarket.so
+go/libmarket.h
+mojo/market_mojo
+
+# Mojo FFI reference binaries (source tracked, binaries build on demand)
+mojo/_lapack_test
+
+# spectral (graph Laplacian eig) compiled artefacts
+go/libspectral.so
+go/libspectral.h
+mojo/spectral_mojo

@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -27,6 +28,7 @@ from __future__ import annotations
 import json
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -43,7 +45,8 @@ RESULTS_FILE = RESULTS_DIR / f"gpu_benchmark_{_date_str}.json"
 def _load_existing() -> dict:
     if RESULTS_FILE.exists():
         with RESULTS_FILE.open() as f:
-            return json.load(f)
+            data: dict = json.load(f)
+            return data
     return {"benchmarks": {}, "metadata": {}}
 
 
@@ -435,7 +438,7 @@ def bench_batched_kuramoto() -> dict:
             K = jnp.ones((N, N)) * 0.5 / N
             K = K.at[jnp.diag_indices(N)].set(0.0)
 
-            def run_one(phases, o=omegas, k=K, ns=n_steps):
+            def run_one(phases, o=omegas, k=K, ns=n_steps):  # type: ignore[no-untyped-def]
                 final, _ = kuramoto_forward(phases, o, k, 0.01, ns)
                 return final
 
@@ -640,7 +643,7 @@ def bench_simplicial_layer(sizes: list[int] | None = None) -> dict:
 # Main runner with checkpoint/resume
 # ──────────────────────────────────────────────────
 
-BENCHMARKS = [
+BENCHMARKS: list[tuple[str, Callable[[], dict]]] = [
     ("kuramoto_forward", bench_kuramoto_layer_forward),
     ("stuart_landau_forward", bench_stuart_landau_layer_forward),
     ("simplicial_forward", bench_simplicial_layer),

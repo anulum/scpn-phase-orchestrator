@@ -562,8 +562,66 @@ Total: **21 tests**.
 
 ---
 
+## Multi-backend fallback chain
+
+Since the 2026-04-17 migration to the AttnRes-level module standard,
+``pac`` ships with five language-backed implementations for every
+kernel (``modulation_index`` and ``pac_matrix``). The dispatcher
+resolves the fastest available backend at import time and exposes
+the choice as ``ACTIVE_BACKEND`` / ``AVAILABLE_BACKENDS``.
+
+| Position | Backend | Build |
+|---|---|---|
+| 1 | Rust | `maturin develop -m spo-kernel/crates/spo-ffi/Cargo.toml --release` |
+| 2 | Mojo | `mojo build mojo/pac.mojo -o mojo/pac_mojo -Xlinker -lm` |
+| 3 | Julia | `juliacall` + `julia/pac.jl` |
+| 4 | Go | `cd go && go build -buildmode=c-shared -o libpac.so pac.go` |
+| 5 | Python | always present |
+
+### Parity (measured vs NumPy reference)
+
+| Backend | `modulation_index` |
+|---|---|
+| Rust | 6.59e-17 (bit-exact) |
+| Mojo | 3.70e-12 (text-protocol budget) |
+| Julia | 6.94e-18 (bit-exact) |
+| Go | 6.94e-17 (bit-exact) |
+| Python | 0 (reference) |
+
+Tests in ``tests/test_pac_backends.py`` enforce ``atol = 1e-12`` for
+Rust/Julia/Go and ``atol = 1e-10`` for Mojo (the log-sum-over-bins
+step amplifies the 17-digit text-protocol floor).
+
+### Measured benchmark
+
+Output from
+``PYTHONPATH=src python benchmarks/pac_benchmark.py --sizes 200 1000 5000 --calls 100``:
+
+| N | Rust | Mojo | Julia | Go | Python |
+|---|---|---|---|---|---|
+| 200 | **0.078 ms** | 111.378 ms | 80.976 ms | 0.241 ms | 0.332 ms |
+| 1000 | **0.010 ms** | 99.913 ms | 0.032 ms | 0.028 ms | 0.328 ms |
+| 5000 | **0.035 ms** | 111.358 ms | 0.053 ms | 0.045 ms | 0.773 ms |
+
+Rust dominates; Julia/Go converge to within 1.3× of Rust after JIT
+warm-up at ``N ≥ 1000``. NumPy fallback stays within 22× of Rust —
+usable for one-off analysis but not for a monitor loop running on
+every simulation step. Mojo's subprocess floor rules it out of the
+hot loop until Mojo 0.27+.
+
+---
+
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/pac.py` (103 lines)
+- Python dispatcher: `src/scpn_phase_orchestrator/upde/pac.py`
+- Python bridges: `upde/_pac_julia.py`, `upde/_pac_go.py`,
+  `upde/_pac_mojo.py`
 - Rust: `spo-kernel/crates/spo-engine/src/pac.rs`
-- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (pac_modulation_index)
+- Julia: `julia/pac.jl`
+- Go: `go/pac.go`
+- Mojo: `mojo/pac.mojo`
+- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (`pac_modulation_index`,
+  `pac_matrix_compute`)
+- Tests: `tests/test_pac.py`, `tests/test_pac_parity.py`,
+  `tests/test_pac_backends.py`, `tests/test_pac_stability.py`
+- Benchmark: `benchmarks/pac_benchmark.py`

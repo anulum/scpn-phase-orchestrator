@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Commercial license available
 // © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 // © Code 2020–2026 Miroslav Šotek. All rights reserved.
 // ORCID: 0009-0009-3560-0851
@@ -63,8 +64,11 @@ pub fn modulation_index(theta_low: &[f64], amp_high: &[f64], n_bins: usize) -> f
 
 /// N×N PAC matrix: entry [i*n+j] = MI(phase_column_i, amplitude_column_j).
 ///
-/// Input `phases` and `amplitudes` are column-major flattened (T, N) arrays
-/// of length T*N. Returns row-major N×N vector.
+/// Input `phases` and `amplitudes` are **row-major** flattened (T, N) arrays
+/// of length T*N — element at (row, col) sits at index `row * n + col`. This
+/// matches numpy's default `ravel()` order (C order). Returns a row-major
+/// N×N vector (entry [i*n+j] is MI from column i phases against column j
+/// amplitudes).
 #[must_use]
 pub fn pac_matrix(
     phases: &[f64],
@@ -83,7 +87,7 @@ pub fn pac_matrix(
     for i in 0..n {
         for j in 0..n {
             // Extract column i from phases, column j from amplitudes
-            // Column-major: element (row, col) at index row * n + col
+            // Row-major: element (row, col) at index row * n + col.
             let phase_col: Vec<f64> = (0..t).map(|row| phases[row * n + i]).collect();
             let amp_col: Vec<f64> = (0..t).map(|row| amplitudes[row * n + j]).collect();
             result[i * n + j] = modulation_index(&phase_col, &amp_col, n_bins);

@@ -1,19 +1,42 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — UPDE integration engine
+# SCPN Phase Orchestrator — UPDE integration engine (stateful class)
+
+"""Stateful :class:`UPDEEngine`.
+
+The batched integrator is stateless — see
+:mod:`scpn_phase_orchestrator.upde._run` and the re-exported
+:func:`upde_run`. This module keeps the state-heavy observer: the
+class pre-allocates scratch buffers for the chosen method, holds a
+reentrant lock for thread-safety, and retains ``_last_dt`` across
+RK45 step calls.
+"""
 
 from __future__ import annotations
+
+import threading
 
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.upde._run import (
+    ACTIVE_BACKEND,
+    AVAILABLE_BACKENDS,
+    upde_run,
+)
 
-__all__ = ["UPDEEngine"]
+__all__ = [
+    "ACTIVE_BACKEND",
+    "AVAILABLE_BACKENDS",
+    "UPDEEngine",
+    "upde_run",
+]
 
 
 class UPDEEngine:
@@ -78,6 +101,11 @@ class UPDEEngine:
             self._ks = [np.empty(n_oscillators, dtype=np.float64) for _ in range(7)]
             self._err_buf = np.empty(n_oscillators, dtype=np.float64)
 
+        # Serialise concurrent step()/run() callers on this instance — the
+        # pre-allocated scratch arrays above are not safe to share. Reentrant
+        # so that run() → step() within the same thread does not deadlock.
+        self._lock = threading.RLock()
+
     @property
     def last_dt(self) -> float:
         """Actual dt used on the last accepted step (relevant for rk45)."""
@@ -93,41 +121,24 @@ class UPDEEngine:
         alpha: NDArray,
     ) -> NDArray:
         """Advance phases by one timestep, return new phases in [0, 2*pi)."""
-        if not (np.isfinite(zeta) and np.isfinite(psi)):
-            raise ValueError("zeta and psi must be finite")
-        n = self._n
-        if phases.shape != (n,):
-            raise ValueError(f"phases.shape={phases.shape}, expected ({n},)")
-        if omegas.shape != (n,):
-            raise ValueError(f"omegas.shape={omegas.shape}, expected ({n},)")
-        if knm.shape != (n, n):
-            raise ValueError(f"knm.shape={knm.shape}, expected ({n}, {n})")
-        if alpha.shape != (n, n):
-            raise ValueError(f"alpha.shape={alpha.shape}, expected ({n}, {n})")
-        if not np.all(np.isfinite(phases)):
-            raise ValueError("phases contain NaN/Inf")
-        if not np.all(np.isfinite(omegas)):
-            raise ValueError("omegas contain NaN/Inf")
-        if not np.all(np.isfinite(knm)):
-            raise ValueError("knm contains NaN/Inf")
-        if not np.all(np.isfinite(alpha)):
-            raise ValueError("alpha contains NaN/Inf")
-        if self._rust is not None:  # pragma: no cover
-            return np.asarray(
-                self._rust.step(
-                    np.ascontiguousarray(phases.ravel()),
-                    np.ascontiguousarray(omegas.ravel()),
-                    np.ascontiguousarray(knm.ravel()),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha.ravel()),
+        self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
+        with self._lock:
+            if self._rust is not None:  # pragma: no cover
+                return np.asarray(
+                    self._rust.step(
+                        np.ascontiguousarray(phases.ravel()),
+                        np.ascontiguousarray(omegas.ravel()),
+                        np.ascontiguousarray(knm.ravel()),
+                        float(zeta),
+                        float(psi),
+                        np.ascontiguousarray(alpha.ravel()),
+                    )
                 )
-            )
-        if self._method == "euler":
-            return self._euler_step(phases, omegas, knm, zeta, psi, alpha)
-        if self._method == "rk45":
-            return self._rk45_step(phases, omegas, knm, zeta, psi, alpha)
-        return self._rk4_step(phases, omegas, knm, zeta, psi, alpha)
+            if self._method == "euler":
+                return self._euler_step(phases, omegas, knm, zeta, psi, alpha)
+            if self._method == "rk45":
+                return self._rk45_step(phases, omegas, knm, zeta, psi, alpha)
+            return self._rk4_step(phases, omegas, knm, zeta, psi, alpha)
 
     def run(
         self,
@@ -139,29 +150,54 @@ class UPDEEngine:
         alpha: NDArray,
         n_steps: int,
     ) -> NDArray:
-        """Run n_steps, return final phases. Uses Rust batch API when available."""
-        if self._rust is not None:  # pragma: no cover
-            return np.asarray(
-                self._rust.run(
-                    np.ascontiguousarray(phases.ravel()),
-                    np.ascontiguousarray(omegas.ravel()),
-                    np.ascontiguousarray(knm.ravel()),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha.ravel()),
-                    n_steps,
-                )
+        """Run n_steps, return final phases. Dispatches to the fastest
+        available backend via the module-level ``upde_run``."""
+        with self._lock:
+            return upde_run(
+                phases,
+                omegas,
+                knm,
+                alpha,
+                float(zeta),
+                float(psi),
+                self._dt,
+                int(n_steps),
+                self._method,
+                1,
+                self._atol,
+                self._rtol,
             )
-        p = phases.copy()
-        for _ in range(n_steps):
-            p = self.step(p, omegas, knm, zeta, psi, alpha)
-        return p
 
     def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         return compute_order_parameter(phases)
+
+    def _validate_inputs(
+        self,
+        phases: NDArray,
+        omegas: NDArray,
+        knm: NDArray,
+        alpha: NDArray,
+        zeta: float,
+        psi: float,
+    ) -> None:
+        """Shape and NaN/Inf guards shared by :meth:`step`."""
+        if not (np.isfinite(zeta) and np.isfinite(psi)):
+            raise ValueError("zeta and psi must be finite")
+        n = self._n
+        checks = (
+            ("phases", phases, (n,)),
+            ("omegas", omegas, (n,)),
+            ("knm", knm, (n, n)),
+            ("alpha", alpha, (n, n)),
+        )
+        for name, arr, shape in checks:
+            if arr.shape != shape:
+                raise ValueError(f"{name}.shape={arr.shape}, expected {shape}")
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"{name} contains NaN/Inf")
 
     def _derivative(
         self,
@@ -224,6 +260,24 @@ class UPDEEngine:
         result: NDArray = (phases + (dt / 6.0) * weighted) % TWO_PI
         return result
 
+    def _rk45_stage_vector(
+        self,
+        phases: NDArray,
+        omegas: NDArray,
+        knm: NDArray,
+        zeta: float,
+        psi: float,
+        alpha: NDArray,
+        dt: float,
+    ) -> None:
+        """Evaluate all 7 Dormand-Prince stages into ``self._ks``."""
+        A = self._DP_A
+        ks = self._ks
+        ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
+        for i in range(1, 7):
+            stage = phases + dt * np.dot(A[i, :i], np.array(ks[:i]))
+            ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
+
     def _rk45_step(
         self,
         phases: NDArray,
@@ -235,43 +289,30 @@ class UPDEEngine:
     ) -> NDArray:
         """Dormand-Prince RK45 with embedded error estimation and adaptive dt."""
         dt = self._last_dt
-        A = self._DP_A
-        ks = self._ks
         max_reject = 3
+        ks = self._ks
 
         for _ in range(max_reject + 1):
-            # Evaluate all 7 Dormand-Prince stages
-            ks[0][:] = self._derivative(phases, omegas, knm, zeta, psi, alpha)
-            for i in range(1, 7):
-                # y_stage = y_n + h Σ a_ij k_j (Butcher row i)
-                stage = phases + dt * np.dot(A[i, :i], np.array(ks[:i]))
-                ks[i][:] = self._derivative(stage, omegas, knm, zeta, psi, alpha)
-
+            self._rk45_stage_vector(phases, omegas, knm, zeta, psi, alpha, dt)
             ks_arr = np.array(ks)
-            # 5th-order solution (accepted) and 4th-order (for error)
             y5 = phases + dt * np.dot(self._DP_B5, ks_arr)
             y4 = phases + dt * np.dot(self._DP_B4, ks_arr)
 
-            # Local error estimate: |y5 - y4| / (atol + rtol*max(|y|,|y5|))
-            # Hairer & Wanner mixed tolerance scaling
+            # Mixed tolerance scaling (Hairer & Wanner).
             np.subtract(y5, y4, out=self._err_buf)
             np.abs(self._err_buf, out=self._err_buf)
             scale = self._atol + self._rtol * np.maximum(np.abs(phases), np.abs(y5))
             err_norm = float(np.max(self._err_buf / scale))
 
             if err_norm <= 1.0:
-                # PI step-size control: h_new = 0.9 * h * err^(-1/p)
-                # p=5 for acceptance → exponent -0.2
                 factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
                 self._last_dt = min(dt * factor, self._dt * 10.0)
                 result: NDArray = y5 % TWO_PI
                 return result
 
-            # Reject — shrink with safety factor, exponent -1/4 (order p+1)
             factor = max(0.2, 0.9 * err_norm ** (-0.25))  # pragma: no cover
             dt = dt * factor  # pragma: no cover
 
-        # Exhausted retries, accept current result
         self._last_dt = dt  # pragma: no cover
         result_fallback: NDArray = y5 % TWO_PI  # pragma: no cover
         return result_fallback  # pragma: no cover

@@ -65,7 +65,7 @@ state = detect_chimera(phases, knm)
 
 ## Entrainment Verification Score (EVS)
 
-**Detailed documentation:** [EVS (Entrainment) — Superior Reference](monitor_evs.md)
+**Detailed documentation:** [EVS (Entrainment) — detailed reference](monitor_evs.md)
 
 Three-criterion battery that distinguishes genuine entrainment
 (phase-locking to a stimulus) from broadband artifacts. All three
@@ -362,6 +362,6 @@ AASM sleep staging mapped to the Kuramoto order parameter R.
 Classifies phases into Wake/N1/N2/N3/REM based on R thresholds
 and a functional desynchronisation flag. Includes ultradian
 (~90 min) cycle phase estimation.
-**Detailed documentation:** [Sleep Staging — Superior Reference](monitor_sleep_staging.md)
+**Detailed documentation:** [Sleep Staging — detailed reference](monitor_sleep_staging.md)
 
 ::: scpn_phase_orchestrator.monitor.sleep_staging

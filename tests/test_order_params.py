@@ -1,16 +1,31 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Order parameter tests
+# SCPN Phase Orchestrator — Algorithm tests for order parameters
+
+"""Algorithm-level tests for ``upde/order_params.py``.
+
+Covers the three compute kernels — ``compute_order_parameter``,
+``compute_plv``, ``compute_layer_coherence`` — plus dispatcher
+invariants. Per-backend parity lives in
+``test_order_params_backends.py``; stability tests live in
+``test_order_params_stability.py``.
+"""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
+from hypothesis.extra.numpy import arrays
 
 from scpn_phase_orchestrator.upde.order_params import (
+    ACTIVE_BACKEND,
+    AVAILABLE_BACKENDS,
     compute_layer_coherence,
     compute_order_parameter,
     compute_plv,
@@ -18,229 +33,139 @@ from scpn_phase_orchestrator.upde.order_params import (
 
 TWO_PI = 2.0 * np.pi
 
-
-def test_identical_phases_R_one():
-    phases = np.full(100, 1.5)
-    R, _ = compute_order_parameter(phases)
-    np.testing.assert_allclose(R, 1.0, atol=1e-12)
-
-
-def test_uniform_phases_R_near_zero():
-    phases = np.linspace(0, TWO_PI, 1000, endpoint=False)
-    R, _ = compute_order_parameter(phases)
-    assert R < 0.02
+phase_arrays = arrays(
+    dtype=np.float64,
+    shape=st.integers(min_value=2, max_value=200),
+    elements=st.floats(
+        min_value=-1e3, max_value=1e3, allow_nan=False, allow_infinity=False
+    ),
+)
 
 
-def test_plv_identical_series():
-    phases = np.ones(200) * 2.0
-    plv = compute_plv(phases, phases)
-    np.testing.assert_allclose(plv, 1.0, atol=1e-12)
+# ---------------------------------------------------------------------
+# compute_order_parameter
+# ---------------------------------------------------------------------
 
 
-def test_plv_random_uncorrelated():
-    rng = np.random.default_rng(55)
-    a = rng.uniform(0, TWO_PI, size=5000)
-    b = rng.uniform(0, TWO_PI, size=5000)
-    plv = compute_plv(a, b)
-    assert plv < 0.1
-
-
-def test_layer_coherence_full_mask():
-    phases = np.array([0.0, 0.0, 0.0, 0.0])
-    mask = np.ones(4, dtype=bool)
-    R_layer = compute_layer_coherence(phases, mask)
-    R_global, _ = compute_order_parameter(phases)
-    np.testing.assert_allclose(R_layer, R_global, atol=1e-12)
-
-
-def test_layer_coherence_partial_mask():
-    phases = np.array([0.0, 0.0, np.pi, np.pi])
-    mask = np.array([True, True, False, False])
-    R_sub = compute_layer_coherence(phases, mask)
-    np.testing.assert_allclose(R_sub, 1.0, atol=1e-12)
-
-
-def test_layer_coherence_empty_mask():
-    phases = np.array([1.0, 2.0, 3.0])
-    mask = np.zeros(3, dtype=bool)
-    assert compute_layer_coherence(phases, mask) == 0.0
-
-
-def test_plv_length_mismatch_raises():
-    a = np.array([1.0, 2.0, 3.0])
-    b = np.array([1.0, 2.0])
-    with pytest.raises(ValueError, match="equal-length"):
-        compute_plv(a, b)
-
-
-class TestOrderParameterAlgebraicInvariants:
-    """Information-theoretic and algebraic bounds on R and ψ."""
-
-    def test_R_bounded_zero_one_for_random_phases(self):
-        """R ∈ [0, 1] for 100 random draws."""
-        rng = np.random.default_rng(42)
-        for _ in range(100):
-            phases = rng.uniform(0, TWO_PI, 64)
-            r, psi = compute_order_parameter(phases)
-            assert 0.0 <= r <= 1.0 + 1e-12
-            assert 0.0 <= psi < TWO_PI
-
-    def test_psi_is_mean_phase_for_identical(self):
-        """All phases = θ₀ → ψ = θ₀."""
-        theta_0 = 2.7
-        phases = np.full(50, theta_0)
-        r, psi = compute_order_parameter(phases)
-        assert abs(r - 1.0) < 1e-12
-        assert abs(psi - theta_0) < 1e-10
-
-    def test_R_decreases_with_spread(self):
-        """As phase spread increases from 0 → π, R monotonically decreases."""
-        n = 64
-        base = 1.0
-        prev_r = 1.0
-        for spread in np.linspace(0, np.pi, 20):
-            phases = np.linspace(base - spread / 2, base + spread / 2, n)
-            r, _ = compute_order_parameter(phases)
-            assert r <= prev_r + 1e-10
-            prev_r = r
-
-    def test_single_oscillator_R_one(self):
-        r, _ = compute_order_parameter(np.array([4.2]))
-        assert abs(r - 1.0) < 1e-12
-
-    def test_two_antipodal_R_zero(self):
-        """θ₁ = 0, θ₂ = π → R = 0."""
-        r, _ = compute_order_parameter(np.array([0.0, np.pi]))
-        assert r < 1e-12
-
-
-class TestPLVStatisticalProperties:
-    """PLV: deeper statistical and edge-case testing."""
-
-    def test_plv_symmetric(self):
-        """PLV(a, b) = PLV(b, a)."""
-        rng = np.random.default_rng(66)
-        a = rng.uniform(0, TWO_PI, 200)
-        b = rng.uniform(0, TWO_PI, 200)
-        assert abs(compute_plv(a, b) - compute_plv(b, a)) < 1e-12
-
-    def test_plv_constant_phase_diff_one(self):
-        """a = b + δ (constant offset) → PLV = 1."""
-        rng = np.random.default_rng(77)
-        a = rng.uniform(0, TWO_PI, 500)
-        b = (a + 1.3) % TWO_PI
-        plv = compute_plv(a, b)
-        assert plv > 0.99
-
-    def test_plv_converges_to_zero_for_independent(self):
-        """As N grows, PLV of independent signals → 0."""
-        rng = np.random.default_rng(88)
-        plvs = []
-        for n in [100, 500, 2000, 10000]:
-            a = rng.uniform(0, TWO_PI, n)
-            b = rng.uniform(0, TWO_PI, n)
-            plvs.append(compute_plv(a, b))
-        # PLV should decrease with sample size for independent signals
-        assert plvs[-1] < plvs[0]
-
-
-class TestOrderParamsPipelineEndToEnd:
-    """Full pipeline: CouplingBuilder → Engine → R/PLV/coherence → Regime."""
-
-    def test_coupling_engine_R_psi_regime(self):
-        from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
-        from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
-        from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-
-        n = 16
-        cb = CouplingBuilder()
-        cs = cb.build(n_layers=n, base_strength=0.5, decay_alpha=0.2)
-        eng = UPDEEngine(n, dt=0.01, method="rk4")
-        rng = np.random.default_rng(42)
-        phases = rng.uniform(0, TWO_PI, n)
-        omegas = np.ones(n)
-        # Collect trajectory for PLV
-        history = [[] for _ in range(n)]
-        for _ in range(300):
-            phases = eng.step(phases, omegas, cs.knm, 0.0, 0.0, cs.alpha)
-            for i in range(n):
-                history[i].append(phases[i])
-        # Order parameter
-        r, psi = compute_order_parameter(phases)
-        assert 0.0 <= r <= 1.0
-        # PLV between first two oscillators
-        plv_01 = compute_plv(np.array(history[0]), np.array(history[1]))
-        assert 0.0 <= plv_01 <= 1.0
-        # Layer coherence on first half
-        mask = np.zeros(n, dtype=bool)
-        mask[: n // 2] = True
-        r_layer = compute_layer_coherence(phases, mask)
-        assert 0.0 <= r_layer <= 1.0 + 1e-12
-        # Feed R into RegimeManager
-        layer = LayerState(R=r, psi=psi)
-        state = UPDEState(
-            layers=[layer],
-            cross_layer_alignment=np.array([r]),
-            stability_proxy=r,
-            regime_id="nominal",
-        )
-        rm = RegimeManager(hysteresis=0.05)
-        regime = rm.evaluate(state, BoundaryState())
-        assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
-
-    def test_sync_trajectory_high_R_and_plv(self):
-        """Strong coupling + identical ω → high R and high PLV."""
-        from scpn_phase_orchestrator.upde.engine import UPDEEngine
-
-        n = 8
-        eng = UPDEEngine(n, dt=0.01, method="rk4")
-        rng = np.random.default_rng(11)
-        phases = rng.uniform(0, TWO_PI, n)
-        omegas = np.ones(n)
-        knm = 3.0 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        h0, h1 = [], []
-        for _ in range(500):
-            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-            h0.append(phases[0])
-            h1.append(phases[1])
+class TestOrderParameter:
+    @given(phases=phase_arrays)
+    @settings(max_examples=30, deadline=None)
+    def test_r_bounded_unit_interval(self, phases: np.ndarray) -> None:
         r, _ = compute_order_parameter(phases)
-        plv = compute_plv(np.array(h0), np.array(h1))
-        assert r > 0.9, f"Expected high R for strong coupling, got {r}"
-        assert plv > 0.8, f"Expected high PLV for synced pair, got {plv}"
+        assert 0.0 <= r <= 1.0 + 1e-12
 
-    def test_performance_R_256_under_100us(self):
-        """compute_order_parameter(256) < 100μs budget."""
-        import time
+    @given(phases=phase_arrays)
+    @settings(max_examples=30, deadline=None)
+    def test_psi_in_zero_2pi(self, phases: np.ndarray) -> None:
+        _, psi = compute_order_parameter(phases)
+        assert 0.0 <= psi < TWO_PI + 1e-12
 
+    def test_empty_returns_zero_zero(self) -> None:
+        r, psi = compute_order_parameter(np.array([], dtype=np.float64))
+        assert r == 0.0 and psi == 0.0
+
+    def test_full_synchrony_r_one(self) -> None:
+        phases = np.full(32, 1.234)
+        r, _ = compute_order_parameter(phases)
+        assert r == pytest.approx(1.0, abs=1e-12)
+
+    def test_antiphase_pairs_r_zero(self) -> None:
+        phases = np.concatenate([np.zeros(8), np.full(8, np.pi)])
+        r, _ = compute_order_parameter(phases)
+        assert r == pytest.approx(0.0, abs=1e-12)
+
+    def test_uniform_distribution_r_small(self) -> None:
+        phases = np.linspace(0.0, TWO_PI, 100, endpoint=False)
+        r, _ = compute_order_parameter(phases)
+        assert r < 1e-10
+
+    def test_single_oscillator_r_one(self) -> None:
+        r, psi = compute_order_parameter(np.array([0.7]))
+        assert r == pytest.approx(1.0, abs=1e-12)
+        assert psi == pytest.approx(0.7, abs=1e-12)
+
+
+# ---------------------------------------------------------------------
+# compute_plv
+# ---------------------------------------------------------------------
+
+
+class TestPLV:
+    @given(a=phase_arrays, b=phase_arrays)
+    @settings(max_examples=20, deadline=None)
+    def test_plv_bounded_unit_interval(self, a: np.ndarray, b: np.ndarray) -> None:
+        n = min(a.size, b.size)
+        val = compute_plv(a[:n], b[:n])
+        assert 0.0 <= val <= 1.0 + 1e-12
+
+    def test_empty_returns_zero(self) -> None:
+        assert compute_plv(np.array([]), np.array([])) == 0.0
+
+    def test_identical_series_plv_one(self) -> None:
         rng = np.random.default_rng(0)
-        phases = rng.uniform(0, TWO_PI, 256)
-        compute_order_parameter(phases)
-        t0 = time.perf_counter()
-        for _ in range(1000):
-            compute_order_parameter(phases)
-        elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 1e-4, f"R(256) took {elapsed * 1e6:.1f}μs"
+        phases = rng.uniform(0.0, TWO_PI, size=50)
+        assert compute_plv(phases, phases) == pytest.approx(1.0, abs=1e-12)
 
-    def test_performance_plv_1000_under_500us(self):
-        """compute_plv(1000 samples) < 500μs budget."""
-        import time
+    def test_constant_offset_plv_one(self) -> None:
+        rng = np.random.default_rng(1)
+        phases = rng.uniform(0.0, TWO_PI, size=50)
+        offset = phases + 0.7
+        assert compute_plv(phases, offset) == pytest.approx(1.0, abs=1e-12)
 
-        rng = np.random.default_rng(0)
-        a = rng.uniform(0, TWO_PI, 1000)
-        b = rng.uniform(0, TWO_PI, 1000)
-        compute_plv(a, b)
-        t0 = time.perf_counter()
-        for _ in range(1000):
-            compute_plv(a, b)
-        elapsed = (time.perf_counter() - t0) / 1000
-        assert elapsed < 5e-4, f"PLV(1000) took {elapsed * 1e6:.1f}μs"
+    def test_uncorrelated_plv_small(self) -> None:
+        rng = np.random.default_rng(42)
+        a = rng.uniform(0.0, TWO_PI, size=2000)
+        b = rng.uniform(0.0, TWO_PI, size=2000)
+        assert compute_plv(a, b) < 0.08
+
+    def test_length_mismatch_rejected(self) -> None:
+        with pytest.raises(ValueError, match="equal-length"):
+            compute_plv(np.zeros(5), np.zeros(6))
 
 
-# Pipeline wiring: order_params tests exercise compute_order_parameter,
-# compute_plv, compute_layer_coherence via CouplingBuilder → UPDEEngine(RK4)
-# → RegimeManager. Algebraic: R∈[0,1], PLV symmetry, convergence, monotonicity.
-# Performance: R(256)<100μs, PLV(1000)<500μs.
+# ---------------------------------------------------------------------
+# compute_layer_coherence
+# ---------------------------------------------------------------------
+
+
+class TestLayerCoherence:
+    def test_full_synchrony_of_subset(self) -> None:
+        phases = np.array([0.0, 0.1, np.pi, np.pi + 0.1, 2.0, 3.0], dtype=np.float64)
+        r = compute_layer_coherence(phases, np.array([0, 1], dtype=np.int64))
+        assert r > 0.99
+
+    def test_empty_mask_returns_zero(self) -> None:
+        phases = np.array([0.0, 1.0, 2.0])
+        assert compute_layer_coherence(phases, np.array([], dtype=np.int64)) == 0.0
+
+    def test_bool_mask_supported(self) -> None:
+        phases = np.array([0.0, np.pi, 0.05, np.pi + 0.05])
+        bool_mask = np.array([True, False, True, False])
+        idx_mask = np.array([0, 2], dtype=np.int64)
+        r_bool = compute_layer_coherence(phases, bool_mask)
+        r_idx = compute_layer_coherence(phases, idx_mask)
+        assert r_bool == pytest.approx(r_idx, abs=1e-12)
+
+    def test_single_index_r_one(self) -> None:
+        phases = np.array([0.7, 1.0, 2.0])
+        r = compute_layer_coherence(phases, np.array([0], dtype=np.int64))
+        assert r == pytest.approx(1.0, abs=1e-12)
+
+
+# ---------------------------------------------------------------------
+# Dispatcher
+# ---------------------------------------------------------------------
+
+
+class TestDispatcher:
+    def test_python_is_always_available(self) -> None:
+        assert "python" in AVAILABLE_BACKENDS
+        assert AVAILABLE_BACKENDS[-1] == "python"
+
+    def test_active_backend_is_first_available(self) -> None:
+        assert AVAILABLE_BACKENDS[0] == ACTIVE_BACKEND
+
+    def test_fastest_first_ordering(self) -> None:
+        canonical = ["rust", "mojo", "julia", "go", "python"]
+        indices = [canonical.index(b) for b in AVAILABLE_BACKENDS]
+        assert indices == sorted(indices)

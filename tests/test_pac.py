@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -81,7 +82,7 @@ class TestPACMatrix:
             pac_matrix(np.zeros(10), np.zeros(10))
 
     def test_mismatched_n_raises(self) -> None:
-        with pytest.raises(ValueError, match="same number"):
+        with pytest.raises(ValueError, match="same shape"):
             pac_matrix(np.zeros((10, 3)), np.zeros((10, 4)))
 
 

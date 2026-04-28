@@ -88,6 +88,15 @@ class GaianMeshNode:
         self._listen_thread.join(timeout=1.0)
         self._broadcast_thread.join(timeout=1.0)
 
+    def __enter__(self) -> GaianMeshNode:
+        """Start networking threads on ``with GaianMeshNode(...) as node:``."""
+        self.start()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        """Stop networking threads and release the UDP socket on context exit."""
+        self.stop()
+
     def update_local_state(self, R: float, psi: float) -> None:
         """Update the local macro state to be broadcasted to peers."""
         self._local_R = R

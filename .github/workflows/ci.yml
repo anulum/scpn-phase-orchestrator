@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -137,7 +138,7 @@ jobs:
           cache: pip
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: bandit -r src/ -c pyproject.toml
-      - run: pip install pip-audit==2.10.0 && pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-39892 --ignore-vuln CVE-2025-71176
+      - run: python -m pip install --upgrade pip==26.1 pip-audit==2.10.0 && pip-audit --ignore-vuln CVE-2026-4539 --ignore-vuln CVE-2026-39892 --ignore-vuln CVE-2025-71176
 
   rust-check:
     strategy:
@@ -158,10 +159,19 @@ jobs:
             spo-kernel/target
           key: cargo-${{ runner.os }}-stable-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-${{ runner.os }}-stable-
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
       - run: cargo fmt --check
       - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
       - run: cargo doc --no-deps --workspace --exclude spo-ffi
       - run: cargo test --workspace --exclude spo-ffi
+      # spo-ffi `extension-module` is a default feature; disable it so the
+      # test binary can link libpython. Ubuntu-only — macOS and Windows
+      # runners exercise the FFI path via the maturin wheel build in
+      # ``ffi-test`` instead.
+      - if: runner.os == 'Linux'
+        run: cargo test -p spo-ffi --no-default-features --lib
 
   ffi-test:
     strategy:

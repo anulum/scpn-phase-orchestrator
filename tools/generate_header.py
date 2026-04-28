@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -31,7 +32,7 @@ def generate(output: Path) -> None:
     rng = np.random.default_rng(42)
 
     fig = plt.figure(figsize=(WIDTH, HEIGHT), dpi=DPI, facecolor="#08080c")
-    ax = fig.add_axes([0, 0, 1, 1], frameon=False)
+    ax = fig.add_axes((0.0, 0.0, 1.0, 1.0), frameon=False)
     ax.set_xlim(0, WIDTH)
     ax.set_ylim(0, HEIGHT)
     ax.set_xticks([])
@@ -44,7 +45,7 @@ def generate(output: Path) -> None:
     Z = np.exp(-0.05 * ((X - WIDTH * 0.7) ** 2 + (Y - HEIGHT * 0.5) ** 2))
     ax.imshow(
         Z,
-        extent=[0, WIDTH, 0, HEIGHT],
+        extent=(0.0, float(WIDTH), 0.0, float(HEIGHT)),
         origin="lower",
         cmap="magma",
         alpha=0.1,
@@ -58,7 +59,7 @@ def generate(output: Path) -> None:
         amplitude = 0.3 * (1 - (t / 4) * 0.5)
         phase_noise = rng.normal(0, 0.5 * (1 - (t / 4)))
         wave = offset_y + amplitude * np.sin(t * 8 + i * 0.2 + phase_noise)
-        color = plt.cm.cool(i / 8.0)
+        color = plt.get_cmap("cool")(i / 8.0)
         ax.plot(t + 7, wave, color=color, lw=1.5, alpha=0.7)
 
     # Chaotic input spikes

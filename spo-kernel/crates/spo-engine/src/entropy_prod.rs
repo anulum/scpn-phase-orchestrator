@@ -78,7 +78,6 @@ mod tests {
 
     #[test]
     fn scales_with_dt() {
-        let n = 2;
         let phases = vec![0.0, 1.0];
         let omegas = vec![1.0, 2.0];
         let knm = vec![0.0; 4];

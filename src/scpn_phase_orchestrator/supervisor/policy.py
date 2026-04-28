@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -7,6 +8,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
@@ -14,6 +17,8 @@ from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["SupervisorPolicy"]
+
+logger = logging.getLogger(__name__)
 
 # Empirical — see docs/ASSUMPTIONS.md § Supervisor Policy
 _K_BUMP = 0.05
@@ -50,6 +55,24 @@ class SupervisorPolicy:
             proposed = self._regime_manager.evaluate(upde_state, boundary_state)
         regime = self._regime_manager.transition(proposed)
 
+        actions = self._actions_for_regime(regime, upde_state)
+        logger.info(
+            "supervisor decide: regime=%s actions=%d",
+            regime.value,
+            len(actions),
+            extra={
+                "regime": regime.value,
+                "n_actions": len(actions),
+                "n_violations": len(boundary_state.violations),
+                "stability_proxy": upde_state.stability_proxy,
+                "knobs": [a.knob for a in actions],
+            },
+        )
+        return actions
+
+    def _actions_for_regime(
+        self, regime: Regime, upde_state: UPDEState
+    ) -> list[ControlAction]:
         if regime == Regime.NOMINAL:
             return []
 
