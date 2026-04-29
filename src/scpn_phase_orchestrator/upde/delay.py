@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 from collections import deque
+from math import isfinite
+from numbers import Integral, Real
 
 import numpy as np
 from numpy.typing import NDArray
@@ -27,6 +29,21 @@ except ImportError:
 __all__ = ["DelayBuffer", "DelayedEngine"]
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    value = float(value)
+    if not isfinite(value) or value <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    return value
+
+
 class DelayBuffer:
     """Circular buffer storing phase history for delayed coupling.
 
@@ -35,13 +52,9 @@ class DelayBuffer:
     """
 
     def __init__(self, n_oscillators: int, max_delay_steps: int):
-        if n_oscillators < 1:
-            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
-        if max_delay_steps < 1:
-            raise ValueError(f"max_delay_steps must be >= 1, got {max_delay_steps}")
-        self._n = n_oscillators
-        self._max = max_delay_steps
-        self._buffer: deque[NDArray] = deque(maxlen=max_delay_steps)
+        self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
+        self._max = _validate_positive_int(max_delay_steps, name="max_delay_steps")
+        self._buffer: deque[NDArray] = deque(maxlen=self._max)
 
     def push(self, phases: NDArray) -> None:
         """Append a phase snapshot to the buffer."""
@@ -70,16 +83,10 @@ class DelayedEngine:
     """
 
     def __init__(self, n_oscillators: int, dt: float, delay_steps: int = 1):
-        if n_oscillators < 1:
-            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        if delay_steps < 1:
-            raise ValueError(f"delay_steps must be >= 1, got {delay_steps}")
-        self._n = n_oscillators
-        self._dt = dt
-        self._delay_steps = delay_steps
-        self._buffer: deque[NDArray] = deque(maxlen=delay_steps + 1)
+        self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
+        self._dt = _validate_positive_float(dt, name="dt")
+        self._delay_steps = _validate_positive_int(delay_steps, name="delay_steps")
+        self._buffer: deque[NDArray] = deque(maxlen=self._delay_steps + 1)
 
     @property
     def delay_steps(self) -> int:
