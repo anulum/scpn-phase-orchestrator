@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from scpn_phase_orchestrator.apps.queuewaves.config import (
@@ -150,3 +152,19 @@ def test_production_rate_limits_requests(
 
     assert first.status_code == 200
     assert second.status_code == 429
+
+
+def test_production_template_server_requires_request_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scpn_phase_orchestrator.apps.queuewaves.config import load_config
+
+    cfg = load_config(Path("domainpacks/queuewaves/queuewaves.production.yaml"))
+    monkeypatch.setenv("QUEUEWAVES_API_KEY", "template-key")
+    client = TestClient(create_app(cfg))
+
+    missing = client.get("/api/v1/health")
+    present = client.get("/api/v1/health", headers={"X-API-Key": "template-key"})
+
+    assert missing.status_code == 401
+    assert present.status_code == 200
