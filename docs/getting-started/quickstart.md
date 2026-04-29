@@ -54,6 +54,12 @@ Validate a binding spec:
 spo validate domainpacks/minimal_domain/binding_spec.yaml
 ```
 
+Inspect resolved runtime defaults before running:
+
+```bash
+spo inspect domainpacks/minimal_domain/binding_spec.yaml
+```
+
 Run a simulation and write an audit log:
 
 ```bash

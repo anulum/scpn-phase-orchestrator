@@ -101,6 +101,28 @@ def test_validate_invalid(runner, invalid_spec_path):
     assert "ERROR" in result.output
 
 
+def test_inspect_text_reports_resolved_defaults(runner, valid_spec_path):
+    result = runner.invoke(main, ["inspect", valid_spec_path])
+    assert result.exit_code == 0
+    assert "Domain: cli-test (1.0.0)" in result.output
+    assert "Timing: dt=0.01s  control=0.1s  interval=10 steps" in result.output
+    assert "Counts: layers=2  oscillators=4  families=1" in result.output
+    assert "omega=default" in result.output
+    assert "Actuation bounds source: runtime_defaults" in result.output
+
+
+def test_inspect_json_reports_resolved_summary(runner, valid_spec_path):
+    result = runner.invoke(main, ["inspect", valid_spec_path, "--json-out"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["name"] == "cli-test"
+    assert data["timing"]["control_interval_steps"] == 10
+    assert data["counts"]["oscillators"] == 4
+    assert data["layers"][0]["range"] == [0, 2]
+    assert data["defaults_applied"]["omegas"] == ["L1", "L2"]
+    assert data["actuation"]["value_bounds_source"] == "runtime_defaults"
+
+
 def test_run_simulation(runner, valid_spec_path):
     result = runner.invoke(main, ["run", valid_spec_path, "--steps", "10"])
     assert result.exit_code == 0
