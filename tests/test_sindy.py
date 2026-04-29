@@ -9,11 +9,13 @@
 """Coverage for the Phase-SINDy symbolic coupling discoverer.
 
 The pre-existing single happy-path case exercised recovery on a clean
-two-oscillator signal. This suite adds the edge and error paths Gemini
-S6 flagged as missing.
+two-oscillator signal. This suite adds the edge and error paths flagged
+by the S6 audit.
 """
 
 from __future__ import annotations
+
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -120,8 +122,22 @@ def test_sindy_rejects_zero_max_iter():
 
 def test_sindy_rejects_negative_threshold():
     """Negative threshold would invert the sparsification logic."""
-    with pytest.raises(ValueError, match="threshold must be non-negative"):
+    with pytest.raises(ValueError, match="threshold.*non-negative"):
         PhaseSINDy(threshold=-0.1)
+
+
+@pytest.mark.parametrize("threshold", [float("nan"), float("inf"), True, "0.1"])
+def test_sindy_rejects_non_finite_or_non_numeric_threshold(threshold: object):
+    """Threshold must be a finite numeric sparsity bound."""
+    with pytest.raises(ValueError, match="threshold"):
+        PhaseSINDy(threshold=cast(Any, threshold))
+
+
+@pytest.mark.parametrize("max_iter", [1.5, "2", True])
+def test_sindy_rejects_non_integer_max_iter(max_iter: object):
+    """STLSQ iterations must be a positive integer count."""
+    with pytest.raises(ValueError, match="max_iter"):
+        PhaseSINDy(max_iter=cast(Any, max_iter))
 
 
 def test_sindy_threshold_sparsifies_weak_terms():

@@ -267,7 +267,7 @@ Review of Fluid Mechanics 36, 2004.
 
 ### Agent Coordination
 
-Multiple AI agents (Claude, Codex, Gemini, human) working on a shared
+Multiple software agents and a human operator working on a shared
 codebase exhibit oscillatory task patterns — heartbeat liveness checks,
 task flow cycles, topic focus shifts.  Synchronisation = coordinated
 parallel work; desynchronisation = merge conflicts and wasted effort.

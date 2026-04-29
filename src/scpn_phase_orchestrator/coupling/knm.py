@@ -92,7 +92,32 @@ class CouplingBuilder:
     def build(
         self, n_layers: int, base_strength: float, decay_alpha: float
     ) -> CouplingState:
-        """K_ij = base_strength * exp(-decay_alpha * |i - j|), zero diagonal."""
+        """Build an exponentially decayed phase-coupling matrix.
+
+        Parameters
+        ----------
+        n_layers
+            Number of hierarchy layers or oscillators represented in the
+            square coupling matrix.
+        base_strength
+            Coupling strength before distance decay is applied.
+        decay_alpha
+            Non-negative exponential decay coefficient in
+            ``exp(-decay_alpha * |i - j|)``.
+
+        Returns
+        -------
+        CouplingState
+            Coupling snapshot with ``knm`` and ``alpha`` matrices of shape
+            ``(n_layers, n_layers)``. The diagonal of ``knm`` is zero and
+            ``alpha`` is initialised to zeros.
+
+        Notes
+        -----
+        When the Rust extension is available, construction dispatches to
+        ``spo_kernel.PyCouplingBuilder`` and preserves the same output
+        contract as the NumPy fallback.
+        """
         if _HAS_RUST:  # pragma: no cover
             from spo_kernel import PyCouplingBuilder
 

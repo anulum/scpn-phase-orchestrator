@@ -84,7 +84,7 @@ class TestSheafUPDEEngine:
 
 
 class TestSheafEngineEdgeCases:
-    """Edge cases and error paths Gemini S6 flagged as missing."""
+    """Edge cases and error paths a prior audit flagged as missing."""
 
     def test_zero_restriction_maps_decouple_oscillators(self):
         """Empty coupling (all zero restriction maps) → each dim evolves

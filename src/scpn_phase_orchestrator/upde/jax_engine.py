@@ -62,10 +62,12 @@ def _validate_method(value: object) -> str:
     return value
 
 
+# type ignore: JAX tracer callables need dynamic signatures for jit wrapping.
 def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     """Build JIT-compiled Kuramoto step function."""
 
     @jit
+    # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _kuramoto_step(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
         diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
         coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
@@ -75,7 +77,9 @@ def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
         return new_phases % (2.0 * jnp.pi)
 
     @jit
+    # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
+        # type ignore: nested derivative keeps JAX tracer polymorphism.
         def deriv(p):  # type: ignore[no-untyped-def]
             """Kuramoto coupling derivative at given phases."""
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
@@ -92,13 +96,16 @@ def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     return _kuramoto_step, _kuramoto_rk4
 
 
+# type ignore: JAX tracer callables need dynamic signatures for jit wrapping.
 def _build_jax_sl_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     """Build JIT-compiled Stuart-Landau step function."""
 
     @jit
+    # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _sl_rk4(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, dt):  # type: ignore[no-untyped-def]
         n = omegas.shape[0]
 
+        # type ignore: nested derivative keeps JAX tracer polymorphism.
         def deriv(s):  # type: ignore[no-untyped-def]
             """Stuart-Landau coupled (phase, amplitude) derivative."""
             th, am = s[:n], s[n:]

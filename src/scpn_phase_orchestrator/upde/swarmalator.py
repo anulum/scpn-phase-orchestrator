@@ -209,6 +209,36 @@ class SwarmalatorEngine:
         j: float = 1.0,
         k: float = 1.0,
     ) -> tuple[NDArray, NDArray]:
+        """Advance coupled swarmalator positions and phases by one step.
+
+        Parameters
+        ----------
+        pos
+            Agent positions with shape ``(n_agents, dim)``.
+        phases
+            Agent phases in radians, shape ``(n_agents,)``.
+        omegas
+            Natural angular frequencies, shape ``(n_agents,)``.
+        a
+            Baseline spatial attraction coefficient.
+        b
+            Spatial repulsion coefficient.
+        j
+            Phase-dependent attraction modulation.
+        k
+            Phase-coupling coefficient.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Updated positions with shape ``(n_agents, dim)`` and updated
+            phases wrapped into ``[0, 2*pi)``.
+
+        Notes
+        -----
+        The dispatcher selects the first available accelerated backend and
+        falls back to the NumPy reference path with the same state contract.
+        """
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(

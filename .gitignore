@@ -55,7 +55,7 @@ experiments/.eeg_cache/
 # Coordination — local-only session logs and handovers
 .coordination/
 
-# Claude Code local config — never commit
+# Local assistant config — never commit
 CLAUDE.md
 .claude/
 

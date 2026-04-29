@@ -8,15 +8,24 @@
 
 from __future__ import annotations
 
+import re
+
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["MetricsExporter"]
+
+_PROMETHEUS_PREFIX_RE = re.compile(r"^[A-Za-z_:][A-Za-z0-9_:]*$")
 
 
 class MetricsExporter:
     """Format UPDE state, regime, and latency as Prometheus text exposition."""
 
     def __init__(self, prefix: str = "spo") -> None:
+        if not isinstance(prefix, str) or not _PROMETHEUS_PREFIX_RE.fullmatch(prefix):
+            raise ValueError(
+                "prefix must be a valid Prometheus metric prefix "
+                "([A-Za-z_:][A-Za-z0-9_:]*)"
+            )
         self._prefix = prefix
 
     def exposition_lines(

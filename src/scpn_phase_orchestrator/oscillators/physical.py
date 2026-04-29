@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -17,6 +19,9 @@ from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
 __all__ = ["PhysicalExtractor"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+ComplexArray: TypeAlias = NDArray[np.complex128]
+
 
 class PhysicalExtractor(PhaseExtractor):
     """Extracts instantaneous phase from continuous waveforms via Hilbert transform."""
@@ -24,7 +29,7 @@ class PhysicalExtractor(PhaseExtractor):
     def __init__(self, node_id: str = "phys_0"):
         self._node_id = node_id
 
-    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+    def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Extract instantaneous phase from a 1-D waveform via Hilbert transform."""
         if signal.ndim != 1 or signal.size < 2:
             raise ValueError(
@@ -71,7 +76,7 @@ class PhysicalExtractor(PhaseExtractor):
         return float(np.mean([ps.quality for ps in phase_states]))
 
     @staticmethod
-    def _envelope_quality(signal: NDArray, analytic: NDArray) -> float:
+    def _envelope_quality(signal: FloatArray, analytic: ComplexArray) -> float:
         envelope = np.abs(analytic)
         mean_env = np.mean(envelope)
         if mean_env < 1e-15:

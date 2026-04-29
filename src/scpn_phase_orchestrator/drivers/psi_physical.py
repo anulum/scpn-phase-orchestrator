@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from math import isfinite
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -20,10 +22,19 @@ class PhysicalDriver:
     """Sinusoidal external drive: Psi_P(t) = amplitude * sin(2*pi*frequency*t)."""
 
     def __init__(self, frequency: float, amplitude: float = 1.0):
-        if frequency <= 0.0:
-            raise ValueError(f"frequency must be positive, got {frequency}")
-        self._frequency = frequency
-        self._amplitude = amplitude
+        try:
+            parsed_frequency = float(frequency)
+            parsed_amplitude = float(amplitude)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("frequency and amplitude must be finite numbers") from exc
+        if not isfinite(parsed_frequency) or parsed_frequency <= 0.0:
+            raise ValueError(f"frequency must be finite and positive, got {frequency}")
+        if not isfinite(parsed_amplitude) or parsed_amplitude < 0.0:
+            raise ValueError(
+                f"amplitude must be finite and non-negative, got {amplitude}"
+            )
+        self._frequency = parsed_frequency
+        self._amplitude = parsed_amplitude
 
     def compute(self, t: float) -> float:
         """Return Psi_P at time *t*."""

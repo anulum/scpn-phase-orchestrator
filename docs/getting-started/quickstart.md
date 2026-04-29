@@ -8,6 +8,16 @@ Five minutes from install to synchronized oscillators.
 pip install scpn-phase-orchestrator
 ```
 
+For repository development, use the one-command setup and smoke run:
+
+```bash
+make quickstart
+```
+
+That target creates `.venv`, installs the development extras, validates
+`domainpacks/minimal_domain/binding_spec.yaml`, runs a short audited
+simulation, and prints a coherence report.
+
 ## 2. Your First Simulation
 
 8 Kuramoto oscillators with uniform coupling, integrated for 500 RK4 steps:

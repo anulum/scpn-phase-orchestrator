@@ -20,6 +20,7 @@ from typing import Any
 try:
     from httpx import HTTPError as _HTTPError
 except ImportError:  # pragma: no cover
+    # type ignore: optional httpx dependency falls back to a base I/O error.
     _HTTPError = OSError  # type: ignore[assignment,misc]
 
 from scpn_phase_orchestrator.apps.queuewaves.alerter import WebhookAlerter
@@ -315,4 +316,5 @@ def run_server(config_path: str, host: str = "127.0.0.1", port: int = 8080) -> N
 
     cfg = load_config(Path(config_path))
     app = create_app(cfg)
+    # type ignore: uvicorn's app parameter typing is narrower than FastAPI instances.
     uvicorn.run(app, host=host, port=port, log_level="info")  # type: ignore[arg-type]

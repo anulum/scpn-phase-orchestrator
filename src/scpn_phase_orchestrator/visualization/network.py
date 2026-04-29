@@ -9,15 +9,18 @@
 from __future__ import annotations
 
 import json
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["network_graph_json", "coupling_heatmap_json"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 def network_graph_json(
-    knm: NDArray,
+    knm: FloatArray,
     layer_names: list[str] | None = None,
     R_values: list[float] | None = None,
     threshold: float = 0.01,
@@ -60,7 +63,7 @@ def network_graph_json(
 
 
 def coupling_heatmap_json(
-    knm: NDArray,
+    knm: FloatArray,
     layer_names: list[str] | None = None,
 ) -> str:
     """Generate heatmap data JSON from coupling matrix.

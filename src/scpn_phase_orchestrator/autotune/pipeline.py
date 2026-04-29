@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -19,21 +20,23 @@ from scpn_phase_orchestrator.coupling.prior import UniversalPrior
 
 __all__ = ["identify_binding_spec", "AutoTuneResult"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class AutoTuneResult:
     """Output of the auto-tune pipeline: inferred frequencies and coupling."""
 
     omegas: list[float]
-    knm: NDArray
-    alpha: NDArray
+    knm: FloatArray
+    alpha: FloatArray
     n_layers: int
     dominant_freqs: list[float]
     K_c_estimate: float
 
 
 def identify_binding_spec(
-    time_series: NDArray,
+    time_series: FloatArray,
     fs: float,
     n_layers: int | None = None,
 ) -> AutoTuneResult:

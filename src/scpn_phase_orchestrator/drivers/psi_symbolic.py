@@ -20,8 +20,13 @@ class SymbolicDriver:
     def __init__(self, sequence: list[float]):
         if not sequence:
             raise ValueError("sequence must be non-empty")
-        self._sequence = np.asarray(sequence, dtype=np.float64)
-        self._n = len(sequence)
+        parsed_sequence = np.asarray(sequence, dtype=np.float64)
+        if parsed_sequence.ndim != 1:
+            raise ValueError("sequence must be one-dimensional")
+        if not np.all(np.isfinite(parsed_sequence)):
+            raise ValueError("sequence values must be finite")
+        self._sequence = parsed_sequence
+        self._n = len(parsed_sequence)
 
     def compute(self, step: int) -> float:
         """Return symbolic phase at discrete *step* (cyclic)."""

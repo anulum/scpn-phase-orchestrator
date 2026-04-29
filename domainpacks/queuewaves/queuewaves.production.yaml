@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — QueueWaves production configuration template
+
+prometheus_url: "http://prometheus:9090"
+scrape_interval_s: 15.0
+buffer_length: 64
+
+services:
+  - name: order-api-errors
+    promql: "rate(http_requests_total{service='order-api',code=~'5..'}[1m])"
+    layer: micro
+    channel: P
+  - name: payment-errors
+    promql: "rate(http_requests_total{service='payment-svc',code=~'5..'}[1m])"
+    layer: micro
+    channel: P
+  - name: gateway-p99
+    promql: "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service='gateway'}[5m]))"
+    layer: meso
+    channel: P
+  - name: total-throughput
+    promql: "sum(rate(http_requests_total[5m]))"
+    layer: macro
+    channel: P
+
+thresholds:
+  r_bad_warn: 0.50
+  r_bad_critical: 0.70
+  plv_cascade: 0.85
+  imprint_chronic: 1.5
+  cooldown_seconds: 300.0
+
+coupling:
+  strength: 0.50
+  decay: 0.25
+
+alert_sinks:
+  - url: "https://ops.example.com/queuewaves-alert"
+    format: generic
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+security:
+  mode: production
+  api_key_env: QUEUEWAVES_API_KEY
+  rate_limit_per_minute: 120

@@ -15,6 +15,7 @@ from scpn_phase_orchestrator.adapters.hardware_io import (
     HAS_MODBUS,
     BrainFlowAdapter,
     ModbusAdapter,
+    SampleBuffer,
     SimulatedBoardAdapter,
 )
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import LSLBCIBridge
@@ -64,6 +65,7 @@ __all__ = [
     "RedisStateStore",
     "RemanentiaBridge",
     "SCPNControlBridge",
+    "SampleBuffer",
     "SNNControllerBridge",
     "SecureModbusAdapter",
     "SimulatedBoardAdapter",

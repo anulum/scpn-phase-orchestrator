@@ -28,6 +28,22 @@ def _mock_response(body: dict):
     return resp
 
 
+class TestPrometheusConfigValidation:
+    @pytest.mark.parametrize("endpoint", ["", "localhost:9090", "file:///tmp/prom"])
+    def test_endpoint_must_be_http_url(self, endpoint: str):
+        with pytest.raises(ValueError, match="endpoint"):
+            PrometheusAdapter(endpoint)
+
+    @pytest.mark.parametrize("timeout", [0.0, -1.0, float("inf"), float("nan"), True])
+    def test_timeout_must_be_finite_and_positive(self, timeout: float):
+        with pytest.raises(ValueError, match="timeout"):
+            PrometheusAdapter("http://localhost:9090", timeout=timeout)
+
+    def test_timeout_is_normalised_to_float(self):
+        adapter = PrometheusAdapter("http://localhost:9090", timeout=1)
+        assert adapter._timeout == 1.0
+
+
 class TestFetchMetric:
     def test_returns_values(self):
         body = {

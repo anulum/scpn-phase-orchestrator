@@ -20,6 +20,7 @@ try:
 
     HAS_WEBSOCKETS = True
 except ImportError:
+    # type ignore: optional websockets dependency uses a None sentinel fallback.
     websockets = None  # type: ignore[assignment]
     HAS_WEBSOCKETS = False
 
