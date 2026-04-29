@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.adapters.opentelemetry import OTelExporter, _NoOpSpan
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
@@ -89,6 +90,15 @@ class TestOTelExporter:
     def test_custom_service_name(self) -> None:
         exp = OTelExporter(service_name="custom_spo")
         assert exp._service_name == "custom_spo"
+
+    @pytest.mark.parametrize("service_name", ["", "1spo", "bad name", "bad/name"])
+    def test_invalid_service_name_rejected(self, service_name: str) -> None:
+        with pytest.raises(ValueError, match="service_name"):
+            OTelExporter(service_name=service_name)
+
+    def test_hyphenated_service_name_is_valid(self) -> None:
+        exp = OTelExporter(service_name="test-svc")
+        assert exp._service_name == "test-svc"
 
     def test_default_service_name(self) -> None:
         exp = OTelExporter()

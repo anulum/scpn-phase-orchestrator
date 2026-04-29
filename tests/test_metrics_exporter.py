@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -75,6 +76,18 @@ def test_custom_prefix():
     result = exp.export(state, "nominal", 1.0)
     assert "myapp_r_global" in result
     assert "spo_r_global" not in result
+
+
+@pytest.mark.parametrize("prefix", ["", "1spo", "bad-name", "bad name"])
+def test_invalid_prefix_rejected(prefix: str):
+    with pytest.raises(ValueError, match="prefix"):
+        MetricsExporter(prefix=prefix)
+
+
+def test_prometheus_colon_prefix_is_valid():
+    exp = MetricsExporter(prefix="spo:internal")
+    state = _make_state([0.5])
+    assert "spo:internal_r_global" in exp.export(state, "nominal", 1.0)
 
 
 def test_export_pac_max():
