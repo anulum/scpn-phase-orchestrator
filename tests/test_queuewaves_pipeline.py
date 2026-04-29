@@ -41,6 +41,37 @@ def test_compiler_produces_valid_spec():
     assert 1 in spec.objectives.good_layers
 
 
+def test_compiler_preserves_named_extension_channels():
+    cfg = QueueWavesConfig(
+        prometheus_url="http://localhost:9090",
+        services=[
+            ServiceDef(name="cpu", promql="cpu", layer="micro", channel="P"),
+            ServiceDef(name="events", promql="events", layer="meso", channel="I"),
+            ServiceDef(name="state", promql="state", layer="macro", channel="S"),
+            ServiceDef(
+                name="quantum",
+                promql="quantum",
+                layer="macro",
+                channel="Q_control",
+                extractor_type="event",
+            ),
+        ],
+        scrape_interval_s=1.0,
+        buffer_length=16,
+    )
+
+    spec = ConfigCompiler().compile(cfg)
+
+    assert spec.oscillator_families["cpu"].channel == "P"
+    assert spec.oscillator_families["cpu"].extractor_type == "hilbert"
+    assert spec.oscillator_families["events"].channel == "I"
+    assert spec.oscillator_families["events"].extractor_type == "event"
+    assert spec.oscillator_families["state"].channel == "S"
+    assert spec.oscillator_families["state"].extractor_type == "ring"
+    assert spec.oscillator_families["quantum"].channel == "Q_control"
+    assert spec.oscillator_families["quantum"].extractor_type == "event"
+
+
 def test_pipeline_tick():
     cfg = _make_config()
     pipeline = PhaseComputePipeline(cfg)
