@@ -33,6 +33,8 @@ import json
 import logging
 import os
 import threading
+import time
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import numpy as np
@@ -410,6 +412,34 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
                 sim.event_bus.clear()
 
     app = FastAPI(title="SPO Dashboard", version="0.5.0", lifespan=_lifespan)
+
+    @app.middleware("http")
+    async def _log_http_request(
+        request: FastAPIRequest,
+        call_next: Callable[[FastAPIRequest], Awaitable[Response]],
+    ) -> Response:
+        start = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            duration_ms = (time.perf_counter() - start) * 1000.0
+            path = request.url.path
+            logger.info(
+                "http.request: method=%s path=%s status_code=%d duration_ms=%.3f",
+                request.method,
+                path,
+                status_code,
+                duration_ms,
+                extra={
+                    "http_method": request.method,
+                    "http_path": path,
+                    "status_code": status_code,
+                    "duration_ms": duration_ms,
+                },
+            )
 
     _api_key = os.environ.get("SPO_API_KEY")
     _production = is_production_mode("SPO")

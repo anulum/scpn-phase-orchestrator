@@ -71,6 +71,33 @@ def _snap_to_response(snap: dict) -> StateResponse:
     )
 
 
+def _log_state_rpc(
+    rpc: str,
+    response: StateResponse,
+    *,
+    level: int = logging.INFO,
+    n_steps: int | None = None,
+) -> None:
+    extra = {
+        "rpc": rpc,
+        "step": response.step,
+        "R_global": response.R_global,
+        "regime": response.regime,
+        "status": "ok",
+    }
+    if n_steps is not None:
+        extra["n_steps"] = n_steps
+    logger.log(
+        level,
+        "grpc.%s: step=%d R_global=%.4f regime=%s",
+        rpc,
+        response.step,
+        response.R_global,
+        response.regime,
+        extra=extra,
+    )
+
+
 class PhaseStreamServicer(PhaseOrchestratorServicer):
     """gRPC servicer that exposes state, step, reset, streaming, and config.
 
@@ -121,7 +148,9 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         """gRPC unary RPC: return current simulation state."""
         self._authorise(context)
         with self._lock:
-            return _snap_to_response(self._sim.snapshot())
+            response = _snap_to_response(self._sim.snapshot())
+        _log_state_rpc("GetState", response)
+        return response
 
     def Step(self, request: Any, context: Any) -> StateResponse:
         """gRPC unary RPC: advance simulation by n_steps and return state."""
@@ -131,13 +160,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
             for _ in range(n):
                 self._sim.step()
             response = _snap_to_response(self._sim.snapshot())
-        logger.debug(
-            "grpc.Step: n_steps=%d step=%d R_global=%.4f regime=%s",
-            n,
-            response.step,
-            response.R_global,
-            response.regime,
-        )
+        _log_state_rpc("Step", response, n_steps=n)
         return response
 
     def Reset(self, request: Any, context: Any) -> StateResponse:
@@ -146,14 +169,14 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         with self._lock:
             self._sim.reset()
             response = _snap_to_response(self._sim.snapshot())
-        logger.info("grpc.Reset: step=%d regime=%s", response.step, response.regime)
+        _log_state_rpc("Reset", response)
         return response
 
     def GetConfig(self, request: Any, context: Any) -> ConfigResponse:
         """gRPC unary RPC: return engine configuration."""
         self._authorise(context)
         spec = self._sim.spec
-        return ConfigResponse(
+        response = ConfigResponse(
             name=spec.name,
             n_oscillators=self._sim.n_osc,
             n_layers=len(spec.layers),
@@ -161,6 +184,20 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
             sample_period_s=spec.sample_period_s,
             control_period_s=spec.control_period_s,
         )
+        logger.info(
+            "grpc.GetConfig: name=%s n_oscillators=%d n_layers=%d",
+            response.name,
+            response.n_oscillators,
+            response.n_layers,
+            extra={
+                "rpc": "GetConfig",
+                "config_name": response.name,
+                "n_oscillators": response.n_oscillators,
+                "n_layers": response.n_layers,
+                "status": "ok",
+            },
+        )
+        return response
 
     # -- server-streaming RPC -------------------------------------------------
 
@@ -169,14 +206,50 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         self._authorise(context)
         max_steps = getattr(request, "max_steps", 100) or 100
         interval = getattr(request, "interval_s", 0.05) or 0.05
+        emitted = 0
+        logger.info(
+            "grpc.StreamPhases.start: max_steps=%d interval_s=%.4f",
+            max_steps,
+            interval,
+            extra={
+                "rpc": "StreamPhases",
+                "stream_event": "start",
+                "max_steps": max_steps,
+                "interval_s": interval,
+                "status": "ok",
+            },
+        )
         for _ in range(max_steps):
             if (
                 context is not None
                 and hasattr(context, "is_active")
                 and not context.is_active()
             ):
+                logger.info(
+                    "grpc.StreamPhases.stop: emitted=%d reason=inactive_context",
+                    emitted,
+                    extra={
+                        "rpc": "StreamPhases",
+                        "stream_event": "stop",
+                        "emitted": emitted,
+                        "reason": "inactive_context",
+                        "status": "ok",
+                    },
+                )
                 return
             with self._lock:
                 snap = self._sim.snapshot()
             yield _snap_to_response(snap)
+            emitted += 1
             time.sleep(interval)
+        logger.info(
+            "grpc.StreamPhases.stop: emitted=%d reason=max_steps",
+            emitted,
+            extra={
+                "rpc": "StreamPhases",
+                "stream_event": "stop",
+                "emitted": emitted,
+                "reason": "max_steps",
+                "status": "ok",
+            },
+        )
