@@ -17,6 +17,10 @@ signals are oscillators, how they couple, and what "healthy" looks like.
 
 ## Pipeline
 
+For a step-by-step map from YAML to extractors, engines, supervisor,
+actuation, audit, and replay, see
+[How the Pipeline Fires](pipeline_firing.md).
+
 ```
 Domain Signals
     |
