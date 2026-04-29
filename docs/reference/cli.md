@@ -163,6 +163,39 @@ spo report run.jsonl --json-out > summary.json
 
 ---
 
+## `spo explain`
+
+Generate a human-readable explanation report from an audit log.
+
+```
+spo explain <audit_log> [OPTIONS]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `audit_log` | Path to an `audit.jsonl` file |
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--markdown-out PATH` | None | Write a Markdown explanation report |
+| `--pdf-out PATH` | None | Write a dependency-free text PDF report |
+| `--max-actions N` | 12 | Maximum control actions to explain |
+
+**Output:** regime distribution, regime transitions, metric evidence,
+control-action explanations, event summaries, and hash-chain status.
+
+**Example:**
+
+```bash
+spo explain run.jsonl --markdown-out explain.md --pdf-out explain.pdf
+```
+
+---
+
 ## `spo queuewaves serve`
 
 Start the QueueWaves cascade failure detection server.

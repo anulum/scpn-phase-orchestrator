@@ -8,6 +8,22 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.reporting.explainability import (
+    ActionExplanation,
+    ExplainabilityReport,
+    build_explainability_report,
+    render_markdown,
+    write_markdown,
+    write_pdf,
+)
 from scpn_phase_orchestrator.reporting.plots import CoherencePlot
 
-__all__ = ["CoherencePlot"]
+__all__ = [
+    "ActionExplanation",
+    "CoherencePlot",
+    "ExplainabilityReport",
+    "build_explainability_report",
+    "render_markdown",
+    "write_markdown",
+    "write_pdf",
+]

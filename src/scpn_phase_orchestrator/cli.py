@@ -597,6 +597,50 @@ def report(log_path: str, json_out: bool) -> None:
     click.echo(f"Hash chain: {status} ({n_verified} records verified)")
 
 
+@main.command()
+@click.argument("log_path", type=click.Path(exists=True))
+@click.option("--markdown-out", default=None, type=click.Path(), help="Write Markdown")
+@click.option("--pdf-out", default=None, type=click.Path(), help="Write text PDF")
+@click.option("--max-actions", default=12, type=int, help="Maximum action explanations")
+def explain(
+    log_path: str,
+    markdown_out: str | None,
+    pdf_out: str | None,
+    max_actions: int,
+) -> None:
+    """Generate a human-readable explanation report from an audit log."""
+    from scpn_phase_orchestrator.reporting.explainability import (
+        build_explainability_report,
+        render_markdown,
+        write_markdown,
+        write_pdf,
+    )
+
+    if max_actions < 1:
+        click.echo("ERROR: --max-actions must be >= 1", err=True)
+        raise SystemExit(1)
+
+    replay_engine = ReplayEngine(log_path)
+    entries = replay_engine.load()
+    try:
+        explanation = build_explainability_report(entries, max_actions=max_actions)
+    except ValueError as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        raise SystemExit(1) from exc
+
+    wrote = False
+    if markdown_out is not None:
+        write_markdown(explanation, markdown_out)
+        click.echo(f"Markdown report written: {markdown_out}")
+        wrote = True
+    if pdf_out is not None:
+        write_pdf(explanation, pdf_out)
+        click.echo(f"PDF report written: {pdf_out}")
+        wrote = True
+    if not wrote:
+        click.echo(render_markdown(explanation), nl=False)
+
+
 @main.group()
 def queuewaves() -> None:
     """QueueWaves — real-time cascade failure detector."""
