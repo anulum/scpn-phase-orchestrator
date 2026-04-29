@@ -51,7 +51,13 @@ jobs:
     timeout-minutes: 45
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        include:
+          - python-version: "3.11"
+            lockfile: requirements/dev-lock-py311.txt
+          - python-version: "3.12"
+            lockfile: requirements/dev-lock.txt
+          - python-version: "3.13"
+            lockfile: requirements/dev-lock-py313.txt
     env:
       HYPOTHESIS_PROFILE: ci
     steps:
@@ -61,7 +67,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install (lockfile)
-        run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+        run: pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
       - name: Run tests (with coverage on 3.12)
         run: >
           pytest tests/ -v --tb=short
@@ -181,8 +187,25 @@ jobs:
   ffi-test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
+            lockfile: requirements/dev-lock-py311.txt
+          - os: ubuntu-latest
+            python-version: "3.12"
+            lockfile: requirements/dev-lock.txt
+          - os: macos-latest
+            python-version: "3.11"
+            lockfile: requirements/dev-lock-py311.txt
+          - os: macos-latest
+            python-version: "3.12"
+            lockfile: requirements/dev-lock.txt
+          - os: windows-latest
+            python-version: "3.11"
+            lockfile: requirements/dev-lock-py311.txt
+          - os: windows-latest
+            python-version: "3.12"
+            lockfile: requirements/dev-lock.txt
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -207,7 +230,7 @@ jobs:
           . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
           pytest tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
@@ -235,7 +258,7 @@ jobs:
           . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
           pytest tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
@@ -255,7 +278,7 @@ jobs:
           source .venv/Scripts/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
           pytest tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
