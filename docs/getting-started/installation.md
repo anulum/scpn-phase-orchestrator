@@ -18,6 +18,15 @@ pip install -e ".[dev]"
 
 The `dev` extra includes pytest, hypothesis, ruff, mypy, bandit, coverage, mkdocs-material, pre-commit, and twine.
 
+For a full local setup plus a minimal audited smoke run:
+
+```bash
+make quickstart
+```
+
+The target creates `.venv`, installs development extras, validates the
+minimal domainpack, runs `spo run`, and reports the generated audit log.
+
 ## Optional Extras
 
 | Extra | Installs | Purpose |
