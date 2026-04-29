@@ -93,6 +93,8 @@ def test_validate_valid(runner, valid_spec_path):
     result = runner.invoke(main, ["validate", valid_spec_path])
     assert result.exit_code == 0
     assert "Valid" in result.output
+    assert "Resolved configuration:" in result.output
+    assert "engine: kuramoto" in result.output
 
 
 def test_validate_invalid(runner, invalid_spec_path):
@@ -104,8 +106,22 @@ def test_validate_invalid(runner, invalid_spec_path):
 def test_run_simulation(runner, valid_spec_path):
     result = runner.invoke(main, ["run", valid_spec_path, "--steps", "10"])
     assert result.exit_code == 0
+    assert "Resolved configuration:" in result.output
     assert "R_good" in result.output
     assert "R_bad" in result.output
+
+
+def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    result = runner.invoke(
+        main,
+        ["run", valid_spec_path, "--steps", "2", "--audit", str(audit_path)],
+    )
+    assert result.exit_code == 0
+    header = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert header["binding_config"]["name"] == "cli-test"
+    assert header["binding_config"]["engine_mode"] == "kuramoto"
+    assert "P" in header["binding_config"]["channels"]
 
 
 def test_run_invalid_spec(runner, invalid_spec_path):
