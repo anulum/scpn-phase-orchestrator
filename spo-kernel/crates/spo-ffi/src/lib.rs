@@ -243,6 +243,29 @@ struct PyUPDEStepper {
 
 #[pymethods]
 impl PyUPDEStepper {
+    /// Create a Rust-backed UPDE stepper.
+    ///
+    /// Parameters
+    /// ----------
+    /// n
+    ///     Number of oscillators in every phase, frequency, and coupling
+    ///     input passed to `step` or `run`.
+    /// dt
+    ///     Base integration timestep in seconds.
+    /// method
+    ///     Integration method: `"euler"`, `"rk4"`, or `"rk45"`.
+    /// n_substeps
+    ///     Number of substeps retained in the integration configuration.
+    /// atol
+    ///     Absolute tolerance used by adaptive RK45.
+    /// rtol
+    ///     Relative tolerance used by adaptive RK45.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If `method` is unknown or the integration configuration is
+    ///     rejected by the Rust kernel.
     #[new]
     #[pyo3(signature = (n, dt = 0.01, method = "euler", n_substeps = 1, atol = 1e-6, rtol = 1e-3))]
     fn new(
