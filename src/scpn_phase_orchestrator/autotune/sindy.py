@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Integral, Real
+
 import numpy as np
 from scipy.linalg import lstsq
 
@@ -32,12 +35,18 @@ class PhaseSINDy:
     """
 
     def __init__(self, threshold: float = 0.05, max_iter: int = 10):
-        if threshold < 0.0:
-            raise ValueError(f"threshold must be non-negative, got {threshold}")
+        if isinstance(threshold, bool) or not isinstance(threshold, Real):
+            raise ValueError("threshold must be finite and non-negative")
+        parsed_threshold = float(threshold)
+        if not isfinite(parsed_threshold) or parsed_threshold < 0.0:
+            raise ValueError("threshold must be non-negative and finite")
+        if isinstance(max_iter, bool) or not isinstance(max_iter, Integral):
+            raise ValueError("max_iter must be an integer >= 1")
         if max_iter < 1:
             raise ValueError(f"max_iter must be >= 1, got {max_iter}")
-        self.threshold = threshold
-        self.max_iter = max_iter
+        parsed_max_iter = int(max_iter)
+        self.threshold: float = parsed_threshold
+        self.max_iter: int = parsed_max_iter
         self.coefficients: list[np.ndarray] = []
         self.feature_names: list[list[str]] = []
 
