@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from typing import get_type_hints
 
 import numpy as np
 
@@ -138,3 +139,18 @@ class TestVisualizationPipelineWiring:
 
         wheel = json.loads(phase_wheel_json(phases))
         assert len(wheel["oscillators"]) == n
+
+
+class TestVisualizationTypeHints:
+    """Guard the V2 typed-array contract for public visualization helpers."""
+
+    def test_public_array_inputs_use_parameterised_ndarray_aliases(self):
+        for fn, param in [
+            (network_graph_json, "knm"),
+            (coupling_heatmap_json, "knm"),
+            (torus_points_json, "phases"),
+            (phase_wheel_json, "phases"),
+        ]:
+            hint = get_type_hints(fn)[param]
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)

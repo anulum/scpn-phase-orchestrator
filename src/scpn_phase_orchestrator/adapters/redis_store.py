@@ -18,6 +18,7 @@ try:
 
     _HAS_REDIS = True
 except ModuleNotFoundError:  # pragma: no cover
+    # type ignore: optional redis dependency uses a None module sentinel.
     _redis_mod = None  # type: ignore[assignment]
     _HAS_REDIS = False
 

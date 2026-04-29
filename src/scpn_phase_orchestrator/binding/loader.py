@@ -47,13 +47,88 @@ def _require(data: dict, key: str, context: str = "") -> Any:
         raise BindingLoadError(f"missing required key {key!r}{loc}") from None
 
 
-def _require_mapping(value: Any, context: str) -> dict:
-    """Return *value* as a mapping or raise a location-specific load error."""
+def _expected(kind: str, context: str, value: object) -> BindingLoadError:
+    return BindingLoadError(f"expected {kind} in {context}, got {type(value).__name__}")
+
+
+def _require_mapping(value: object, context: str) -> dict:
     if not isinstance(value, dict):
-        raise BindingLoadError(
-            f"{context} must be a mapping, got {type(value).__name__}"
-        )
+        raise _expected("mapping", context, value)
     return value
+
+
+def _optional_mapping(value: object, context: str) -> dict:
+    if value is None:
+        return {}
+    return _require_mapping(value, context)
+
+
+def _require_list(value: object, context: str) -> list:
+    if not isinstance(value, list):
+        raise _expected("list", context, value)
+    return value
+
+
+def _optional_list(value: object, context: str) -> list:
+    if value is None:
+        return []
+    return _require_list(value, context)
+
+
+def _require_str(value: object, context: str) -> str:
+    if not isinstance(value, str):
+        raise _expected("string", context, value)
+    return value
+
+
+def _require_int(value: object, context: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise _expected("integer", context, value)
+    return value
+
+
+def _require_number(value: object, context: str) -> float:
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise _expected("number", context, value)
+    return float(value)
+
+
+def _optional_number(value: object, context: str) -> float | None:
+    if value is None:
+        return None
+    return _require_number(value, context)
+
+
+def _optional_str(value: object, context: str) -> str | None:
+    if value is None:
+        return None
+    return _require_str(value, context)
+
+
+def _optional_str_list(value: object, context: str) -> list[str]:
+    items = _optional_list(value, context)
+    return [_require_str(item, f"{context}[]") for item in items]
+
+
+def _optional_number_list(value: object, context: str) -> list[float] | None:
+    if value is None:
+        return None
+    items = _require_list(value, context)
+    return [_require_number(item, f"{context}[]") for item in items]
+
+
+def _require_number_list(value: object, context: str) -> list[float]:
+    items = _require_list(value, context)
+    return [_require_number(item, f"{context}[]") for item in items]
+
+
+def _require_number_pair(value: object, context: str) -> tuple[float, float]:
+    items = _require_number_list(value, context)
+    if len(items) != 2:
+        raise BindingLoadError(
+            f"expected two numbers in {context}, got {len(items)} item(s)"
+        )
+    return (items[0], items[1])
 
 
 def _load_drivers(data: dict) -> DriverSpec:
@@ -62,9 +137,14 @@ def _load_drivers(data: dict) -> DriverSpec:
     standard_driver_keys = {"physical", "informational", "symbolic"}
     driver_maps: dict[str, dict] = {}
     for key, value in drivers_data.items():
-        if key not in standard_driver_keys and not is_valid_channel_id(key):
-            raise BindingLoadError(f"drivers.{key}: invalid driver channel identifier")
-        driver_maps[key] = _require_mapping(value, f"drivers.{key}")
+        driver_key = _require_str(key, "drivers key")
+        if driver_key not in standard_driver_keys and not is_valid_channel_id(
+            driver_key
+        ):
+            raise BindingLoadError(
+                f"drivers.{driver_key}: invalid driver channel identifier"
+            )
+        driver_maps[driver_key] = _require_mapping(value, f"drivers.{driver_key}")
 
     extra_drivers = {
         key: value
@@ -110,119 +190,221 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
             f"expected mapping at top level, got {type(data).__name__}"
         )
 
-    layers = [
-        HierarchyLayer(
-            name=_require(lay, "name", "layers[]"),
-            index=_require(lay, "index", "layers[]"),
-            oscillator_ids=lay.get("oscillator_ids", []),
-            omegas=lay.get("omegas"),
-            family=lay.get("family"),
+    layers_data = _require_list(_require(data, "layers", "root"), "layers")
+    layers = []
+    for i, raw_layer in enumerate(layers_data):
+        lay = _require_mapping(raw_layer, f"layers[{i}]")
+        layers.append(
+            HierarchyLayer(
+                name=_require_str(_require(lay, "name", "layers[]"), "layers[].name"),
+                index=_require_int(
+                    _require(lay, "index", "layers[]"), "layers[].index"
+                ),
+                oscillator_ids=_optional_str_list(
+                    lay.get("oscillator_ids"), "layers[].oscillator_ids"
+                ),
+                omegas=_optional_number_list(lay.get("omegas"), "layers[].omegas"),
+                family=_optional_str(lay.get("family"), "layers[].family"),
+            )
         )
-        for lay in _require(data, "layers", "root")
-    ]
 
-    osc_families = {
-        k: OscillatorFamily(
-            channel=_require(v, "channel", f"oscillator_families.{k}"),
-            extractor_type=resolve_extractor_type(
-                _require(v, "extractor_type", f"oscillator_families.{k}")
+    families_data = _require_mapping(
+        _require(data, "oscillator_families", "root"), "oscillator_families"
+    )
+    osc_families = {}
+    for key, raw_family in families_data.items():
+        family_name = _require_str(key, "oscillator_families key")
+        family_data = _require_mapping(raw_family, f"oscillator_families.{family_name}")
+        extractor_type = _require_str(
+            _require(
+                family_data, "extractor_type", f"oscillator_families.{family_name}"
             ),
-            config=v.get("config", {}),
+            f"oscillator_families.{family_name}.extractor_type",
         )
-        for k, v in _require(data, "oscillator_families", "root").items()
-    }
+        osc_families[family_name] = OscillatorFamily(
+            channel=_require_str(
+                _require(family_data, "channel", f"oscillator_families.{family_name}"),
+                f"oscillator_families.{family_name}.channel",
+            ),
+            extractor_type=resolve_extractor_type(extractor_type),
+            config=_optional_mapping(
+                family_data.get("config"), f"oscillator_families.{family_name}.config"
+            ),
+        )
 
-    coupling_data = _require(data, "coupling", "root")
+    coupling_data = _require_mapping(_require(data, "coupling", "root"), "coupling")
     coupling = CouplingSpec(
-        base_strength=_require(coupling_data, "base_strength", "coupling"),
-        decay_alpha=_require(coupling_data, "decay_alpha", "coupling"),
-        templates=coupling_data.get("templates", {}),
+        base_strength=_require_number(
+            _require(coupling_data, "base_strength", "coupling"),
+            "coupling.base_strength",
+        ),
+        decay_alpha=_require_number(
+            _require(coupling_data, "decay_alpha", "coupling"),
+            "coupling.decay_alpha",
+        ),
+        templates=_optional_mapping(
+            coupling_data.get("templates"), "coupling.templates"
+        ),
     )
 
     drivers = _load_drivers(data)
 
-    obj = _require(data, "objectives", "root")
+    obj = _require_mapping(_require(data, "objectives", "root"), "objectives")
     objectives = ObjectivePartition(
-        good_layers=_require(obj, "good_layers", "objectives"),
-        bad_layers=_require(obj, "bad_layers", "objectives"),
-        good_weight=obj.get("good_weight", 1.0),
-        bad_weight=obj.get("bad_weight", 1.0),
+        good_layers=_require_list(
+            _require(obj, "good_layers", "objectives"), "objectives.good_layers"
+        ),
+        bad_layers=_require_list(
+            _require(obj, "bad_layers", "objectives"), "objectives.bad_layers"
+        ),
+        good_weight=_require_number(
+            obj.get("good_weight", 1.0), "objectives.good_weight"
+        ),
+        bad_weight=_require_number(obj.get("bad_weight", 1.0), "objectives.bad_weight"),
     )
 
-    boundaries = [
-        BoundaryDef(
-            name=_require(b, "name", "boundaries[]"),
-            variable=_require(b, "variable", "boundaries[]"),
-            lower=b.get("lower"),
-            upper=b.get("upper"),
-            severity=_require(b, "severity", "boundaries[]"),
+    boundaries = []
+    for i, raw_boundary in enumerate(
+        _optional_list(data.get("boundaries"), "boundaries")
+    ):
+        b = _require_mapping(raw_boundary, f"boundaries[{i}]")
+        boundaries.append(
+            BoundaryDef(
+                name=_require_str(
+                    _require(b, "name", "boundaries[]"), "boundaries[].name"
+                ),
+                variable=_require_str(
+                    _require(b, "variable", "boundaries[]"), "boundaries[].variable"
+                ),
+                lower=_optional_number(b.get("lower"), "boundaries[].lower"),
+                upper=_optional_number(b.get("upper"), "boundaries[].upper"),
+                severity=_require_str(
+                    _require(b, "severity", "boundaries[]"), "boundaries[].severity"
+                ),
+            )
         )
-        for b in data.get("boundaries", [])
-    ]
 
-    actuators = [
-        ActuatorMapping(
-            name=_require(a, "name", "actuators[]"),
-            knob=_require(a, "knob", "actuators[]"),
-            scope=_require(a, "scope", "actuators[]"),
-            limits=tuple(_require(a, "limits", "actuators[]")),
+    actuators = []
+    for i, raw_actuator in enumerate(
+        _optional_list(data.get("actuators"), "actuators")
+    ):
+        a = _require_mapping(raw_actuator, f"actuators[{i}]")
+        actuators.append(
+            ActuatorMapping(
+                name=_require_str(
+                    _require(a, "name", "actuators[]"), "actuators[].name"
+                ),
+                knob=_require_str(
+                    _require(a, "knob", "actuators[]"), "actuators[].knob"
+                ),
+                scope=_require_str(
+                    _require(a, "scope", "actuators[]"), "actuators[].scope"
+                ),
+                limits=_require_number_pair(
+                    _require(a, "limits", "actuators[]"), "actuators[].limits"
+                ),
+            )
         )
-        for a in data.get("actuators", [])
-    ]
 
     imprint_data = data.get("imprint_model") or data.get("imprint")
     imprint = None
     if imprint_data:
+        imprint_map = _require_mapping(imprint_data, "imprint_model")
         imprint = ImprintSpec(
-            decay_rate=_require(imprint_data, "decay_rate", "imprint_model"),
-            saturation=_require(imprint_data, "saturation", "imprint_model"),
-            modulates=imprint_data.get("modulates", []),
+            decay_rate=_require_number(
+                _require(imprint_map, "decay_rate", "imprint_model"),
+                "imprint_model.decay_rate",
+            ),
+            saturation=_require_number(
+                _require(imprint_map, "saturation", "imprint_model"),
+                "imprint_model.saturation",
+            ),
+            modulates=_optional_list(
+                imprint_map.get("modulates"), "imprint_model.modulates"
+            ),
         )
 
     geo_data = data.get("geometry_prior")
     geometry = None
     if geo_data:
+        geo_map = _require_mapping(geo_data, "geometry_prior")
         geometry = GeometrySpec(
-            constraint_type=_require(geo_data, "constraint_type", "geometry_prior"),
-            params=geo_data.get("params", {}),
+            constraint_type=_require_str(
+                _require(geo_map, "constraint_type", "geometry_prior"),
+                "geometry_prior.constraint_type",
+            ),
+            params=_optional_mapping(geo_map.get("params"), "geometry_prior.params"),
         )
 
     pnet_data = data.get("protocol_net")
     protocol_net = None
     if pnet_data:
+        pnet_map = _require_mapping(pnet_data, "protocol_net")
         pnet_transitions = []
-        for t in _require(pnet_data, "transitions", "protocol_net"):
+        for i, raw_transition in enumerate(
+            _require_list(
+                _require(pnet_map, "transitions", "protocol_net"),
+                "protocol_net.transitions",
+            )
+        ):
+            t = _require_mapping(raw_transition, f"protocol_net.transitions[{i}]")
             pnet_transitions.append(
                 ProtocolTransitionSpec(
-                    name=_require(t, "name", "protocol_net.transitions[]"),
-                    inputs=t.get("inputs", []),
-                    outputs=t.get("outputs", []),
+                    name=_require_str(
+                        _require(t, "name", "protocol_net.transitions[]"),
+                        "protocol_net.transitions[].name",
+                    ),
+                    inputs=_optional_list(
+                        t.get("inputs"), "protocol_net.transitions[].inputs"
+                    ),
+                    outputs=_optional_list(
+                        t.get("outputs"), "protocol_net.transitions[].outputs"
+                    ),
                     guard=t.get("guard"),
                 )
             )
         protocol_net = ProtocolNetSpec(
-            places=_require(pnet_data, "places", "protocol_net"),
-            initial=_require(pnet_data, "initial", "protocol_net"),
-            place_regime=pnet_data.get("place_regime", {}),
+            places=_require_list(
+                _require(pnet_map, "places", "protocol_net"), "protocol_net.places"
+            ),
+            initial=_require_mapping(
+                _require(pnet_map, "initial", "protocol_net"), "protocol_net.initial"
+            ),
+            place_regime=_optional_mapping(
+                pnet_map.get("place_regime"), "protocol_net.place_regime"
+            ),
             transitions=pnet_transitions,
         )
 
     amp_data = data.get("amplitude")
     amplitude = None
     if amp_data:
+        amp_map = _require_mapping(amp_data, "amplitude")
         amplitude = AmplitudeSpec(
-            mu=_require(amp_data, "mu", "amplitude"),
-            epsilon=_require(amp_data, "epsilon", "amplitude"),
-            amp_coupling_strength=amp_data.get("amp_coupling_strength", 0.0),
-            amp_coupling_decay=amp_data.get("amp_coupling_decay", 0.3),
+            mu=_require_number(_require(amp_map, "mu", "amplitude"), "amplitude.mu"),
+            epsilon=_require_number(
+                _require(amp_map, "epsilon", "amplitude"), "amplitude.epsilon"
+            ),
+            amp_coupling_strength=_require_number(
+                amp_map.get("amp_coupling_strength", 0.0),
+                "amplitude.amp_coupling_strength",
+            ),
+            amp_coupling_decay=_require_number(
+                amp_map.get("amp_coupling_decay", 0.3),
+                "amplitude.amp_coupling_decay",
+            ),
         )
 
     return BindingSpec(
-        name=_require(data, "name", "root"),
-        version=_require(data, "version", "root"),
-        safety_tier=_require(data, "safety_tier", "root"),
-        sample_period_s=_require(data, "sample_period_s", "root"),
-        control_period_s=_require(data, "control_period_s", "root"),
+        name=_require_str(_require(data, "name", "root"), "name"),
+        version=_require_str(_require(data, "version", "root"), "version"),
+        safety_tier=_require_str(_require(data, "safety_tier", "root"), "safety_tier"),
+        sample_period_s=_require_number(
+            _require(data, "sample_period_s", "root"), "sample_period_s"
+        ),
+        control_period_s=_require_number(
+            _require(data, "control_period_s", "root"), "control_period_s"
+        ),
         layers=layers,
         oscillator_families=osc_families,
         coupling=coupling,

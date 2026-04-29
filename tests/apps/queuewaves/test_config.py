@@ -140,6 +140,19 @@ def test_load_config_defaults(tmp_path: Path) -> None:
     assert cfg.security.rate_limit_per_minute == 120
 
 
+def test_production_template_requires_auth_and_rate_limit() -> None:
+    template = Path("domainpacks/queuewaves/queuewaves.production.yaml")
+
+    cfg = load_config(template)
+
+    assert cfg.security.mode == "production"
+    assert cfg.security.api_key_env == "QUEUEWAVES_API_KEY"
+    assert cfg.security.rate_limit_per_minute > 0
+    assert cfg.server.host == "0.0.0.0"
+    assert cfg.services
+    assert cfg.alert_sinks
+
+
 def test_load_config_normalises_numeric_scalars(tmp_path: Path) -> None:
     yaml_text = textwrap.dedent("""\
         prometheus_url: "http://prom:9090"

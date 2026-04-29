@@ -21,6 +21,7 @@ USING_GENERATED_PB2: bool
 USING_GENERATED_GRPC: bool
 
 try:
+    # type ignore: generated protobuf modules expose runtime attributes mypy cannot see.
     from scpn_phase_orchestrator.grpc_gen.spo_pb2 import (  # type: ignore[attr-defined]
         ConfigRequest,
         ConfigResponse,
@@ -55,6 +56,7 @@ try:
 
     USING_GENERATED_GRPC = True
 except Exception:  # pragma: no cover
+    # type ignore: fallback servicer intentionally substitutes generated grpc types.
     from scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback import (  # type: ignore[assignment]
         PhaseOrchestratorServicer,
         add_PhaseOrchestratorServicer_to_server,
