@@ -73,9 +73,9 @@ def resolve_binding_summary(
                 "oscillator_ids": list(layer.oscillator_ids),
                 "range": layer_ranges[layer.index],
                 "family": layer.family,
-                "omegas": omegas[layer_ranges[layer.index][0] : layer_ranges[
-                    layer.index
-                ][1]],
+                "omegas": omegas[
+                    layer_ranges[layer.index][0] : layer_ranges[layer.index][1]
+                ],
                 "omega_source": "explicit" if layer.omegas is not None else "default",
             }
             for layer in spec.layers
@@ -138,16 +138,10 @@ def resolve_binding_summary(
             "protocol_net": spec.protocol_net is not None,
         },
         "defaults_applied": {
-            "omegas": [
-                layer.name for layer in spec.layers if layer.omegas is None
-            ],
-            "actuator_bounds": []
-            if spec.actuators
-            else sorted(_RUNTIME_VALUE_BOUNDS),
+            "omegas": [layer.name for layer in spec.layers if layer.omegas is None],
+            "actuator_bounds": [] if spec.actuators else sorted(_RUNTIME_VALUE_BOUNDS),
             "drivers": [
-                channel
-                for channel, cfg in sorted(driver_configs.items())
-                if not cfg
+                channel for channel, cfg in sorted(driver_configs.items()) if not cfg
             ],
         },
     }
