@@ -123,5 +123,5 @@ class SecureModbusAdapter:
         """Return True if the TLS-wrapped Modbus connection is active."""
         try:
             return bool(self._client.connected)  # type: ignore[attr-defined]
-        except Exception:
+        except (AttributeError, OSError, RuntimeError):
             return False

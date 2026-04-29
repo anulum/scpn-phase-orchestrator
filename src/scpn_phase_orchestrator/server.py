@@ -74,6 +74,14 @@ __all__ = ["create_app", "SimulationState"]
 logger = logging.getLogger(__name__)
 
 TWO_PI = 2.0 * np.pi
+HEALTH_CHECK_EXCEPTIONS = (
+    RuntimeError,
+    ValueError,
+    TypeError,
+    KeyError,
+    IndexError,
+    FloatingPointError,
+)
 
 
 class SimulationState:
@@ -510,7 +518,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             r_val = snap.get("R_global", float("nan"))
             checks["R_finite"] = "ok" if np.isfinite(r_val) else "error"
             checks["regime"] = "ok" if snap.get("regime") else "unknown"
-        except Exception as exc:
+        except HEALTH_CHECK_EXCEPTIONS as exc:
             checks["engine"] = f"error: {exc}"
 
         healthy = all(v == "ok" for v in checks.values())

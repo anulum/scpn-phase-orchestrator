@@ -166,6 +166,36 @@ class TestSecureModbusAdapterTLS:
             adapter = SecureModbusAdapter("localhost", 802, cert, key)
             assert adapter.validate_connection() is False
 
+    def test_validate_connection_unexpected_exception_propagates(self, tmp_path):
+        cert = tmp_path / "client.pem"
+        key = tmp_path / "client.key"
+        cert.write_text("dummy-cert")
+        key.write_text("dummy-key")
+
+        mock_client = MagicMock()
+        mock_client.connect.return_value = True
+        type(mock_client).connected = property(
+            lambda self: (_ for _ in ()).throw(ValueError("bad state"))
+        )
+
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.modbus_tls.ModbusTlsClient",
+                return_value=mock_client,
+            ),
+            patch("scpn_phase_orchestrator.adapters.modbus_tls.ssl") as mock_ssl,
+        ):
+            mock_ctx = MagicMock()
+            mock_ssl.SSLContext.return_value = mock_ctx
+            mock_ssl.PROTOCOL_TLS_CLIENT = 2
+            mock_ssl.SSLError = Exception
+
+            from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
+
+            adapter = SecureModbusAdapter("localhost", 802, cert, key)
+            with pytest.raises(ValueError, match="bad state"):
+                adapter.validate_connection()
+
     def test_connection_failure_raises(self, tmp_path):
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"

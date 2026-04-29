@@ -164,6 +164,36 @@ class TestFastAPIEndpoints:
         assert "name" in data
         assert "n_oscillators" in data
 
+    def test_health_reports_known_runtime_error(self, monkeypatch):
+        from scpn_phase_orchestrator.server import create_app
+
+        def fail_snapshot(self):
+            raise RuntimeError("engine unavailable")
+
+        monkeypatch.setattr(SimulationState, "snapshot", fail_snapshot)
+        app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+        client = TestClient(app)
+
+        r = client.get("/api/health")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] == "degraded"
+        assert data["checks"]["engine"] == "error: engine unavailable"
+
+    def test_health_does_not_swallow_unexpected_fault(self, monkeypatch):
+        from scpn_phase_orchestrator.server import create_app
+
+        def fail_snapshot(self):
+            raise AssertionError("programming fault")
+
+        monkeypatch.setattr(SimulationState, "snapshot", fail_snapshot)
+        app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+        client = TestClient(app)
+
+        with pytest.raises(AssertionError, match="programming fault"):
+            client.get("/api/health")
+
     def test_production_requires_api_key_env(self, monkeypatch):
         from scpn_phase_orchestrator.server import create_app
 
