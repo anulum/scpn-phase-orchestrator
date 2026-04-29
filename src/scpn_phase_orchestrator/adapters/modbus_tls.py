@@ -128,5 +128,5 @@ class SecureModbusAdapter:
         try:
             # type ignore: optional pymodbus client is stored as object.
             return bool(self._client.connected)  # type: ignore[attr-defined]
-        except Exception:
+        except (AttributeError, OSError, RuntimeError):
             return False
