@@ -19,9 +19,14 @@ TWO_PI = 2.0 * np.pi
 
 
 class TestConstructorValidation:
-    def test_n_layers_zero_raises(self):
-        with pytest.raises(ValueError, match="n_layers must be >= 1"):
-            PlasmaControlBridge(n_layers=0)
+    @pytest.mark.parametrize("n_layers", [True, 1.5, "2", 0, 9])
+    def test_invalid_n_layers_raise(self, n_layers: object):
+        with pytest.raises(ValueError, match="n_layers"):
+            PlasmaControlBridge(n_layers=n_layers)
+
+    def test_supported_subset_layer_count(self):
+        bridge = PlasmaControlBridge(n_layers=3)
+        assert len(bridge.import_plasma_omega()) == 3
 
 
 class TestKnmSpecImport:
@@ -55,6 +60,14 @@ class TestKnmSpecImport:
         bridge = PlasmaControlBridge(n_layers=4)
         with pytest.raises(ValueError, match="square"):
             bridge.import_knm_spec(np.zeros((3, 4)))
+
+    @pytest.mark.parametrize("n_osc_per_layer", [True, 0, -1, 1.5, "2"])
+    def test_rejects_invalid_n_osc_per_layer(self, n_osc_per_layer: object):
+        bridge = PlasmaControlBridge(n_layers=2)
+        with pytest.raises(ValueError, match="n_osc_per_layer"):
+            bridge.import_knm_spec(
+                {"matrix": np.eye(2).tolist(), "n_osc_per_layer": n_osc_per_layer}
+            )
 
 
 class TestSnapshotImport:
@@ -176,6 +189,12 @@ class TestPlasmaOmega:
         bridge = PlasmaControlBridge(n_layers=4)
         omegas = bridge.import_plasma_omega(n_osc_per_layer=1)
         assert len(omegas) == 4
+
+    @pytest.mark.parametrize("n_osc_per_layer", [True, 0, -1, 1.5, "2"])
+    def test_omega_rejects_invalid_oscillator_count(self, n_osc_per_layer: object):
+        bridge = PlasmaControlBridge(n_layers=4)
+        with pytest.raises(ValueError, match="n_osc_per_layer"):
+            bridge.import_plasma_omega(n_osc_per_layer=n_osc_per_layer)
 
 
 class TestPlasmaDomainpack:
