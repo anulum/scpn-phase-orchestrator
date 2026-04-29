@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from numbers import Integral
 from typing import cast
 
 import numpy as np
@@ -33,8 +34,12 @@ class QuantumControlBridge:
     def __init__(self, n_oscillators: int, trotter_order: int = 1):
         if n_oscillators < 1:
             raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
+        if isinstance(trotter_order, bool) or not isinstance(trotter_order, Integral):
+            raise ValueError("trotter_order must be an integer >= 1")
+        if trotter_order < 1:
+            raise ValueError("trotter_order must be an integer >= 1")
         self._n = n_oscillators
-        self._trotter_order = trotter_order
+        self._trotter_order: int = int(trotter_order)
 
     def import_artifact(self, artifact_dict: dict) -> UPDEState:
         """Convert a scpn-quantum-control result dict into UPDEState."""
