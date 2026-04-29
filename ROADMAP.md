@@ -105,8 +105,13 @@
 ### v1.x differentiators
 
 - ML-driven auto-binding and oscillator discovery: ingest raw multimodal data, propose P/I/S or N-channel extractors, infer an initial coupling graph, and emit a reviewable binding spec.
+- Auto domain binding pipeline: turn raw time-series, event logs, and sensor streams into candidate oscillator families, extractor parameters, initial coupling matrices, and a scored `binding_spec.yaml` proposal. Start with SINDy-assisted feature discovery and leave graph-learning coupling inference behind an experimental flag until it has reproducible benchmarks.
+- RL and hybrid optimisation layer for knob tuning: leverage the JAX `nn/` backend and `autotune` module to learn policies for `K`, `alpha`, `zeta`, and `Psi` from rewards based on coherence metrics minus penalties for `R_bad`, unsafe actuation, and regime churn. Initial scope: replay-trained model-free or hybrid PPO/SAC experiments that emit auditable policy candidates rather than direct production control.
 - Trainable supervisor policies: extend rule-based policy evaluation with reinforcement learning or active-inference loops that optimise long-horizon `R_good` / `R_bad` trade-offs under replayable safety constraints.
 - Uncertainty-aware phase estimation: Bayesian or ensemble phase estimates propagated through MPC/OA reduction and supervisor decisions.
+- Hierarchical multi-scale orchestration: support nested orchestrators where local/edge supervisors maintain local coherence, exchange reduced phase/coherence summaries, and escalate only bounded regime evidence to a parent supervisor. Reuse Hodge decomposition and transfer-entropy monitors to decide what crosses hierarchy boundaries.
 - Distributed edge orchestration: multi-node phase consensus with gossip or local Kuramoto coupling, plus WASM/FPGA deployment paths for decentralised operation.
 - Digital-twin binding standard: version `binding_spec.yaml` as an open bidirectional live-sync contract for simulators, services, and hardware twins.
-- Formal verification hooks: export Petri-net regimes and policy rules to PRISM, TLA+, or equivalent model-checking workflows, with CI artefacts for safety-critical policies.
+- Formal verification hooks: export Petri-net regimes and policy rules to PRISM, TLA+, SPIN, or equivalent model-checking workflows, with CI artefacts for safety-critical policies.
+- Neuromorphic and quantum-native backends: extend existing SNN and quantum-control bridges so the orchestrator can emit Lava/BrainScaleS-style neuromorphic schedules and QPU control schedules directly from validated phase-control plans.
+- Extractor and actuator plugin ecosystem: define a stable Python/Rust plugin interface for custom `PhaseExtractor` and `ActuationMapper` implementations, including schema validation, entry-point discovery, audit metadata, compatibility tests, and versioned capability declarations.
