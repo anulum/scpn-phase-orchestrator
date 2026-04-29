@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -16,19 +17,21 @@ from scipy.signal import hilbert
 
 __all__ = ["extract_phases", "PhaseResult"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class PhaseResult:
     """Hilbert-transform output: instantaneous phase, amplitude, and frequency."""
 
-    phases: NDArray
-    amplitudes: NDArray
-    instantaneous_freq: NDArray
+    phases: FloatArray
+    amplitudes: FloatArray
+    instantaneous_freq: FloatArray
     dominant_freq: float
 
 
 def extract_phases(
-    signal: NDArray,
+    signal: FloatArray,
     fs: float,
     bandpass: tuple[float, float] | None = None,
 ) -> PhaseResult:
@@ -49,8 +52,8 @@ def extract_phases(
         x = _bandpass_filter(x, fs, bandpass[0], bandpass[1])
 
     analytic = hilbert(x)
-    phases: NDArray = np.angle(analytic) % (2 * np.pi)
-    amplitudes: NDArray = np.abs(analytic)
+    phases: FloatArray = np.angle(analytic) % (2 * np.pi)
+    amplitudes: FloatArray = np.abs(analytic)
 
     # Instantaneous frequency from phase derivative
     dphase = np.diff(np.unwrap(np.angle(analytic)))
@@ -69,12 +72,12 @@ def extract_phases(
     )
 
 
-def _bandpass_filter(x: NDArray, fs: float, low: float, high: float) -> NDArray:
+def _bandpass_filter(x: FloatArray, fs: float, low: float, high: float) -> FloatArray:
     """Simple FFT-based bandpass filter."""
     n = len(x)
     freqs = np.fft.rfftfreq(n, d=1.0 / fs)
     fft = np.fft.rfft(x)
     mask = (freqs >= low) & (freqs <= high)
     fft[~mask] = 0.0
-    result: NDArray = np.fft.irfft(fft, n=n)
+    result: FloatArray = np.fft.irfft(fft, n=n)
     return result
