@@ -48,6 +48,11 @@ services:
     promql: "sum(rate(http_requests_total[5m]))"
     layer: macro
     channel: P
+  - name: retry-budget
+    promql: "retry_budget_remaining"
+    layer: macro
+    channel: RetryBudget
+    extractor_type: event
 
 thresholds:
   r_bad_warn: 0.50
@@ -89,6 +94,8 @@ scratch.
 | `prometheus_url` | required | Prometheus base URL |
 | `scrape_interval_s` | 15.0 | Seconds between scrape cycles |
 | `buffer_length` | 64 | Rolling buffer length per service |
+| `services[].channel` | P | Binding channel ID. `P`, `I`, and `S` have default extractors; named channels are allowed. |
+| `services[].extractor_type` | channel default | Required for named channels; accepts the normal binding extractor names and aliases. |
 | `thresholds.r_bad_warn` | 0.50 | R_bad warning threshold |
 | `thresholds.r_bad_critical` | 0.70 | R_bad critical threshold |
 | `thresholds.plv_cascade` | 0.85 | PLV cascade propagation threshold |
