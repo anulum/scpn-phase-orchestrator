@@ -202,10 +202,10 @@ jobs:
             lockfile: requirements/dev-lock.txt
           - os: windows-latest
             python-version: "3.11"
-            lockfile: requirements/dev-lock-py311.txt
+            lockfile: requirements/dev-lock-windows-ffi-py311.txt
           - os: windows-latest
             python-version: "3.12"
-            lockfile: requirements/dev-lock.txt
+            lockfile: requirements/dev-lock-windows-ffi-py312.txt
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
