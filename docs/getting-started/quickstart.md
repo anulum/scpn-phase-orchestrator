@@ -121,6 +121,7 @@ print(f"Amplitudes: {amplitudes.round(3)}")
 
 ## Next Steps
 
+- [Minimal Domainpack in 5 Minutes](minimal_domainpack_5min.md) -- start from raw P/I/S source data
 - [Tutorial: Hello World](hello_world.md) -- build a custom 4-oscillator domain from scratch
 - [Concepts: System Overview](../concepts/system_overview.md) -- full pipeline architecture
 - [API Reference](../reference/api/index.md) -- complete Python API
