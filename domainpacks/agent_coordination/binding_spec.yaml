@@ -33,6 +33,16 @@ layers:
     oscillator_ids: [agent_a_topic, agent_b_topic, agent_c_topic, human_topic]
     omegas: [0.005, 0.005, 0.005, 0.005]
     family: topic_alignment
+  - name: operator_intent
+    index: 3
+    oscillator_ids: [human_goal, human_priority]
+    omegas: [0.004, 0.004]
+    family: operator_intent
+  - name: conflict_risk
+    index: 4
+    oscillator_ids: [merge_risk, ownership_risk]
+    omegas: [0.003, 0.003]
+    family: conflict_risk
 
 oscillator_families:
   agent_liveness:
@@ -48,6 +58,62 @@ oscillator_families:
     extractor_type: ring
     config:
       n_states: 4
+  operator_intent:
+    channel: H
+    extractor_type: event
+    config: {}
+  conflict_risk:
+    channel: Risk
+    extractor_type: graph
+    config: {}
+
+channels:
+  P:
+    role: agent_liveness
+    units: heartbeat_phase
+    metric_semantics: availability coherence
+  I:
+    role: task_cadence
+    units: task_event_phase
+    metric_semantics: task-flow regularity
+  S:
+    role: topic_state
+    units: discrete_topic_phase
+    metric_semantics: semantic topic alignment
+  H:
+    role: operator_intent
+    required: false
+    replay_semantics: event
+    metric_semantics: human priority cadence
+  Risk:
+    role: derived_conflict_risk
+    required: false
+    replay_semantics: derived
+    derived_from: [I, S, H]
+    derive_rule: merge_conflict_risk = lag(I,S) + intent_mismatch(H,S)
+    metric_semantics: derived merge-conflict phase
+
+channel_groups:
+  coordination_surface:
+    channels: [P, I, S, H, Risk]
+    required: true
+    description: channels exposed to coordination policy checks
+  derived_risk_surface:
+    channels: [Risk]
+    required: false
+    description: derived conflict-risk channels
+
+cross_channel_couplings:
+  - source: H
+    target: I
+    strength: 0.25
+    mode: directed
+    template: operator_priority_to_task_flow
+  - source: Risk
+    target: S
+    strength: 0.15
+    mode: inhibitory
+    template: risk_suppresses_topic_lock
 
 coupling:
   # Agent coupling: shared files/tasks create synchronisation pressure.
@@ -63,12 +129,16 @@ drivers:
     zeta: 0.02
   symbolic:
     zeta: 0.01
+  H:
+    cadence_hz: 0.2
+    zeta: 0.02
+  Risk: {}
 
 objectives:
   # Heartbeat + task flow = healthy coordination.
   # Topic desync = agents talking past each other.
-  good_layers: [0, 1]
-  bad_layers: [2]
+  good_layers: [0, 1, 3]
+  bad_layers: [2, 4]
   good_weight: 1.0
   bad_weight: 1.5
 

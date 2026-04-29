@@ -17,7 +17,10 @@ from scpn_phase_orchestrator.binding.types import (
     AmplitudeSpec,
     BindingSpec,
     BoundaryDef,
+    ChannelGroupSpec,
+    ChannelSpec,
     CouplingSpec,
+    CrossChannelCouplingSpec,
     DriverSpec,
     GeometrySpec,
     HierarchyLayer,
@@ -93,6 +96,18 @@ def _require_number(value: object, context: str) -> float:
     return float(value)
 
 
+def _require_bool(value: object, context: str) -> bool:
+    if not isinstance(value, bool):
+        raise _expected("boolean", context, value)
+    return value
+
+
+def _optional_bool(value: object, context: str, default: bool) -> bool:
+    if value is None:
+        return default
+    return _require_bool(value, context)
+
+
 def _optional_number(value: object, context: str) -> float | None:
     if value is None:
         return None
@@ -157,6 +172,115 @@ def _load_drivers(data: dict) -> DriverSpec:
         symbolic=driver_maps.get("symbolic", {}),
         extra=extra_drivers,
     )
+
+
+def _load_channels(data: dict) -> dict[str, ChannelSpec]:
+    """Load optional typed N-channel declarations."""
+    channels_data = _optional_mapping(data.get("channels"), "channels")
+    channels: dict[str, ChannelSpec] = {}
+    for raw_name, raw_channel in channels_data.items():
+        name = _require_str(raw_name, "channels key")
+        if not is_valid_channel_id(name):
+            raise BindingLoadError(f"channels.{name}: invalid channel identifier")
+        channel_data = _require_mapping(raw_channel, f"channels.{name}")
+        channels[name] = ChannelSpec(
+            role=_require_str(
+                channel_data.get("role", "domain"), f"channels.{name}.role"
+            ),
+            required=_optional_bool(
+                channel_data.get("required"), f"channels.{name}.required", True
+            ),
+            units=_optional_str(channel_data.get("units"), f"channels.{name}.units"),
+            metric_semantics=_optional_str(
+                channel_data.get("metric_semantics"),
+                f"channels.{name}.metric_semantics",
+            ),
+            coupling_participation=_optional_bool(
+                channel_data.get("coupling_participation"),
+                f"channels.{name}.coupling_participation",
+                True,
+            ),
+            audit_serialisation=_optional_bool(
+                channel_data.get("audit_serialisation"),
+                f"channels.{name}.audit_serialisation",
+                True,
+            ),
+            replay_semantics=_require_str(
+                channel_data.get("replay_semantics", "phase"),
+                f"channels.{name}.replay_semantics",
+            ),
+            supervisor_visibility=_optional_bool(
+                channel_data.get("supervisor_visibility"),
+                f"channels.{name}.supervisor_visibility",
+                True,
+            ),
+            derived_from=_optional_str_list(
+                channel_data.get("derived_from"), f"channels.{name}.derived_from"
+            ),
+            derive_rule=_optional_str(
+                channel_data.get("derive_rule"), f"channels.{name}.derive_rule"
+            ),
+        )
+    return channels
+
+
+def _load_channel_groups(data: dict) -> dict[str, ChannelGroupSpec]:
+    """Load optional N-channel group declarations."""
+    groups_data = _optional_mapping(data.get("channel_groups"), "channel_groups")
+    groups: dict[str, ChannelGroupSpec] = {}
+    for raw_name, raw_group in groups_data.items():
+        name = _require_str(raw_name, "channel_groups key")
+        if not is_valid_channel_id(name):
+            raise BindingLoadError(
+                f"channel_groups.{name}: invalid channel group identifier"
+            )
+        group_data = _require_mapping(raw_group, f"channel_groups.{name}")
+        groups[name] = ChannelGroupSpec(
+            channels=_optional_str_list(
+                _require(group_data, "channels", f"channel_groups.{name}"),
+                f"channel_groups.{name}.channels",
+            ),
+            required=_optional_bool(
+                group_data.get("required"), f"channel_groups.{name}.required", True
+            ),
+            description=_optional_str(
+                group_data.get("description"), f"channel_groups.{name}.description"
+            ),
+        )
+    return groups
+
+
+def _load_cross_channel_couplings(data: dict) -> list[CrossChannelCouplingSpec]:
+    """Load optional cross-channel coupling declarations."""
+    couplings = []
+    for i, raw_coupling in enumerate(
+        _optional_list(data.get("cross_channel_couplings"), "cross_channel_couplings")
+    ):
+        c = _require_mapping(raw_coupling, f"cross_channel_couplings[{i}]")
+        couplings.append(
+            CrossChannelCouplingSpec(
+                source=_require_str(
+                    _require(c, "source", "cross_channel_couplings[]"),
+                    "cross_channel_couplings[].source",
+                ),
+                target=_require_str(
+                    _require(c, "target", "cross_channel_couplings[]"),
+                    "cross_channel_couplings[].target",
+                ),
+                strength=_require_number(
+                    _require(c, "strength", "cross_channel_couplings[]"),
+                    "cross_channel_couplings[].strength",
+                ),
+                mode=_require_str(
+                    c.get("mode", "bidirectional"),
+                    "cross_channel_couplings[].mode",
+                ),
+                template=_optional_str(
+                    c.get("template"), "cross_channel_couplings[].template"
+                ),
+            )
+        )
+    return couplings
 
 
 def load_binding_spec(path: str | Path) -> BindingSpec:
@@ -248,6 +372,9 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
     )
 
     drivers = _load_drivers(data)
+    channels = _load_channels(data)
+    channel_groups = _load_channel_groups(data)
+    cross_channel_couplings = _load_cross_channel_couplings(data)
 
     obj = _require_mapping(_require(data, "objectives", "root"), "objectives")
     objectives = ObjectivePartition(
@@ -416,4 +543,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         geometry_prior=geometry,
         protocol_net=protocol_net,
         amplitude=amplitude,
+        channels=channels,
+        channel_groups=channel_groups,
+        cross_channel_couplings=cross_channel_couplings,
     )

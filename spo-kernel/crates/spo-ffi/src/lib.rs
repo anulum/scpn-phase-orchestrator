@@ -1698,6 +1698,25 @@ impl PyRuleEngine {
             .collect()
     }
 
+    /// Evaluate rules against UPDE layer order parameters and partitions.
+    #[pyo3(signature = (regime, layer_rs, good_layers, bad_layers, extra = None))]
+    fn evaluate_state(
+        &mut self,
+        regime: &str,
+        layer_rs: Vec<f64>,
+        good_layers: Vec<usize>,
+        bad_layers: Vec<usize>,
+        extra: Option<HashMap<String, f64>>,
+    ) -> Vec<(String, String, f64, f64, String)> {
+        let state = make_upde_state(&layer_rs);
+        let extra = extra.unwrap_or_default();
+        self.inner
+            .evaluate_state(regime, &state, &good_layers, &bad_layers, &extra)
+            .into_iter()
+            .map(|a| (a.knob, a.scope, a.value, a.ttl_s, a.rule_name))
+            .collect()
+    }
+
     fn advance_clock(&mut self, dt: f64) {
         self.inner.advance_clock(dt);
     }

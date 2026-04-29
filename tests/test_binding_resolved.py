@@ -116,3 +116,82 @@ def test_resolved_binding_config_includes_named_channels(tmp_path):
     assert "H" in summary["channels"]
     assert summary["channels"]["H"]["driver_keys"] == ["cadence_hz"]
     assert any("channel H:" in line for line in lines)
+
+
+def test_resolved_binding_config_includes_channel_algebra(tmp_path):
+    path = _write_spec(
+        tmp_path,
+        {
+            "name": "resolved-nchannel-test",
+            "version": "1.0.0",
+            "safety_tier": "research",
+            "sample_period_s": 0.02,
+            "control_period_s": 0.1,
+            "layers": [
+                {
+                    "name": "plant",
+                    "index": 0,
+                    "oscillator_ids": ["p0"],
+                    "family": "plant",
+                },
+                {
+                    "name": "operator",
+                    "index": 1,
+                    "oscillator_ids": ["h0"],
+                    "family": "operator",
+                },
+                {
+                    "name": "risk",
+                    "index": 2,
+                    "oscillator_ids": ["r0"],
+                    "family": "risk",
+                },
+            ],
+            "oscillator_families": {
+                "plant": {"channel": "P", "extractor_type": "physical", "config": {}},
+                "operator": {"channel": "H", "extractor_type": "event", "config": {}},
+                "risk": {"channel": "Risk", "extractor_type": "graph", "config": {}},
+            },
+            "channels": {
+                "P": {"role": "plant", "units": "rad"},
+                "H": {"role": "operator", "replay_semantics": "event"},
+                "Risk": {
+                    "role": "derived_risk",
+                    "required": False,
+                    "replay_semantics": "derived",
+                    "derived_from": ["P", "H"],
+                    "derive_rule": "phase_lag(P,H)",
+                },
+            },
+            "channel_groups": {
+                "supervised": {
+                    "channels": ["P", "H", "Risk"],
+                    "description": "policy visible channels",
+                }
+            },
+            "cross_channel_couplings": [
+                {"source": "H", "target": "P", "strength": 0.2, "mode": "directed"}
+            ],
+            "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+            "drivers": {
+                "physical": {},
+                "informational": {},
+                "symbolic": {},
+                "H": {"cadence_hz": 2.0},
+                "Risk": {},
+            },
+            "objectives": {"good_layers": [0, 1], "bad_layers": [2]},
+            "boundaries": [],
+            "actuators": [],
+        },
+    )
+
+    summary = resolved_binding_config(load_binding_spec(path))
+    lines = format_resolved_binding_config(summary)
+
+    assert summary["channels"]["Risk"]["derived_from"] == ["P", "H"]
+    assert summary["channels"]["Risk"]["replay_semantics"] == "derived"
+    assert summary["channel_groups"]["supervised"]["channels"] == ["P", "H", "Risk"]
+    assert summary["cross_channel_couplings"][0]["source"] == "H"
+    assert any("metadata: role=derived_risk" in line for line in lines)
+    assert any("channel_groups: supervised" in line for line in lines)

@@ -18,6 +18,11 @@ from scpn_phase_orchestrator.binding.types import VALID_SAFETY_TIERS
 DOMAINPACKS_DIR = Path(__file__).resolve().parent.parent / "domainpacks"
 
 ALL_PACKS = sorted(p.parent.name for p in DOMAINPACKS_DIR.glob("*/binding_spec.yaml"))
+NCHANNEL_EXAMPLES = {
+    "agent_coordination",
+    "swarm_robotics",
+    "traffic_flow",
+}
 
 
 @pytest.fixture(params=ALL_PACKS)
@@ -95,6 +100,18 @@ def test_policy_file_exists(pack_name):
 def test_run_file_exists(pack_name):
     run_path = DOMAINPACKS_DIR / pack_name / "run.py"
     assert run_path.exists(), f"{pack_name}/run.py missing"
+
+
+@pytest.mark.parametrize("pack_name", sorted(NCHANNEL_EXAMPLES))
+def test_nchannel_examples_are_declared_and_wired(pack_name):
+    spec = load_binding_spec(DOMAINPACKS_DIR / pack_name / "binding_spec.yaml")
+
+    assert len(spec.used_channels()) > 3
+    assert spec.channels
+    assert spec.channel_groups
+    assert spec.cross_channel_couplings
+    assert any(channel.derived_from for channel in spec.channels.values())
+    assert validate_binding_spec(spec) == []
 
 
 # Pipeline wiring: domainpack validation tested via real domainpack loading and

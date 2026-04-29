@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from scpn_phase_orchestrator.exceptions import ValidationError
 
@@ -18,6 +18,9 @@ __all__ = [
     "OscillatorFamily",
     "CouplingSpec",
     "DriverSpec",
+    "ChannelSpec",
+    "ChannelGroupSpec",
+    "CrossChannelCouplingSpec",
     "ObjectivePartition",
     "BoundaryDef",
     "ActuatorMapping",
@@ -99,6 +102,42 @@ class DriverSpec:
         }
         configs.update(self.extra or {})
         return configs
+
+
+@dataclass(frozen=True)
+class ChannelSpec:
+    """Typed binding channel metadata for N-channel domainpacks."""
+
+    role: str
+    required: bool = True
+    units: str | None = None
+    metric_semantics: str | None = None
+    coupling_participation: bool = True
+    audit_serialisation: bool = True
+    replay_semantics: str = "phase"
+    supervisor_visibility: bool = True
+    derived_from: list[str] = field(default_factory=list)
+    derive_rule: str | None = None
+
+
+@dataclass(frozen=True)
+class ChannelGroupSpec:
+    """Named set of channels used for validation and supervisor summaries."""
+
+    channels: list[str]
+    required: bool = True
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class CrossChannelCouplingSpec:
+    """Declared coupling relation between two binding channels."""
+
+    source: str
+    target: str
+    strength: float
+    mode: str = "bidirectional"
+    template: str | None = None
 
 
 @dataclass(frozen=True)
@@ -248,6 +287,11 @@ class BindingSpec:
     geometry_prior: GeometrySpec | None = None
     protocol_net: ProtocolNetSpec | None = None
     amplitude: AmplitudeSpec | None = None
+    channels: dict[str, ChannelSpec] = field(default_factory=dict)
+    channel_groups: dict[str, ChannelGroupSpec] = field(default_factory=dict)
+    cross_channel_couplings: list[CrossChannelCouplingSpec] = field(
+        default_factory=list
+    )
 
     def get_omegas(self) -> list[float]:
         """Collect natural frequencies from all layers.
@@ -269,3 +313,17 @@ class BindingSpec:
             else:
                 result.extend([1.0] * n)
         return result
+
+    def used_channels(self) -> set[str]:
+        """Return channels referenced by families, drivers, and algebra."""
+        used = {family.channel for family in self.oscillator_families.values()}
+        used.update(self.drivers.all_channel_configs())
+        used.update(self.channels)
+        for channel in self.channels.values():
+            used.update(channel.derived_from)
+        for group in self.channel_groups.values():
+            used.update(group.channels)
+        for coupling in self.cross_channel_couplings:
+            used.add(coupling.source)
+            used.add(coupling.target)
+        return used

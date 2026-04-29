@@ -13,6 +13,7 @@
 use std::collections::HashMap;
 
 use crate::petri_net::GuardOp;
+use spo_types::UPDEState;
 
 /// Single condition: metric op threshold.
 #[derive(Debug, Clone)]
@@ -164,6 +165,19 @@ impl RuleEngine {
         actions
     }
 
+    /// Evaluate against a structured UPDE state plus good/bad layer partitions.
+    pub fn evaluate_state(
+        &mut self,
+        regime: &str,
+        state: &UPDEState,
+        good_layers: &[usize],
+        bad_layers: &[usize],
+        extra: &HashMap<String, f64>,
+    ) -> Vec<FiredAction> {
+        let ctx = state_context(state, good_layers, bad_layers, extra);
+        self.evaluate(regime, &ctx)
+    }
+
     pub fn reset(&mut self) {
         self.fire_counts.clear();
         self.last_fire_t.clear();
@@ -171,9 +185,45 @@ impl RuleEngine {
     }
 }
 
+/// Build the metric context used by rule evaluation from a UPDE state.
+#[must_use]
+pub fn state_context(
+    state: &UPDEState,
+    good_layers: &[usize],
+    bad_layers: &[usize],
+    extra: &HashMap<String, f64>,
+) -> HashMap<String, f64> {
+    let mut ctx = extra.clone();
+    ctx.insert("stability_proxy".into(), state.stability_proxy);
+    ctx.insert("R".into(), state.mean_r());
+
+    for (idx, layer) in state.layers.iter().enumerate() {
+        ctx.insert(format!("R.{idx}"), layer.r);
+        ctx.insert(format!("R_{idx}"), layer.r);
+        ctx.insert(format!("psi.{idx}"), layer.psi);
+        ctx.insert(format!("psi_{idx}"), layer.psi);
+    }
+
+    for (idx, &layer_idx) in good_layers.iter().enumerate() {
+        if let Some(layer) = state.layers.get(layer_idx) {
+            ctx.insert(format!("R_good.{idx}"), layer.r);
+            ctx.insert(format!("R_good_{idx}"), layer.r);
+        }
+    }
+    for (idx, &layer_idx) in bad_layers.iter().enumerate() {
+        if let Some(layer) = state.layers.get(layer_idx) {
+            ctx.insert(format!("R_bad.{idx}"), layer.r);
+            ctx.insert(format!("R_bad_{idx}"), layer.r);
+        }
+    }
+
+    ctx
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use spo_types::{LayerState, Regime, UPDEState};
 
     fn simple_rule(name: &str, regime: &str, metric: &str, op: GuardOp, thresh: f64) -> PolicyRule {
         PolicyRule {
@@ -195,6 +245,19 @@ mod tests {
         }
     }
 
+    fn state(rs: &[f64]) -> UPDEState {
+        UPDEState {
+            layers: rs
+                .iter()
+                .copied()
+                .map(|r| LayerState { r, psi: 0.0 })
+                .collect(),
+            cross_layer_alignment: vec![],
+            stability_proxy: 0.42,
+            regime: Regime::Nominal,
+        }
+    }
+
     #[test]
     fn fires_when_condition_met() {
         let mut eng = RuleEngine::new(vec![simple_rule(
@@ -208,6 +271,28 @@ mod tests {
         let actions = eng.evaluate("degraded", &ctx);
         assert_eq!(actions.len(), 1);
         assert_eq!(actions[0].rule_name, "boost");
+    }
+
+    #[test]
+    fn state_context_exposes_layer_and_partition_metrics() {
+        let ctx = state_context(&state(&[0.2, 0.8, 0.4]), &[1], &[0, 2], &HashMap::new());
+
+        assert_eq!(ctx["stability_proxy"], 0.42);
+        assert!((ctx["R"] - (0.2 + 0.8 + 0.4) / 3.0).abs() < 1e-12);
+        assert_eq!(ctx["R.1"], 0.8);
+        assert_eq!(ctx["R_good.0"], 0.8);
+        assert_eq!(ctx["R_bad.1"], 0.4);
+    }
+
+    #[test]
+    fn evaluate_state_uses_good_bad_layer_metrics() {
+        let rule = simple_rule("suppress_bad", "CRITICAL", "R_bad.0", GuardOp::Lt, 0.3);
+        let mut eng = RuleEngine::new(vec![rule]);
+        let actions =
+            eng.evaluate_state("critical", &state(&[0.2, 0.9]), &[1], &[0], &HashMap::new());
+
+        assert_eq!(actions.len(), 1);
+        assert_eq!(actions[0].rule_name, "suppress_bad");
     }
 
     #[test]

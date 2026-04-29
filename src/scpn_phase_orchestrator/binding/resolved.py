@@ -34,7 +34,7 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
         for name, family in sorted(spec.oscillator_families.items())
     }
     driver_configs = spec.drivers.all_channel_configs()
-    channels = sorted(set(family_channels.values()) | set(driver_configs))
+    channels = sorted(spec.used_channels())
 
     family_summaries: dict[str, dict[str, object]] = {}
     for name, family in sorted(spec.oscillator_families.items()):
@@ -77,6 +77,7 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
             }
         )
         driver_config = driver_configs.get(channel, {})
+        channel_spec = spec.channels.get(channel)
         channel_summaries[channel] = {
             "families": family_names,
             "extractors": extractors,
@@ -86,6 +87,33 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
             "oscillator_count": sum(
                 len(layer.oscillator_ids) for layer in channel_layers
             ),
+            "declared": channel_spec is not None,
+            "role": channel_spec.role if channel_spec is not None else None,
+            "required": channel_spec.required if channel_spec is not None else None,
+            "units": channel_spec.units if channel_spec is not None else None,
+            "metric_semantics": (
+                channel_spec.metric_semantics if channel_spec is not None else None
+            ),
+            "coupling_participation": (
+                channel_spec.coupling_participation
+                if channel_spec is not None
+                else None
+            ),
+            "audit_serialisation": (
+                channel_spec.audit_serialisation if channel_spec is not None else None
+            ),
+            "replay_semantics": (
+                channel_spec.replay_semantics if channel_spec is not None else None
+            ),
+            "supervisor_visibility": (
+                channel_spec.supervisor_visibility if channel_spec is not None else None
+            ),
+            "derived_from": (
+                list(channel_spec.derived_from) if channel_spec is not None else []
+            ),
+            "derive_rule": channel_spec.derive_rule
+            if channel_spec is not None
+            else None,
         }
 
     features = {
@@ -106,6 +134,24 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
         "layer_count": len(spec.layers),
         "oscillator_count": n_osc,
         "channels": channel_summaries,
+        "channel_groups": {
+            name: {
+                "channels": list(group.channels),
+                "required": group.required,
+                "description": group.description,
+            }
+            for name, group in sorted(spec.channel_groups.items())
+        },
+        "cross_channel_couplings": [
+            {
+                "source": coupling.source,
+                "target": coupling.target,
+                "strength": coupling.strength,
+                "mode": coupling.mode,
+                "template": coupling.template,
+            }
+            for coupling in spec.cross_channel_couplings
+        ],
         "families": family_summaries,
         "layers": layer_summaries,
         "unassigned_layer_count": sum(
@@ -183,6 +229,24 @@ def format_resolved_binding_config(summary: dict[str, object]) -> list[str]:
             f"layers={raw_info.get('layer_count', 0)} "
             f"oscillators={raw_info.get('oscillator_count', 0)}"
         )
+        if raw_info.get("declared"):
+            role = raw_info.get("role") or "domain"
+            replay = raw_info.get("replay_semantics") or "phase"
+            derived_from = _string_list(raw_info.get("derived_from"))
+            derived = f" derived_from={','.join(derived_from)}" if derived_from else ""
+            lines.append(
+                f"    metadata: role={role} replay={replay} "
+                f"supervisor={raw_info.get('supervisor_visibility')}{derived}"
+            )
+
+    groups = summary.get("channel_groups", {})
+    if isinstance(groups, dict) and groups:
+        group_names = ", ".join(sorted(str(name) for name in groups))
+        lines.append(f"  channel_groups: {group_names}")
+
+    couplings = summary.get("cross_channel_couplings", [])
+    if isinstance(couplings, list) and couplings:
+        lines.append(f"  cross_channel_couplings: {len(couplings)}")
 
     unassigned = summary.get("unassigned_layer_count", 0)
     if unassigned:

@@ -150,6 +150,69 @@ def test_loader_preserves_named_driver_channels(tmp_path):
     assert spec.drivers.all_channel_configs()["Q"] == {"zeta": 0.25}
 
 
+def test_loader_preserves_n_channel_algebra(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "oscillator_families": {
+            "phys": {"channel": "P", "extractor_type": "hilbert", "config": {}},
+            "operator": {"channel": "H", "extractor_type": "event", "config": {}},
+            "risk": {"channel": "Risk", "extractor_type": "graph", "config": {}},
+        },
+        "channels": {
+            "P": {
+                "role": "plant",
+                "units": "rad",
+                "metric_semantics": "physical phase",
+            },
+            "H": {
+                "role": "operator_intent",
+                "replay_semantics": "event",
+                "supervisor_visibility": True,
+            },
+            "Risk": {
+                "role": "derived_risk",
+                "required": False,
+                "replay_semantics": "derived",
+                "derived_from": ["P", "H"],
+                "derive_rule": "risk = phase_lag(P,H)",
+            },
+        },
+        "channel_groups": {
+            "control_surface": {
+                "channels": ["P", "H", "Risk"],
+                "required": True,
+                "description": "channels exposed to supervisor policy",
+            }
+        },
+        "cross_channel_couplings": [
+            {
+                "source": "H",
+                "target": "P",
+                "strength": 0.25,
+                "mode": "directed",
+                "template": "operator_to_plant",
+            }
+        ],
+        "drivers": {
+            "physical": {},
+            "informational": {},
+            "symbolic": {},
+            "H": {"cadence_hz": 1.0},
+            "Risk": {},
+        },
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    spec = load_binding_spec(p)
+
+    assert spec.channels["H"].role == "operator_intent"
+    assert spec.channels["Risk"].derived_from == ["P", "H"]
+    assert spec.channel_groups["control_surface"].channels == ["P", "H", "Risk"]
+    assert spec.cross_channel_couplings[0].source == "H"
+    assert spec.cross_channel_couplings[0].target == "P"
+
+
 def test_loader_rejects_non_mapping_drivers_block(tmp_path):
     data = {**_SPEC_DATA, "drivers": ["physical"]}
     p = tmp_path / "spec.json"
@@ -209,6 +272,15 @@ def test_loader_rejects_invalid_named_driver_channel(tmp_path):
         load_binding_spec(p)
 
 
+def test_loader_rejects_invalid_declared_channel_id(tmp_path):
+    data = {**_SPEC_DATA, "channels": {"bad channel": {"role": "bad"}}}
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(BindingLoadError, match="invalid channel identifier"):
+        load_binding_spec(p)
+
+
 def test_json_yaml_produce_identical_spec(tmp_path):
     """Loading the same spec from JSON and YAML must produce identical BindingSpec."""
     yaml = pytest.importorskip("yaml")
@@ -256,6 +328,39 @@ def test_loaded_spec_passes_validation(tmp_path):
     spec = load_binding_spec(p)
     errors = validate_binding_spec(spec)
     assert errors == [], f"Valid spec should produce no errors: {errors}"
+
+
+def test_validate_rejects_broken_channel_algebra(tmp_path):
+    from scpn_phase_orchestrator.binding import validate_binding_spec
+
+    data = {
+        **_SPEC_DATA,
+        "channels": {
+            "Risk": {
+                "role": "derived_risk",
+                "replay_semantics": "derived",
+                "derived_from": ["Missing"],
+            }
+        },
+        "channel_groups": {"empty": {"channels": []}},
+        "cross_channel_couplings": [
+            {"source": "Risk", "target": "Risk", "strength": -0.1, "mode": "bad"}
+        ],
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    spec = load_binding_spec(p)
+
+    errors = validate_binding_spec(spec)
+
+    assert any("derived_from references unknown channel" in err for err in errors)
+    assert any("derive_rule is required" in err for err in errors)
+    assert any(
+        "channel_group 'empty': channels must not be empty" in err for err in errors
+    )
+    assert any("source and target must differ" in err for err in errors)
+    assert any("strength must be finite and >= 0" in err for err in errors)
+    assert any("mode must be one of" in err for err in errors)
 
 
 def test_loader_validate_control_period_and_channels(tmp_path):

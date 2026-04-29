@@ -16,12 +16,23 @@ layers:
   - name: individual_heading
     index: 0
     oscillator_ids: [bot_0, bot_1, bot_2, bot_3]
+    family: heading_angle
   - name: formation_shape
     index: 1
     oscillator_ids: [form_radius, form_angle]
+    family: formation_event
   - name: flock_direction
     index: 2
     oscillator_ids: [flock_heading, flock_speed]
+    family: formation_state
+  - name: obstacle_field
+    index: 3
+    oscillator_ids: [obstacle_left, obstacle_right, obstacle_front]
+    family: obstacle_phase
+  - name: mission_intent
+    index: 4
+    oscillator_ids: [target_heading, target_spacing]
+    family: mission_phase
 
 # Vicsek et al., PRL 75(6), 1995.
 # Heading alignment via local averaging = Kuramoto on the unit circle.
@@ -40,6 +51,62 @@ oscillator_families:
     extractor_type: ring
     config:
       n_states: 4
+  obstacle_phase:
+    channel: Env
+    extractor_type: graph
+    config: {}
+  mission_phase:
+    channel: Mission
+    extractor_type: event
+    config: {}
+
+channels:
+  P:
+    role: robot_heading
+    units: rad
+    metric_semantics: individual heading phase
+  I:
+    role: formation_event
+    units: event_phase
+    metric_semantics: formation-update cadence
+  S:
+    role: formation_state
+    units: discrete_state_phase
+    metric_semantics: formation topology state
+  Env:
+    role: obstacle_field
+    required: false
+    replay_semantics: state
+    metric_semantics: obstacle proximity phase
+  Mission:
+    role: derived_mission_intent
+    required: false
+    replay_semantics: derived
+    derived_from: [P, S, Env]
+    derive_rule: target_phase = target_heading(P) + safe_spacing(S,Env)
+    metric_semantics: target intent phase
+
+channel_groups:
+  navigation_surface:
+    channels: [P, Env, Mission]
+    required: true
+    description: channels that steer heading and avoidance decisions
+  formation_surface:
+    channels: [I, S, Mission]
+    required: true
+    description: channels that constrain group formation
+
+cross_channel_couplings:
+  - source: Env
+    target: P
+    strength: 0.35
+    mode: inhibitory
+    template: obstacle_repulsion
+  - source: Mission
+    target: P
+    strength: 0.30
+    mode: directed
+    template: mission_heading_drive
 
 coupling:
   # Proximity-based communication: coupling decays with inter-robot distance.
@@ -55,11 +122,16 @@ drivers:
     zeta: 0.02
   symbolic:
     zeta: 0.02
+  Env:
+    zeta: 0.08
+  Mission:
+    cadence_hz: 0.5
+    zeta: 0.03
 
 objectives:
   # Heading alignment + flock coherence = good; formation breakup = bad.
-  good_layers: [0, 2]
-  bad_layers: [1]
+  good_layers: [0, 2, 4]
+  bad_layers: [1, 3]
   good_weight: 1.0
   bad_weight: 1.5
 
