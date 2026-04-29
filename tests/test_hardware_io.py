@@ -9,12 +9,15 @@
 from __future__ import annotations
 
 import importlib.util
+from unittest.mock import MagicMock
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.adapters.hardware_io import (
     HAS_BRAINFLOW,
     HAS_MODBUS,
+    ModbusAdapter,
     SampleBuffer,
     SimulatedBoardAdapter,
 )
@@ -171,3 +174,93 @@ class TestHardwareFlags:
     def test_has_modbus_matches_importlib(self):
         expected = importlib.util.find_spec("pymodbus") is not None
         assert expected == HAS_MODBUS
+
+
+# ---------------------------------------------------------------------------
+# Adapter registry wiring
+# ---------------------------------------------------------------------------
+
+
+class TestHardwareRegistryWiring:
+    """Verify hardware_io is intentionally public optional adapter surface."""
+
+    def test_adapters_package_exports_hardware_io_surface(self):
+        import scpn_phase_orchestrator.adapters as adapters
+
+        assert adapters.SampleBuffer is SampleBuffer
+        assert adapters.SimulatedBoardAdapter is SimulatedBoardAdapter
+        assert adapters.ModbusAdapter is ModbusAdapter
+
+
+# ---------------------------------------------------------------------------
+# ModbusAdapter: mock-backed branch coverage without SCADA hardware
+# ---------------------------------------------------------------------------
+
+
+class TestModbusAdapter:
+    """Verify ModbusAdapter semantics using a mocked pymodbus client."""
+
+    def test_missing_optional_dependency_raises(self, monkeypatch):
+        import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
+
+        monkeypatch.setattr(hardware_io, "HAS_MODBUS", False)
+
+        with pytest.raises(ImportError, match="pymodbus not installed"):
+            ModbusAdapter("plc.local")
+
+    def test_connect_disconnect_read_write_success(self, monkeypatch):
+        import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
+
+        client = MagicMock()
+        read_result = MagicMock()
+        read_result.isError.return_value = False
+        read_result.registers = [10, 20]
+        write_result = MagicMock()
+        write_result.isError.return_value = False
+        client.read_holding_registers.return_value = read_result
+        client.write_register.return_value = write_result
+        factory = MagicMock(return_value=client)
+
+        monkeypatch.setattr(hardware_io, "HAS_MODBUS", True)
+        monkeypatch.setattr(hardware_io, "ModbusTcpClient", factory, raising=False)
+
+        adapter = ModbusAdapter("plc.local", port=1502)
+        adapter.connect()
+        values = adapter.read_holding_registers(7, count=2)
+        wrote = adapter.write_register(9, 123)
+        adapter.disconnect()
+
+        factory.assert_called_once_with("plc.local", port=1502)
+        client.connect.assert_called_once()
+        client.read_holding_registers.assert_called_once_with(7, count=2)
+        client.write_register.assert_called_once_with(9, 123)
+        client.close.assert_called_once()
+        np.testing.assert_allclose(values, np.array([10.0, 20.0]))
+        assert wrote is True
+
+    def test_read_error_returns_zero_vector_and_write_reports_false(self, monkeypatch):
+        import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
+
+        client = MagicMock()
+        read_result = MagicMock()
+        read_result.isError.return_value = True
+        write_result = MagicMock()
+        write_result.isError.return_value = True
+        client.read_holding_registers.return_value = read_result
+        client.write_register.return_value = write_result
+
+        monkeypatch.setattr(hardware_io, "HAS_MODBUS", True)
+        monkeypatch.setattr(
+            hardware_io,
+            "ModbusTcpClient",
+            MagicMock(return_value=client),
+            raising=False,
+        )
+
+        adapter = ModbusAdapter("plc.local")
+
+        np.testing.assert_allclose(
+            adapter.read_holding_registers(0, count=3),
+            np.zeros(3),
+        )
+        assert adapter.write_register(0, 1) is False
