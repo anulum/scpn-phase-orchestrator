@@ -123,6 +123,37 @@ def test_config_compiler_oscillator_families(minimal_config: QueueWavesConfig) -
     assert spec.oscillator_families["svc-a"].extractor_type == "hilbert"
 
 
+def test_config_compiler_accepts_standard_and_named_channels(tmp_path: Path) -> None:
+    yaml_text = textwrap.dedent("""\
+        prometheus_url: "http://prom:9090"
+        services:
+          - name: latency
+            promql: histogram_quantile(0.99, rate(http_duration_bucket[5m]))
+            layer: micro
+            channel: P
+          - name: release-state
+            promql: deployment_state
+            layer: meso
+            channel: S
+          - name: retry-budget
+            promql: retry_budget_remaining
+            layer: macro
+            channel: RetryBudget
+            extractor_type: event
+    """)
+    path = tmp_path / "qw-nchannel.yaml"
+    path.write_text(yaml_text, encoding="utf-8")
+
+    spec = ConfigCompiler().compile(load_config(path))
+
+    assert spec.oscillator_families["latency"].channel == "P"
+    assert spec.oscillator_families["latency"].extractor_type == "hilbert"
+    assert spec.oscillator_families["release-state"].channel == "S"
+    assert spec.oscillator_families["release-state"].extractor_type == "ring"
+    assert spec.oscillator_families["retry-budget"].channel == "RetryBudget"
+    assert spec.oscillator_families["retry-budget"].extractor_type == "event"
+
+
 def test_load_config_defaults(tmp_path: Path) -> None:
     yaml_text = textwrap.dedent("""\
         prometheus_url: "http://prom:9090"
@@ -217,9 +248,19 @@ def test_load_config_normalises_numeric_scalars(tmp_path: Path) -> None:
             services:
               - name: s1
                 promql: up
-                channel: X
+                channel: 1bad
             """,
             "service.channel",
+        ),
+        (
+            """\
+            prometheus_url: "http://prom:9090"
+            services:
+              - name: s1
+                promql: up
+                channel: ExtraChannel
+            """,
+            "service.extractor_type",
         ),
         (
             """\
@@ -267,7 +308,15 @@ def test_load_config_rejects_invalid_values(
 @pytest.mark.parametrize(
     "factory",
     [
-        lambda: ServiceDef(name="svc", promql="up", layer="micro", channel="S"),
+        lambda: ServiceDef(name="svc", promql="up", layer="micro", channel="1bad"),
+        lambda: ServiceDef(name="svc", promql="up", layer="micro", channel="Extra"),
+        lambda: ServiceDef(
+            name="svc",
+            promql="up",
+            layer="micro",
+            channel="Extra",
+            extractor_type="unknown",
+        ),
         lambda: ThresholdConfig(r_bad_warn=2.0, r_bad_critical=1.0),
         lambda: CouplingConfig(strength=-0.1),
         lambda: AlertSink(url="ftp://example.com/hook"),
