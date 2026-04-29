@@ -44,6 +44,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Real
 
 import numpy as np
 from numpy.typing import NDArray
@@ -161,6 +162,15 @@ def _dispatch() -> Callable[..., tuple[float, float, float, float]] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    return coerced
+
+
 def _oa_deriv(
     re: float,
     im: float,
@@ -242,8 +252,10 @@ class OttAntonsenReduction:
         K: float,
         dt: float = 0.01,
     ):
-        if not all(np.isfinite(v) for v in (omega_0, delta, K, dt)):
-            raise ValueError("omega_0, delta, K, and dt must be finite")
+        omega_0 = _validate_finite_real(omega_0, name="omega_0")
+        delta = _validate_finite_real(delta, name="delta")
+        K = _validate_finite_real(K, name="K")
+        dt = _validate_finite_real(dt, name="dt")
         if delta < 0:
             raise ValueError(f"delta (half-width) must be non-negative, got {delta}")
         if dt <= 0.0:
