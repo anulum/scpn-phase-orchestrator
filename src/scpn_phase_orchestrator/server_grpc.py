@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["PhaseStreamServicer", "HAS_GRPC"]
 
 try:
+    # type ignore: grpcio ships without complete typing in the supported range.
     import grpc  # type: ignore[import-untyped]  # pragma: no cover
 
     HAS_GRPC = True  # pragma: no cover

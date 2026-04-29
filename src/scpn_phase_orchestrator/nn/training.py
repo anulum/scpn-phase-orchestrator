@@ -46,6 +46,7 @@ def sync_loss(
     Returns:
         Scalar loss (R - target_R)^2
     """
+    # type ignore: Equinox modules expose __call__ dynamically by subclass.
     final = model(phases)  # type: ignore[operator]
     R = order_parameter(final)
     return (R - target_R) ** 2
@@ -68,6 +69,7 @@ def trajectory_loss(
     Returns:
         Scalar mean circular distance
     """
+    # type ignore: training accepts the trajectory-capable Equinox protocol.
     _, predicted = model.forward_with_trajectory(phases)  # type: ignore[attr-defined]
     T = min(predicted.shape[0], observed.shape[0])
     pred = predicted[:T]

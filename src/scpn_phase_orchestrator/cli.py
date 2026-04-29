@@ -285,6 +285,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                     zeta,
                     psi_target,
                     eff_alpha,
+                    # type ignore: amplitude_mode proves spec.amplitude is set here.
                     epsilon=spec.amplitude.epsilon,  # type: ignore[union-attr]
                 )
                 phases = sl_state[:n_osc]
@@ -441,6 +442,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                     log_kwargs["amplitudes"] = amplitudes
                     log_kwargs["mu"] = eff_mu
                     log_kwargs["knm_r"] = coupling.knm_r
+                    # type ignore: amplitude_mode proves spec.amplitude is set here.
                     log_kwargs["epsilon"] = spec.amplitude.epsilon  # type: ignore[union-attr]
                 audit_logger.log_step(
                     step_idx,

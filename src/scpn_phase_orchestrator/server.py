@@ -65,8 +65,11 @@ try:
         WebSocketDisconnect,  # pragma: no cover
     )
 except ImportError:  # pragma: no cover
+    # type ignore: FastAPI is optional; sentinels keep module importable without it.
     Response = None  # type: ignore[assignment,misc]  # pragma: no cover
+    # type ignore: FastAPI is optional; sentinels keep module importable without it.
     WebSocket = None  # type: ignore[assignment,misc]  # pragma: no cover
+    # type ignore: FastAPI is optional; sentinels keep module importable without it.
     WebSocketDisconnect = None  # type: ignore[assignment,misc]  # pragma: no cover
 
 __all__ = ["create_app", "SimulationState"]

@@ -30,6 +30,7 @@ __all__ = [
 ]
 
 try:
+    # type ignore: BrainFlow is optional and lacks complete typing metadata.
     from brainflow.board_shim import (  # type: ignore[import-not-found,import-untyped]  # pragma: no cover
         BoardShim,
         BrainFlowInputParams,
@@ -40,6 +41,7 @@ except ImportError:
     HAS_BRAINFLOW = False
 
 try:
+    # type ignore: pymodbus is optional for hardware adapter deployments.
     from pymodbus.client import (  # type: ignore[import-not-found]
         ModbusTcpClient,  # pragma: no cover
     )
