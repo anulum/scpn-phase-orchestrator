@@ -18,6 +18,7 @@ for fuzzer in "$project_root"/fuzzers/*_fuzzer.py; do
     --distpath "$OUT" \
     --onefile \
     --name "$fuzzer_package" \
+    --add-data "$project_root/src/scpn_phase_orchestrator/supervisor/policy_rules.py:src/scpn_phase_orchestrator/supervisor" \
     --paths "$project_root/src" \
     "$fuzzer"
 
