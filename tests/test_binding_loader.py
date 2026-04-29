@@ -155,7 +155,7 @@ def test_loader_rejects_non_mapping_drivers_block(tmp_path):
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(BindingLoadError, match="drivers must be a mapping"):
+    with pytest.raises(BindingLoadError, match="expected mapping in drivers, got list"):
         load_binding_spec(p)
 
 
@@ -167,7 +167,9 @@ def test_loader_rejects_non_mapping_standard_driver(tmp_path):
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(BindingLoadError, match="drivers.physical must be a mapping"):
+    with pytest.raises(
+        BindingLoadError, match="expected mapping in drivers.physical, got float"
+    ):
         load_binding_spec(p)
 
 
@@ -184,7 +186,9 @@ def test_loader_rejects_non_mapping_named_driver(tmp_path):
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(BindingLoadError, match="drivers.Q must be a mapping"):
+    with pytest.raises(
+        BindingLoadError, match="expected mapping in drivers.Q, got float"
+    ):
         load_binding_spec(p)
 
 
