@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -15,6 +17,9 @@ from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
 __all__ = ["SymbolicExtractor"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 
 class SymbolicExtractor(PhaseExtractor):
@@ -39,7 +44,7 @@ class SymbolicExtractor(PhaseExtractor):
         self._node_id = node_id
         self._mode = mode
 
-    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+    def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Map discrete state indices to phases on the unit circle."""
         indices = np.asarray(signal, dtype=np.int64)
         if self._mode == "ring":
@@ -84,7 +89,7 @@ class SymbolicExtractor(PhaseExtractor):
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))
 
-    def _transition_quality(self, indices: NDArray, i: int) -> float:
+    def _transition_quality(self, indices: IntArray, i: int) -> float:
         """Quality based on transition regularity: penalise repeated or large jumps."""
         if i == 0 or len(indices) < 2:
             return 0.5

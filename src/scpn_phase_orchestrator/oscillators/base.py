@@ -10,10 +10,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import TypeAlias
 
+import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["PhaseState", "PhaseExtractor"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -32,7 +36,7 @@ class PhaseExtractor(ABC):
     """Abstract base for signal-to-phase extraction algorithms."""
 
     @abstractmethod
-    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+    def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Extract phase states from a raw signal at the given sample rate."""
         ...
 

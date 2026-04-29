@@ -8,10 +8,17 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
+from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
+from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 
 # ── PhaseState construction and field access ────────────────────────────
 
@@ -292,6 +299,23 @@ class TestPhaseExtractorContract:
     def test_quality_score_is_abstract(self):
         """quality_score must be marked @abstractmethod."""
         assert getattr(PhaseExtractor.quality_score, "__isabstractmethod__", False)
+
+    def test_public_array_contracts_are_parameterised(self):
+        """Public oscillator array contracts stay element-typed."""
+        for fn, param in [
+            (PhaseExtractor.extract, "signal"),
+            (PhysicalExtractor.extract, "signal"),
+            (InformationalExtractor.extract, "signal"),
+            (SymbolicExtractor.extract, "signal"),
+            (extract_initial_phases, "omegas"),
+        ]:
+            hint = get_type_hints(fn)[param]
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
+
+        result_hint = get_type_hints(PhaseQualityScorer.downweight_mask)["return"]
+        assert "numpy.ndarray" in str(result_hint)
+        assert "float64" in str(result_hint)
 
 
 # ── PhaseState edge values ─────────────────────────────────────────────
