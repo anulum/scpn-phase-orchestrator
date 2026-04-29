@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 import yaml
 
 from scpn_phase_orchestrator.binding.types import (
+    VALID_EXTRACTORS,
     ActuatorMapping,
     BindingSpec,
     BoundaryDef,
@@ -24,6 +25,8 @@ from scpn_phase_orchestrator.binding.types import (
     HierarchyLayer,
     ObjectivePartition,
     OscillatorFamily,
+    is_valid_channel_id,
+    resolve_extractor_type,
 )
 
 __all__ = [
@@ -36,7 +39,7 @@ __all__ = [
 ]
 
 _LAYER_ORDER = {"micro": 0, "meso": 1, "macro": 2}
-_VALID_CHANNELS = frozenset({"P", "I"})
+_DEFAULT_EXTRACTORS_BY_CHANNEL = {"P": "hilbert", "I": "event", "S": "ring"}
 _VALID_ALERT_FORMATS = frozenset({"generic", "slack"})
 _VALID_SECURITY_MODES = frozenset({"development", "production"})
 
@@ -86,12 +89,13 @@ def _require_http_url(value: str, field_name: str) -> str:
 
 @dataclass(frozen=True)
 class ServiceDef:
-    """A monitored service: name, PromQL query, hierarchy layer, and channel type."""
+    """A monitored service: query, hierarchy layer, channel, and extractor."""
 
     name: str
     promql: str
     layer: str  # micro, meso, macro
-    channel: str = "P"  # P(hysical) or I(nformational)
+    channel: str = "P"
+    extractor_type: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "name", _require_non_empty(self.name, "service.name"))
@@ -100,8 +104,29 @@ class ServiceDef:
         )
         if self.layer not in _LAYER_ORDER:
             raise ValueError("service.layer must be micro, meso, or macro")
-        if self.channel not in _VALID_CHANNELS:
-            raise ValueError("service.channel must be P or I")
+        object.__setattr__(
+            self,
+            "channel",
+            _require_non_empty(self.channel, "service.channel"),
+        )
+        if not is_valid_channel_id(self.channel):
+            raise ValueError(
+                "service.channel must be a valid binding channel identifier"
+            )
+        if self.extractor_type is not None:
+            raw_extractor = _require_non_empty(
+                self.extractor_type, "service.extractor_type"
+            )
+            extractor = resolve_extractor_type(raw_extractor)
+            if extractor not in VALID_EXTRACTORS:
+                raise ValueError("service.extractor_type must be a valid extractor")
+            object.__setattr__(self, "extractor_type", extractor)
+
+    def resolved_extractor_type(self) -> str:
+        """Return the extractor algorithm for this service channel."""
+        if self.extractor_type is not None:
+            return self.extractor_type
+        return _DEFAULT_EXTRACTORS_BY_CHANNEL.get(self.channel, "hilbert")
 
 
 @dataclass(frozen=True)
@@ -266,6 +291,7 @@ def load_config(path: Path) -> QueueWavesConfig:
             promql=s["promql"],
             layer=s.get("layer", "micro"),
             channel=s.get("channel", "P"),
+            extractor_type=s.get("extractor_type"),
         )
         for s in raw.get("services", [])
     ]
@@ -338,9 +364,10 @@ class ConfigCompiler:
             )
 
             for svc in svcs:
-                ext = "hilbert" if svc.channel == "P" else "event"
                 osc_families[svc.name] = OscillatorFamily(
-                    channel=svc.channel, extractor_type=ext, config={}
+                    channel=svc.channel,
+                    extractor_type=svc.resolved_extractor_type(),
+                    config={},
                 )
 
             # micro = bad (retry storms sync), macro = good (coordinated throughput)
