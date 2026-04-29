@@ -130,6 +130,26 @@ def test_loader_passes_algorithm_names_through(tmp_path):
     assert spec.oscillator_families["g"].extractor_type == "graph"
 
 
+def test_loader_preserves_named_driver_channels(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "drivers": {
+            "physical": {},
+            "informational": {},
+            "symbolic": {},
+            "Q": {"zeta": 0.25},
+            "edge-node": {"psi": 1.5},
+        },
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    spec = load_binding_spec(p)
+
+    assert spec.drivers.channel_config("Q") == {"zeta": 0.25}
+    assert spec.drivers.channel_config("edge-node") == {"psi": 1.5}
+    assert spec.drivers.all_channel_configs()["Q"] == {"zeta": 0.25}
+
+
 def test_json_yaml_produce_identical_spec(tmp_path):
     """Loading the same spec from JSON and YAML must produce identical BindingSpec."""
     yaml = pytest.importorskip("yaml")
@@ -186,7 +206,11 @@ def test_loader_validate_control_period_and_channels(tmp_path):
         **_SPEC_DATA,
         "control_period_s": -1.0,
         "oscillator_families": {
-            "bad": {"channel": "X", "extractor_type": "hilbert", "config": {}},
+            "bad": {
+                "channel": "bad channel",
+                "extractor_type": "hilbert",
+                "config": {},
+            },
         },
         "boundaries": [
             {

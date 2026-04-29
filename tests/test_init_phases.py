@@ -4,7 +4,7 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Tests for P/I/S initial phase extraction
+# SCPN Phase Orchestrator — Tests for binding-channel initial phase extraction
 
 from __future__ import annotations
 
@@ -93,6 +93,52 @@ def test_different_seeds_differ():
     a = extract_initial_phases(spec, omegas, seed=1)
     b = extract_initial_phases(spec, omegas, seed=2)
     assert not np.array_equal(a, b)
+
+
+def test_named_channels_route_by_extractor_semantics():
+    layers = [
+        HierarchyLayer(
+            name="L1",
+            index=0,
+            oscillator_ids=["osc0", "osc1", "osc2", "osc3"],
+        ),
+    ]
+    families = {
+        "fast": OscillatorFamily(channel="Q", extractor_type="hilbert", config={}),
+        "events": OscillatorFamily(channel="C", extractor_type="event", config={}),
+        "modes": OscillatorFamily(
+            channel="M", extractor_type="ring", config={"n_states": 7}
+        ),
+        "edge": OscillatorFamily(
+            channel="edge-node",
+            extractor_type="graph",
+            config={},
+        ),
+    }
+    spec = BindingSpec(
+        name="test-n-channel",
+        version="1.0.0",
+        safety_tier="research",
+        sample_period_s=0.01,
+        control_period_s=0.1,
+        layers=layers,
+        oscillator_families=families,
+        coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
+        drivers=DriverSpec(
+            physical={},
+            informational={},
+            symbolic={},
+            extra={"Q": {"zeta": 0.1}, "C": {"zeta": 0.2}},
+        ),
+        objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
+        boundaries=[],
+        actuators=[],
+    )
+    phases = extract_initial_phases(spec, np.array([1.0, 2.0, 3.0, 4.0]), seed=42)
+
+    assert phases.shape == (4,)
+    assert np.all(phases >= 0.0)
+    assert np.all(phases < TWO_PI)
 
 
 class TestInitPhasesPipelineWiring:

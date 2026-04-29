@@ -117,6 +117,17 @@ def test_multi_channel_quality_scores():
     assert report.quality_scores["P"] > report.quality_scores["S"]
 
 
+def test_named_extension_channel_quality_score():
+    n = 5
+    states = _make_states(n, quality=0.8, channel="Q")
+    phases = np.zeros(n)
+    imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
+
+    report = check_session_start(states, phases, imprint, n)
+    assert report.passed
+    assert report.quality_scores["Q"] == 0.8
+
+
 def test_low_initial_coherence_warns():
     n = 10
     states = _make_states(n, quality=0.8)

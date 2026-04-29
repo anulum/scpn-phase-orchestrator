@@ -4,7 +4,7 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — P/I/S phase initialization
+# SCPN Phase Orchestrator — Binding-channel phase initialization
 
 from __future__ import annotations
 
@@ -19,6 +19,9 @@ from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 __all__ = ["extract_initial_phases"]
 
 TWO_PI = 2.0 * np.pi
+_PHYSICAL_EXTRACTORS = frozenset({"hilbert", "wavelet", "zero_crossing"})
+_INFORMATIONAL_EXTRACTORS = frozenset({"event"})
+_SYMBOLIC_EXTRACTORS = frozenset({"ring", "graph"})
 
 
 def extract_initial_phases(
@@ -26,11 +29,11 @@ def extract_initial_phases(
     omegas: NDArray,
     seed: int = 42,
 ) -> NDArray:
-    """Extract initial phases from P/I/S channels defined in binding_spec.
+    """Extract initial phases from channels defined in binding_spec.
 
-    For each oscillator, generates a synthetic signal matching its channel
-    type and extracts the phase. Falls back to random phase if extraction
-    fails.
+    For each oscillator, generates a synthetic signal matching the family
+    channel or extractor semantics and extracts the phase. Falls back to
+    random phase if extraction fails.
 
     Returns (n_osc,) array of initial phases in [0, 2*pi).
     """
@@ -40,32 +43,28 @@ def extract_initial_phases(
     t = np.linspace(0, 1.0, 256)
 
     families = spec.oscillator_families
-    family_channels = {}
-    family_configs = {}
-    for name, fam in families.items():
-        family_channels[name] = fam.channel
-        family_configs[name] = fam.config or {}
-
     osc_idx = 0
     for layer in spec.layers:
         for osc_id in layer.oscillator_ids:
             omega = omegas[osc_idx]
-            channel = _resolve_channel(layer.family, families, osc_idx)
+            family = _resolve_family(layer.family, families, osc_idx)
+            channel = family.channel if family is not None else "P"
+            extractor_type = family.extractor_type if family is not None else "hilbert"
 
-            if channel == "P":
+            if channel == "P" or extractor_type in _PHYSICAL_EXTRACTORS:
                 signal = np.sin(omega * TWO_PI * t) + rng.normal(0, 0.1, len(t))
                 p_ext = PhysicalExtractor(node_id=osc_id)
                 states = p_ext.extract(signal, sample_rate=256.0)
                 phases[osc_idx] = states[-1].theta if states else rng.uniform(0, TWO_PI)
 
-            elif channel == "I":
+            elif channel == "I" or extractor_type in _INFORMATIONAL_EXTRACTORS:
                 n_events = max(3, int(omega * 10))
                 timestamps = np.sort(rng.uniform(0, 1.0, n_events))
                 i_ext = InformationalExtractor(node_id=osc_id)
                 states = i_ext.extract(timestamps, sample_rate=1.0)
                 phases[osc_idx] = states[-1].theta if states else rng.uniform(0, TWO_PI)
 
-            elif channel == "S":
+            elif channel == "S" or extractor_type in _SYMBOLIC_EXTRACTORS:
                 n_states = _get_n_states(families)
                 state_idx = rng.integers(0, n_states)
                 s_ext = SymbolicExtractor(n_states=n_states, node_id=osc_id)
@@ -86,22 +85,30 @@ def _resolve_channel(
     osc_idx: int,
 ) -> str:
     """Resolve channel from explicit family binding or round-robin fallback."""
+    family = _resolve_family(layer_family, families, osc_idx)
+    if family is not None:
+        return family.channel
+    return "P"
+
+
+def _resolve_family(
+    layer_family: str | None,
+    families: dict[str, OscillatorFamily],
+    osc_idx: int,
+) -> OscillatorFamily | None:
+    """Resolve family from explicit layer binding or round-robin fallback."""
     if layer_family is not None and layer_family in families:
-        return families[layer_family].channel
-    channels = []
-    for key in sorted(families.keys()):
-        ch = families[key].channel
-        if ch not in channels:
-            channels.append(ch)
-    if not channels:
-        return "P"
-    return channels[osc_idx % len(channels)]
+        return families[layer_family]
+    ordered = [families[key] for key in sorted(families)]
+    if not ordered:
+        return None
+    return ordered[osc_idx % len(ordered)]
 
 
 def _get_n_states(families: dict[str, OscillatorFamily]) -> int:
-    """Find n_states from the first symbolic family."""
+    """Find n_states from the first symbolic-family extractor."""
     for fam in families.values():
-        if fam.channel == "S":
+        if fam.channel == "S" or fam.extractor_type in _SYMBOLIC_EXTRACTORS:
             cfg = fam.config or {}
             return int(cfg.get("n_states", 4))
     return 4

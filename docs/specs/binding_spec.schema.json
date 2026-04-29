@@ -46,7 +46,8 @@
           "oscillator_ids": {
             "type": "array",
             "items": { "type": "string" }
-          }
+          },
+          "family": { "type": "string" }
         }
       },
       "minItems": 1
@@ -60,7 +61,8 @@
         "properties": {
           "channel": {
             "type": "string",
-            "enum": ["P", "I", "S"]
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+            "description": "Named phase channel. P, I, and S are the standard physical, informational, and symbolic channels; domainpacks may define additional typed channels."
           },
           "extractor_type": {
             "type": "string",
@@ -90,6 +92,7 @@
     },
     "drivers": {
       "type": "object",
+      "additionalProperties": { "type": "object" },
       "properties": {
         "physical": { "type": "object" },
         "informational": { "type": "object" },

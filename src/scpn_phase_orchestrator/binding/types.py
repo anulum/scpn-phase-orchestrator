@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from scpn_phase_orchestrator.exceptions import ValidationError
@@ -25,11 +26,13 @@ __all__ = [
     "ProtocolNetSpec",
     "AmplitudeSpec",
     "VALID_CHANNELS",
+    "STANDARD_CHANNELS",
     "VALID_SEVERITIES",
     "VALID_KNOBS",
     "VALID_SAFETY_TIERS",
     "EXTRACTOR_ALIASES",
     "VALID_EXTRACTORS",
+    "is_valid_channel_id",
     "resolve_extractor_type",
     "BindingSpec",
 ]
@@ -48,9 +51,9 @@ class HierarchyLayer:
 
 @dataclass(frozen=True)
 class OscillatorFamily:
-    """Phase extraction configuration for one oscillator group (P/I/S channel)."""
+    """Phase extraction configuration for one oscillator group."""
 
-    channel: str  # "P", "I", or "S"
+    channel: str
     extractor_type: str
     config: dict
 
@@ -66,11 +69,36 @@ class CouplingSpec:
 
 @dataclass(frozen=True)
 class DriverSpec:
-    """Configuration for P/I/S external driver channels."""
+    """Configuration for standard and named external driver channels."""
 
     physical: dict
     informational: dict
     symbolic: dict
+    extra: dict[str, dict] | None = None
+
+    def channel_config(self, channel: str) -> dict:
+        """Return driver config for a standard or named channel."""
+        standard = {
+            "P": self.physical,
+            "physical": self.physical,
+            "I": self.informational,
+            "informational": self.informational,
+            "S": self.symbolic,
+            "symbolic": self.symbolic,
+        }
+        if channel in standard:
+            return standard[channel]
+        return (self.extra or {}).get(channel, {})
+
+    def all_channel_configs(self) -> dict[str, dict]:
+        """Return standard driver configs plus named extension channels."""
+        configs = {
+            "P": self.physical,
+            "I": self.informational,
+            "S": self.symbolic,
+        }
+        configs.update(self.extra or {})
+        return configs
 
 
 @dataclass(frozen=True)
@@ -163,7 +191,9 @@ class AmplitudeSpec:
     amp_coupling_decay: float = 0.3
 
 
-VALID_CHANNELS = frozenset({"P", "I", "S"})
+STANDARD_CHANNELS = frozenset({"P", "I", "S"})
+VALID_CHANNELS = STANDARD_CHANNELS
+_CHANNEL_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
 VALID_SEVERITIES = frozenset({"soft", "hard"})
 VALID_KNOBS = frozenset({"K", "alpha", "zeta", "Psi"})
 VALID_SAFETY_TIERS = frozenset({"research", "clinical", "consumer", "production"})
@@ -186,6 +216,11 @@ EXTRACTOR_ALIASES: dict[str, str] = {
     "symbolic": "ring",
 }
 VALID_EXTRACTORS = _ALGORITHM_EXTRACTORS | frozenset(EXTRACTOR_ALIASES)
+
+
+def is_valid_channel_id(channel: str) -> bool:
+    """Return True when *channel* is a valid binding channel identifier."""
+    return bool(_CHANNEL_ID_RE.fullmatch(channel))
 
 
 def resolve_extractor_type(raw: str) -> str:

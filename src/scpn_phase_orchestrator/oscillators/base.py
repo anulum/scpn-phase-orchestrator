@@ -24,7 +24,7 @@ class PhaseState:
     omega: float  # instantaneous frequency, rad/s
     amplitude: float
     quality: float  # 0..1
-    channel: str  # "P", "I", or "S"
+    channel: str
     node_id: str
 
 

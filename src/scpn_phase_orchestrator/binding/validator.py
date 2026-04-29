@@ -9,12 +9,12 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.binding.types import (
-    VALID_CHANNELS,
     VALID_EXTRACTORS,
     VALID_KNOBS,
     VALID_SAFETY_TIERS,
     VALID_SEVERITIES,
     BindingSpec,
+    is_valid_channel_id,
 )
 
 __all__ = ["validate_binding_spec"]
@@ -51,10 +51,11 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     layer_indices = {lay.index for lay in spec.layers}
 
     for family_name, fam in spec.oscillator_families.items():
-        if fam.channel not in VALID_CHANNELS:
+        if not is_valid_channel_id(fam.channel):
             errors.append(
-                f"oscillator_family {family_name!r}: channel must be one of "
-                f"{VALID_CHANNELS}, got {fam.channel!r}"
+                f"oscillator_family {family_name!r}: channel must be a non-empty "
+                f"identifier matching [A-Za-z][A-Za-z0-9_-]{{0,63}}, got "
+                f"{fam.channel!r}"
             )
         if fam.extractor_type not in VALID_EXTRACTORS:
             errors.append(

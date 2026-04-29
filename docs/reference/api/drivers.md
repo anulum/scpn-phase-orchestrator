@@ -1,10 +1,10 @@
 # Drivers
 
 External forcing functions that inject the drive signal Ψ(t) into
-the Kuramoto equation. Each driver corresponds to one of the three
-oscillator channels (Physical, Informational, Symbolic) and produces
-a time-varying phase target that pulls oscillators toward a desired
-synchronisation pattern.
+the Kuramoto equation. The built-in drivers cover the standard
+physical, informational, and symbolic channel profile. Binding specs
+may also preserve named driver sections for extension channels, while
+custom actuation code decides how those channels affect Ψ(t).
 
 ## Pipeline position
 

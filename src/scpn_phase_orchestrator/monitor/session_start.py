@@ -43,7 +43,7 @@ def check_session_start(
     """Validate extraction quality, imprint consistency, and initial coherence.
 
     Args:
-        phase_states: extracted P/I/S states from all oscillators.
+        phase_states: extracted states from all configured channels.
         initial_phases: phase array that will seed the UPDE engine.
         imprint_state: loaded (or fresh) imprint state.
         n_osc: expected oscillator count.
@@ -55,7 +55,7 @@ def check_session_start(
     scorer = PhaseQualityScorer()
 
     # Quality per channel
-    by_channel: dict[str, list[PhaseState]] = {"P": [], "I": [], "S": []}
+    by_channel: dict[str, list[PhaseState]] = {}
     for ps in phase_states:
         by_channel.setdefault(ps.channel, []).append(ps)
 

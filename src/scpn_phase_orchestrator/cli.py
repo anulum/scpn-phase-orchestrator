@@ -217,9 +217,8 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
 
     # Initialise drive parameters from spec.drivers
     zeta = max(
-        spec.drivers.physical.get("zeta", 0.0),
-        spec.drivers.informational.get("zeta", 0.0),
-        spec.drivers.symbolic.get("zeta", 0.0),
+        (cfg.get("zeta", 0.0) for cfg in spec.drivers.all_channel_configs().values()),
+        default=0.0,
     )
     zeta_ttl = 0
     psi_target = spec.drivers.physical.get("psi", 0.0)

@@ -1,9 +1,12 @@
 # Phase Contract
 
 The Phase Contract defines the universal interface between signal sources
-(oscillators) and the UPDE integration engine. Every oscillator — physical,
-informational, or symbolic — must produce a `PhaseState` that satisfies
-this contract. Violations break the coupling pipeline downstream.
+(oscillators) and the UPDE integration engine. Every oscillator must
+produce a `PhaseState` that satisfies this contract. The standard channel
+profile is physical (`P`), informational (`I`), and symbolic (`S`), and
+domainpacks may add named channels when their extractor semantics are
+declared in the binding spec. Violations break the coupling pipeline
+downstream.
 
 ## PhaseState Fields
 
@@ -13,7 +16,7 @@ this contract. Violations break the coupling pipeline downstream.
 | `omega` | `float` | Instantaneous angular frequency, rad/s. May be negative. |
 | `amplitude` | `float` | Signal amplitude. Channel-specific meaning (see below). |
 | `quality` | `float` | Confidence in `[0, 1]`. 0 = unreliable. 1 = perfect. |
-| `channel` | `str` | `"P"`, `"I"`, or `"S"`. Set by extractor class. |
+| `channel` | `str` | Channel identifier matching `[A-Za-z][A-Za-z0-9_-]{0,63}`. |
 | `node_id` | `str` | Unique identifier for this oscillator instance. |
 
 ### Field Semantics by Channel
@@ -167,7 +170,9 @@ The following invariants hold at all times in a correctly wired pipeline:
 
 3. **Quality range**: `0 <= quality <= 1`.
 
-4. **Channel validity**: `channel in {"P", "I", "S"}`.
+4. **Channel validity**: `channel` matches
+   `[A-Za-z][A-Za-z0-9_-]{0,63}` and maps to a declared extractor
+   family. `P`, `I`, and `S` remain the standard profile.
 
 5. **Node binding**: `node_id` exists in the active binding spec.
 
@@ -231,13 +236,13 @@ def _validate(state: PhaseState) -> None:
     assert math.isfinite(state.omega)
     assert math.isfinite(state.amplitude)
     assert 0.0 <= state.quality <= 1.0
-    assert state.channel in ("P", "I", "S")
+    assert re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", state.channel)
 ```
 
 The pipeline does not currently enforce this at the boundary (for
 performance), so extractors bear responsibility. The
 `test_phase_contract.py` test suite verifies contract compliance for
-all three built-in extractors.
+the built-in extractors.
 
 ## Pipeline Integration Example
 
