@@ -55,25 +55,31 @@ class TestSimplicialEngineValidation:
 
 class TestDelayBufferValidation:
     def test_rejects_zero_oscillators(self) -> None:
-        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+        with pytest.raises(
+            ValueError, match="n_oscillators must be a positive integer"
+        ):
             DelayBuffer(n_oscillators=0, max_delay_steps=5)
 
     def test_rejects_zero_max_delay(self) -> None:
-        with pytest.raises(ValueError, match="max_delay_steps must be >= 1"):
+        with pytest.raises(
+            ValueError, match="max_delay_steps must be a positive integer"
+        ):
             DelayBuffer(n_oscillators=3, max_delay_steps=0)
 
 
 class TestDelayedEngineValidation:
     def test_rejects_zero_oscillators(self) -> None:
-        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+        with pytest.raises(
+            ValueError, match="n_oscillators must be a positive integer"
+        ):
             DelayedEngine(n_oscillators=0, dt=0.01)
 
     def test_rejects_zero_dt(self) -> None:
-        with pytest.raises(ValueError, match="dt must be positive"):
+        with pytest.raises(ValueError, match="dt must be a finite positive real"):
             DelayedEngine(n_oscillators=4, dt=0.0)
 
     def test_rejects_zero_delay_steps(self) -> None:
-        with pytest.raises(ValueError, match="delay_steps must be >= 1"):
+        with pytest.raises(ValueError, match="delay_steps must be a positive integer"):
             DelayedEngine(n_oscillators=4, dt=0.01, delay_steps=0)
 
 
