@@ -26,12 +26,24 @@ spo validate <binding_spec>
 | 0 | Valid specification |
 | 1 | Validation errors found |
 
-**Output:** List of validation errors (one per line) or `Valid`.
+**Output:** List of validation errors (one per line) or `Valid` followed by
+the resolved binding configuration summary.
 
 **Example:**
 
 ```bash
 spo validate domainpacks/bio_stub/binding_spec.yaml
+```
+
+Example success output:
+
+```text
+Valid
+Resolved configuration:
+  domain: bio_stub v0.1.0 (research)
+  timing: sample=0.01s control=0.1s interval=10 steps
+  structure: layers=3 oscillators=6 channels=I, P, S
+  engine: kuramoto features=none
 ```
 
 ---
@@ -58,8 +70,9 @@ spo run <binding_spec> [OPTIONS]
 | `--audit PATH` | None | Write audit log to JSONL file |
 | `--seed INT` | None | RNG seed for reproducibility |
 
-**Output:** Per-step regime, R_global, boundary violations, and policy actions
-printed to stdout.
+**Output:** Resolved binding configuration, then final `R_good`, `R_bad`, and
+regime. If `--audit` is set, the audit header contains the same resolved
+configuration summary.
 
 **Example:**
 

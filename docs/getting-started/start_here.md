@@ -202,6 +202,9 @@ After your entry point:
 
 - **Concepts:** [Control Knobs K/alpha/zeta/Psi](../concepts/knobs_K_alpha_zeta_Psi.md)
   — the four parameters you can adjust.
+- **Concepts:** [Pipeline Execution](../concepts/pipeline_execution.md)
+  — how binding YAML resolves into extractors, engines, supervisor
+  actions, and audit records.
 - **Concepts:** [Phase Contract](../specs/phase_contract.md) — what
   every oscillator must produce.
 - **Concepts:** [Oscillators P/I/S](../concepts/oscillators_PIS.md) —

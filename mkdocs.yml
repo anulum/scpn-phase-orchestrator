@@ -56,6 +56,7 @@ nav:
       - Start Here (Learning Path): getting-started/start_here.md
   - Concepts:
       - System Overview: concepts/system_overview.md
+      - Pipeline Execution: concepts/pipeline_execution.md
       - "Oscillators & PIS": concepts/oscillators_PIS.md
       - "Knobs: K, α, ζ, Ψ": concepts/knobs_K_alpha_zeta_Psi.md
       - Memory Imprint: concepts/memory_imprint.md
