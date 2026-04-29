@@ -19,6 +19,7 @@ for fuzzer in "$project_root"/fuzzers/*_fuzzer.py; do
     --onefile \
     --name "$fuzzer_package" \
     --add-data "$project_root/src/scpn_phase_orchestrator/supervisor/policy_rules.py:src/scpn_phase_orchestrator/supervisor" \
+    --hidden-import yaml \
     --paths "$project_root/src" \
     "$fuzzer"
 

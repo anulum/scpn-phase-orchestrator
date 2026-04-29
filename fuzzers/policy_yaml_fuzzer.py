@@ -89,6 +89,9 @@ def _load_policy_rules() -> object:
 
 
 with atheris.instrument_imports():
+    import yaml as _yaml
+
+    sys.modules.setdefault("yaml", _yaml)
     load_policy_rules = _load_policy_rules()
 
 
