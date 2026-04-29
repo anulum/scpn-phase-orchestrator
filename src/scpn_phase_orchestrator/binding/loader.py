@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
     ProtocolNetSpec,
     ProtocolTransitionSpec,
+    is_valid_channel_id,
     resolve_extractor_type,
 )
 from scpn_phase_orchestrator.exceptions import BindingError
@@ -44,6 +45,38 @@ def _require(data: dict, key: str, context: str = "") -> Any:
     except KeyError:
         loc = f" in {context}" if context else ""
         raise BindingLoadError(f"missing required key {key!r}{loc}") from None
+
+
+def _require_mapping(value: Any, context: str) -> dict:
+    """Return *value* as a mapping or raise a location-specific load error."""
+    if not isinstance(value, dict):
+        raise BindingLoadError(
+            f"{context} must be a mapping, got {type(value).__name__}"
+        )
+    return value
+
+
+def _load_drivers(data: dict) -> DriverSpec:
+    """Load standard and named driver channel configuration maps."""
+    drivers_data = _require_mapping(_require(data, "drivers", "root"), "drivers")
+    standard_driver_keys = {"physical", "informational", "symbolic"}
+    driver_maps: dict[str, dict] = {}
+    for key, value in drivers_data.items():
+        if key not in standard_driver_keys and not is_valid_channel_id(key):
+            raise BindingLoadError(f"drivers.{key}: invalid driver channel identifier")
+        driver_maps[key] = _require_mapping(value, f"drivers.{key}")
+
+    extra_drivers = {
+        key: value
+        for key, value in driver_maps.items()
+        if key not in standard_driver_keys
+    }
+    return DriverSpec(
+        physical=driver_maps.get("physical", {}),
+        informational=driver_maps.get("informational", {}),
+        symbolic=driver_maps.get("symbolic", {}),
+        extra=extra_drivers,
+    )
 
 
 def load_binding_spec(path: str | Path) -> BindingSpec:
@@ -106,19 +139,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         templates=coupling_data.get("templates", {}),
     )
 
-    drivers_data = _require(data, "drivers", "root")
-    standard_driver_keys = {"physical", "informational", "symbolic"}
-    extra_drivers = {
-        key: value
-        for key, value in drivers_data.items()
-        if key not in standard_driver_keys and isinstance(value, dict)
-    }
-    drivers = DriverSpec(
-        physical=drivers_data.get("physical", {}),
-        informational=drivers_data.get("informational", {}),
-        symbolic=drivers_data.get("symbolic", {}),
-        extra=extra_drivers,
-    )
+    drivers = _load_drivers(data)
 
     obj = _require(data, "objectives", "root")
     objectives = ObjectivePartition(
