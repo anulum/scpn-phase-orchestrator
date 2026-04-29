@@ -29,6 +29,7 @@ PYTEST_HEAVY_IGNORES = [
     "--ignore=tests/test_oim.py",
     "--ignore=tests/test_quantum_bridge_live.py",
     "--ignore=tests/test_geometry_walk.py",
+    "--ignore-glob=tests/test_nn_physics_validation*.py",
 ]
 
 PYTHON_GATES: list[tuple[str, list[str], Path]] = [
