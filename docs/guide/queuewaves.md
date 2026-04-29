@@ -76,6 +76,12 @@ security:
   rate_limit_per_minute: 120
 ```
 
+The production-ready template lives at
+`domainpacks/queuewaves/queuewaves.production.yaml`. It sets
+`security.mode: production`, `api_key_env: QUEUEWAVES_API_KEY`, and a positive
+request rate limit, so deployments do not need to remember those fields from
+scratch.
+
 ### Key Fields
 
 | Field | Default | Meaning |
@@ -108,7 +114,7 @@ security:
 
 ```bash
 export QUEUEWAVES_API_KEY="$(openssl rand -hex 32)"
-spo queuewaves serve --config queuewaves.yaml --host 0.0.0.0 --port 8080
+spo queuewaves serve --config domainpacks/queuewaves/queuewaves.production.yaml
 ```
 
 Starts a FastAPI application. Scrapes Prometheus on each interval, runs the
@@ -221,11 +227,12 @@ It connects to `/ws/stream` for live updates and renders:
 ## Production Deployment
 
 ```bash
-uvicorn scpn_phase_orchestrator.apps.queuewaves.server:create_app \
-    --factory --host 0.0.0.0 --port 8080 --workers 1
+export QUEUEWAVES_API_KEY="$(openssl rand -hex 32)"
+spo queuewaves serve --config domainpacks/queuewaves/queuewaves.production.yaml
 ```
 
 QueueWaves is single-process (shared pipeline state). Run behind nginx or
-Traefik for TLS termination, set `security.mode: production`, and provide
-`QUEUEWAVES_API_KEY` before binding to non-loopback interfaces. For multiple
-clusters, run one QueueWaves instance per Prometheus source.
+Traefik for TLS termination. The production template already sets
+`security.mode: production`; the server refuses to start unless
+`QUEUEWAVES_API_KEY` is present. For multiple clusters, run one QueueWaves
+instance per Prometheus source.
