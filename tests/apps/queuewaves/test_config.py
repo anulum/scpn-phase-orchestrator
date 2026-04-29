@@ -217,7 +217,7 @@ def test_load_config_normalises_numeric_scalars(tmp_path: Path) -> None:
             services:
               - name: s1
                 promql: up
-                channel: X
+                channel: bad channel
             """,
             "service.channel",
         ),
@@ -267,7 +267,9 @@ def test_load_config_rejects_invalid_values(
 @pytest.mark.parametrize(
     "factory",
     [
-        lambda: ServiceDef(name="svc", promql="up", layer="micro", channel="S"),
+        lambda: ServiceDef(
+            name="svc", promql="up", layer="micro", channel="bad channel"
+        ),
         lambda: ThresholdConfig(r_bad_warn=2.0, r_bad_critical=1.0),
         lambda: CouplingConfig(strength=-0.1),
         lambda: AlertSink(url="ftp://example.com/hook"),
