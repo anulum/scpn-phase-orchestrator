@@ -220,6 +220,8 @@ After your entry point:
   how to set coupling strengths.
 - **Deployment:** [Hardware Guide](../guide/hardware_deployment.md) —
   Rust FFI, FPGA, WASM, GPU, Docker.
+- **Deployment:** [Backend Strategy](../guide/backend_strategy.md) —
+  Rust and JAX primary paths, Python fallback, experimental backends.
 - **Domains:** [Domainpack Gallery](../galleries/domainpack_gallery.md)
   — 24 domains.
 - **API:** [Full API Reference](../reference/api/index.md)

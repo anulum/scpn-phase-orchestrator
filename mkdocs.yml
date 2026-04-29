@@ -67,6 +67,7 @@ nav:
       - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
       - QueueWaves Cascade Detector: guide/queuewaves.md
       - Rust FFI Acceleration: guide/rust_ffi.md
+      - Backend Strategy: guide/backend_strategy.md
       - Adapter Bridges: guide/adapters.md
       - Performance Tuning: guide/performance.md
       - Production Deployment: guide/production.md
