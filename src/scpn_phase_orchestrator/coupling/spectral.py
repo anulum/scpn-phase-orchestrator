@@ -256,12 +256,15 @@ def spectral_gap(knm: NDArray) -> float:
     two-cluster structure."""
     knm = np.asarray(knm, dtype=np.float64)
     n = knm.shape[0]
+    if n < 3:
+        return 0.0
+    off_diag = np.abs(knm[~np.eye(n, dtype=bool)])
+    if off_diag.size and np.allclose(off_diag, off_diag[0], rtol=1e-12, atol=1e-12):
+        return 0.0
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
         return float(_rust_bundle()["sg"](flat, n))
     eigvals, _ = _primitive()(flat, n)
-    if n < 3:
-        return 0.0
     return float(eigvals[2] - eigvals[1])
 
 

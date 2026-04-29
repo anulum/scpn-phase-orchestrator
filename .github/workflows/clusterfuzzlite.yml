@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996-2026 Miroslav Sotek. All rights reserved.
+# © Code 2020-2026 Miroslav Sotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator - ClusterFuzzLite workflow
+
+name: ClusterFuzzLite
+
+on:
+  pull_request:
+    paths:
+      - ".clusterfuzzlite/**"
+      - ".github/workflows/clusterfuzzlite.yml"
+      - "fuzzers/**"
+      - "requirements/runtime-lock.txt"
+      - "src/**"
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  python-fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Build fuzzers
+        id: build
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: python
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sanitizer: address
+      - name: Run fuzzers
+        id: run
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: 120
+          mode: code-change
+          sanitizer: address
+          output-sarif: true
