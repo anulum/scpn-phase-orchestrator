@@ -120,7 +120,36 @@ class UPDEEngine:
         psi: float,
         alpha: NDArray,
     ) -> NDArray:
-        """Advance phases by one timestep, return new phases in [0, 2*pi)."""
+        """Advance one UPDE integration step.
+
+        Parameters
+        ----------
+        phases
+            Current oscillator phases, shape ``(n_oscillators,)``.
+        omegas
+            Natural angular frequencies in radians per second, shape
+            ``(n_oscillators,)``.
+        knm
+            Coupling matrix ``K_nm`` with shape
+            ``(n_oscillators, n_oscillators)``.
+        zeta
+            External drive strength.
+        psi
+            External drive phase target in radians.
+        alpha
+            Sakaguchi phase-lag matrix with the same shape as ``knm``.
+
+        Returns
+        -------
+        numpy.ndarray
+            New phases wrapped into ``[0, 2*pi)``.
+
+        Raises
+        ------
+        ValueError
+            If input shapes do not match the configured oscillator count
+            or any scalar/array input is non-finite.
+        """
         self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
         with self._lock:
             if self._rust is not None:  # pragma: no cover
