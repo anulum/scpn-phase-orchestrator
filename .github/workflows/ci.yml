@@ -60,12 +60,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Install (lockfile, 3.12 only)
-        if: matrix.python-version == '3.12'
+      - name: Install (lockfile)
         run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
-      - name: Install (loose, non-3.12)
-        if: matrix.python-version != '3.12'
-        run: pip install -e ".[dev,full,plot,otel,queuewaves,nn]"
       - name: Run tests (with coverage on 3.12)
         run: >
           pytest tests/ -v --tb=short
@@ -232,14 +228,14 @@ jobs:
           name: coverage-data-ffi
           path: .coverage.ffi
           include-hidden-files: true
-      - name: Build and test (Unix, loose)
+      - name: Build and test (Unix, lockfile)
         if: runner.os != 'Windows' && matrix.python-version != '3.12'
         run: |
           python -m venv .venv
           . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install -e ".[dev,full,plot,otel,queuewaves,nn]"
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           pytest tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
@@ -259,7 +255,7 @@ jobs:
           source .venv/Scripts/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install -e ".[dev,full,plot,otel,nn]"
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
           pytest tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
