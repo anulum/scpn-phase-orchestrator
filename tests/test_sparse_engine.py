@@ -141,7 +141,7 @@ class TestSparseUPDEEngine:
 
 
 class TestSparseEngineEdgeCases:
-    """Edge cases and error paths Gemini S6 flagged as missing."""
+    """Edge cases and error paths a prior audit flagged as missing."""
 
     def test_zero_coupling_matches_dense(self):
         """Empty CSR → sparse should reduce to the pure ω·dt Euler step."""

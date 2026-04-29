@@ -104,7 +104,7 @@ class TestSimplicialReductionInvariants:
 
 
 class TestSimplicialEdgeCases:
-    """Edge and error paths Gemini S6 flagged as missing from the property
+    """Edge and error paths a prior audit flagged as missing from the property
     suite — the hypothesis cases exercise the happy path; these cover
     degenerate inputs, long-run behaviour and cross-path parity."""
 

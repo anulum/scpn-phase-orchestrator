@@ -52,11 +52,13 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
+      - "Minimal Domainpack in 5 Minutes": getting-started/minimal_domainpack_5min.md
       - "Tutorial: Hello World": getting-started/hello_world.md
       - Start Here (Learning Path): getting-started/start_here.md
   - Concepts:
       - System Overview: concepts/system_overview.md
       - "How the Pipeline Fires": concepts/pipeline_firing.md
+      - Pipeline Execution: concepts/pipeline_execution.md
       - "Oscillators & PIS": concepts/oscillators_PIS.md
       - "Knobs: K, α, ζ, Ψ": concepts/knobs_K_alpha_zeta_Psi.md
       - Memory Imprint: concepts/memory_imprint.md
@@ -68,6 +70,7 @@ nav:
       - QueueWaves Cascade Detector: guide/queuewaves.md
       - Rust FFI Acceleration: guide/rust_ffi.md
       - Backend Fallback Chain: guide/backend_fallbacks.md
+      - Backend Strategy: guide/backend_strategy.md
       - Adapter Bridges: guide/adapters.md
       - Performance Tuning: guide/performance.md
       - Production Deployment: guide/production.md

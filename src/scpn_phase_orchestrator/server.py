@@ -33,6 +33,8 @@ import json
 import logging
 import os
 import threading
+import time
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import numpy as np
@@ -65,8 +67,11 @@ try:
         WebSocketDisconnect,  # pragma: no cover
     )
 except ImportError:  # pragma: no cover
+    # type ignore: FastAPI is optional; sentinels keep module importable without it.
     Response = None  # type: ignore[assignment,misc]  # pragma: no cover
+    # type ignore: FastAPI is optional; sentinels keep module importable without it.
     WebSocket = None  # type: ignore[assignment,misc]  # pragma: no cover
+    # type ignore: FastAPI is optional; sentinels keep module importable without it.
     WebSocketDisconnect = None  # type: ignore[assignment,misc]  # pragma: no cover
 
 __all__ = ["create_app", "SimulationState"]
@@ -74,6 +79,14 @@ __all__ = ["create_app", "SimulationState"]
 logger = logging.getLogger(__name__)
 
 TWO_PI = 2.0 * np.pi
+HEALTH_CHECK_EXCEPTIONS = (
+    RuntimeError,
+    ValueError,
+    TypeError,
+    KeyError,
+    IndexError,
+    FloatingPointError,
+)
 
 
 class SimulationState:
@@ -408,6 +421,34 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
 
     app = FastAPI(title="SPO Dashboard", version="0.5.0", lifespan=_lifespan)
 
+    @app.middleware("http")
+    async def _log_http_request(
+        request: FastAPIRequest,
+        call_next: Callable[[FastAPIRequest], Awaitable[Response]],
+    ) -> Response:
+        start = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            duration_ms = (time.perf_counter() - start) * 1000.0
+            path = request.url.path
+            logger.info(
+                "http.request: method=%s path=%s status_code=%d duration_ms=%.3f",
+                request.method,
+                path,
+                status_code,
+                duration_ms,
+                extra={
+                    "http_method": request.method,
+                    "http_path": path,
+                    "status_code": status_code,
+                    "duration_ms": duration_ms,
+                },
+            )
+
     _api_key = os.environ.get("SPO_API_KEY")
     _production = is_production_mode("SPO")
     if _production and not _api_key:
@@ -510,7 +551,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             r_val = snap.get("R_global", float("nan"))
             checks["R_finite"] = "ok" if np.isfinite(r_val) else "error"
             checks["regime"] = "ok" if snap.get("regime") else "unknown"
-        except Exception as exc:
+        except HEALTH_CHECK_EXCEPTIONS as exc:
             checks["engine"] = f"error: {exc}"
 
         healthy = all(v == "ok" for v in checks.values())

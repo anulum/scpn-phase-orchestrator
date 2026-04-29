@@ -8,6 +8,16 @@ Five minutes from install to synchronized oscillators.
 pip install scpn-phase-orchestrator
 ```
 
+For repository development, use the one-command setup and smoke run:
+
+```bash
+make quickstart
+```
+
+That target creates `.venv`, installs the development extras, validates
+`domainpacks/minimal_domain/binding_spec.yaml`, runs a short audited
+simulation, and prints a coherence report.
+
 ## 2. Your First Simulation
 
 8 Kuramoto oscillators with uniform coupling, integrated for 500 RK4 steps:
@@ -127,6 +137,7 @@ print(f"Amplitudes: {amplitudes.round(3)}")
 
 ## Next Steps
 
+- [Minimal Domainpack in 5 Minutes](minimal_domainpack_5min.md) -- start from raw P/I/S source data
 - [Tutorial: Hello World](hello_world.md) -- build a custom 4-oscillator domain from scratch
 - [Concepts: System Overview](../concepts/system_overview.md) -- full pipeline architecture
 - [API Reference](../reference/api/index.md) -- complete Python API

@@ -80,9 +80,15 @@ class TestPhasesToFeedback:
 
 
 class TestConstructorValidation:
-    def test_n_layers_zero_raises(self):
-        with pytest.raises(ValueError, match="n_layers must be >= 1"):
-            FusionCoreBridge(n_layers=0)
+    @pytest.mark.parametrize("n_layers", [True, 1.5, "2", 0, 7])
+    def test_invalid_n_layers_raise(self, n_layers: object):
+        with pytest.raises(ValueError, match="n_layers"):
+            FusionCoreBridge(n_layers=n_layers)
+
+    def test_supported_subset_layer_count(self):
+        bridge = FusionCoreBridge(n_layers=3)
+        phases = bridge.observables_to_phases({})
+        assert phases.shape == (3,)
 
 
 class TestQProfileImport:

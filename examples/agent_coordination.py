@@ -6,7 +6,7 @@
 # SCPN Phase Orchestrator — Example: Multi-Agent AI Coordination
 #
 # Models AI agent collaboration as a synchronisation problem.
-# 4 agents (Claude, Codex, Gemini, human) work on a shared codebase.
+# 4 agents work with a human operator on a shared codebase.
 # Synchronisation (high R) = harmony. Desync (low R) = conflicts.
 #
 # Demonstrates: SYNAPSE_CHANNEL-style coordination modelled as phase
@@ -27,7 +27,7 @@ TWO_PI = 2.0 * np.pi
 
 
 def main() -> None:
-    agents = ["Claude", "Codex", "Gemini", "Human"]
+    agents = ["Agent-A", "Agent-B", "Agent-C", "Human"]
     n = len(agents)
     rng = np.random.default_rng(42)
 
@@ -37,10 +37,10 @@ def main() -> None:
     # Coupling: agents working on related repos couple
     knm = np.array(
         [
-            [0.0, 1.5, 0.5, 2.0],  # Claude: strong with Human, medium Codex
-            [1.5, 0.0, 1.0, 0.5],  # Codex: strong with Claude, medium Gemini
-            [0.5, 1.0, 0.0, 0.8],  # Gemini: medium with Codex and Human
-            [2.0, 0.5, 0.8, 0.0],  # Human: directs Claude primarily
+            [0.0, 1.5, 0.5, 2.0],  # Agent-A: strong with Human, medium Agent-B
+            [1.5, 0.0, 1.0, 0.5],  # Agent-B: strong with Agent-A, medium Agent-C
+            [0.5, 1.0, 0.0, 0.8],  # Agent-C: medium with Agent-B and Human
+            [2.0, 0.5, 0.8, 0.0],  # Human: directs Agent-A primarily
         ]
     )
 
@@ -60,8 +60,8 @@ def main() -> None:
         status = "harmony" if R > 0.6 else "drifting" if R > 0.3 else "CONFLICT"
         print(f"  t={epoch + 1}: R={R:.3f} [{status}]")
 
-    # Phase 2: Agent conflict — Codex and Gemini work on same file
-    print("\nPhase 2: CONFLICT — Codex and Gemini overlap on same module")
+    # Phase 2: Agent conflict — two agents work on the same file
+    print("\nPhase 2: CONFLICT — Agent-B and Agent-C overlap on same module")
     knm_conflict = knm.copy()
     knm_conflict[1, 2] = -1.0  # anti-coupling: competing changes
     knm_conflict[2, 1] = -1.0

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from numbers import Integral, Real
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -15,6 +17,21 @@ from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = ["SparseUPDEEngine"]
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    return coerced
 
 
 class SparseUPDEEngine:
@@ -53,6 +70,13 @@ class SparseUPDEEngine:
             atol: Absolute tolerance for adaptive RK45.
             rtol: Relative tolerance for adaptive RK45.
         """
+        n_oscillators = _validate_positive_int(
+            n_oscillators,
+            name="n_oscillators",
+        )
+        dt = _validate_positive_float(dt, name="dt")
+        atol = _validate_positive_float(atol, name="atol")
+        rtol = _validate_positive_float(rtol, name="rtol")
         self._n = n_oscillators
         self._dt = dt
         if method not in ("euler", "rk4", "rk45"):

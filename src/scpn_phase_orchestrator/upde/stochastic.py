@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -31,6 +33,24 @@ class NoiseProfile:
     R_deterministic: float
 
 
+def _validate_finite_non_negative(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    value = float(value)
+    if not isfinite(value) or value < 0.0:
+        raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    return value
+
+
+def _validate_finite_positive(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    value = float(value)
+    if not isfinite(value) or value <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    return value
+
+
 class StochasticInjector:
     """Add calibrated noise to phase dynamics.
 
@@ -41,9 +61,7 @@ class StochasticInjector:
     """
 
     def __init__(self, D: float, seed: int | None = None):
-        if D < 0:
-            raise ValueError(f"noise strength D must be non-negative, got {D}")
-        self._D = D
+        self._D = _validate_finite_non_negative(D, name="D")
         self._rng = np.random.default_rng(seed)
 
     @property
@@ -52,12 +70,11 @@ class StochasticInjector:
 
     @D.setter
     def D(self, value: float) -> None:
-        if value < 0:
-            raise ValueError(f"D must be non-negative, got {value}")
-        self._D = value
+        self._D = _validate_finite_non_negative(value, name="D")
 
     def inject(self, phases: NDArray, dt: float) -> NDArray:
         """Add Wiener noise to phases: θ += √(2D*dt) * N(0,1)."""
+        dt = _validate_finite_positive(dt, name="dt")
         if self._D == 0.0:
             return phases
         noise = self._rng.standard_normal(len(phases))

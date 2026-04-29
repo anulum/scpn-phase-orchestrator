@@ -13,24 +13,24 @@ sample_period_s: 1.0
 control_period_s: 5.0
 
 # Multi-agent AI coordination as a synchronisation problem.
-# Each AI agent (Claude, Codex, Gemini, human) is an oscillator.
+# Each software agent or human operator is an oscillator.
 # Synchronisation = agents working in harmony (no conflicts).
 # Desynchronisation = task overlap, merge conflicts, wasted work.
 
 layers:
   - name: heartbeat
     index: 0
-    oscillator_ids: [claude_hb, codex_hb, gemini_hb, human_hb]
+    oscillator_ids: [agent_a_hb, agent_b_hb, agent_c_hb, human_hb]
     omegas: [0.1, 0.1, 0.1, 0.05]
     family: agent_liveness
   - name: task_flow
     index: 1
-    oscillator_ids: [claude_tasks, codex_tasks, gemini_tasks, human_tasks]
+    oscillator_ids: [agent_a_tasks, agent_b_tasks, agent_c_tasks, human_tasks]
     omegas: [0.01, 0.01, 0.01, 0.005]
     family: task_cadence
   - name: topic_coherence
     index: 2
-    oscillator_ids: [claude_topic, codex_topic, gemini_topic, human_topic]
+    oscillator_ids: [agent_a_topic, agent_b_topic, agent_c_topic, human_topic]
     omegas: [0.005, 0.005, 0.005, 0.005]
     family: topic_alignment
 

@@ -4,71 +4,115 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Resolved binding summary tests
+# SCPN Phase Orchestrator — Resolved binding configuration tests
 
 from __future__ import annotations
 
-from scpn_phase_orchestrator.binding.resolved import resolve_binding_summary
-from scpn_phase_orchestrator.binding.types import (
-    ActuatorMapping,
-    BindingSpec,
-    BoundaryDef,
-    CouplingSpec,
-    DriverSpec,
-    HierarchyLayer,
-    ObjectivePartition,
-    OscillatorFamily,
+import yaml
+
+from scpn_phase_orchestrator.binding import (
+    format_resolved_binding_config,
+    load_binding_spec,
+    resolved_binding_config,
 )
 
 
-def _spec() -> BindingSpec:
-    return BindingSpec(
-        name="resolved-test",
-        version="1.0.0",
-        safety_tier="research",
-        sample_period_s=0.02,
-        control_period_s=0.1,
-        layers=[
-            HierarchyLayer("sensor", 0, ["p0", "p1"], omegas=[1.2, 1.4]),
-            HierarchyLayer("controller", 1, ["s0"]),
-        ],
-        oscillator_families={
-            "physical": OscillatorFamily("P", "hilbert", {"units": "bar"}),
-            "symbolic": OscillatorFamily("S", "ring", {"states": ["a", "b"]}),
+def _write_spec(tmp_path, spec: dict) -> str:
+    path = tmp_path / "binding_spec.yaml"
+    path.write_text(yaml.dump(spec), encoding="utf-8")
+    return str(path)
+
+
+def test_resolved_binding_config_summarises_runtime_choices(tmp_path):
+    path = _write_spec(
+        tmp_path,
+        {
+            "name": "resolved-test",
+            "version": "1.0.0",
+            "safety_tier": "research",
+            "sample_period_s": 0.01,
+            "control_period_s": 0.1,
+            "layers": [
+                {
+                    "name": "plant",
+                    "index": 0,
+                    "oscillator_ids": ["p0", "p1"],
+                    "family": "phys",
+                },
+                {"name": "events", "index": 1, "oscillator_ids": ["e0"]},
+            ],
+            "oscillator_families": {
+                "phys": {
+                    "channel": "P",
+                    "extractor_type": "physical",
+                    "config": {"window": 16},
+                },
+            },
+            "coupling": {
+                "base_strength": 0.45,
+                "decay_alpha": 0.3,
+                "templates": {"local": "nearest"},
+            },
+            "drivers": {
+                "physical": {"frequency": 1.0, "zeta": 0.2},
+                "informational": {},
+                "symbolic": {},
+            },
+            "objectives": {"good_layers": [0], "bad_layers": [1]},
+            "boundaries": [],
+            "actuators": [],
         },
-        coupling=CouplingSpec(0.35, 0.2, {"near": "local"}),
-        drivers=DriverSpec(
-            physical={"psi": 0.3},
-            informational={"zeta": 0.05},
-            symbolic={},
-        ),
-        objectives=ObjectivePartition([0], [1], good_weight=2.0, bad_weight=0.5),
-        boundaries=[BoundaryDef("floor", "R", 0.2, None, "soft")],
-        actuators=[ActuatorMapping("global-k", "K", "global", (0.0, 3.0))],
     )
 
+    summary = resolved_binding_config(load_binding_spec(path))
 
-def test_resolve_binding_summary_counts_ranges_and_defaults() -> None:
-    summary = resolve_binding_summary(_spec(), spec_path="/private/domain.yaml")
-
-    assert summary["source"] == "domain.yaml"
-    assert summary["counts"]["oscillators"] == 3
-    assert summary["timing"]["control_interval_steps"] == 5
-    assert summary["layers"][0]["range"] == (0, 2)
-    assert summary["layers"][1]["range"] == (2, 3)
-    assert summary["layers"][0]["omega_source"] == "explicit"
-    assert summary["layers"][1]["omega_source"] == "default"
-    assert summary["layers"][1]["omegas"] == [1.0]
-    assert summary["defaults_applied"]["omegas"] == ["controller"]
+    assert summary["engine_mode"] == "kuramoto"
+    assert summary["control_interval_steps"] == 10
+    assert summary["oscillator_count"] == 3
+    assert summary["unassigned_layer_count"] == 1
+    channels = summary["channels"]
+    assert channels["P"]["families"] == ["phys"]
+    assert channels["P"]["extractors"] == ["hilbert"]
+    assert channels["P"]["driver_keys"] == ["frequency", "zeta"]
+    assert channels["P"]["oscillator_count"] == 2
 
 
-def test_resolve_binding_summary_actuation_and_drivers() -> None:
-    summary = resolve_binding_summary(_spec())
+def test_resolved_binding_config_includes_named_channels(tmp_path):
+    path = _write_spec(
+        tmp_path,
+        {
+            "name": "resolved-extra-test",
+            "version": "1.0.0",
+            "safety_tier": "research",
+            "sample_period_s": 0.02,
+            "control_period_s": 0.1,
+            "layers": [
+                {
+                    "name": "operator",
+                    "index": 0,
+                    "oscillator_ids": ["h0", "h1"],
+                    "family": "human",
+                }
+            ],
+            "oscillator_families": {
+                "human": {"channel": "H", "extractor_type": "event", "config": {}},
+            },
+            "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+            "drivers": {
+                "physical": {},
+                "informational": {},
+                "symbolic": {},
+                "H": {"cadence_hz": 2.0},
+            },
+            "objectives": {"good_layers": [0], "bad_layers": []},
+            "boundaries": [],
+            "actuators": [],
+        },
+    )
 
-    assert summary["actuation"]["value_bounds_source"] == "actuators"
-    assert summary["actuation"]["value_bounds"] == {"K": (0.0, 3.0)}
-    assert summary["actuation"]["rate_limits"]["Psi"] == 0.5
-    assert summary["drivers"]["zeta_initial"] == 0.05
-    assert summary["drivers"]["psi_initial"] == 0.3
-    assert summary["drivers"]["psi_driver"] is None
-    assert summary["oscillator_families"]["physical"]["config_keys"] == ["units"]
+    summary = resolved_binding_config(load_binding_spec(path))
+    lines = format_resolved_binding_config(summary)
+
+    assert "H" in summary["channels"]
+    assert summary["channels"]["H"]["driver_keys"] == ["cadence_hz"]
+    assert any("channel H:" in line for line in lines)

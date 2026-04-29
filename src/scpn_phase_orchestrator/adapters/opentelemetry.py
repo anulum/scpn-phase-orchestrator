@@ -18,6 +18,7 @@ implementation that silently discards spans and metrics.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
@@ -25,6 +26,8 @@ from typing import Any
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["OTelExporter"]
+
+_SERVICE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,127}$")
 
 try:
     import opentelemetry.metrics as otel_metrics  # pragma: no cover
@@ -61,6 +64,13 @@ class OTelExporter:
     """
 
     def __init__(self, service_name: str = "spo") -> None:
+        if not isinstance(service_name, str) or not _SERVICE_NAME_RE.fullmatch(
+            service_name
+        ):
+            raise ValueError(
+                "service_name must start with a letter and contain only "
+                "letters, digits, underscore, dot, or hyphen"
+            )
         self._service_name = service_name
         self._enabled = _HAS_OTEL
         self._tracer: Any = None

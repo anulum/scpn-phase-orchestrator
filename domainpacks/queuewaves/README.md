@@ -40,3 +40,15 @@ pressure accumulate and modulate coupling, representing gradual system decay.
 
 200 steps: steady state -> traffic spike (2x load) -> retry storm (micro
 sync) -> circuit breaker -> recovery.
+
+## Production Template
+
+`queuewaves.production.yaml` is the production-safe service template. It binds
+the server for container or reverse-proxy deployment, sets
+`security.mode: production`, requires the `QUEUEWAVES_API_KEY` environment
+variable, and enables request rate limiting.
+
+```bash
+export QUEUEWAVES_API_KEY="$(openssl rand -hex 32)"
+spo queuewaves serve --config domainpacks/queuewaves/queuewaves.production.yaml
+```

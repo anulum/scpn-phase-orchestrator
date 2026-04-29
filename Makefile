@@ -7,7 +7,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install install-dev test test-rust test-all lint fmt bandit sast \
+.PHONY: help install install-dev quickstart test test-rust test-all lint fmt bandit sast \
         preflight preflight-fast docs docs-build bench bench-rust bridge \
         build docker-build docker-run clean install-hooks
 
@@ -20,6 +20,14 @@ install:  ## Install package
 
 install-dev:  ## Install with dev dependencies
 	pip install -e ".[dev,queuewaves,plot,notebook]"
+
+quickstart:  ## Create dev venv, install extras, run minimal audited demo
+	python -m venv .venv
+	.venv/bin/python -m pip install --upgrade pip
+	.venv/bin/python -m pip install -e ".[dev,queuewaves,plot,notebook]"
+	.venv/bin/spo validate domainpacks/minimal_domain/binding_spec.yaml
+	.venv/bin/spo run domainpacks/minimal_domain/binding_spec.yaml --steps 50 --audit /tmp/spo-quickstart-audit.jsonl
+	.venv/bin/spo report /tmp/spo-quickstart-audit.jsonl
 
 test:  ## Run Python tests with coverage
 	pytest tests/ -v --tb=short --cov=scpn_phase_orchestrator --cov-report=term-missing

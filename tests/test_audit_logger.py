@@ -308,6 +308,23 @@ class TestAuditHeader:
         record = json.loads(log_path.read_text().strip())
         assert record["amplitude_mode"] is True
 
+    def test_header_contains_binding_config_when_provided(self, tmp_path):
+        log_path = tmp_path / "audit.jsonl"
+        binding_config = {
+            "name": "demo",
+            "engine_mode": "kuramoto",
+            "channels": {"P": {"driver_keys": ["frequency"]}},
+        }
+        with AuditLogger(log_path) as logger:
+            logger.log_header(
+                n_oscillators=4,
+                dt=0.005,
+                binding_config=binding_config,
+            )
+
+        record = json.loads(log_path.read_text().strip())
+        assert record["binding_config"] == binding_config
+
     def test_header_without_seed_omits_field(self, tmp_path):
         """Optional fields must be absent, not null, when not provided."""
         log_path = tmp_path / "audit.jsonl"

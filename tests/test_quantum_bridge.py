@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Quantum Bridge tests
 
+from typing import Any, cast
+
 import numpy as np
 import pytest
 
@@ -60,6 +62,14 @@ class TestConstructorValidation:
     def test_custom_trotter_order_propagates(self):
         b = QuantumControlBridge(n_oscillators=2, trotter_order=4)
         assert b._trotter_order == 4
+
+    @pytest.mark.parametrize("trotter_order", [0, -1, 1.5, "2", True])
+    def test_rejects_invalid_trotter_order(self, trotter_order: object):
+        with pytest.raises(ValueError, match="trotter_order"):
+            QuantumControlBridge(
+                n_oscillators=2,
+                trotter_order=cast("Any", trotter_order),
+            )
 
 
 class TestImportArtifactEdges:

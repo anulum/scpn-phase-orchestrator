@@ -24,7 +24,7 @@ from scpn_phase_orchestrator.adapters.synapse_channel_bridge import (
 class TestSynapseChannelBridge:
     def _make_bridge(self) -> SynapseChannelBridge:
         return SynapseChannelBridge(
-            agents=["Claude", "Codex", "Gemini", "Human"],
+            agents=["Agent-A", "Agent-B", "Agent-C", "Human"],
         )
 
     def test_init_n_oscillators(self) -> None:
@@ -47,56 +47,56 @@ class TestSynapseChannelBridge:
         bridge = self._make_bridge()
         bridge._process_message(
             {
-                "sender": "Claude",
+                "sender": "Agent-A",
                 "type": "heartbeat",
             }
         )
-        state = bridge._states["Claude"]
+        state = bridge._states["Agent-A"]
         assert state.last_heartbeat > 0
 
     def test_process_heartbeat_interval(self) -> None:
         bridge = self._make_bridge()
-        bridge._states["Claude"].last_heartbeat = 100.0
+        bridge._states["Agent-A"].last_heartbeat = 100.0
         bridge._process_message(
             {
-                "sender": "Claude",
+                "sender": "Agent-A",
                 "type": "heartbeat",
             }
         )
-        state = bridge._states["Claude"]
+        state = bridge._states["Agent-A"]
         assert len(state.heartbeat_intervals) == 1
 
     def test_process_chat(self) -> None:
         bridge = self._make_bridge()
         bridge._process_message(
             {
-                "sender": "Codex",
+                "sender": "Agent-B",
                 "type": "chat",
             }
         )
-        assert bridge._states["Codex"].message_count == 1
+        assert bridge._states["Agent-B"].message_count == 1
 
     def test_process_claim(self) -> None:
         bridge = self._make_bridge()
         bridge._process_message(
             {
-                "sender": "Gemini",
+                "sender": "Agent-C",
                 "type": "claim_granted",
                 "payload": "fix_bug_42",
             }
         )
-        assert bridge._states["Gemini"].current_task == "fix_bug_42"
+        assert bridge._states["Agent-C"].current_task == "fix_bug_42"
 
     def test_process_release(self) -> None:
         bridge = self._make_bridge()
-        bridge._states["Gemini"].current_task = "fix_bug_42"
+        bridge._states["Agent-C"].current_task = "fix_bug_42"
         bridge._process_message(
             {
-                "sender": "Gemini",
+                "sender": "Agent-C",
                 "type": "release_granted",
             }
         )
-        assert bridge._states["Gemini"].current_task is None
+        assert bridge._states["Agent-C"].current_task is None
 
     def test_unknown_sender_ignored(self) -> None:
         bridge = self._make_bridge()
@@ -109,40 +109,40 @@ class TestSynapseChannelBridge:
 
     def test_coupling_both_active(self) -> None:
         bridge = self._make_bridge()
-        bridge._states["Claude"].current_task = "task_a"
-        bridge._states["Codex"].current_task = "task_b"
+        bridge._states["Agent-A"].current_task = "task_a"
+        bridge._states["Agent-B"].current_task = "task_b"
         knm = bridge.get_coupling()
         assert knm[0, 1] == 1.0
         assert knm[1, 0] == 1.0
 
     def test_coupling_one_idle(self) -> None:
         bridge = self._make_bridge()
-        bridge._states["Claude"].current_task = "task_a"
+        bridge._states["Agent-A"].current_task = "task_a"
         knm = bridge.get_coupling()
         assert knm[0, 1] == 0.3
 
     def test_phases_advance_with_heartbeats(self) -> None:
         bridge = self._make_bridge()
-        bridge._states["Claude"].heartbeat_intervals = [2.0, 2.0, 2.0]
+        bridge._states["Agent-A"].heartbeat_intervals = [2.0, 2.0, 2.0]
         phases = bridge.get_phases()
         assert phases[0] > 0  # freq=0.5, advance=π
 
     def test_agent_summary(self) -> None:
         bridge = self._make_bridge()
-        bridge._states["Claude"].current_task = "review"
-        bridge._states["Claude"].message_count = 3
+        bridge._states["Agent-A"].current_task = "review"
+        bridge._states["Agent-A"].message_count = 3
         summary = bridge.get_agent_summary()
-        assert summary["Claude"]["task"] == "review"
-        assert summary["Claude"]["messages"] == 3
+        assert summary["Agent-A"]["task"] == "review"
+        assert summary["Agent-A"]["messages"] == 3
 
     def test_heartbeat_interval_cap(self) -> None:
         bridge = self._make_bridge()
-        state = bridge._states["Claude"]
+        state = bridge._states["Agent-A"]
         state.last_heartbeat = 1.0
         for _ in range(25):
             bridge._process_message(
                 {
-                    "sender": "Claude",
+                    "sender": "Agent-A",
                     "type": "heartbeat",
                 }
             )
@@ -153,18 +153,18 @@ class TestSynapseChannelBridge:
         for _ in range(25):
             bridge._process_message(
                 {
-                    "sender": "Claude",
+                    "sender": "Agent-A",
                     "type": "claim_granted",
                     "payload": "task",
                 }
             )
-        assert len(bridge._states["Claude"].task_events) <= 20
+        assert len(bridge._states["Agent-A"].task_events) <= 20
 
 
 class TestSynapseChannelBridgeAsync:
     def _make_bridge(self) -> SynapseChannelBridge:
         return SynapseChannelBridge(
-            agents=["Claude", "Codex"],
+            agents=["Agent-A", "Agent-B"],
         )
 
     @pytest.mark.asyncio
@@ -198,11 +198,11 @@ class TestSynapseChannelBridgeAsync:
     @pytest.mark.asyncio
     async def test_listen_once_message(self) -> None:
         bridge = self._make_bridge()
-        msg = json.dumps({"sender": "Claude", "type": "chat"})
+        msg = json.dumps({"sender": "Agent-A", "type": "chat"})
         bridge._ws = AsyncMock()
         bridge._ws.recv = AsyncMock(return_value=msg)
         await bridge.listen_once()
-        assert bridge._states["Claude"].message_count == 1
+        assert bridge._states["Agent-A"].message_count == 1
 
     @pytest.mark.asyncio
     async def test_listen_once_timeout(self) -> None:

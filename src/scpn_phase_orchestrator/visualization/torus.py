@@ -9,15 +9,18 @@
 from __future__ import annotations
 
 import json
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["torus_points_json", "phase_wheel_json"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 def torus_points_json(
-    phases: NDArray,
+    phases: FloatArray,
     R_values: list[float] | None = None,
     major_radius: float = 2.0,
     minor_radius: float = 0.5,
@@ -59,7 +62,7 @@ def torus_points_json(
     return json.dumps({"points": points}, indent=2)
 
 
-def phase_wheel_json(phases: NDArray, layer_names: list[str] | None = None) -> str:
+def phase_wheel_json(phases: FloatArray, layer_names: list[str] | None = None) -> str:
     """Phase wheel data: oscillator phases as polar coordinates.
 
     Each oscillator is a point at angle=θ_i, radius=1 on the unit circle.

@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import json
+from math import isfinite
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import numpy as np
@@ -20,8 +22,21 @@ class PrometheusAdapter:
     """Fetch time-series metrics from a Prometheus endpoint."""
 
     def __init__(self, endpoint: str, timeout: float = 10.0):
+        if not isinstance(endpoint, str) or not endpoint:
+            raise ValueError("Prometheus endpoint must be a non-empty http(s) URL")
+        parsed = urlparse(endpoint)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise ValueError("Prometheus endpoint must be a non-empty http(s) URL")
+        if isinstance(timeout, bool):
+            raise ValueError("Prometheus timeout must be finite and positive")
+        try:
+            parsed_timeout = float(timeout)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Prometheus timeout must be finite and positive") from exc
+        if not isfinite(parsed_timeout) or parsed_timeout <= 0.0:
+            raise ValueError("Prometheus timeout must be finite and positive")
         self._endpoint = endpoint.rstrip("/")
-        self._timeout = timeout
+        self._timeout = parsed_timeout
 
     def fetch_metric(
         self, query: str, start: float, end: float, step: float

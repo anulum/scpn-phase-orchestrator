@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from numbers import Integral
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -36,10 +38,19 @@ class FusionCoreBridge:
     All methods work without scpn-fusion-core (pure numpy + dict).
     """
 
+    _n_layers: int
+
     def __init__(self, n_layers: int = 6):
-        if n_layers < 1:
-            raise ValueError(f"n_layers must be >= 1, got {n_layers}")
-        self._n_layers = n_layers
+        if (
+            isinstance(n_layers, bool)
+            or not isinstance(n_layers, Integral)
+            or not 1 <= n_layers <= len(_OBS_NAMES)
+        ):
+            raise ValueError(
+                f"n_layers must be an integer in [1, {len(_OBS_NAMES)}], "
+                f"got {n_layers!r}"
+            )
+        self._n_layers = int(n_layers)
 
     def observables_to_phases(self, snapshot: dict) -> NDArray:
         """Map 6 fusion observables to [0, 2*pi) phases.

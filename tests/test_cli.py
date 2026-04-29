@@ -93,6 +93,8 @@ def test_validate_valid(runner, valid_spec_path):
     result = runner.invoke(main, ["validate", valid_spec_path])
     assert result.exit_code == 0
     assert "Valid" in result.output
+    assert "Resolved configuration:" in result.output
+    assert "engine: kuramoto" in result.output
 
 
 def test_validate_invalid(runner, invalid_spec_path):
@@ -104,11 +106,11 @@ def test_validate_invalid(runner, invalid_spec_path):
 def test_inspect_text_reports_resolved_defaults(runner, valid_spec_path):
     result = runner.invoke(main, ["inspect", valid_spec_path])
     assert result.exit_code == 0
-    assert "Domain: cli-test (1.0.0)" in result.output
-    assert "Timing: dt=0.01s  control=0.1s  interval=10 steps" in result.output
-    assert "Counts: layers=2  oscillators=4  families=1" in result.output
-    assert "omega=default" in result.output
-    assert "Actuation bounds source: runtime_defaults" in result.output
+    assert "Resolved configuration:" in result.output
+    assert "domain: cli-test v1.0.0 (research)" in result.output
+    assert "timing: sample=0.01s control=0.1s interval=10 steps" in result.output
+    assert "structure: layers=2 oscillators=4" in result.output
+    assert "engine: kuramoto" in result.output
 
 
 def test_inspect_json_reports_resolved_summary(runner, valid_spec_path):
@@ -116,18 +118,31 @@ def test_inspect_json_reports_resolved_summary(runner, valid_spec_path):
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["name"] == "cli-test"
-    assert data["timing"]["control_interval_steps"] == 10
-    assert data["counts"]["oscillators"] == 4
-    assert data["layers"][0]["range"] == [0, 2]
-    assert data["defaults_applied"]["omegas"] == ["L1", "L2"]
-    assert data["actuation"]["value_bounds_source"] == "runtime_defaults"
+    assert data["control_interval_steps"] == 10
+    assert data["oscillator_count"] == 4
+    assert data["engine_mode"] == "kuramoto"
+    assert data["unassigned_layer_count"] == 2
 
 
 def test_run_simulation(runner, valid_spec_path):
     result = runner.invoke(main, ["run", valid_spec_path, "--steps", "10"])
     assert result.exit_code == 0
+    assert "Resolved configuration:" in result.output
     assert "R_good" in result.output
     assert "R_bad" in result.output
+
+
+def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_path):
+    audit_path = tmp_path / "audit.jsonl"
+    result = runner.invoke(
+        main,
+        ["run", valid_spec_path, "--steps", "2", "--audit", str(audit_path)],
+    )
+    assert result.exit_code == 0
+    header = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    assert header["binding_config"]["name"] == "cli-test"
+    assert header["binding_config"]["engine_mode"] == "kuramoto"
+    assert "P" in header["binding_config"]["channels"]
 
 
 def test_run_invalid_spec(runner, invalid_spec_path):

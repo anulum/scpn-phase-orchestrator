@@ -46,7 +46,29 @@ class BoundaryObserver:
     def observe(
         self, values: dict[str, float], *, step: int | None = None
     ) -> BoundaryState:
-        """Check *values* against all boundary definitions, return violations."""
+        """Evaluate scalar measurements against configured boundaries.
+
+        Parameters
+        ----------
+        values
+            Mapping from monitored variable name to the current scalar
+            measurement.
+        step
+            Optional supervisor step attached to any posted
+            ``boundary_breach`` event. When omitted, the observer reuses
+            its previous step counter.
+
+        Returns
+        -------
+        BoundaryState
+            Partitioned violation snapshot containing all violations plus
+            soft and hard subsets.
+
+        Notes
+        -----
+        Missing variables are ignored. Unknown severities are logged and
+        treated as hard violations so safety-critical callers fail closed.
+        """
         if step is not None:
             self._step = step
         state = BoundaryState()

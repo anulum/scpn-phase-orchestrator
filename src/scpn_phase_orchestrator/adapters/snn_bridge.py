@@ -126,6 +126,7 @@ class SNNControllerBridge:
 
         Raises ImportError if lava-nc is not installed.
         """
+        # type ignore: lava-nc is an optional dependency without bundled stubs.
         from lava.proc.lif.process import LIF  # type: ignore[import-not-found]
 
         return LIF(

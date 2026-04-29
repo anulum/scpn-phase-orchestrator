@@ -4,100 +4,117 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Resolved binding summaries
+# SCPN Phase Orchestrator — Resolved binding configuration summary
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from scpn_phase_orchestrator.binding.types import BindingSpec, resolve_extractor_type
 
-from scpn_phase_orchestrator.binding.types import BindingSpec
-
-__all__ = ["resolve_binding_summary"]
-
-_RUNTIME_RATE_LIMITS = {"K": 0.1, "zeta": 0.2, "alpha": 0.1, "Psi": 0.5}
-_RUNTIME_VALUE_BOUNDS = {
-    "K": (-0.5, 0.5),
-    "zeta": (0.0, 0.5),
-    "alpha": (-1.0, 1.0),
-}
+__all__ = ["format_resolved_binding_config", "resolved_binding_config"]
 
 
-def resolve_binding_summary(
-    spec: BindingSpec,
-    *,
-    spec_path: str | Path | None = None,
-) -> dict[str, Any]:
-    """Return a serialisable summary of runtime-relevant binding resolution.
+def _string_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
 
-    The summary mirrors defaults and derived values used by the CLI run path:
-    oscillator counts, layer-to-index ranges, omega defaults, control interval,
-    actuator bounds, drive defaults, optional subsystems, and validation-facing
-    metadata. It is intentionally read-only and does not construct engines or
-    adapters.
+
+def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
+    """Build a deterministic, JSON-safe summary of binding runtime choices.
+
+    The summary intentionally exposes structural choices, enabled features, and
+    driver key names only. It does not copy raw driver configuration values into
+    audit metadata because production driver blocks may contain endpoints or
+    deployment-local identifiers.
     """
-    n_oscillators = sum(len(layer.oscillator_ids) for layer in spec.layers)
-    layer_ranges = _resolve_layer_ranges(spec)
-    omegas = spec.get_omegas()
-    actuator_bounds = _resolve_actuator_bounds(spec)
+    n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    control_interval_steps = max(1, round(spec.control_period_s / spec.sample_period_s))
+    family_channels = {
+        name: family.channel
+        for name, family in sorted(spec.oscillator_families.items())
+    }
     driver_configs = spec.drivers.all_channel_configs()
-    zeta_initial = max(
-        (float(cfg.get("zeta", 0.0)) for cfg in driver_configs.values()),
-        default=0.0,
-    )
+    channels = sorted(set(family_channels.values()) | set(driver_configs))
 
-    return {
-        "source": Path(spec_path).name if spec_path is not None else None,
-        "name": spec.name,
-        "version": spec.version,
-        "safety_tier": spec.safety_tier,
-        "timing": {
-            "sample_period_s": spec.sample_period_s,
-            "control_period_s": spec.control_period_s,
-            "control_interval_steps": max(
-                1, round(spec.control_period_s / spec.sample_period_s)
-            ),
-        },
-        "counts": {
-            "layers": len(spec.layers),
-            "oscillators": n_oscillators,
-            "families": len(spec.oscillator_families),
-            "boundaries": len(spec.boundaries),
-            "actuators": len(spec.actuators),
-        },
-        "layers": [
+    family_summaries: dict[str, dict[str, object]] = {}
+    for name, family in sorted(spec.oscillator_families.items()):
+        family_summaries[name] = {
+            "channel": family.channel,
+            "extractor_type": family.extractor_type,
+            "resolved_extractor_type": resolve_extractor_type(family.extractor_type),
+            "config_keys": sorted(family.config),
+        }
+
+    layer_summaries: list[dict[str, object]] = []
+    for layer in sorted(spec.layers, key=lambda item: item.index):
+        channel = family_channels.get(layer.family) if layer.family else None
+        layer_summaries.append(
             {
                 "name": layer.name,
                 "index": layer.index,
-                "oscillator_count": len(layer.oscillator_ids),
-                "oscillator_ids": list(layer.oscillator_ids),
-                "range": layer_ranges[layer.index],
                 "family": layer.family,
-                "omegas": omegas[
-                    layer_ranges[layer.index][0] : layer_ranges[layer.index][1]
-                ],
-                "omega_source": "explicit" if layer.omegas is not None else "default",
+                "channel": channel,
+                "oscillator_count": len(layer.oscillator_ids),
             }
+        )
+
+    channel_summaries: dict[str, dict[str, object]] = {}
+    for channel in channels:
+        family_names = sorted(
+            name
+            for name, family_channel in family_channels.items()
+            if family_channel == channel
+        )
+        channel_layers = [
+            layer
             for layer in spec.layers
-        ],
-        "oscillator_families": {
-            name: {
-                "channel": family.channel,
-                "extractor_type": family.extractor_type,
-                "config_keys": sorted(family.config),
+            if layer.family is not None and layer.family in family_names
+        ]
+        extractors = sorted(
+            {
+                resolve_extractor_type(spec.oscillator_families[name].extractor_type)
+                for name in family_names
             }
-            for name, family in sorted(spec.oscillator_families.items())
-        },
+        )
+        driver_config = driver_configs.get(channel, {})
+        channel_summaries[channel] = {
+            "families": family_names,
+            "extractors": extractors,
+            "driver_configured": bool(driver_config),
+            "driver_keys": sorted(driver_config),
+            "layer_count": len(channel_layers),
+            "oscillator_count": sum(
+                len(layer.oscillator_ids) for layer in channel_layers
+            ),
+        }
+
+    features = {
+        "amplitude": spec.amplitude is not None,
+        "geometry_prior": spec.geometry_prior is not None,
+        "imprint_model": spec.imprint_model is not None,
+        "protocol_net": spec.protocol_net is not None,
+    }
+
+    return {
+        "name": spec.name,
+        "version": spec.version,
+        "safety_tier": spec.safety_tier,
+        "sample_period_s": spec.sample_period_s,
+        "control_period_s": spec.control_period_s,
+        "control_interval_steps": control_interval_steps,
+        "engine_mode": "stuart_landau" if spec.amplitude is not None else "kuramoto",
+        "layer_count": len(spec.layers),
+        "oscillator_count": n_osc,
+        "channels": channel_summaries,
+        "families": family_summaries,
+        "layers": layer_summaries,
+        "unassigned_layer_count": sum(
+            1 for layer in spec.layers if layer.family is None
+        ),
         "coupling": {
             "base_strength": spec.coupling.base_strength,
             "decay_alpha": spec.coupling.decay_alpha,
-            "template_count": len(spec.coupling.templates),
-        },
-        "drivers": {
-            "channels": sorted(driver_configs),
-            "zeta_initial": zeta_initial,
-            "psi_initial": float(spec.drivers.physical.get("psi", 0.0)),
-            "psi_driver": _resolve_psi_driver(spec),
+            "templates": sorted(spec.coupling.templates),
         },
         "objectives": {
             "good_layers": list(spec.objectives.good_layers),
@@ -109,70 +126,67 @@ def resolve_binding_summary(
             {
                 "name": boundary.name,
                 "variable": boundary.variable,
-                "lower": boundary.lower,
-                "upper": boundary.upper,
                 "severity": boundary.severity,
             }
-            for boundary in spec.boundaries
+            for boundary in sorted(spec.boundaries, key=lambda item: item.name)
         ],
-        "actuation": {
-            "rate_limits": dict(_RUNTIME_RATE_LIMITS),
-            "value_bounds": actuator_bounds,
-            "value_bounds_source": "actuators"
-            if spec.actuators
-            else "runtime_defaults",
-            "actuators": [
-                {
-                    "name": actuator.name,
-                    "knob": actuator.knob,
-                    "scope": actuator.scope,
-                    "limits": list(actuator.limits),
-                }
-                for actuator in spec.actuators
-            ],
-        },
-        "optional": {
-            "amplitude_mode": spec.amplitude is not None,
-            "imprint_model": spec.imprint_model is not None,
-            "geometry_prior": spec.geometry_prior is not None,
-            "protocol_net": spec.protocol_net is not None,
-        },
-        "defaults_applied": {
-            "omegas": [layer.name for layer in spec.layers if layer.omegas is None],
-            "actuator_bounds": [] if spec.actuators else sorted(_RUNTIME_VALUE_BOUNDS),
-            "drivers": [
-                channel for channel, cfg in sorted(driver_configs.items()) if not cfg
-            ],
-        },
+        "actuators": [
+            {
+                "name": actuator.name,
+                "knob": actuator.knob,
+                "scope": actuator.scope,
+                "limits": list(actuator.limits),
+            }
+            for actuator in sorted(spec.actuators, key=lambda item: item.name)
+        ],
+        "features": features,
     }
 
 
-def _resolve_layer_ranges(spec: BindingSpec) -> dict[int, tuple[int, int]]:
-    ranges: dict[int, tuple[int, int]] = {}
-    cursor = 0
-    for layer in spec.layers:
-        next_cursor = cursor + len(layer.oscillator_ids)
-        ranges[layer.index] = (cursor, next_cursor)
-        cursor = next_cursor
-    return ranges
+def format_resolved_binding_config(summary: dict[str, object]) -> list[str]:
+    """Render a compact, human-readable summary for CLI output."""
+    channels = summary["channels"]
+    assert isinstance(channels, dict)  # nosec B101 — internal summary shape
+    features = summary["features"]
+    assert isinstance(features, dict)  # nosec B101 — internal summary shape
+    enabled_features = sorted(name for name, enabled in features.items() if enabled)
+    feature_text = ", ".join(enabled_features) if enabled_features else "none"
+    channel_names = ", ".join(sorted(str(channel) for channel in channels)) or "none"
 
+    lines = [
+        "Resolved configuration:",
+        (
+            f"  domain: {summary['name']} v{summary['version']} "
+            f"({summary['safety_tier']})"
+        ),
+        (
+            f"  timing: sample={summary['sample_period_s']}s "
+            f"control={summary['control_period_s']}s "
+            f"interval={summary['control_interval_steps']} steps"
+        ),
+        (
+            f"  structure: layers={summary['layer_count']} "
+            f"oscillators={summary['oscillator_count']} channels={channel_names}"
+        ),
+        f"  engine: {summary['engine_mode']} features={feature_text}",
+    ]
 
-def _resolve_actuator_bounds(spec: BindingSpec) -> dict[str, tuple[float, float]]:
-    value_bounds: dict[str, tuple[float, float]] = {}
-    for actuator in spec.actuators:
-        if actuator.limits and len(actuator.limits) == 2:
-            value_bounds[actuator.knob] = (
-                float(actuator.limits[0]),
-                float(actuator.limits[1]),
-            )
-    return value_bounds or dict(_RUNTIME_VALUE_BOUNDS)
+    for channel, raw_info in sorted(channels.items(), key=lambda item: str(item[0])):
+        assert isinstance(raw_info, dict)  # nosec B101 — internal summary shape
+        families = _string_list(raw_info.get("families")) or ["none"]
+        extractors = _string_list(raw_info.get("extractors")) or ["none"]
+        driver_keys = _string_list(raw_info.get("driver_keys")) or ["none"]
+        lines.append(
+            f"  channel {channel}: families={','.join(families)} "
+            f"extractors={','.join(extractors)} "
+            f"driver_keys={','.join(driver_keys)} "
+            f"layers={raw_info.get('layer_count', 0)} "
+            f"oscillators={raw_info.get('oscillator_count', 0)}"
+        )
 
-
-def _resolve_psi_driver(spec: BindingSpec) -> str | None:
-    if "frequency" in spec.drivers.physical:
-        return "physical.frequency"
-    if "cadence_hz" in spec.drivers.informational:
-        return "informational.cadence_hz"
-    if "sequence" in spec.drivers.symbolic:
-        return "symbolic.sequence"
-    return None
+    unassigned = summary.get("unassigned_layer_count", 0)
+    if unassigned:
+        lines.append(
+            f"  note: {unassigned} layer(s) have no explicit oscillator family binding"
+        )
+    return lines

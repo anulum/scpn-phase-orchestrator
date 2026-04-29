@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from numbers import Integral
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -22,6 +24,13 @@ TWO_PI = 2.0 * np.pi
 Q_MIN_STABLE = 1.0  # Kruskal-Shafranov limit
 BETA_N_LIMIT = 2.8  # Troyon no-wall limit
 GREENWALD_LIMIT = 1.2  # Greenwald density fraction
+_PLASMA_LAYER_COUNT = 8
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return int(value)
 
 
 class PlasmaControlBridge:
@@ -30,9 +39,14 @@ class PlasmaControlBridge:
     All methods work without scpn-control installed (pure numpy + dict).
     """
 
+    _n_layers: int
+
     def __init__(self, n_layers: int = 8):
-        if n_layers < 1:
-            raise ValueError(f"n_layers must be >= 1, got {n_layers}")
+        n_layers = _validate_positive_int(n_layers, name="n_layers")
+        if n_layers > _PLASMA_LAYER_COUNT:
+            raise ValueError(
+                f"n_layers must be <= {_PLASMA_LAYER_COUNT}, got {n_layers!r}"
+            )
         self._n_layers = n_layers
 
     def import_knm_spec(self, knm_spec_or_dict: object) -> CouplingState:
@@ -43,7 +57,10 @@ class PlasmaControlBridge:
         """
         if isinstance(knm_spec_or_dict, dict):
             layer_knm = np.asarray(knm_spec_or_dict["matrix"], dtype=np.float64)
-            n_per = int(knm_spec_or_dict.get("n_osc_per_layer", 2))
+            n_per = _validate_positive_int(
+                knm_spec_or_dict.get("n_osc_per_layer", 2),
+                name="n_osc_per_layer",
+            )
         else:
             layer_knm = np.asarray(knm_spec_or_dict, dtype=np.float64)
             n_per = 2
@@ -67,6 +84,10 @@ class PlasmaControlBridge:
 
         Returns frequencies ordered: micro_turbulence(fast) → plasma_wall(slow).
         """
+        n_osc_per_layer = _validate_positive_int(
+            n_osc_per_layer,
+            name="n_osc_per_layer",
+        )
         # 8 characteristic plasma timescales (normalised, rad/s)
         layer_omegas = np.array(
             [

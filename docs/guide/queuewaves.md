@@ -48,6 +48,11 @@ services:
     promql: "sum(rate(http_requests_total[5m]))"
     layer: macro
     channel: P
+  - name: retry-budget
+    promql: "retry_budget_remaining"
+    layer: macro
+    channel: RetryBudget
+    extractor_type: event
 
 thresholds:
   r_bad_warn: 0.50
@@ -76,6 +81,12 @@ security:
   rate_limit_per_minute: 120
 ```
 
+The production-ready template lives at
+`domainpacks/queuewaves/queuewaves.production.yaml`. It sets
+`security.mode: production`, `api_key_env: QUEUEWAVES_API_KEY`, and a positive
+request rate limit, so deployments do not need to remember those fields from
+scratch.
+
 ### Key Fields
 
 | Field | Default | Meaning |
@@ -83,6 +94,8 @@ security:
 | `prometheus_url` | required | Prometheus base URL |
 | `scrape_interval_s` | 15.0 | Seconds between scrape cycles |
 | `buffer_length` | 64 | Rolling buffer length per service |
+| `services[].channel` | P | Binding channel ID. `P`, `I`, and `S` have default extractors; named channels are allowed. |
+| `services[].extractor_type` | channel default | Required for named channels; accepts the normal binding extractor names and aliases. |
 | `thresholds.r_bad_warn` | 0.50 | R_bad warning threshold |
 | `thresholds.r_bad_critical` | 0.70 | R_bad critical threshold |
 | `thresholds.plv_cascade` | 0.85 | PLV cascade propagation threshold |
@@ -108,7 +121,7 @@ security:
 
 ```bash
 export QUEUEWAVES_API_KEY="$(openssl rand -hex 32)"
-spo queuewaves serve --config queuewaves.yaml --host 0.0.0.0 --port 8080
+spo queuewaves serve --config domainpacks/queuewaves/queuewaves.production.yaml
 ```
 
 Starts a FastAPI application. Scrapes Prometheus on each interval, runs the
@@ -221,11 +234,12 @@ It connects to `/ws/stream` for live updates and renders:
 ## Production Deployment
 
 ```bash
-uvicorn scpn_phase_orchestrator.apps.queuewaves.server:create_app \
-    --factory --host 0.0.0.0 --port 8080 --workers 1
+export QUEUEWAVES_API_KEY="$(openssl rand -hex 32)"
+spo queuewaves serve --config domainpacks/queuewaves/queuewaves.production.yaml
 ```
 
 QueueWaves is single-process (shared pipeline state). Run behind nginx or
-Traefik for TLS termination, set `security.mode: production`, and provide
-`QUEUEWAVES_API_KEY` before binding to non-loopback interfaces. For multiple
-clusters, run one QueueWaves instance per Prometheus source.
+Traefik for TLS termination. The production template already sets
+`security.mode: production`; the server refuses to start unless
+`QUEUEWAVES_API_KEY` is present. For multiple clusters, run one QueueWaves
+instance per Prometheus source.

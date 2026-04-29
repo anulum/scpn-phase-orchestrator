@@ -45,6 +45,11 @@ class TestStochasticInjector:
         with pytest.raises(ValueError, match="non-negative"):
             StochasticInjector(D=-1.0)
 
+    @pytest.mark.parametrize("D", [True, np.nan, np.inf, "1.0"])
+    def test_invalid_D_raises(self, D: object):
+        with pytest.raises(ValueError, match="D"):
+            StochasticInjector(D=D)
+
     def test_D_setter(self):
         inj = StochasticInjector(D=0.0)
         inj.D = 0.5
@@ -54,6 +59,18 @@ class TestStochasticInjector:
         inj = StochasticInjector(D=0.0)
         with pytest.raises(ValueError):
             inj.D = -1.0
+
+    @pytest.mark.parametrize("D", [False, np.nan, np.inf, "1.0"])
+    def test_D_setter_invalid_raises(self, D: object):
+        inj = StochasticInjector(D=0.0)
+        with pytest.raises(ValueError, match="D"):
+            inj.D = D
+
+    @pytest.mark.parametrize("dt", [False, 0.0, -0.01, np.nan, np.inf, "0.01"])
+    def test_invalid_dt_raises(self, dt: object):
+        inj = StochasticInjector(D=1.0)
+        with pytest.raises(ValueError, match="dt"):
+            inj.inject(np.zeros(3), dt=dt)
 
     def test_reproducible_with_seed(self):
         inj1 = StochasticInjector(D=1.0, seed=99)

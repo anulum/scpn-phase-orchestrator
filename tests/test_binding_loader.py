@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from scpn_phase_orchestrator.binding.loader import load_binding_spec
+from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 
 _SPEC_DATA = {
     "name": "loader-test",
@@ -148,6 +148,65 @@ def test_loader_preserves_named_driver_channels(tmp_path):
     assert spec.drivers.channel_config("Q") == {"zeta": 0.25}
     assert spec.drivers.channel_config("edge-node") == {"psi": 1.5}
     assert spec.drivers.all_channel_configs()["Q"] == {"zeta": 0.25}
+
+
+def test_loader_rejects_non_mapping_drivers_block(tmp_path):
+    data = {**_SPEC_DATA, "drivers": ["physical"]}
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(BindingLoadError, match="expected mapping in drivers, got list"):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_non_mapping_standard_driver(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "drivers": {"physical": 1.0, "informational": {}, "symbolic": {}},
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError, match="expected mapping in drivers.physical, got float"
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_non_mapping_named_driver(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "drivers": {
+            "physical": {},
+            "informational": {},
+            "symbolic": {},
+            "Q": 0.5,
+        },
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError, match="expected mapping in drivers.Q, got float"
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_invalid_named_driver_channel(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "drivers": {
+            "physical": {},
+            "informational": {},
+            "symbolic": {},
+            "bad channel": {"zeta": 0.1},
+        },
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(BindingLoadError, match="invalid driver channel identifier"):
+        load_binding_spec(p)
 
 
 def test_json_yaml_produce_identical_spec(tmp_path):

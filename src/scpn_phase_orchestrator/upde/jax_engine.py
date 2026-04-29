@@ -18,6 +18,8 @@ Usage:
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Integral, Real
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -39,10 +41,33 @@ if TYPE_CHECKING:
     import jax.numpy as jnp
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    value = float(value)
+    if not isfinite(value) or value <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    return value
+
+
+def _validate_method(value: object) -> str:
+    if not isinstance(value, str) or value not in ("euler", "rk4"):
+        raise ValueError(f"unsupported method {value!r}")
+    return value
+
+
+# type ignore: JAX tracer callables need dynamic signatures for jit wrapping.
 def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     """Build JIT-compiled Kuramoto step function."""
 
     @jit
+    # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _kuramoto_step(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
         diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
         coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
@@ -52,7 +77,9 @@ def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
         return new_phases % (2.0 * jnp.pi)
 
     @jit
+    # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
+        # type ignore: nested derivative keeps JAX tracer polymorphism.
         def deriv(p):  # type: ignore[no-untyped-def]
             """Kuramoto coupling derivative at given phases."""
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
@@ -69,13 +96,16 @@ def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     return _kuramoto_step, _kuramoto_rk4
 
 
+# type ignore: JAX tracer callables need dynamic signatures for jit wrapping.
 def _build_jax_sl_step():  # type: ignore[no-untyped-def]  # pragma: no cover
     """Build JIT-compiled Stuart-Landau step function."""
 
     @jit
+    # type ignore: JAX tracer callable signatures are intentionally dynamic.
     def _sl_rk4(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, dt):  # type: ignore[no-untyped-def]
         n = omegas.shape[0]
 
+        # type ignore: nested derivative keeps JAX tracer polymorphism.
         def deriv(s):  # type: ignore[no-untyped-def]
             """Stuart-Landau coupled (phase, amplitude) derivative."""
             th, am = s[:n], s[n:]
@@ -112,15 +142,9 @@ class JaxUPDEEngine:  # pragma: no cover
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
-        if n < 1:
-            raise ValueError(f"n must be >= 1, got {n}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        if method not in ("euler", "rk4"):
-            raise ValueError(f"unsupported method {method!r}")
-        self._n = n
-        self._dt = dt
-        self._method = method
+        self._n = _validate_positive_int(n, name="n")
+        self._dt = _validate_positive_float(dt, name="dt")
+        self._method = _validate_method(method)
         euler_fn, rk4_fn = _build_jax_step()
         self._euler = euler_fn
         self._rk4 = rk4_fn
@@ -155,12 +179,8 @@ class JaxStuartLandauEngine:  # pragma: no cover
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
-        if n < 1:
-            raise ValueError(f"n must be >= 1, got {n}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        self._n = n
-        self._dt = dt
+        self._n = _validate_positive_int(n, name="n")
+        self._dt = _validate_positive_float(dt, name="dt")
         self._sl_rk4 = _build_jax_sl_step()
 
     def step(

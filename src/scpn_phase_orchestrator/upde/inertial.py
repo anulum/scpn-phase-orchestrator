@@ -32,6 +32,8 @@ dispatcher selects the fastest available path.
 from __future__ import annotations
 
 from collections.abc import Callable
+from math import isfinite
+from numbers import Integral, Real
 
 import numpy as np
 from numpy.typing import NDArray
@@ -137,6 +139,21 @@ def _dispatch() -> Callable[..., tuple[NDArray, NDArray]] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    coerced = float(value)
+    if not isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    return coerced
+
+
 def _python_step(
     theta: NDArray,
     omega_dot: NDArray,
@@ -180,12 +197,8 @@ class InertialKuramotoEngine:
     """
 
     def __init__(self, n: int, dt: float = 0.01) -> None:
-        if n < 1:
-            raise ValueError(f"n must be >= 1, got {n}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        self._n = n
-        self._dt = dt
+        self._n = _validate_positive_int(n, name="n")
+        self._dt = _validate_positive_float(dt, name="dt")
 
     def step(
         self,
