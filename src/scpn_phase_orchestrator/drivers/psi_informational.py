@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from math import isfinite
+
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
@@ -19,9 +21,15 @@ class InformationalDriver:
     """External drive Psi_I(t) = 2*pi*cadence_hz*t (mod 2*pi)."""
 
     def __init__(self, cadence_hz: float):
-        if cadence_hz <= 0.0:
-            raise ValueError(f"cadence_hz must be positive, got {cadence_hz}")
-        self._cadence_hz = cadence_hz
+        try:
+            parsed_cadence = float(cadence_hz)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("cadence_hz must be finite and positive") from exc
+        if not isfinite(parsed_cadence) or parsed_cadence <= 0.0:
+            raise ValueError(
+                f"cadence_hz must be finite and positive, got {cadence_hz}"
+            )
+        self._cadence_hz = parsed_cadence
 
     def compute(self, t: float) -> float:
         """Return Psi_I at time *t*, wrapped to [0, 2*pi)."""
