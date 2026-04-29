@@ -20,10 +20,12 @@ from pathlib import Path
 __all__ = ["SecureModbusAdapter", "HAS_PYMODBUS"]
 
 try:
+    # type ignore: pymodbus is optional and has incomplete typing on supported releases.
     from pymodbus.client import ModbusTlsClient  # type: ignore[import-not-found]
 
     HAS_PYMODBUS = True
 except ImportError:
+    # type ignore: None sentinel mirrors the optional pymodbus import boundary.
     ModbusTlsClient = None  # type: ignore[assignment,misc]
     HAS_PYMODBUS = False
 
@@ -103,6 +105,7 @@ class SecureModbusAdapter:
 
         Raises ConnectionError if the read fails or returns an error frame.
         """
+        # type ignore: optional pymodbus client is stored as object after runtime guard.
         result = self._client.read_holding_registers(  # type: ignore[attr-defined]
             address, count=1
         )
@@ -115,6 +118,7 @@ class SecureModbusAdapter:
 
         Raises ConnectionError if the write fails.
         """
+        # type ignore: optional pymodbus client is stored as object after runtime guard.
         result = self._client.write_register(address, value)  # type: ignore[attr-defined]
         if result.isError():
             raise ConnectionError(f"Modbus write error at address {address}: {result}")
@@ -122,6 +126,7 @@ class SecureModbusAdapter:
     def validate_connection(self) -> bool:
         """Return True if the TLS-wrapped Modbus connection is active."""
         try:
+            # type ignore: optional pymodbus client is stored as object.
             return bool(self._client.connected)  # type: ignore[attr-defined]
         except Exception:
             return False

@@ -49,7 +49,7 @@ def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
         ValueError: If n_regions < 2 or > 80.
     """
     try:
-        # neurolib is optional and currently lacks complete type metadata;
+        # type ignore: neurolib is optional and currently lacks complete type metadata;
         # runtime availability is handled by the ModuleNotFoundError branch.
         from neurolib.utils.loadData import (  # type: ignore[import-untyped,import-not-found]
             Dataset,
