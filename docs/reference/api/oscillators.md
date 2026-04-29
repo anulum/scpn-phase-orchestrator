@@ -1,10 +1,11 @@
 # Oscillators
 
-Phase extraction from raw signals via three channels: Physical (P),
-Informational (I), Symbolic (S). This three-channel decomposition is
-the core abstraction that makes SPO domain-agnostic — any signal
-that exhibits periodic or quasi-periodic behaviour maps onto one or
-more channels.
+Phase extraction from raw signals via canonical Physical (P),
+Informational (I), and Symbolic (S) channels, plus named extension
+channels. The P/I/S decomposition is the default abstraction that makes
+SPO domain-agnostic, but deployments are not limited to three channels:
+any signal that exhibits periodic or quasi-periodic behaviour can map
+onto one or more named channels.
 
 ## Pipeline position
 
@@ -32,7 +33,8 @@ Quality scores gate which oscillators participate in coupling.
 
 ## The PIS Model
 
-Every domain signal decomposes into at most three oscillator channels:
+Every domain signal decomposes into one or more oscillator channels. The
+canonical channels are:
 
 | Channel | Signal type | Extraction method | Example domains |
 |---------|------------|-------------------|-----------------|
@@ -40,9 +42,12 @@ Every domain signal decomposes into at most three oscillator channels:
 | **I** (Informational) | Event streams, rates | Inter-event interval | Network traffic, API calls, manufacturing |
 | **S** (Symbolic) | Categorical sequences | Ring mapping | Protocols, language, music, genetics |
 
-Not every domain uses all three channels. A pure physics domain (tokamak
-plasma) might use only P. A pure IT domain (microservices) might use
-only I. The binding specification declares which channels are active.
+Not every domain uses all three canonical channels. A pure physics
+domain (tokamak plasma) might use only P. A pure IT domain
+(microservices) might use only I. Larger deployments can add named
+extension channels such as `thermal`, `market_sentiment`, or
+`operator_intent` while preserving the same `PhaseState` contract. The
+binding specification declares which channels are active.
 
 ---
 
@@ -69,9 +74,14 @@ are downweighted in coupling and excluded from regime classification.
 All channel extractors implement the `PhaseExtractor` abstract base class:
 
 ```python
+from numpy.typing import NDArray
+import numpy as np
+
+FloatArray = NDArray[np.float64]
+
 class PhaseExtractor(ABC):
     @abstractmethod
-    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]: ...
+    def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]: ...
 
     @abstractmethod
     def quality_score(self, phase_states: list[PhaseState]) -> float: ...
@@ -214,7 +224,7 @@ Cumulative transition distances normalised to [0, 2π).
 |--------|-----------|-------------|
 | `score` | `(states) → float` | Amplitude-weighted mean quality |
 | `detect_collapse` | `(states, threshold=0.1) → bool` | True if >50% below threshold |
-| `downweight_mask` | `(states, min_quality=0.3) → NDArray` | Weight array, zeros below min |
+| `downweight_mask` | `(states, min_quality=0.3) → NDArray[np.float64]` | Weight array, zeros below min |
 
 ### Downweight mask in pipeline
 
