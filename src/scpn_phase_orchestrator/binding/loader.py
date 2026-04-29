@@ -62,7 +62,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
 
         try:
             data = yaml.safe_load(raw)
-        except yaml.YAMLError as exc:
+        except (RecursionError, yaml.YAMLError) as exc:
             raise BindingLoadError(f"YAML parse error in {path.name}: {exc}") from exc
     elif path.suffix == ".json":
         try:
@@ -107,10 +107,17 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
     )
 
     drivers_data = _require(data, "drivers", "root")
+    standard_driver_keys = {"physical", "informational", "symbolic"}
+    extra_drivers = {
+        key: value
+        for key, value in drivers_data.items()
+        if key not in standard_driver_keys and isinstance(value, dict)
+    }
     drivers = DriverSpec(
         physical=drivers_data.get("physical", {}),
         informational=drivers_data.get("informational", {}),
         symbolic=drivers_data.get("symbolic", {}),
+        extra=extra_drivers,
     )
 
     obj = _require(data, "objectives", "root")

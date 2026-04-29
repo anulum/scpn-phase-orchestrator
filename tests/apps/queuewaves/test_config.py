@@ -71,6 +71,24 @@ def test_load_config(tmp_path: Path) -> None:
     assert cfg.security.rate_limit_per_minute == 240
 
 
+def test_load_config_recursion_error_is_parse_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scpn_phase_orchestrator.apps.queuewaves import config as config_mod
+
+    path = tmp_path / "qw.yaml"
+    path.write_text(
+        "prometheus_url: http://prom:9090\nservices: []\n", encoding="utf-8"
+    )
+
+    def raise_recursion(_: str) -> object:
+        raise RecursionError("nested YAML")
+
+    monkeypatch.setattr(config_mod.yaml, "safe_load", raise_recursion)
+    with pytest.raises(ValueError, match="QueueWaves config YAML parse error"):
+        load_config(path)
+
+
 def test_config_compiler_layers(minimal_config: QueueWavesConfig) -> None:
     compiler = ConfigCompiler()
     spec = compiler.compile(minimal_config)

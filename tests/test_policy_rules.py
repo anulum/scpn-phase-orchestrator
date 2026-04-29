@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     CompoundCondition,
@@ -122,6 +123,20 @@ def test_load_empty_policy_yaml(tmp_path):
     p = tmp_path / "policy.yaml"
     p.write_text("rules: []\n", encoding="utf-8")
     assert load_policy_rules(p) == []
+
+
+def test_load_policy_rules_recursion_error_is_parse_error(tmp_path, monkeypatch):
+    import yaml
+
+    p = tmp_path / "policy.yaml"
+    p.write_text("rules: []\n", encoding="utf-8")
+
+    def raise_recursion(_: str) -> object:
+        raise RecursionError("nested YAML")
+
+    monkeypatch.setattr(yaml, "safe_load", raise_recursion)
+    with pytest.raises(ValueError, match="policy rules YAML parse error"):
+        load_policy_rules(p)
 
 
 def test_out_of_range_layer_returns_none():

@@ -324,7 +324,7 @@ def load_policy_rules(path: str | Path) -> list[PolicyRule]:
         raise ValueError(f"cannot read policy rules: {reason}") from None
     try:
         data = yaml.safe_load(raw)
-    except yaml.YAMLError:
+    except (RecursionError, yaml.YAMLError):
         raise ValueError("policy rules YAML parse error") from None
     if not isinstance(data, dict) or "rules" not in data:
         return []

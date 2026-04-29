@@ -56,7 +56,7 @@ only I. The binding specification declares which channels are active.
 | `omega` | `float` | R | Instantaneous frequency (rad/s) |
 | `amplitude` | `float` | ≥ 0 | Signal strength (SNR proxy) |
 | `quality` | `float` | [0, 1] | Extraction confidence |
-| `channel` | `str` | P, I, S | Channel type |
+| `channel` | `str` | Identifier | Binding channel (`P`, `I`, `S`, or named extension) |
 | `node_id` | `str` | — | Unique oscillator identifier |
 
 Quality scores gate downstream processing: low-quality oscillators

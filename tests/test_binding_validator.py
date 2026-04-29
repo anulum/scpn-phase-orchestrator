@@ -51,9 +51,13 @@ def test_negative_sample_period(sample_binding_spec):
     assert any("sample_period_s" in e for e in errors)
 
 
-def test_invalid_channel(sample_binding_spec):
+def test_invalid_channel_identifier(sample_binding_spec):
     bad_families = {
-        "x": OscillatorFamily(channel="X", extractor_type="hilbert", config={}),
+        "x": OscillatorFamily(
+            channel="bad channel",
+            extractor_type="hilbert",
+            config={},
+        ),
     }
     bad = replace(sample_binding_spec, oscillator_families=bad_families)
     errors = validate_binding_spec(bad)
@@ -138,8 +142,8 @@ def test_all_valid_safety_tiers_accepted(sample_binding_spec):
 
 
 def test_valid_channels_accepted(sample_binding_spec):
-    """Channels P, I, S must all pass validation."""
-    for ch in ["P", "I", "S"]:
+    """Standard and named extension channels must pass validation."""
+    for ch in ["P", "I", "S", "Q", "sensor_4", "edge-node"]:
         families = {
             "f": OscillatorFamily(channel=ch, extractor_type="hilbert", config={}),
         }
