@@ -241,5 +241,42 @@ def test_compound_and_parity(spo):
     assert len(rust_eng.evaluate("degraded", {"stability_proxy": 0.9})) == 0
 
 
+def test_evaluate_state_good_bad_layer_metric_parity(spo):
+    py_rule = PolicyRule(
+        name="suppress_bad",
+        regimes=["CRITICAL"],
+        condition=PolicyCondition(metric="R_bad", layer=0, op="<", threshold=0.3),
+        actions=[PolicyAction(knob="K", scope="layer_0", value=-0.1, ttl_s=5.0)],
+    )
+    rust_rule = (
+        "suppress_bad",
+        ["CRITICAL"],
+        [("R_bad.0", "<", 0.3)],
+        "AND",
+        [("K", "layer_0", -0.1, 5.0)],
+        0.0,
+        0,
+    )
+    py_eng = PolicyEngine([py_rule])
+    rust_eng = spo.PyRuleEngine([rust_rule])
+    if not hasattr(rust_eng, "evaluate_state"):
+        pytest.skip("installed spo_kernel lacks PyRuleEngine.evaluate_state")
+
+    state = UPDEState(
+        layers=[LayerState(R=0.2, psi=0.0), LayerState(R=0.9, psi=0.0)],
+        cross_layer_alignment=np.zeros((2, 2)),
+        stability_proxy=0.55,
+        regime_id="critical",
+    )
+
+    py_actions = py_eng.evaluate(Regime.CRITICAL, state, [1], [0])
+    rust_actions = rust_eng.evaluate_state("critical", [0.2, 0.9], [1], [0])
+
+    assert len(py_actions) == len(rust_actions) == 1
+    assert py_actions[0].knob == rust_actions[0][0]
+    assert py_actions[0].scope == rust_actions[0][1]
+    assert abs(py_actions[0].value - rust_actions[0][2]) < 1e-12
+
+
 # Pipeline wiring: the parity tests above cross-validate
 # Rust PyRuleEngine against Python PolicyEngine.

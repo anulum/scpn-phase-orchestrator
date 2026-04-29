@@ -121,7 +121,7 @@ mod tests {
     fn critical_damping_and_reduce() {
         let mut sp = SupervisorPolicy::new(RegimeManager::default());
         let actions = sp.decide(&make_state(0.1), &empty_boundary());
-        assert!(actions.len() >= 1);
+        assert!(!actions.is_empty());
         assert_eq!(actions[0].knob, Knob::Zeta);
     }
 

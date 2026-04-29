@@ -160,7 +160,7 @@ mod tests {
         };
         let mut values = HashMap::new();
         values.insert("x".into(), -0.1);
-        let state = BoundaryObserver::observe(&[def.clone()], &values);
+        let state = BoundaryObserver::observe(std::slice::from_ref(&def), &values);
         assert_eq!(state.violations.len(), 1);
 
         values.insert("x".into(), 1.5);

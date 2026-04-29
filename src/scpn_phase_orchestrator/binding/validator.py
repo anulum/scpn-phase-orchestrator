@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import math
+
 from scpn_phase_orchestrator.binding.types import (
     VALID_EXTRACTORS,
     VALID_KNOBS,
@@ -18,6 +20,11 @@ from scpn_phase_orchestrator.binding.types import (
 )
 
 __all__ = ["validate_binding_spec"]
+
+_VALID_CROSS_CHANNEL_MODES = frozenset(
+    {"bidirectional", "directed", "excitatory", "inhibitory"}
+)
+_VALID_REPLAY_SEMANTICS = frozenset({"phase", "event", "state", "derived", "external"})
 
 
 def validate_binding_spec(spec: BindingSpec) -> list[str]:
@@ -49,6 +56,77 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
         errors.append("at least one layer is required")
 
     layer_indices = {lay.index for lay in spec.layers}
+
+    used_channels = spec.used_channels()
+    for channel_id in used_channels:
+        if not is_valid_channel_id(channel_id):
+            errors.append(
+                f"channel {channel_id!r}: must match [A-Za-z][A-Za-z0-9_-]{{0,63}}"
+            )
+
+    family_driver_channels = {
+        family.channel for family in spec.oscillator_families.values()
+    }
+    family_driver_channels.update(spec.drivers.all_channel_configs())
+    declared_or_used = family_driver_channels | set(spec.channels)
+
+    for channel_name, channel_spec in spec.channels.items():
+        if channel_spec.replay_semantics not in _VALID_REPLAY_SEMANTICS:
+            errors.append(
+                f"channel {channel_name!r}: replay_semantics must be one of "
+                f"{sorted(_VALID_REPLAY_SEMANTICS)}, "
+                f"got {channel_spec.replay_semantics!r}"
+            )
+        for source in channel_spec.derived_from:
+            if source == channel_name:
+                errors.append(
+                    f"channel {channel_name!r}: derived_from must not include itself"
+                )
+            if source not in declared_or_used:
+                errors.append(
+                    f"channel {channel_name!r}: derived_from references unknown "
+                    f"channel {source!r}"
+                )
+        if channel_spec.derived_from and not channel_spec.derive_rule:
+            errors.append(
+                f"channel {channel_name!r}: derive_rule is required when "
+                "derived_from is set"
+            )
+
+    for group_name, group in spec.channel_groups.items():
+        if not group.channels:
+            errors.append(f"channel_group {group_name!r}: channels must not be empty")
+        for channel in group.channels:
+            if channel not in declared_or_used:
+                errors.append(
+                    f"channel_group {group_name!r}: references unknown channel "
+                    f"{channel!r}"
+                )
+
+    for i, coupling in enumerate(spec.cross_channel_couplings):
+        if coupling.source not in declared_or_used:
+            errors.append(
+                f"cross_channel_couplings[{i}]: source references unknown channel "
+                f"{coupling.source!r}"
+            )
+        if coupling.target not in declared_or_used:
+            errors.append(
+                f"cross_channel_couplings[{i}]: target references unknown channel "
+                f"{coupling.target!r}"
+            )
+        if coupling.source == coupling.target:
+            errors.append(
+                f"cross_channel_couplings[{i}]: source and target must differ"
+            )
+        if not math.isfinite(coupling.strength) or coupling.strength < 0.0:
+            errors.append(
+                f"cross_channel_couplings[{i}].strength must be finite and >= 0"
+            )
+        if coupling.mode not in _VALID_CROSS_CHANNEL_MODES:
+            errors.append(
+                f"cross_channel_couplings[{i}].mode must be one of "
+                f"{sorted(_VALID_CROSS_CHANNEL_MODES)}, got {coupling.mode!r}"
+            )
 
     for family_name, fam in spec.oscillator_families.items():
         if not is_valid_channel_id(fam.channel):
@@ -116,8 +194,6 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             )
 
     if spec.amplitude is not None:
-        import math
-
         if not math.isfinite(spec.amplitude.mu):
             errors.append("amplitude.mu must be finite")
         if spec.amplitude.epsilon < 0.0:

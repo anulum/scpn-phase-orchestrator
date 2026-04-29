@@ -16,15 +16,27 @@ layers:
   - name: intersection
     index: 0
     oscillator_ids: [signal_phase, queue_length, pedestrian]
+    family: signal_cycle
   - name: corridor
     index: 1
     oscillator_ids: [green_wave, travel_time, bus_priority]
+    family: demand_event
   - name: network
     index: 2
     oscillator_ids: [area_flow, congestion_index]
+    family: signal_state
   - name: demand
     index: 3
     oscillator_ids: [commuter, freight]
+    family: demand_event
+  - name: weather
+    index: 4
+    oscillator_ids: [rain_intensity, visibility]
+    family: weather_phase
+  - name: equity_pressure
+    index: 5
+    oscillator_ids: [pedestrian_wait, transit_delay]
+    family: equity_pressure
 
 oscillator_families:
   # Traffic signals are literal phase oscillators; Gershenson & Rosenblueth (2012)
@@ -43,6 +55,62 @@ oscillator_families:
     extractor_type: ring
     config:
       n_states: 5
+  weather_phase:
+    channel: Weather
+    extractor_type: physical
+    config: {}
+  equity_pressure:
+    channel: Equity
+    extractor_type: graph
+    config: {}
+
+channels:
+  P:
+    role: signal_cycle
+    units: rad
+    metric_semantics: signal oscillator phase
+  I:
+    role: demand_event
+    units: event_phase
+    metric_semantics: arrival-event cadence
+  S:
+    role: signal_state
+    units: discrete_signal_state
+    metric_semantics: controller state phase
+  Weather:
+    role: environmental_modifier
+    required: false
+    replay_semantics: state
+    metric_semantics: weather-induced speed phase
+  Equity:
+    role: derived_service_pressure
+    required: false
+    replay_semantics: derived
+    derived_from: [I, S, Weather]
+    derive_rule: equity_phase = wait_pressure(I,S) + weather_delay(Weather)
+    metric_semantics: service-equity pressure phase
+
+channel_groups:
+  controller_surface:
+    channels: [P, I, S]
+    required: true
+    description: channels required for signal timing
+  operations_surface:
+    channels: [Weather, Equity]
+    required: false
+    description: optional operational modifiers for resilient timing
+
+cross_channel_couplings:
+  - source: Weather
+    target: P
+    strength: 0.20
+    mode: directed
+    template: weather_speed_adjustment
+  - source: Equity
+    target: S
+    strength: 0.25
+    mode: excitatory
+    template: service_priority_lift
 
 coupling:
   # Signal coordination coupling proportional to link capacity
@@ -58,11 +126,14 @@ drivers:
     zeta: 0.02
   symbolic:
     zeta: 0.02
+  Weather:
+    zeta: 0.04
+  Equity: {}
 
 objectives:
   # Green wave sync = good; intersection queue sync = gridlock; demand surge = bad
-  good_layers: [1]
-  bad_layers: [0, 3]
+  good_layers: [1, 5]
+  bad_layers: [0, 3, 4]
   good_weight: 1.0
   bad_weight: 1.5
 

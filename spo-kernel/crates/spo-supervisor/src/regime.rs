@@ -228,8 +228,10 @@ mod tests {
 
     #[test]
     fn recovery_from_critical_in_degraded_band() {
-        let mut rm = RegimeManager::default();
-        rm.current = Regime::Critical;
+        let rm = RegimeManager {
+            current: Regime::Critical,
+            ..Default::default()
+        };
         let regime = rm.evaluate(&make_state(0.5), &empty_boundary());
         assert_eq!(regime, Regime::Recovery);
     }
@@ -237,8 +239,10 @@ mod tests {
     #[test]
     fn critical_goes_through_recovery() {
         // Python parity: Critical never jumps directly to Nominal.
-        let mut rm = RegimeManager::default();
-        rm.current = Regime::Critical;
+        let mut rm = RegimeManager {
+            current: Regime::Critical,
+            ..Default::default()
+        };
         // R=0.8 above all thresholds — still returns Recovery (must step through)
         let regime = rm.evaluate(&make_state(0.8), &empty_boundary());
         assert_eq!(regime, Regime::Recovery);
@@ -266,8 +270,10 @@ mod tests {
 
     #[test]
     fn same_regime_no_transition() {
-        let mut rm = RegimeManager::default();
-        rm.current = Regime::Nominal;
+        let mut rm = RegimeManager {
+            current: Regime::Nominal,
+            ..Default::default()
+        };
         let result = rm.transition(Regime::Nominal);
         assert_eq!(result, Regime::Nominal);
     }
@@ -367,7 +373,7 @@ mod tests {
         let mut rm = RegimeManager::new(0.05, 0);
         rm.set_event_bus(EventBus::new(10));
         rm.force_transition(Regime::Critical);
-        let bus = rm.event_bus().unwrap();
+        let bus = rm.event_bus().expect("bus set");
         assert_eq!(bus.count(), 1);
     }
 }
