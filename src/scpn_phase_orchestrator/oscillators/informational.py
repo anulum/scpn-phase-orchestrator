@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -15,6 +17,8 @@ from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
 __all__ = ["InformationalExtractor"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class InformationalExtractor(PhaseExtractor):
@@ -27,7 +31,7 @@ class InformationalExtractor(PhaseExtractor):
     def __init__(self, node_id: str = "info_0"):
         self._node_id = node_id
 
-    def extract(self, signal: NDArray, sample_rate: float) -> list[PhaseState]:
+    def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Args:
         signal: 1-D array of event timestamps in seconds (sorted ascending).
         sample_rate: not used for timestamps but kept for interface consistency.

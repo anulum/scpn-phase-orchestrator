@@ -8,12 +8,16 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.oscillators.base import PhaseState
 
 __all__ = ["PhaseQualityScorer"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class PhaseQualityScorer:
@@ -40,7 +44,7 @@ class PhaseQualityScorer:
 
     def downweight_mask(
         self, phase_states: list[PhaseState], min_quality: float = 0.3
-    ) -> NDArray:
+    ) -> FloatArray:
         """Weight array in [0,1], zeros below min_quality."""
         if not phase_states:
             return np.array([], dtype=np.float64)

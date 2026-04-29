@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -18,6 +20,8 @@ from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 
 __all__ = ["extract_initial_phases"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 TWO_PI = 2.0 * np.pi
 _PHYSICAL_EXTRACTORS = frozenset({"hilbert", "wavelet", "zero_crossing"})
 _INFORMATIONAL_EXTRACTORS = frozenset({"event"})
@@ -26,9 +30,9 @@ _SYMBOLIC_EXTRACTORS = frozenset({"ring", "graph"})
 
 def extract_initial_phases(
     spec: BindingSpec,
-    omegas: NDArray,
+    omegas: FloatArray,
     seed: int = 42,
-) -> NDArray:
+) -> FloatArray:
     """Extract initial phases from channels defined in binding_spec.
 
     For each oscillator, generates a synthetic signal matching the family
