@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -17,7 +18,11 @@ import numpy as np
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    load_binding_spec,
+    resolve_binding_summary,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
     GeometryConstraint,
     NonNegativeConstraint,
@@ -73,6 +78,83 @@ def validate(binding_spec: str) -> None:
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
     click.echo("Valid")
+
+
+@main.command("inspect")
+@click.argument("binding_spec", type=click.Path(exists=True))
+@click.option("--json-out", is_flag=True, help="Output resolved summary as JSON")
+def inspect_binding(binding_spec: str, json_out: bool) -> None:
+    """Inspect resolved runtime defaults for a binding spec."""
+    spec = load_binding_spec(Path(binding_spec))
+    errors = validate_binding_spec(spec)
+    if errors:
+        for e in errors:
+            click.echo(f"ERROR: {e}", err=True)
+        raise SystemExit(1)
+
+    try:
+        summary = resolve_binding_summary(spec, spec_path=binding_spec)
+    except ValueError as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        raise SystemExit(1) from exc
+
+    if json_out:
+        click.echo(json.dumps(summary, indent=2, sort_keys=True))
+        return
+
+    click.echo(f"Domain: {summary['name']} ({summary['version']})")
+    click.echo(f"Safety tier: {summary['safety_tier']}")
+    timing = summary["timing"]
+    click.echo(
+        "Timing: "
+        f"dt={timing['sample_period_s']}s  "
+        f"control={timing['control_period_s']}s  "
+        f"interval={timing['control_interval_steps']} steps"
+    )
+    counts = summary["counts"]
+    click.echo(
+        "Counts: "
+        f"layers={counts['layers']}  "
+        f"oscillators={counts['oscillators']}  "
+        f"families={counts['families']}  "
+        f"boundaries={counts['boundaries']}  "
+        f"actuators={counts['actuators']}"
+    )
+
+    click.echo("Layers:")
+    for layer in summary["layers"]:
+        start, stop = layer["range"]
+        click.echo(
+            f"  L{layer['index']} {layer['name']}: "
+            f"{layer['oscillator_count']} oscillators [{start}:{stop}], "
+            f"omega={layer['omega_source']}"
+        )
+
+    click.echo("Families:")
+    for name, family in summary["oscillator_families"].items():
+        click.echo(
+            f"  {name}: channel={family['channel']} "
+            f"extractor={family['extractor_type']}"
+        )
+
+    drivers = summary["drivers"]
+    click.echo(
+        "Drivers: "
+        f"zeta_initial={drivers['zeta_initial']}  "
+        f"psi_initial={drivers['psi_initial']}  "
+        f"psi_driver={drivers['psi_driver'] or 'none'}"
+    )
+    actuation = summary["actuation"]
+    click.echo(f"Actuation bounds source: {actuation['value_bounds_source']}")
+    defaults = summary["defaults_applied"]
+    if defaults["omegas"] or defaults["actuator_bounds"] or defaults["drivers"]:
+        click.echo("Defaults applied:")
+        if defaults["omegas"]:
+            click.echo(f"  omegas: {', '.join(defaults['omegas'])}")
+        if defaults["actuator_bounds"]:
+            click.echo(f"  actuator_bounds: {', '.join(defaults['actuator_bounds'])}")
+        if defaults["drivers"]:
+            click.echo(f"  empty_drivers: {', '.join(defaults['drivers'])}")
 
 
 @main.command()
