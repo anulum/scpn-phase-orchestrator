@@ -9,22 +9,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["identify_frequencies", "FrequencyResult"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class FrequencyResult:
-    frequencies: NDArray
-    amplitudes: NDArray
+    frequencies: FloatArray
+    amplitudes: FloatArray
     layer_assignment: list[int]
 
 
 def identify_frequencies(
-    data: NDArray,
+    data: FloatArray,
     fs: float,
     n_modes: int | None = None,
     rank_threshold: float = 0.01,

@@ -8,8 +8,15 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
+from scpn_phase_orchestrator.autotune.freq_id import (
+    FrequencyResult,
+    identify_frequencies,
+)
+from scpn_phase_orchestrator.autotune.phase_extract import PhaseResult, extract_phases
 from scpn_phase_orchestrator.autotune.pipeline import (
     AutoTuneResult,
     identify_binding_spec,
@@ -98,3 +105,29 @@ class TestAutoTunePipelineWiring:
             )
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
+
+
+class TestAutoTuneTypeHints:
+    """Guard the V2 typed-array contract for public autotune helpers."""
+
+    def test_public_array_inputs_use_parameterised_ndarray_aliases(self):
+        for fn, param in [
+            (extract_phases, "signal"),
+            (identify_frequencies, "data"),
+            (identify_binding_spec, "time_series"),
+        ]:
+            hint = get_type_hints(fn)[param]
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
+
+    def test_public_result_arrays_use_parameterised_ndarray_aliases(self):
+        for cls, fields in [
+            (PhaseResult, ["phases", "amplitudes", "instantaneous_freq"]),
+            (FrequencyResult, ["frequencies", "amplitudes"]),
+            (AutoTuneResult, ["knm", "alpha"]),
+        ]:
+            hints = get_type_hints(cls)
+            for field in fields:
+                hint = hints[field]
+                assert "numpy.ndarray" in str(hint)
+                assert "float64" in str(hint)
