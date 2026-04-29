@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import numpy as np
 import pytest
 
@@ -75,6 +77,20 @@ class TestPhysicalDriver:
         with pytest.raises(ValueError, match="positive"):
             PhysicalDriver(frequency=0.0)
 
+    @pytest.mark.parametrize("frequency", [float("nan"), float("inf"), "fast"])
+    def test_invalid_frequency_rejected(self, frequency: object):
+        with pytest.raises(ValueError, match="frequency"):
+            PhysicalDriver(frequency=cast(Any, frequency))
+
+    @pytest.mark.parametrize("amplitude", [float("nan"), float("inf"), -0.1, "loud"])
+    def test_invalid_amplitude_rejected(self, amplitude: object):
+        with pytest.raises(ValueError, match="amplitude|frequency"):
+            PhysicalDriver(frequency=1.0, amplitude=cast(Any, amplitude))
+
+    def test_zero_amplitude_is_valid_quiescent_drive(self):
+        drv = PhysicalDriver(frequency=1.0, amplitude=0.0)
+        assert drv.compute(0.25) == pytest.approx(0.0)
+
     def test_output_bounded_by_amplitude(self):
         """Output must always be in [-amplitude, +amplitude]."""
         drv = PhysicalDriver(frequency=7.3, amplitude=2.5)
@@ -129,6 +145,11 @@ class TestInformationalDriver:
         with pytest.raises(ValueError, match="positive"):
             InformationalDriver(cadence_hz=-1.0)
 
+    @pytest.mark.parametrize("cadence_hz", [float("nan"), float("inf"), "fast"])
+    def test_invalid_cadence_rejected(self, cadence_hz: object):
+        with pytest.raises(ValueError, match="cadence_hz"):
+            InformationalDriver(cadence_hz=cast(Any, cadence_hz))
+
 
 # ---------------------------------------------------------------------------
 # SymbolicDriver: periodic sequence
@@ -167,6 +188,15 @@ class TestSymbolicDriver:
     def test_empty_sequence_rejected(self):
         with pytest.raises(ValueError, match="non-empty"):
             SymbolicDriver(sequence=[])
+
+    @pytest.mark.parametrize("sequence", [[0.0, float("nan")], [0.0, float("inf")]])
+    def test_non_finite_sequence_rejected(self, sequence: list[float]):
+        with pytest.raises(ValueError, match="finite"):
+            SymbolicDriver(sequence=sequence)
+
+    def test_multidimensional_sequence_rejected(self):
+        with pytest.raises(ValueError, match="one-dimensional"):
+            SymbolicDriver(sequence=cast(Any, [[0.0], [1.0]]))
 
     def test_batch_periodicity(self):
         """Batch output must be periodic with period = len(sequence)."""
