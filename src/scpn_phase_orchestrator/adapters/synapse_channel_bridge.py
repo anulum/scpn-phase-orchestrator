@@ -20,7 +20,7 @@ Usage::
 
     bridge = SynapseChannelBridge(
         hub_uri="ws://localhost:8876",
-        agents=["Claude", "Codex", "Gemini", "Human"],
+        agents=["Agent-A", "Agent-B", "Agent-C", "Human"],
     )
     await bridge.connect()
 

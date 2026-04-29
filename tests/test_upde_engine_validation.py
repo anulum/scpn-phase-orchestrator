@@ -108,20 +108,56 @@ class TestJaxEngineValidation:
     def test_rejects_zero_n(self) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
-        with pytest.raises(ValueError, match="n must be >= 1"):
+        with pytest.raises(ValueError, match="n"):
             JaxUPDEEngine(n=0)
+
+    @pytest.mark.parametrize("n", [True, 1.5, "4"])
+    def test_rejects_invalid_n_type(self, n: object) -> None:
+        from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
+
+        with pytest.raises(ValueError, match="n"):
+            JaxUPDEEngine(n=n)
 
     def test_rejects_zero_dt(self) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
-        with pytest.raises(ValueError, match="dt must be positive"):
+        with pytest.raises(ValueError, match="dt"):
             JaxUPDEEngine(n=4, dt=0.0)
+
+    @pytest.mark.parametrize("dt", [False, -0.01, float("nan"), float("inf"), "0.01"])
+    def test_rejects_invalid_dt(self, dt: object) -> None:
+        from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
+
+        with pytest.raises(ValueError, match="dt"):
+            JaxUPDEEngine(n=4, dt=dt)
 
     def test_rejects_unknown_method(self) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
         with pytest.raises(ValueError, match="unsupported method"):
             JaxUPDEEngine(n=4, method="adams-bashforth")
+
+    def test_rejects_non_string_method(self) -> None:
+        from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
+
+        with pytest.raises(ValueError, match="unsupported method"):
+            JaxUPDEEngine(n=4, method=True)
+
+    @pytest.mark.parametrize("n", [False, 0, 1.5, "4"])
+    def test_stuart_landau_rejects_invalid_n(self, n: object) -> None:
+        from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
+
+        with pytest.raises(ValueError, match="n"):
+            JaxStuartLandauEngine(n=n)
+
+    @pytest.mark.parametrize(
+        "dt", [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"]
+    )
+    def test_stuart_landau_rejects_invalid_dt(self, dt: object) -> None:
+        from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
+
+        with pytest.raises(ValueError, match="dt"):
+            JaxStuartLandauEngine(n=4, dt=dt)
 
 
 # Pipeline wiring: engine constructors guard the boundary between user

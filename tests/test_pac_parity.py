@@ -11,7 +11,7 @@
 The pre-existing three cases exercised only the Rust path in isolation.
 This module restores true parity coverage: every case below runs both
 backends on the same inputs and asserts numerical agreement, plus
-exercises the edge cases Gemini's S6 audit flagged as missing (degenerate
+exercises the edge cases a prior audit flagged as missing (degenerate
 inputs, extreme bin counts, fully synchronous phases, constant amplitude,
 NaN rejection).
 """
