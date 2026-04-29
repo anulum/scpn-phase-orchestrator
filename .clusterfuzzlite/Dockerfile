@@ -9,6 +9,8 @@
 FROM gcr.io/oss-fuzz-base/base-builder-python@sha256:a7652a04e2db56911868c9aeab9fa4eb1dbabb6a9e45772b2fa718dd4471fa25
 
 COPY . "$SRC/scpn-phase-orchestrator"
+COPY .clusterfuzzlite/build.sh "$SRC/build.sh"
 WORKDIR "$SRC/scpn-phase-orchestrator"
 
-RUN python3 -m pip install --require-hashes --no-deps -r requirements/runtime-lock.txt
+RUN chmod +x "$SRC/build.sh" && \
+    python3 -m pip install --require-hashes --no-deps -r requirements/runtime-lock.txt
