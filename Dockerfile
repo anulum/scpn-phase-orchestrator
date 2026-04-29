@@ -28,12 +28,12 @@ FROM python:3.12-slim@sha256:2be8daddbd3438e0e0c82ddd4a37e0e7ff3c1e0a0e7e0e4ed4e
 
 WORKDIR /build
 
-COPY pyproject.toml .
-COPY src/ src/
-COPY domainpacks/ domainpacks/
+COPY requirements/runtime-lock.txt /tmp/runtime-lock.txt
 COPY --from=rust-builder /wheels/*.whl /wheels/
 
-RUN pip install --no-cache-dir --prefix=/install . /wheels/*.whl
+RUN python -m pip install --no-cache-dir --prefix=/install \
+        --require-hashes --no-deps -r /tmp/runtime-lock.txt && \
+    python -c "import glob, pathlib, sysconfig, zipfile; target = pathlib.Path(sysconfig.get_paths(vars={'base': '/install', 'platbase': '/install'})['platlib']); target.mkdir(parents=True, exist_ok=True); wheels = glob.glob('/wheels/*.whl'); assert len(wheels) == 1, wheels; zipfile.ZipFile(wheels[0]).extractall(target)"
 
 # ── Stage 3: Production image ────────────────────────────────────
 FROM python:3.12-slim@sha256:2be8daddbd3438e0e0c82ddd4a37e0e7ff3c1e0a0e7e0e4ed4e3be0ba26d3e21 AS production
@@ -46,13 +46,15 @@ RUN groupadd --gid 1000 spo && \
     useradd --uid 1000 --gid spo --create-home spo
 
 COPY --from=python-builder /install /usr/local
+COPY --chown=spo:spo src/ /app/src/
 COPY --chown=spo:spo domainpacks/ /app/domainpacks/
 
 WORKDIR /app
+ENV PYTHONPATH=/app/src
 USER spo
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD ["python", "-c", "import urllib.request as u; r=u.urlopen('http://localhost:8000/api/health'); assert b'healthy' in r.read()"]
 
-ENTRYPOINT ["spo"]
+ENTRYPOINT ["python", "-c", "from scpn_phase_orchestrator.cli import main; main()"]
 CMD ["--help"]
