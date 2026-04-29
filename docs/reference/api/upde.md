@@ -285,6 +285,11 @@ results = multi_basin_stability(omegas, knm, R_thresholds=(0.3, 0.6, 0.8))
 **References:** Menck et al. 2013, Nature Physics 9:89-92.
 
 ::: scpn_phase_orchestrator.upde.basin_stability
+    options:
+      members:
+        - steady_state_r
+        - basin_stability
+        - multi_basin_stability
 
 ## Hypergraph (k-Body) Coupling Engine
 

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -79,6 +80,27 @@ def validate(binding_spec: str) -> None:
         raise SystemExit(1)
     click.echo("Valid")
     summary = resolved_binding_config(spec)
+    for line in format_resolved_binding_config(summary):
+        click.echo(line)
+
+
+@main.command("inspect")
+@click.argument("binding_spec", type=click.Path(exists=True))
+@click.option("--json-out", is_flag=True, help="Output resolved summary as JSON")
+def inspect_binding(binding_spec: str, json_out: bool) -> None:
+    """Inspect resolved runtime choices for a binding spec."""
+    spec = load_binding_spec(Path(binding_spec))
+    errors = validate_binding_spec(spec)
+    if errors:
+        for e in errors:
+            click.echo(f"ERROR: {e}", err=True)
+        raise SystemExit(1)
+
+    summary = resolved_binding_config(spec)
+    if json_out:
+        click.echo(json.dumps(summary, indent=2, sort_keys=True))
+        return
+
     for line in format_resolved_binding_config(summary):
         click.echo(line)
 

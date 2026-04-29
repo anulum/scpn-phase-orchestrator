@@ -57,6 +57,7 @@ nav:
       - Start Here (Learning Path): getting-started/start_here.md
   - Concepts:
       - System Overview: concepts/system_overview.md
+      - "How the Pipeline Fires": concepts/pipeline_firing.md
       - Pipeline Execution: concepts/pipeline_execution.md
       - "Oscillators & PIS": concepts/oscillators_PIS.md
       - "Knobs: K, α, ζ, Ψ": concepts/knobs_K_alpha_zeta_Psi.md
@@ -68,6 +69,7 @@ nav:
       - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
       - QueueWaves Cascade Detector: guide/queuewaves.md
       - Rust FFI Acceleration: guide/rust_ffi.md
+      - Backend Fallback Chain: guide/backend_fallbacks.md
       - Backend Strategy: guide/backend_strategy.md
       - Adapter Bridges: guide/adapters.md
       - Performance Tuning: guide/performance.md
