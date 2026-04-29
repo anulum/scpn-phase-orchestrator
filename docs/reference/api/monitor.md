@@ -100,6 +100,9 @@ result = monitor.evaluate(
 ```
 
 ::: scpn_phase_orchestrator.monitor.evs
+    options:
+      members:
+        - EVSMonitor
 
 ## Partial Information Decomposition (PID)
 
