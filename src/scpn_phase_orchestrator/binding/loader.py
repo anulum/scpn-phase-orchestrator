@@ -62,7 +62,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
 
         try:
             data = yaml.safe_load(raw)
-        except yaml.YAMLError as exc:
+        except (RecursionError, yaml.YAMLError) as exc:
             raise BindingLoadError(f"YAML parse error in {path.name}: {exc}") from exc
     elif path.suffix == ".json":
         try:

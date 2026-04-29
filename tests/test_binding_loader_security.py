@@ -37,6 +37,21 @@ class TestMalformedYAML:
         with pytest.raises(BindingLoadError, match="YAML parse error"):
             load_binding_spec(p)
 
+    def test_yaml_recursion_error_is_parse_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import yaml
+
+        p = tmp_path / "recursive.yaml"
+        p.write_text("rules: []\n", encoding="utf-8")
+
+        def raise_recursion(_: str) -> object:
+            raise RecursionError("nested YAML")
+
+        monkeypatch.setattr(yaml, "safe_load", raise_recursion)
+        with pytest.raises(BindingLoadError, match="YAML parse error"):
+            load_binding_spec(p)
+
 
 class TestInvalidJSON:
     def test_truncated_json(self, tmp_path: Path) -> None:
