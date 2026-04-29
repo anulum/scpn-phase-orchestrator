@@ -18,6 +18,8 @@ Usage:
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Integral, Real
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -37,6 +39,27 @@ except ImportError:  # pragma: no cover
 
 if TYPE_CHECKING:
     import jax.numpy as jnp
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    value = float(value)
+    if not isfinite(value) or value <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real, got {value!r}")
+    return value
+
+
+def _validate_method(value: object) -> str:
+    if not isinstance(value, str) or value not in ("euler", "rk4"):
+        raise ValueError(f"unsupported method {value!r}")
+    return value
 
 
 def _build_jax_step():  # type: ignore[no-untyped-def]  # pragma: no cover
@@ -112,15 +135,9 @@ class JaxUPDEEngine:  # pragma: no cover
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
-        if n < 1:
-            raise ValueError(f"n must be >= 1, got {n}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        if method not in ("euler", "rk4"):
-            raise ValueError(f"unsupported method {method!r}")
-        self._n = n
-        self._dt = dt
-        self._method = method
+        self._n = _validate_positive_int(n, name="n")
+        self._dt = _validate_positive_float(dt, name="dt")
+        self._method = _validate_method(method)
         euler_fn, rk4_fn = _build_jax_step()
         self._euler = euler_fn
         self._rk4 = rk4_fn
@@ -155,12 +172,8 @@ class JaxStuartLandauEngine:  # pragma: no cover
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
-        if n < 1:
-            raise ValueError(f"n must be >= 1, got {n}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        self._n = n
-        self._dt = dt
+        self._n = _validate_positive_int(n, name="n")
+        self._dt = _validate_positive_float(dt, name="dt")
         self._sl_rk4 = _build_jax_sl_step()
 
     def step(
