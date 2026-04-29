@@ -24,6 +24,7 @@ from numpy.typing import NDArray
 __all__ = [
     "BrainFlowAdapter",
     "ModbusAdapter",
+    "SampleBuffer",
     "SimulatedBoardAdapter",
     "HAS_BRAINFLOW",
     "HAS_MODBUS",
