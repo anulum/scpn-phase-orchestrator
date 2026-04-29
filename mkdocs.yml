@@ -52,6 +52,7 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
+      - "Minimal Domainpack in 5 Minutes": getting-started/minimal_domainpack_5min.md
       - "Tutorial: Hello World": getting-started/hello_world.md
       - Start Here (Learning Path): getting-started/start_here.md
   - Concepts:
