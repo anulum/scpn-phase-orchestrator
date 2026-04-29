@@ -42,6 +42,7 @@ bit-for-bit. Nonzero alpha falls back to the direct
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Integral, Real
 from typing import cast
 
 import numpy as np
@@ -155,6 +156,21 @@ def _dispatch() -> Callable[..., NDArray] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_nonzero_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-zero real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced == 0.0:
+        raise ValueError(f"{name} must be a finite non-zero real, got {value!r}")
+    return coerced
+
+
 def _coupling_deriv(
     theta: NDArray,
     knm: NDArray,
@@ -254,10 +270,11 @@ class SplittingEngine:
     """
 
     def __init__(self, n_oscillators: int, dt: float):
-        if n_oscillators < 1:
-            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
-        if dt == 0.0:
-            raise ValueError(f"dt must be non-zero, got {dt}")
+        n_oscillators = _validate_positive_int(
+            n_oscillators,
+            name="n_oscillators",
+        )
+        dt = _validate_nonzero_finite_float(dt, name="dt")
         # Negative dt is intentional for symplectic-reversibility
         # checks — Strang is time-reversible, so stepping forward
         # then with dt → −dt returns to the starting state.
