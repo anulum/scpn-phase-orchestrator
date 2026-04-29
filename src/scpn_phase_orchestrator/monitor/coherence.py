@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from numbers import Integral
+
 import numpy as np
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
@@ -15,12 +17,23 @@ from scpn_phase_orchestrator.upde.metrics import UPDEState
 __all__ = ["CoherenceMonitor"]
 
 
+def _validate_layer_indices(values: list[int], *, name: str) -> list[int]:
+    indices: list[int] = []
+    for value in values:
+        if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+            raise ValueError(
+                f"{name} must contain non-negative integer indices, got {value!r}"
+            )
+        indices.append(int(value))
+    return indices
+
+
 class CoherenceMonitor:
     """Track coherence partitioned into good vs bad layer subsets."""
 
     def __init__(self, good_layers: list[int], bad_layers: list[int]):
-        self._good = good_layers
-        self._bad = bad_layers
+        self._good = _validate_layer_indices(good_layers, name="good_layers")
+        self._bad = _validate_layer_indices(bad_layers, name="bad_layers")
 
     def compute_r_good(self, upde_state: UPDEState) -> float:
         """Mean order parameter R across good (synchronise) layers."""
