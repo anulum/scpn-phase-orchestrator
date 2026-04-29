@@ -17,7 +17,12 @@ import numpy as np
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    format_resolved_binding_config,
+    load_binding_spec,
+    resolved_binding_config,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
     GeometryConstraint,
     NonNegativeConstraint,
@@ -73,6 +78,9 @@ def validate(binding_spec: str) -> None:
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
     click.echo("Valid")
+    summary = resolved_binding_config(spec)
+    for line in format_resolved_binding_config(summary):
+        click.echo(line)
 
 
 @main.command()
@@ -95,6 +103,9 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             "non-research tiers are not yet enforced at runtime",
             err=True,
         )
+    binding_summary = resolved_binding_config(spec)
+    for line in format_resolved_binding_config(binding_summary):
+        click.echo(line)
 
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     if n_osc == 0:
@@ -245,6 +256,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             dt=spec.sample_period_s,
             seed=seed,
             amplitude_mode=amplitude_mode,
+            binding_config=binding_summary,
         )
     try:
         for step_idx in range(steps):
