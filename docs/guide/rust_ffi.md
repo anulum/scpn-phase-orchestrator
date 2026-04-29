@@ -6,6 +6,9 @@ supervisor logic, SSGF geometry control, monitor observers, and autotune
 pipelines. Python classes auto-detect the compiled `spo_kernel` module and
 delegate transparently — no code changes needed.
 
+For runtime selection across Rust, Python, JAX, and auxiliary research
+backends, see [Backend Fallback Chain](backend_fallbacks.md).
+
 ## Prerequisites
 
 - Rust 1.75+ (MSRV)
