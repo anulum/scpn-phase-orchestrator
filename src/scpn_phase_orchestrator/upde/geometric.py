@@ -32,6 +32,7 @@ and the direct ``atan2 + sin(diff)`` form otherwise.
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Integral, Real
 from typing import cast
 
 import numpy as np
@@ -137,6 +138,21 @@ def _dispatch() -> Callable[..., NDArray] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    return coerced
+
+
 def _python_torus_run(
     phases: NDArray,
     omegas: NDArray,
@@ -203,12 +219,8 @@ class TorusEngine:
     """
 
     def __init__(self, n_oscillators: int, dt: float):
-        if n_oscillators < 1:
-            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        self._n = n_oscillators
-        self._dt = dt
+        self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
+        self._dt = _validate_positive_float(dt, name="dt")
 
     def step(
         self,
