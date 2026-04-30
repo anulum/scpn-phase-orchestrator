@@ -21,12 +21,29 @@ Tolerances:
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import embedding as em_mod
+from scpn_phase_orchestrator.monitor._embedding_go import (
+    delay_embed_go,
+    mutual_information_go,
+    nearest_neighbor_distances_go,
+)
+from scpn_phase_orchestrator.monitor._embedding_julia import (
+    delay_embed_julia,
+    mutual_information_julia,
+    nearest_neighbor_distances_julia,
+)
+from scpn_phase_orchestrator.monitor._embedding_mojo import (
+    delay_embed_mojo,
+    mutual_information_mojo,
+    nearest_neighbor_distances_mojo,
+)
 from scpn_phase_orchestrator.monitor.embedding import (
     AVAILABLE_BACKENDS,
     delay_embed,
@@ -72,6 +89,33 @@ def _reference_de(sig, delay, dim) -> np.ndarray:
 def _signal(seed: int, t: int = 200) -> np.ndarray:
     rng = np.random.default_rng(seed)
     return np.sin(np.linspace(0, 10 * np.pi, t)) + 0.1 * rng.normal(0, 1, t)
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        delay_embed_go,
+        delay_embed_julia,
+        delay_embed_mojo,
+        mutual_information_go,
+        mutual_information_julia,
+        mutual_information_mojo,
+        nearest_neighbor_distances_go,
+        nearest_neighbor_distances_julia,
+        nearest_neighbor_distances_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        for key in {"signal", "embedded"}:
+            if key in hints:
+                assert "numpy.ndarray" in str(hints[key])
+                assert "float64" in str(hints[key])
+        if fn.__name__.startswith("delay_embed"):
+            assert "numpy.ndarray" in str(hints["return"])
+            assert "float64" in str(hints["return"])
+        if fn.__name__.startswith("nearest_neighbor_distances"):
+            assert "numpy.ndarray" in str(hints["return"])
+            assert "float64" in str(hints["return"])
+            assert "int64" in str(hints["return"])
 
 
 class TestDelayEmbedParity:

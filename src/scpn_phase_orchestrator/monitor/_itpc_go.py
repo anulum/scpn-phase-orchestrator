@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = ["compute_itpc_go", "itpc_persistence_go"]
 
@@ -52,7 +56,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def compute_itpc_go(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray:
+def compute_itpc_go(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     out = np.zeros(n_tp, dtype=np.float64)
@@ -68,10 +72,10 @@ def compute_itpc_go(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray:
 
 
 def itpc_persistence_go(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     n_trials: int,
     n_tp: int,
-    pause_indices: NDArray,
+    pause_indices: IntArray,
 ) -> float:
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)

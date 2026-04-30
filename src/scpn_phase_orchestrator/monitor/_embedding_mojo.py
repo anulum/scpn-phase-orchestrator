@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "_ensure_exe",
@@ -52,10 +56,10 @@ def _run(payload: str) -> list[str]:
 
 
 def delay_embed_mojo(
-    signal: NDArray,
+    signal: FloatArray,
     delay: int,
     dimension: int,
-) -> NDArray:
+) -> FloatArray:
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     t = int(s.size)
     tokens: list[str] = [
@@ -70,7 +74,7 @@ def delay_embed_mojo(
 
 
 def mutual_information_mojo(
-    signal: NDArray,
+    signal: FloatArray,
     lag: int,
     n_bins: int,
 ) -> float:
@@ -88,10 +92,10 @@ def mutual_information_mojo(
 
 
 def nearest_neighbor_distances_mojo(
-    embedded: NDArray,
+    embedded: FloatArray,
     t: int,
     m: int,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, IntArray]:
     e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
     tokens: list[str] = ["NN", str(int(t)), str(int(m))]
     tokens.extend(repr(float(x)) for x in e.tolist())

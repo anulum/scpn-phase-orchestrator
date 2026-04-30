@@ -18,12 +18,26 @@ measured parity sits at ~5e-17 on this host (bit-equivalent).
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import itpc as it_mod
+from scpn_phase_orchestrator.monitor._itpc_go import (
+    compute_itpc_go,
+    itpc_persistence_go,
+)
+from scpn_phase_orchestrator.monitor._itpc_julia import (
+    compute_itpc_julia,
+    itpc_persistence_julia,
+)
+from scpn_phase_orchestrator.monitor._itpc_mojo import (
+    compute_itpc_mojo,
+    itpc_persistence_mojo,
+)
 from scpn_phase_orchestrator.monitor.itpc import (
     AVAILABLE_BACKENDS,
     compute_itpc,
@@ -62,6 +76,27 @@ def _reference_pers(phases: np.ndarray, idx: np.ndarray) -> float:
 def _problem(seed: int, n_trials: int = 30, n_tp: int = 80):
     rng = np.random.default_rng(seed)
     return rng.uniform(0.0, TWO_PI, size=(n_trials, n_tp))
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        compute_itpc_go,
+        compute_itpc_julia,
+        compute_itpc_mojo,
+        itpc_persistence_go,
+        itpc_persistence_julia,
+        itpc_persistence_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        assert "numpy.ndarray" in str(hints["phases_flat"])
+        assert "float64" in str(hints["phases_flat"])
+        if "pause_indices" in hints:
+            assert "numpy.ndarray" in str(hints["pause_indices"])
+            assert "int64" in str(hints["pause_indices"])
+        if fn.__name__.startswith("compute_itpc"):
+            assert "numpy.ndarray" in str(hints["return"])
+            assert "float64" in str(hints["return"])
 
 
 class TestRustParity:

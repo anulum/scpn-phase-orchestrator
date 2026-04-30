@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "delay_embed_go",
@@ -66,10 +70,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def delay_embed_go(
-    signal: NDArray,
+    signal: FloatArray,
     delay: int,
     dimension: int,
-) -> NDArray:
+) -> FloatArray:
     lib = _load_lib()
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     t_eff = int(s.size) - (int(dimension) - 1) * int(delay)
@@ -87,7 +91,7 @@ def delay_embed_go(
 
 
 def mutual_information_go(
-    signal: NDArray,
+    signal: FloatArray,
     lag: int,
     n_bins: int,
 ) -> float:
@@ -107,10 +111,10 @@ def mutual_information_go(
 
 
 def nearest_neighbor_distances_go(
-    embedded: NDArray,
+    embedded: FloatArray,
     t: int,
     m: int,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, IntArray]:
     lib = _load_lib()
     e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
     dist = np.zeros(t, dtype=np.float64)

@@ -11,10 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "delay_embed_julia",
@@ -40,10 +43,10 @@ def _ensure() -> Any:
 
 
 def delay_embed_julia(
-    signal: NDArray,
+    signal: FloatArray,
     delay: int,
     dimension: int,
-) -> NDArray:
+) -> FloatArray:
     jl = _ensure()
     return np.asarray(
         jl.delay_embed(
@@ -56,7 +59,7 @@ def delay_embed_julia(
 
 
 def mutual_information_julia(
-    signal: NDArray,
+    signal: FloatArray,
     lag: int,
     n_bins: int,
 ) -> float:
@@ -71,10 +74,10 @@ def mutual_information_julia(
 
 
 def nearest_neighbor_distances_julia(
-    embedded: NDArray,
+    embedded: FloatArray,
     t: int,
     m: int,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, IntArray]:
     jl = _ensure()
     dist, idx = jl.nearest_neighbor_distances(
         np.ascontiguousarray(embedded.ravel(), dtype=np.float64),

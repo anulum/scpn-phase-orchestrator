@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = ["_ensure_exe", "compute_itpc_mojo", "itpc_persistence_mojo"]
 
@@ -46,7 +50,7 @@ def _run(payload: str) -> list[float]:
     return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def compute_itpc_mojo(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray:
+def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     if n_trials == 0 or n_tp == 0:
         return np.zeros(n_tp, dtype=np.float64)
     tokens: list[str] = ["ITPC", str(n_trials), str(n_tp)]
@@ -58,10 +62,10 @@ def compute_itpc_mojo(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray
 
 
 def itpc_persistence_mojo(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     n_trials: int,
     n_tp: int,
-    pause_indices: NDArray,
+    pause_indices: IntArray,
 ) -> float:
     idx = np.ascontiguousarray(pause_indices.ravel(), dtype=np.int64)
     if idx.size == 0:

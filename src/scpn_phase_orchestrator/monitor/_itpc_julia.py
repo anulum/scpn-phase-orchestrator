@@ -11,10 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = ["compute_itpc_julia", "itpc_persistence_julia"]
 
@@ -35,7 +38,7 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def compute_itpc_julia(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArray:
+def compute_itpc_julia(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
     jl = _ensure()
     return np.asarray(
         jl.compute_itpc(
@@ -48,10 +51,10 @@ def compute_itpc_julia(phases_flat: NDArray, n_trials: int, n_tp: int) -> NDArra
 
 
 def itpc_persistence_julia(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     n_trials: int,
     n_tp: int,
-    pause_indices: NDArray,
+    pause_indices: IntArray,
 ) -> float:
     jl = _ensure()
     return float(
