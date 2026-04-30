@@ -194,6 +194,67 @@ def test_max_fires_parity(spo):
     assert len(rust_eng.evaluate("degraded", ctx)) == 0
 
 
+def test_rust_rule_engine_exposes_fire_diagnostics(spo):
+    rust_eng = spo.PyRuleEngine(
+        [_rust_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)]
+    )
+    if not all(
+        hasattr(rust_eng, attr)
+        for attr in ("rule_names", "fire_counts", "fire_count", "last_fire_time")
+    ):
+        pytest.skip("installed spo_kernel lacks PyRuleEngine diagnostics")
+
+    assert rust_eng.rule_names == ["boost"]
+    assert rust_eng.fire_count("boost") == 0
+    assert rust_eng.fire_counts == {}
+    assert rust_eng.last_fire_time("boost") is None
+
+    assert len(rust_eng.evaluate("degraded", {"stability_proxy": 0.3})) == 1
+
+    assert rust_eng.fire_count("boost") == 1
+    assert rust_eng.fire_counts == {"boost": 1}
+    assert rust_eng.last_fire_time("boost") == 0.0
+    assert rust_eng.last_fire_times == {"boost": 0.0}
+
+
+def test_rust_rule_engine_rejects_invalid_policy_surface(spo):
+    probe = spo.PyRuleEngine(
+        [_rust_rule("probe", "DEGRADED", "stability_proxy", "<", 0.5)]
+    )
+    if not hasattr(probe, "rule_names"):
+        pytest.skip("installed spo_kernel lacks PyRuleEngine diagnostics slice")
+
+    with pytest.raises(ValueError, match="unknown rule logic"):
+        spo.PyRuleEngine(
+            [
+                (
+                    "bad_logic",
+                    ["DEGRADED"],
+                    [("a", ">", 0.0), ("b", "<", 1.0)],
+                    "XOR",
+                    [("K", "global", 0.1, 1.0)],
+                    0.0,
+                    0,
+                )
+            ]
+        )
+
+    with pytest.raises(ValueError, match="actions must not be empty"):
+        spo.PyRuleEngine(
+            [
+                (
+                    "empty_actions",
+                    ["DEGRADED"],
+                    [("stability_proxy", "<", 0.5)],
+                    "AND",
+                    [],
+                    0.0,
+                    0,
+                )
+            ]
+        )
+
+
 def test_compound_and_parity(spo):
     py_rule = PolicyRule(
         name="compound",

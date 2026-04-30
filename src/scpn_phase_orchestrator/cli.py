@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.binding import (
     resolved_binding_config,
     validate_binding_spec,
 )
+from scpn_phase_orchestrator.binding.types import ProtocolNetSpec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
     GeometryConstraint,
     NonNegativeConstraint,
@@ -38,6 +39,10 @@ from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.supervisor.events import EventBus
+from scpn_phase_orchestrator.supervisor.formal_export import (
+    export_petri_net_prism,
+    export_policy_rules_prism,
+)
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
@@ -48,6 +53,10 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     parse_guard,
 )
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.policy_diagnostics import (
+    PolicyDryRunReport,
+    dry_run_policy_rules,
+)
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyEngine,
     load_policy_rules,
@@ -103,6 +112,198 @@ def inspect_binding(binding_spec: str, json_out: bool) -> None:
 
     for line in format_resolved_binding_config(summary):
         click.echo(line)
+
+
+def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:
+    places = [Place(name) for name in protocol.places]
+    transitions = []
+    for ts in protocol.transitions:
+        guard = parse_guard(ts.guard) if ts.guard else None
+        transitions.append(
+            Transition(
+                name=ts.name,
+                inputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.inputs],
+                outputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.outputs],
+                guard=guard,
+            )
+        )
+    return PetriNet(places, transitions), Marking(tokens=dict(protocol.initial))
+
+
+@main.command("formal-export")
+@click.argument("binding_spec", type=click.Path(exists=True))
+@click.option(
+    "--output",
+    "-o",
+    default=None,
+    type=click.Path(),
+    help="Write PRISM model to a file instead of stdout",
+)
+@click.option("--module-name", default="spo_petri", help="PRISM module name")
+@click.option("--max-tokens", default=None, type=int, help="Token upper bound")
+@click.option(
+    "--export",
+    "export_target",
+    type=click.Choice(["protocol", "policy"]),
+    default="protocol",
+    show_default=True,
+    help="Supervisor artefact to export",
+)
+@click.option(
+    "--policy",
+    "policy_path",
+    default=None,
+    type=click.Path(exists=True),
+    help="Policy YAML path for --export policy; defaults to sibling policy.yaml",
+)
+def formal_export(
+    binding_spec: str,
+    output: str | None,
+    module_name: str,
+    max_tokens: int | None,
+    export_target: str,
+    policy_path: str | None,
+) -> None:
+    """Export supervisor artefacts for formal model checking."""
+    spec_path = Path(binding_spec)
+    spec = load_binding_spec(spec_path)
+    errors = validate_binding_spec(spec)
+    if errors:
+        for e in errors:
+            click.echo(f"ERROR: {e}", err=True)
+        raise SystemExit(1)
+
+    if export_target == "policy":
+        policy_file = (
+            Path(policy_path)
+            if policy_path is not None
+            else spec_path.parent / "policy.yaml"
+        )
+        if not policy_file.exists():
+            click.echo(f"ERROR: policy file not found: {policy_file}", err=True)
+            raise SystemExit(1)
+        rules = load_policy_rules(policy_file)
+        if not rules:
+            click.echo("ERROR: policy file contains no rules", err=True)
+            raise SystemExit(1)
+        export = export_policy_rules_prism(rules, module_name=module_name)
+        if output is None:
+            click.echo(export.model, nl=False)
+            return
+        Path(output).write_text(export.model, encoding="utf-8")
+        click.echo(f"PRISM model written: {output}")
+        return
+
+    if spec.protocol_net is None:
+        click.echo("ERROR: binding spec has no protocol_net", err=True)
+        raise SystemExit(1)
+
+    net, marking = _petri_net_from_protocol(spec.protocol_net)
+    export = export_petri_net_prism(
+        net,
+        marking,
+        module_name=module_name,
+        max_tokens=max_tokens,
+    )
+    if output is None:
+        click.echo(export.model, nl=False)
+        return
+    Path(output).write_text(export.model, encoding="utf-8")
+    click.echo(f"PRISM model written: {output}")
+
+
+def _policy_report_dict(report: PolicyDryRunReport) -> dict[str, object]:
+    return {
+        "steps": report.steps,
+        "rules": list(report.rules),
+        "fire_counts": report.fire_counts,
+        "action_counts": report.action_counts,
+        "unreachable_rules": list(report.unreachable_rules),
+        "overlapping_steps": list(report.overlapping_steps),
+        "action_collision_steps": list(report.action_collision_steps),
+        "step_reports": [
+            {
+                "step": step.step,
+                "regime": step.regime,
+                "fired_rules": list(step.fired_rules),
+                "actions": list(step.actions),
+            }
+            for step in report.step_reports
+        ],
+    }
+
+
+@main.command("policy-dry-run")
+@click.argument("binding_spec", type=click.Path(exists=True))
+@click.argument("audit_log", type=click.Path(exists=True))
+@click.option(
+    "--policy",
+    "policy_path",
+    default=None,
+    type=click.Path(exists=True),
+    help="Policy YAML path; defaults to binding spec sibling policy.yaml",
+)
+@click.option("--json-out", is_flag=True, help="Output JSON instead of text")
+def policy_dry_run(
+    binding_spec: str,
+    audit_log: str,
+    policy_path: str | None,
+    json_out: bool,
+) -> None:
+    """Replay policy rules against an audit log without applying actuation."""
+    spec_path = Path(binding_spec)
+    spec = load_binding_spec(spec_path)
+    errors = validate_binding_spec(spec)
+    if errors:
+        for e in errors:
+            click.echo(f"ERROR: {e}", err=True)
+        raise SystemExit(1)
+
+    policy_file = (
+        Path(policy_path)
+        if policy_path is not None
+        else spec_path.parent / "policy.yaml"
+    )
+    if not policy_file.exists():
+        click.echo(f"ERROR: policy file not found: {policy_file}", err=True)
+        raise SystemExit(1)
+    rules = load_policy_rules(policy_file)
+    if not rules:
+        click.echo("ERROR: policy file contains no rules", err=True)
+        raise SystemExit(1)
+
+    entries = ReplayEngine(audit_log).load()
+    report = dry_run_policy_rules(
+        rules,
+        entries,
+        good_layers=list(spec.objectives.good_layers),
+        bad_layers=list(spec.objectives.bad_layers),
+    )
+    if json_out:
+        click.echo(json.dumps(_policy_report_dict(report), indent=2, sort_keys=True))
+        return
+
+    click.echo(f"Steps: {report.steps}  Rules: {len(report.rules)}")
+    click.echo("Rule fires:")
+    for rule in report.rules:
+        click.echo(f"  {rule}: {report.fire_counts.get(rule, 0)}")
+    if report.unreachable_rules:
+        click.echo()
+        click.echo("Unreachable rules:")
+        for rule in report.unreachable_rules:
+            click.echo(f"  {rule}")
+    if report.overlapping_steps:
+        click.echo()
+        click.echo(
+            "Overlapping rule steps: "
+            + ", ".join(str(step) for step in report.overlapping_steps)
+        )
+    if report.action_collision_steps:
+        click.echo()
+        click.echo(
+            "Action collision steps: "
+            + ", ".join(str(step) for step in report.action_collision_steps)
+        )
 
 
 @main.command()
@@ -166,24 +367,11 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
 
     petri_adapter: PetriNetAdapter | None = None
     if spec.protocol_net is not None:
-        pn = spec.protocol_net
-        places = [Place(name) for name in pn.places]
-        transitions = []
-        for ts in pn.transitions:
-            guard = parse_guard(ts.guard) if ts.guard else None
-            transitions.append(
-                Transition(
-                    name=ts.name,
-                    inputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.inputs],
-                    outputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.outputs],
-                    guard=guard,
-                )
-            )
-        net = PetriNet(places, transitions)
+        net, marking = _petri_net_from_protocol(spec.protocol_net)
         petri_adapter = PetriNetAdapter(
             net,
-            Marking(tokens=dict(pn.initial)),
-            pn.place_regime,
+            marking,
+            spec.protocol_net.place_regime,
             event_bus=event_bus,
         )
 
@@ -568,7 +756,7 @@ def report(log_path: str, json_out: bool) -> None:
         raise SystemExit(1)
 
     n_steps = len(steps)
-    n_layers = len(steps[0]["layers"])
+    n_layers = max(len(s.get("layers", [])) for s in steps)
     r_series = [
         [s["layers"][i]["R"] for s in steps if i < len(s["layers"])]
         for i in range(n_layers)

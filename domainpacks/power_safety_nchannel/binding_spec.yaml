@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Power Safety N-Channel Binding Spec
+
+name: power_safety_nchannel
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.02
+control_period_s: 0.2
+
+channels:
+  P:
+    role: electrical_phase
+    units: rad
+    metric_semantics: voltage and frequency synchronisation
+  I:
+    role: protection_events
+    units: events/s
+    metric_semantics: relay and breaker event cadence
+  S:
+    role: grid_state
+    units: state
+    metric_semantics: grid operating mode
+  Reserve:
+    role: spinning_reserve
+    units: MW
+    metric_semantics: reserve margin phase pressure
+  Weather:
+    role: weather_forcing
+    units: normalised_forecast
+    metric_semantics: forecast-driven renewable volatility
+  Risk:
+    role: derived_risk
+    required: false
+    units: score
+    metric_semantics: derived safety pressure from reserve, weather, and events
+    coupling_participation: false
+    replay_semantics: derived
+    derived_from: [Reserve, Weather, I]
+    derive_rule: "max(0, Weather.volatility - Reserve.margin) + I.trip_rate"
+
+channel_groups:
+  grid_observability:
+    channels: [P, Reserve, Weather]
+    description: continuous grid physics and exogenous forcing
+  safety_channels:
+    channels: [I, S, Risk]
+    description: protection and supervisor decision evidence
+
+cross_channel_couplings:
+  - source: Weather
+    target: P
+    strength: 0.14
+    mode: excitatory
+    template: weather_forces_grid_phase
+  - source: Reserve
+    target: Risk
+    strength: 0.2
+    mode: inhibitory
+    template: reserve_suppresses_risk
+  - source: Risk
+    target: S
+    strength: 0.3
+    mode: directed
+    template: risk_gates_grid_state
+
+layers:
+  - name: feeders
+    index: 0
+    oscillator_ids: [feeder_a, feeder_b, feeder_c]
+  - name: substations
+    index: 1
+    oscillator_ids: [substation_a, substation_b]
+  - name: regional_dispatch
+    index: 2
+    oscillator_ids: [dispatch]
+
+oscillator_families:
+  electrical_phase:
+    channel: P
+    extractor_type: physical
+    config: {}
+  protection_log:
+    channel: I
+    extractor_type: event
+    config: {}
+  operating_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
+  reserve_margin:
+    channel: Reserve
+    extractor_type: zero_crossing
+    config:
+      centred_on: scheduled_margin
+  weather_forcing:
+    channel: Weather
+    extractor_type: wavelet
+    config:
+      horizon_s: 900.0
+
+coupling:
+  base_strength: 0.5
+  decay_alpha: 0.32
+  templates:
+    weather_forces_grid_phase: weather_phase
+    reserve_suppresses_risk: reserve_risk
+    risk_gates_grid_state: risk_state
+
+drivers:
+  physical:
+    zeta: 0.01
+    psi: 0.0
+  informational:
+    zeta: 0.03
+  symbolic:
+    zeta: 0.02
+  Reserve:
+    zeta: 0.02
+  Weather:
+    zeta: 0.05
+  Risk:
+    zeta: 0.04
+
+objectives:
+  good_layers: [0, 1, 2]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: dispatch_lock_floor
+    variable: R_2
+    lower: 0.52
+    upper: null
+    severity: hard
+
+actuators:
+  - name: grid_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: substation_lag
+    knob: alpha
+    scope: layer_1
+    limits: [0.0, 1.0]
+
+policy: policy.yaml

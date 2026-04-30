@@ -13,6 +13,7 @@ from dataclasses import replace
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
     BoundaryDef,
+    ChannelSpec,
     OscillatorFamily,
 )
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
@@ -147,7 +148,16 @@ def test_valid_channels_accepted(sample_binding_spec):
         families = {
             "f": OscillatorFamily(channel=ch, extractor_type="hilbert", config={}),
         }
-        spec = replace(sample_binding_spec, oscillator_families=families)
+        channels = (
+            {}
+            if ch in {"P", "I", "S"}
+            else {ch: ChannelSpec(role="domain", units="phase")}
+        )
+        spec = replace(
+            sample_binding_spec,
+            oscillator_families=families,
+            channels=channels,
+        )
         errors = validate_binding_spec(spec)
         ch_errors = [e for e in errors if "channel" in e]
         assert ch_errors == [], f"channel={ch!r} should be valid, got: {ch_errors}"
@@ -190,6 +200,82 @@ def test_valid_version_formats(sample_binding_spec):
         errors = validate_binding_spec(spec)
         ver_errors = [e for e in errors if "version" in e]
         assert ver_errors == [], f"version={v!r} should be valid, got: {ver_errors}"
+
+
+def test_named_nchannel_must_be_declared(sample_binding_spec):
+    families = {
+        "risk": OscillatorFamily(channel="Risk", extractor_type="event", config={}),
+    }
+    bad = replace(sample_binding_spec, oscillator_families=families, channels={})
+
+    errors = validate_binding_spec(bad)
+
+    assert any("named N-channel" in e and "Risk" in e for e in errors)
+
+
+def test_required_channel_must_have_runtime_evidence(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channels={"Risk": ChannelSpec(role="risk", required=True)},
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("required channel" in e and "Risk" in e for e in errors)
+
+
+def test_derived_channel_requires_derived_replay_semantics(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channels={
+            "Risk": ChannelSpec(
+                role="risk",
+                required=False,
+                replay_semantics="phase",
+                derived_from=["P"],
+                derive_rule="risk = phase(P)",
+            )
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("replay_semantics='derived'" in e for e in errors)
+
+
+def test_derived_replay_semantics_requires_sources(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channels={
+            "Risk": ChannelSpec(
+                role="risk",
+                required=False,
+                replay_semantics="derived",
+            )
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("requires derived_from" in e for e in errors)
+
+
+def test_derive_rule_requires_sources(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channels={
+            "Risk": ChannelSpec(
+                role="risk",
+                required=False,
+                replay_semantics="phase",
+                derive_rule="risk = phase(P)",
+            )
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("derive_rule requires derived_from" in e for e in errors)
 
 
 # Pipeline wiring: binding validator tested via schema enforcement, required field

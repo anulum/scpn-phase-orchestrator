@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Edge Consensus N-Channel Policy
+
+rules:
+  - name: reinforce_gateway_lock
+    regime: [NOMINAL, DEGRADED]
+    priority: 20
+    condition:
+      metric: R_good
+      op: "<"
+      threshold: 0.72
+    actions:
+      - knob: K
+        scope: global
+        value: 0.14
+        ttl_s: 1.0
+    cooldown_s: 0.4
+  - name: damp_gateway_lag
+    regime: [NOMINAL, DEGRADED]
+    priority: 10
+    logic: AND
+    conditions:
+      - metric: R_1
+        op: "<"
+        threshold: 0.68
+      - metric: R_global
+        op: "<"
+        threshold: 0.75
+    actions:
+      - knob: alpha
+        scope: layer_1
+        value: -0.05
+        ttl_s: 1.0
+    cooldown_s: 0.6

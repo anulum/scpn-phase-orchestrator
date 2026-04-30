@@ -75,6 +75,7 @@ mod tests {
     fn make_state(rs: &[f64]) -> UPDEState {
         UPDEState {
             layers: rs.iter().map(|&r| LayerState { r, psi: 0.0 }).collect(),
+            channel_metrics: vec![],
             cross_layer_alignment: vec![],
             stability_proxy: 0.0,
             regime: Regime::Nominal,
@@ -107,6 +108,7 @@ mod tests {
     fn make_state_with_cla(rs: &[f64], cla: Vec<f64>) -> UPDEState {
         UPDEState {
             layers: rs.iter().map(|&r| LayerState { r, psi: 0.0 }).collect(),
+            channel_metrics: vec![],
             cross_layer_alignment: cla,
             stability_proxy: 0.0,
             regime: Regime::Nominal,

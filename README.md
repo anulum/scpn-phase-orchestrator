@@ -177,6 +177,8 @@ and is built from source via `maturin develop`.
 | `cardiac_rhythm` | Cardiology | Gap-junction coupling, arrhythmia (4 layers, 10 oscillators) |
 | `chemical_reactor` | Process control | Hopf bifurcation, Semenov limit (4 layers, 10 oscillators) |
 | `circadian_biology` | Chronobiology | SCN clock-gene coupled oscillators (4 layers, 10 oscillators) |
+| `digital_twin_nchannel` | Digital twins | Six-channel plant/twin residual profile with derived `TwinResidual` |
+| `edge_consensus_nchannel` | Edge orchestration | Six-channel gossip consensus with load/trust coupling |
 | `epidemic_sir` | Epidemiology | Epidemic wave synchronisation (3 layers, 8 oscillators) |
 | `firefly_swarm` | Ecology | Flash synchronisation, Mirollo-Strogatz (2 layers, 8 oscillators) |
 | `fusion_equilibrium` | Fusion equilibrium | Grad-Shafranov + FusionCoreBridge (6 layers, 12 oscillators) |
@@ -189,6 +191,7 @@ and is built from source via `maturin develop`.
 | `neuroscience_eeg` | Neuroscience | EEG band->phase, seizure detection (6 layers, 14 oscillators) |
 | `plasma_control` | Tokamak plasma | MHD/transport multi-scale control (8 layers, 16 oscillators) |
 | `pll_clock` | Telecommunications | PLL network clock synchronisation (3 layers, 8 oscillators) |
+| `power_safety_nchannel` | Power systems | Six-channel grid safety profile with derived `Risk` |
 | `power_grid` | Power systems | Swing equation = Kuramoto (5 layers, 12 oscillators) |
 | `quantum_simulation` | Quantum computing | Qubit register phase coupling (3 layers, 8 oscillators) |
 | `queuewaves` | Cloud/queues | Retry storm desynchronisation (3 layers, 6 oscillators) |

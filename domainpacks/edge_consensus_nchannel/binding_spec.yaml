@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Edge Consensus N-Channel Binding Spec
+
+name: edge_consensus_nchannel
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.02
+control_period_s: 0.2
+
+channels:
+  P:
+    role: physical_clock
+    units: rad
+    metric_semantics: local oscillator phase lock at each edge node
+  I:
+    role: telemetry_event
+    units: events/s
+    metric_semantics: gossip packet cadence and dropped update bursts
+  S:
+    role: symbolic_mode
+    units: state
+    metric_semantics: node lifecycle state machine
+  Load:
+    role: workload_pressure
+    units: normalised_queue_depth
+    metric_semantics: local queue pressure that modulates consensus urgency
+  Trust:
+    role: peer_trust
+    units: score
+    metric_semantics: reputation-weighted neighbour coherence
+  ConsensusHealth:
+    role: derived_supervisor_metric
+    required: false
+    units: score
+    metric_semantics: derived coherence health from physical lock, telemetry, and trust
+    coupling_participation: false
+    replay_semantics: derived
+    derived_from: [P, I, Trust]
+    derive_rule: "mean(P.lock_quality, I.delivery_ratio, Trust.peer_score)"
+
+channel_groups:
+  realtime_observability:
+    channels: [P, I, Load]
+    description: live signals sampled by each edge node
+  safety_evidence:
+    channels: [S, Trust, ConsensusHealth]
+    description: channels exposed to the supervisor for escalation
+
+cross_channel_couplings:
+  - source: Load
+    target: P
+    strength: 0.18
+    mode: inhibitory
+    template: queue_pressure_desynchronises_clock
+  - source: Trust
+    target: I
+    strength: 0.24
+    mode: directed
+    template: reputation_weights_gossip
+  - source: ConsensusHealth
+    target: S
+    strength: 0.12
+    mode: directed
+    template: derived_health_gates_mode
+
+layers:
+  - name: leaf_nodes
+    index: 0
+    oscillator_ids: [leaf_a, leaf_b, leaf_c]
+  - name: regional_gateways
+    index: 1
+    oscillator_ids: [gateway_a, gateway_b]
+  - name: parent_supervisor
+    index: 2
+    oscillator_ids: [parent]
+
+oscillator_families:
+  clock_phase:
+    channel: P
+    extractor_type: physical
+    config: {}
+  gossip_events:
+    channel: I
+    extractor_type: event
+    config: {}
+  lifecycle_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 4
+  queue_pressure:
+    channel: Load
+    extractor_type: wavelet
+    config:
+      window_s: 2.0
+  peer_reputation:
+    channel: Trust
+    extractor_type: graph
+    config:
+      edge_weight: trust_score
+
+coupling:
+  base_strength: 0.42
+  decay_alpha: 0.35
+  templates:
+    queue_pressure_desynchronises_clock: inhibitory_load
+    reputation_weights_gossip: trust_directed
+    derived_health_gates_mode: health_to_state
+
+drivers:
+  physical:
+    zeta: 0.01
+    psi: 0.0
+  informational:
+    zeta: 0.03
+  symbolic:
+    zeta: 0.02
+  Load:
+    zeta: 0.04
+  Trust:
+    zeta: 0.02
+  ConsensusHealth:
+    zeta: 0.01
+
+objectives:
+  good_layers: [0, 1, 2]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: parent_lock_floor
+    variable: R_2
+    lower: 0.55
+    upper: null
+    severity: soft
+
+actuators:
+  - name: edge_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 2.5]
+  - name: gateway_lag
+    knob: alpha
+    scope: layer_1
+    limits: [0.0, 1.2]
+
+policy: policy.yaml

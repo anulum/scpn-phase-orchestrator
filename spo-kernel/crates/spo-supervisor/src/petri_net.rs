@@ -42,6 +42,9 @@ impl Guard {
         let Some(&val) = ctx.get(&self.metric) else {
             return false;
         };
+        if !val.is_finite() || !self.threshold.is_finite() {
+            return false;
+        }
         match self.op {
             GuardOp::Gt => val > self.threshold,
             GuardOp::Ge => val >= self.threshold,
@@ -105,8 +108,22 @@ impl PetriNet {
     /// # Errors
     /// Returns error if any arc references an unknown place.
     pub fn new(places: Vec<String>, transitions: Vec<Transition>) -> Result<Self, String> {
+        for place in &places {
+            if place.is_empty() {
+                return Err("place names must not be empty".into());
+            }
+        }
         for t in &transitions {
+            if t.name.is_empty() {
+                return Err("transition names must not be empty".into());
+            }
             for arc in t.inputs.iter().chain(t.outputs.iter()) {
+                if arc.weight == 0 {
+                    return Err(format!(
+                        "transition {:?} has zero-weight arc for place {:?}",
+                        t.name, arc.place
+                    ));
+                }
                 if !places.contains(&arc.place) {
                     return Err(format!(
                         "transition {:?} references unknown place {:?}",
@@ -129,6 +146,14 @@ impl PetriNet {
     #[must_use]
     pub fn transitions(&self) -> &[Transition] {
         &self.transitions
+    }
+
+    #[must_use]
+    pub fn transition_names(&self) -> Vec<String> {
+        self.transitions
+            .iter()
+            .map(|transition| transition.name.clone())
+            .collect()
     }
 
     #[must_use]
@@ -199,6 +224,9 @@ pub fn parse_guard(text: &str) -> Result<Guard, String> {
     let threshold: f64 = parts[2]
         .parse()
         .map_err(|e| format!("invalid threshold: {e}"))?;
+    if !threshold.is_finite() {
+        return Err(format!("guard threshold must be finite, got {threshold}"));
+    }
     Ok(Guard {
         metric: parts[0].to_string(),
         op,
@@ -317,6 +345,43 @@ mod tests {
     }
 
     #[test]
+    fn empty_place_rejected() {
+        let result = PetriNet::new(vec!["".into()], vec![]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn empty_transition_rejected() {
+        let result = PetriNet::new(
+            vec!["a".into()],
+            vec![Transition {
+                name: String::new(),
+                inputs: vec![],
+                outputs: vec![],
+                guard: None,
+            }],
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn zero_weight_arc_rejected() {
+        let result = PetriNet::new(
+            vec!["a".into()],
+            vec![Transition {
+                name: "bad".into(),
+                inputs: vec![Arc {
+                    place: "a".into(),
+                    weight: 0,
+                }],
+                outputs: vec![],
+                guard: None,
+            }],
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn parse_guard_valid() {
         let g = parse_guard("stability_proxy > 0.6").expect("valid");
         assert_eq!(g.metric, "stability_proxy");
@@ -345,6 +410,12 @@ mod tests {
     }
 
     #[test]
+    fn parse_guard_rejects_non_finite_threshold() {
+        assert!(parse_guard("x > NaN").is_err());
+        assert!(parse_guard("x > inf").is_err());
+    }
+
+    #[test]
     fn guard_evaluate_missing_metric() {
         let g = Guard {
             metric: "missing".into(),
@@ -352,6 +423,26 @@ mod tests {
             threshold: 0.5,
         };
         assert!(!g.evaluate(&HashMap::new()));
+    }
+
+    #[test]
+    fn guard_rejects_non_finite_context_metric() {
+        let g = Guard {
+            metric: "x".into(),
+            op: GuardOp::Gt,
+            threshold: 0.5,
+        };
+        let ctx: HashMap<String, f64> = [("x".into(), f64::INFINITY)].into();
+        assert!(!g.evaluate(&ctx));
+    }
+
+    #[test]
+    fn transition_names_preserve_priority_order() {
+        let net = simple_net();
+        assert_eq!(
+            net.transition_names(),
+            vec!["start".to_string(), "finish".to_string()]
+        );
     }
 
     #[test]

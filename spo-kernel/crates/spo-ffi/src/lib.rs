@@ -1649,15 +1649,20 @@ impl PyRuleEngine {
                             })
                         })
                         .collect::<PyResult<Vec<_>>>()?;
+                    let logic = match logic.to_uppercase().as_str() {
+                        "AND" => rule_engine::Logic::And,
+                        "OR" => rule_engine::Logic::Or,
+                        other => {
+                            return Err(PyValueError::new_err(format!(
+                                "unknown rule logic: {other}"
+                            )))
+                        }
+                    };
                     let condition = if conditions.len() == 1 {
                         rule_engine::RuleCondition::Single(
                             conditions.into_iter().next().expect("len==1"),
                         )
                     } else {
-                        let logic = match logic.to_uppercase().as_str() {
-                            "OR" => rule_engine::Logic::Or,
-                            _ => rule_engine::Logic::And,
-                        };
                         rule_engine::RuleCondition::Compound { conditions, logic }
                     };
                     let rule_actions: Vec<rule_engine::RuleAction> = actions
@@ -1681,7 +1686,7 @@ impl PyRuleEngine {
             )
             .collect::<PyResult<Vec<_>>>()?;
         Ok(Self {
-            inner: rule_engine::RuleEngine::new(parsed),
+            inner: rule_engine::RuleEngine::try_new(parsed).map_err(PyValueError::new_err)?,
         })
     }
 
@@ -1728,6 +1733,29 @@ impl PyRuleEngine {
     #[getter]
     fn clock(&self) -> f64 {
         self.inner.clock()
+    }
+
+    #[getter]
+    fn rule_names(&self) -> Vec<String> {
+        self.inner.rule_names()
+    }
+
+    fn fire_count(&self, rule_name: &str) -> u32 {
+        self.inner.fire_count(rule_name)
+    }
+
+    #[getter]
+    fn fire_counts(&self) -> HashMap<String, u32> {
+        self.inner.fire_counts().clone()
+    }
+
+    fn last_fire_time(&self, rule_name: &str) -> Option<f64> {
+        self.inner.last_fire_time(rule_name)
+    }
+
+    #[getter]
+    fn last_fire_times(&self) -> HashMap<String, f64> {
+        self.inner.last_fire_times().clone()
     }
 }
 
@@ -1822,6 +1850,23 @@ impl PyPetriNet {
     fn place_names(&self) -> Vec<String> {
         self.inner.place_names().to_vec()
     }
+
+    #[getter]
+    fn transition_names(&self) -> Vec<String> {
+        self.inner.transition_names()
+    }
+
+    fn active_places(&self, tokens: HashMap<String, u32>) -> Vec<String> {
+        let mut marking = petri_net::Marking::default();
+        for (p, n) in &tokens {
+            marking.set(p, *n);
+        }
+        marking
+            .active_places()
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+    }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -1846,6 +1891,7 @@ fn make_upde_state_full(layer_rs: &[f64], psi_values: &[f64], cla: &[f64]) -> UP
     };
     UPDEState {
         layers,
+        channel_metrics: vec![],
         cross_layer_alignment: cla.to_vec(),
         stability_proxy,
         regime: Regime::Nominal,
