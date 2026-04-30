@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Power Safety N-Channel Policy
+
+rules:
+  - name: reinforce_dispatch_coherence
+    regime: [NOMINAL, DEGRADED]
+    priority: 20
+    condition:
+      metric: R_good
+      op: "<"
+      threshold: 0.7
+    actions:
+      - knob: K
+        scope: global
+        value: 0.15
+        ttl_s: 1.0
+    cooldown_s: 0.4
+  - name: reduce_substation_lag
+    regime: [NOMINAL, DEGRADED]
+    priority: 10
+    condition:
+      metric: R_1
+      op: "<"
+      threshold: 0.63
+    actions:
+      - knob: alpha
+        scope: layer_1
+        value: -0.04
+        ttl_s: 1.0
+    cooldown_s: 0.6

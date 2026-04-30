@@ -28,7 +28,7 @@ simulations.
 | 18 | **financial_markets** | 8 (4 layers) | Hilbert phase, order parameter regime detection | `18_market_regime_detection.ipynb` |
 | 19 | **swarm_robotics** | 8 (3 layers) | Swarmalator spatial + phase coupling | `19_swarmalator_dynamics.ipynb` |
 
-## All 33 Domainpacks
+## All 36 Domainpacks
 
 | Pack | Domain | Layers | Oscillators | Channels |
 |------|--------|--------|-------------|----------|
@@ -39,6 +39,8 @@ simulations.
 | `cardiac_rhythm` | Cardiology | 4 | 10 | P/I |
 | `chemical_reactor` | Process control | 4 | 10 | P/I |
 | `circadian_biology` | Chronobiology | 4 | 10 | S |
+| `digital_twin_nchannel` | Digital twins | 3 | 6 | P/I/S/Thermal/Quality/TwinResidual |
+| `edge_consensus_nchannel` | Edge orchestration | 3 | 6 | P/I/S/Load/Trust/ConsensusHealth |
 | `epidemic_sir` | Epidemiology | 3 | 8 | P/I |
 | `financial_markets` | Stock sync and crash detection | 4 | 8 | P/I/S |
 | `firefly_swarm` | Ecology | 2 | 8 | P/I |
@@ -55,6 +57,7 @@ simulations.
 | `neuroscience_eeg` | Neuroscience | 6 | 14 | P/I |
 | `plasma_control` | Tokamak plasma | 8 | 16 | P/I |
 | `pll_clock` | Telecommunications | 3 | 8 | P/I |
+| `power_safety_nchannel` | Power systems | 3 | 6 | P/I/S/Reserve/Weather/Risk |
 | `power_grid` | Power systems | 5 | 12 | P/I |
 | `quantum_simulation` | Quantum computing | 3 | 8 | P/I |
 | `queuewaves` | Cloud/queues | 3 | 6 | P/I |

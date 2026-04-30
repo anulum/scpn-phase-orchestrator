@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 
 from scpn_phase_orchestrator.binding.types import (
+    STANDARD_CHANNELS,
     VALID_EXTRACTORS,
     VALID_KNOBS,
     VALID_SAFETY_TIERS,
@@ -69,6 +70,16 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     }
     family_driver_channels.update(spec.drivers.all_channel_configs())
     declared_or_used = family_driver_channels | set(spec.channels)
+    undeclared_named_channels = sorted(
+        channel
+        for channel in family_driver_channels
+        if channel not in STANDARD_CHANNELS and channel not in spec.channels
+    )
+    for channel in undeclared_named_channels:
+        errors.append(
+            f"channel {channel!r}: named N-channel drivers/families must be "
+            "declared under channels"
+        )
 
     for channel_name, channel_spec in spec.channels.items():
         if channel_spec.replay_semantics not in _VALID_REPLAY_SEMANTICS:
@@ -91,6 +102,29 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             errors.append(
                 f"channel {channel_name!r}: derive_rule is required when "
                 "derived_from is set"
+            )
+        if channel_spec.derived_from and channel_spec.replay_semantics != "derived":
+            errors.append(
+                f"channel {channel_name!r}: derived_from channels must use "
+                "replay_semantics='derived'"
+            )
+        if channel_spec.replay_semantics == "derived" and not channel_spec.derived_from:
+            errors.append(
+                f"channel {channel_name!r}: replay_semantics='derived' requires "
+                "derived_from"
+            )
+        if channel_spec.derive_rule and not channel_spec.derived_from:
+            errors.append(
+                f"channel {channel_name!r}: derive_rule requires derived_from"
+            )
+        if (
+            channel_spec.required
+            and not channel_spec.derived_from
+            and channel_name not in family_driver_channels
+        ):
+            errors.append(
+                f"channel {channel_name!r}: required channel must be backed by "
+                "an oscillator family or driver"
             )
 
     for group_name, group in spec.channel_groups.items():

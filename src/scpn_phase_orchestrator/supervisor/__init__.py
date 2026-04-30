@@ -10,6 +10,11 @@ from __future__ import annotations
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
+from scpn_phase_orchestrator.supervisor.formal_export import (
+    PrismExport,
+    export_petri_net_prism,
+    export_policy_rules_prism,
+)
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
@@ -19,6 +24,11 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     Transition,
 )
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.policy_diagnostics import (
+    PolicyDryRunReport,
+    PolicyDryRunStep,
+    dry_run_policy_rules,
+)
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     CompoundCondition,
     PolicyAction,
@@ -43,9 +53,12 @@ __all__ = [
     "PetriNetAdapter",
     "Place",
     "PolicyAction",
+    "PolicyDryRunReport",
+    "PolicyDryRunStep",
     "PolicyCondition",
     "PolicyEngine",
     "PolicyRule",
+    "PrismExport",
     "Prediction",
     "PredictiveSupervisor",
     "Regime",
@@ -53,5 +66,8 @@ __all__ = [
     "RegimeManager",
     "SupervisorPolicy",
     "Transition",
+    "dry_run_policy_rules",
+    "export_petri_net_prism",
+    "export_policy_rules_prism",
     "load_policy_rules",
 ]

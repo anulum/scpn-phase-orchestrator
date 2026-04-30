@@ -28,6 +28,9 @@ impl Condition {
         let Some(&val) = ctx.get(&self.metric) else {
             return false;
         };
+        if !val.is_finite() {
+            return false;
+        }
         match self.op {
             GuardOp::Gt => val > self.threshold,
             GuardOp::Ge => val >= self.threshold,
@@ -97,6 +100,7 @@ pub struct FiredAction {
 }
 
 /// Rule-based policy engine with cooldown and fire-count tracking.
+#[derive(Debug)]
 pub struct RuleEngine {
     rules: Vec<PolicyRule>,
     fire_counts: HashMap<String, u32>,
@@ -105,14 +109,32 @@ pub struct RuleEngine {
 }
 
 impl RuleEngine {
+    /// Build a rule engine, panicking if rules are invalid.
+    ///
+    /// # Panics
+    /// Panics when `rules` contains non-finite thresholds/action values,
+    /// negative TTL/cooldown values, empty action fields, or empty condition
+    /// metrics. Use [`Self::try_new`] when policy input is user supplied.
     #[must_use]
     pub fn new(rules: Vec<PolicyRule>) -> Self {
-        Self {
+        Self::try_new(rules).expect("valid policy rules")
+    }
+
+    /// Build a rule engine after validating the policy surface.
+    ///
+    /// # Errors
+    /// Returns a human-readable error when rule thresholds, action values,
+    /// TTLs, or cooldowns are non-finite or outside their valid ranges.
+    pub fn try_new(rules: Vec<PolicyRule>) -> Result<Self, String> {
+        for rule in &rules {
+            validate_rule(rule)?;
+        }
+        Ok(Self {
             rules,
             fire_counts: HashMap::new(),
             last_fire_t: HashMap::new(),
             clock: 0.0,
-        }
+        })
     }
 
     pub fn advance_clock(&mut self, dt: f64) {
@@ -122,6 +144,36 @@ impl RuleEngine {
     #[must_use]
     pub fn clock(&self) -> f64 {
         self.clock
+    }
+
+    /// Return policy rule names in evaluation order.
+    #[must_use]
+    pub fn rule_names(&self) -> Vec<String> {
+        self.rules.iter().map(|rule| rule.name.clone()).collect()
+    }
+
+    /// Return the number of times a rule has fired.
+    #[must_use]
+    pub fn fire_count(&self, rule_name: &str) -> u32 {
+        self.fire_counts.get(rule_name).copied().unwrap_or(0)
+    }
+
+    /// Return all recorded fire counts keyed by rule name.
+    #[must_use]
+    pub fn fire_counts(&self) -> &HashMap<String, u32> {
+        &self.fire_counts
+    }
+
+    /// Return the last engine-clock time at which a rule fired.
+    #[must_use]
+    pub fn last_fire_time(&self, rule_name: &str) -> Option<f64> {
+        self.last_fire_t.get(rule_name).copied()
+    }
+
+    /// Return all recorded last-fire times keyed by rule name.
+    #[must_use]
+    pub fn last_fire_times(&self) -> &HashMap<String, f64> {
+        &self.last_fire_t
     }
 
     /// Evaluate all rules against regime + metric context. Returns fired actions.
@@ -185,6 +237,80 @@ impl RuleEngine {
     }
 }
 
+fn validate_rule(rule: &PolicyRule) -> Result<(), String> {
+    if rule.name.is_empty() {
+        return Err("policy rule name must not be empty".into());
+    }
+    validate_condition(&rule.condition)?;
+    if !rule.cooldown_s.is_finite() || rule.cooldown_s < 0.0 {
+        return Err(format!(
+            "policy rule {:?}: cooldown_s must be finite and >= 0",
+            rule.name
+        ));
+    }
+    if rule.actions.is_empty() {
+        return Err(format!(
+            "policy rule {:?}: actions must not be empty",
+            rule.name
+        ));
+    }
+    for action in &rule.actions {
+        if action.knob.is_empty() {
+            return Err(format!(
+                "policy rule {:?}: action knob must not be empty",
+                rule.name
+            ));
+        }
+        if action.scope.is_empty() {
+            return Err(format!(
+                "policy rule {:?}: action scope must not be empty",
+                rule.name
+            ));
+        }
+        if !action.value.is_finite() {
+            return Err(format!(
+                "policy rule {:?}: action value must be finite",
+                rule.name
+            ));
+        }
+        if !action.ttl_s.is_finite() || action.ttl_s < 0.0 {
+            return Err(format!(
+                "policy rule {:?}: action ttl_s must be finite and >= 0",
+                rule.name
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_condition(condition: &RuleCondition) -> Result<(), String> {
+    match condition {
+        RuleCondition::Single(condition) => validate_single_condition(condition),
+        RuleCondition::Compound { conditions, .. } => {
+            if conditions.is_empty() {
+                return Err("compound policy condition must not be empty".into());
+            }
+            for condition in conditions {
+                validate_single_condition(condition)?;
+            }
+            Ok(())
+        }
+    }
+}
+
+fn validate_single_condition(condition: &Condition) -> Result<(), String> {
+    if condition.metric.is_empty() {
+        return Err("policy condition metric must not be empty".into());
+    }
+    if !condition.threshold.is_finite() {
+        return Err(format!(
+            "policy condition {:?}: threshold must be finite",
+            condition.metric
+        ));
+    }
+    Ok(())
+}
+
 /// Build the metric context used by rule evaluation from a UPDE state.
 #[must_use]
 pub fn state_context(
@@ -217,13 +343,23 @@ pub fn state_context(
         }
     }
 
+    for metric in &state.channel_metrics {
+        let channel = metric.channel.as_str();
+        ctx.insert(format!("R.channel.{channel}"), metric.r);
+        ctx.insert(format!("R_channel_{channel}"), metric.r);
+        ctx.insert(format!("psi.channel.{channel}"), metric.psi);
+        ctx.insert(format!("psi_channel_{channel}"), metric.psi);
+        ctx.insert(format!("channel_weight.{channel}"), metric.weight);
+        ctx.insert(format!("channel_weight_{channel}"), metric.weight);
+    }
+
     ctx
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spo_types::{LayerState, Regime, UPDEState};
+    use spo_types::{Channel, ChannelMetric, LayerState, Regime, UPDEState};
 
     fn simple_rule(name: &str, regime: &str, metric: &str, op: GuardOp, thresh: f64) -> PolicyRule {
         PolicyRule {
@@ -252,6 +388,21 @@ mod tests {
                 .copied()
                 .map(|r| LayerState { r, psi: 0.0 })
                 .collect(),
+            channel_metrics: vec![],
+            cross_layer_alignment: vec![],
+            stability_proxy: 0.42,
+            regime: Regime::Nominal,
+        }
+    }
+
+    fn state_with_channels(rs: &[f64], channel_metrics: Vec<ChannelMetric>) -> UPDEState {
+        UPDEState {
+            layers: rs
+                .iter()
+                .copied()
+                .map(|r| LayerState { r, psi: 0.0 })
+                .collect(),
+            channel_metrics,
             cross_layer_alignment: vec![],
             stability_proxy: 0.42,
             regime: Regime::Nominal,
@@ -274,6 +425,54 @@ mod tests {
     }
 
     #[test]
+    fn try_new_rejects_non_finite_threshold() {
+        let err = RuleEngine::try_new(vec![simple_rule(
+            "bad",
+            "DEGRADED",
+            "stability_proxy",
+            GuardOp::Lt,
+            f64::NAN,
+        )])
+        .expect_err("NaN threshold must be rejected");
+
+        assert!(err.contains("threshold must be finite"));
+    }
+
+    #[test]
+    fn try_new_rejects_bad_action_values() {
+        let mut rule = simple_rule("bad_action", "DEGRADED", "x", GuardOp::Lt, 1.0);
+        rule.actions[0].ttl_s = -1.0;
+
+        let err = RuleEngine::try_new(vec![rule]).expect_err("negative TTL must be rejected");
+
+        assert!(err.contains("ttl_s must be finite and >= 0"));
+    }
+
+    #[test]
+    fn try_new_rejects_empty_actions() {
+        let mut rule = simple_rule("no_action", "DEGRADED", "x", GuardOp::Lt, 1.0);
+        rule.actions.clear();
+
+        let err = RuleEngine::try_new(vec![rule]).expect_err("empty actions must fail");
+
+        assert!(err.contains("actions must not be empty"));
+    }
+
+    #[test]
+    fn non_finite_context_metric_does_not_fire() {
+        let mut eng = RuleEngine::new(vec![simple_rule(
+            "boost",
+            "DEGRADED",
+            "stability_proxy",
+            GuardOp::Gt,
+            0.5,
+        )]);
+        let ctx: HashMap<String, f64> = [("stability_proxy".into(), f64::INFINITY)].into();
+
+        assert!(eng.evaluate("degraded", &ctx).is_empty());
+    }
+
+    #[test]
     fn state_context_exposes_layer_and_partition_metrics() {
         let ctx = state_context(&state(&[0.2, 0.8, 0.4]), &[1], &[0, 2], &HashMap::new());
 
@@ -285,6 +484,25 @@ mod tests {
     }
 
     #[test]
+    fn state_context_exposes_named_channel_metrics() {
+        let state = state_with_channels(
+            &[0.2, 0.8, 0.4],
+            vec![
+                ChannelMetric::new(Channel::P, 0.75, 1.0, 1.0).expect("valid P metric"),
+                ChannelMetric::new(Channel::new("Risk"), 0.25, 2.0, 0.5)
+                    .expect("valid Risk metric"),
+            ],
+        );
+
+        let ctx = state_context(&state, &[], &[], &HashMap::new());
+
+        assert_eq!(ctx["R.channel.P"], 0.75);
+        assert_eq!(ctx["R_channel_Risk"], 0.25);
+        assert_eq!(ctx["psi.channel.Risk"], 2.0);
+        assert_eq!(ctx["channel_weight_Risk"], 0.5);
+    }
+
+    #[test]
     fn evaluate_state_uses_good_bad_layer_metrics() {
         let rule = simple_rule("suppress_bad", "CRITICAL", "R_bad.0", GuardOp::Lt, 0.3);
         let mut eng = RuleEngine::new(vec![rule]);
@@ -293,6 +511,22 @@ mod tests {
 
         assert_eq!(actions.len(), 1);
         assert_eq!(actions[0].rule_name, "suppress_bad");
+    }
+
+    #[test]
+    fn evaluate_state_uses_named_channel_metrics() {
+        let rule = simple_rule("risk_guard", "CRITICAL", "R.channel.Risk", GuardOp::Lt, 0.3);
+        let mut eng = RuleEngine::new(vec![rule]);
+        let state = state_with_channels(
+            &[0.2, 0.9],
+            vec![ChannelMetric::new(Channel::new("Risk"), 0.25, 2.0, 0.5)
+                .expect("valid Risk metric")],
+        );
+
+        let actions = eng.evaluate_state("critical", &state, &[], &[], &HashMap::new());
+
+        assert_eq!(actions.len(), 1);
+        assert_eq!(actions[0].rule_name, "risk_guard");
     }
 
     #[test]
@@ -350,6 +584,33 @@ mod tests {
         assert_eq!(eng.evaluate("degraded", &ctx).len(), 1);
         assert_eq!(eng.evaluate("degraded", &ctx).len(), 1);
         assert!(eng.evaluate("degraded", &ctx).is_empty()); // max_fires reached
+    }
+
+    #[test]
+    fn exposes_rule_fire_diagnostics() {
+        let rule = PolicyRule {
+            max_fires: 2,
+            cooldown_s: 0.5,
+            ..simple_rule("r1", "DEGRADED", "x", GuardOp::Lt, 1.0)
+        };
+        let mut eng = RuleEngine::new(vec![rule]);
+        let ctx: HashMap<String, f64> = [("x".into(), 0.5)].into();
+
+        assert_eq!(eng.rule_names(), vec!["r1".to_string()]);
+        assert_eq!(eng.fire_count("r1"), 0);
+        assert_eq!(eng.last_fire_time("r1"), None);
+
+        assert_eq!(eng.evaluate("degraded", &ctx).len(), 1);
+
+        assert_eq!(eng.fire_count("r1"), 1);
+        assert_eq!(eng.fire_counts()["r1"], 1);
+        assert_eq!(eng.last_fire_time("r1"), Some(0.0));
+        assert_eq!(eng.last_fire_times()["r1"], 0.0);
+
+        eng.advance_clock(1.0);
+        assert_eq!(eng.evaluate("degraded", &ctx).len(), 1);
+        assert_eq!(eng.fire_count("r1"), 2);
+        assert_eq!(eng.last_fire_time("r1"), Some(1.0));
     }
 
     #[test]

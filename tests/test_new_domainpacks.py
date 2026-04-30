@@ -13,9 +13,17 @@ from pathlib import Path
 import pytest
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
+from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 from scpn_phase_orchestrator.server import SimulationState
+from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
 
 DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
+
+NCHANNEL_PACKS = [
+    "digital_twin_nchannel",
+    "edge_consensus_nchannel",
+    "power_safety_nchannel",
+]
 
 NEW_PACKS = [
     "financial_markets",
@@ -35,6 +43,7 @@ NEW_PACKS = [
     "satellite_constellation",
     "swarm_robotics",
     "traffic_flow",
+    *NCHANNEL_PACKS,
 ]
 
 
@@ -99,6 +108,35 @@ def test_domainpack_reset_restores_step_zero(pack: str) -> None:
         sim.step()
     reset_state = sim.reset()
     assert reset_state["step"] == 0
+
+
+@pytest.mark.parametrize("pack", NCHANNEL_PACKS)
+def test_nchannel_domainpack_declares_channel_algebra(pack: str) -> None:
+    """N-channel examples must exercise groups, derived channels, and
+    cross-channel coupling rather than only renaming P/I/S."""
+    spec = load_binding_spec(DOMAINPACK_DIR / pack / "binding_spec.yaml")
+    errors = validate_binding_spec(spec)
+    assert not errors
+    assert len(spec.used_channels()) > 3
+    assert len(spec.channel_groups) >= 2
+    assert len(spec.cross_channel_couplings) >= 3
+    derived = [
+        (name, channel)
+        for name, channel in spec.channels.items()
+        if channel.derived_from and channel.replay_semantics == "derived"
+    ]
+    assert derived
+    for _, channel in derived:
+        assert channel.derive_rule
+        assert channel.supervisor_visibility is True
+
+
+@pytest.mark.parametrize("pack", NCHANNEL_PACKS)
+def test_nchannel_domainpack_policy_loads(pack: str) -> None:
+    """The examples must ship an executable policy next to the binding."""
+    rules = load_policy_rules(DOMAINPACK_DIR / pack / "policy.yaml")
+    assert len(rules) >= 2
+    assert all(rule.actions for rule in rules)
 
 
 def test_missing_domainpack_raises_clear_error() -> None:

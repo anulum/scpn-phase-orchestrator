@@ -256,7 +256,7 @@ class TestEndToEndChannels:
 class TestAllDomainpacksLoad:
     """Every domainpack loads without error."""
 
-    def test_all_25_load(self):
+    def test_all_domainpacks_load(self):
         loaded = 0
         for pack_dir in sorted(DOMAINPACK_DIR.iterdir()):
             if not pack_dir.is_dir():
@@ -269,4 +269,4 @@ class TestAllDomainpacksLoad:
             assert len(spec.layers) > 0
             assert len(spec.oscillator_families) > 0
             loaded += 1
-        assert loaded == 33
+        assert loaded == 36

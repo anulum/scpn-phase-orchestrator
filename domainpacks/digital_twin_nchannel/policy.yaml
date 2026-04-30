@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Digital Twin N-Channel Policy
+
+rules:
+  - name: reduce_twin_residual
+    regime: [NOMINAL, DEGRADED]
+    priority: 20
+    condition:
+      metric: R_2
+      op: "<"
+      threshold: 0.58
+    actions:
+      - knob: K
+        scope: global
+        value: 0.12
+        ttl_s: 1.0
+    cooldown_s: 0.5
+  - name: stabilise_line_lag
+    regime: [NOMINAL, DEGRADED]
+    priority: 10
+    condition:
+      metric: R_1
+      op: "<"
+      threshold: 0.65
+    actions:
+      - knob: alpha
+        scope: layer_1
+        value: -0.04
+        ttl_s: 1.0
+    cooldown_s: 0.6

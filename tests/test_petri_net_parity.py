@@ -195,5 +195,34 @@ def test_place_names_parity(spo):
     assert set(py_net.place_names) == set(rust_net.place_names)
 
 
+def test_rust_petri_net_exposes_transition_and_active_place_diagnostics(spo):
+    rust_net = _rust_simple_net(spo)
+    if not all(
+        hasattr(rust_net, attr) for attr in ("transition_names", "active_places")
+    ):
+        pytest.skip("installed spo_kernel lacks PyPetriNet diagnostics")
+
+    assert rust_net.transition_names == ["start", "finish"]
+    assert rust_net.active_places({"idle": 1, "active": 0}) == ["idle"]
+
+
+def test_rust_petri_net_rejects_invalid_surface(spo):
+    probe = _rust_simple_net(spo)
+    if not hasattr(probe, "transition_names"):
+        pytest.skip("installed spo_kernel lacks PyPetriNet validation slice")
+
+    with pytest.raises(ValueError, match="place names must not be empty"):
+        spo.PyPetriNet([""], [])
+
+    with pytest.raises(ValueError, match="transition names must not be empty"):
+        spo.PyPetriNet(["a"], [("", [], [], None)])
+
+    with pytest.raises(ValueError, match="zero-weight arc"):
+        spo.PyPetriNet(["a"], [("bad", [("a", 0)], [], None)])
+
+    with pytest.raises(ValueError, match="threshold must be finite"):
+        spo.PyPetriNet(["a"], [("bad", [("a", 1)], [], "x > NaN")])
+
+
 # Pipeline wiring: the parity tests above cross-validate
 # Rust PyPetriNet against Python PetriNet.

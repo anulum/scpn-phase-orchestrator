@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Digital Twin N-Channel Binding Spec
+
+name: digital_twin_nchannel
+version: "0.1.0"
+safety_tier: research
+sample_period_s: 0.01
+control_period_s: 0.1
+
+channels:
+  P:
+    role: machine_phase
+    units: rad
+    metric_semantics: rotating equipment phase and vibration phase lock
+  I:
+    role: event_log
+    units: events/s
+    metric_semantics: maintenance and alarm cadence
+  S:
+    role: operating_state
+    units: state
+    metric_semantics: plant mode state machine
+  Thermal:
+    role: thermal_field
+    units: degC
+    metric_semantics: temperature wave phase across assets
+  Quality:
+    role: quality_stream
+    units: defect_rate
+    metric_semantics: product quality event phase
+  TwinResidual:
+    role: derived_residual
+    required: false
+    units: residual
+    metric_semantics: mismatch between plant and digital twin channels
+    coupling_participation: false
+    replay_semantics: derived
+    derived_from: [P, Thermal, Quality]
+    derive_rule: "abs(P.predicted_phase - P.measured_phase) + Thermal.residual + Quality.residual"
+
+channel_groups:
+  plant_signals:
+    channels: [P, Thermal, Quality]
+    description: live plant measurements
+  decision_signals:
+    channels: [I, S, TwinResidual]
+    description: supervisor-facing context and derived residuals
+
+cross_channel_couplings:
+  - source: Thermal
+    target: P
+    strength: 0.16
+    mode: directed
+    template: thermal_drift_to_machine_phase
+  - source: Quality
+    target: S
+    strength: 0.2
+    mode: directed
+    template: defect_rate_gates_state
+  - source: TwinResidual
+    target: I
+    strength: 0.22
+    mode: excitatory
+    template: residual_raises_event_attention
+
+layers:
+  - name: machine_cells
+    index: 0
+    oscillator_ids: [cell_a, cell_b, cell_c]
+  - name: process_line
+    index: 1
+    oscillator_ids: [line_a, line_b]
+  - name: twin_supervisor
+    index: 2
+    oscillator_ids: [twin]
+
+oscillator_families:
+  rotating_assets:
+    channel: P
+    extractor_type: physical
+    config: {}
+  alarms:
+    channel: I
+    extractor_type: event
+    config: {}
+  operation_state:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 5
+  thermal_wave:
+    channel: Thermal
+    extractor_type: wavelet
+    config:
+      window_s: 4.0
+  quality_events:
+    channel: Quality
+    extractor_type: event
+    config:
+      defect_bucket_s: 30.0
+
+coupling:
+  base_strength: 0.48
+  decay_alpha: 0.28
+  templates:
+    thermal_drift_to_machine_phase: thermal_directed
+    defect_rate_gates_state: quality_symbolic
+    residual_raises_event_attention: residual_event
+
+drivers:
+  physical:
+    zeta: 0.01
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.02
+  Thermal:
+    zeta: 0.03
+  Quality:
+    zeta: 0.04
+  TwinResidual:
+    zeta: 0.05
+
+objectives:
+  good_layers: [0, 1, 2]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries:
+  - name: twin_residual_floor
+    variable: R_2
+    lower: 0.5
+    upper: null
+    severity: hard
+
+actuators:
+  - name: twin_coupling
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+  - name: line_phase_lag
+    knob: alpha
+    scope: layer_1
+    limits: [0.0, 1.0]
+
+policy: policy.yaml

@@ -73,7 +73,7 @@ class CoherencePlot:
     def _extract_r_series(self) -> tuple[list[int], int, list[list[float]]]:
         steps = self._require_steps()
         x = [s["step"] for s in steps]
-        n_layers = len(steps[0]["layers"])
+        n_layers = max(len(s.get("layers", [])) for s in steps)
         series = []
         for i in range(n_layers):
             series.append(

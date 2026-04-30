@@ -121,7 +121,7 @@ def _event_lines(entries: list[dict[str, Any]], limit: int = 12) -> tuple[str, .
 def _metric_summary(steps: list[dict[str, Any]]) -> tuple[str, ...]:
     if not steps:
         return ()
-    n_layers = len(steps[0].get("layers", []))
+    n_layers = max(len(step.get("layers", [])) for step in steps)
     lines: list[str] = []
     for idx in range(n_layers):
         series = [
@@ -208,7 +208,7 @@ def build_explainability_report(
     last = steps[-1]
     return ExplainabilityReport(
         steps=len(steps),
-        layers=len(steps[0].get("layers", [])),
+        layers=max(len(step.get("layers", [])) for step in steps),
         hash_chain_ok=integrity_ok,
         hash_chain_verified=n_verified,
         final_regime=str(last.get("regime", "unknown")),

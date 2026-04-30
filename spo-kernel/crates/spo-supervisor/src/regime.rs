@@ -186,6 +186,7 @@ mod tests {
     fn make_state(r: f64) -> UPDEState {
         UPDEState {
             layers: vec![LayerState { r, psi: 0.0 }],
+            channel_metrics: vec![],
             cross_layer_alignment: vec![],
             stability_proxy: 0.0,
             regime: Regime::Nominal,
@@ -283,6 +284,7 @@ mod tests {
         let rm = RegimeManager::default();
         let state = UPDEState {
             layers: vec![],
+            channel_metrics: vec![],
             cross_layer_alignment: vec![],
             stability_proxy: 0.0,
             regime: Regime::Nominal,
