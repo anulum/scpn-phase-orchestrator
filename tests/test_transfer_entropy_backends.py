@@ -10,12 +10,20 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import transfer_entropy as te_mod
+from scpn_phase_orchestrator.monitor._te_go import phase_te_go, te_matrix_go
+from scpn_phase_orchestrator.monitor._te_julia import (
+    phase_te_julia,
+    te_matrix_julia,
+)
+from scpn_phase_orchestrator.monitor._te_mojo import phase_te_mojo, te_matrix_mojo
 from scpn_phase_orchestrator.monitor.transfer_entropy import (
     AVAILABLE_BACKENDS,
     phase_transfer_entropy,
@@ -49,6 +57,29 @@ def _reference_matrix(series: np.ndarray, n_bins: int) -> np.ndarray:
         return transfer_entropy_matrix(series, n_bins)
     finally:
         _reset(prev)
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        phase_te_go,
+        te_matrix_go,
+        phase_te_julia,
+        te_matrix_julia,
+        phase_te_mojo,
+        te_matrix_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        checked_hints = [
+            value
+            for key, value in hints.items()
+            if key in {"source", "target", "phase_series"}
+        ]
+        if fn.__name__.startswith("te_matrix"):
+            checked_hints.append(hints["return"])
+        for hint in checked_hints:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
 
 
 class TestRustParity:
