@@ -11,12 +11,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["swarmalator_step_julia"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "swarmalator.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,9 +38,9 @@ def _ensure() -> Any:
 
 
 def swarmalator_step_julia(
-    pos: NDArray,
-    phases: NDArray,
-    omegas: NDArray,
+    pos: FloatArray,
+    phases: FloatArray,
+    omegas: FloatArray,
     n: int,
     dim: int,
     a: float,
@@ -46,7 +48,7 @@ def swarmalator_step_julia(
     j: float,
     k: float,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     jl = _ensure()
     new_pos_flat, new_phases = jl.swarmalator_step(
         np.ascontiguousarray(pos.ravel(), dtype=np.float64),
@@ -60,7 +62,9 @@ def swarmalator_step_julia(
         float(k),
         float(dt),
     )
-    return (
-        np.asarray(new_pos_flat, dtype=np.float64).reshape(n, dim),
-        np.asarray(new_phases, dtype=np.float64),
+    new_pos_array: FloatArray = np.asarray(new_pos_flat, dtype=np.float64).reshape(
+        n,
+        dim,
     )
+    new_phases_array: FloatArray = np.asarray(new_phases, dtype=np.float64)
+    return new_pos_array, new_phases_array

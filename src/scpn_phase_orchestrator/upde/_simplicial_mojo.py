@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "simplicial_run_mojo"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "simplicial_mojo"
 
@@ -31,17 +34,17 @@ def _ensure_exe() -> Path:
 
 
 def simplicial_run_mojo(
-    phases: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     zeta: float,
     psi: float,
     sigma2: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> FloatArray:
     exe = _ensure_exe()
     tokens: list[str] = [
         "SIMP",
@@ -70,4 +73,5 @@ def simplicial_run_mojo(
     lines = proc.stdout.strip().splitlines()
     if len(lines) != n:
         raise ValueError(f"Mojo SIMP returned {len(lines)} lines, expected {n}")
-    return np.array([float(x) for x in lines], dtype=np.float64)
+    result: FloatArray = np.array([float(x) for x in lines], dtype=np.float64)
+    return result

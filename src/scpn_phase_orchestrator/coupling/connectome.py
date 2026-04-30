@@ -17,6 +17,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -31,10 +33,12 @@ except ImportError:
 
 __all__ = ["load_hcp_connectome", "load_neurolib_hcp"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 _NEUROLIB_HCP_SIZE = 80  # Cakan & Obermayer 2021, Neuroimage 227:117474
 
 
-def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
+def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
     """Load real HCP structural connectivity from neurolib.
 
     Args:
@@ -67,10 +71,10 @@ def load_neurolib_hcp(n_regions: int = 80) -> NDArray:
         raise ValueError(msg)
 
     ds = Dataset("hcp")
-    sc: NDArray = np.asarray(ds.Cmat, dtype=np.float64)
+    sc: FloatArray = np.asarray(ds.Cmat, dtype=np.float64)
     sc = sc[:n_regions, :n_regions]
     np.fill_diagonal(sc, 0.0)
-    result: NDArray = np.clip(sc, 0.0, None)
+    result: FloatArray = np.clip(sc, 0.0, None)
     return result
 
 
@@ -80,7 +84,7 @@ _INTER_HEMI_STRENGTH = 0.15
 _DMN_HUB_BOOST = 0.3
 
 
-def load_hcp_connectome(n_regions: int, seed: int = 42) -> NDArray:
+def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     """Generate a synthetic HCP-inspired coupling matrix.
 
     Args:
@@ -94,11 +98,11 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> NDArray:
         raise ValueError(msg)
 
     if _HAS_RUST:
-        flat: NDArray = np.asarray(_rust_load_hcp(n_regions, seed))
+        flat: FloatArray = np.asarray(_rust_load_hcp(n_regions, seed))
         return flat.reshape(n_regions, n_regions)
 
     rng = np.random.default_rng(seed=seed)
-    knm = np.zeros((n_regions, n_regions), dtype=np.float64)
+    knm: FloatArray = np.zeros((n_regions, n_regions), dtype=np.float64)
     half = n_regions // 2
 
     # Intra-hemispheric: exponential distance decay within each hemisphere
@@ -145,4 +149,5 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> NDArray:
     # Symmetrise and clean diagonal
     knm = np.asarray((knm + knm.T) / 2.0, dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
-    return np.clip(knm, 0, None)
+    result: FloatArray = np.clip(knm, 0, None)
+    return result

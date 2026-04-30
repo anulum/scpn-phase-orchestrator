@@ -8,12 +8,27 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.coupling.plasticity import (
     compute_eligibility,
     three_factor_update,
 )
+
+
+def test_public_array_contracts_are_parameterised() -> None:
+    """Public plasticity array contracts stay element-typed."""
+    for hint in [
+        get_type_hints(compute_eligibility)["phases"],
+        get_type_hints(compute_eligibility)["return"],
+        get_type_hints(three_factor_update)["knm"],
+        get_type_hints(three_factor_update)["eligibility"],
+        get_type_hints(three_factor_update)["return"],
+    ]:
+        assert "numpy.ndarray" in str(hint)
+        assert "float64" in str(hint)
 
 
 def test_eligibility_synchronised_phases():

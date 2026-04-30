@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -23,6 +24,8 @@ except ImportError:
     _HAS_RUST = False
 
 __all__ = ["UniversalPrior", "CouplingPrior"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 # Empirical prior from 25 domainpacks (R4-A3 cross-domain transfer study)
 _K_BASE_MEAN = 0.47
@@ -87,7 +90,7 @@ class UniversalPrior:
             K_c_estimate=0.0,
         )
 
-    def estimate_Kc(self, omegas: NDArray, n_layers: int) -> CouplingPrior:
+    def estimate_Kc(self, omegas: FloatArray, n_layers: int) -> CouplingPrior:
         """Combine prior with Dörfler-Bullo K_c for given omegas.
 
         K_c = max|ω_i - ω_j| / λ₂(L) where L is built from the prior's
@@ -98,7 +101,7 @@ class UniversalPrior:
         prior = self.default()
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
-        knm = prior.K_base * np.exp(-prior.decay_alpha * dist)
+        knm: FloatArray = prior.K_base * np.exp(-prior.decay_alpha * dist)
         np.fill_diagonal(knm, 0.0)
         K_c = critical_coupling(omegas, knm)
         return CouplingPrior(

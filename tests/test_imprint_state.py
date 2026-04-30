@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import dataclasses
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -63,6 +64,27 @@ class TestImprintStateContracts:
         """Edge case: empty oscillator set must not crash."""
         state = ImprintState(m_k=np.array([]), last_update=0.0)
         assert len(state.m_k) == 0
+
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        """Public imprint array contracts stay element-typed."""
+        state_hint = get_type_hints(ImprintState)["m_k"]
+        assert "numpy.ndarray" in str(state_hint)
+        assert "float64" in str(state_hint)
+
+        for method, param in [
+            (ImprintModel.update, "exposure"),
+            (ImprintModel.modulate_coupling, "knm"),
+            (ImprintModel.modulate_lag, "alpha"),
+            (ImprintModel.modulate_mu, "mu"),
+        ]:
+            hints = get_type_hints(method)
+            input_hint = hints[param]
+            result_hint = hints["return"]
+            assert "numpy.ndarray" in str(input_hint)
+            assert "float64" in str(input_hint)
+            assert "numpy.ndarray" in str(result_hint) or result_hint is ImprintState
+            if result_hint is not ImprintState:
+                assert "float64" in str(result_hint)
 
 
 # ---------------------------------------------------------------------------

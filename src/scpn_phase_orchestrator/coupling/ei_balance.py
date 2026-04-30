@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -27,6 +28,8 @@ except ImportError:
 
 __all__ = ["EIBalance", "compute_ei_balance", "adjust_ei_ratio"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class EIBalance:
@@ -37,7 +40,7 @@ class EIBalance:
 
 
 def compute_ei_balance(
-    knm: NDArray,
+    knm: FloatArray,
     excitatory_indices: list[int],
     inhibitory_indices: list[int],
 ) -> EIBalance:
@@ -93,11 +96,11 @@ def compute_ei_balance(
 
 
 def adjust_ei_ratio(
-    knm: NDArray,
+    knm: FloatArray,
     excitatory_indices: list[int],
     inhibitory_indices: list[int],
     target_ratio: float = 1.0,
-) -> NDArray:
+) -> FloatArray:
     """Scale inhibitory coupling to achieve target E/I ratio.
 
     Returns modified knm with inhibitory rows scaled so that
@@ -110,7 +113,7 @@ def adjust_ei_ratio(
         k_flat = np.ascontiguousarray(knm.ravel())
         e_arr = np.array(excitatory_indices, dtype=np.int64)
         i_arr = np.array(inhibitory_indices, dtype=np.int64)
-        result_flat = np.asarray(
+        result_flat: FloatArray = np.asarray(
             _rust_adjust(k_flat, n, e_arr, i_arr, target_ratio),
         )
         return result_flat.reshape(n, n)
@@ -125,7 +128,7 @@ def adjust_ei_ratio(
 
     # Scale inhibitory rows: I_new = I_old * (current_ratio / target_ratio)
     scale = current_ratio / target_ratio
-    result = knm.copy()
+    result: FloatArray = knm.copy()
     for idx in inhibitory_indices:
         if idx < n:
             result[idx, :] *= scale

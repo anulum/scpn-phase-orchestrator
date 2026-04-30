@@ -8,12 +8,16 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.imprint.state import ImprintState
 
 __all__ = ["ImprintModel"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class ImprintModel:
@@ -35,7 +39,9 @@ class ImprintModel:
         self._decay_rate = decay_rate
         self._saturation = saturation
 
-    def update(self, state: ImprintState, exposure: NDArray, dt: float) -> ImprintState:
+    def update(
+        self, state: ImprintState, exposure: FloatArray, dt: float
+    ) -> ImprintState:
         """Decay existing imprint, add new exposure, clip to saturation."""
         decayed = state.m_k * np.exp(-self._decay_rate * dt)
         m_new = np.clip(decayed + exposure * dt, 0.0, self._saturation)
@@ -45,18 +51,18 @@ class ImprintModel:
             attribution=state.attribution.copy(),
         )
 
-    def modulate_coupling(self, knm: NDArray, imprint: ImprintState) -> NDArray:
+    def modulate_coupling(self, knm: FloatArray, imprint: ImprintState) -> FloatArray:
         """Scale Knm rows by (1 + m_k)."""
-        result: NDArray = knm * (1.0 + imprint.m_k)[:, np.newaxis]
+        result: FloatArray = knm * (1.0 + imprint.m_k)[:, np.newaxis]
         return result
 
-    def modulate_lag(self, alpha: NDArray, imprint: ImprintState) -> NDArray:
+    def modulate_lag(self, alpha: FloatArray, imprint: ImprintState) -> FloatArray:
         """Shift phase lags by antisymmetric imprint offset."""
         offset = imprint.m_k[:, np.newaxis] - imprint.m_k[np.newaxis, :]
-        result: NDArray = alpha + offset
+        result: FloatArray = alpha + offset
         return result
 
-    def modulate_mu(self, mu: NDArray, imprint: ImprintState) -> NDArray:
+    def modulate_mu(self, mu: FloatArray, imprint: ImprintState) -> FloatArray:
         """Scale bifurcation parameter: μ_k * (1 + m_k)."""
-        result: NDArray = mu * (1.0 + imprint.m_k)
+        result: FloatArray = mu * (1.0 + imprint.m_k)
         return result

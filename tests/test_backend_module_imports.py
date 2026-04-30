@@ -9,8 +9,19 @@
 from __future__ import annotations
 
 import importlib
+from typing import get_type_hints
 
 import pytest
+
+from scpn_phase_orchestrator.upde._simplicial_go import simplicial_run_go
+from scpn_phase_orchestrator.upde._simplicial_julia import simplicial_run_julia
+from scpn_phase_orchestrator.upde._simplicial_mojo import simplicial_run_mojo
+from scpn_phase_orchestrator.upde._splitting_go import splitting_run_go
+from scpn_phase_orchestrator.upde._splitting_julia import splitting_run_julia
+from scpn_phase_orchestrator.upde._splitting_mojo import splitting_run_mojo
+from scpn_phase_orchestrator.upde._swarmalator_go import swarmalator_step_go
+from scpn_phase_orchestrator.upde._swarmalator_julia import swarmalator_step_julia
+from scpn_phase_orchestrator.upde._swarmalator_mojo import swarmalator_step_mojo
 
 BACKEND_MODULES = (
     "scpn_phase_orchestrator.coupling._attnres_go",
@@ -106,3 +117,34 @@ BACKEND_MODULES = (
 def test_optional_backend_module_import_surface(module_name: str) -> None:
     module = importlib.import_module(module_name)
     assert module.__name__ == module_name
+
+
+def test_optional_upde_backend_array_contracts_are_parameterised() -> None:
+    functions = [
+        splitting_run_go,
+        splitting_run_julia,
+        splitting_run_mojo,
+        simplicial_run_go,
+        simplicial_run_julia,
+        simplicial_run_mojo,
+        swarmalator_step_go,
+        swarmalator_step_julia,
+        swarmalator_step_mojo,
+    ]
+
+    for fn in functions:
+        hints = get_type_hints(fn)
+        assert "numpy.ndarray" in str(hints["return"])
+        assert "float64" in str(hints["return"])
+
+        for param in ("phases", "omegas"):
+            assert "numpy.ndarray" in str(hints[param])
+            assert "float64" in str(hints[param])
+
+        if fn.__name__.startswith("swarmalator"):
+            assert "numpy.ndarray" in str(hints["pos"])
+            assert "float64" in str(hints["pos"])
+        else:
+            for param in ("knm_flat", "alpha_flat"):
+                assert "numpy.ndarray" in str(hints[param])
+                assert "float64" in str(hints[param])

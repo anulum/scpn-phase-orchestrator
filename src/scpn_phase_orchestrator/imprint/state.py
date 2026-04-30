@@ -9,16 +9,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypeAlias
 
+import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["ImprintState"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass(frozen=True)
 class ImprintState:
     """L9 memory imprint per oscillator: accumulation vector, timestamp, attribution."""
 
-    m_k: NDArray
+    m_k: FloatArray
     last_update: float
     attribution: dict[str, float] = field(default_factory=dict)

@@ -11,12 +11,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["simplicial_run_julia"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "simplicial.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,17 +38,17 @@ def _ensure() -> Any:
 
 
 def simplicial_run_julia(
-    phases: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     zeta: float,
     psi: float,
     sigma2: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> FloatArray:
     jl = _ensure()
     result = jl.simplicial_run(
         np.ascontiguousarray(phases, dtype=np.float64),
@@ -60,4 +62,5 @@ def simplicial_run_julia(
         float(dt),
         int(n_steps),
     )
-    return np.asarray(result, dtype=np.float64)
+    result_array: FloatArray = np.asarray(result, dtype=np.float64)
+    return result_array

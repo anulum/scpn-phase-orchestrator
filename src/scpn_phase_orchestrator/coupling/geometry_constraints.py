@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,12 +22,14 @@ __all__ = [
     "validate_knm",
 ]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 class GeometryConstraint(ABC):
     """Base class for K_nm matrix geometry constraints."""
 
     @abstractmethod
-    def project(self, knm: NDArray) -> NDArray:
+    def project(self, knm: FloatArray) -> FloatArray:
         """Project *knm* onto the feasible set defined by this constraint."""
         ...
 
@@ -34,22 +37,22 @@ class GeometryConstraint(ABC):
 class SymmetryConstraint(GeometryConstraint):
     """Enforce K_nm symmetry: K -> (K + K^T) / 2."""
 
-    def project(self, knm: NDArray) -> NDArray:
+    def project(self, knm: FloatArray) -> FloatArray:
         """Return the symmetric part of *knm*."""
-        result: NDArray = 0.5 * (knm + knm.T)
+        result: FloatArray = 0.5 * (knm + knm.T)
         return result
 
 
 class NonNegativeConstraint(GeometryConstraint):
     """Clamp negative entries to zero."""
 
-    def project(self, knm: NDArray) -> NDArray:
+    def project(self, knm: FloatArray) -> FloatArray:
         """Return *knm* with all negative entries replaced by 0."""
-        result: NDArray = np.maximum(knm, 0.0)
+        result: FloatArray = np.maximum(knm, 0.0)
         return result
 
 
-def validate_knm(knm: NDArray, *, atol: float = 1e-12) -> None:
+def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
     """Check that a coupling matrix is square, symmetric, non-negative, zero-diagonal.
 
     Raises ValueError with a specific message on the first violation found.
@@ -65,9 +68,9 @@ def validate_knm(knm: NDArray, *, atol: float = 1e-12) -> None:
         raise ValueError(f"Knm diagonal is non-zero (max |diag| = {diag_max:.2e})")
 
 
-def project_knm(knm: NDArray, constraints: list[GeometryConstraint]) -> NDArray:
+def project_knm(knm: FloatArray, constraints: list[GeometryConstraint]) -> FloatArray:
     """Apply all geometry constraints sequentially, then zero the diagonal."""
-    result = knm.copy()
+    result: FloatArray = knm.copy()
     for c in constraints:
         result = c.project(result)
     np.fill_diagonal(result, 0.0)

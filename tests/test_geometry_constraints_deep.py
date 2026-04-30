@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -19,8 +21,29 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
     project_knm,
     validate_knm,
 )
+from scpn_phase_orchestrator.coupling.templates import KnmTemplate
 
 # ── validate_knm: square check ─────────────────────────────────────────
+
+
+class TestCouplingArrayTypeHints:
+    """Guard V2 typed-array contracts for public coupling helpers."""
+
+    def test_template_and_geometry_arrays_are_parameterised(self) -> None:
+        for hint in [
+            get_type_hints(KnmTemplate)["knm"],
+            get_type_hints(KnmTemplate)["alpha"],
+            get_type_hints(GeometryConstraint.project)["knm"],
+            get_type_hints(SymmetryConstraint.project)["knm"],
+            get_type_hints(SymmetryConstraint.project)["return"],
+            get_type_hints(NonNegativeConstraint.project)["knm"],
+            get_type_hints(NonNegativeConstraint.project)["return"],
+            get_type_hints(validate_knm)["knm"],
+            get_type_hints(project_knm)["knm"],
+            get_type_hints(project_knm)["return"],
+        ]:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
 
 
 class TestValidateKnmShape:

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.coupling.ei_balance import (
@@ -15,6 +17,17 @@ from scpn_phase_orchestrator.coupling.ei_balance import (
     adjust_ei_ratio,
     compute_ei_balance,
 )
+
+
+def test_public_array_contracts_are_parameterised() -> None:
+    """Public E/I balance array contracts stay element-typed."""
+    for hint in [
+        get_type_hints(compute_ei_balance)["knm"],
+        get_type_hints(adjust_ei_ratio)["knm"],
+        get_type_hints(adjust_ei_ratio)["return"],
+    ]:
+        assert "numpy.ndarray" in str(hint)
+        assert "float64" in str(hint)
 
 
 def _uniform_knm(n: int, k: float = 1.0) -> np.ndarray:
