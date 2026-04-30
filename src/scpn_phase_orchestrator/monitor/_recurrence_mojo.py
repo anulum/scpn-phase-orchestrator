@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+ByteArray: TypeAlias = NDArray[np.uint8]
 
 __all__ = [
     "_ensure_exe",
@@ -51,12 +55,12 @@ def _run(payload: str) -> list[int]:
 
 
 def recurrence_matrix_mojo(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
     epsilon: float,
     angular: bool,
-) -> NDArray:
+) -> ByteArray:
     tokens: list[str] = [
         "REC",
         str(int(t)),
@@ -72,13 +76,13 @@ def recurrence_matrix_mojo(
 
 
 def cross_recurrence_matrix_mojo(
-    traj_a_flat: NDArray,
-    traj_b_flat: NDArray,
+    traj_a_flat: FloatArray,
+    traj_b_flat: FloatArray,
     t: int,
     d: int,
     epsilon: float,
     angular: bool,
-) -> NDArray:
+) -> ByteArray:
     tokens: list[str] = [
         "CROSS",
         str(int(t)),

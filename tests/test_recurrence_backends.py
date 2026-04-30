@@ -15,12 +15,26 @@ Outputs are booleans — tolerance is exact array equality. Both
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import recurrence as r_mod
+from scpn_phase_orchestrator.monitor._recurrence_go import (
+    cross_recurrence_matrix_go,
+    recurrence_matrix_go,
+)
+from scpn_phase_orchestrator.monitor._recurrence_julia import (
+    cross_recurrence_matrix_julia,
+    recurrence_matrix_julia,
+)
+from scpn_phase_orchestrator.monitor._recurrence_mojo import (
+    cross_recurrence_matrix_mojo,
+    recurrence_matrix_mojo,
+)
 from scpn_phase_orchestrator.monitor.recurrence import (
     AVAILABLE_BACKENDS,
     cross_recurrence_matrix,
@@ -64,6 +78,32 @@ def _reference_cross(
 
 def _trajectory(seed: int, t: int = 30, d: int = 3) -> np.ndarray:
     return np.random.default_rng(seed).normal(0, 1, (t, d))
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        recurrence_matrix_go,
+        cross_recurrence_matrix_go,
+        recurrence_matrix_julia,
+        cross_recurrence_matrix_julia,
+        recurrence_matrix_mojo,
+        cross_recurrence_matrix_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        checked_hints = [hints["return"]]
+        checked_hints.extend(
+            value
+            for key, value in hints.items()
+            if key in {"traj_flat", "traj_a_flat", "traj_b_flat"}
+        )
+        for hint in checked_hints:
+            assert "numpy.ndarray" in str(hint)
+        float_hint = (
+            hints["traj_flat"] if "traj_flat" in hints else hints["traj_a_flat"]
+        )
+        assert "float64" in str(float_hint)
+        assert "uint8" in str(hints["return"])
 
 
 class TestRustParity:
