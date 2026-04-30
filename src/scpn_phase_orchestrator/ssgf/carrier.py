@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -25,11 +26,13 @@ except ImportError:
 
 __all__ = ["GeometryCarrier", "SSGFState"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class SSGFState:
-    z: NDArray
-    W: NDArray
+    z: FloatArray
+    W: FloatArray
     cost: float
     grad_norm: float
     step: int
@@ -58,42 +61,42 @@ class GeometryCarrier:
         self._z_dim = z_dim
         self._lr = lr
         self._rng = np.random.default_rng(seed)
-        self._z = self._rng.normal(0, 0.1, z_dim)
+        self._z: FloatArray = self._rng.normal(0, 0.1, z_dim)
         # Decoder: W = softplus(A @ z) reshaped to (n, n), zero diagonal
         # A is a fixed random projection (n*n × z_dim)
-        self._A = self._rng.normal(
+        self._A: FloatArray = self._rng.normal(
             0, 1.0 / np.sqrt(z_dim), (n_oscillators * n_oscillators, z_dim)
         )
         self._step = 0
 
     @property
-    def z(self) -> NDArray:
+    def z(self) -> FloatArray:
         return self._z.copy()
 
     @property
     def z_dim(self) -> int:
         return self._z_dim
 
-    def decode(self, z: NDArray | None = None) -> NDArray:
+    def decode(self, z: FloatArray | None = None) -> FloatArray:
         """Map z → coupling matrix W (n × n, non-negative, zero diagonal)."""
         if z is None:
             z = self._z
         if _HAS_RUST:
             zv = np.ascontiguousarray(z, dtype=np.float64)
             av = np.ascontiguousarray(self._A.ravel(), dtype=np.float64)
-            w_flat: NDArray = np.asarray(_rust_decode(zv, av, self._n))
+            w_flat: FloatArray = np.asarray(_rust_decode(zv, av, self._n))
             return w_flat.reshape(self._n, self._n)
         raw = self._A @ z
         # Softplus ensures non-negative coupling
         W = np.log1p(np.exp(raw)).reshape(self._n, self._n)
         np.fill_diagonal(W, 0.0)
-        out: NDArray = W
+        out: FloatArray = W
         return out
 
     def update(
         self,
         cost: float,
-        cost_fn: Callable[[NDArray], float] | None = None,
+        cost_fn: Callable[[FloatArray], float] | None = None,
         epsilon: float = 1e-4,
     ) -> SSGFState:
         """One SSGF outer step: compute gradient of cost w.r.t. z, descend.
@@ -102,7 +105,7 @@ class GeometryCarrier:
         Otherwise records cost for external gradient computation.
         """
         self._step += 1
-        grad = np.zeros(self._z_dim)
+        grad: FloatArray = np.zeros(self._z_dim)
 
         if cost_fn is not None:
             for i in range(self._z_dim):

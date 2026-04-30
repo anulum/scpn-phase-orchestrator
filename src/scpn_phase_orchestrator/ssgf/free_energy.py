@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -28,13 +30,15 @@ except ImportError:
 
 __all__ = ["add_langevin_noise", "boltzmann_weight", "effective_temperature"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 def add_langevin_noise(
-    z: NDArray,
+    z: FloatArray,
     temperature: float,
     dt: float,
     rng: np.random.Generator | None = None,
-) -> NDArray:
+) -> FloatArray:
     """Add Langevin stochastic noise to a z-space vector.
 
     z_new = z + sqrt(2·T·dt) · η,  η ~ N(0, I)
@@ -48,16 +52,19 @@ def add_langevin_noise(
         return z.copy()
 
     if _HAS_RUST and rng is None:
-        flat = np.ascontiguousarray(z.ravel(), dtype=np.float64)
-        return np.asarray(_rust_langevin(flat, temperature, dt, 42)).reshape(
+        flat: FloatArray = np.ascontiguousarray(z.ravel(), dtype=np.float64)
+        rust_result: FloatArray = np.asarray(
+            _rust_langevin(flat, temperature, dt, 42)
+        ).reshape(
             z.shape,
         )
+        return rust_result
 
     if rng is None:
         rng = np.random.default_rng()
     sigma = np.sqrt(2.0 * temperature * dt)
     noise = rng.standard_normal(z.shape)
-    result: NDArray = z + sigma * noise
+    result: FloatArray = z + sigma * noise
     return result
 
 
@@ -76,7 +83,7 @@ def boltzmann_weight(u_total: float, temperature: float) -> float:
     return float(np.exp(exponent))
 
 
-def effective_temperature(costs_history: NDArray) -> float:
+def effective_temperature(costs_history: FloatArray) -> float:
     """Estimate effective temperature from cost fluctuations.
 
     T_eff = Var(U) / (2 · <U>)
@@ -90,7 +97,7 @@ def effective_temperature(costs_history: NDArray) -> float:
     if len(costs_history) < 2:
         return 0.0
     if _HAS_RUST:
-        c = np.ascontiguousarray(costs_history, dtype=np.float64).ravel()
+        c: FloatArray = np.ascontiguousarray(costs_history, dtype=np.float64).ravel()
         return float(_rust_teff(c))
     var = float(np.var(costs_history, ddof=1))
     mean = float(np.mean(costs_history))

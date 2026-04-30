@@ -8,12 +8,20 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.monitor.sleep_staging import (
     classify_sleep_stage,
     ultradian_phase,
 )
+
+
+def test_public_array_contracts_are_parameterised():
+    hint = get_type_hints(ultradian_phase)["timestamps"]
+    assert "numpy.ndarray" in str(hint)
+    assert "float64" in str(hint)
 
 
 def test_n3_high_synchrony():

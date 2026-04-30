@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.monitor.psychedelic import (
@@ -16,6 +18,22 @@ from scpn_phase_orchestrator.monitor.psychedelic import (
     simulate_psychedelic_trajectory,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+
+def test_public_array_contracts_are_parameterised():
+    hints = (
+        get_type_hints(reduce_coupling)["knm"],
+        get_type_hints(reduce_coupling)["return"],
+        get_type_hints(entropy_from_phases)["phases"],
+        get_type_hints(simulate_psychedelic_trajectory)["phases"],
+        get_type_hints(simulate_psychedelic_trajectory)["omegas"],
+        get_type_hints(simulate_psychedelic_trajectory)["knm"],
+        get_type_hints(simulate_psychedelic_trajectory)["alpha"],
+    )
+
+    for hint in hints:
+        assert "numpy.ndarray" in str(hint)
+        assert "float64" in str(hint)
 
 
 def test_reduce_coupling_zero_factor_keeps_original():

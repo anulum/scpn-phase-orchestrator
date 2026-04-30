@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import importlib.util
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -32,6 +33,14 @@ class TestTCBOObserverInit:
     def test_custom_params(self):
         obs = TCBOObserver(tau_h1=0.5, embed_dim=5, embed_delay=2, window_size=100)
         assert obs.tau_h1 == 0.5
+
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        for hint in [
+            get_type_hints(TCBOObserver.observe)["phases"],
+            get_type_hints(TCBOObserver._delay_embed)["return"],
+        ]:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
 
 
 class TestTCBOInsufficient:

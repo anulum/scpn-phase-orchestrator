@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -17,6 +18,8 @@ from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["SNNControllerBridge"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 # Abbott 1999, Eq. 1 — LIF time constants
 TAU_RC = 0.02  # s, membrane time constant
@@ -41,14 +44,15 @@ class SNNControllerBridge:
 
     def upde_state_to_input_current(
         self, state: UPDEState, i_scale: float = 1.0
-    ) -> NDArray:
+    ) -> FloatArray:
         """Map R values from each layer to LIF input currents."""
-        r_values = np.array([ls.R for ls in state.layers], dtype=np.float64)
-        return r_values * i_scale
+        r_values: FloatArray = np.array([ls.R for ls in state.layers], dtype=np.float64)
+        result: FloatArray = r_values * i_scale
+        return result
 
     def spike_rates_to_actions(
         self,
-        rates: NDArray,
+        rates: FloatArray,
         layer_assignments: list[int],
         threshold_hz: float = 50.0,
     ) -> list[ControlAction]:
@@ -75,12 +79,12 @@ class SNNControllerBridge:
                 )
         return actions
 
-    def lif_rate_estimate(self, currents: NDArray) -> NDArray:
+    def lif_rate_estimate(self, currents: FloatArray) -> FloatArray:
         """Analytic LIF steady-state firing rate (Abbott 1999, Eq. 1).
 
         rate = 1 / (tau_ref - tau_rc * ln(1 - 1/J))  for J > 1
         """
-        rates = np.zeros_like(currents, dtype=np.float64)
+        rates: FloatArray = np.zeros_like(currents, dtype=np.float64)
         above = currents > 1.0
         if above.any():
             j = currents[above]

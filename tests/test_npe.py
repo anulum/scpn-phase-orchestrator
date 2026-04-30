@@ -8,12 +8,25 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.monitor.npe import compute_npe, phase_distance_matrix
 
 
 class TestPhaseDistanceMatrix:
+    def test_public_array_contracts_are_parameterised(self):
+        hints = (
+            get_type_hints(phase_distance_matrix)["phases"],
+            get_type_hints(phase_distance_matrix)["return"],
+            get_type_hints(compute_npe)["phases"],
+        )
+
+        for hint in hints:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
+
     def test_symmetric(self):
         phases = np.array([0.0, 1.0, 2.0])
         D = phase_distance_matrix(phases)

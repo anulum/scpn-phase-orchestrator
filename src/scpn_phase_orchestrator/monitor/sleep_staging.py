@@ -8,8 +8,13 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+StageCodeArray: TypeAlias = NDArray[np.uint8]
 
 try:
     from spo_kernel import (
@@ -81,7 +86,7 @@ _STAGE_CODES = {"Wake": 0, "N1": 1, "N2": 2, "N3": 3, "REM": 4}
 
 
 def ultradian_phase(
-    timestamps: NDArray,
+    timestamps: FloatArray,
     stage_history: list[str],
 ) -> float:
     """Estimate position within the ~90-minute ultradian sleep cycle.
@@ -99,13 +104,13 @@ def ultradian_phase(
         Returns 0.0 if no N3 epoch is found.
     """
     if _HAS_RUST:
-        ts = np.ascontiguousarray(timestamps, dtype=np.float64)
-        codes = np.array(
+        rust_ts: FloatArray = np.ascontiguousarray(timestamps, dtype=np.float64)
+        codes: StageCodeArray = np.array(
             [_STAGE_CODES.get(s, 0) for s in stage_history],
             dtype=np.uint8,
         )
-        return float(_rust_ultradian(ts, codes))
-    ts = np.asarray(timestamps, dtype=np.float64)
+        return float(_rust_ultradian(rust_ts, codes))
+    ts: FloatArray = np.asarray(timestamps, dtype=np.float64)
     if len(ts) == 0 or len(stage_history) == 0:
         return 0.0
     n = min(len(ts), len(stage_history))

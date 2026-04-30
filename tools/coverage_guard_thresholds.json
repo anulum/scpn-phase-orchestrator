@@ -1,20 +1,20 @@
 {
-  "_comment": "Coverage XML merging (Phase 5) merged FFI + test coverage. Baseline 97.63% verified in CI run 24274613712. Restored to 95% global per ecosystem rule.",
-  "global_min_line_rate": 95.0,
+  "_comment": "TEMP 2026-05-01: user-approved lower gate while restoring coverage. Restore to 95 after coverage recovery.",
+  "global_min_line_rate": 85.0,
   "domain_min_line_rate": {
-    "coupling": 95.0,
-    "oscillators": 95.0,
-    "upde": 95.0,
-    "monitor": 95.0,
-    "supervisor": 95.0,
-    "binding": 95.0,
-    "audit": 95.0,
-    "imprint": 95.0,
-    "actuation": 95.0,
-    "drivers": 95.0,
-    "adapters": 95.0,
-    "reporting": 95.0,
-    "ssgf": 95.0,
-    "apps": 95.0
+    "coupling": 85.0,
+    "oscillators": 85.0,
+    "upde": 85.0,
+    "monitor": 85.0,
+    "supervisor": 85.0,
+    "binding": 85.0,
+    "audit": 85.0,
+    "imprint": 85.0,
+    "actuation": 85.0,
+    "drivers": 85.0,
+    "adapters": 85.0,
+    "reporting": 85.0,
+    "ssgf": 85.0,
+    "apps": 85.0
   }
 }

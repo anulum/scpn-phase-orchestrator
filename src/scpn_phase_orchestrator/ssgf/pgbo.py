@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -17,6 +18,8 @@ from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 __all__ = ["PGBO", "PGBOSnapshot"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -56,7 +59,7 @@ class PGBO:
         self._step = 0
         self._history: list[PGBOSnapshot] = []
 
-    def observe(self, phases: NDArray, W: NDArray) -> PGBOSnapshot:
+    def observe(self, phases: FloatArray, W: FloatArray) -> PGBOSnapshot:
         """Compute coherence, SSGF costs, and phase-geometry alignment.
 
         Args:
@@ -79,7 +82,7 @@ class PGBO:
             gauge_curvature = 0.0
         else:
             diff = phases[:, np.newaxis] - phases[np.newaxis, :]
-            plv_matrix = np.cos(diff)
+            plv_matrix: FloatArray = np.cos(diff)
             triu = np.triu_indices(n, k=1)
             plv_flat = plv_matrix[triu]
             w_flat = W[triu]

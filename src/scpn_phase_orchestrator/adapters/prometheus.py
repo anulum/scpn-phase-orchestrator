@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import json
 from math import isfinite
+from typing import TypeAlias
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class PrometheusAdapter:
@@ -40,7 +43,7 @@ class PrometheusAdapter:
 
     def fetch_metric(
         self, query: str, start: float, end: float, step: float
-    ) -> NDArray:
+    ) -> FloatArray:
         """Query Prometheus range API, return values as 1-D float array.
 
         Raises ConnectionError on network failure, ValueError on bad response.
@@ -65,7 +68,8 @@ class PrometheusAdapter:
 
         # First result series: extract values (timestamp, value pairs)
         values = [float(v[1]) for v in results[0].get("values", [])]
-        return np.array(values, dtype=np.float64)
+        result: FloatArray = np.array(values, dtype=np.float64)
+        return result
 
     def fetch_instant(self, query: str) -> float:
         """Query Prometheus instant API, return scalar value."""

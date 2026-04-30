@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import re
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -43,6 +44,12 @@ class TestQ1616Encoding:
 
 
 class TestModuleStructure:
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        hints = get_type_hints(KuramotoVerilogCompiler.compile)
+        for param in ("knm", "omegas"):
+            assert "numpy.ndarray" in str(hints[param])
+            assert "float64" in str(hints[param])
+
     def test_module_header_uses_n(self) -> None:
         compiler = KuramotoVerilogCompiler(n_oscillators=4)
         verilog = compiler.compile(np.zeros((4, 4)), np.ones(4), 0.01)

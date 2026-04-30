@@ -8,12 +8,28 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
 
 
 class TestWindingNumbers:
+    def test_public_array_contracts_are_parameterised(self):
+        hints = (
+            get_type_hints(winding_numbers)["phases_history"],
+            get_type_hints(winding_numbers)["return"],
+            get_type_hints(winding_vector)["phases_history"],
+            get_type_hints(winding_vector)["return"],
+        )
+
+        for hint in hints:
+            assert "numpy.ndarray" in str(hint)
+
+        assert "float64" in str(hints[0])
+        assert "int64" in str(hints[1])
+
     def test_one_full_rotation(self):
         """Oscillator advancing past 2π should have winding number 1."""
         T = 100

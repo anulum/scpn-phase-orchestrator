@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,6 +38,8 @@ except ImportError:
 
 __all__ = ["EthicalCost", "compute_ethical_cost"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class EthicalCost:
@@ -49,8 +52,8 @@ class EthicalCost:
 
 
 def compute_ethical_cost(
-    phases: NDArray,
-    knm: NDArray,
+    phases: FloatArray,
+    knm: FloatArray,
     *,
     alpha_R: float = 0.4,
     beta_K: float = 0.3,
@@ -82,8 +85,8 @@ def compute_ethical_cost(
         )
 
     if _HAS_RUST:
-        p = np.ascontiguousarray(phases, dtype=np.float64)
-        k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+        p: FloatArray = np.ascontiguousarray(phases, dtype=np.float64)
+        k: FloatArray = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         j, phi, c15, nv = _rust_ethical_cost(
             p,
             k,

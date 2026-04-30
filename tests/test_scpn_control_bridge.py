@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
@@ -42,6 +44,15 @@ def _make_state(n_layers: int = 3) -> UPDEState:
 
 
 class TestImportKnm:
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        for hint in [
+            get_type_hints(SCPNControlBridge.import_knm)["scpn_knm"],
+            get_type_hints(SCPNControlBridge.import_omega)["scpn_omega"],
+            get_type_hints(SCPNControlBridge.import_omega)["return"],
+        ]:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
+
     def test_valid_square(self) -> None:
         bridge = SCPNControlBridge({"layers": 4})
         knm = np.ones((4, 4))

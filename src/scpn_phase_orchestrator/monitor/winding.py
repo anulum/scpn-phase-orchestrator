@@ -18,10 +18,13 @@ clockwise.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -36,17 +39,17 @@ TWO_PI = 2.0 * np.pi
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray]:
+def _load_rust_fn() -> Callable[..., IntArray]:
     from spo_kernel import winding_numbers as _rust_wind
 
-    def _rust(phases_flat: NDArray, t: int, n: int) -> NDArray:
+    def _rust(phases_flat: FloatArray, t: int, n: int) -> IntArray:
         # Rust FFI takes the flat array and infers T from length.
         return np.asarray(_rust_wind(phases_flat, int(n)), dtype=np.int64)
 
-    return cast("Callable[..., NDArray]", _rust)
+    return cast("Callable[..., IntArray]", _rust)
 
 
-def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._winding_mojo import (
         _ensure_exe,
         winding_numbers_mojo,
@@ -56,7 +59,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     return winding_numbers_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.monitor._winding_julia import (
         winding_numbers_julia,
@@ -65,7 +68,7 @@ def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchai
     return winding_numbers_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_go_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._winding_go import (
         _load_lib,
         winding_numbers_go,
@@ -75,7 +78,7 @@ def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     return winding_numbers_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., IntArray]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -98,13 +101,13 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray] | None:
+def _dispatch() -> Callable[..., IntArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
 
 
-def winding_numbers(phases_history: NDArray) -> NDArray:
+def winding_numbers(phases_history: FloatArray) -> IntArray:
     """Cumulative winding number of each oscillator over a trajectory.
 
     ``w_i = floor(Σ_t wrap(Δθ_{i,t}) / 2π)`` with
@@ -121,7 +124,7 @@ def winding_numbers(phases_history: NDArray) -> NDArray:
         return np.zeros(n, dtype=np.int64)
 
     t, n = int(phases_history.shape[0]), int(phases_history.shape[1])
-    flat = np.ascontiguousarray(phases_history.ravel(), dtype=np.float64)
+    flat: FloatArray = np.ascontiguousarray(phases_history.ravel(), dtype=np.float64)
 
     backend_fn = _dispatch()
     if backend_fn is not None:
@@ -131,10 +134,10 @@ def winding_numbers(phases_history: NDArray) -> NDArray:
     dtheta = np.diff(phases_history, axis=0)
     dtheta_wrapped = (dtheta + np.pi) % TWO_PI - np.pi
     cumulative = np.sum(dtheta_wrapped, axis=0)
-    return cast("NDArray", np.floor(cumulative / TWO_PI).astype(np.int64))
+    return cast("IntArray", np.floor(cumulative / TWO_PI).astype(np.int64))
 
 
-def winding_vector(phases_history: NDArray) -> NDArray:
+def winding_vector(phases_history: FloatArray) -> IntArray:
     """N-dimensional integer classification vector from winding numbers.
 
     Alias for :func:`winding_numbers`; topologically distinct
