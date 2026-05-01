@@ -95,6 +95,57 @@ class TestSimulatedBoardAdapter:
 
 
 class TestPrometheusAdapter:
+    def test_fetch_metric_rejects_invalid_query_and_range(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with pytest.raises(ValueError, match="non-empty string"):
+            adapter.fetch_metric("  ", 0, 10, 1)
+        with pytest.raises(ValueError, match="end must be >= start"):
+            adapter.fetch_metric("up", 10, 0, 1)
+        with pytest.raises(ValueError, match="step must be positive"):
+            adapter.fetch_metric("up", 0, 10, 0)
+
+    def test_fetch_instant_rejects_invalid_query(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with pytest.raises(ValueError, match="non-empty string"):
+            adapter.fetch_instant("")
+
+    def test_fetch_metric_url_encodes_query_text(self):
+        from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+
+        mock_response = json.dumps(
+            {
+                "status": "success",
+                "data": {"resultType": "matrix", "result": []},
+            }
+        ).encode()
+        adapter = PrometheusAdapter("http://localhost:9090")
+        with patch(
+            "scpn_phase_orchestrator.adapters.prometheus.urlopen"
+        ) as mock_urlopen:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = mock_response
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            mock_urlopen.return_value = mock_resp
+
+            adapter.fetch_metric(
+                'sum(rate(http_requests_total{job="api"}[5m]))',
+                0,
+                60,
+                5,
+            )
+
+            request_arg = mock_urlopen.call_args.args[0]
+            encoded = (
+                "query=sum%28rate%28http_requests_total%7Bjob%3D%22api%22%7D"
+                "%5B5m%5D%29%29"
+            )
+            assert encoded in request_arg.full_url
+
     def test_fetch_metric_success(self):
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
