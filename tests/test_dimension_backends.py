@@ -21,12 +21,26 @@ triu-indices pair list. Tolerances:
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import dimension as dim_mod
+from scpn_phase_orchestrator.monitor._dimension_go import (
+    correlation_integral_go,
+    kaplan_yorke_dimension_go,
+)
+from scpn_phase_orchestrator.monitor._dimension_julia import (
+    correlation_integral_julia,
+    kaplan_yorke_dimension_julia,
+)
+from scpn_phase_orchestrator.monitor._dimension_mojo import (
+    correlation_integral_mojo,
+    kaplan_yorke_dimension_mojo,
+)
 from scpn_phase_orchestrator.monitor.dimension import (
     AVAILABLE_BACKENDS,
     correlation_integral,
@@ -68,6 +82,31 @@ def _trajectory(seed: int, t: int = 40, d: int = 3) -> np.ndarray:
 
 def _eps(n_k: int = 10) -> np.ndarray:
     return np.logspace(-1, 0.5, n_k)
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    ci_functions = (
+        correlation_integral_go,
+        correlation_integral_julia,
+        correlation_integral_mojo,
+    )
+    ky_functions = (
+        kaplan_yorke_dimension_go,
+        kaplan_yorke_dimension_julia,
+        kaplan_yorke_dimension_mojo,
+    )
+    for fn in ci_functions:
+        hints = get_type_hints(fn)
+        for key in ("traj_flat", "epsilons", "return"):
+            assert "numpy.ndarray" in str(hints[key])
+            assert "float64" in str(hints[key])
+        for key in ("idx_i", "idx_j"):
+            assert "numpy.ndarray" in str(hints[key])
+            assert "int64" in str(hints[key])
+    for fn in ky_functions:
+        hints = get_type_hints(fn)
+        assert "numpy.ndarray" in str(hints["lyapunov_exponents"])
+        assert "float64" in str(hints["lyapunov_exponents"])
 
 
 class TestRustParity:
