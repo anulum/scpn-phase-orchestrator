@@ -4,6 +4,10 @@ Validation tests that confirm or falsify the physical correctness of the
 JAX nn/ module. Each test has a known analytical result. A failure means
 the implementation is wrong, not that the test is too strict.
 
+Governance for remaining exceptions (xfail/skip) is tracked in
+`docs/reference/nn_xfail_skip_register.md` with issue refs,
+owner assignment, and release-blocking decisions.
+
 Existing tests (`test_physics_benchmarks.py`, `test_ott_antonsen.py`,
 `test_bifurcation.py`) validate the NumPy engine. These tests validate
 the JAX nn/ module independently, then cross-validate both backends.
