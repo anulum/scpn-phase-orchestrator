@@ -12,8 +12,12 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
+import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["_ensure_exe", "entropy_production_rate_mojo"]
 
@@ -47,9 +51,9 @@ def _run(payload: str) -> float:
 
 
 def entropy_production_rate_mojo(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
     alpha: float,
     dt: float,
 ) -> float:
