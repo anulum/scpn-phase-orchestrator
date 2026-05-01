@@ -1,0 +1,7172 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/concepts/domain_utilisation_schemas/">
+      
+      
+        <link rel="prev" href="../phase_control_theory/">
+      
+      
+        <link rel="next" href="../kuramoto_theory/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/anulum_logo_company.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Domain Utilisation Schemas - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#domain-utilisation-schemas" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Domain Utilisation Schemas
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/stuart_landau/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tutorials/01_new_domain_checklist/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/api/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../galleries/domainpack_gallery/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../ASSUMPTIONS/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../papers/JOSS_DRAFT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Papers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../VALIDATION_REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../pricing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Pricing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/minimal_domainpack_5min/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minimal Domainpack in 5 Minutes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/start_here/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here (Learning Path)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pipeline_firing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How the Pipeline Fires
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pipeline_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../phase_control_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#master-domainpack-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Master Domainpack Table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-kuramoto-fits-each-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Kuramoto Fits Each Domain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why Kuramoto Fits Each Domain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#neuroscience-eeg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neuroscience (EEG)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#power-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power Systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cardiac-electrophysiology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cardiac Electrophysiology
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rotating-machinery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating Machinery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chemical-reactors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chemical Reactors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plasma-physics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plasma Physics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manufacturing-spc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manufacturing SPC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#queue-networks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Queue Networks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#circadian-biology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Circadian Biology
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#traffic-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Traffic Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epidemic-sir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epidemic SIR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biology-bio-stub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Biology (Bio Stub)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graph-geometry-geometry-walk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph Geometry (Geometry Walk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimal-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimal Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fusion-equilibrium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fusion Equilibrium
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#laser-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Laser Arrays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pll-clock-networks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PLL Clock Networks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firefly-swarms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Firefly Swarms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#swarm-robotics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Swarm Robotics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autonomous-vehicles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autonomous Vehicles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#brain-connectome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Brain Connectome
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#financial-markets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Financial Markets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gene-oscillator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gene Oscillator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identity-coherence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity Coherence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#musical-acoustics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Musical Acoustics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#robotic-cpg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Robotic CPG
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#satellite-constellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Satellite Constellation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sleep-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sleep Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vortex-shedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vortex Shedding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-coordination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Coordination
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-extraction-rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase Extraction Rationale
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#goodbad-layer-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Good/Bad Layer Partition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#boundary-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundary Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actuator-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Actuator Mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coupling-topology-rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coupling Topology Rationale
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#imprint-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imprint Semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New Domain
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kuramoto_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/backend_fallbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Fallback Chain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/backend_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/dependency_locks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Locks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Differentiable Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/advanced_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/control_systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/analysis_toolkit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Toolkit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/hardware_deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/digital_twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital Twin Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/notebook_to_production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook → Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/interactive_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../video_scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Video Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/04_differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Differentiable Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_simplicial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Simplicial (3-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_hypergraph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Hypergraph (k-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_geometric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Geometric (SO(2))
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_envelope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Envelope (RMS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_splitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Strang Splitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_te_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — TE Adaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_prior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Universal Prior
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_connectome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — HCP Connectome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_sleep_staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Sleep Staging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_evs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — EVS (Entrainment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/ssgf_carrier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Geometry Carrier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/ssgf_ethical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Ethical Cost (C15)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_23" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_23" id="__nav_7_23_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_23_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_23">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autotune
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_sindy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase-SINDy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_coupling_est/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_phase_extract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Extraction (Hilbert)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_freq_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequency Identification (DMD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifacts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neural Network (nn)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_physics_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Physics Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/end_to_end_wiring_audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Wiring Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../competitive_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../competitive_comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What SPO Does That No One Else Can
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Papers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/JOSS_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JOSS: Phase Dynamics Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/DUAL_R_PH1_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual R+p_h1 Consciousness Criterion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/SSGF_IDENTITY_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF Sextuple Identity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/SAFETY_CERT_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Certification Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/FEP_CORRESPONDENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FEP Correspondence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION_REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION_STUDY_PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clinical Study Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pricing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pricing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#master-domainpack-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Master Domainpack Table
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-kuramoto-fits-each-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Kuramoto Fits Each Domain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why Kuramoto Fits Each Domain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#neuroscience-eeg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neuroscience (EEG)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#power-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power Systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cardiac-electrophysiology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cardiac Electrophysiology
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rotating-machinery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating Machinery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chemical-reactors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chemical Reactors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plasma-physics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plasma Physics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manufacturing-spc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manufacturing SPC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#queue-networks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Queue Networks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#circadian-biology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Circadian Biology
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#traffic-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Traffic Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epidemic-sir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Epidemic SIR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#biology-bio-stub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Biology (Bio Stub)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graph-geometry-geometry-walk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph Geometry (Geometry Walk)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimal-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimal Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fusion-equilibrium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fusion Equilibrium
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#laser-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Laser Arrays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pll-clock-networks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PLL Clock Networks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firefly-swarms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Firefly Swarms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#swarm-robotics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Swarm Robotics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autonomous-vehicles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autonomous Vehicles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#brain-connectome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Brain Connectome
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#financial-markets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Financial Markets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gene-oscillator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gene Oscillator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identity-coherence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity Coherence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#musical-acoustics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Musical Acoustics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#robotic-cpg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Robotic CPG
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#satellite-constellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Satellite Constellation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sleep-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sleep Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vortex-shedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vortex Shedding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-coordination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Coordination
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-extraction-rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase Extraction Rationale
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#goodbad-layer-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Good/Bad Layer Partition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#boundary-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boundary Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actuator-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Actuator Mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coupling-topology-rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coupling Topology Rationale
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#imprint-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imprint Semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New Domain
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="domain-utilisation-schemas">Domain Utilisation Schemas<a class="headerlink" href="#domain-utilisation-schemas" title="Permanent link">&para;</a></h1>
+<p>Cross-domain comparison of all 33 SPO domainpacks, showing how Kuramoto/UPDE
+phase dynamics map to diverse physical, biological, and engineered systems.</p>
+<h2 id="master-domainpack-table">Master Domainpack Table<a class="headerlink" href="#master-domainpack-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Pack</th>
+<th>Layers</th>
+<th>Osc</th>
+<th>Safety Tier</th>
+<th>Pipeline</th>
+<th>Key Innovation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>agent_coordination</td>
+<td>3</td>
+<td>12</td>
+<td>research</td>
+<td>full</td>
+<td>Multi-agent AI sync (heartbeat, task, topic)</td>
+</tr>
+<tr>
+<td>autonomous_vehicles</td>
+<td>3</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>Vehicle platoon phase-locking</td>
+</tr>
+<tr>
+<td>bio_stub</td>
+<td>4</td>
+<td>16</td>
+<td>research</td>
+<td>full</td>
+<td>Multi-scale biological oscillators</td>
+</tr>
+<tr>
+<td>brain_connectome</td>
+<td>4</td>
+<td>12</td>
+<td>research</td>
+<td>full</td>
+<td>HCP-inspired structural connectivity</td>
+</tr>
+<tr>
+<td>cardiac_rhythm</td>
+<td>4</td>
+<td>10</td>
+<td>clinical</td>
+<td>full</td>
+<td>Gap-junction coupling, arrhythmia</td>
+</tr>
+<tr>
+<td>chemical_reactor</td>
+<td>4</td>
+<td>10</td>
+<td>production</td>
+<td>full</td>
+<td>Hopf bifurcation, Semenov limit</td>
+</tr>
+<tr>
+<td>circadian_biology</td>
+<td>4</td>
+<td>10</td>
+<td>research</td>
+<td>full</td>
+<td>SCN clock-gene coupled oscillators</td>
+</tr>
+<tr>
+<td>epidemic_sir</td>
+<td>3</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>Epidemic wave synchronisation</td>
+</tr>
+<tr>
+<td>financial_markets</td>
+<td>4</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>Hilbert phase, crash regime detection</td>
+</tr>
+<tr>
+<td>firefly_swarm</td>
+<td>2</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>Mirollo-Strogatz flash synchronisation</td>
+</tr>
+<tr>
+<td>fusion_equilibrium</td>
+<td>6</td>
+<td>12</td>
+<td>research</td>
+<td>full</td>
+<td>MHD equilibrium + FusionCoreBridge</td>
+</tr>
+<tr>
+<td>gene_oscillator</td>
+<td>3</td>
+<td>6</td>
+<td>research</td>
+<td>full</td>
+<td>Repressilator + quorum sensing</td>
+</tr>
+<tr>
+<td>geometry_walk</td>
+<td>2</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>Random walk on graphs</td>
+</tr>
+<tr>
+<td>identity_coherence</td>
+<td>6</td>
+<td>35</td>
+<td>research</td>
+<td>full</td>
+<td>SSGF identity model, chimera + plasticity</td>
+</tr>
+<tr>
+<td>laser_array</td>
+<td>3</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>Evanescent-coupled laser phase-locking</td>
+</tr>
+<tr>
+<td>manufacturing_spc</td>
+<td>3</td>
+<td>9</td>
+<td>consumer</td>
+<td>full</td>
+<td>SPC process drift detection</td>
+</tr>
+<tr>
+<td>metaphysics_demo</td>
+<td>3</td>
+<td>7</td>
+<td>research</td>
+<td>full</td>
+<td>P/I/S + imprint + geometry</td>
+</tr>
+<tr>
+<td>minimal_domain</td>
+<td>2</td>
+<td>4</td>
+<td>research</td>
+<td>full</td>
+<td>Minimal-but-complete pipeline example</td>
+</tr>
+<tr>
+<td>musical_acoustics</td>
+<td>3</td>
+<td>9</td>
+<td>research</td>
+<td>full</td>
+<td>Consonance and groove via harmonic sync</td>
+</tr>
+<tr>
+<td>network_security</td>
+<td>3</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>DDoS detection via traffic sync anomaly</td>
+</tr>
+<tr>
+<td>neuroscience_eeg</td>
+<td>6</td>
+<td>14</td>
+<td>research</td>
+<td>full</td>
+<td>EEG band-&gt;phase, seizure detection</td>
+</tr>
+<tr>
+<td>plasma_control</td>
+<td>8</td>
+<td>16</td>
+<td>research</td>
+<td>adapter</td>
+<td>Full tokamak layer hierarchy (PlasmaControlBridge)</td>
+</tr>
+<tr>
+<td>pll_clock</td>
+<td>3</td>
+<td>8</td>
+<td>production</td>
+<td>full</td>
+<td>PLL network clock sync (ITU-T G.811)</td>
+</tr>
+<tr>
+<td>power_grid</td>
+<td>5</td>
+<td>12</td>
+<td>production</td>
+<td>full</td>
+<td>Swing equation = Kuramoto (exact)</td>
+</tr>
+<tr>
+<td>quantum_simulation</td>
+<td>3</td>
+<td>8</td>
+<td>research</td>
+<td>adapter</td>
+<td>Quantum gate phase tracking (QuantumControlBridge)</td>
+</tr>
+<tr>
+<td>queuewaves</td>
+<td>3</td>
+<td>6</td>
+<td>consumer</td>
+<td>full</td>
+<td>Service queue oscillations</td>
+</tr>
+<tr>
+<td>robotic_cpg</td>
+<td>4</td>
+<td>8</td>
+<td>consumer</td>
+<td>full</td>
+<td>Quadruped CPG locomotion gait patterns</td>
+</tr>
+<tr>
+<td>rotating_machinery</td>
+<td>4</td>
+<td>10</td>
+<td>consumer</td>
+<td>full</td>
+<td>Vibration harmonics, ISO 10816</td>
+</tr>
+<tr>
+<td>satellite_constellation</td>
+<td>3</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>Orbital slot + comms link sync</td>
+</tr>
+<tr>
+<td>sleep_architecture</td>
+<td>4</td>
+<td>8</td>
+<td>research</td>
+<td>full</td>
+<td>AASM sleep staging from R values</td>
+</tr>
+<tr>
+<td>swarm_robotics</td>
+<td>3</td>
+<td>8</td>
+<td>consumer</td>
+<td>full</td>
+<td>Vicsek collective motion/formation</td>
+</tr>
+<tr>
+<td>traffic_flow</td>
+<td>4</td>
+<td>10</td>
+<td>consumer</td>
+<td>full</td>
+<td>Signal coordination = phase sync</td>
+</tr>
+<tr>
+<td>vortex_shedding</td>
+<td>3</td>
+<td>9</td>
+<td>research</td>
+<td>full</td>
+<td>Wake dynamics (Stuart-Landau amplitude)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pipeline types</strong>: <em>full</em> = BoundaryObserver + RegimeManager + SupervisorPolicy + PolicyEngine + ImprintModel (where applicable).  <em>adapter</em> = uses a specialised bridge class (FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge) as an alternative architecture.</p>
+<h2 id="why-kuramoto-fits-each-domain">Why Kuramoto Fits Each Domain<a class="headerlink" href="#why-kuramoto-fits-each-domain" title="Permanent link">&para;</a></h2>
+<h3 id="neuroscience-eeg">Neuroscience (EEG)<a class="headerlink" href="#neuroscience-eeg" title="Permanent link">&para;</a></h3>
+<p>Neural populations oscillate at characteristic band frequencies.  Bandpass
+filtering -&gt; Hilbert transform yields instantaneous phase, which IS a
+Kuramoto oscillator phase.  Inter-region phase-locking value (PLV) measures
+synchronisation.  Buzsaki (2006) <em>Rhythms of the Brain</em>; Fries (2005)
+"Communication through Coherence".</p>
+<h3 id="power-systems">Power Systems<a class="headerlink" href="#power-systems" title="Permanent link">&para;</a></h3>
+<p>The swing equation <code>d delta/dt = omega</code> is literally a second-order Kuramoto model.
+PMU phasor angles are oscillator phases; line admittances are coupling
+constants.  No phase extraction step is needed -- measurement IS phase.
+Dorfler, Chertkov, Bullo (2013).</p>
+<h3 id="cardiac-electrophysiology">Cardiac Electrophysiology<a class="headerlink" href="#cardiac-electrophysiology" title="Permanent link">&para;</a></h3>
+<p>Gap-junction (connexin-43) electrical coupling between cardiac cells is
+Kuramoto coupling with coupling constant proportional to gap junction
+conductance.  SA node pacemaker cells entrain downstream tissue exactly
+as high-frequency Kuramoto oscillators entrain slower ones.  Strogatz (2003)
+<em>Sync</em>.</p>
+<h3 id="rotating-machinery">Rotating Machinery<a class="headerlink" href="#rotating-machinery" title="Permanent link">&para;</a></h3>
+<p>Vibration harmonics (1X, 2X, 3X) of shaft rotation, bearing defect
+frequencies (BPFI, BPFO, FTF), and structural resonance modes form a
+coupled oscillator network linked by mechanical impedance.  Phase
+relationships between harmonics diagnose faults: 1X+2X in-phase signals
+misalignment.  ISO 10816-3.</p>
+<h3 id="chemical-reactors">Chemical Reactors<a class="headerlink" href="#chemical-reactors" title="Permanent link">&para;</a></h3>
+<p>CSTR systems undergo Hopf bifurcations where concentration and temperature
+oscillate with well-defined phase relationships.  The Arrhenius-heat
+coupling creates limit cycles naturally modelled as coupled oscillators.
+Fogler (2020) Ch. 12.</p>
+<h3 id="plasma-physics">Plasma Physics<a class="headerlink" href="#plasma-physics" title="Permanent link">&para;</a></h3>
+<p>Micro-turbulence, zonal flows, MHD tearing modes, sawteeth/ELMs, and
+transport barriers form a multi-timescale oscillator hierarchy.  The
+predator-prey relationship between turbulence and zonal flows is a
+classic coupled-oscillator problem.  ITER Physics Basis (2007).</p>
+<h3 id="manufacturing-spc">Manufacturing SPC<a class="headerlink" href="#manufacturing-spc" title="Permanent link">&para;</a></h3>
+<p>Sensor signals (vibration, temperature, pressure) oscillate around
+setpoints.  Tool wear causes systematic drift that correlates sensor
+phases -- exactly the kind of synchronisation Kuramoto detects.</p>
+<h3 id="queue-networks">Queue Networks<a class="headerlink" href="#queue-networks" title="Permanent link">&para;</a></h3>
+<p>Service queues exhibit oscillatory behaviour under periodic demand.
+Phase relationships between upstream and downstream queues determine
+system throughput.  Spiked arrivals synchronise queue oscillations.</p>
+<h3 id="circadian-biology">Circadian Biology<a class="headerlink" href="#circadian-biology" title="Permanent link">&para;</a></h3>
+<p>SCN neurons are literal coupled oscillators with ~24 h period.  Clock
+genes (Per/Cry, Bmal1, Rev-erb) form transcription-translation feedback
+loops whose phase relationships determine circadian entrainment.
+Winfree (1967); Strogatz (2003) <em>Sync</em> Ch. 5.</p>
+<h3 id="traffic-flow">Traffic Flow<a class="headerlink" href="#traffic-flow" title="Permanent link">&para;</a></h3>
+<p>Traffic signal coordination IS phase synchronisation.  Each signalised
+intersection cycles with period ~90 s; offset-based green wave coordination
+aligns phase differences between adjacent signals.  Gershenson &amp;
+Rosenblueth (2012) showed self-organising traffic lights converge via
+coupled-oscillator dynamics.</p>
+<h3 id="epidemic-sir">Epidemic SIR<a class="headerlink" href="#epidemic-sir" title="Permanent link">&para;</a></h3>
+<p>Epidemic waves oscillate with well-defined periods driven by seasonal
+forcing, immunity waning, and intervention cycles.  The SIR model produces
+damped oscillations that are naturally phase-coupled across regions via
+mobility.  Seasonal forcing acts as external drive (zeta).  Earn et al.
+(2000).</p>
+<h3 id="biology-bio-stub">Biology (Bio Stub)<a class="headerlink" href="#biology-bio-stub" title="Permanent link">&para;</a></h3>
+<p>Biological systems oscillate at every scale: Ca2+ transients (ms),
+cardiac rhythm (s), circadian clocks (24 h), hormonal cycles (days-weeks).
+Multi-scale coupling between cellular, tissue, organ, and systemic layers
+is inherently a Kuramoto hierarchy.</p>
+<h3 id="graph-geometry-geometry-walk">Graph Geometry (Geometry Walk)<a class="headerlink" href="#graph-geometry-geometry-walk" title="Permanent link">&para;</a></h3>
+<p>Random walkers on a graph synchronise when coupling exceeds a critical
+threshold related to spectral gap.  Phase = ring-mapped node index
+(theta = 2<em>pi</em>s/N).  Clustering and fragmentation transitions map to
+Kuramoto order parameter bifurcations.</p>
+<h3 id="minimal-domain">Minimal Domain<a class="headerlink" href="#minimal-domain" title="Permanent link">&para;</a></h3>
+<p>Minimal 2-layer, 4-oscillator test harness exercising every pipeline
+component: CouplingBuilder, UPDEEngine, BoundaryObserver, RegimeManager,
+SupervisorPolicy, PolicyEngine.  Reference implementation for new
+domain authors.</p>
+<h3 id="fusion-equilibrium">Fusion Equilibrium<a class="headerlink" href="#fusion-equilibrium" title="Permanent link">&para;</a></h3>
+<p>Grad-Shafranov equilibrium, MHD stability, transport, and ELM/sawtooth
+events form a coupled oscillator hierarchy.  FusionCoreBridge maps
+tokamak observables (q-profile, beta_N, tau_E) to oscillator phases.
+ITER Physics Basis (2007).</p>
+<h3 id="laser-arrays">Laser Arrays<a class="headerlink" href="#laser-arrays" title="Permanent link">&para;</a></h3>
+<p>Semiconductor laser arrays couple via evanescent fields in shared
+waveguide substrates.  Each laser's optical phase evolves under gain
+competition and nearest-neighbour evanescent coupling — structurally
+identical to Kuramoto with finite-range coupling.  Winful &amp; Wang,
+Appl Phys Lett 53(20), 1988; Kozyreff et al., PRL 85(18), 2000.</p>
+<h3 id="pll-clock-networks">PLL Clock Networks<a class="headerlink" href="#pll-clock-networks" title="Permanent link">&para;</a></h3>
+<p>Phase-locked loops track a reference clock by adjusting VCO frequency
+proportional to phase error — exactly the Kuramoto coupling term
+K·sin(θ_ref − θ_vco).  Hierarchical PLL networks (stratum clocks)
+synchronise via cascaded phase detectors.  Strogatz &amp; Mirollo, SIAM
+J Appl Math 1988; ITU-T G.811.</p>
+<h3 id="firefly-swarms">Firefly Swarms<a class="headerlink" href="#firefly-swarms" title="Permanent link">&para;</a></h3>
+<p>Firefly flash synchronisation is the canonical biological Kuramoto
+example.  Each firefly adjusts its flash-phase based on visual
+coupling to neighbours, converging to collective synchrony.  Mirollo
+&amp; Strogatz (1990) proved global synchronisation for identical
+pulse-coupled oscillators.</p>
+<h3 id="swarm-robotics">Swarm Robotics<a class="headerlink" href="#swarm-robotics" title="Permanent link">&para;</a></h3>
+<p>The Vicsek model — robots aligning heading angles with neighbours
+plus noise — is a discrete-time Kuramoto model on a proximity graph.
+Heading phase = oscillator phase; alignment = coupling.  Vicsek et al.,
+PRL 75(6), 1995; Cucker &amp; Smale, IEEE TAC 2007.</p>
+<h3 id="autonomous-vehicles">Autonomous Vehicles<a class="headerlink" href="#autonomous-vehicles" title="Permanent link">&para;</a></h3>
+<p>Vehicle platoons maintain fixed headway via adaptive cruise control.
+Each vehicle's position oscillates around the desired following distance
+— a phase-coupled system where synchronisation = stable platoon and
+desynchronisation = collision risk or string instability.  Dey et al.,
+IEEE Trans Intell Transp Syst 17(5), 2016.</p>
+<h3 id="brain-connectome">Brain Connectome<a class="headerlink" href="#brain-connectome" title="Permanent link">&para;</a></h3>
+<p>HCP-derived structural connectivity matrices define coupling topology
+between cortical regions.  Each region oscillates at characteristic
+frequencies; the connectome determines which regions phase-lock.
+Bullmore &amp; Sporns, Nature Reviews Neuroscience 10, 2009.</p>
+<h3 id="financial-markets">Financial Markets<a class="headerlink" href="#financial-markets" title="Permanent link">&para;</a></h3>
+<p>Asset returns exhibit collective synchronisation preceding crashes.
+Hilbert-transformed price series yield instantaneous phases; the
+Kuramoto order parameter R(t) → 1 signals herding behaviour.
+Harmon et al., PLoS ONE 6(4), 2011.</p>
+<h3 id="gene-oscillator">Gene Oscillator<a class="headerlink" href="#gene-oscillator" title="Permanent link">&para;</a></h3>
+<p>The repressilator (Elowitz &amp; Leibler, Nature 403, 2000) is a synthetic
+three-gene oscillatory circuit.  Quorum sensing couples repressilators
+across cells — structurally identical to Kuramoto coupling with
+chemical diffusion as the coupling channel.</p>
+<h3 id="identity-coherence">Identity Coherence<a class="headerlink" href="#identity-coherence" title="Permanent link">&para;</a></h3>
+<p>The SSGF identity model treats cognitive traits (working style,
+reasoning patterns, values) as oscillators whose synchronisation
+defines coherent identity.  Chimera states (partial coherence) model
+cognitive dissonance.  An application of the SCPN consciousness
+framework to AI self-modelling.</p>
+<h3 id="musical-acoustics">Musical Acoustics<a class="headerlink" href="#musical-acoustics" title="Permanent link">&para;</a></h3>
+<p>Harmonic modes of musical instruments (fundamental, overtones) form
+coupled oscillators.  Consonance = integer frequency ratios = specific
+phase relationships.  Rhythmic groove emerges from synchronised beat
+subdivisions.  Large &amp; Palmer, Ecological Psychology 14(1-2), 2002.</p>
+<h3 id="network-security">Network Security<a class="headerlink" href="#network-security" title="Permanent link">&para;</a></h3>
+<p>Normal network traffic oscillates with diurnal and weekly periods.
+DDoS attacks disrupt these patterns — anomalous synchronisation in
+packet arrivals signals coordinated attack traffic.  Phase-based
+detection complements rate-based methods.</p>
+<h3 id="robotic-cpg">Robotic CPG<a class="headerlink" href="#robotic-cpg" title="Permanent link">&para;</a></h3>
+<p>Central Pattern Generators produce rhythmic locomotion via coupled
+oscillators.  Quadruped gaits (walk, trot, gallop) correspond to
+specific phase relationships between leg CPGs — exactly Kuramoto with
+discrete symmetry-breaking modes.  Ijspeert, Neural Networks 21(4),
+2008.</p>
+<h3 id="satellite-constellation">Satellite Constellation<a class="headerlink" href="#satellite-constellation" title="Permanent link">&para;</a></h3>
+<p>Satellites in constellation maintain orbital slot phasing and
+inter-satellite link timing.  Orbital mechanics produces oscillatory
+relative motion; communication link synchronisation requires phase
+coordination across the constellation.</p>
+<h3 id="sleep-architecture">Sleep Architecture<a class="headerlink" href="#sleep-architecture" title="Permanent link">&para;</a></h3>
+<p>EEG power in delta, theta, alpha, and beta bands defines AASM sleep
+stages.  The order parameter R computed per band tracks transitions
+between wake, N1, N2, N3, and REM — a natural Kuramoto hierarchy with
+sleep stage = regime.</p>
+<h3 id="vortex-shedding">Vortex Shedding<a class="headerlink" href="#vortex-shedding" title="Permanent link">&para;</a></h3>
+<p>Karman vortex streets behind bluff bodies produce periodic lift and
+drag oscillations at the Strouhal frequency.  Multiple cylinders
+interact via wake coupling — Stuart-Landau amplitude dynamics capture
+lock-in and vortex-induced vibration.  Williamson &amp; Govardhan, Annual
+Review of Fluid Mechanics 36, 2004.</p>
+<h3 id="agent-coordination">Agent Coordination<a class="headerlink" href="#agent-coordination" title="Permanent link">&para;</a></h3>
+<p>Multiple software agents and a human operator working on a shared
+codebase exhibit oscillatory task patterns — heartbeat liveness checks,
+task flow cycles, topic focus shifts.  Synchronisation = coordinated
+parallel work; desynchronisation = merge conflicts and wasted effort.</p>
+<h2 id="phase-extraction-rationale">Phase Extraction Rationale<a class="headerlink" href="#phase-extraction-rationale" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Source Signal</th>
+<th>Extraction</th>
+<th>Phase =</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EEG</td>
+<td>Voltage time series</td>
+<td>Bandpass + Hilbert</td>
+<td>Instantaneous phase</td>
+</tr>
+<tr>
+<td>Power grid</td>
+<td>PMU phasor</td>
+<td>Direct measurement</td>
+<td>Rotor angle delta</td>
+</tr>
+<tr>
+<td>Cardiac</td>
+<td>Intracardiac EGM</td>
+<td>Activation time mapping</td>
+<td>Activation phase</td>
+</tr>
+<tr>
+<td>Rotating</td>
+<td>Accelerometer</td>
+<td>Order tracking + FFT</td>
+<td>Harmonic phase</td>
+</tr>
+<tr>
+<td>Chemical</td>
+<td>T, C, P sensors</td>
+<td>Detrend + Hilbert</td>
+<td>Oscillation phase</td>
+</tr>
+<tr>
+<td>Plasma</td>
+<td>Mirnov coils, ECE</td>
+<td>Mode fitting</td>
+<td>Mode phase</td>
+</tr>
+<tr>
+<td>Manufacturing</td>
+<td>SPC sensor</td>
+<td>Detrend around setpoint</td>
+<td>Deviation phase</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Queue depth</td>
+<td>Detrend + Hilbert</td>
+<td>Demand phase</td>
+</tr>
+<tr>
+<td>Circadian</td>
+<td>Clock gene expression</td>
+<td>Cosinor fit</td>
+<td>Acrophase</td>
+</tr>
+<tr>
+<td>Traffic</td>
+<td>Signal state</td>
+<td>Cycle normalisation</td>
+<td>Cycle phase</td>
+</tr>
+<tr>
+<td>Epidemic</td>
+<td>Case counts</td>
+<td>Detrend + Hilbert</td>
+<td>Wave phase</td>
+</tr>
+<tr>
+<td>Biology</td>
+<td>Multi-modal sensors</td>
+<td>Scale-appropriate</td>
+<td>Per-scale phase</td>
+</tr>
+<tr>
+<td>Geometry</td>
+<td>Graph node index</td>
+<td>Ring mapping theta=2<em>pi</em>s/N</td>
+<td>Node phase</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>Diagnostic signals</td>
+<td>Observable mapping</td>
+<td>Equilibrium phase</td>
+</tr>
+<tr>
+<td>Laser array</td>
+<td>Optical field</td>
+<td>Heterodyne interferometry</td>
+<td>Optical phase</td>
+</tr>
+<tr>
+<td>PLL clock</td>
+<td>VCO output</td>
+<td>Phase detector</td>
+<td>VCO phase</td>
+</tr>
+<tr>
+<td>Firefly</td>
+<td>Flash events</td>
+<td>Inter-flash interval</td>
+<td>Flash phase</td>
+</tr>
+<tr>
+<td>Swarm</td>
+<td>IMU heading</td>
+<td>Compass reading</td>
+<td>Heading angle</td>
+</tr>
+<tr>
+<td>Autonomous vehicles</td>
+<td>Headway distance</td>
+<td>Detrend + Hilbert</td>
+<td>Following phase</td>
+</tr>
+<tr>
+<td>Brain connectome</td>
+<td>fMRI BOLD / EEG</td>
+<td>Bandpass + Hilbert</td>
+<td>Regional phase</td>
+</tr>
+<tr>
+<td>Financial markets</td>
+<td>Price returns</td>
+<td>Hilbert transform</td>
+<td>Asset phase</td>
+</tr>
+<tr>
+<td>Gene oscillator</td>
+<td>Fluorescence reporter</td>
+<td>Peak detection</td>
+<td>Expression phase</td>
+</tr>
+<tr>
+<td>Identity coherence</td>
+<td>Trait activation signals</td>
+<td>Inter-event frequency</td>
+<td>Trait phase</td>
+</tr>
+<tr>
+<td>Musical acoustics</td>
+<td>Audio waveform</td>
+<td>FFT harmonic tracking</td>
+<td>Harmonic phase</td>
+</tr>
+<tr>
+<td>Network security</td>
+<td>Packet timestamps</td>
+<td>Inter-arrival frequency</td>
+<td>Traffic phase</td>
+</tr>
+<tr>
+<td>Robotic CPG</td>
+<td>Joint angle encoders</td>
+<td>Direct measurement</td>
+<td>Joint phase</td>
+</tr>
+<tr>
+<td>Satellite constellation</td>
+<td>Orbital position</td>
+<td>Kepler elements</td>
+<td>Orbital phase</td>
+</tr>
+<tr>
+<td>Sleep architecture</td>
+<td>EEG band power</td>
+<td>Bandpass + Hilbert</td>
+<td>Band phase</td>
+</tr>
+<tr>
+<td>Vortex shedding</td>
+<td>Pressure/force transducer</td>
+<td>Detrend + Hilbert</td>
+<td>Shedding phase</td>
+</tr>
+<tr>
+<td>Agent coordination</td>
+<td>Heartbeat timestamps</td>
+<td>Inter-event frequency</td>
+<td>Agent liveness phase</td>
+</tr>
+</tbody>
+</table>
+<h2 id="goodbad-layer-partition">Good/Bad Layer Partition<a class="headerlink" href="#goodbad-layer-partition" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Good (R up = healthy)</th>
+<th>Bad (R up = pathological)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EEG</td>
+<td>Alpha, gamma, network</td>
+<td>Delta (wake), beta excess</td>
+</tr>
+<tr>
+<td>Power grid</td>
+<td>Generator sync, area freq</td>
+<td>Load demand, renewable</td>
+</tr>
+<tr>
+<td>Cardiac</td>
+<td>SA node, atrial</td>
+<td>Ventricular desync</td>
+</tr>
+<tr>
+<td>Rotating</td>
+<td>Shaft at nominal</td>
+<td>Blade flutter, structural</td>
+</tr>
+<tr>
+<td>Chemical</td>
+<td>Heat transfer, feed flow</td>
+<td>Kinetics oscillation</td>
+</tr>
+<tr>
+<td>Plasma</td>
+<td>Transport barrier, current</td>
+<td>Turbulence, sawteeth</td>
+</tr>
+<tr>
+<td>Manufacturing</td>
+<td>Machine, line</td>
+<td>Sensor (drift = bad)</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Throughput (macro)</td>
+<td>Retry burst (micro)</td>
+</tr>
+<tr>
+<td>Circadian</td>
+<td>SCN core, peripheral</td>
+<td>Behavioural desync (jet lag)</td>
+</tr>
+<tr>
+<td>Traffic</td>
+<td>Corridor (green wave)</td>
+<td>Intersection (gridlock), demand</td>
+</tr>
+<tr>
+<td>Epidemic</td>
+<td>Intervention coordination</td>
+<td>Infection wave, mobility</td>
+</tr>
+<tr>
+<td>Biology</td>
+<td>Tissue, organ, systemic</td>
+<td>(none defined)</td>
+</tr>
+<tr>
+<td>Geometry</td>
+<td>Local, global coherence</td>
+<td>(none defined)</td>
+</tr>
+<tr>
+<td>Minimal</td>
+<td>Lower, upper</td>
+<td>(none defined)</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>Equilibrium, transport, boundary</td>
+<td>Events (sawtooth, ELM)</td>
+</tr>
+<tr>
+<td>Laser array</td>
+<td>Single laser, array coupling</td>
+<td>External cavity (feedback)</td>
+</tr>
+<tr>
+<td>PLL clock</td>
+<td>VCO lock, network PLL</td>
+<td>Stratum hierarchy (holdover)</td>
+</tr>
+<tr>
+<td>Firefly</td>
+<td>Individual flash, swarm</td>
+<td>(none defined)</td>
+</tr>
+<tr>
+<td>Swarm</td>
+<td>Heading alignment, flock direction</td>
+<td>Formation breakup</td>
+</tr>
+<tr>
+<td>Autonomous vehicles</td>
+<td>Leader-follower platoon</td>
+<td>String instability</td>
+</tr>
+<tr>
+<td>Brain connectome</td>
+<td>Visual, auditory, DMN sync</td>
+<td>Hypersync (seizure)</td>
+</tr>
+<tr>
+<td>Financial markets</td>
+<td>Sector diversification</td>
+<td>Cross-asset herding (crash)</td>
+</tr>
+<tr>
+<td>Gene oscillator</td>
+<td>Repressilator rhythm</td>
+<td>Quorum desync</td>
+</tr>
+<tr>
+<td>Identity coherence</td>
+<td>Working style, values</td>
+<td>Cognitive dissonance (chimera)</td>
+</tr>
+<tr>
+<td>Musical acoustics</td>
+<td>Harmonic consonance, groove</td>
+<td>Dissonance, tempo drift</td>
+</tr>
+<tr>
+<td>Network security</td>
+<td>Normal traffic rhythm</td>
+<td>Attack synchronisation</td>
+</tr>
+<tr>
+<td>Robotic CPG</td>
+<td>Gait phase coordination</td>
+<td>Leg collision, stumble</td>
+</tr>
+<tr>
+<td>Satellite constellation</td>
+<td>Orbital slot, comms link</td>
+<td>Constellation breakup</td>
+</tr>
+<tr>
+<td>Sleep architecture</td>
+<td>Delta (N3), alpha (wake)</td>
+<td>Beta excess (insomnia)</td>
+</tr>
+<tr>
+<td>Vortex shedding</td>
+<td>Upstream wake coherence</td>
+<td>Lock-in (structural fatigue)</td>
+</tr>
+<tr>
+<td>Agent coordination</td>
+<td>Task flow, topic alignment</td>
+<td>Merge conflicts, duplicated work</td>
+</tr>
+</tbody>
+</table>
+<h2 id="boundary-sources">Boundary Sources<a class="headerlink" href="#boundary-sources" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Hard Boundaries</th>
+<th>Standard/Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EEG</td>
+<td>Broadband sync &lt; 0.9</td>
+<td>Lehnertz (2009)</td>
+</tr>
+<tr>
+<td>Power grid</td>
+<td>Freq +/-0.5 Hz, V 0.95-1.05 pu</td>
+<td>NERC BAL-003-2, ANSI C84.1</td>
+</tr>
+<tr>
+<td>Cardiac</td>
+<td>HR 40-180 bpm, QT &lt; 500 ms</td>
+<td>ACC/AHA guidelines, Roden (2004)</td>
+</tr>
+<tr>
+<td>Rotating</td>
+<td>Vibration &lt; 7.1 mm/s</td>
+<td>ISO 10816-3 zone C/D</td>
+</tr>
+<tr>
+<td>Chemical</td>
+<td>T &lt; 450 C, P &lt; 15 bar</td>
+<td>Semenov limit, ASME VIII</td>
+</tr>
+<tr>
+<td>Plasma</td>
+<td>q_min &gt;= 1, beta_N &lt;= 2.8</td>
+<td>Kruskal-Shafranov, Troyon</td>
+</tr>
+<tr>
+<td>Manufacturing</td>
+<td>Temp &lt; 85 C, pressure &gt; 2</td>
+<td>OEM specs</td>
+</tr>
+<tr>
+<td>Circadian</td>
+<td>Phase deviation &lt; 3 h</td>
+<td>Clinical circadian disruption</td>
+</tr>
+<tr>
+<td>Traffic</td>
+<td>Queue &lt; 50 vehicles</td>
+<td>Intersection capacity</td>
+</tr>
+<tr>
+<td>Epidemic</td>
+<td>Cases &lt; 100/100k, hospital &lt; 80%</td>
+<td>WHO threshold</td>
+</tr>
+<tr>
+<td>Biology</td>
+<td>HR 40-180 bpm</td>
+<td>Clinical range</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>q_min &gt;= 1, beta_N &lt;= 2.8</td>
+<td>Kruskal-Shafranov, Troyon</td>
+</tr>
+<tr>
+<td>Laser array</td>
+<td>Phase variance &lt; 0.3 rad, feedback &lt; 0.5</td>
+<td>Winful &amp; Wang (1988)</td>
+</tr>
+<tr>
+<td>PLL clock</td>
+<td>Phase error &lt; 100 ns, drift &lt; 10 ppm</td>
+<td>IEEE 1588, ITU-T G.811</td>
+</tr>
+<tr>
+<td>Firefly</td>
+<td>Flash variance &lt; 0.5 s</td>
+<td>Observational ecology</td>
+</tr>
+<tr>
+<td>Swarm</td>
+<td>Formation error &lt; 2 m, collision &gt; 0.5 m</td>
+<td>Safety standards</td>
+</tr>
+<tr>
+<td>Autonomous vehicles</td>
+<td>Headway &gt; 1.5 s, speed delta &lt; 10 km/h</td>
+<td>SAE J3016, ISO 22839</td>
+</tr>
+<tr>
+<td>Brain connectome</td>
+<td>Global sync &lt; 0.9</td>
+<td>Lehnertz (2009)</td>
+</tr>
+<tr>
+<td>Financial markets</td>
+<td>Drawdown &lt; 5%, VIX &lt; 30</td>
+<td>Risk management</td>
+</tr>
+<tr>
+<td>Gene oscillator</td>
+<td>Expression ratio 0.1-10x</td>
+<td>Elowitz &amp; Leibler (2000)</td>
+</tr>
+<tr>
+<td>Identity coherence</td>
+<td>R_identity &gt; 0.3</td>
+<td>SSGF threshold</td>
+</tr>
+<tr>
+<td>Musical acoustics</td>
+<td>Intonation &lt; 20 cents, tempo drift &lt; 5%</td>
+<td>Perceptual thresholds</td>
+</tr>
+<tr>
+<td>Network security</td>
+<td>Packet rate &lt; 10x baseline</td>
+<td>IDS thresholds</td>
+</tr>
+<tr>
+<td>Robotic CPG</td>
+<td>Joint angle limits, torque &lt; max</td>
+<td>Actuator specs</td>
+</tr>
+<tr>
+<td>Satellite constellation</td>
+<td>Slot drift &lt; 0.1 deg, link margin &gt; 3 dB</td>
+<td>ITU Radio Regulations</td>
+</tr>
+<tr>
+<td>Sleep architecture</td>
+<td>Stage duration within AASM norms</td>
+<td>AASM manual v3</td>
+</tr>
+<tr>
+<td>Vortex shedding</td>
+<td>Amplitude &lt; fatigue limit, St = 0.2 +/- 0.05</td>
+<td>ASME PTC 19.3</td>
+</tr>
+<tr>
+<td>Agent coordination</td>
+<td>Heartbeat interval &lt; 60 s, conflict rate &lt; 0.1</td>
+<td>Operational SLA</td>
+</tr>
+</tbody>
+</table>
+<h2 id="actuator-mapping">Actuator Mapping<a class="headerlink" href="#actuator-mapping" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>K (coupling)</th>
+<th>alpha (lag)</th>
+<th>zeta (drive)</th>
+<th>Psi (target)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EEG</td>
+<td>Connectivity</td>
+<td>Delta band lag</td>
+<td>Entrainment stim</td>
+<td>Target phase</td>
+</tr>
+<tr>
+<td>Power grid</td>
+<td>Governor droop</td>
+<td>Load shed phase</td>
+<td>AGC bias</td>
+<td>Curtailment</td>
+</tr>
+<tr>
+<td>Cardiac</td>
+<td>Drug coupling</td>
+<td>Vagal modulation</td>
+<td>Pacing rate</td>
+<td>Pacing target</td>
+</tr>
+<tr>
+<td>Rotating</td>
+<td>Bearing stiffness</td>
+<td>Damper viscosity</td>
+<td>Speed setpoint</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Chemical</td>
+<td>Coolant flow</td>
+<td>Agitator speed</td>
+<td>Feed rate</td>
+<td>Jacket SP</td>
+</tr>
+<tr>
+<td>Plasma</td>
+<td>Global coupling</td>
+<td>Turbulence lag</td>
+<td>Damping</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Manufacturing</td>
+<td>Global coupling</td>
+<td>Sensor lag</td>
+<td>Damping</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Global coupling</td>
+<td>Micro lag</td>
+<td>Damping</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Circadian</td>
+<td>Inter-clock coupling</td>
+<td>Sleep schedule lag</td>
+<td>Light exposure</td>
+<td>Meal timing</td>
+</tr>
+<tr>
+<td>Traffic</td>
+<td>Signal coordination</td>
+<td>Phase split</td>
+<td>Green wave offset</td>
+<td>Ramp metering</td>
+</tr>
+<tr>
+<td>Epidemic</td>
+<td>Vaccination coordination</td>
+<td>Travel restriction</td>
+<td>Social measures</td>
+<td>Lockdown target</td>
+</tr>
+<tr>
+<td>Biology</td>
+<td>Global coupling</td>
+<td>--</td>
+<td>Entrainment</td>
+<td>Reference phase</td>
+</tr>
+<tr>
+<td>Geometry</td>
+<td>Global coupling</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Minimal</td>
+<td>Global coupling</td>
+<td>--</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>Global coupling</td>
+<td>--</td>
+<td>Entrainment</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Laser array</td>
+<td>Evanescent coupling</td>
+<td>Detuning offset</td>
+<td>Injection current</td>
+<td>Feedback phase</td>
+</tr>
+<tr>
+<td>PLL clock</td>
+<td>Loop bandwidth</td>
+<td>Frequency trim</td>
+<td>Reference drive</td>
+<td>Phase target</td>
+</tr>
+<tr>
+<td>Firefly</td>
+<td>Visual coupling</td>
+<td>--</td>
+<td>Environmental light</td>
+<td>Flash target</td>
+</tr>
+<tr>
+<td>Swarm</td>
+<td>Alignment coupling</td>
+<td>Obstacle avoidance</td>
+<td>Formation drive</td>
+<td>Target heading</td>
+</tr>
+<tr>
+<td>Autonomous vehicles</td>
+<td>Platoon coupling</td>
+<td>Headway lag</td>
+<td>ACC setpoint</td>
+<td>Leader speed</td>
+</tr>
+<tr>
+<td>Brain connectome</td>
+<td>Connectivity strength</td>
+<td>Propagation delay</td>
+<td>Stimulation</td>
+<td>Target region</td>
+</tr>
+<tr>
+<td>Financial markets</td>
+<td>Portfolio correlation</td>
+<td>Sector rotation lag</td>
+<td>Hedging</td>
+<td>Risk target</td>
+</tr>
+<tr>
+<td>Gene oscillator</td>
+<td>Quorum coupling</td>
+<td>Diffusion delay</td>
+<td>Inducer concentration</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Identity coherence</td>
+<td>Trait coupling</td>
+<td>Cognitive lag</td>
+<td>External feedback</td>
+<td>Value target</td>
+</tr>
+<tr>
+<td>Musical acoustics</td>
+<td>Ensemble coupling</td>
+<td>Tempo offset</td>
+<td>Conductor beat</td>
+<td>Pitch target</td>
+</tr>
+<tr>
+<td>Network security</td>
+<td>Traffic coupling</td>
+<td>Routing lag</td>
+<td>Rate limiting</td>
+<td>Baseline pattern</td>
+</tr>
+<tr>
+<td>Robotic CPG</td>
+<td>Inter-leg coupling</td>
+<td>Gait phase offset</td>
+<td>Speed command</td>
+<td>Gait target</td>
+</tr>
+<tr>
+<td>Satellite constellation</td>
+<td>Orbital coupling</td>
+<td>Propagation delay</td>
+<td>Thrust manoeuvre</td>
+<td>Slot target</td>
+</tr>
+<tr>
+<td>Sleep architecture</td>
+<td>Inter-band coupling</td>
+<td>Band transition lag</td>
+<td>Light/sound stim</td>
+<td>Sleep stage</td>
+</tr>
+<tr>
+<td>Vortex shedding</td>
+<td>Wake coupling</td>
+<td>Convective delay</td>
+<td>Flow speed</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Agent coordination</td>
+<td>Task coupling</td>
+<td>Communication lag</td>
+<td>Priority signal</td>
+<td>Coordination target</td>
+</tr>
+</tbody>
+</table>
+<h2 id="coupling-topology-rationale">Coupling Topology Rationale<a class="headerlink" href="#coupling-topology-rationale" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Topology</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EEG</td>
+<td>Symmetric, non-negative</td>
+<td>Cortical connectivity is undirected</td>
+</tr>
+<tr>
+<td>Power grid</td>
+<td>Distance-decayed</td>
+<td>Admittance ~ 1/impedance ~ 1/distance</td>
+</tr>
+<tr>
+<td>Cardiac</td>
+<td>Strong nearest-neighbour</td>
+<td>Gap junctions connect adjacent cells</td>
+</tr>
+<tr>
+<td>Rotating</td>
+<td>Layer-block</td>
+<td>Mechanical path: shaft -&gt; bearing -&gt; structure</td>
+</tr>
+<tr>
+<td>Chemical</td>
+<td>Dense intra-layer</td>
+<td>Heat-mass coupling is tight within reactions</td>
+</tr>
+<tr>
+<td>Plasma</td>
+<td>Hierarchical decay</td>
+<td>Timescale separation between layers</td>
+</tr>
+<tr>
+<td>Manufacturing</td>
+<td>Weak cross-layer</td>
+<td>Sensors are only indirectly coupled</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Distance-decayed</td>
+<td>Upstream/downstream proximity</td>
+</tr>
+<tr>
+<td>Circadian</td>
+<td>Strong intra-layer</td>
+<td>Clock genes tightly coupled within SCN</td>
+</tr>
+<tr>
+<td>Traffic</td>
+<td>Distance-decayed</td>
+<td>Adjacent intersections strongly coupled</td>
+</tr>
+<tr>
+<td>Epidemic</td>
+<td>Weak cross-layer</td>
+<td>Regions coupled via mobility only</td>
+</tr>
+<tr>
+<td>Biology</td>
+<td>Hierarchical decay</td>
+<td>Timescale separation across scales</td>
+</tr>
+<tr>
+<td>Geometry</td>
+<td>Distance-decayed</td>
+<td>Graph adjacency determines coupling</td>
+</tr>
+<tr>
+<td>Minimal</td>
+<td>Distance-decayed</td>
+<td>Default template</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>Hierarchical decay</td>
+<td>Timescale separation between layers</td>
+</tr>
+<tr>
+<td>Laser array</td>
+<td>Distance-decayed</td>
+<td>Evanescent field exponential decay</td>
+</tr>
+<tr>
+<td>PLL clock</td>
+<td>Hierarchical decay</td>
+<td>Stratum hierarchy (cascaded PLLs)</td>
+</tr>
+<tr>
+<td>Firefly</td>
+<td>Distance-decayed</td>
+<td>Line-of-sight visual range</td>
+</tr>
+<tr>
+<td>Swarm</td>
+<td>Distance-decayed</td>
+<td>Proximity-based communication range</td>
+</tr>
+<tr>
+<td>Autonomous vehicles</td>
+<td>Distance-decayed</td>
+<td>V2V range limited by proximity</td>
+</tr>
+<tr>
+<td>Brain connectome</td>
+<td>HCP-weighted</td>
+<td>Structural connectivity from diffusion MRI</td>
+</tr>
+<tr>
+<td>Financial markets</td>
+<td>Correlation-based</td>
+<td>Asset return correlation matrix</td>
+</tr>
+<tr>
+<td>Gene oscillator</td>
+<td>Dense intra-layer</td>
+<td>Same-cell gene products diffuse freely</td>
+</tr>
+<tr>
+<td>Identity coherence</td>
+<td>Hierarchical decay</td>
+<td>Trait layers separated by abstraction level</td>
+</tr>
+<tr>
+<td>Musical acoustics</td>
+<td>Strong intra-layer</td>
+<td>Harmonics of same instrument tightly coupled</td>
+</tr>
+<tr>
+<td>Network security</td>
+<td>Distance-decayed</td>
+<td>Network topology determines traffic paths</td>
+</tr>
+<tr>
+<td>Robotic CPG</td>
+<td>Strong nearest-neighbour</td>
+<td>Adjacent legs mechanically coupled</td>
+</tr>
+<tr>
+<td>Satellite constellation</td>
+<td>Distance-decayed</td>
+<td>Inter-satellite link range</td>
+</tr>
+<tr>
+<td>Sleep architecture</td>
+<td>Hierarchical decay</td>
+<td>Timescale separation between EEG bands</td>
+</tr>
+<tr>
+<td>Vortex shedding</td>
+<td>Distance-decayed</td>
+<td>Wake interaction decays with cylinder spacing</td>
+</tr>
+<tr>
+<td>Agent coordination</td>
+<td>Weak cross-layer</td>
+<td>Agents coupled only via shared repo</td>
+</tr>
+</tbody>
+</table>
+<h2 id="imprint-semantics">Imprint Semantics<a class="headerlink" href="#imprint-semantics" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Physical Meaning</th>
+<th>Timescale</th>
+<th>Modulates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EEG</td>
+<td>Meditation training (plasticity)</td>
+<td>Weeks-months</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Cardiac</td>
+<td>Drug accumulation (pharmacokinetics)</td>
+<td>Hours-days</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Chemical</td>
+<td>Catalyst fouling/deactivation</td>
+<td>Months</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Manufacturing</td>
+<td>Tool wear history</td>
+<td>Weeks</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Circadian</td>
+<td>Chronic jet lag / shift work debt</td>
+<td>Days-weeks</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Biology</td>
+<td>Chronic exposure accumulation</td>
+<td>Days-months</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>Plasma facing component erosion</td>
+<td>Weeks</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Laser array</td>
+<td>Mirror degradation (facet erosion)</td>
+<td>Months</td>
+<td>K</td>
+</tr>
+<tr>
+<td>PLL clock</td>
+<td>Crystal aging (frequency drift)</td>
+<td>Years</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Firefly</td>
+<td>(none — memoryless dynamics)</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Swarm</td>
+<td>(none — stateless dynamics)</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Plasma</td>
+<td>(none — fast relative to wall conditioning)</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Power grid</td>
+<td>Transformer insulation aging (IEEE C57.91)</td>
+<td>Years</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Rotating</td>
+<td>Bearing wear (ISO 15243 spalling)</td>
+<td>Weeks-months</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Service degradation (memory leaks, pool exhaustion)</td>
+<td>Hours-days</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Traffic</td>
+<td>Signal timing drift + road degradation</td>
+<td>Weeks-months</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Epidemic</td>
+<td>Waning immunity (Antia et al. 2018)</td>
+<td>Months</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Geometry</td>
+<td>(none)</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Minimal</td>
+<td>(none)</td>
+<td>--</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Autonomous vehicles</td>
+<td>Tyre wear, brake fade</td>
+<td>Hours-days</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Brain connectome</td>
+<td>Synaptic plasticity (LTP/LTD)</td>
+<td>Days-weeks</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Financial markets</td>
+<td>Regime memory (bull/bear momentum)</td>
+<td>Weeks-months</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Gene oscillator</td>
+<td>Epigenetic modification</td>
+<td>Days-weeks</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Identity coherence</td>
+<td>Trait reinforcement / habit formation</td>
+<td>Weeks-months</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Musical acoustics</td>
+<td>Ensemble rehearsal (muscle memory)</td>
+<td>Days-weeks</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Network security</td>
+<td>Baseline drift (traffic pattern evolution)</td>
+<td>Days</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Robotic CPG</td>
+<td>Joint wear, actuator fatigue</td>
+<td>Weeks-months</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Satellite constellation</td>
+<td>Orbital decay, component aging</td>
+<td>Months-years</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Sleep architecture</td>
+<td>Chronic sleep debt</td>
+<td>Days-weeks</td>
+<td>K, alpha</td>
+</tr>
+<tr>
+<td>Vortex shedding</td>
+<td>Structural fatigue accumulation</td>
+<td>Months</td>
+<td>K</td>
+</tr>
+<tr>
+<td>Agent coordination</td>
+<td>(none — stateless coordination)</td>
+<td>--</td>
+<td>--</td>
+</tr>
+</tbody>
+</table>
+<h2 id="adding-a-new-domain">Adding a New Domain<a class="headerlink" href="#adding-a-new-domain" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Identify the oscillators: what physically oscillates?</li>
+<li>Map oscillators to layers by timescale hierarchy.</li>
+<li>Define omega values from domain physics (cite sources).</li>
+<li>Partition layers into good (sync = healthy) and bad (sync = pathological).</li>
+<li>Set boundaries from engineering standards or medical guidelines.</li>
+<li>Map actuators to physical control knobs.</li>
+<li>Decide if imprint applies (slow accumulation effects).</li>
+<li>Create <code>binding_spec.yaml</code>, <code>policy.yaml</code>, <code>run.py</code>, <code>README.md</code>.</li>
+<li>Validate: <code>spo validate domainpacks/&lt;name&gt;/binding_spec.yaml</code>.</li>
+<li>Run: <code>python domainpacks/&lt;name&gt;/run.py</code>.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

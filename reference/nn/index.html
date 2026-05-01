@@ -1,0 +1,7013 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/reference/nn/">
+      
+      
+        <link rel="prev" href="../api/nn/">
+      
+      
+        <link rel="next" href="../nn_physics_validation_plan/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/anulum_logo_company.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>nn/ Module — Full Reference - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#nn-module-complete-api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              nn/ Module — Full Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/stuart_landau/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tutorials/01_new_domain_checklist/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../api/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../galleries/domainpack_gallery/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../ASSUMPTIONS/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../papers/JOSS_DRAFT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Papers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../VALIDATION_REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../pricing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Pricing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/minimal_domainpack_5min/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minimal Domainpack in 5 Minutes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/start_here/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here (Learning Path)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/pipeline_firing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How the Pipeline Fires
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/pipeline_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/phase_control_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/domain_utilisation_schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/kuramoto_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/backend_fallbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Fallback Chain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/backend_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/dependency_locks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Locks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Differentiable Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/advanced_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/control_systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/analysis_toolkit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Toolkit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/hardware_deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/digital_twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital Twin Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/notebook_to_production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook → Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/interactive_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../video_scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Video Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/04_differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Differentiable Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upde_simplicial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Simplicial (3-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upde_hypergraph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Hypergraph (k-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upde_geometric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Geometric (SO(2))
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upde_envelope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Envelope (RMS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upde_reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upde_splitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Strang Splitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/coupling_te_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — TE Adaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/coupling_prior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Universal Prior
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/coupling_connectome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — HCP Connectome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/monitor_sleep_staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Sleep Staging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/monitor_evs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — EVS (Entrainment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/ssgf_carrier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Geometry Carrier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/ssgf_ethical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Ethical Cost (C15)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_23" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_23" id="__nav_7_23_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_23_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_23">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autotune
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/autotune_sindy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase-SINDy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/autotune_coupling_est/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/autotune_phase_extract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Extraction (Hilbert)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/autotune_freq_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequency Identification (DMD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifacts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/autotune/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neural Network (nn)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-functional-api-functionalpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Functional API (functional.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Functional API (functional.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-kuramoto-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Kuramoto Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-masked-sparse-kuramoto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Masked (Sparse) Kuramoto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-winfree-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Winfree Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-simplicial-3-body-kuramoto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Simplicial (3-Body) Kuramoto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-stuart-landau-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 Stuart-Landau Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-order-parameters-and-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 Order Parameters and Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-equinox-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Equinox Layers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Equinox Layers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-kuramotolayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 KuramotoLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-stuartlandaulayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 StuartLandauLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-simplicialkuramotolayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 SimplicialKuramotoLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-thetaneuronlayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 ThetaNeuronLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-udekuramotolayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 UDEKuramotoLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-inverse-problem-inversepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Inverse Problem (inverse.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Inverse Problem (inverse.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-analytical_inverse-pikovsky-2008" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 analytical_inverse (Pikovsky 2008)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-hybrid_inverse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 hybrid_inverse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-infer_coupling-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 infer_coupling (legacy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-coupling_correlation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 coupling_correlation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-oscillator-ising-machine-oimpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Oscillator Ising Machine (oim.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Oscillator Ising Machine (oim.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oim_solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oim_solve
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-bold-signal-generator-boldpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. BOLD Signal Generator (bold.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. BOLD Signal Generator (bold.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#state-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-parameters-stephan-et-al-2007" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default parameters (Stephan et al. 2007)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-reservoir-computing-reservoirpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Reservoir Computing (reservoir.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Reservoir Computing (reservoir.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-chimera-detection-chimerapy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Chimera Detection (chimera.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Chimera Detection (chimera.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#local-order-parameter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local order parameter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-spectral-analysis-spectralpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Spectral Analysis (spectral.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Spectral Analysis (spectral.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#functions_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-training-utilities-trainingpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Training Utilities (training.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Training Utilities (training.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loss-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loss functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-gpu-benchmark-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. GPU Benchmark Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. GPU Benchmark Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hardware-comparison-kuramoto-forward-pass-100-steps-mean-sstep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardware comparison (Kuramoto forward pass, 100 steps, mean µs/step)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jax-vs-numpy-crossover-500-kuramoto-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JAX vs NumPy crossover (500 Kuramoto steps)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batched-kuramoto-vmap-64-oscillators-200-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batched Kuramoto (vmap, 64 oscillators, 200 steps)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inverse-coupling-accuracy-gradient-method-500-epochs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inverse coupling accuracy (gradient method, 500 epochs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analytical-vs-gradient-inverse-measured-2026-03-27-l40s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analytical vs gradient inverse (measured 2026-03-27, L40S)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Design Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nn_physics_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Physics Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../end_to_end_wiring_audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Wiring Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../competitive_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../competitive_comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What SPO Does That No One Else Can
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Papers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/JOSS_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JOSS: Phase Dynamics Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/DUAL_R_PH1_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual R+p_h1 Consciousness Criterion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/SSGF_IDENTITY_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF Sextuple Identity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/SAFETY_CERT_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Certification Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/FEP_CORRESPONDENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FEP Correspondence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION_REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION_STUDY_PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clinical Study Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pricing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pricing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-functional-api-functionalpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Functional API (functional.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Functional API (functional.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-kuramoto-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Kuramoto Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-masked-sparse-kuramoto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Masked (Sparse) Kuramoto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-winfree-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Winfree Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-simplicial-3-body-kuramoto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Simplicial (3-Body) Kuramoto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-stuart-landau-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 Stuart-Landau Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-order-parameters-and-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 Order Parameters and Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-equinox-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Equinox Layers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Equinox Layers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-kuramotolayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 KuramotoLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-stuartlandaulayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 StuartLandauLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-simplicialkuramotolayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 SimplicialKuramotoLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-thetaneuronlayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 ThetaNeuronLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-udekuramotolayer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 UDEKuramotoLayer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-inverse-problem-inversepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Inverse Problem (inverse.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Inverse Problem (inverse.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-analytical_inverse-pikovsky-2008" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 analytical_inverse (Pikovsky 2008)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-hybrid_inverse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 hybrid_inverse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-infer_coupling-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 infer_coupling (legacy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-coupling_correlation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 coupling_correlation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-oscillator-ising-machine-oimpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Oscillator Ising Machine (oim.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Oscillator Ising Machine (oim.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oim_solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oim_solve
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-bold-signal-generator-boldpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. BOLD Signal Generator (bold.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. BOLD Signal Generator (bold.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#state-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-parameters-stephan-et-al-2007" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default parameters (Stephan et al. 2007)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-reservoir-computing-reservoirpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Reservoir Computing (reservoir.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Reservoir Computing (reservoir.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-chimera-detection-chimerapy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Chimera Detection (chimera.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Chimera Detection (chimera.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#local-order-parameter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local order parameter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functions_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-spectral-analysis-spectralpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Spectral Analysis (spectral.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Spectral Analysis (spectral.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#functions_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-training-utilities-trainingpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Training Utilities (training.py)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Training Utilities (training.py)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loss-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loss functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-gpu-benchmark-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. GPU Benchmark Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. GPU Benchmark Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hardware-comparison-kuramoto-forward-pass-100-steps-mean-sstep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardware comparison (Kuramoto forward pass, 100 steps, mean µs/step)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jax-vs-numpy-crossover-500-kuramoto-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JAX vs NumPy crossover (500 Kuramoto steps)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batched-kuramoto-vmap-64-oscillators-200-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batched Kuramoto (vmap, 64 oscillators, 200 steps)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inverse-coupling-accuracy-gradient-method-500-epochs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inverse coupling accuracy (gradient method, 500 epochs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analytical-vs-gradient-inverse-measured-2026-03-27-l40s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analytical vs gradient inverse (measured 2026-03-27, L40S)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Design Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="nn-module-complete-api-reference">nn/ Module — Complete API Reference<a class="headerlink" href="#nn-module-complete-api-reference" title="Permanent link">&para;</a></h1>
+<p>The <code>nn/</code> module is SPO's differentiable JAX backend. Every function is
+JIT-compilable, <code>vmap</code>-compatible, and fully differentiable via JAX autodiff.
+It turns oscillator dynamics into gradient-trainable building blocks.</p>
+<p><strong>Installation:</strong> <code>pip install scpn-phase-orchestrator[nn]</code>
+(installs <code>jax&gt;=0.4</code>, <code>equinox&gt;=0.11</code>, <code>optax&gt;=0.2</code>)</p>
+<hr />
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>nn/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── functional.py          Pure JAX functions (no state)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── kuramoto_layer.py      KuramotoLayer (equinox Module)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── stuart_landau_layer.py StuartLandauLayer (equinox Module)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── simplicial_layer.py    SimplicialKuramotoLayer (equinox Module)
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── theta_neuron.py        ThetaNeuronLayer + functional
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── ude.py                 UDEKuramotoLayer + CouplingResidual
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── inverse.py             Coupling matrix inference (3 methods)
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>├── oim.py                 Oscillator Ising Machine
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── bold.py                Balloon-Windkessel hemodynamic model
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>├── reservoir.py           Kuramoto reservoir computing
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>├── chimera.py             Chimera state detection
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>├── spectral.py            Laplacian spectral analysis
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>├── training.py            Loss functions + training loop
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>└── __init__.py            Lazy-loaded public API (90 symbols)
+</code></pre></div>
+<p>All imports are lazy: <code>import scpn_phase_orchestrator.nn</code> succeeds without
+JAX installed. Symbols resolve on first attribute access.</p>
+<hr />
+<h2 id="1-functional-api-functionalpy">1. Functional API (<code>functional.py</code>)<a class="headerlink" href="#1-functional-api-functionalpy" title="Permanent link">&para;</a></h2>
+<p>Stateless functions operating on JAX arrays. No side effects, no mutable
+state. Every function listed here accepts and returns <code>jax.Array</code>.</p>
+<h3 id="11-kuramoto-model">1.1 Kuramoto Model<a class="headerlink" href="#11-kuramoto-model" title="Permanent link">&para;</a></h3>
+<p>The standard Kuramoto model (Kuramoto 1975):</p>
+<div class="arithmatex">\[\frac{d\theta_i}{dt} = \omega_i + \sum_j K_{ij} \sin(\theta_j - \theta_i)\]</div>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Integrator</th>
+<th>Signature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kuramoto_step</code></td>
+<td>Euler</td>
+<td><code>(phases, omegas, K, dt) → phases</code></td>
+</tr>
+<tr>
+<td><code>kuramoto_rk4_step</code></td>
+<td>RK4</td>
+<td><code>(phases, omegas, K, dt) → phases</code></td>
+</tr>
+<tr>
+<td><code>kuramoto_forward</code></td>
+<td>scan(RK4|Euler)</td>
+<td><code>(phases, omegas, K, dt, n_steps, method) → (final, trajectory)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>phases</code>: <code>(N,)</code> oscillator phases in [0, 2π)</li>
+<li><code>omegas</code>: <code>(N,)</code> natural frequencies</li>
+<li><code>K</code>: <code>(N, N)</code> coupling matrix</li>
+<li><code>dt</code>: <code>float</code> integration timestep</li>
+<li><code>n_steps</code>: <code>int</code> number of integration steps</li>
+<li><code>method</code>: <code>"rk4"</code> (default) or <code>"euler"</code></li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>kuramoto_step</code>, <code>kuramoto_rk4_step</code>: <code>(N,)</code> updated phases, wrapped to [0, 2π)</li>
+<li><code>kuramoto_forward</code>: tuple <code>(final, trajectory)</code> where <code>final</code> is <code>(N,)</code> and <code>trajectory</code> is <code>(n_steps, N)</code></li>
+</ul>
+<p><code>kuramoto_forward</code> uses <code>jax.lax.scan</code> internally, making it efficient for
+XLA compilation and enabling gradient flow through the full trajectory.</p>
+<h3 id="12-masked-sparse-kuramoto">1.2 Masked (Sparse) Kuramoto<a class="headerlink" href="#12-masked-sparse-kuramoto" title="Permanent link">&para;</a></h3>
+<p>Identical to standard Kuramoto but with a binary mask for sparse coupling:</p>
+<div class="arithmatex">\[\frac{d\theta_i}{dt} = \omega_i + \sum_j K_{ij} \cdot M_{ij} \cdot \sin(\theta_j - \theta_i)\]</div>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Integrator</th>
+<th>Extra parameter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kuramoto_step_masked</code></td>
+<td>Euler</td>
+<td><code>mask: (N, N)</code> binary</td>
+</tr>
+<tr>
+<td><code>kuramoto_rk4_step_masked</code></td>
+<td>RK4</td>
+<td><code>mask: (N, N)</code> binary</td>
+</tr>
+<tr>
+<td><code>kuramoto_forward_masked</code></td>
+<td>scan</td>
+<td><code>mask: (N, N)</code> binary</td>
+</tr>
+</tbody>
+</table>
+<p>The mask is static (not learnable). Use this when network topology is known
+but coupling weights are learnable.</p>
+<h3 id="13-winfree-model">1.3 Winfree Model<a class="headerlink" href="#13-winfree-model" title="Permanent link">&para;</a></h3>
+<p>The Winfree model (Winfree 1967) — pulse-coupled oscillators with separate
+sensitivity and influence functions:</p>
+<div class="arithmatex">\[\frac{d\theta_i}{dt} = \omega_i + \frac{K}{N} \cdot Q(\theta_i) \cdot \sum_j P(\theta_j)\]</div>
+<p>where <span class="arithmatex">\(P(\theta) = 1 + \cos(\theta)\)</span> (pulse function) and <span class="arithmatex">\(Q(\theta) = -\sin(\theta)\)</span> (phase response curve).</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Integrator</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>winfree_step</code></td>
+<td>Euler</td>
+</tr>
+<tr>
+<td><code>winfree_rk4_step</code></td>
+<td>RK4</td>
+</tr>
+<tr>
+<td><code>winfree_forward</code></td>
+<td>scan(RK4|Euler)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Parameters:</strong> <code>(phases, omegas, K, dt)</code> where <code>K</code> is a <strong>scalar</strong> coupling
+strength (not a matrix). The all-to-all coupling is implicit.</p>
+<h3 id="14-simplicial-3-body-kuramoto">1.4 Simplicial (3-Body) Kuramoto<a class="headerlink" href="#14-simplicial-3-body-kuramoto" title="Permanent link">&para;</a></h3>
+<p>Extends Kuramoto with higher-order 3-body interactions (Gambuzza et al.
+2023, Nature Physics; Tang et al. 2025):</p>
+<div class="arithmatex">\[\frac{d\theta_i}{dt} = \omega_i + \sum_j K_{ij} \sin(\theta_j - \theta_i) + \frac{\sigma_2}{N^2} \sum_{j,k} \sin[(\theta_j - \theta_i) + (\theta_k - \theta_i)]\]</div>
+<p>The 3-body term is computed efficiently as <span class="arithmatex">\(\frac{2\sigma_2}{N^2} S_i C_i\)</span>
+where <span class="arithmatex">\(S_i = \sum_j \sin(\theta_j - \theta_i)\)</span> and <span class="arithmatex">\(C_i = \sum_j \cos(\theta_j - \theta_i)\)</span>.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Extra parameter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>simplicial_step</code></td>
+<td><code>sigma2: float</code> (default 0.0)</td>
+</tr>
+<tr>
+<td><code>simplicial_rk4_step</code></td>
+<td><code>sigma2: float</code></td>
+</tr>
+<tr>
+<td><code>simplicial_forward</code></td>
+<td><code>sigma2: float</code></td>
+</tr>
+</tbody>
+</table>
+<p>When <code>sigma2=0</code>, these reduce to standard pairwise Kuramoto. Nonzero <code>sigma2</code>
+produces explosive (first-order) synchronisation transitions — a qualitatively
+different phenomenon from the continuous (second-order) transition of
+standard Kuramoto.</p>
+<h3 id="15-stuart-landau-model">1.5 Stuart-Landau Model<a class="headerlink" href="#15-stuart-landau-model" title="Permanent link">&para;</a></h3>
+<p>Coupled phase-amplitude oscillators. Unlike Kuramoto (phase only),
+Stuart-Landau carries amplitude dynamics — enabling representation of
+feature presence (amplitude &gt; 0) alongside binding (phase).</p>
+<p>Phase:
+$<span class="arithmatex">\(\frac{d\theta_i}{dt} = \omega_i + \sum_j K_{ij} \sin(\theta_j - \theta_i)\)</span>$</p>
+<p>Amplitude:
+$<span class="arithmatex">\(\frac{dr_i}{dt} = (\mu_i - r_i^2) r_i + \epsilon \sum_j K^r_{ij} \cdot r_j \cdot \cos(\theta_j - \theta_i)\)</span>$</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stuart_landau_step</code></td>
+<td><code>(new_phases, new_amplitudes)</code></td>
+</tr>
+<tr>
+<td><code>stuart_landau_rk4_step</code></td>
+<td><code>(new_phases, new_amplitudes)</code></td>
+</tr>
+<tr>
+<td><code>stuart_landau_forward</code></td>
+<td><code>(final_p, final_r, traj_p, traj_r)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Additional parameters:</strong></p>
+<ul>
+<li><code>amplitudes</code>: <code>(N,)</code> oscillator amplitudes (r &gt;= 0)</li>
+<li><code>mu</code>: <code>(N,)</code> bifurcation parameters. <code>mu &gt; 0</code>: supercritical (oscillators converge to amplitude sqrt(mu)). <code>mu &lt; 0</code>: subcritical (amplitudes decay to 0).</li>
+<li><code>K_r</code>: <code>(N, N)</code> amplitude coupling matrix</li>
+<li><code>epsilon</code>: <code>float</code> amplitude coupling strength (default 1.0)</li>
+</ul>
+<p>Amplitudes are clamped to &gt;= 0 after each step.</p>
+<h3 id="16-order-parameters-and-metrics">1.6 Order Parameters and Metrics<a class="headerlink" href="#16-order-parameters-and-metrics" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Formula</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>order_parameter(phases)</code></td>
+<td><span class="arithmatex">\(R = \|\langle e^{i\theta} \rangle\|\)</span></td>
+<td>Scalar R in [0, 1]. R=1: perfect sync. R~0: incoherent.</td>
+</tr>
+<tr>
+<td><code>plv(trajectory)</code></td>
+<td><span class="arithmatex">\(\text{PLV}_{ij} = \|\langle e^{i(\theta_i - \theta_j)} \rangle_t\|\)</span></td>
+<td><code>(N, N)</code> matrix in [0, 1].</td>
+</tr>
+<tr>
+<td><code>coupling_laplacian(K)</code></td>
+<td><span class="arithmatex">\(L = D - K\)</span></td>
+<td><code>(N, N)</code> Laplacian.</td>
+</tr>
+<tr>
+<td><code>saf_order_parameter(K, omegas)</code></td>
+<td><span class="arithmatex">\(r \approx 1 - \frac{1}{2N}\sum_{j=2}^N \lambda_j^{-2} \langle v^j, \omega \rangle^2\)</span></td>
+<td>Scalar estimated R.</td>
+</tr>
+<tr>
+<td><code>saf_loss(K, omegas, budget, budget_weight)</code></td>
+<td><span class="arithmatex">\(-r + w \cdot \max(\|K\|_1 - B, 0)\)</span></td>
+<td>Scalar loss for topology optimisation.</td>
+</tr>
+</tbody>
+</table>
+<p>The SAF (Spectral Alignment Function) provides a closed-form estimate of the
+order parameter from Laplacian eigenstructure (Skardal &amp; Taylor 2016; Song et
+al. 2025). It avoids ODE integration entirely, making it ~10x faster for
+gradient-based topology search.</p>
+<hr />
+<h2 id="2-equinox-layers">2. Equinox Layers<a class="headerlink" href="#2-equinox-layers" title="Permanent link">&para;</a></h2>
+<p>Stateful modules with learnable parameters. All inherit from <code>equinox.Module</code>.
+Use with <code>optax</code> for training.</p>
+<h3 id="21-kuramotolayer">2.1 KuramotoLayer<a class="headerlink" href="#21-kuramotolayer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">KuramotoLayer</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">K_scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Learnable parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Shape</th>
+<th>Initialisation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>K</code></td>
+<td><code>(n, n)</code></td>
+<td>Symmetric Gaussian, scale <code>K_scale</code></td>
+</tr>
+<tr>
+<td><code>omegas</code></td>
+<td><code>(n,)</code></td>
+<td>Gaussian</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Static config:</strong> <code>n_steps</code>, <code>dt</code>, <code>n</code>, <code>mask</code></p>
+<p><strong>Methods:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__call__</code></td>
+<td><code>(phases) → phases</code></td>
+<td>Final phases after <code>n_steps</code></td>
+</tr>
+<tr>
+<td><code>forward_with_trajectory</code></td>
+<td><code>(phases) → (final, trajectory)</code></td>
+<td>Final + <code>(n_steps, n)</code> trajectory</td>
+</tr>
+<tr>
+<td><code>sync_score</code></td>
+<td><code>(phases) → R</code></td>
+<td>Scalar order parameter</td>
+</tr>
+</tbody>
+</table>
+<p>If <code>mask</code> is provided (binary <code>(n, n)</code> array), uses <code>kuramoto_forward_masked</code>
+internally — topology is fixed, only weights are learnable.</p>
+<h3 id="22-stuartlandaulayer">2.2 StuartLandauLayer<a class="headerlink" href="#22-stuartlandaulayer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">StuartLandauLayer</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">K_scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Learnable parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Shape</th>
+<th>Initialisation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>K</code></td>
+<td><code>(n, n)</code></td>
+<td>Symmetric Gaussian</td>
+</tr>
+<tr>
+<td><code>K_r</code></td>
+<td><code>(n, n)</code></td>
+<td>Symmetric Gaussian</td>
+</tr>
+<tr>
+<td><code>omegas</code></td>
+<td><code>(n,)</code></td>
+<td>Gaussian</td>
+</tr>
+<tr>
+<td><code>mu</code></td>
+<td><code>(n,)</code></td>
+<td><code>0.5 + 0.1 * N(0,1)</code> (supercritical by default)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Methods:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__call__</code></td>
+<td><code>(phases, amplitudes) → (phases, amplitudes)</code></td>
+<td>Final state</td>
+</tr>
+<tr>
+<td><code>forward_with_trajectory</code></td>
+<td><code>(phases, amplitudes) → (fp, fr, traj_p, traj_r)</code></td>
+<td>Full trajectories</td>
+</tr>
+<tr>
+<td><code>sync_score</code></td>
+<td><code>(phases, amplitudes) → R</code></td>
+<td>Phase order parameter</td>
+</tr>
+<tr>
+<td><code>mean_amplitude</code></td>
+<td><code>(phases, amplitudes) → scalar</code></td>
+<td>Mean final amplitude</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-simplicialkuramotolayer">2.3 SimplicialKuramotoLayer<a class="headerlink" href="#23-simplicialkuramotolayer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">SimplicialKuramotoLayer</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">K_scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">sigma2_init</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Learnable parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Shape</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>K</code></td>
+<td><code>(n, n)</code></td>
+<td>Pairwise coupling</td>
+</tr>
+<tr>
+<td><code>omegas</code></td>
+<td><code>(n,)</code></td>
+<td>Natural frequencies</td>
+</tr>
+<tr>
+<td><code>sigma2</code></td>
+<td>scalar</td>
+<td>3-body coupling strength</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>sigma2=0</code>, identical to <code>KuramotoLayer</code>. Gradient flows through
+<code>sigma2</code>, enabling learning whether higher-order interactions are needed.</p>
+<h3 id="24-thetaneuronlayer">2.4 ThetaNeuronLayer<a class="headerlink" href="#24-thetaneuronlayer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">ThetaNeuronLayer</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">K_scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">eta_mean</span><span class="o">=-</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+</code></pre></div>
+<p>The theta neuron (Ermentrout &amp; Kopell 1986) — canonical model for Type I
+neuronal excitability:</p>
+<div class="arithmatex">\[\frac{d\theta_i}{dt} = (1 - \cos\theta_i) + (1 + \cos\theta_i)(\eta_i + I_{\text{syn},i})\]</div>
+<p>where <span class="arithmatex">\(I_{\text{syn},i} = \sum_j K_{ij}(1 - \cos\theta_j)\)</span>.</p>
+<p>Unlike Kuramoto oscillators which always oscillate, theta neurons can be
+<strong>excitable</strong> (<span class="arithmatex">\(\eta &lt; 0\)</span>): they fire only when driven by sufficient synaptic
+input. This makes them suitable for modelling spiking neural networks.</p>
+<p><strong>Learnable parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Shape</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>K</code></td>
+<td><code>(n, n)</code></td>
+<td>Synaptic coupling</td>
+</tr>
+<tr>
+<td><code>eta</code></td>
+<td><code>(n,)</code></td>
+<td>Excitability. <code>eta &gt; 0</code>: oscillatory. <code>eta &lt; 0</code>: excitable.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Functional API:</strong> <code>theta_neuron_step</code>, <code>theta_neuron_rk4_step</code>, <code>theta_neuron_forward</code>
+with signature <code>(phases, eta, K, dt)</code>.</p>
+<h3 id="25-udekuramotolayer">2.5 UDEKuramotoLayer<a class="headerlink" href="#25-udekuramotolayer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">UDEKuramotoLayer</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">K_scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">hidden</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+</code></pre></div>
+<p>Universal Differential Equation (Rackauckas et al. 2020): known physics
+backbone + learned neural residual:</p>
+<div class="arithmatex">\[\frac{d\theta_i}{dt} = \omega_i + \sum_j K_{ij} \cdot [\sin(\theta_j - \theta_i) + \text{NN}_\phi(\theta_j - \theta_i)]\]</div>
+<p>The <code>sin(Delta_theta)</code> term provides the mechanistic backbone. The
+<code>CouplingResidual</code> MLP (3-layer, tanh activations) handles model mismatch:
+higher harmonics, asymmetric coupling, amplitude-dependent effects.</p>
+<p><strong>Learnable parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Shape</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>K</code></td>
+<td><code>(n, n)</code></td>
+<td>Coupling matrix</td>
+</tr>
+<tr>
+<td><code>omegas</code></td>
+<td><code>(n,)</code></td>
+<td>Natural frequencies</td>
+</tr>
+<tr>
+<td><code>residual</code></td>
+<td><code>CouplingResidual</code></td>
+<td>3-layer MLP (1 → hidden → hidden → 1)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>CouplingResidual architecture:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Δθ (scalar) → Linear(1, 16) → tanh → Linear(16, 16) → tanh → Linear(16, 1) → correction (scalar)
+</code></pre></div>
+<p>Applied per-pair via double <code>jax.vmap</code> over the <code>(N, N)</code> phase-difference
+matrix — no explicit loops.</p>
+<hr />
+<h2 id="3-inverse-problem-inversepy">3. Inverse Problem (<code>inverse.py</code>)<a class="headerlink" href="#3-inverse-problem-inversepy" title="Permanent link">&para;</a></h2>
+<p>Recover coupling matrix <span class="arithmatex">\(K\)</span> and natural frequencies <span class="arithmatex">\(\omega\)</span> from observed
+phase trajectories.</p>
+<h3 id="31-analytical_inverse-pikovsky-2008">3.1 analytical_inverse (Pikovsky 2008)<a class="headerlink" href="#31-analytical_inverse-pikovsky-2008" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">analytical_inverse</span><span class="p">(</span><span class="n">observed</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span> <span class="err">→</span> <span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">omegas</span><span class="p">)</span>
+</code></pre></div>
+<p>Exploits Kuramoto structure directly. Finite-difference approximation of
+<span class="arithmatex">\(d\theta/dt\)</span>, build <span class="arithmatex">\(\sin(\Delta\theta)\)</span> basis matrix, solve via least
+squares per oscillator.</p>
+<ul>
+<li><strong>Complexity:</strong> <span class="arithmatex">\(O(N^3)\)</span> per oscillator (lstsq)</li>
+<li><strong>Accuracy:</strong> correlation &gt; 0.95 for noiseless data</li>
+<li><strong>Speed:</strong> seconds (no ODE backprop)</li>
+<li><strong>Phase wrapping:</strong> uses <code>atan2(sin, cos)</code> for central differences, correctly handling 2π boundaries</li>
+</ul>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>observed</code>: <code>(T, N)</code> phase trajectory, <span class="arithmatex">\(T \geq 3\)</span></li>
+<li><code>dt</code>: integration timestep</li>
+<li><code>alpha</code>: Tikhonov (ridge) regularisation. 0 = no regularisation.</li>
+</ul>
+<p><strong>Always try this first.</strong> Only fall back to gradient methods if data is noisy
+or the underlying model isn't pure Kuramoto.</p>
+<h3 id="32-hybrid_inverse">3.2 hybrid_inverse<a class="headerlink" href="#32-hybrid_inverse" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">hybrid_inverse</span><span class="p">(</span><span class="n">observed</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">n_refine</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="err">→</span> <span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">omegas</span><span class="p">,</span> <span class="n">losses</span><span class="p">)</span>
+</code></pre></div>
+<p>Analytical init + gradient refinement via multiple shooting. Handles model
+mismatch (noise, higher harmonics) by starting from the analytical solution
+and running Adam epochs with windowed loss.</p>
+<p><strong>Multiple shooting:</strong> the trajectory is split into windows of <code>window_size</code>
+steps. Each window's loss is computed independently and averaged. This prevents
+gradient vanishing through long ODE integration and is fully JIT-compatible
+via <code>vmap</code> across windows.</p>
+<h3 id="33-infer_coupling-legacy">3.3 infer_coupling (legacy)<a class="headerlink" href="#33-infer_coupling-legacy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">infer_coupling</span><span class="p">(</span><span class="n">observed</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">n_epochs</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">l1_weight</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>               <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">grad_clip</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="err">→</span> <span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">omegas</span><span class="p">,</span> <span class="n">losses</span><span class="p">)</span>
+</code></pre></div>
+<p>Pure gradient descent through ODE solver with Adam optimiser. Slow (minutes)
+and lower accuracy than analytical methods. Kept for backward compatibility
+and for cases where the forward model is not standard Kuramoto.</p>
+<p><strong>Loss function:</strong> <code>inverse_loss</code> — runs forward model from <code>observed[0]</code>,
+compares prediction against observed trajectory using circular distance
+<span class="arithmatex">\(\text{mean}(1 - \cos(\Delta\theta))\)</span>.</p>
+<h3 id="34-coupling_correlation">3.4 coupling_correlation<a class="headerlink" href="#34-coupling_correlation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">coupling_correlation</span><span class="p">(</span><span class="n">K_true</span><span class="p">,</span> <span class="n">K_inferred</span><span class="p">)</span> <span class="err">→</span> <span class="n">scalar</span>
+</code></pre></div>
+<p>Pearson correlation on upper-triangle entries (excluding diagonal).
+Use this to evaluate inference quality.</p>
+<hr />
+<h2 id="4-oscillator-ising-machine-oimpy">4. Oscillator Ising Machine (<code>oim.py</code>)<a class="headerlink" href="#4-oscillator-ising-machine-oimpy" title="Permanent link">&para;</a></h2>
+<p>Maps NP-hard combinatorial problems (graph colouring, max-cut, QUBO) to
+coupled oscillator dynamics. Connected oscillators repel from the same phase
+cluster.</p>
+<p><strong>Coupling function:</strong></p>
+<div class="arithmatex">\[\frac{d\theta_i}{dt} = \kappa \sum_j A_{ij} \sin(n_c \cdot (\theta_i - \theta_j))\]</div>
+<p>where <span class="arithmatex">\(n_c\)</span> is the number of colours. This drives connected nodes to
+phase separations of <span class="arithmatex">\(2\pi / n_c\)</span> — i.e., different colour assignments.</p>
+<p><strong>Energy function:</strong></p>
+<div class="arithmatex">\[E = \sum_{(i,j) \in \mathcal{E}} \cos(n_c \cdot (\theta_i - \theta_j))\]</div>
+<p>Minimised when connected nodes are maximally separated. Differentiable.</p>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>oim_step(phases, adjacency, n_colors, dt, coupling_strength)</code></td>
+<td>Single Euler step</td>
+</tr>
+<tr>
+<td><code>oim_forward(phases, adjacency, n_colors, dt, n_steps, coupling_strength)</code></td>
+<td>Trajectory via scan</td>
+</tr>
+<tr>
+<td><code>oim_solve(adjacency, n_colors, *, key, ...)</code></td>
+<td>Full solver with annealing + multi-restart</td>
+</tr>
+<tr>
+<td><code>extract_coloring(phases, n_colors)</code></td>
+<td>Floor-bucket assignment</td>
+</tr>
+<tr>
+<td><code>extract_coloring_soft(phases, n_colors)</code></td>
+<td>Circular-distance assignment (more accurate)</td>
+</tr>
+<tr>
+<td><code>coloring_violations(colors, adjacency)</code></td>
+<td>Count same-colour edges</td>
+</tr>
+<tr>
+<td><code>coloring_energy(phases, adjacency, n_colors)</code></td>
+<td>Continuous energy (differentiable)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="oim_solve">oim_solve<a class="headerlink" href="#oim_solve" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">oim_solve</span><span class="p">(</span><span class="n">adjacency</span><span class="p">,</span> <span class="n">n_colors</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">k_min</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">k_max</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>          <span class="n">n_anneal</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">n_refine</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">n_restarts</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="err">→</span> <span class="p">(</span><span class="n">best_colors</span><span class="p">,</span> <span class="n">best_phases</span><span class="p">,</span> <span class="n">best_energy</span><span class="p">)</span>
+</code></pre></div>
+<p>Fully vectorised solver. All restarts run in parallel via <code>vmap</code>. Annealing
+and refinement use <code>jax.lax.scan</code> — no Python loops. For 2-colouring,
+automatically switches to <code>sin(Delta_theta)</code> coupling (anti-phase at π).</p>
+<hr />
+<h2 id="5-bold-signal-generator-boldpy">5. BOLD Signal Generator (<code>bold.py</code>)<a class="headerlink" href="#5-bold-signal-generator-boldpy" title="Permanent link">&para;</a></h2>
+<p>Balloon-Windkessel hemodynamic model (Friston et al. 2000, Stephan et al.
+2007). Converts neural activity to simulated fMRI BOLD signal.</p>
+<h3 id="state-variables">State variables<a class="headerlink" href="#state-variables" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Symbol</th>
+<th>Description</th>
+<th>Resting value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>s</code></td>
+<td>vasodilatory signal</td>
+<td>Neural-vascular coupling</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>f</code></td>
+<td>blood inflow</td>
+<td>Normalised cerebral blood flow</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>v</code></td>
+<td>blood volume</td>
+<td>Normalised venous volume</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>q</code></td>
+<td>deoxyhemoglobin</td>
+<td>Normalised dHb content</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="equations">Equations<a class="headerlink" href="#equations" title="Permanent link">&para;</a></h3>
+<p>Oxygen extraction: <span class="arithmatex">\(E(f) = 1 - (1 - E_0)^{1/f}\)</span></p>
+<p>State dynamics:
+$<span class="arithmatex">\(\frac{ds}{dt} = x - \kappa s - \gamma(f - 1)\)</span>$
+$<span class="arithmatex">\(\frac{df}{dt} = s\)</span>$
+$<span class="arithmatex">\(\frac{dv}{dt} = \frac{1}{\tau}(f - v^{1/\alpha})\)</span>$
+$<span class="arithmatex">\(\frac{dq}{dt} = \frac{1}{\tau}\left(\frac{f \cdot E(f)}{E_0} - \frac{v^{1/\alpha} \cdot q}{v}\right)\)</span>$</p>
+<p>BOLD output: <span class="arithmatex">\(y = V_0 \cdot [k_1(1-q) + k_2(1-q/v) + k_3(1-v)]\)</span></p>
+<h3 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>balloon_windkessel_step(s, f, v, q, x, dt, ...)</code></td>
+<td>Single Euler step</td>
+</tr>
+<tr>
+<td><code>bold_signal(v, q)</code></td>
+<td>Compute BOLD from volume and dHb</td>
+</tr>
+<tr>
+<td><code>bold_from_neural(neural, dt, dt_bold=0.5)</code></td>
+<td>Full pipeline: <code>(T, N)</code> neural → <code>(T_bold, N)</code> BOLD</td>
+</tr>
+</tbody>
+</table>
+<h3 id="default-parameters-stephan-et-al-2007">Default parameters (Stephan et al. 2007)<a class="headerlink" href="#default-parameters-stephan-et-al-2007" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kappa</code></td>
+<td>0.65</td>
+<td>Signal decay rate (1/s)</td>
+</tr>
+<tr>
+<td><code>gamma</code></td>
+<td>0.41</td>
+<td>Flow-dependent elimination (1/s)</td>
+</tr>
+<tr>
+<td><code>tau</code></td>
+<td>0.98</td>
+<td>Hemodynamic transit time (s)</td>
+</tr>
+<tr>
+<td><code>alpha</code></td>
+<td>0.32</td>
+<td>Grubb's vessel stiffness exponent</td>
+</tr>
+<tr>
+<td><code>E0</code></td>
+<td>0.4</td>
+<td>Resting oxygen extraction fraction</td>
+</tr>
+<tr>
+<td><code>V0</code></td>
+<td>0.02</td>
+<td>Resting blood volume fraction</td>
+</tr>
+<tr>
+<td><code>k1</code></td>
+<td>2.8</td>
+<td>BOLD coefficient (= 7·E0)</td>
+</tr>
+<tr>
+<td><code>k2</code></td>
+<td>2.0</td>
+<td>BOLD coefficient</td>
+</tr>
+<tr>
+<td><code>k3</code></td>
+<td>1.6</td>
+<td>BOLD coefficient (= 2·E0 - 0.2)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-reservoir-computing-reservoirpy">6. Reservoir Computing (<code>reservoir.py</code>)<a class="headerlink" href="#6-reservoir-computing-reservoirpy" title="Permanent link">&para;</a></h2>
+<p>Kuramoto oscillator network as a nonlinear reservoir. Only the readout
+layer is trained. Theory: universal approximation near edge-of-bifurcation
+(arXiv:2407.16172, 2024).</p>
+<h3 id="pipeline">Pipeline<a class="headerlink" href="#pipeline" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Input u(t) → W_in → modulate ω → Kuramoto dynamics → extract features → W_out → prediction
+</code></pre></div>
+<p>Input signal is injected into natural frequencies:
+<span class="arithmatex">\(\omega_i(t) = \omega_i + (W_{\text{in}} \cdot u(t))_i\)</span></p>
+<h3 id="feature-extraction">Feature extraction<a class="headerlink" href="#feature-extraction" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">reservoir_features</span><span class="p">(</span><span class="n">phases</span><span class="p">)</span> <span class="err">→</span> <span class="p">(</span><span class="mi">2</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">,)</span>
+</code></pre></div>
+<p>Features: <code>[cos(θ_1), sin(θ_1), ..., cos(θ_N), sin(θ_N), R]</code></p>
+<h3 id="functions_2">Functions<a class="headerlink" href="#functions_2" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reservoir_drive(phases, omegas, K, W_in, u, dt, n_steps)</code></td>
+<td>Drive reservoir, collect <code>(T, 2N+1)</code> features</td>
+</tr>
+<tr>
+<td><code>ridge_readout(features, targets, alpha=1e-4)</code></td>
+<td>Train linear readout: <span class="arithmatex">\(W = (F^TF + \alpha I)^{-1}F^TY\)</span></td>
+</tr>
+<tr>
+<td><code>reservoir_predict(features, W_out)</code></td>
+<td>Apply readout: <span class="arithmatex">\(\hat{Y} = F \cdot W\)</span></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-chimera-detection-chimerapy">7. Chimera Detection (<code>chimera.py</code>)<a class="headerlink" href="#7-chimera-detection-chimerapy" title="Permanent link">&para;</a></h2>
+<p>Chimera states: spatiotemporal patterns where synchronised and incoherent
+domains coexist (Kuramoto &amp; Battogtokh 2002). All functions are
+differentiable, enabling gradient-based search for chimera-producing
+coupling matrices.</p>
+<h3 id="local-order-parameter">Local order parameter<a class="headerlink" href="#local-order-parameter" title="Permanent link">&para;</a></h3>
+<div class="arithmatex">\[R_i = \left|\frac{1}{|\mathcal{N}_i|}\sum_{j \in \mathcal{N}_i} e^{i(\theta_j - \theta_i)}\right|\]</div>
+<p>Neighbours defined by nonzero entries in <span class="arithmatex">\(K\)</span>.</p>
+<h3 id="functions_3">Functions<a class="headerlink" href="#functions_3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>local_order_parameter(phases, K)</code></td>
+<td><code>(N,)</code> local R per oscillator</td>
+</tr>
+<tr>
+<td><code>chimera_index(phases, K)</code></td>
+<td>Scalar variance of local R. High = chimera.</td>
+</tr>
+<tr>
+<td><code>detect_chimera(phases, K, coherent_threshold=0.8, incoherent_threshold=0.3)</code></td>
+<td><code>(coherent_mask, incoherent_mask)</code> boolean arrays</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-spectral-analysis-spectralpy">8. Spectral Analysis (<code>spectral.py</code>)<a class="headerlink" href="#8-spectral-analysis-spectralpy" title="Permanent link">&para;</a></h2>
+<p>Differentiable spectral metrics via <code>jnp.linalg.eigh</code>. Gradient flows
+through eigendecomposition for topology optimisation.</p>
+<h3 id="functions_4">Functions<a class="headerlink" href="#functions_4" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Formula</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>laplacian_spectrum(K)</code></td>
+<td>eigenvalues of <span class="arithmatex">\(L = D - K\)</span></td>
+<td><code>(N,)</code> ascending</td>
+</tr>
+<tr>
+<td><code>algebraic_connectivity(K)</code></td>
+<td><span class="arithmatex">\(\lambda_2\)</span></td>
+<td>Fiedler value. 0 iff disconnected.</td>
+</tr>
+<tr>
+<td><code>eigenratio(K)</code></td>
+<td><span class="arithmatex">\(\lambda_N / \lambda_2\)</span></td>
+<td>MSF synchronisability (Barahona &amp; Pecora 2002). Lower = more synchronisable.</td>
+</tr>
+<tr>
+<td><code>sync_threshold(K, omegas)</code></td>
+<td>$\max</td>
+<td>\omega_i - \omega_j</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-training-utilities-trainingpy">9. Training Utilities (<code>training.py</code>)<a class="headerlink" href="#9-training-utilities-trainingpy" title="Permanent link">&para;</a></h2>
+<p>End-to-end training loop for equinox layers with optax optimisers.</p>
+<h3 id="loss-functions">Loss functions<a class="headerlink" href="#loss-functions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sync_loss(model, phases, target_R=1.0)</code></td>
+<td><span class="arithmatex">\((R - R_{\text{target}})^2\)</span></td>
+</tr>
+<tr>
+<td><code>trajectory_loss(model, phases, observed)</code></td>
+<td>Mean circular distance to observed data</td>
+</tr>
+<tr>
+<td><code>coupling_sparsity_loss(K, target_density=0.1)</code></td>
+<td>L1 penalty toward target sparsity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="training-loop">Training loop<a class="headerlink" href="#training-loop" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">train_step</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">)</span> <span class="err">→</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">opt_state</span><span class="p">,</span> <span class="n">loss</span><span class="p">)</span>
+</code></pre></div>
+<p>Single step using <code>eqx.filter_value_and_grad</code> + optax update.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">train</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">n_epochs</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="err">→</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">losses</span><span class="p">)</span>
+</code></pre></div>
+<p>Full loop. The inner step is <code>eqx.filter_jit</code>-compiled.</p>
+<h3 id="data-generation">Data generation<a class="headerlink" href="#data-generation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generate_kuramoto_data(N, T, dt, K_scale, *, key)</code></td>
+<td><code>(K_true, omegas_true, phases0, trajectory)</code></td>
+</tr>
+<tr>
+<td><code>generate_chimera_data(N, T, dt, coupling_strength, coupling_range, *, key)</code></td>
+<td><code>(K, phases0, trajectory)</code> on a 1D ring</td>
+</tr>
+</tbody>
+</table>
+<p><code>generate_chimera_data</code> uses non-local ring coupling (Kuramoto &amp; Battogtokh
+2002) seeded with a partially coherent initial state.</p>
+<hr />
+<h2 id="10-gpu-benchmark-results">10. GPU Benchmark Results<a class="headerlink" href="#10-gpu-benchmark-results" title="Permanent link">&para;</a></h2>
+<p>All benchmarks use the same <code>tools/gpu_benchmark.py</code> suite. 9 benchmark
+suites, checkpoint/resume, saves after each benchmark.</p>
+<h3 id="hardware-comparison-kuramoto-forward-pass-100-steps-mean-sstep">Hardware comparison (Kuramoto forward pass, 100 steps, mean µs/step)<a class="headerlink" href="#hardware-comparison-kuramoto-forward-pass-100-steps-mean-sstep" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>L40S (cloud)</th>
+<th>GTX 1060 (local)</th>
+<th>Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>408</td>
+<td>4,271</td>
+<td>10.5x</td>
+</tr>
+<tr>
+<td>64</td>
+<td>472</td>
+<td>1,904</td>
+<td>4.0x</td>
+</tr>
+<tr>
+<td>128</td>
+<td>514</td>
+<td>1,870</td>
+<td>3.6x</td>
+</tr>
+<tr>
+<td>256</td>
+<td>775</td>
+<td>2,193</td>
+<td>2.8x</td>
+</tr>
+<tr>
+<td>512</td>
+<td>760</td>
+<td>3,939</td>
+<td>5.2x</td>
+</tr>
+</tbody>
+</table>
+<h3 id="jax-vs-numpy-crossover-500-kuramoto-steps">JAX vs NumPy crossover (500 Kuramoto steps)<a class="headerlink" href="#jax-vs-numpy-crossover-500-kuramoto-steps" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>GTX 1060 JAX (ms)</th>
+<th>NumPy CPU (ms)</th>
+<th>Speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>128</td>
+<td>649</td>
+<td>24</td>
+<td>0.04x</td>
+</tr>
+<tr>
+<td>256</td>
+<td>870</td>
+<td>78</td>
+<td>0.09x</td>
+</tr>
+<tr>
+<td>512</td>
+<td>517</td>
+<td>460</td>
+<td>0.9x</td>
+</tr>
+<tr>
+<td><strong>1024</strong></td>
+<td><strong>593</strong></td>
+<td><strong>3,039</strong></td>
+<td><strong>5.1x</strong></td>
+</tr>
+<tr>
+<td><strong>2048</strong></td>
+<td><strong>873</strong></td>
+<td><strong>16,902</strong></td>
+<td><strong>19.4x</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Crossover at N ≈ 512–1024.</strong> Below that, NumPy on CPU is faster due to
+JAX kernel launch overhead. Above N=1024, GPU parallelism dominates.</p>
+<h3 id="batched-kuramoto-vmap-64-oscillators-200-steps">Batched Kuramoto (vmap, 64 oscillators, 200 steps)<a class="headerlink" href="#batched-kuramoto-vmap-64-oscillators-200-steps" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Batch size</th>
+<th>Total (ms)</th>
+<th>Per instance (µs)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>674</td>
+<td>674,014</td>
+</tr>
+<tr>
+<td>4</td>
+<td>752</td>
+<td>187,886</td>
+</tr>
+<tr>
+<td>16</td>
+<td>406</td>
+<td>25,387</td>
+</tr>
+<tr>
+<td>64</td>
+<td>631</td>
+<td>9,854</td>
+</tr>
+<tr>
+<td>256</td>
+<td>595</td>
+<td>2,324</td>
+</tr>
+</tbody>
+</table>
+<p>Batching amortises kernel launch overhead. At batch=256, per-instance
+cost is 290x lower than batch=1.</p>
+<h3 id="inverse-coupling-accuracy-gradient-method-500-epochs">Inverse coupling accuracy (gradient method, 500 epochs)<a class="headerlink" href="#inverse-coupling-accuracy-gradient-method-500-epochs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>Correlation</th>
+<th>RMSE</th>
+<th>Final loss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>0.605</td>
+<td>0.122</td>
+<td>2e-06</td>
+</tr>
+<tr>
+<td>8</td>
+<td>0.588</td>
+<td>0.161</td>
+<td>2e-06</td>
+</tr>
+<tr>
+<td>16</td>
+<td>0.543</td>
+<td>0.172</td>
+<td>2e-05</td>
+</tr>
+<tr>
+<td>32</td>
+<td>0.327</td>
+<td>0.190</td>
+<td>1.3e-05</td>
+</tr>
+</tbody>
+</table>
+<h3 id="analytical-vs-gradient-inverse-measured-2026-03-27-l40s">Analytical vs gradient inverse (measured 2026-03-27, L40S)<a class="headerlink" href="#analytical-vs-gradient-inverse-measured-2026-03-27-l40s" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>Analytical corr</th>
+<th>Analytical time (s)</th>
+<th>Gradient corr</th>
+<th>Gradient time (s)</th>
+<th>Speedup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>1.000</td>
+<td>0.73</td>
+<td>0.676</td>
+<td>81.6</td>
+<td>112x</td>
+</tr>
+<tr>
+<td>8</td>
+<td>0.959</td>
+<td>0.55</td>
+<td>0.564</td>
+<td>77.6</td>
+<td>142x</td>
+</tr>
+<tr>
+<td>16</td>
+<td>0.845</td>
+<td>0.59</td>
+<td>0.527</td>
+<td>84.0</td>
+<td>142x</td>
+</tr>
+<tr>
+<td>32</td>
+<td>0.680</td>
+<td>0.62</td>
+<td>0.331</td>
+<td>84.2</td>
+<td>136x</td>
+</tr>
+</tbody>
+</table>
+<p><code>analytical_inverse</code> is both faster and more accurate. Use gradient methods
+only when the underlying model deviates from standard Kuramoto.</p>
+<hr />
+<h2 id="11-design-decisions">11. Design Decisions<a class="headerlink" href="#11-design-decisions" title="Permanent link">&para;</a></h2>
+<p><strong>Why JAX, not PyTorch?</strong> <code>jax.lax.scan</code> compiles the full ODE integration
+loop into a single XLA kernel. PyTorch's eager mode would require one kernel
+launch per step, 50–200x overhead for typical <code>n_steps</code>.</p>
+<p><strong>Why equinox, not flax/haiku?</strong> Equinox treats modules as pytrees. Layers
+are plain dataclasses with <code>jax.Array</code> fields. No separate <code>state</code> vs <code>params</code>
+dictionaries. <code>filter_jit</code> and <code>filter_grad</code> operate on the module directly.</p>
+<p><strong>Why lazy imports?</strong> <code>import scpn_phase_orchestrator.nn</code> must succeed
+without JAX installed. The package is used in CI environments (linting,
+typing, documentation) where GPU dependencies are not available.</p>
+<p><strong>Why manual Adam in inverse.py?</strong> The inverse functions pre-date the
+<code>training.py</code> module and operate on raw arrays, not equinox modules. They
+use hand-rolled Adam to avoid an optax dependency for users who only need
+the functional API.</p>
+<hr />
+<h2 id="12-references">12. References<a class="headerlink" href="#12-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Kuramoto, Y. (1975). Self-entrainment of a population of coupled non-linear oscillators.</li>
+<li>Winfree, A.T. (1967). Biological rhythms and the behavior of populations of coupled oscillators. <em>J. Theor. Biol.</em> 16(1):15–42.</li>
+<li>Ermentrout, G.B. &amp; Kopell, N. (1986). Parabolic bursting in an excitable system coupled with a slow oscillation. <em>SIAM J. Appl. Math.</em> 46(2):233–253.</li>
+<li>Pikovsky, A. (2008). Reconstruction of a scalar potential from a time series of actions. <em>Phys. Rev. Lett.</em> 100:214101.</li>
+<li>Friston, K.J. et al. (2000). Nonlinear responses in fMRI: the Balloon model. <em>NeuroImage</em> 12(4):466–477.</li>
+<li>Stephan, K.E. et al. (2007). Comparing hemodynamic models with DCM. <em>NeuroImage</em> 38(3):387–401.</li>
+<li>Barahona, M. &amp; Pecora, L.M. (2002). Synchronization in small-world systems. <em>Phys. Rev. Lett.</em> 89(5):054101.</li>
+<li>Skardal, P.S. &amp; Taylor, D. (2016). Optimal synchronization of directed complex networks. <em>SIAM J. Appl. Dyn. Syst.</em> 15(1):458–489.</li>
+<li>Rackauckas, C. et al. (2020). Universal Differential Equations for Scientific Machine Learning. <em>arXiv:2001.04385</em>.</li>
+<li>Kuramoto, Y. &amp; Battogtokh, D. (2002). Coexistence of coherence and incoherence in nonlocally coupled phase oscillators. <em>Nonlinear Phenom. Complex Syst.</em> 5(4):380–385.</li>
+<li>Gambuzza, L.V. et al. (2023). Stability of synchronization in simplicial complexes. <em>Nature Physics</em> 17(7):1093–1098.</li>
+<li>Dorfler, F. &amp; Bullo, F. (2014). Synchronization in complex networks of phase oscillators: A survey. <em>Automatica</em> 50(6):1539–1564.</li>
+<li>Böhm, F. &amp; Schumacher, J. (2020). Graph coloring with physics-inspired graph neural networks. <em>arXiv:2009.00490</em>.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

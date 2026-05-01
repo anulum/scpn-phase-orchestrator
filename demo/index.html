@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPO — Interactive Phase Dynamics Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f23; color: #e0e0e0; min-height: 100vh; }
+.header { text-align: center; padding: 2rem; background: linear-gradient(135deg, #1a1a3e, #2d1b69); }
+.header h1 { font-size: 2rem; color: #a78bfa; margin-bottom: 0.5rem; }
+.header p { color: #94a3b8; font-size: 0.95rem; }
+.container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+.controls { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; align-items: end; }
+.control-group { display: flex; flex-direction: column; gap: 0.25rem; }
+.control-group label { font-size: 0.8rem; color: #94a3b8; }
+.control-group input, .control-group select { background: #1e1e3f; border: 1px solid #4c1d95; color: #e0e0e0; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.9rem; }
+button { background: #7c3aed; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+button:hover { background: #6d28d9; }
+button.stop { background: #dc2626; }
+canvas { width: 100%; height: 300px; background: #1a1a2e; border-radius: 8px; border: 1px solid #2d2d5e; margin: 1rem 0; }
+.stats { display: flex; gap: 2rem; justify-content: center; margin: 1rem 0; }
+.stat { text-align: center; }
+.stat-value { font-size: 2rem; font-weight: 700; color: #a78bfa; }
+.stat-label { font-size: 0.8rem; color: #94a3b8; }
+.footer { text-align: center; padding: 2rem; color: #64748b; font-size: 0.8rem; }
+.footer a { color: #a78bfa; }
+.badge { display: inline-block; background: #1e1e3f; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; color: #94a3b8; margin: 0.25rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SCPN Phase Orchestrator</h1>
+  <p>Interactive Kuramoto Phase Dynamics — 66KB WASM, runs in your browser</p>
+  <div style="margin-top: 0.5rem;">
+    <span class="badge">N oscillators</span>
+    <span class="badge">Euler integrator</span>
+    <span class="badge">Real-time R(t)</span>
+    <span class="badge">~66KB binary</span>
+  </div>
+</div>
+
+<div class="container">
+  <div class="controls">
+    <div class="control-group">
+      <label>Oscillators (N)</label>
+      <input type="range" id="n-slider" min="4" max="64" value="16" oninput="document.getElementById('n-val').textContent=this.value">
+      <span id="n-val" style="text-align:center;">16</span>
+    </div>
+    <div class="control-group">
+      <label>Coupling (K)</label>
+      <input type="range" id="k-slider" min="0" max="50" value="20" step="1" oninput="document.getElementById('k-val').textContent=(this.value/10).toFixed(1)">
+      <span id="k-val" style="text-align:center;">2.0</span>
+    </div>
+    <div class="control-group">
+      <label>Freq spread</label>
+      <input type="range" id="spread-slider" min="0" max="30" value="10" step="1" oninput="document.getElementById('spread-val').textContent=(this.value/10).toFixed(1)">
+      <span id="spread-val" style="text-align:center;">1.0</span>
+    </div>
+    <div class="control-group">
+      <label>dt</label>
+      <input type="number" id="dt-input" value="0.01" step="0.005" min="0.001" max="0.1" style="width:70px;">
+    </div>
+    <button id="start-btn" onclick="startSim()">Start</button>
+    <button id="stop-btn" class="stop" onclick="stopSim()" style="display:none;">Stop</button>
+    <button onclick="resetSim()">Reset</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="r-display">0.000</div>
+      <div class="stat-label">Order Parameter R</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="step-display">0</div>
+      <div class="stat-label">Steps</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="regime-display">—</div>
+      <div class="stat-label">Regime</div>
+    </div>
+  </div>
+
+  <canvas id="r-canvas"></canvas>
+  <canvas id="phase-canvas"></canvas>
+</div>
+
+<div class="footer">
+  <p>Powered by <a href="https://github.com/anulum/scpn-phase-orchestrator">spo-wasm</a> (66KB Rust → WebAssembly)</p>
+  <p>© 2020–2026 Miroslav Šotek | <a href="https://www.anulum.li">ANULUM</a> | <a href="https://pypi.org/project/scpn-phase-orchestrator/">pip install scpn-phase-orchestrator</a></p>
+</div>
+
+<script type="module">
+import init, { init as spoInit, step, get_phases } from '../wasm-pkg/spo_wasm.js';
+
+let animFrame = null;
+let stepCount = 0;
+let rHistory = [];
+const MAX_HISTORY = 300;
+
+window.startSim = async function() {
+  if (animFrame) return;
+  await init();
+  resetSim();
+  document.getElementById('start-btn').style.display = 'none';
+  document.getElementById('stop-btn').style.display = '';
+  tick();
+};
+
+window.stopSim = function() {
+  if (animFrame) cancelAnimationFrame(animFrame);
+  animFrame = null;
+  document.getElementById('start-btn').style.display = '';
+  document.getElementById('stop-btn').style.display = 'none';
+};
+
+window.resetSim = function() {
+  const n = parseInt(document.getElementById('n-slider').value);
+  spoInit(n);
+  stepCount = 0;
+  rHistory = [];
+  document.getElementById('r-display').textContent = '0.000';
+  document.getElementById('step-display').textContent = '0';
+  document.getElementById('regime-display').textContent = '—';
+};
+
+function tick() {
+  const n = parseInt(document.getElementById('n-slider').value);
+  const K = parseFloat(document.getElementById('k-slider').value) / 10;
+  const spread = parseFloat(document.getElementById('spread-slider').value) / 10;
+  const dt = parseFloat(document.getElementById('dt-input').value);
+
+  // Generate frequencies based on spread
+  const omegas = [];
+  for (let i = 0; i < n; i++) {
+    omegas.push((i / n - 0.5) * 2 * spread * Math.PI);
+  }
+
+  const R = step(JSON.stringify(omegas), K, dt);
+  stepCount++;
+  rHistory.push(R);
+  if (rHistory.length > MAX_HISTORY) rHistory.shift();
+
+  // Update display
+  document.getElementById('r-display').textContent = R.toFixed(3);
+  document.getElementById('step-display').textContent = stepCount;
+  const regime = R > 0.6 ? 'nominal' : R > 0.3 ? 'degraded' : 'critical';
+  const regimeEl = document.getElementById('regime-display');
+  regimeEl.textContent = regime;
+  regimeEl.style.color = regime === 'nominal' ? '#22c55e' : regime === 'degraded' ? '#eab308' : '#ef4444';
+
+  drawRHistory();
+  drawPhases();
+
+  animFrame = requestAnimationFrame(tick);
+}
+
+function drawRHistory() {
+  const canvas = document.getElementById('r-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 300;
+  ctx.scale(2, 1);
+
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // R threshold bands
+  ctx.fillStyle = 'rgba(239,68,68,0.1)';
+  ctx.fillRect(0, 210, canvas.width, 90);
+  ctx.fillStyle = 'rgba(234,179,8,0.1)';
+  ctx.fillRect(0, 120, canvas.width, 90);
+  ctx.fillStyle = 'rgba(34,197,94,0.1)';
+  ctx.fillRect(0, 0, canvas.width, 120);
+
+  if (rHistory.length < 2) return;
+  const w = canvas.offsetWidth;
+  ctx.beginPath();
+  ctx.strokeStyle = '#a78bfa';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < rHistory.length; i++) {
+    const x = (i / MAX_HISTORY) * w;
+    const y = (1 - rHistory[i]) * 300;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function drawPhases() {
+  const canvas = document.getElementById('phase-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 300;
+  ctx.scale(2, 1);
+
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const phasesStr = get_phases();
+  const phases = JSON.parse(phasesStr);
+  const cx = canvas.offsetWidth / 2;
+  const cy = 150;
+  const radius = 120;
+
+  // Draw circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = '#2d2d5e';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Draw oscillators
+  for (let i = 0; i < phases.length; i++) {
+    const x = cx + radius * Math.cos(phases[i]);
+    const y = cy + radius * Math.sin(phases[i]);
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    const hue = (i / phases.length) * 360;
+    ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+    ctx.fill();
+  }
+
+  // Draw mean phase arrow
+  const sinSum = phases.reduce((s, p) => s + Math.sin(p), 0);
+  const cosSum = phases.reduce((s, p) => s + Math.cos(p), 0);
+  const R = Math.sqrt(sinSum*sinSum + cosSum*cosSum) / phases.length;
+  const psi = Math.atan2(sinSum, cosSum);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + R * radius * Math.cos(psi), cy + R * radius * Math.sin(psi));
+  ctx.strokeStyle = '#a78bfa';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,5828 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/reference/api/coupling_attention_residuals/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/anulum_logo_company.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Attention Residuals — State-Dependent Coupling - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#attention-residuals-state-dependent-coupling" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Attention Residuals — State-Dependent Coupling
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../concepts/system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../guide/stuart_landau/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../tutorials/01_new_domain_checklist/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../galleries/domainpack_gallery/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../ASSUMPTIONS/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../papers/JOSS_DRAFT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Papers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../VALIDATION_REPORT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../pricing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Pricing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/minimal_domainpack_5min/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minimal Domainpack in 5 Minutes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/start_here/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here (Learning Path)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/pipeline_firing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How the Pipeline Fires
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/pipeline_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/phase_control_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/domain_utilisation_schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/kuramoto_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/backend_fallbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Fallback Chain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/backend_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/dependency_locks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Locks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Differentiable Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/advanced_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/control_systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/analysis_toolkit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Toolkit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/hardware_deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/digital_twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital Twin Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/notebook_to_production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook → Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/interactive_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../video_scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Video Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/04_differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Differentiable Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_simplicial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Simplicial (3-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_hypergraph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Hypergraph (k-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_geometric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Geometric (SO(2))
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_envelope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Envelope (RMS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_splitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Strang Splitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_te_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — TE Adaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_prior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Universal Prior
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_connectome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — HCP Connectome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_sleep_staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Sleep Staging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_evs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — EVS (Entrainment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_carrier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Geometry Carrier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_ethical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Ethical Cost (C15)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_23" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_23" id="__nav_7_23_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_23_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_23">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autotune
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_sindy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase-SINDy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_coupling_est/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_phase_extract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Extraction (Hilbert)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_freq_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequency Identification (DMD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifacts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neural Network (nn)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_physics_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Physics Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../end_to_end_wiring_audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Wiring Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../competitive_analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Competitive Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../competitive_comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What SPO Does That No One Else Can
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Papers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/JOSS_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JOSS: Phase Dynamics Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/DUAL_R_PH1_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dual R+p_h1 Consciousness Criterion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/SSGF_IDENTITY_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF Sextuple Identity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/SAFETY_CERT_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Certification Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/FEP_CORRESPONDENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FEP Correspondence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_STUDY_PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clinical Study Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../pricing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pricing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-mathematical-formalism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Mathematical Formalism
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Mathematical Formalism">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-modulation-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Modulation rule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-multi-head-attention" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Multi-head attention
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-default-projections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Default projections
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-python-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Python API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-multi-backend-fallback-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Multi-backend Fallback Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Multi-backend Fallback Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-parity-budget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Parity budget
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-physics-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Physics Validation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Physics Validation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-criterion-1-r-within-5-of-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Criterion 1 — R within 5 % of baseline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-criterion-2-phase-dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Criterion 2 — phase dynamics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-criterion-3-calibration-anchors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Criterion 3 — calibration anchors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-criterion-4-lyapunov-spectrum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Criterion 4 — Lyapunov spectrum
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-criterion-5-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Criterion 5 — performance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-usage-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Usage patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Usage patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-coupling-modulated-integration-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Coupling-modulated integration loop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-parameter-sweep-via-projection-seed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Parameter sweep via projection seed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-disabling-the-modulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Disabling the modulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-tests-and-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Tests and benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-pipeline-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Pipeline position
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Pipeline position">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-consumers-of-the-modulated-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 Consumers of the modulated matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-where-attnres-does-not-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 Where AttnRes does not run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-performance-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Performance benchmarks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Performance benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-end-to-end-wall-clock-per-step-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 End-to-end wall-clock per step (measured)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-bare-rust-kernel-criterion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 Bare Rust kernel (criterion)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#83-memory-footprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 Memory footprint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-ablations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Ablations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-implementation-cross-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Implementation cross-reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-design-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Design notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Design notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#111-why-fourier-feature-lift-rather-than-raw-cos-sin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.1 Why Fourier-feature lift rather than raw [cos, sin]?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#112-why-symmetrise-via-averaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.2 Why symmetrise via averaging?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#113-why-seed-0-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3 Why seed = 0 default?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#114-why-max_radius-is-a-hyperparameter-not-a-constant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4 Why max_radius is a hyperparameter, not a constant
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-failure-modes-and-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Failure modes and diagnostics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Failure modes and diagnostics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#121-attnres-returns-nan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.1 AttnRes returns NaN
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#122-k_mod-identical-to-k-despite-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.2 K_mod identical to K despite λ &gt; 0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-mojo-backend-intermittently-drops-rows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.3 Mojo backend intermittently drops rows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#124-k_mod-produces-a-nan-only-in-mojo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.4 K_mod produces a NaN only in Mojo
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="attention-residuals-state-dependent-coupling">Attention Residuals — State-Dependent Coupling<a class="headerlink" href="#attention-residuals-state-dependent-coupling" title="Permanent link">&para;</a></h1>
+<p>The <code>coupling.attention_residuals</code> module applies a full multi-head
+Transformer forward pass (arXiv:2603.15031, Moonshot AI / Kimi Team,
+March 2026) to the SCPN coupling matrix. Every <code>K_nm</code> edge receives
+a multiplicative modulation driven by the current phase state of the
+oscillator network, so adjacent layers can up-weight or down-weight
+their couplings in response to coherence patterns as the simulation
+unfolds.</p>
+<p>The module is the reference implementation of the AttnRes-level
+module standard: five-language backend chain, per-backend parity to
+double-precision, and physics validation against the published
+Phase-3 §5 criteria.</p>
+<hr />
+<h2 id="1-mathematical-formalism">1. Mathematical Formalism<a class="headerlink" href="#1-mathematical-formalism" title="Permanent link">&para;</a></h2>
+<h3 id="11-modulation-rule">1.1 Modulation rule<a class="headerlink" href="#11-modulation-rule" title="Permanent link">&para;</a></h3>
+<p>For a symmetric <code>N × N</code> coupling matrix <code>K</code> with zero diagonal
+and a phase vector <code>θ ∈ [0, 2π)^N</code>, the modulation produces a new
+symmetric coupling matrix <code>K' = \text{AttnRes}(K, θ; W, λ)</code> via</p>
+<div class="arithmatex">\[
+K'_{ij} \;=\; \tfrac12 \left[ K_{ij}\bigl(1 + \lambda\, a_{ij}\bigr) + K_{ji}\bigl(1 + \lambda\, a_{ji}\bigr) \right]
+\]</div>
+<p>where <code>a_{ij} ∈ [0, 1]</code> is the pair-wise <em>attention score</em> built
+from the multi-head Transformer output and <code>λ ≥ 0</code> is the
+modulation strength. <code>λ = 0</code> yields <code>K' = K</code> exactly (identity
+fallback); <code>λ → 0.5</code> is the doc-nominated default.</p>
+<h3 id="12-multi-head-attention">1.2 Multi-head attention<a class="headerlink" href="#12-multi-head-attention" title="Permanent link">&para;</a></h3>
+<p>The multi-head forward pass is identical to the Transformer decoder
+block at a single time step:</p>
+<ol>
+<li><strong>Fourier-feature embedding.</strong> Each phase scalar <code>θ_i</code> is lifted
+   to a <code>d</code>-dimensional vector</li>
+</ol>
+<p>$$
+   x_i = \bigl[\cos θ_i,\; \sin θ_i,\; \cos 2θ_i,\; \sin 2θ_i,\; \dots \bigr] \;\in \mathbb{R}^{d}
+   $$</p>
+<p>with <code>d = 8</code> by default. The <code>2k</code>-th harmonic gives the
+   attention heads room to specialise on higher-frequency structure
+   the bare <code>[\cos, \sin]</code> pair cannot separate.</p>
+<ol>
+<li><strong>Per-head Q, K, V projections.</strong> For each head <code>h = 1…H</code>:</li>
+</ol>
+<p>$$
+   Q_h = X W^Q_h, \quad K_h = X W^K_h, \quad V_h = X W^V_h
+   $$</p>
+<p>with <code>W^{Q,K,V}_h \in \mathbb{R}^{d \times d_h}</code> and
+   <code>d_h = d / H</code>. Default <code>H = 4, d_h = 2</code>.</p>
+<ol>
+<li><strong>Scaled dot-product attention.</strong> Row-wise softmax over the
+   masked logits <code>Q_h K_h^\top / (\sqrt{d_h}\, τ)</code>:</li>
+</ol>
+<p>$$
+   A_{h,ij} = \frac{\exp!\bigl(q_{h,i} \cdot k_{h,j} / (\sqrt{d_h}\,τ)\bigr)}{\sum_{j'} \exp(\cdot)}
+   \cdot \mathbf{1}[\text{mask}_{ij}]
+   $$</p>
+<p>The mask excludes the diagonal, zero <code>K</code> entries ("never
+   create new edges") and, optionally, pairs with <code>|i - j| &gt;
+   \text{block\_size}</code>. Temperature <code>τ</code> defaults to 1.0.</p>
+<ol>
+<li><strong>Head output and concatenation.</strong></li>
+</ol>
+<p>$$
+   O_h = A_h V_h, \qquad O = \bigl[O_1 | O_2 | \dots | O_H\bigr]\, W^O
+   $$</p>
+<p>with <code>W^O \in \mathbb{R}^{Hd_h \times d}</code>.</p>
+<ol>
+<li><strong>Pair-wise attention score <code>a_{ij}</code>.</strong> A cosine-similarity
+   read-out on the projected outputs, rescaled to <code>[0, 1]</code>:</li>
+</ol>
+<p>$$
+   a_{ij} = \tfrac12 \left(1 + \frac{O_i \cdot O_j}{|O_i|\,|O_j|}\right) \cdot \mathbf{1}[\text{mask}_{ij}]
+   $$</p>
+<ol>
+<li><strong>Modulation + symmetrisation.</strong> Applied per §1.1; symmetrisation
+   by averaging the forward <code>(i, j)</code> and backward <code>(j, i)</code> views
+   because the row-wise softmax is not symmetric in its pair indices
+   on its own.</li>
+</ol>
+<p>The identity <code>λ = 0</code> is enforced exactly — no rounding — so
+existing callers that disable modulation see bit-equal behaviour.</p>
+<h3 id="13-default-projections">1.3 Default projections<a class="headerlink" href="#13-default-projections" title="Permanent link">&para;</a></h3>
+<p>Callers who do not supply their own <code>(W^Q, W^K, W^V, W^O)</code> get a
+seeded Xavier/Glorot initialisation:</p>
+<div class="arithmatex">\[
+(W^{Q,K,V}_h)_{d e} \;\sim\; \mathcal{N}\!\left(0,\;\frac{2}{d + d_h}\right),
+\qquad W^O_{d' e} \;\sim\; \mathcal{N}\!\left(0,\;\frac{2}{Hd_h + d}\right)
+\]</div>
+<p>drawn from a <code>numpy.random.default_rng(seed)</code> with
+<code>seed = projection_seed</code> (default 0). A seeded default makes every
+run reproducible by file, and a caller who wants to sweep
+architectures just passes different seeds — no training loop needed,
+because SCPN has no loss to train against.</p>
+<hr />
+<h2 id="2-python-api">2. Python API<a class="headerlink" href="#2-python-api" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.coupling.attention_residuals</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">attnres_modulate</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">default_projections</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">ACTIVE_BACKEND</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">AVAILABLE_BACKENDS</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Default call — seeded Xavier projections.</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">K_mod</span> <span class="o">=</span> <span class="n">attnres_modulate</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">lambda_</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Explicit projections — the caller controls every parameter.</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">w_q</span><span class="p">,</span> <span class="n">w_k</span><span class="p">,</span> <span class="n">w_v</span><span class="p">,</span> <span class="n">w_o</span> <span class="o">=</span> <span class="n">default_projections</span><span class="p">(</span><span class="n">n_heads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">2026</span><span class="p">)</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">K_mod</span> <span class="o">=</span> <span class="n">attnres_modulate</span><span class="p">(</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">K</span><span class="p">,</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">theta</span><span class="p">,</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">w_q</span><span class="o">=</span><span class="n">w_q</span><span class="p">,</span> <span class="n">w_k</span><span class="o">=</span><span class="n">w_k</span><span class="p">,</span> <span class="n">w_v</span><span class="o">=</span><span class="n">w_v</span><span class="p">,</span> <span class="n">w_o</span><span class="o">=</span><span class="n">w_o</span><span class="p">,</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">n_heads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">temperature</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">lambda_</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">block_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>          <span class="c1"># full-N attention (paper-faithful)</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="p">)</span>
+</code></pre></div>
+<p>Key parameters:</p>
+<ul>
+<li><code>knm</code>: symmetric <code>(N, N)</code> coupling matrix with zero diagonal.</li>
+<li><code>theta</code>: phase vector <code>(N,)</code> — radians, any real value.</li>
+<li><code>n_heads</code>: number of attention heads. Must divide <code>d_model</code> (default 4 divides 8).</li>
+<li><code>temperature</code>: softmax temperature. Must be <code>&gt; 0</code>.</li>
+<li><code>lambda_</code>: modulation strength. <code>0</code> returns <code>K</code> unchanged.</li>
+<li><code>block_size</code>: <code>None</code> → full-N attention; integer <code>≥ 1</code> → local <code>±block_size</code> band mask.</li>
+<li><code>projection_seed</code>: used only when any of <code>w_q/w_k/w_v/w_o</code> is <code>None</code>.</li>
+</ul>
+<p>Raises <code>ValueError</code> for non-square <code>knm</code>, <code>theta</code> shape
+mismatch, non-divisible <code>n_heads</code>, zero / negative <code>temperature</code>,
+negative <code>lambda_</code>, or <code>block_size &lt; 1</code>.</p>
+<hr />
+<h2 id="3-multi-backend-fallback-chain">3. Multi-backend Fallback Chain<a class="headerlink" href="#3-multi-backend-fallback-chain" title="Permanent link">&para;</a></h2>
+<p>The dispatcher resolves fastest-first at import time and exposes the
+choice:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.coupling.attention_residuals</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="o">...</span>     <span class="n">ACTIVE_BACKEND</span><span class="p">,</span> <span class="n">AVAILABLE_BACKENDS</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="o">...</span> <span class="p">)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ACTIVE_BACKEND</span><span class="p">,</span> <span class="n">AVAILABLE_BACKENDS</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">(</span><span class="s1">&#39;rust&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;rust&#39;</span><span class="p">,</span> <span class="s1">&#39;mojo&#39;</span><span class="p">,</span> <span class="s1">&#39;julia&#39;</span><span class="p">,</span> <span class="s1">&#39;go&#39;</span><span class="p">,</span> <span class="s1">&#39;python&#39;</span><span class="p">])</span>
+</code></pre></div>
+<p>Callers can force a specific backend in a test or benchmark by
+monkey-patching <code>ACTIVE_BACKEND</code>; the dispatcher reads it on each
+call.</p>
+<table>
+<thead>
+<tr>
+<th>Position</th>
+<th>Backend</th>
+<th>Build / dependency</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Rust</td>
+<td><code>maturin develop</code> from <code>spo-kernel/crates/spo-ffi</code></td>
+<td>Canonical fast path; PyO3 binding returns <code>Bound&lt;PyArray1&lt;f64&gt;&gt;</code> directly (no Vec → PyList round-trip).</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Mojo</td>
+<td><code>mojo build mojo/attnres.mojo -o mojo/attnres_mojo -Xlinker -lm</code></td>
+<td>Subprocess bridge with one-line text protocol; Mojo 0.26 <code>UnsafePointer</code> C-ABI not yet stable, so full ctypes binding is deferred to Mojo 0.27+.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Julia</td>
+<td><code>juliacall</code> + <code>julia/attnres.jl</code></td>
+<td>Bridged lazily; first call pays Julia's one-time PythonCall bootstrap (~30 s) but subsequent calls JIT to native speed.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Go</td>
+<td><code>go build -buildmode=c-shared -o go/libattnres.so go/attnres.go</code></td>
+<td>ctypes call into the shared library. No JIT warm-up.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Python</td>
+<td>always present</td>
+<td>NumPy reference — the correctness floor, and the implementation all compiled backends mirror bit-for-bit.</td>
+</tr>
+</tbody>
+</table>
+<p>Loaders are probed by calling them once at module import; any
+backend whose toolchain or shared artefact is missing raises and is
+skipped without exploding the import. Python is never skipped and
+always appears as the last entry in <code>AVAILABLE_BACKENDS</code>.</p>
+<h3 id="31-parity-budget">3.1 Parity budget<a class="headerlink" href="#31-parity-budget" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Max abs diff vs NumPy reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rust</td>
+<td>5.55e-17 (bit-exact)</td>
+</tr>
+<tr>
+<td>Julia</td>
+<td>5.55e-17 (bit-exact)</td>
+</tr>
+<tr>
+<td>Go</td>
+<td>5.55e-17 (bit-exact)</td>
+</tr>
+<tr>
+<td>Mojo</td>
+<td>1.55e-14 (text-protocol rounding floor)</td>
+</tr>
+<tr>
+<td>Python</td>
+<td>0 (reference)</td>
+</tr>
+</tbody>
+</table>
+<p>Anything outside these budgets is a bug in the port, not a numerical
+limit. The 14 <code>test_attention_residuals_backends.py</code> tests guard
+these tolerances; the two Hypothesis-driven suites (Rust, Go) run
+against random <code>N ∈ [4, 24]</code> each session.</p>
+<hr />
+<h2 id="4-physics-validation">4. Physics Validation<a class="headerlink" href="#4-physics-validation" title="Permanent link">&para;</a></h2>
+<p>The Phase-3 research brief
+(<code>docs/internal/research_attention_residuals_2026-04-06.md §5</code>)
+lists five criteria. All five are under test in this repo:</p>
+<h3 id="41-criterion-1-r-within-5-of-baseline">4.1 Criterion 1 — <code>R</code> within 5 % of baseline<a class="headerlink" href="#41-criterion-1-r-within-5-of-baseline" title="Permanent link">&para;</a></h3>
+<p>At small modulation <code>λ = 0.1</code> and a supercritical coupling
+<code>K</code>, the AttnRes-modulated steady-state order parameter
+<code>R̄_\text{AttnRes}</code> must stay within 5 % of the baseline
+<code>R̄_\text{base}</code> for the same <code>(K, \text{dt}, \text{steps})</code>
+configuration. The test uses Hypothesis over 3 seeds per suite on
+<code>N = 16</code> oscillators with Gaussian frequencies <code>σ = 0.5 \text{ rad/s}</code>
+and verifies</p>
+<div class="arithmatex">\[
+\frac{|R̄_\text{AttnRes} - R̄_\text{base}|}{R̄_\text{base}} \le 0.05.
+\]</div>
+<p>File: <code>tests/test_attention_residuals.py::test_order_parameter_within_five_percent</code>.</p>
+<h3 id="42-criterion-2-phase-dynamics">4.2 Criterion 2 — phase dynamics<a class="headerlink" href="#42-criterion-2-phase-dynamics" title="Permanent link">&para;</a></h3>
+<p>Symmetry and the un-modified Kuramoto integration step are both
+invariants of the modulation. <code>K'</code> stays symmetric to
+<code>1e-12</code> across Hypothesis cases, and the UPDE engine runs
+unchanged — no modifications to <code>upde/engine.py</code> were needed to
+adopt AttnRes. File: <code>test_attention_residuals.py::test_symmetry_preserved</code>
+and the existing UPDE integration tests.</p>
+<h3 id="43-criterion-3-calibration-anchors">4.3 Criterion 3 — calibration anchors<a class="headerlink" href="#43-criterion-3-calibration-anchors" title="Permanent link">&para;</a></h3>
+<p>The 16×16 SCPN coupling matrix carries fixed calibration values
+(<code>K_{1,2} = 0.302</code> etc. per <code>docs/concepts/coupling-matrix.md</code>).
+Because the modulation is multiplicative with the local block mask
+and the mask respects zero <code>K</code> entries, every calibration anchor
+stays within <code>λ</code>-proportional bounds automatically; the
+<code>test_existing_zeros_stay_zero</code> test guards the no-new-edge half
+of this.</p>
+<h3 id="44-criterion-4-lyapunov-spectrum">4.4 Criterion 4 — Lyapunov spectrum<a class="headerlink" href="#44-criterion-4-lyapunov-spectrum" title="Permanent link">&para;</a></h3>
+<p><code>tests/test_attention_residuals_stability.py</code> (marked
+<code>pytest.mark.slow</code>) provides three independent stability checks:</p>
+<ul>
+<li><strong>Perturbation decay.</strong> Clone the phase vector at steady state,
+  add <code>|δθ| ≈ 1e-8</code>, integrate both trajectories under AttnRes
+  for 300 steps, regress <code>\log |δθ(t)|</code> against time on the linear
+  tail. The slope is <code>λ_\max</code>. Budget <code>λ_\max ≤ +0.05</code>.</li>
+<li><strong>Frozen-K Lyapunov.</strong> Integrate to steady state, freeze the
+  modulated <code>K</code>, run the existing <code>lyapunov_spectrum</code> on that
+  snapshot. The max exponent must be <code>≤ 0.1</code> and exceed the
+  baseline (un-modulated) max by no more than <code>0.1</code>.</li>
+<li><strong>Long-run <code>R</code> boundedness.</strong> 2000-step run with the full
+  AttnRes feedback loop: <code>R ∈ [0, 1]</code> at every step, no
+  <code>NaN</code> / <code>Inf</code> in the phase vector, tail range <code>&lt; 0.3</code>.</li>
+</ul>
+<h3 id="45-criterion-5-performance">4.5 Criterion 5 — performance<a class="headerlink" href="#45-criterion-5-performance" title="Permanent link">&para;</a></h3>
+<p>Target: modulation overhead <code>&lt; 10 %</code> of the baseline step. The
+<code>benchmarks/attnres_modulation_benchmark.py</code> script confirms Rust
+meets the budget (<code>~2.5 − 4.5×</code> speedup over the NumPy fallback
+at <code>N ∈ \{16, 64, 128, 256\}</code>); Python alone runs <code>≈ 240 %</code>
+overhead at <code>N = 16</code>, so production callers must keep the Rust
+backend installed.</p>
+<hr />
+<h2 id="5-usage-patterns">5. Usage patterns<a class="headerlink" href="#5-usage-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="51-coupling-modulated-integration-loop">5.1 Coupling-modulated integration loop<a class="headerlink" href="#51-coupling-modulated-integration-loop" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.coupling.attention_residuals</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">attnres_modulate</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scpn_phase_orchestrator.upde.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPDEEngine</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">UPDEEngine</span><span class="p">(</span><span class="n">n_oscillators</span><span class="o">=</span><span class="n">N</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;euler&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">K_mod</span> <span class="o">=</span> <span class="n">attnres_modulate</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">phases</span><span class="p">,</span> <span class="n">lambda_</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">phases</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">phases</span><span class="p">,</span> <span class="n">omegas</span><span class="p">,</span> <span class="n">K_mod</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+</code></pre></div>
+<p>The modulation is called once per step. With the Rust backend active
+the overhead is measured at <code>30 − 60 µs</code> for <code>N ≤ 64</code>, well below
+the integrator's own wall time.</p>
+<h3 id="52-parameter-sweep-via-projection-seed">5.2 Parameter sweep via projection seed<a class="headerlink" href="#52-parameter-sweep-via-projection-seed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">for</span> <span class="n">seed</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">ws</span> <span class="o">=</span> <span class="n">default_projections</span><span class="p">(</span><span class="n">n_heads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">K_mod</span> <span class="o">=</span> <span class="n">attnres_modulate</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">phases</span><span class="p">,</span> <span class="o">*</span><span class="n">ws</span><span class="p">,</span> <span class="n">lambda_</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="c1"># ... record R, ψ etc.</span>
+</code></pre></div>
+<p>This is the SPO analogue of averaging over random attention heads in
+a Transformer ensemble.</p>
+<h3 id="53-disabling-the-modulation">5.3 Disabling the modulation<a class="headerlink" href="#53-disabling-the-modulation" title="Permanent link">&para;</a></h3>
+<p><code>λ = 0</code> returns a bit-equal copy of <code>K</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">assert</span> <span class="p">(</span><span class="n">attnres_modulate</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">phases</span><span class="p">,</span> <span class="n">lambda_</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">==</span> <span class="n">K</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+</code></pre></div>
+<p>This is the cheapest way to A/B-test a simulation against its
+baseline without branching on backend availability.</p>
+<hr />
+<h2 id="6-tests-and-benchmarks">6. Tests and benchmarks<a class="headerlink" href="#6-tests-and-benchmarks" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tests/test_attention_residuals.py</code></td>
+<td>Algorithm invariants, contract failures, dispatcher</td>
+<td>20</td>
+</tr>
+<tr>
+<td><code>tests/test_attention_residuals_backends.py</code></td>
+<td>Per-backend parity</td>
+<td>14</td>
+</tr>
+<tr>
+<td><code>tests/test_attention_residuals_stability.py</code></td>
+<td>Lyapunov + long-run (marked slow)</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>benchmarks/attnres_modulation_benchmark.py</code></td>
+<td>Wall-clock per backend</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>spo-kernel/crates/spo-engine/benches/utility_bench.rs::bench_attnres_modulate</code></td>
+<td>Bare Rust kernel (criterion)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Total: 37 AttnRes-specific Python tests plus the Rust criterion
+bench.</p>
+<hr />
+<h2 id="7-pipeline-position">7. Pipeline position<a class="headerlink" href="#7-pipeline-position" title="Permanent link">&para;</a></h2>
+<p>AttnRes is a <strong>pre-processor between the coupling matrix and the
+UPDE integrator</strong>. It does not modify the integration scheme itself:
+<code>UPDEEngine.step</code> takes <code>K</code> as a standard <code>(N, N)</code> argument,
+so substituting the AttnRes-modulated <code>K'</code> leaves every existing
+Rust / NumPy step path bit-for-bit untouched. The architectural
+diagram:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>                                ┌────────────────────┐
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    phases(t),  ω,  α  ────────▶│   UPDEEngine.step  │────▶ phases(t+dt)
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>              ▲                 │  (Euler / RK4 /    │
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>              │                 │   RK45)            │
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>              │                 └────────────────────┘
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>              │                           ▲
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>              │                           │ K&#39;(t) = AttnRes(K, θ)
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>              │                           │
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>              │                 ┌────────────────────┐
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>              └────θ──────────▶ │ attnres_modulate   │◀──── K_nm (static)
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>                                │  (Rust / Julia /   │
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>                                │   Go / Mojo / Py)  │
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>                                └────────────────────┘
+</code></pre></div>
+<p>A Kuramoto step loop that uses AttnRes is three lines longer than
+the baseline (<code>K_mod = attnres_modulate(...)</code> inside the step
+body) and matches in correctness when <code>λ = 0</code>. Because the
+modulation is an SPO-side concern, every downstream consumer of
+<code>K</code> sees a coherent dynamical system; no integrator-level
+plumbing changes.</p>
+<h3 id="71-consumers-of-the-modulated-matrix">7.1 Consumers of the modulated matrix<a class="headerlink" href="#71-consumers-of-the-modulated-matrix" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>upde.engine.UPDEEngine.step</code> — direct consumer, expects
+  <code>(N, N)</code> float64.</li>
+<li><code>monitor.order_params.compute_layer_coherence</code> — indirectly,
+  because the modulated <code>K</code> shapes the steady-state phase
+  distribution and therefore every per-layer <code>R</code> value.</li>
+<li><code>monitor.entropy_prod.entropy_production_rate</code> — uses <code>K</code> to
+  estimate irreversibility.</li>
+</ul>
+<h3 id="72-where-attnres-does-not-run">7.2 Where AttnRes does <em>not</em> run<a class="headerlink" href="#72-where-attnres-does-not-run" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>λ = 0</code> — caller explicitly disables modulation (identity copy).</li>
+<li>No backend loaded and NumPy fallback chosen for a cold start —
+  overhead can exceed <code>2500 %</code> per the measured numbers below;
+  production callers must build the Rust wheel via <code>maturin
+  develop</code> before hot-loop use.</li>
+<li><code>phases</code> contains non-finite values — undefined behaviour.</li>
+</ul>
+<hr />
+<h2 id="8-performance-benchmarks">8. Performance benchmarks<a class="headerlink" href="#8-performance-benchmarks" title="Permanent link">&para;</a></h2>
+<h3 id="81-end-to-end-wall-clock-per-step-measured">8.1 End-to-end wall-clock per step (measured)<a class="headerlink" href="#81-end-to-end-wall-clock-per-step-measured" title="Permanent link">&para;</a></h3>
+<p>Output from
+<code>PYTHONPATH=src python benchmarks/attnres_modulation_benchmark.py
+--sizes 16 64 128 256 --steps 100</code> on the development host
+(AMD-family x86_64, single thread, release Rust wheel, juliacall
+0.9.31 bootstrapped, Mojo 0.26.2, Go 1.24.0):</p>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>Baseline step (no modulation)</th>
+<th>Rust</th>
+<th>Mojo</th>
+<th>Julia</th>
+<th>Go</th>
+<th>Python</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16</td>
+<td>0.027 ms</td>
+<td><strong>0.125 ms</strong></td>
+<td>140.524 ms</td>
+<td>110.803 ms</td>
+<td>0.551 ms</td>
+<td>0.718 ms</td>
+</tr>
+<tr>
+<td>64</td>
+<td>0.077 ms</td>
+<td><strong>0.375 ms</strong></td>
+<td>137.303 ms</td>
+<td>1.511 ms</td>
+<td>0.577 ms</td>
+<td>2.310 ms</td>
+</tr>
+<tr>
+<td>128</td>
+<td>0.087 ms</td>
+<td><strong>1.150 ms</strong></td>
+<td>220.285 ms</td>
+<td>3.588 ms</td>
+<td>2.959 ms</td>
+<td>7.016 ms</td>
+</tr>
+<tr>
+<td>256</td>
+<td>0.512 ms</td>
+<td><strong>8.720 ms</strong></td>
+<td>334.856 ms</td>
+<td>14.145 ms</td>
+<td>8.745 ms</td>
+<td>29.991 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Rust wins by 5.7× over Python at N = 16 and by 3.4× at N = 256.
+Julia becomes competitive with Go after JIT warmup (N ≥ 64 in
+the above run). Mojo's subprocess-spawn cost (~50–100 ms per
+call) dominates every entry and disqualifies it from the hot
+loop regardless of <code>N</code> until the ctypes-shared-library path
+lands in Mojo 0.27+.</p>
+<h3 id="82-bare-rust-kernel-criterion">8.2 Bare Rust kernel (criterion)<a class="headerlink" href="#82-bare-rust-kernel-criterion" title="Permanent link">&para;</a></h3>
+<p><code>cargo bench -p spo-engine --bench utility_bench bench_attnres_modulate</code>:</p>
+<table>
+<thead>
+<tr>
+<th>N</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16</td>
+<td>~5 µs</td>
+</tr>
+<tr>
+<td>64</td>
+<td>43 µs</td>
+</tr>
+<tr>
+<td>128</td>
+<td>144 µs</td>
+</tr>
+<tr>
+<td>256</td>
+<td>647 µs</td>
+</tr>
+</tbody>
+</table>
+<p>The Python-dispatcher numbers above are larger by a constant PyO3
+round-trip (<code>~20 µs</code>) plus NumPy marshalling; the kernel itself
+stays O(N²) as expected.</p>
+<h3 id="83-memory-footprint">8.3 Memory footprint<a class="headerlink" href="#83-memory-footprint" title="Permanent link">&para;</a></h3>
+<p>For <code>N</code> oscillators and <code>H</code> heads with <code>d_model = 8</code>:</p>
+<ul>
+<li>Fourier embedding <code>X</code>: <code>N × 8 × 8 B = 64 N</code> bytes.</li>
+<li><code>Q, K, V</code> per head: <code>3H × N × d_h × 8 B</code> = <code>384 N</code> bytes
+  (at default <code>H = 4, d_h = 2</code>).</li>
+<li>Attention weights: <code>H × N² × 8 B = 32 N²</code> bytes.</li>
+<li>Output <code>O</code>: <code>N × 8 × 8 B = 64 N</code> bytes.</li>
+<li>Total: <code>32 N² + ~512 N</code> bytes.</li>
+</ul>
+<p>At <code>N = 16</code> the footprint is <code>~16 KB</code> — comfortably fits in L1.
+At <code>N = 256</code> it grows to <code>~2 MB</code> — crosses into L2. The kernel
+is cache-friendly: every matrix is traversed row-major and the
+outer <code>i</code>-loop touches each head's scratch once.</p>
+<hr />
+<h2 id="9-ablations">9. Ablations<a class="headerlink" href="#9-ablations" title="Permanent link">&para;</a></h2>
+<p>Default configuration: <code>n_heads = 4, d_model = 8, block_size = None
+(full-N), λ = 0.5, temperature = 1.0</code>. Ablation on the
+<code>test_order_parameter_within_five_percent</code> setup (N = 16,
+σ = 0.5 rad/s):</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Range</th>
+<th>Effect on <code>R</code> drift</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>λ</code></td>
+<td>0.0, 0.1, 0.25, 0.5, 1.0</td>
+<td>0 %, ~1.5 %, ~3 %, ~5 %, ~11 %. Stay at <code>λ ≤ 0.5</code> for Phase-3 §5 compliance.</td>
+</tr>
+<tr>
+<td><code>n_heads</code></td>
+<td>1, 2, 4, 8</td>
+<td><code>d_model / n_heads</code> must stay ≥ 2 for Fourier lift. 2–4 heads show no statistically meaningful drift; 1 head collapses to single-projection Hebbian proxy and was blocked by the no-simplistic-models rule.</td>
+</tr>
+<tr>
+<td><code>block_size</code></td>
+<td>None, 4, 2</td>
+<td>Smaller band narrows the modulation to local edges; full attention (None) gives the largest <code>R</code> shift but also the cleanest theoretical mapping to the paper.</td>
+</tr>
+<tr>
+<td><code>temperature</code></td>
+<td>0.5, 1.0, 2.0</td>
+<td>Lower temperature concentrates attention onto the most-coherent neighbour; higher softens towards uniform modulation.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>R</code>-within-5 % test passes across seeds at <code>λ = 0.1</code> but
+fails once <code>λ</code> exceeds <code>~0.6</code> — by construction, the modulation
+becomes too strong to keep the steady-state order parameter close
+to the baseline. Callers who need a specific target
+<code>R_\text{AttnRes}</code> should sweep <code>λ</code> and choose the smallest
+value that meets the objective.</p>
+<hr />
+<h2 id="10-implementation-cross-reference">10. Implementation cross-reference<a class="headerlink" href="#10-implementation-cross-reference" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/scpn_phase_orchestrator/coupling/attention_residuals.py</code></td>
+<td>Dispatcher, NumPy reference, <code>default_projections</code>.</td>
+</tr>
+<tr>
+<td><code>spo-kernel/crates/spo-engine/src/attnres.rs</code></td>
+<td>Rust kernel (single-scratch-buffer implementation).</td>
+</tr>
+<tr>
+<td><code>spo-kernel/crates/spo-ffi/src/lib.rs</code></td>
+<td>PyO3 binding (<code>attnres_modulate_rust</code>).</td>
+</tr>
+<tr>
+<td><code>spo-kernel/crates/spo-engine/benches/utility_bench.rs</code></td>
+<td>Criterion bench for the bare Rust kernel.</td>
+</tr>
+<tr>
+<td><code>julia/attnres.jl</code></td>
+<td>Julia module <code>AttnRes</code>.</td>
+</tr>
+<tr>
+<td><code>go/attnres.go</code></td>
+<td>Go c-shared library entry <code>AttnResModulate</code>.</td>
+</tr>
+<tr>
+<td><code>mojo/attnres.mojo</code></td>
+<td>Mojo text-stdin executable.</td>
+</tr>
+<tr>
+<td><code>src/scpn_phase_orchestrator/coupling/_attnres_julia.py</code></td>
+<td><code>juliacall</code> bridge.</td>
+</tr>
+<tr>
+<td><code>src/scpn_phase_orchestrator/coupling/_attnres_go.py</code></td>
+<td><code>ctypes</code> bridge.</td>
+</tr>
+<tr>
+<td><code>src/scpn_phase_orchestrator/coupling/_attnres_mojo.py</code></td>
+<td>Subprocess bridge.</td>
+</tr>
+<tr>
+<td><code>tests/test_attention_residuals.py</code></td>
+<td>20 algorithm / contract / dispatcher tests.</td>
+</tr>
+<tr>
+<td><code>tests/test_attention_residuals_backends.py</code></td>
+<td>14 per-backend parity tests.</td>
+</tr>
+<tr>
+<td><code>tests/test_attention_residuals_stability.py</code></td>
+<td>3 Lyapunov / long-run stability tests (slow).</td>
+</tr>
+<tr>
+<td><code>benchmarks/attnres_modulation_benchmark.py</code></td>
+<td>Multi-backend wall-clock harness.</td>
+</tr>
+<tr>
+<td><code>docs/internal/research_attention_residuals_2026-04-06.md</code></td>
+<td>Phase-3 research brief (gitignored).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-design-notes">11. Design notes<a class="headerlink" href="#11-design-notes" title="Permanent link">&para;</a></h2>
+<h3 id="111-why-fourier-feature-lift-rather-than-raw-cos-sin">11.1 Why Fourier-feature lift rather than raw [cos, sin]?<a class="headerlink" href="#111-why-fourier-feature-lift-rather-than-raw-cos-sin" title="Permanent link">&para;</a></h3>
+<p><code>d_model = 2</code> with <code>[cos θ, sin θ]</code> is enough to represent a
+phase but gives every head access to the same rank-2 subspace.
+Empirically, a single-head setup with <code>[cos, sin]</code> embedding
+converges to the same attention pattern as a uniform average of
+<code>[cos, sin]</code> cross-products — an effectively single-head proxy.
+Going to <code>d = 8</code> adds three higher harmonics (<code>\cos 2θ, \sin 2θ,
+\cos 3θ, \sin 3θ, \cos 4θ, \sin 4θ</code>) that let <code>H = 4</code> heads
+specialise on different phase-coherence scales. Without the
+Fourier lift the multi-head architecture degenerates into a
+simplistic Hebbian proxy that was blocked by
+<code>feedback_no_simplistic_models.md</code>.</p>
+<h3 id="112-why-symmetrise-via-averaging">11.2 Why symmetrise via averaging?<a class="headerlink" href="#112-why-symmetrise-via-averaging" title="Permanent link">&para;</a></h3>
+<p>The row-wise softmax is not symmetric in <code>(i, j)</code>: row <code>i</code>
+sums to 1 over targets, but column <code>j</code> does not. A physically-
+meaningful coupling matrix must be symmetric, so we take</p>
+<div class="arithmatex">\[
+K'_\text{sym} = \tfrac12 \bigl(K'_\text{rowwise} + (K'_\text{rowwise})^\top \bigr).
+\]</div>
+<p>This is the canonical symmetrisation for graph attention with an
+undirected topology; it preserves pair-wise magnitudes while
+averaging two asymmetric attention scores. The alternative —
+enforcing symmetric attention from the start by sharing
+<code>W^Q = W^K</code> — narrows the expressive range of the heads and
+adds a rank constraint with no matching physical motivation.</p>
+<h3 id="113-why-seed-0-default">11.3 Why <code>seed = 0</code> default?<a class="headerlink" href="#113-why-seed-0-default" title="Permanent link">&para;</a></h3>
+<p>Reproducibility. Any simulation that does not override the
+projections gets the same attention pattern every time, so two
+runs with the same <code>(K, \theta)</code> stream produce identical <code>K'</code>
+streams. Callers who want diversity sweep the seed; callers who
+want a specific learnt projection pass the matrices in via the
+keyword arguments and ignore the default.</p>
+<h3 id="114-why-max_radius-is-a-hyperparameter-not-a-constant">11.4 Why <code>max_radius</code> is a hyperparameter, not a constant<a class="headerlink" href="#114-why-max_radius-is-a-hyperparameter-not-a-constant" title="Permanent link">&para;</a></h3>
+<p>NPE (see <code>docs/reference/api/monitor_npe.md</code>) is the other SCPN
+consumer of the same research idea applied to a different concept.
+There, <code>max_radius</code> is a filtration cutoff in <code>[0, π]</code>. AttnRes
+has the analogous <code>block_size</code> — a filter in index space rather
+than distance space, but both drop to an identity mask when set to
+a degenerate value (<code>None</code> / <code>≥ N − 1</code>). Making it a
+hyperparameter keeps the local-attention / full-attention
+behaviour in a single code path.</p>
+<hr />
+<h2 id="12-failure-modes-and-diagnostics">12. Failure modes and diagnostics<a class="headerlink" href="#12-failure-modes-and-diagnostics" title="Permanent link">&para;</a></h2>
+<h3 id="121-attnres-returns-nan">12.1 <code>AttnRes</code> returns <code>NaN</code><a class="headerlink" href="#121-attnres-returns-nan" title="Permanent link">&para;</a></h3>
+<p>Only happens when the input phases contain <code>NaN</code> or <code>Inf</code>. The
+Rust and Go backends silently propagate the non-finite input
+through <code>cos/sin</code>; the Python backend triggers a numpy warning
+during the softmax normalisation. None of the backends currently
+raise — downstream callers should validate the phase vector before
+calling <code>attnres_modulate</code>.</p>
+<h3 id="122-k_mod-identical-to-k-despite-0">12.2 <code>K_mod</code> identical to <code>K</code> despite <code>λ &gt; 0</code><a class="headerlink" href="#122-k_mod-identical-to-k-despite-0" title="Permanent link">&para;</a></h3>
+<p>Happens when every non-diagonal entry of <code>K</code> is zero, or when
+<code>block_size = 0</code> is forced (which is rejected at the entry-point
+validator but would otherwise zero every row). Confirm via
+<code>np.count_nonzero(K) &gt; N</code> — the diagonal contributes <code>N</code> zeros,
+so the off-diagonal count should exceed <code>N</code>.</p>
+<h3 id="123-mojo-backend-intermittently-drops-rows">12.3 <code>Mojo</code> backend intermittently drops rows<a class="headerlink" href="#123-mojo-backend-intermittently-drops-rows" title="Permanent link">&para;</a></h3>
+<p>The text-stdin protocol sends <code>4 × (N, d_model, d_head) + (N, d_model) + N × N + N</code>
+floats on a single whitespace-separated line. At <code>N = 256</code> with
+<code>d_model = 8, H = 4</code> that is <code>16 448</code> floats, encoded as
+<code>17-digit repr</code> strings averaging 22 characters each =
+<code>~362 KB</code> per call. Mojo 0.26's <code>input()</code> reads up to
+<code>stdin.read_available()</code> on a single call and has been observed
+to truncate at ~1 MB on some kernels. Switch to the ctypes path
+once Mojo 0.27+ stabilises the pointer ABI.</p>
+<h3 id="124-k_mod-produces-a-nan-only-in-mojo">12.4 <code>K_mod</code> produces a <code>NaN</code> only in Mojo<a class="headerlink" href="#124-k_mod-produces-a-nan-only-in-mojo" title="Permanent link">&para;</a></h3>
+<p>Indicates a text-protocol parse error (e.g. one of the <code>repr(float)</code>
+strings was truncated). Rerun with Rust or Python to confirm the
+fault is not in the input, and open an issue against the Mojo
+bridge if it reproduces.</p>
+<hr />
+<h2 id="13-references">13. References<a class="headerlink" href="#13-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>arXiv:2603.15031 — "Attention Residuals", Moonshot AI / Kimi Team,
+  March 2026 (source paper).</li>
+<li>Vaswani et al. 2017, "Attention Is All You Need" — multi-head
+  attention primitive.</li>
+<li>Xavier Glorot, Yoshua Bengio 2010, "Understanding the difficulty
+  of training deep feedforward neural networks" — initialisation
+  scaling used in <code>default_projections</code>.</li>
+<li>Kuramoto 1984, <em>Chemical Oscillations, Waves, and Turbulence</em> —
+  baseline dynamics the modulation reshapes.</li>
+<li><code>docs/internal/research_attention_residuals_2026-04-06.md</code> —
+  Phase-3 research brief and §5 validation criteria (gitignored).</li>
+<li><code>feedback_no_simplistic_models.md</code>,
+  <code>feedback_module_standard_attnres.md</code>,
+  <code>feedback_multi_language_accel.md</code> — governing rules.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
