@@ -16,10 +16,15 @@ reason so CI on minimal environments stays green.
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor import lyapunov as ly_mod
+from scpn_phase_orchestrator.monitor._lyapunov_go import lyapunov_spectrum_go
+from scpn_phase_orchestrator.monitor._lyapunov_julia import lyapunov_spectrum_julia
+from scpn_phase_orchestrator.monitor._lyapunov_mojo import lyapunov_spectrum_mojo
 from scpn_phase_orchestrator.monitor.lyapunov import (
     AVAILABLE_BACKENDS,
     lyapunov_spectrum,
@@ -193,3 +198,20 @@ class TestDispatcherResolution:
 
     def test_python_always_available(self) -> None:
         assert "python" in AVAILABLE_BACKENDS
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (lyapunov_spectrum_go, "go"),
+            (lyapunov_spectrum_julia, "julia"),
+            (lyapunov_spectrum_mojo, "mojo"),
+        ],
+    )
+    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("phases_init", "omegas", "knm", "alpha", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"

@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["lyapunov_spectrum_go"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "liblyapunov.so"
 _LIB: ctypes.CDLL | None = None
@@ -57,16 +59,16 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def lyapunov_spectrum_go(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     dt: float,
     n_steps: int,
     qr_interval: int,
     zeta: float,
     psi: float,
-) -> NDArray:
+) -> FloatArray:
     lib = _load_lib()
     n = int(phases_init.size)
     p = np.ascontiguousarray(phases_init.ravel(), dtype=np.float64)

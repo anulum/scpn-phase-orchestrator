@@ -16,12 +16,13 @@ reference implementation.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["lyapunov_spectrum_julia"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "lyapunov.jl"
 _JULIA_MODULE: Any | None = None
@@ -41,16 +42,16 @@ def _ensure() -> Any:
 
 
 def lyapunov_spectrum_julia(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     dt: float,
     n_steps: int,
     qr_interval: int,
     zeta: float,
     psi: float,
-) -> NDArray:
+) -> FloatArray:
     jl = _ensure()
     n = int(phases_init.size)
     return np.asarray(
