@@ -15,12 +15,26 @@ bit-equivalent (0.0) on Rust/Julia/Go and 3.3e-15 on Mojo.
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.upde import envelope as e_mod
+from scpn_phase_orchestrator.upde._envelope_go import (
+    envelope_modulation_depth_go,
+    extract_envelope_go,
+)
+from scpn_phase_orchestrator.upde._envelope_julia import (
+    envelope_modulation_depth_julia,
+    extract_envelope_julia,
+)
+from scpn_phase_orchestrator.upde._envelope_mojo import (
+    envelope_modulation_depth_mojo,
+    extract_envelope_mojo,
+)
 from scpn_phase_orchestrator.upde.envelope import (
     AVAILABLE_BACKENDS,
     envelope_modulation_depth,
@@ -189,3 +203,34 @@ class TestCrossBackendConsistency:
                 _reset(prev)
             np.testing.assert_allclose(env, ref_env, atol=tolerances[backend])
             assert abs(mod - ref_mod) <= tolerances[backend]
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (extract_envelope_go, "go:extract"),
+            (extract_envelope_julia, "julia:extract"),
+            (extract_envelope_mojo, "mojo:extract"),
+        ],
+    )
+    def test_extract_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("amps", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (envelope_modulation_depth_go, "go:mod"),
+            (envelope_modulation_depth_julia, "julia:mod"),
+            (envelope_modulation_depth_mojo, "mojo:mod"),
+        ],
+    )
+    def test_mod_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        text = str(hints["env"])
+        assert "numpy.ndarray" in text, f"{label}:env missing ndarray annotation"
+        assert "numpy.float64" in text, f"{label}:env missing float64 annotation"
