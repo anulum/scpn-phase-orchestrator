@@ -74,6 +74,8 @@
 
 - Production-hardened with fuzz testing (Hypothesis profiles) and fault injection
 - Full benchmark suite: Kuramoto reference (Strogatz 2000), Stuart-Landau (Pikovsky 2001), Petri net reachability
+- ~~Production hardening slice: SupervisorPolicy Petri fault fallback + Hypothesis fault-injection tests~~ (done — `tests/test_fault_injection_supervisor.py`)
+- ~~Benchmark suite slice: unified Kuramoto/Stuart-Landau/Petri reference harness~~ (done — `benchmarks/reference_suite.py`, `tests/test_reference_benchmark_suite.py`)
 - ~~RK45 exhausted-retry fallback test coverage~~ (done)
 - Complete API documentation with mkdocstrings autodoc for all public modules
 - Docker multi-stage build with security scanning (Trivy/Grype)
