@@ -143,6 +143,9 @@ nav:
       - Visualization: reference/api/visualization.md
       - Adapters: reference/api/adapters.md
       - QueueWaves: reference/api/queuewaves.md
+      - Autotune: reference/api/autotune.md
+      - SSGF: reference/api/ssgf.md
+      - Visualization: reference/api/visualization.md
       - "Neural Network (nn)": reference/api/nn.md
       - "nn/ Module — Full Reference": reference/nn.md
       - "nn/ Physics Validation": reference/nn_physics_validation_plan.md

@@ -78,6 +78,7 @@
 - ~~Benchmark suite slice: unified Kuramoto/Stuart-Landau/Petri reference harness~~ (done — `benchmarks/reference_suite.py`, `tests/test_reference_benchmark_suite.py`)
 - ~~RK45 exhausted-retry fallback test coverage~~ (done)
 - Complete API documentation with mkdocstrings autodoc for all public modules
+- ~~API docs slice: wire missing mkdocstrings API pages into nav/index (autotune, ssgf, visualization)~~ (done — `mkdocs.yml`, `docs/reference/api/index.md`)
 - Docker multi-stage build with security scanning (Trivy/Grype)
 - ~~BoundaryObserver configurable default severity~~ (done — defaults to hard with warning)
 - ~~DP tableau deduplication between upde.rs and stuart_landau.rs~~ (done)
