@@ -93,7 +93,7 @@
   CSV sensor stream -> P channel, event log -> I channel, state-machine trace -> S channel, binding spec, engine run, supervisor decisions, actuation output, and `audit.jsonl` replay.
 - Add a "minimal viable domainpack in 5 minutes" guide using bundled real sample data, from raw CSV/event/state inputs through scaffold, binding spec, run, visualisation, and replay.
 - Add a high-level "why this knob does what" explainer for K, alpha, zeta, Psi, damping, delay, coupling priors, supervisor thresholds, and actuation limits, aimed at users who do not already know Kuramoto control theory.
-- Publish short video walkthroughs for first run, binding-spec authoring, policy debugging, audit replay, and deployment profiles.
+- ~~Publish short video walkthroughs for first run, binding-spec authoring, policy debugging, audit replay, and deployment profiles.~~ (done — `docs/video_scripts.md`, section “Roadmap Walkthrough Set (v1.0 Adoption Track)”)
 - Add a visual binding-spec editor as an optional development extra. First acceptable version: load/save `binding_spec.yaml`, validate schema, expose P/I/S channel mappings, preview extractor outputs, and produce a minimal reproducible domainpack.
 - Add an interactive supervisor-policy editor and validation loop for the DSL: structured rule builder, trigger/action autocomplete, cooldown/rate-limit previews, schema diagnostics, dry-run evaluation against `audit.jsonl`, and warnings for unreachable or overlapping rules.
 - Reduce hidden YAML behaviour by documenting every inferred default in generated docs and surfacing resolved runtime configuration in CLI output and audit metadata.
