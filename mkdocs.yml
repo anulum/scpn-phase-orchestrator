@@ -138,6 +138,8 @@ nav:
       - Drivers: reference/api/drivers.md
       - Audit: reference/api/audit.md
       - Reporting: reference/api/reporting.md
+      - Artifacts: reference/api/artifacts.md
+      - Visualization: reference/api/visualization.md
       - Adapters: reference/api/adapters.md
       - QueueWaves: reference/api/queuewaves.md
       - "Neural Network (nn)": reference/api/nn.md
