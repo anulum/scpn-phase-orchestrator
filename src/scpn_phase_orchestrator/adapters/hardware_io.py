@@ -67,6 +67,18 @@ class SampleBuffer:
 
     def push(self, samples: NDArray) -> None:
         """Push (n_channels, n_samples) into the ring buffer."""
+        if samples.ndim != 2:
+            raise ValueError(
+                "samples must be a 2D array shaped (n_channels, n_samples)"
+            )
+        if samples.shape[0] != self.n_channels:
+            raise ValueError(
+                f"samples first dimension must match n_channels={self.n_channels}"
+            )
+        if not np.issubdtype(samples.dtype, np.number):
+            raise ValueError("samples must be numeric")
+        if not np.all(np.isfinite(samples)):
+            raise ValueError("samples must contain only finite values")
         n_samples = samples.shape[1]
         for i in range(n_samples):
             self.buffer[:, self.write_idx % self.capacity] = samples[:, i]
@@ -242,6 +254,10 @@ class ModbusAdapter:  # pragma: no cover
 
     def read_holding_registers(self, address: int, count: int = 1) -> NDArray:
         """Read holding registers, return as float64 array."""
+        if address < 0:
+            raise ValueError("address must be >= 0")
+        if count <= 0:
+            raise ValueError("count must be > 0")
         result = self._client.read_holding_registers(address, count=count)
         if result.isError():
             return np.zeros(count)
@@ -249,5 +265,9 @@ class ModbusAdapter:  # pragma: no cover
 
     def write_register(self, address: int, value: int) -> bool:
         """Write a single holding register."""
+        if address < 0:
+            raise ValueError("address must be >= 0")
+        if not isinstance(value, int):
+            raise ValueError("value must be an integer")
         result = self._client.write_register(address, value)
         return not result.isError()

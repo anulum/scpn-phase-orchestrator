@@ -13,6 +13,8 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.adapters.hardware_io import (
     HAS_BRAINFLOW,
@@ -73,6 +75,38 @@ class TestSampleBuffer:
             buf.push(np.array([[float(i)]]))
         recent = buf.get_recent(10)
         assert recent.shape[1] <= 5
+
+    def test_push_rejects_non_2d(self):
+        buf = SampleBuffer(capacity=8, n_channels=2)
+        with pytest.raises(ValueError, match="2D"):
+            buf.push(np.array([1.0, 2.0]))
+
+    def test_push_rejects_channel_mismatch(self):
+        buf = SampleBuffer(capacity=8, n_channels=2)
+        with pytest.raises(ValueError, match="n_channels=2"):
+            buf.push(np.array([[1.0], [2.0], [3.0]]))
+
+    def test_push_rejects_non_finite(self):
+        buf = SampleBuffer(capacity=8, n_channels=2)
+        bad = np.array([[1.0, np.nan], [3.0, 4.0]])
+        with pytest.raises(ValueError, match="finite"):
+            buf.push(bad)
+
+    @given(
+        n_channels=st.integers(min_value=1, max_value=6),
+        capacity=st.integers(min_value=1, max_value=20),
+        n_samples=st.integers(min_value=1, max_value=40),
+    )
+    def test_push_fuzz_valid_numeric_shapes(self, n_channels, capacity, n_samples):
+        """Valid numeric 2D arrays must always be accepted."""
+        buf = SampleBuffer(capacity=capacity, n_channels=n_channels)
+        samples = np.arange(n_channels * n_samples, dtype=np.float64).reshape(
+            n_channels, n_samples
+        )
+        buf.push(samples)
+        recent = buf.get_recent(n_samples)
+        assert recent.shape[0] == n_channels
+        assert recent.shape[1] == min(n_samples, capacity)
 
 
 # ---------------------------------------------------------------------------
@@ -264,3 +298,37 @@ class TestModbusAdapter:
             np.zeros(3),
         )
         assert adapter.write_register(0, 1) is False
+
+    def test_read_rejects_invalid_address_and_count(self, monkeypatch):
+        import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
+
+        monkeypatch.setattr(hardware_io, "HAS_MODBUS", True)
+        monkeypatch.setattr(
+            hardware_io,
+            "ModbusTcpClient",
+            MagicMock(return_value=MagicMock()),
+            raising=False,
+        )
+        adapter = ModbusAdapter("plc.local")
+
+        with pytest.raises(ValueError, match="address must be >= 0"):
+            adapter.read_holding_registers(-1, count=1)
+        with pytest.raises(ValueError, match="count must be > 0"):
+            adapter.read_holding_registers(0, count=0)
+
+    def test_write_rejects_invalid_address_and_non_int_value(self, monkeypatch):
+        import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
+
+        monkeypatch.setattr(hardware_io, "HAS_MODBUS", True)
+        monkeypatch.setattr(
+            hardware_io,
+            "ModbusTcpClient",
+            MagicMock(return_value=MagicMock()),
+            raising=False,
+        )
+        adapter = ModbusAdapter("plc.local")
+
+        with pytest.raises(ValueError, match="address must be >= 0"):
+            adapter.write_register(-1, 1)
+        with pytest.raises(ValueError, match="value must be an integer"):
+            adapter.write_register(0, 1.5)  # type: ignore[arg-type]
