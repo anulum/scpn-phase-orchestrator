@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
@@ -80,6 +82,13 @@ class TestStochasticInjector:
         r2 = inj2.inject(phases, dt=0.01)
         np.testing.assert_array_equal(r1, r2)
 
+    def test_inject_annotations_use_float64_ndarray(self) -> None:
+        hints = get_type_hints(StochasticInjector.inject)
+        for name in ("phases", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text
+            assert "numpy.float64" in text
+
 
 class TestSelfConsistency:
     def test_zero_K(self):
@@ -128,6 +137,13 @@ class TestFindOptimalNoise:
         assert result.D >= 0.0
         assert 0.0 <= result.R_achieved <= 1.0
         assert 0.0 <= result.R_deterministic <= 1.0
+
+    def test_find_optimal_noise_annotations_use_float64_ndarray(self) -> None:
+        hints = get_type_hints(find_optimal_noise, localns={"UPDEEngine": UPDEEngine})
+        for name in ("phases_init", "omegas", "knm", "alpha", "D_range"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text
+            assert "numpy.float64" in text
 
 
 class TestNoiseScaling:
