@@ -68,7 +68,7 @@
 - ~~Local GPU validation: GTX 1060, all 9 benchmark suites, JAX 0.9.2~~ (done)
 - ~~First automated FIM (strange loop) validation: V75-V86~~ (done)
 - ~~Cross-project sync: bidirectional findings exchange with scpn-quantum-control and sc-neurocore~~ (done)
-- Petri net + PolicyEngine Rust port (spo-supervisor crate)
+- ~~Petri net + PolicyEngine Rust port (spo-supervisor crate)~~ (done — `spo-kernel/crates/spo-supervisor/src/petri_net.rs`, `spo-kernel/crates/spo-supervisor/src/rule_engine.rs`, FFI bindings in `spo-kernel/crates/spo-ffi/src/lib.rs` (`PyPetriNet`, `PyRuleEngine`), parity coverage in `tests/test_petri_net_parity.py` and `tests/test_rule_engine_parity.py`)
 
 ## v1.0
 
