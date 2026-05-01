@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["upde_run_go"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _METHOD_IDS = {"euler": 0, "rk4": 1, "rk45": 2}
 
@@ -56,10 +58,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def upde_run_go(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
@@ -68,7 +70,7 @@ def upde_run_go(
     n_substeps: int,
     atol: float,
     rtol: float,
-) -> NDArray:
+) -> FloatArray:
     lib = _load_lib()
     if method not in _METHOD_IDS:
         raise ValueError(

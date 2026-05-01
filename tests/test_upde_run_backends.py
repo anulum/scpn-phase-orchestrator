@@ -18,10 +18,15 @@ integrators. Tolerances:
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.upde import engine as eng_mod
+from scpn_phase_orchestrator.upde._engine_go import upde_run_go
+from scpn_phase_orchestrator.upde._engine_julia import upde_run_julia
+from scpn_phase_orchestrator.upde._engine_mojo import upde_run_mojo
 from scpn_phase_orchestrator.upde.engine import (
     AVAILABLE_BACKENDS,
     upde_run,
@@ -217,3 +222,20 @@ class TestDispatcherResolution:
         out = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=10)
         assert out.shape == (3,)
         assert np.all(np.isfinite(out))
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (upde_run_go, "go"),
+            (upde_run_julia, "julia"),
+            (upde_run_mojo, "mojo"),
+        ],
+    )
+    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("phases", "omegas", "knm", "alpha", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
