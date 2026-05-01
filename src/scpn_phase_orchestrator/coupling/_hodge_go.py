@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["hodge_decomposition_go"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libhodge.so"
 _LIB: ctypes.CDLL | None = None
@@ -46,10 +48,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def hodge_decomposition_go(
-    knm_flat: NDArray,
-    phases: NDArray,
+    knm_flat: FloatArray,
+    phases: FloatArray,
     n: int,
-) -> tuple[NDArray, NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray, FloatArray]:
     lib = _load_lib()
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

@@ -15,12 +15,17 @@ round-trip.
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling import hodge as h_mod
+from scpn_phase_orchestrator.coupling._hodge_go import hodge_decomposition_go
+from scpn_phase_orchestrator.coupling._hodge_julia import hodge_decomposition_julia
+from scpn_phase_orchestrator.coupling._hodge_mojo import hodge_decomposition_mojo
 from scpn_phase_orchestrator.coupling.hodge import (
     AVAILABLE_BACKENDS,
     hodge_decomposition,
@@ -176,3 +181,20 @@ class TestCrossBackendConsistency:
             np.testing.assert_allclose(got.gradient, ref.gradient, atol=atol)
             np.testing.assert_allclose(got.curl, ref.curl, atol=atol)
             np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=atol)
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (hodge_decomposition_go, "go"),
+            (hodge_decomposition_julia, "julia"),
+            (hodge_decomposition_mojo, "mojo"),
+        ],
+    )
+    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("knm_flat", "phases", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"

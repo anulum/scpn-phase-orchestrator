@@ -11,12 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["spectral_eig_julia"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "spectral.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,9 +37,9 @@ def _ensure() -> Any:
 
 
 def spectral_eig_julia(
-    knm_flat: NDArray,
+    knm_flat: FloatArray,
     n: int,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     jl = _ensure()
     eigvals, fiedler = jl.spectral_eig(
         np.ascontiguousarray(knm_flat, dtype=np.float64),

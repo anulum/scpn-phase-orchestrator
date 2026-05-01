@@ -24,6 +24,7 @@ than on raw values.
 from __future__ import annotations
 
 import contextlib
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -31,6 +32,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling import spectral as s_mod
+from scpn_phase_orchestrator.coupling._spectral_go import spectral_eig_go
+from scpn_phase_orchestrator.coupling._spectral_julia import spectral_eig_julia
+from scpn_phase_orchestrator.coupling._spectral_mojo import spectral_eig_mojo
 from scpn_phase_orchestrator.coupling.spectral import (
     fiedler_value,
     fiedler_vector,
@@ -186,3 +190,20 @@ class TestHypothesisParity:
         _, _, _, ref = _run_backend("python", seed, n=n)
         _, _, _, got = _run_backend("go", seed, n=n)
         assert np.max(np.abs(got - ref)) < TOL_GONUM
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (spectral_eig_go, "go"),
+            (spectral_eig_julia, "julia"),
+            (spectral_eig_mojo, "mojo"),
+        ],
+    )
+    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("knm_flat", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
