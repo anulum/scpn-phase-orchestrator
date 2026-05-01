@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -99,3 +100,12 @@ def test_collector_client_lifecycle() -> None:
         assert collector._client is None
 
     asyncio.run(_run())
+
+
+def test_collector_array_annotations_use_float64_ndarray() -> None:
+    values_hints = get_type_hints(MetricBuffer.values_array)
+    arrays_hints = get_type_hints(PrometheusCollector.get_signal_arrays)
+    assert "numpy.ndarray" in str(values_hints["return"])
+    assert "numpy.float64" in str(values_hints["return"])
+    assert "numpy.ndarray" in str(arrays_hints["return"])
+    assert "numpy.float64" in str(arrays_hints["return"])

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -35,6 +36,7 @@ from scpn_phase_orchestrator.upde.order_params import (
 from scpn_phase_orchestrator.upde.pac import modulation_index
 
 __all__ = ["PipelineSnapshot", "PhaseComputePipeline"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 TWO_PI = 2.0 * np.pi
 
@@ -132,8 +134,8 @@ class PhaseComputePipeline:
         # stable estimate; deeper windows trade memory for smoother PAC.
         self._pac_window = 32
         self._subcritical_threshold = 0.1
-        self._phase_history: list[NDArray] = []
-        self._amplitude_history: list[NDArray] = []
+        self._phase_history: list[FloatArray] = []
+        self._amplitude_history: list[FloatArray] = []
 
         self._layer_osc_ranges: dict[int, list[int]] = {}
         osc_idx = 0
@@ -161,11 +163,11 @@ class PhaseComputePipeline:
         return self._regime_manager.current_regime.value
 
     @property
-    def imprint_levels(self) -> NDArray:
+    def imprint_levels(self) -> FloatArray:
         """Per-oscillator imprint memory levels."""
         return self._imprint_state.m_k
 
-    def tick(self, buffers: dict[str, NDArray]) -> PipelineSnapshot:
+    def tick(self, buffers: dict[str, FloatArray]) -> PipelineSnapshot:
         """Run one full pipeline cycle.
 
         Args:
