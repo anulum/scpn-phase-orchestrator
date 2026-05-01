@@ -11,10 +11,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["local_order_parameter_julia"]
 
@@ -36,10 +38,10 @@ def _ensure() -> Any:
 
 
 def local_order_parameter_julia(
-    phases: NDArray,
-    knm_flat: NDArray,
+    phases: FloatArray,
+    knm_flat: FloatArray,
     n: int,
-) -> NDArray:
+) -> FloatArray:
     jl = _ensure()
     return np.asarray(
         jl.local_order_parameter(

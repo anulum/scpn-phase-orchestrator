@@ -11,10 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+ByteArray: TypeAlias = NDArray[np.uint8]
 
 __all__ = ["cross_recurrence_matrix_julia", "recurrence_matrix_julia"]
 
@@ -36,12 +39,12 @@ def _ensure() -> Any:
 
 
 def recurrence_matrix_julia(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
     epsilon: float,
     angular: bool,
-) -> NDArray:
+) -> ByteArray:
     jl = _ensure()
     return np.asarray(
         jl.recurrence_matrix(
@@ -56,13 +59,13 @@ def recurrence_matrix_julia(
 
 
 def cross_recurrence_matrix_julia(
-    traj_a_flat: NDArray,
-    traj_b_flat: NDArray,
+    traj_a_flat: FloatArray,
+    traj_b_flat: FloatArray,
     t: int,
     d: int,
     epsilon: float,
     angular: bool,
-) -> NDArray:
+) -> ByteArray:
     jl = _ensure()
     return np.asarray(
         jl.cross_recurrence_matrix(

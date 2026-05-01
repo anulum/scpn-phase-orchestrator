@@ -8,10 +8,15 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["SymbolicDriver"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 
 class SymbolicDriver:
@@ -32,7 +37,7 @@ class SymbolicDriver:
         """Return symbolic phase at discrete *step* (cyclic)."""
         return float(self._sequence[step % self._n])
 
-    def compute_batch(self, steps: NDArray) -> NDArray:
+    def compute_batch(self, steps: IntArray) -> FloatArray:
         """Vectorised symbolic phase lookup over an array of step indices."""
-        result: NDArray = self._sequence[steps.astype(int) % self._n]
+        result: FloatArray = self._sequence[steps.astype(int) % self._n]
         return result

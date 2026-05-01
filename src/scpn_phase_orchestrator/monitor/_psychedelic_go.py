@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["entropy_from_phases_go"]
 
@@ -44,7 +47,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def entropy_from_phases_go(phases: NDArray, n_bins: int) -> float:
+def entropy_from_phases_go(phases: FloatArray, n_bins: int) -> float:
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

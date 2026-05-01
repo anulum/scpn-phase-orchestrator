@@ -11,10 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = ["correlation_integral_julia", "kaplan_yorke_dimension_julia"]
 
@@ -36,13 +39,13 @@ def _ensure() -> Any:
 
 
 def correlation_integral_julia(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
-    idx_i: NDArray,
-    idx_j: NDArray,
-    epsilons: NDArray,
-) -> NDArray:
+    idx_i: IntArray,
+    idx_j: IntArray,
+    epsilons: FloatArray,
+) -> FloatArray:
     jl = _ensure()
     return np.asarray(
         jl.correlation_integral(
@@ -57,7 +60,7 @@ def correlation_integral_julia(
     )
 
 
-def kaplan_yorke_dimension_julia(lyapunov_exponents: NDArray) -> float:
+def kaplan_yorke_dimension_julia(lyapunov_exponents: FloatArray) -> float:
     jl = _ensure()
     return float(
         jl.kaplan_yorke_dimension(

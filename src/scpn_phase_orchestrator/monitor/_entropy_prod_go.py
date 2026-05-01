@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["entropy_production_rate_go"]
 
@@ -48,9 +51,9 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def entropy_production_rate_go(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
     alpha: float,
     dt: float,
 ) -> float:

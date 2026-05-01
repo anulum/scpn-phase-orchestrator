@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -247,6 +247,27 @@ class TestDriversPipelineEndToEnd:
         assert np.isfinite(phys.compute(0.5))
         assert np.isfinite(symb.compute(0))
         assert np.isfinite(info.compute(0.5))
+
+
+class TestDriverTypeHints:
+    """Guard the V2 typed-array contract for public driver batch APIs."""
+
+    def test_batch_inputs_and_outputs_are_parameterised_ndarrays(self) -> None:
+        for method, expected_input_dtype in [
+            (PhysicalDriver.compute_batch, "float64"),
+            (InformationalDriver.compute_batch, "float64"),
+            (SymbolicDriver.compute_batch, "int64"),
+        ]:
+            hints = get_type_hints(method)
+            input_name = (
+                "steps" if method is SymbolicDriver.compute_batch else "t_array"
+            )
+            input_hint = hints[input_name]
+            result_hint = hints["return"]
+            assert "numpy.ndarray" in str(input_hint)
+            assert expected_input_dtype in str(input_hint)
+            assert "numpy.ndarray" in str(result_hint)
+            assert "float64" in str(result_hint)
 
 
 # Pipeline wiring: PhysicalDriver/SymbolicDriver/InformationalDriver → psi

@@ -11,10 +11,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_te_julia", "te_matrix_julia"]
 
@@ -35,7 +37,7 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def phase_te_julia(source: NDArray, target: NDArray, n_bins: int) -> float:
+def phase_te_julia(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     jl = _ensure()
     return float(
         jl.phase_transfer_entropy(
@@ -47,11 +49,11 @@ def phase_te_julia(source: NDArray, target: NDArray, n_bins: int) -> float:
 
 
 def te_matrix_julia(
-    phase_series: NDArray,
+    phase_series: FloatArray,
     n_osc: int,
     n_time: int,
     n_bins: int,
-) -> NDArray:
+) -> FloatArray:
     jl = _ensure()
     return np.asarray(
         jl.transfer_entropy_matrix(

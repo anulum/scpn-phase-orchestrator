@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["simplicial_run_go"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libsimplicial.so"
 _LIB: ctypes.CDLL | None = None
@@ -52,23 +55,23 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def simplicial_run_go(
-    phases: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     zeta: float,
     psi: float,
     sigma2: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> FloatArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases, dtype=np.float64)
     o = np.ascontiguousarray(omegas, dtype=np.float64)
     k = np.ascontiguousarray(knm_flat, dtype=np.float64)
     a = np.ascontiguousarray(alpha_flat, dtype=np.float64)
-    out = np.zeros(int(n), dtype=np.float64)
+    out: FloatArray = np.zeros(int(n), dtype=np.float64)
     rc = lib.SimplicialRun(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         o.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),

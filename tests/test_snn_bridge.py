@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import contextlib
+from typing import get_type_hints
 
 import numpy as np
 
@@ -47,6 +48,17 @@ def test_upde_to_current_empty():
     state = _make_state([])
     currents = bridge.upde_state_to_input_current(state)
     assert len(currents) == 0
+
+
+def test_public_array_contracts_are_parameterised():
+    for hint in [
+        get_type_hints(SNNControllerBridge.upde_state_to_input_current)["return"],
+        get_type_hints(SNNControllerBridge.spike_rates_to_actions)["rates"],
+        get_type_hints(SNNControllerBridge.lif_rate_estimate)["currents"],
+        get_type_hints(SNNControllerBridge.lif_rate_estimate)["return"],
+    ]:
+        assert "numpy.ndarray" in str(hint)
+        assert "float64" in str(hint)
 
 
 def test_spike_rates_above_threshold():

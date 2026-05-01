@@ -13,13 +13,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 try:
     from spo_kernel import (
@@ -45,7 +47,7 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 def _load_rust_fn() -> Callable[..., float]:
     from spo_kernel import entropy_from_phases_rust
 
-    def _rust(phases: NDArray, n_bins: int) -> float:
+    def _rust(phases: FloatArray, n_bins: int) -> float:
         return float(
             entropy_from_phases_rust(
                 np.ascontiguousarray(phases.ravel(), dtype=np.float64),
@@ -114,7 +116,7 @@ def _dispatch() -> Callable[..., float] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
-def reduce_coupling(knm: NDArray, reduction_factor: float) -> NDArray:
+def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
     """Scale coupling matrix by ``(1 − reduction_factor)``.
 
     Args:
@@ -124,14 +126,14 @@ def reduce_coupling(knm: NDArray, reduction_factor: float) -> NDArray:
     Returns:
         Scaled copy. Zero when ``reduction_factor == 1``.
     """
-    k = np.asarray(knm, dtype=np.float64)
+    k: FloatArray = np.asarray(knm, dtype=np.float64)
     if _HAS_RUST_REDUCE:
         flat = np.ascontiguousarray(k.ravel())
         return np.asarray(_rust_reduce(flat, reduction_factor)).reshape(k.shape)
     return k * (1.0 - reduction_factor)
 
 
-def entropy_from_phases(phases: NDArray, n_bins: int = 36) -> float:
+def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
     """Circular Shannon entropy of a phase distribution.
 
     Wraps phases to ``[0, 2π)``, bins into ``n_bins`` equal-width
@@ -141,14 +143,14 @@ def entropy_from_phases(phases: NDArray, n_bins: int = 36) -> float:
     Carhart-Harris et al. 2014, Front. Hum. Neurosci. **8**:20
     ("The entropic brain").
     """
-    phases = np.asarray(phases, dtype=np.float64)
-    if phases.size == 0:
+    phase_values: FloatArray = np.asarray(phases, dtype=np.float64)
+    if phase_values.size == 0:
         return 0.0
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(backend_fn(phases, int(n_bins)))
+        return float(backend_fn(phase_values, int(n_bins)))
 
-    wrapped = phases % (2.0 * np.pi)
+    wrapped = phase_values % (2.0 * np.pi)
     counts, _ = np.histogram(
         wrapped,
         bins=int(n_bins),
@@ -164,10 +166,10 @@ def entropy_from_phases(phases: NDArray, n_bins: int = 36) -> float:
 
 def simulate_psychedelic_trajectory(
     engine: UPDEEngine,
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     reduction_schedule: list[float],
     n_steps_per_level: int = 100,
 ) -> list[dict]:
@@ -190,7 +192,7 @@ def simulate_psychedelic_trajectory(
         List of dicts, one per level, with keys:
           reduction_factor, R, entropy, chimera_index, phases.
     """
-    p = np.asarray(phases, dtype=np.float64).copy()
+    p: FloatArray = np.asarray(phases, dtype=np.float64).copy()
     results: list[dict] = []
 
     for rf in reduction_schedule:

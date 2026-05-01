@@ -11,10 +11,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["entropy_from_phases_julia"]
 
@@ -35,7 +37,7 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def entropy_from_phases_julia(phases: NDArray, n_bins: int) -> float:
+def entropy_from_phases_julia(phases: FloatArray, n_bins: int) -> float:
     jl = _ensure()
     return float(
         jl.entropy_from_phases(

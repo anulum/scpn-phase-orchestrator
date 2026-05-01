@@ -26,10 +26,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -133,9 +136,9 @@ class CorrelationDimensionResult:
     """
 
     D2: float
-    epsilons: NDArray
-    C_eps: NDArray
-    slope: NDArray
+    epsilons: FloatArray
+    C_eps: FloatArray
+    slope: FloatArray
     scaling_range: tuple[float, float]
 
 
@@ -143,7 +146,7 @@ def _prepare_pair_indices(
     total_t: int,
     max_pairs: int,
     seed: int,
-) -> tuple[NDArray, NDArray] | None:
+) -> tuple[IntArray, IntArray] | None:
     """Pre-select pair indices for non-Rust correlation-integral paths.
 
     Returns ``(idx_i, idx_j)`` — either the full upper-triangle or a
@@ -167,11 +170,11 @@ def _prepare_pair_indices(
 
 
 def correlation_integral(
-    trajectory: NDArray,
-    epsilons: NDArray,
+    trajectory: FloatArray,
+    epsilons: FloatArray,
     max_pairs: int = 50000,
     seed: int = 42,
-) -> NDArray:
+) -> FloatArray:
     """Correlation integral ``C(ε) = fraction of pairs within ε``.
 
     Grassberger-Procaccia 1983: ``C(ε) ∝ ε^{D₂}`` in the scaling
@@ -200,7 +203,7 @@ def correlation_integral(
     backend_fn = _dispatch("ci")
     if backend_fn is not None and ACTIVE_BACKEND == "rust":
         fn_rust = cast(
-            "Callable[[NDArray, int, int, NDArray, int, int], NDArray]",
+            "Callable[[FloatArray, int, int, FloatArray, int, int], FloatArray]",
             backend_fn,
         )
         return np.asarray(
@@ -222,7 +225,8 @@ def correlation_integral(
 
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray, int, int, NDArray, NDArray, NDArray], NDArray]",
+            "Callable[[FloatArray, int, int, IntArray, IntArray, FloatArray], "
+            "FloatArray]",
             backend_fn,
         )
         return np.asarray(
@@ -246,7 +250,7 @@ def correlation_integral(
 
 
 def correlation_dimension(
-    trajectory: NDArray,
+    trajectory: FloatArray,
     n_epsilons: int = 30,
     max_pairs: int = 50000,
     seed: int = 42,
@@ -290,10 +294,10 @@ def correlation_dimension(
             scaling_range=(float(epsilons[0]), float(epsilons[-1])),
         )
 
-    best_var = np.inf
+    best_var = float(np.inf)
     best_start = 0
     for i in range(len(slopes) - window + 1):
-        v = np.var(slopes[i : i + window])
+        v = float(np.var(slopes[i : i + window]))
         if v < best_var:
             best_var = v
             best_start = i
@@ -312,7 +316,7 @@ def correlation_dimension(
     )
 
 
-def _attractor_diameter(trajectory: NDArray) -> float:
+def _attractor_diameter(trajectory: FloatArray) -> float:
     """Estimate attractor diameter as max distance between sampled points."""
     t = trajectory.shape[0]
     if t <= 1:
@@ -332,7 +336,7 @@ def _attractor_diameter(trajectory: NDArray) -> float:
     return maxd
 
 
-def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float:
+def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
     """Kaplan-Yorke / information dimension from a Lyapunov spectrum.
 
     ``D_KY = j + (Σ_{i=1}^{j} λ_i) / |λ_{j+1}|`` where ``j`` is the
@@ -354,7 +358,7 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float:
         return 0.0
     backend_fn = _dispatch("ky")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray], float]", backend_fn)
+        fn = cast("Callable[[FloatArray], float]", backend_fn)
         le_sorted = np.sort(le)[::-1]
         return float(fn(np.ascontiguousarray(le_sorted, dtype=np.float64)))
 

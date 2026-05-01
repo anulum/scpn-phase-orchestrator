@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["spectral_eig_go"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libspectral.so"
 _LIB: ctypes.CDLL | None = None
@@ -45,9 +47,9 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def spectral_eig_go(
-    knm_flat: NDArray,
+    knm_flat: FloatArray,
     n: int,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     lib = _load_lib()
     k = np.ascontiguousarray(knm_flat, dtype=np.float64)
     eigvals = np.zeros(int(n), dtype=np.float64)

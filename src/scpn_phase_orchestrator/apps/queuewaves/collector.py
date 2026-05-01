@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["MetricBuffer", "PrometheusCollector"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class MetricBuffer:
         """True when the buffer has reached maximum capacity."""
         return len(self._buf) >= self._maxlen
 
-    def values_array(self) -> NDArray:
+    def values_array(self) -> FloatArray:
         """Return buffered values as a float64 array (timestamps excluded)."""
         return np.array([v for _, v in self._buf], dtype=np.float64)
 
@@ -125,7 +126,7 @@ class PrometheusCollector:
                 self._buffers[name].push(ts, val)
         return self._buffers
 
-    def get_signal_arrays(self) -> dict[str, NDArray]:
+    def get_signal_arrays(self) -> dict[str, FloatArray]:
         """Return value arrays for all ready buffers."""
         return {
             name: buf.values_array() for name, buf in self._buffers.items() if buf.ready

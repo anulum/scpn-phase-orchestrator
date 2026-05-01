@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["_ensure_exe", "entropy_from_phases_mojo"]
 
@@ -30,7 +33,7 @@ def _ensure_exe() -> Path:
     return _EXE_PATH
 
 
-def entropy_from_phases_mojo(phases: NDArray, n_bins: int) -> float:
+def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
     exe = _ensure_exe()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     tokens: list[str] = ["ENT", str(int(p.size)), str(int(n_bins))]

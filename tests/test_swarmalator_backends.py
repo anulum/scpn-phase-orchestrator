@@ -17,12 +17,17 @@ pre-migration Python used ``dist³`` which drifted by O(1e-4)).
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod
+from scpn_phase_orchestrator.upde._swarmalator_go import swarmalator_step_go
+from scpn_phase_orchestrator.upde._swarmalator_julia import swarmalator_step_julia
+from scpn_phase_orchestrator.upde._swarmalator_mojo import swarmalator_step_mojo
 from scpn_phase_orchestrator.upde.swarmalator import (
     AVAILABLE_BACKENDS,
     SwarmalatorEngine,
@@ -180,3 +185,20 @@ class TestCrossBackendConsistency:
             atol = tolerances[backend]
             np.testing.assert_allclose(p, ref_p, atol=atol)
             np.testing.assert_allclose(ph, ref_ph, atol=atol)
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (swarmalator_step_go, "go"),
+            (swarmalator_step_julia, "julia"),
+            (swarmalator_step_mojo, "mojo"),
+        ],
+    )
+    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("pos", "phases", "omegas", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"

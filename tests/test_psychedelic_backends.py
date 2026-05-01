@@ -14,12 +14,17 @@ the subprocess text round-trip on the bin-edge float comparisons.
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import psychedelic as py_mod
+from scpn_phase_orchestrator.monitor._psychedelic_go import entropy_from_phases_go
+from scpn_phase_orchestrator.monitor._psychedelic_julia import entropy_from_phases_julia
+from scpn_phase_orchestrator.monitor._psychedelic_mojo import entropy_from_phases_mojo
 from scpn_phase_orchestrator.monitor.psychedelic import (
     AVAILABLE_BACKENDS,
     entropy_from_phases,
@@ -48,6 +53,18 @@ def _reference(phases: np.ndarray, n_bins: int) -> float:
 
 def _phases(seed: int, n: int = 500) -> np.ndarray:
     return np.random.default_rng(seed).uniform(0, TWO_PI, n)
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        entropy_from_phases_go,
+        entropy_from_phases_julia,
+        entropy_from_phases_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        assert "numpy.ndarray" in str(hints["phases"])
+        assert "float64" in str(hints["phases"])
 
 
 class TestRustParity:

@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["_ensure_exe", "local_order_parameter_mojo"]
 
@@ -47,10 +50,10 @@ def _run(payload: str) -> list[float]:
 
 
 def local_order_parameter_mojo(
-    phases: NDArray,
-    knm_flat: NDArray,
+    phases: FloatArray,
+    knm_flat: FloatArray,
     n: int,
-) -> NDArray:
+) -> FloatArray:
     if n == 0:
         return np.zeros(0, dtype=np.float64)
     tokens: list[str] = ["CHI", str(int(n))]

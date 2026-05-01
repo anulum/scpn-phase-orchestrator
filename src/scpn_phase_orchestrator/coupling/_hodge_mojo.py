@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "hodge_decomposition_mojo"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "hodge_mojo"
 
@@ -31,10 +33,10 @@ def _ensure_exe() -> Path:
 
 
 def hodge_decomposition_mojo(
-    knm_flat: NDArray,
-    phases: NDArray,
+    knm_flat: FloatArray,
+    phases: FloatArray,
     n: int,
-) -> tuple[NDArray, NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray, FloatArray]:
     exe = _ensure_exe()
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

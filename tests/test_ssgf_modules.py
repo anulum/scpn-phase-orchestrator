@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier, SSGFState
@@ -80,6 +82,21 @@ class TestGeometryCarrier:
         assert W.shape == (3, 3)
         assert np.all(W >= 0)
 
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        state_hints = get_type_hints(SSGFState)
+        for field in ("z", "W"):
+            assert "numpy.ndarray" in str(state_hints[field])
+            assert "float64" in str(state_hints[field])
+
+        for hint in [
+            get_type_hints(GeometryCarrier.z.fget)["return"],
+            get_type_hints(GeometryCarrier.decode)["z"],
+            get_type_hints(GeometryCarrier.decode)["return"],
+            get_type_hints(GeometryCarrier.update)["cost_fn"],
+        ]:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
+
 
 class TestCyberneticClosure:
     def test_step_returns_w_and_state(self) -> None:
@@ -120,6 +137,16 @@ class TestCyberneticClosure:
         gc = GeometryCarrier(3)
         cc = CyberneticClosure(gc)
         assert cc.carrier is gc
+
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        for hint in [
+            get_type_hints(CyberneticClosure.step)["phases"],
+            get_type_hints(CyberneticClosure.step)["return"],
+            get_type_hints(CyberneticClosure.run)["phases"],
+            get_type_hints(CyberneticClosure.run)["return"],
+        ]:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
 
 
 class TestEthicalCost:
@@ -172,6 +199,12 @@ class TestEthicalCost:
             connectivity_min=1.0,
         )
         assert result.constraints_violated >= 1
+
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        hints = get_type_hints(compute_ethical_cost)
+        for param in ("phases", "knm"):
+            assert "numpy.ndarray" in str(hints[param])
+            assert "float64" in str(hints[param])
 
 
 class TestSSGFModulesPipelineWiring:

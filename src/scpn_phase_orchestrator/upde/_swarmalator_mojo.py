@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "swarmalator_step_mojo"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "swarmalator_mojo"
 
@@ -31,9 +34,9 @@ def _ensure_exe() -> Path:
 
 
 def swarmalator_step_mojo(
-    pos: NDArray,
-    phases: NDArray,
-    omegas: NDArray,
+    pos: FloatArray,
+    phases: FloatArray,
+    omegas: FloatArray,
     n: int,
     dim: int,
     a: float,
@@ -41,7 +44,7 @@ def swarmalator_step_mojo(
     j: float,
     k: float,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     exe = _ensure_exe()
     tokens: list[str] = [
         "STEP",
@@ -71,11 +74,11 @@ def swarmalator_step_mojo(
     expected = n * dim + n
     if len(lines) != expected:
         raise ValueError(f"Mojo STEP returned {len(lines)} lines, expected {expected}")
-    new_pos = np.array(
+    new_pos: FloatArray = np.array(
         [float(x) for x in lines[: n * dim]],
         dtype=np.float64,
     )
-    new_phases = np.array(
+    new_phases: FloatArray = np.array(
         [float(x) for x in lines[n * dim :]],
         dtype=np.float64,
     )

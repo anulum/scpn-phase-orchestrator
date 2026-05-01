@@ -9,12 +9,16 @@
 from __future__ import annotations
 
 from math import isfinite
+from typing import TypeAlias
 
+import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = ["InformationalDriver"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class InformationalDriver:
@@ -35,6 +39,7 @@ class InformationalDriver:
         """Return Psi_I at time *t*, wrapped to [0, 2*pi)."""
         return (TWO_PI * self._cadence_hz * t) % TWO_PI
 
-    def compute_batch(self, t_array: NDArray) -> NDArray:
+    def compute_batch(self, t_array: FloatArray) -> FloatArray:
         """Vectorised Psi_I over an array of time values."""
-        return (TWO_PI * self._cadence_hz * t_array) % TWO_PI
+        result: FloatArray = (TWO_PI * self._cadence_hz * t_array) % TWO_PI
+        return result

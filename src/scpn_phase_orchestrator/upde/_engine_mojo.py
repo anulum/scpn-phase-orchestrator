@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "upde_run_mojo"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _METHOD_IDS = {"euler": 0, "rk4": 1, "rk45": 2}
 
@@ -49,10 +51,10 @@ def _run(payload: str) -> list[float]:
 
 
 def upde_run_mojo(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
@@ -61,7 +63,7 @@ def upde_run_mojo(
     n_substeps: int,
     atol: float,
     rtol: float,
-) -> NDArray:
+) -> FloatArray:
     if method not in _METHOD_IDS:
         raise ValueError(
             f"unknown method {method!r}; expected one of {list(_METHOD_IDS)}"

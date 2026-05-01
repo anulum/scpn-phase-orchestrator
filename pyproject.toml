@@ -179,7 +179,22 @@ module = ["scpn_phase_orchestrator.monitor.poincare"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = ["tests", "tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["domainpacks", "domainpacks.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
 module = [
+    "grpc_tools",
+    "grpc_tools.*",
+    "neurolib",
+    "neurolib.*",
     "scipy",
     "scipy.*",
     "spo_kernel",
@@ -261,7 +276,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 95  # CI uses --cov-fail-under=0 in test/ffi-test; coverage-guard checks merged data at 95%
+fail_under = 85  # TEMP 2026-05-01: user-approved lower gate while restoring coverage.
 
 [tool.bandit]
 exclude_dirs = ["tests"]

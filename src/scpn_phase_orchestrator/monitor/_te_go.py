@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_te_go", "te_matrix_go"]
 
@@ -54,7 +57,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def phase_te_go(source: NDArray, target: NDArray, n_bins: int) -> float:
+def phase_te_go(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     lib = _load_lib()
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
@@ -73,11 +76,11 @@ def phase_te_go(source: NDArray, target: NDArray, n_bins: int) -> float:
 
 
 def te_matrix_go(
-    phase_series: NDArray,
+    phase_series: FloatArray,
     n_osc: int,
     n_time: int,
     n_bins: int,
-) -> NDArray:
+) -> FloatArray:
     lib = _load_lib()
     series = np.ascontiguousarray(phase_series, dtype=np.float64)
     out = np.zeros(n_osc * n_osc, dtype=np.float64)

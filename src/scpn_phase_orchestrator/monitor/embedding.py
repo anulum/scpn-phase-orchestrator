@@ -39,10 +39,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -67,7 +70,7 @@ def _load_rust_fns() -> dict[str, object]:
         optimal_dimension_rust,
     )
 
-    def _de(signal: NDArray, delay: int, dimension: int) -> NDArray:
+    def _de(signal: FloatArray, delay: int, dimension: int) -> FloatArray:
         flat = np.ascontiguousarray(signal, dtype=np.float64)
         return np.asarray(
             delay_embed_rust(flat, int(delay), int(dimension)),
@@ -175,17 +178,17 @@ def _dispatch(fn_name: str) -> object | None:
 class EmbeddingResult:
     """Delay-embedding output."""
 
-    trajectory: NDArray
+    trajectory: FloatArray
     delay: int
     dimension: int
     T_effective: int
 
 
 def delay_embed(
-    signal: NDArray,
+    signal: FloatArray,
     delay: int,
     dimension: int,
-) -> NDArray:
+) -> FloatArray:
     """Time-delay embedding: ``v(t) = [x(t), x(t+τ), x(t+2τ), …]``."""
     s = np.asarray(signal, dtype=np.float64).ravel()
     t_eff = int(s.size) - (int(dimension) - 1) * int(delay)
@@ -198,7 +201,7 @@ def delay_embed(
 
     backend_fn = _dispatch("de")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, int, int], NDArray]", backend_fn)
+        fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
         return np.asarray(
             fn(s, int(delay), int(dimension)),
             dtype=np.float64,
@@ -206,11 +209,11 @@ def delay_embed(
 
     indices = np.arange(int(dimension)) * int(delay)
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
-    return cast("NDArray", s[rows])
+    return cast("FloatArray", s[rows])
 
 
 def mutual_information(
-    signal: NDArray,
+    signal: FloatArray,
     lag: int,
     n_bins: int = 32,
 ) -> float:
@@ -221,7 +224,7 @@ def mutual_information(
 
     backend_fn = _dispatch("mi")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, int, int], float]", backend_fn)
+        fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
         return float(fn(s, int(lag), int(n_bins)))
 
     t_total = s.size - int(lag)
@@ -245,8 +248,8 @@ def mutual_information(
 
 
 def nearest_neighbor_distances(
-    embedded: NDArray,
-) -> tuple[NDArray, NDArray]:
+    embedded: FloatArray,
+) -> tuple[FloatArray, IntArray]:
     """Brute-force ``k = 1`` kNN on the rows of ``embedded``."""
     e = np.atleast_2d(embedded)
     t, m = int(e.shape[0]), int(e.shape[1])
@@ -256,7 +259,7 @@ def nearest_neighbor_distances(
     backend_fn = _dispatch("nn")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray, int, int], tuple[NDArray, NDArray]]",
+            "Callable[[FloatArray, int, int], tuple[FloatArray, IntArray]]",
             backend_fn,
         )
         dist, idx = fn(e, t, m)
@@ -278,7 +281,7 @@ def nearest_neighbor_distances(
 
 
 def optimal_delay(
-    signal: NDArray,
+    signal: FloatArray,
     max_lag: int = 100,
     n_bins: int = 32,
 ) -> int:
@@ -287,7 +290,7 @@ def optimal_delay(
 
     if ACTIVE_BACKEND == "rust":
         fn = cast(
-            "Callable[[NDArray, int, int], int]",
+            "Callable[[FloatArray, int, int], int]",
             _LOADERS["rust"]()["optimal_delay"],
         )
         return int(fn(s, int(max_lag), int(n_bins)))
@@ -301,7 +304,7 @@ def optimal_delay(
 
 
 def optimal_dimension(
-    signal: NDArray,
+    signal: FloatArray,
     delay: int,
     max_dim: int = 10,
     rtol: float = 15.0,
@@ -356,7 +359,7 @@ def optimal_dimension(
 
 
 def auto_embed(
-    signal: NDArray,
+    signal: FloatArray,
     max_lag: int = 100,
     max_dim: int = 10,
 ) -> EmbeddingResult:

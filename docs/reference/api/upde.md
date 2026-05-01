@@ -205,6 +205,8 @@ acceleration.
 
 ::: scpn_phase_orchestrator.upde.order_params
 
+::: scpn_phase_orchestrator.upde.metrics
+
 ## Phase-Amplitude Coupling (PAC)
 
 Modulation index (MI) via Tort et al. 2010. Bins low-frequency phase,
@@ -223,6 +225,13 @@ Amplitude envelope extraction and numerical integration utilities
 ::: scpn_phase_orchestrator.upde.envelope
 
 ::: scpn_phase_orchestrator.upde.numerics
+
+## Splitting Engine
+
+Operator-splitting UPDE integrator for stiff regimes and deterministic
+phase update decomposition.
+
+::: scpn_phase_orchestrator.upde.splitting
 
 ## Bifurcation Continuation
 

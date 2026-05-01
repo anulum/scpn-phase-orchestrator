@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.apps.queuewaves.config import QueueWavesConfig
@@ -189,3 +191,12 @@ def test_pipeline_empty_layer_osc_range() -> None:
     buffers = {"a": rng.standard_normal(16)}
     snap = pipe.tick(buffers)
     assert snap.tick == 1
+
+
+def test_pipeline_array_annotations_use_float64_ndarray() -> None:
+    tick_hints = get_type_hints(PhaseComputePipeline.tick)
+    imprint_hints = get_type_hints(PhaseComputePipeline.imprint_levels.fget)
+    assert "numpy.ndarray" in str(tick_hints["buffers"])
+    assert "numpy.float64" in str(tick_hints["buffers"])
+    assert "numpy.ndarray" in str(imprint_hints["return"])
+    assert "numpy.float64" in str(imprint_hints["return"])

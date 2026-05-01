@@ -31,6 +31,8 @@ from scpn_phase_orchestrator import (
 | [Drivers](drivers.md) | External forcing functions (Physical, Informational, Symbolic) |
 | [Audit](audit.md) | SHA256-chained audit logging and deterministic replay |
 | [Reporting](reporting.md) | Matplotlib coherence visualizations |
+| [Artifacts](artifacts.md) | Portable run artifacts and QPU data packaging/validation |
+| [Visualization](visualization.md) | Real-time WebXR/network/torus visualization surfaces |
 | [Adapters](adapters.md) | Bridges to SCPN ecosystem, observability, SNN controllers |
 | [QueueWaves](queuewaves.md) | Real-time cascade failure detector for microservices |
 | [SSGF](ssgf.md) | Self-Stabilizing Gauge Field: geometry carrier, ethical cost, PGBO, TCBO |

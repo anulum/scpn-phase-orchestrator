@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+ByteArray: TypeAlias = NDArray[np.uint8]
 
 __all__ = ["cross_recurrence_matrix_go", "recurrence_matrix_go"]
 
@@ -57,12 +61,12 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def recurrence_matrix_go(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
     epsilon: float,
     angular: bool,
-) -> NDArray:
+) -> ByteArray:
     lib = _load_lib()
     p = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
     out = np.zeros(t * t, dtype=np.uint8)
@@ -80,13 +84,13 @@ def recurrence_matrix_go(
 
 
 def cross_recurrence_matrix_go(
-    traj_a_flat: NDArray,
-    traj_b_flat: NDArray,
+    traj_a_flat: FloatArray,
+    traj_b_flat: FloatArray,
     t: int,
     d: int,
     epsilon: float,
     angular: bool,
-) -> NDArray:
+) -> ByteArray:
     lib = _load_lib()
     a = np.ascontiguousarray(traj_a_flat.ravel(), dtype=np.float64)
     b = np.ascontiguousarray(traj_b_flat.ravel(), dtype=np.float64)

@@ -11,12 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["hodge_decomposition_julia"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "hodge.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,10 +37,10 @@ def _ensure() -> Any:
 
 
 def hodge_decomposition_julia(
-    knm_flat: NDArray,
-    phases: NDArray,
+    knm_flat: FloatArray,
+    phases: FloatArray,
     n: int,
-) -> tuple[NDArray, NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray, FloatArray]:
     jl = _ensure()
     g, c, h = jl.hodge_decomposition(
         np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),

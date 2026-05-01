@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,6 +22,7 @@ __all__ = [
     "envelope_modulation_depth_mojo",
     "extract_envelope_mojo",
 ]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "envelope_mojo"
 
@@ -48,7 +50,7 @@ def _run(payload: str) -> list[str]:
     return [line for line in proc.stdout.strip().splitlines() if line]
 
 
-def extract_envelope_mojo(amps: NDArray, window: int) -> NDArray:
+def extract_envelope_mojo(amps: FloatArray, window: int) -> FloatArray:
     a = np.ascontiguousarray(amps.ravel(), dtype=np.float64)
     if a.size == 0:
         return np.zeros(0, dtype=np.float64)
@@ -62,7 +64,7 @@ def extract_envelope_mojo(amps: NDArray, window: int) -> NDArray:
     return np.array([float(x) for x in lines], dtype=np.float64)
 
 
-def envelope_modulation_depth_mojo(env: NDArray) -> float:
+def envelope_modulation_depth_mojo(env: FloatArray) -> float:
     e = np.ascontiguousarray(env.ravel(), dtype=np.float64)
     if e.size == 0:
         return 0.0

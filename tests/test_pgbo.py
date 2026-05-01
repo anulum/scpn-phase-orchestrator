@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.ssgf.pgbo import PGBO, PGBOSnapshot
@@ -90,6 +92,12 @@ class TestPGBO:
         np.fill_diagonal(W, 0.0)
         snap = pgbo.observe(phases, W)
         assert np.isfinite(snap.gauge_curvature)
+
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        hints = get_type_hints(PGBO.observe)
+        for param in ("phases", "W"):
+            assert "numpy.ndarray" in str(hints[param])
+            assert "float64" in str(hints[param])
 
 
 class TestPGBOPipelineWiring:

@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = ["correlation_integral_go", "kaplan_yorke_dimension_go"]
 
@@ -56,13 +60,13 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def correlation_integral_go(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
-    idx_i: NDArray,
-    idx_j: NDArray,
-    epsilons: NDArray,
-) -> NDArray:
+    idx_i: IntArray,
+    idx_j: IntArray,
+    epsilons: FloatArray,
+) -> FloatArray:
     lib = _load_lib()
     traj = np.ascontiguousarray(traj_flat, dtype=np.float64)
     ii = np.ascontiguousarray(idx_i.ravel(), dtype=np.int64)
@@ -85,7 +89,7 @@ def correlation_integral_go(
     return out
 
 
-def kaplan_yorke_dimension_go(lyapunov_exponents: NDArray) -> float:
+def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
     lib = _load_lib()
     le = np.ascontiguousarray(lyapunov_exponents.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

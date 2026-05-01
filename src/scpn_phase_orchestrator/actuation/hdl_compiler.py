@@ -21,9 +21,14 @@ The compiler is arithmetic-complete — no ``real``, no system tasks, no
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
+import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["KuramotoVerilogCompiler"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 # Q16.16 fixed-point configuration.
 _FRAC_BITS = 16
@@ -93,7 +98,7 @@ class KuramotoVerilogCompiler:
         self.width = bit_width
         self.cordic_stages = cordic_stages
 
-    def compile(self, knm: NDArray, omegas: NDArray, dt: float) -> str:
+    def compile(self, knm: FloatArray, omegas: FloatArray, dt: float) -> str:
         r"""Generate a synthesisable Verilog module for the mesh.
 
         The returned string is a complete module suitable for writing to a

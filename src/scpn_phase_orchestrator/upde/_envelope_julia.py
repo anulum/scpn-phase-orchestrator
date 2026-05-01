@@ -11,12 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["envelope_modulation_depth_julia", "extract_envelope_julia"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "envelope.jl"
 _JULIA_MODULE: Any | None = None
@@ -35,7 +36,7 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def extract_envelope_julia(amps: NDArray, window: int) -> NDArray:
+def extract_envelope_julia(amps: FloatArray, window: int) -> FloatArray:
     jl = _ensure()
     return np.asarray(
         jl.extract_envelope(
@@ -46,7 +47,7 @@ def extract_envelope_julia(amps: NDArray, window: int) -> NDArray:
     )
 
 
-def envelope_modulation_depth_julia(env: NDArray) -> float:
+def envelope_modulation_depth_julia(env: FloatArray) -> float:
     jl = _ensure()
     return float(
         jl.envelope_modulation_depth(

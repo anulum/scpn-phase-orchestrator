@@ -11,6 +11,7 @@
 1. **Features**: Proposed via GitHub Issues → discussed → implemented on branch → PR review → squash-merge to main
 2. **Releases**: Project lead tags `v*` on main after CI passes
 3. **Breaking changes**: Announced in CHANGELOG with migration notes; major version bump
+4. **Minor release backend gate**: run the multi-language backend review gate before every `vX.Y.0` release (`docs/guide/backend_review_gate.md`)
 
 ## Contributing
 

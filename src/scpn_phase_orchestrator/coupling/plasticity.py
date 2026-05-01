@@ -8,13 +8,17 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["compute_eligibility", "three_factor_update"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
 
-def compute_eligibility(phases: NDArray) -> NDArray:
+
+def compute_eligibility(phases: FloatArray) -> FloatArray:
     """Pairwise Hebbian eligibility trace: cos(theta_j - theta_i).
 
     Returns shape (n, n) with zero diagonal.
@@ -23,17 +27,17 @@ def compute_eligibility(phases: NDArray) -> NDArray:
     diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
     elig = np.cos(diffs)
     np.fill_diagonal(elig, 0.0)
-    result: NDArray = elig
+    result: FloatArray = elig
     return result
 
 
 def three_factor_update(
-    knm: NDArray,
-    eligibility: NDArray,
+    knm: FloatArray,
+    eligibility: FloatArray,
     modulator: float,
     phase_gate: bool,
     lr: float = 0.01,
-) -> NDArray:
+) -> FloatArray:
     """Three-factor plasticity rule: K_ij += lr * eligibility_ij * M * gate.
 
     Factors:

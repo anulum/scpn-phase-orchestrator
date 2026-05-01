@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["swarmalator_step_go"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libswarmalator.so"
 _LIB: ctypes.CDLL | None = None
@@ -53,9 +56,9 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def swarmalator_step_go(
-    pos: NDArray,
-    phases: NDArray,
-    omegas: NDArray,
+    pos: FloatArray,
+    phases: FloatArray,
+    omegas: FloatArray,
     n: int,
     dim: int,
     a: float,
@@ -63,13 +66,13 @@ def swarmalator_step_go(
     j: float,
     k: float,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     lib = _load_lib()
     p = np.ascontiguousarray(pos.ravel(), dtype=np.float64)
     ph = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     om = np.ascontiguousarray(omegas.ravel(), dtype=np.float64)
-    new_pos = np.zeros(n * dim, dtype=np.float64)
-    new_phases = np.zeros(n, dtype=np.float64)
+    new_pos: FloatArray = np.zeros(n * dim, dtype=np.float64)
+    new_phases: FloatArray = np.zeros(n, dtype=np.float64)
     rc = lib.SwarmalatorStep(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ph.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),

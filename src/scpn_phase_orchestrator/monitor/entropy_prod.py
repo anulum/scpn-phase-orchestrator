@@ -19,10 +19,12 @@ Reference: Acebrón et al. 2005, Rev. Mod. Phys. 77:137–185.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -38,9 +40,9 @@ def _load_rust_fn() -> Callable[..., float]:
     from spo_kernel import entropy_production_rate as _rust_ep
 
     def _rust(
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         alpha: float,
         dt: float,
     ) -> float:
@@ -116,9 +118,9 @@ def _dispatch() -> Callable[..., float] | None:
 
 
 def entropy_production_rate(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
     alpha: float,
     dt: float,
 ) -> float:

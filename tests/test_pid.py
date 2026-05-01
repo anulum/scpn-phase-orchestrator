@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
@@ -15,6 +17,22 @@ from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
 
 
 class TestRedundancy:
+    def test_public_array_contracts_are_parameterised(self):
+        hints = (
+            get_type_hints(redundancy)["phases"],
+            get_type_hints(redundancy)["group_a"],
+            get_type_hints(redundancy)["group_b"],
+            get_type_hints(synergy)["phases"],
+            get_type_hints(synergy)["group_a"],
+            get_type_hints(synergy)["group_b"],
+        )
+
+        for hint in hints:
+            assert "numpy.ndarray" in str(hint)
+
+        assert "float64" in str(hints[0])
+        assert "integer" in str(hints[1])
+
     def test_identical_groups_maximum_redundancy(self):
         """Same oscillators in both groups →
         redundancy = MI of that group with whole."""

@@ -28,10 +28,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+BoolArray: TypeAlias = NDArray[np.bool_]
+ByteArray: TypeAlias = NDArray[np.uint8]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -54,25 +58,25 @@ def _load_rust_fns() -> dict[str, object]:
     )
 
     def _rust_rm(
-        traj_flat: NDArray,
+        traj_flat: FloatArray,
         t: int,
         d: int,
         epsilon: float,
         angular: bool,
-    ) -> NDArray:
+    ) -> ByteArray:
         return np.asarray(
             recurrence_matrix_rust(traj_flat, t, d, epsilon, angular),
             dtype=np.uint8,
         )
 
     def _rust_cross(
-        a_flat: NDArray,
-        b_flat: NDArray,
+        a_flat: FloatArray,
+        b_flat: FloatArray,
         t: int,
         d: int,
         epsilon: float,
         angular: bool,
-    ) -> NDArray:
+    ) -> ByteArray:
         return np.asarray(
             cross_recurrence_matrix_rust(
                 a_flat,
@@ -173,10 +177,10 @@ class RQAResult:
 
 
 def recurrence_matrix(
-    trajectory: NDArray,
+    trajectory: FloatArray,
     epsilon: float,
     metric: str = "euclidean",
-) -> NDArray:
+) -> BoolArray:
     """Binary recurrence matrix ``R_ij = ‖x_i − x_j‖ ≤ ε``.
 
     Args:
@@ -188,7 +192,7 @@ def recurrence_matrix(
     Returns:
         ``(T, T)`` boolean array.
     """
-    traj = np.asarray(trajectory)
+    traj: FloatArray = np.asarray(trajectory, dtype=np.float64)
     if traj.ndim == 1:
         traj = traj[:, np.newaxis]
     elif traj.ndim != 2:
@@ -199,7 +203,10 @@ def recurrence_matrix(
 
     backend_fn = _dispatch("rm")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, int, int, float, bool], NDArray]", backend_fn)
+        fn = cast(
+            "Callable[[FloatArray, int, int, float, bool], ByteArray]",
+            backend_fn,
+        )
         out = np.asarray(fn(flat, t, d, float(epsilon), angular), dtype=np.uint8)
         return out.reshape(t, t).astype(bool)
 
@@ -209,23 +216,23 @@ def recurrence_matrix(
     else:
         diff = traj[:, np.newaxis, :] - traj[np.newaxis, :, :]
         dist = np.sqrt(np.sum(diff**2, axis=2))
-    result: NDArray = dist <= epsilon
+    result: BoolArray = dist <= epsilon
     return result
 
 
 def cross_recurrence_matrix(
-    traj_a: NDArray,
-    traj_b: NDArray,
+    traj_a: FloatArray,
+    traj_b: FloatArray,
     epsilon: float,
     metric: str = "euclidean",
-) -> NDArray:
+) -> BoolArray:
     """Cross-recurrence matrix ``CR_ij = ‖x_i − y_j‖ ≤ ε``.
 
     ``traj_a`` and ``traj_b`` must have the same length and
     dimensionality.
     """
-    a = np.asarray(traj_a)
-    b = np.asarray(traj_b)
+    a: FloatArray = np.asarray(traj_a, dtype=np.float64)
+    b: FloatArray = np.asarray(traj_b, dtype=np.float64)
     if a.ndim == 1:
         a = a[:, np.newaxis]
     elif a.ndim != 2:
@@ -244,7 +251,7 @@ def cross_recurrence_matrix(
     backend_fn = _dispatch("cross_rm")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray, NDArray, int, int, float, bool], NDArray]",
+            "Callable[[FloatArray, FloatArray, int, int, float, bool], ByteArray]",
             backend_fn,
         )
         out = np.asarray(
@@ -259,11 +266,11 @@ def cross_recurrence_matrix(
     else:
         diff = a[:, np.newaxis, :] - b[np.newaxis, :, :]
         dist = np.sqrt(np.sum(diff**2, axis=2))
-    result: NDArray = dist <= epsilon
+    result: BoolArray = dist <= epsilon
     return result
 
 
-def _diagonal_lines(R: NDArray, l_min: int = 2) -> list[int]:
+def _diagonal_lines(R: BoolArray, l_min: int = 2) -> list[int]:
     """Diagonal line lengths, excluding the main diagonal."""
     t = R.shape[0]
     lengths: list[int] = []
@@ -281,7 +288,7 @@ def _diagonal_lines(R: NDArray, l_min: int = 2) -> list[int]:
     return lengths
 
 
-def _vertical_lines(R: NDArray, v_min: int = 2) -> list[int]:
+def _vertical_lines(R: BoolArray, v_min: int = 2) -> list[int]:
     """Vertical line lengths."""
     t = R.shape[0]
     lengths: list[int] = []
@@ -300,7 +307,7 @@ def _vertical_lines(R: NDArray, v_min: int = 2) -> list[int]:
 
 
 def _rqa_from_matrix(
-    R: NDArray,
+    R: BoolArray,
     l_min: int,
     v_min: int,
     exclude_main_diag: bool,
@@ -355,7 +362,7 @@ def _rqa_from_matrix(
 
 
 def rqa(
-    trajectory: NDArray,
+    trajectory: FloatArray,
     epsilon: float,
     l_min: int = 2,
     v_min: int = 2,
@@ -372,8 +379,8 @@ def rqa(
 
 
 def cross_rqa(
-    traj_a: NDArray,
-    traj_b: NDArray,
+    traj_a: FloatArray,
+    traj_b: FloatArray,
     epsilon: float,
     l_min: int = 2,
     metric: str = "euclidean",

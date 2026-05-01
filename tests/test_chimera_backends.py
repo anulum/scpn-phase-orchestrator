@@ -16,12 +16,17 @@ All backends agree with the Python reference within:
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import chimera as ch_mod
+from scpn_phase_orchestrator.monitor._chimera_go import local_order_parameter_go
+from scpn_phase_orchestrator.monitor._chimera_julia import local_order_parameter_julia
+from scpn_phase_orchestrator.monitor._chimera_mojo import local_order_parameter_mojo
 from scpn_phase_orchestrator.monitor.chimera import (
     AVAILABLE_BACKENDS,
     detect_chimera,
@@ -56,6 +61,19 @@ def _problem(seed: int, n: int = 16) -> tuple[np.ndarray, np.ndarray]:
     knm = (knm > 0.3).astype(np.float64) * knm
     np.fill_diagonal(knm, 0.0)
     return phases, knm
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        local_order_parameter_go,
+        local_order_parameter_julia,
+        local_order_parameter_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        for key in ("phases", "knm_flat", "return"):
+            assert "numpy.ndarray" in str(hints[key])
+            assert "float64" in str(hints[key])
 
 
 class TestRustParity:

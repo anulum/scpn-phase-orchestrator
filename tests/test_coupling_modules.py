@@ -8,12 +8,30 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.coupling.lags import LagModel
 from scpn_phase_orchestrator.coupling.prior import CouplingPrior, UniversalPrior
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
+
+
+class TestLagPriorTypeHints:
+    """Guard V2 typed-array contracts for lag and prior helpers."""
+
+    def test_lag_and_prior_arrays_are_parameterised(self) -> None:
+        for hint in [
+            get_type_hints(LagModel.estimate_from_distances)["distances"],
+            get_type_hints(LagModel.estimate_from_distances)["return"],
+            get_type_hints(LagModel.estimate_lag)["signal_a"],
+            get_type_hints(LagModel.estimate_lag)["signal_b"],
+            get_type_hints(LagModel.build_alpha_matrix)["return"],
+            get_type_hints(UniversalPrior.estimate_Kc)["omegas"],
+        ]:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
 
 
 class TestLagModel:

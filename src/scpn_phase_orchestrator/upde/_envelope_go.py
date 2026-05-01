@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["envelope_modulation_depth_go", "extract_envelope_go"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libenvelope.so"
 _LIB: ctypes.CDLL | None = None
@@ -50,7 +52,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def extract_envelope_go(amps: NDArray, window: int) -> NDArray:
+def extract_envelope_go(amps: FloatArray, window: int) -> FloatArray:
     lib = _load_lib()
     a = np.ascontiguousarray(amps.ravel(), dtype=np.float64)
     if a.size == 0:
@@ -67,7 +69,7 @@ def extract_envelope_go(amps: NDArray, window: int) -> NDArray:
     return out
 
 
-def envelope_modulation_depth_go(env: NDArray) -> float:
+def envelope_modulation_depth_go(env: FloatArray) -> float:
     lib = _load_lib()
     e = np.ascontiguousarray(env.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

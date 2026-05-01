@@ -124,6 +124,8 @@ R = redundancy(phases_a, phases_b, phases_target)  # shared info
 S = synergy(phases_a, phases_b, phases_target)      # joint-only info
 ```
 
+::: scpn_phase_orchestrator.monitor.npe
+
 High synergy means the groups carry complementary information — neither
 alone predicts the target, but together they do. This detects
 higher-order functional relationships invisible to pairwise PLV.

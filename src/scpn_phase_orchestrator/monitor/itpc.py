@@ -18,10 +18,13 @@ Two kernels:
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -107,7 +110,7 @@ def _dispatch(fn_name: str) -> object | None:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
-def compute_itpc(phases_trials: NDArray) -> NDArray:
+def compute_itpc(phases_trials: FloatArray) -> FloatArray:
     """Inter-Trial Phase Coherence at each time point.
 
     ``ITPC = |mean(exp(i·θ))|`` across trials (Lachaux et al. 1999).
@@ -129,22 +132,22 @@ def compute_itpc(phases_trials: NDArray) -> NDArray:
     backend_fn = _dispatch("itpc")
     if backend_fn is not None:
         if ACTIVE_BACKEND == "rust":
-            fn_rust = cast("Callable[[NDArray, int, int], NDArray]", backend_fn)
+            fn_rust = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
             flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
             return np.asarray(fn_rust(flat, n_trials, n_tp), dtype=np.float64)
-        fn = cast("Callable[[NDArray, int, int], NDArray]", backend_fn)
+        fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
         return np.asarray(
             fn(phases.ravel(), int(n_trials), int(n_tp)),
             dtype=np.float64,
         )
 
-    result: NDArray = np.abs(np.mean(np.exp(1j * phases), axis=0))
+    result: FloatArray = np.abs(np.mean(np.exp(1j * phases), axis=0))
     return result
 
 
 def itpc_persistence(
-    phases_trials: NDArray,
-    pause_indices: list[int] | NDArray,
+    phases_trials: FloatArray,
+    pause_indices: list[int] | IntArray,
 ) -> float:
     """Mean ITPC at stimulus-pause indices.
 
@@ -172,7 +175,10 @@ def itpc_persistence(
     backend_fn = _dispatch("persistence")
     if backend_fn is not None:
         if ACTIVE_BACKEND == "rust":
-            fn_rust = cast("Callable[[NDArray, int, int, NDArray], float]", backend_fn)
+            fn_rust = cast(
+                "Callable[[FloatArray, int, int, IntArray], float]",
+                backend_fn,
+            )
             return float(
                 fn_rust(
                     np.ascontiguousarray(phases.ravel(), dtype=np.float64),
@@ -181,7 +187,7 @@ def itpc_persistence(
                     np.ascontiguousarray(pause_idx, dtype=np.int64),
                 )
             )
-        fn = cast("Callable[[NDArray, int, int, NDArray], float]", backend_fn)
+        fn = cast("Callable[[FloatArray, int, int, IntArray], float]", backend_fn)
         return float(fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx))
 
     itpc_full = compute_itpc(phases)

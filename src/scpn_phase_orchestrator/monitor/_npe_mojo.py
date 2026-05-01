@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_distance_matrix_mojo", "compute_npe_mojo"]
 
@@ -46,7 +49,7 @@ def _run(payload: str) -> list[float]:
     return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def phase_distance_matrix_mojo(phases: NDArray) -> NDArray:
+def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     n = int(p.size)
     if n == 0:
@@ -59,7 +62,7 @@ def phase_distance_matrix_mojo(phases: NDArray) -> NDArray:
     return np.array(result, dtype=np.float64)
 
 
-def compute_npe_mojo(phases: NDArray, max_radius: float) -> float:
+def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     n = int(p.size)
     if n < 2:

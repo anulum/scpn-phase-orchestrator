@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from math import isfinite
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -16,6 +17,8 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = ["PhysicalDriver"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class PhysicalDriver:
@@ -40,7 +43,9 @@ class PhysicalDriver:
         """Return Psi_P at time *t*."""
         return float(self._amplitude * np.sin(TWO_PI * self._frequency * t))
 
-    def compute_batch(self, t_array: NDArray) -> NDArray:
+    def compute_batch(self, t_array: FloatArray) -> FloatArray:
         """Vectorised Psi_P over an array of time values."""
-        result: NDArray = self._amplitude * np.sin(TWO_PI * self._frequency * t_array)
+        result: FloatArray = self._amplitude * np.sin(
+            TWO_PI * self._frequency * t_array
+        )
         return result

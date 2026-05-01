@@ -17,6 +17,19 @@ The image runs as non-root user `spo` (UID 1000) and includes a deep
 HEALTHCHECK against `/api/health`. Base images are pinned by SHA digest
 for reproducible builds.
 
+### Production defaults
+
+The container defaults are intentionally locked down for production:
+
+- non-root runtime user (`spo`, UID 1000),
+- pinned base-image digests for reproducibility,
+- hash-locked dependency installation,
+- healthcheck wired to `/api/health`,
+- entrypoint constrained to SPO CLI execution.
+
+For hardened deployments, keep these defaults and override only runtime
+configuration (bind mounts, environment, network policy).
+
 ## QueueWaves Server
 
 Run behind uvicorn with a reverse proxy:

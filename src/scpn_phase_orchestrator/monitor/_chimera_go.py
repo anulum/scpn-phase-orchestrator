@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["local_order_parameter_go"]
 
@@ -44,10 +47,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def local_order_parameter_go(
-    phases: NDArray,
-    knm_flat: NDArray,
+    phases: FloatArray,
+    knm_flat: FloatArray,
     n: int,
-) -> NDArray:
+) -> FloatArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)

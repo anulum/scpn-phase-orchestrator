@@ -15,11 +15,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["TCBOObserver", "TCBOState"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _TAU_H1 = 0.72  # from SCPN-CODEBASE optimizations/tcbo/observer.py
 
@@ -66,14 +69,14 @@ class TCBOObserver:
         self._embed_delay = embed_delay
         self._window_size = window_size
         self._beta = beta
-        self._history: list[NDArray] = []
+        self._history: list[FloatArray] = []
 
     @property
     def tau_h1(self) -> float:
         """Consciousness gate threshold on p_h1."""
         return self._tau_h1
 
-    def observe(self, phases: NDArray) -> TCBOState:
+    def observe(self, phases: FloatArray) -> TCBOState:
         """Add phase snapshot, compute TCBO if enough history."""
         self._history.append(phases.copy())
         max_len = self._window_size + self._embed_dim * self._embed_delay
@@ -120,7 +123,7 @@ class TCBOObserver:
         that captures the same qualitative behavior (high PLV ↔ high p_h1)
         without the topological guarantees.
         """
-        recent = np.array(self._history[-self._window_size :])
+        recent: FloatArray = np.array(self._history[-self._window_size :])
         n_osc = recent.shape[1]
         if n_osc < 2:
             return TCBOState(
@@ -150,16 +153,16 @@ class TCBOObserver:
             method="plv_approx",
         )
 
-    def _delay_embed(self) -> NDArray:
+    def _delay_embed(self) -> FloatArray:
         """Delay-embed phase history into d-dimensional point cloud."""
-        recent = np.array(self._history[-self._window_size :])
+        recent: FloatArray = np.array(self._history[-self._window_size :])
         T, n_ch = recent.shape
         d = self._embed_dim
         tau = self._embed_delay
         T_out = T - (d - 1) * tau
         if T_out < 2:
             return recent[:2, :]
-        embedded = np.zeros((T_out, d * n_ch))
+        embedded: FloatArray = np.zeros((T_out, d * n_ch))
         for k in range(d):
             start = k * tau
             embedded[:, k * n_ch : (k + 1) * n_ch] = recent[start : start + T_out]

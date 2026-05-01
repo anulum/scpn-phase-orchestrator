@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
@@ -71,6 +73,12 @@ class TestSSGFCosts:
     def test_returns_dataclass(self):
         costs = compute_ssgf_costs(np.eye(3), np.zeros(3))
         assert isinstance(costs, SSGFCosts)
+
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        hints = get_type_hints(compute_ssgf_costs)
+        for param in ("W", "phases"):
+            assert "numpy.ndarray" in str(hints[param])
+            assert "float64" in str(hints[param])
 
 
 class TestSSGFCostsPipelineWiring:

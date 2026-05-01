@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import math
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -19,6 +20,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.upde import splitting as sp_mod
+from scpn_phase_orchestrator.upde._splitting_go import splitting_run_go
+from scpn_phase_orchestrator.upde._splitting_julia import splitting_run_julia
+from scpn_phase_orchestrator.upde._splitting_mojo import splitting_run_mojo
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
 
 TWO_PI = 2.0 * math.pi
@@ -137,3 +141,20 @@ class TestHypothesisParity:
         ref = _run_backend("python", seed, n=n)
         got = _run_backend("go", seed, n=n)
         assert np.max(np.abs(got - ref)) < TOL
+
+
+class TestBackendTypingContracts:
+    @pytest.mark.parametrize(
+        ("fn", "label"),
+        [
+            (splitting_run_go, "go"),
+            (splitting_run_julia, "julia"),
+            (splitting_run_mojo, "mojo"),
+        ],
+    )
+    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+        hints = get_type_hints(fn)
+        for name in ("phases", "omegas", "knm_flat", "alpha_flat", "return"):
+            text = str(hints[name])
+            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"

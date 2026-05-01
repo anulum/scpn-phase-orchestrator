@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_te_mojo", "te_matrix_mojo"]
 
@@ -47,7 +50,7 @@ def _run(payload: str) -> list[float]:
     return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def phase_te_mojo(source: NDArray, target: NDArray, n_bins: int) -> float:
+def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
     n = int(min(s.size, t.size))
@@ -61,11 +64,11 @@ def phase_te_mojo(source: NDArray, target: NDArray, n_bins: int) -> float:
 
 
 def te_matrix_mojo(
-    phase_series: NDArray,
+    phase_series: FloatArray,
     n_osc: int,
     n_time: int,
     n_bins: int,
-) -> NDArray:
+) -> FloatArray:
     s = np.ascontiguousarray(phase_series, dtype=np.float64)
     tokens = ["MAT", str(n_osc), str(n_time), str(n_bins)]
     tokens.extend(repr(float(x)) for x in s.tolist())

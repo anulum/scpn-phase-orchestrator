@@ -9,10 +9,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
+import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["KnmTemplate", "KnmTemplateSet"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -20,8 +24,8 @@ class KnmTemplate:
     """Named K_nm coupling matrix with associated phase-lag matrix."""
 
     name: str
-    knm: NDArray
-    alpha: NDArray
+    knm: FloatArray
+    alpha: FloatArray
     description: str
 
 

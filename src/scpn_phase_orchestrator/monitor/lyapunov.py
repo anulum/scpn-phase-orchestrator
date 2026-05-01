@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -38,17 +38,23 @@ __all__ = [
     "lyapunov_spectrum",
 ]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+LyapunovBackendFn: TypeAlias = Callable[
+    [FloatArray, FloatArray, FloatArray, FloatArray, float, int, int, float, float],
+    FloatArray,
+]
+
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray]:
+def _load_rust_fn() -> LyapunovBackendFn:
     from spo_kernel import lyapunov_spectrum_rust
 
-    return cast("Callable[..., NDArray]", lyapunov_spectrum_rust)
+    return cast("LyapunovBackendFn", lyapunov_spectrum_rust)
 
 
-def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._lyapunov_mojo import (
         _ensure_exe,
         lyapunov_spectrum_mojo,
@@ -58,7 +64,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     return lyapunov_spectrum_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.monitor._lyapunov_julia import (
         lyapunov_spectrum_julia,
@@ -67,7 +73,7 @@ def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchai
     return lyapunov_spectrum_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_go_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._lyapunov_go import (
         _load_lib,
         lyapunov_spectrum_go,
@@ -77,7 +83,7 @@ def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     return lyapunov_spectrum_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+_LOADERS: dict[str, Callable[[], LyapunovBackendFn]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -100,7 +106,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray] | None:
+def _dispatch() -> LyapunovBackendFn | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -133,7 +139,7 @@ class LyapunovGuard:
         self._basin_threshold = basin_threshold
         self._prev_V: float | None = None
 
-    def evaluate(self, phases: NDArray, knm: NDArray) -> LyapunovState:
+    def evaluate(self, phases: FloatArray, knm: FloatArray) -> LyapunovState:
         """Compute Lyapunov function, its time derivative, and basin check."""
         n = len(phases)
         if n == 0:
@@ -179,13 +185,13 @@ class LyapunovGuard:
 
 
 def _kuramoto_rhs(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
-) -> NDArray:
+) -> FloatArray:
     """Kuramoto RHS with Sakaguchi phase lag and optional external driver."""
     diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
     coupling = np.sum(knm * np.sin(diff), axis=1)
@@ -194,12 +200,12 @@ def _kuramoto_rhs(
 
 
 def _kuramoto_jacobian(
-    phases: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
-) -> NDArray:
+) -> FloatArray:
     """Jacobian of the Kuramoto RHS.
 
     J_ij = K_ij cos(θ_j − θ_i − α_ij)                    for i ≠ j
@@ -207,7 +213,7 @@ def _kuramoto_jacobian(
            − ζ cos(Ψ − θ_i)                              (driver diagonal)
     """
     diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
-    J: NDArray = knm * np.cos(diff)
+    J: FloatArray = knm * np.cos(diff)
     np.fill_diagonal(J, 0.0)
     diag = -J.sum(axis=1)
     if zeta != 0.0:
@@ -217,18 +223,18 @@ def _kuramoto_jacobian(
 
 
 def _rk4_step(
-    phases: NDArray,
-    Q: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    Q: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     dt: float,
     zeta: float,
     psi: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     """One classical RK4 step on the joint (phases, Q) state."""
 
-    def rhs(p: NDArray, q: NDArray) -> tuple[NDArray, NDArray]:
+    def rhs(p: FloatArray, q: FloatArray) -> tuple[FloatArray, FloatArray]:
         return (
             _kuramoto_rhs(p, omegas, knm, alpha, zeta, psi),
             _kuramoto_jacobian(p, knm, alpha, zeta, psi) @ q,
@@ -245,7 +251,7 @@ def _rk4_step(
     return new_phases, new_Q
 
 
-def _row_qr_log_diag(Q: NDArray) -> tuple[NDArray, NDArray]:
+def _row_qr_log_diag(Q: FloatArray) -> tuple[FloatArray, FloatArray]:
     """Row-oriented QR — returns the reorthonormalised Q and ``log|R_ii|``
     floored at ``log(1e-300)`` to avoid ``−inf``."""
     Q_t, R = np.linalg.qr(Q.T)
@@ -254,16 +260,16 @@ def _row_qr_log_diag(Q: NDArray) -> tuple[NDArray, NDArray]:
 
 
 def _lyapunov_spectrum_python(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     dt: float,
     n_steps: int,
     qr_interval: int,
     zeta: float,
     psi: float,
-) -> NDArray:
+) -> FloatArray:
     """Benettin 1980 Lyapunov spectrum via RK4 + row-oriented MGS.
 
     Matches the Rust kernel line-for-line: RK4 on the joint
@@ -290,16 +296,16 @@ def _lyapunov_spectrum_python(
 
 
 def lyapunov_spectrum(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     dt: float = 0.01,
     n_steps: int = 1000,
     qr_interval: int = 10,
     zeta: float = 0.0,
     psi: float = 0.0,
-) -> NDArray:
+) -> FloatArray:
     """Full Lyapunov spectrum (all N exponents) via QR decomposition.
 
     Evolves N perturbation vectors alongside the Kuramoto ODE. Every

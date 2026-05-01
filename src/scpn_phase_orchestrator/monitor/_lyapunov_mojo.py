@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "lyapunov_spectrum_mojo"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "lyapunov_mojo"
 
@@ -51,16 +53,16 @@ def _run(payload: str) -> list[float]:
 
 
 def lyapunov_spectrum_mojo(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     dt: float,
     n_steps: int,
     qr_interval: int,
     zeta: float,
     psi: float,
-) -> NDArray:
+) -> FloatArray:
     n = int(phases_init.size)
     tokens: list[str] = [
         "SPEC",

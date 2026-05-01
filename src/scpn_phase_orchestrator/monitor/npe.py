@@ -22,10 +22,12 @@ a full Vietoris–Rips persistence (ripser) with O(N²) union-find.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -115,12 +117,12 @@ def _dispatch(fn_name: str) -> object:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
-def phase_distance_matrix(phases: NDArray) -> NDArray:
+def phase_distance_matrix(phases: FloatArray) -> FloatArray:
     """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``."""
     n = phases.size
     backend_fn = _dispatch("phase_distance_matrix")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray], NDArray]", backend_fn)
+        fn = cast("Callable[[FloatArray], FloatArray]", backend_fn)
         flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
         return np.asarray(flat, dtype=np.float64).reshape(n, n)
 
@@ -128,7 +130,7 @@ def phase_distance_matrix(phases: NDArray) -> NDArray:
     return np.asarray(np.abs(np.arctan2(np.sin(diff), np.cos(diff))), dtype=np.float64)
 
 
-def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
+def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
     """Normalised Persistent Entropy from H₀ persistence diagram.
 
     ``NPE = H(p) / log(|p|)`` where ``p_i = lifetime_i / Σ lifetimes``
@@ -144,7 +146,7 @@ def compute_npe(phases: NDArray, max_radius: float | None = None) -> float:
 
     backend_fn = _dispatch("compute_npe")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, float], float]", backend_fn)
+        fn = cast("Callable[[FloatArray, float], float]", backend_fn)
         return float(
             fn(
                 np.ascontiguousarray(phases.ravel(), dtype=np.float64),

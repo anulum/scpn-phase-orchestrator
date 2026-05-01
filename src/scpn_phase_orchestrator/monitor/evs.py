@@ -9,11 +9,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 try:
     from spo_kernel import (
@@ -64,8 +68,8 @@ class EVSMonitor:
 
     def evaluate(
         self,
-        phases_trials: NDArray,
-        pause_indices: list[int] | NDArray,
+        phases_trials: FloatArray,
+        pause_indices: list[int] | IntArray,
         target_freq: float,
         control_freq: float,
     ) -> EVSResult:
@@ -108,7 +112,7 @@ class EVSMonitor:
 
     @staticmethod
     def _frequency_specificity(
-        phases_trials: NDArray,
+        phases_trials: FloatArray,
         target_freq: float,
         control_freq: float,
     ) -> float:

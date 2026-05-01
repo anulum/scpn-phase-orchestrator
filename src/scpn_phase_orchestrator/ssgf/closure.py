@@ -9,13 +9,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
+import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 from scpn_phase_orchestrator.ssgf.costs import compute_ssgf_costs
 
 __all__ = ["CyberneticClosure", "ClosureState"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -64,7 +68,7 @@ class CyberneticClosure:
         """The geometry carrier whose latent vector z is updated by the closure."""
         return self._carrier
 
-    def step(self, phases: NDArray) -> tuple[NDArray, ClosureState]:
+    def step(self, phases: FloatArray) -> tuple[FloatArray, ClosureState]:
         """One closure cycle: observe → cost → gradient → new W.
 
         Returns (new_W, closure_state).
@@ -73,7 +77,7 @@ class CyberneticClosure:
         W_before = self._carrier.decode()
         costs_before = compute_ssgf_costs(W_before, phases, weights=self._weights)
 
-        def cost_fn(W: NDArray) -> float:
+        def cost_fn(W: FloatArray) -> float:
             """Total SSGF cost for the given weight matrix and current phases."""
             return compute_ssgf_costs(W, phases, weights=self._weights).u_total
 
@@ -92,8 +96,8 @@ class CyberneticClosure:
         )
 
     def run(
-        self, phases: NDArray, n_outer_steps: int
-    ) -> tuple[NDArray, list[ClosureState]]:
+        self, phases: FloatArray, n_outer_steps: int
+    ) -> tuple[FloatArray, list[ClosureState]]:
         """Run n outer steps, return final W and history."""
         states = []
         W = self._carrier.decode()

@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import json
 from math import isfinite
+from typing import TypeAlias
 from urllib.error import URLError
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class PrometheusAdapter:
@@ -40,15 +43,23 @@ class PrometheusAdapter:
 
     def fetch_metric(
         self, query: str, start: float, end: float, step: float
-    ) -> NDArray:
+    ) -> FloatArray:
         """Query Prometheus range API, return values as 1-D float array.
 
         Raises ConnectionError on network failure, ValueError on bad response.
         """
-        url = (
-            f"{self._endpoint}/api/v1/query_range"
-            f"?query={query}&start={start}&end={end}&step={step}"
+        query_text = _require_query_text(query)
+        start_f = _require_finite_float(start, "start")
+        end_f = _require_finite_float(end, "end")
+        step_f = _require_finite_float(step, "step")
+        if end_f < start_f:
+            raise ValueError("Prometheus end must be >= start")
+        if step_f <= 0.0:
+            raise ValueError("Prometheus step must be positive")
+        params = urlencode(
+            {"query": query_text, "start": start_f, "end": end_f, "step": step_f}
         )
+        url = f"{self._endpoint}/api/v1/query_range?{params}"
         req = Request(url, headers={"Accept": "application/json"})
         try:
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
@@ -65,11 +76,14 @@ class PrometheusAdapter:
 
         # First result series: extract values (timestamp, value pairs)
         values = [float(v[1]) for v in results[0].get("values", [])]
-        return np.array(values, dtype=np.float64)
+        result: FloatArray = np.array(values, dtype=np.float64)
+        return result
 
     def fetch_instant(self, query: str) -> float:
         """Query Prometheus instant API, return scalar value."""
-        url = f"{self._endpoint}/api/v1/query?query={query}"
+        query_text = _require_query_text(query)
+        params = urlencode({"query": query_text})
+        url = f"{self._endpoint}/api/v1/query?{params}"
         req = Request(url, headers={"Accept": "application/json"})
         try:
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
@@ -85,3 +99,24 @@ class PrometheusAdapter:
             raise ValueError("Prometheus returned empty result set")
 
         return float(results[0]["value"][1])
+
+
+def _require_query_text(query: str) -> str:
+    if not isinstance(query, str):
+        raise ValueError("Prometheus query must be a non-empty string")
+    query_text = query.strip()
+    if not query_text:
+        raise ValueError("Prometheus query must be a non-empty string")
+    return query_text
+
+
+def _require_finite_float(value: float, field_name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"Prometheus {field_name} must be finite")
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Prometheus {field_name} must be finite") from exc
+    if not isfinite(parsed):
+        raise ValueError(f"Prometheus {field_name} must be finite")
+    return parsed

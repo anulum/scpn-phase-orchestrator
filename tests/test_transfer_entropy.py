@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 
 from scpn_phase_orchestrator.monitor.transfer_entropy import (
@@ -17,6 +19,17 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
 
 
 class TestTransferEntropy:
+    def test_public_array_contracts_are_parameterised(self):
+        hints = (
+            get_type_hints(phase_transfer_entropy)["source"],
+            get_type_hints(phase_transfer_entropy)["target"],
+            get_type_hints(transfer_entropy_matrix)["phase_series"],
+            get_type_hints(transfer_entropy_matrix)["return"],
+        )
+        for hint in hints:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
+
     def test_identical_signals_low_te(self):
         rng = np.random.default_rng(42)
         sig = rng.uniform(0, 2 * np.pi, 200)

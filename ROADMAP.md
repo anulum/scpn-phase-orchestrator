@@ -68,18 +68,29 @@
 - ~~Local GPU validation: GTX 1060, all 9 benchmark suites, JAX 0.9.2~~ (done)
 - ~~First automated FIM (strange loop) validation: V75-V86~~ (done)
 - ~~Cross-project sync: bidirectional findings exchange with scpn-quantum-control and sc-neurocore~~ (done)
-- Petri net + PolicyEngine Rust port (spo-supervisor crate)
+- ~~Petri net + PolicyEngine Rust port (spo-supervisor crate)~~ (done — `spo-kernel/crates/spo-supervisor/src/petri_net.rs`, `spo-kernel/crates/spo-supervisor/src/rule_engine.rs`, FFI bindings in `spo-kernel/crates/spo-ffi/src/lib.rs` (`PyPetriNet`, `PyRuleEngine`), parity coverage in `tests/test_petri_net_parity.py` and `tests/test_rule_engine_parity.py`)
 
 ## v1.0
 
 - Production-hardened with fuzz testing (Hypothesis profiles) and fault injection
 - Full benchmark suite: Kuramoto reference (Strogatz 2000), Stuart-Landau (Pikovsky 2001), Petri net reachability
+- ~~Production hardening slice: SupervisorPolicy Petri fault fallback + Hypothesis fault-injection tests~~ (done — `tests/test_fault_injection_supervisor.py`)
+- ~~Benchmark suite slice: unified Kuramoto/Stuart-Landau/Petri reference harness~~ (done — `benchmarks/reference_suite.py`, `tests/test_reference_benchmark_suite.py`)
 - ~~RK45 exhausted-retry fallback test coverage~~ (done)
 - Complete API documentation with mkdocstrings autodoc for all public modules
+- ~~API docs slice: wire missing mkdocstrings API pages into nav/index (autotune, ssgf, visualization)~~ (done — `mkdocs.yml`, `docs/reference/api/index.md`)
+- ~~API docs hardening slice: remove broken mkdocstrings import target for non-public ActiveInferenceAgent~~ (done — `docs/reference/api/supervisor.md`)
+- ~~API docs slice: add mkdocstrings coverage for core modules (`upde.metrics`, `upde.splitting`, `monitor.npe`, `oscillators.init_phases`)~~ (done — `docs/reference/api/upde.md`, `docs/reference/api/monitor.md`, `docs/reference/api/oscillators.md`)
 - Docker multi-stage build with security scanning (Trivy/Grype)
 - ~~BoundaryObserver configurable default severity~~ (done — defaults to hard with warning)
 - ~~DP tableau deduplication between upde.rs and stuart_landau.rs~~ (done)
 - Stable public API freeze with semver guarantees
+
+### Deferred track (documented, not current focus)
+
+- Typed-array contract sweep (Python type precision):
+  - Approximately 700 loose `NDArray` signatures remain in `src/` and are still to be parameterised.
+  - This remains a tracked maintenance task, but active execution focus is moved to other roadmap items.
 
 ### v1.0 adoption and credibility track
 
@@ -87,18 +98,18 @@
   CSV sensor stream -> P channel, event log -> I channel, state-machine trace -> S channel, binding spec, engine run, supervisor decisions, actuation output, and `audit.jsonl` replay.
 - Add a "minimal viable domainpack in 5 minutes" guide using bundled real sample data, from raw CSV/event/state inputs through scaffold, binding spec, run, visualisation, and replay.
 - Add a high-level "why this knob does what" explainer for K, alpha, zeta, Psi, damping, delay, coupling priors, supervisor thresholds, and actuation limits, aimed at users who do not already know Kuramoto control theory.
-- Publish short video walkthroughs for first run, binding-spec authoring, policy debugging, audit replay, and deployment profiles.
+- ~~Publish short video walkthroughs for first run, binding-spec authoring, policy debugging, audit replay, and deployment profiles.~~ (done — `docs/video_scripts.md`, section “Roadmap Walkthrough Set (v1.0 Adoption Track)”)
 - Add a visual binding-spec editor as an optional development extra. First acceptable version: load/save `binding_spec.yaml`, validate schema, expose P/I/S channel mappings, preview extractor outputs, and produce a minimal reproducible domainpack.
 - Add an interactive supervisor-policy editor and validation loop for the DSL: structured rule builder, trigger/action autocomplete, cooldown/rate-limit previews, schema diagnostics, dry-run evaluation against `audit.jsonl`, and warnings for unreachable or overlapping rules.
 - Reduce hidden YAML behaviour by documenting every inferred default in generated docs and surfacing resolved runtime configuration in CLI output and audit metadata.
-- Make the mkdocs site the primary entry point: one-page "how the pipeline fires" diagram mapping YAML -> extractors -> engines -> supervisor -> actuation, plus autodoc coverage for every public module.
+- ~~Make the mkdocs site the primary entry point: one-page "how the pipeline fires" diagram mapping YAML -> extractors -> engines -> supervisor -> actuation, plus autodoc coverage for every public module.~~ (done — `docs/concepts/pipeline_firing.md`, API nav/index coverage including `reference/api/artifacts.md` and `reference/api/visualization.md`)
 - Publish head-to-head benchmark pages for domainpacks against domain-specific baselines where appropriate, starting with power-grid swing-equation solvers and cardiac rhythm references.
-- Add reproducible build locks for application and development environments. Evaluate `uv` and `pip-tools`; keep whichever produces maintainable, hash-pinned locks across Linux, macOS, Windows, and CI.
-- Reduce setup friction with documented install profiles: Python-only, Rust FFI, JAX, Docker, and experimental auxiliary backends. Each profile needs a preflight command that reports missing toolchains, optional dependency status, and expected fallback behaviour.
-- Harden Docker deployment with a documented multi-stage image, explicit production defaults, and CI security scans using Trivy or Grype.
+- ~~Add reproducible build locks for application and development environments. Evaluate `uv` and `pip-tools`; keep whichever produces maintainable, hash-pinned locks across Linux, macOS, Windows, and CI.~~ (done — standardised on `pip-tools`; documented in `docs/guide/dependency_locks.md`; operational targets in `Makefile` `lock-refresh`/`lock-check`)
+- ~~Reduce setup friction with documented install profiles: Python-only, Rust FFI, JAX, Docker, and experimental auxiliary backends. Each profile needs a preflight command that reports missing toolchains, optional dependency status, and expected fallback behaviour.~~ (done — `docs/guide/install_profiles.md`)
+- ~~Harden Docker deployment with a documented multi-stage image, explicit production defaults, and CI security scans using Trivy or Grype.~~ (done — `Dockerfile`, `docs/guide/production.md`, `.github/workflows/publish.yml` Trivy scan gate)
 - Keep adapters thin and fuzzed: `hardware_io`, Modbus, OPC-UA, ROS2, Kafka, and related network/file adapters need schema fuzzing, path-scrub tests, and production-default auth/rate-limit examples.
-- Close remaining `nn/` validation xfails/skips before v1.0 unless each has an issue reference, owner, and release-blocking decision.
-- Make N-channel visible in the first-run experience. Ship two or three example domainpacks that use more than P/I/S, including cross-channel coupling, derived channels, and channel groups, with before/after notes showing what the extra channels buy.
+- ~~Close remaining `nn/` validation xfails/skips before v1.0 unless each has an issue reference, owner, and release-blocking decision.~~ (done — `docs/reference/nn_xfail_skip_register.md` plus pointer in `docs/reference/nn_physics_validation_plan.md`)
+- ~~Make N-channel visible in the first-run experience. Ship two or three example domainpacks that use more than P/I/S, including cross-channel coupling, derived channels, and channel groups, with before/after notes showing what the extra channels buy.~~ (done — `digital_twin_nchannel`, `edge_consensus_nchannel`, and `power_safety_nchannel`)
 - Add a "minimal viable domainpack in 5 minutes" path to SPO Studio or the CLI: raw sample data, binding scaffold, policy validation, run, visualisation, and replay without requiring users to understand every control-theory detail first.
 - Keep v1.0 focused on N-channel rollout, public benchmarks against standard Kuramoto/Strogatz and Pikovsky references, real hardware examples, and API freeze discipline.
 
@@ -109,8 +120,8 @@
 - Update audit, replay, visualisation, and reporting to be channel-count agnostic. Acceptance gate: the same run/replay/report pipeline works for three channels and for at least two domainpacks with more than three declared channels.
 - Extend optimisation surfaces to include channel weights and cross-channel coupling parameters, not only `K`, `alpha`, `zeta`, and `Psi`.
 - Treat Rust and JAX as primary execution paths. Keep Julia, Go, Mojo, and other auxiliary backends experimental unless a maintained production workload shows a 5-10x gain or a capability Rust/JAX cannot provide.
-- Document the backend fallback chain in one place, including feature flags, runtime detection, numerical tolerance, benchmark evidence, and deprecation criteria.
-- Add a multi-language backend review gate before each minor release: keep, demote to experimental, or remove based on maintenance cost, CI burden, and measured value.
+- ~~Document the backend fallback chain in one place, including feature flags, runtime detection, numerical tolerance, benchmark evidence, and deprecation criteria.~~ (done — `docs/guide/backend_fallbacks.md`)
+- ~~Add a multi-language backend review gate before each minor release: keep, demote to experimental, or remove based on maintenance cost, CI burden, and measured value.~~ (done — `docs/guide/backend_review_gate.md`, non-destructive default with explicit sign-off for removal)
 - Extend visualisation beyond static matplotlib and the current WASM surface: Plotly/Dash dashboards for production operators, real-time streaming plots, and optional 3D views for swarm, traffic, robotics, and spatial domainpacks.
 
 ### v1.x differentiators

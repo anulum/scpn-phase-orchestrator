@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import json
+from typing import get_type_hints
 from unittest.mock import patch
 
 import numpy as np
@@ -45,6 +46,11 @@ class TestPrometheusConfigValidation:
 
 
 class TestFetchMetric:
+    def test_public_array_contracts_are_parameterised(self):
+        hint = get_type_hints(PrometheusAdapter.fetch_metric)["return"]
+        assert "numpy.ndarray" in str(hint)
+        assert "float64" in str(hint)
+
     def test_returns_values(self):
         body = {
             "status": "success",

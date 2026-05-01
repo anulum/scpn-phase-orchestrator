@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "_ensure_exe",
@@ -50,7 +53,7 @@ def _run(payload: str) -> list[str]:
     return [line for line in proc.stdout.strip().splitlines() if line]
 
 
-def _parse(lines: list[str], dim: int, t: int) -> tuple[NDArray, NDArray, int]:
+def _parse(lines: list[str], dim: int, t: int) -> tuple[FloatArray, FloatArray, int]:
     if not lines:
         return (
             np.zeros(t * dim, dtype=np.float64),
@@ -70,13 +73,13 @@ def _parse(lines: list[str], dim: int, t: int) -> tuple[NDArray, NDArray, int]:
 
 
 def poincare_section_mojo(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
-    normal: NDArray,
+    normal: FloatArray,
     offset: float,
     direction_id: int,
-) -> tuple[NDArray, NDArray, int]:
+) -> tuple[FloatArray, FloatArray, int]:
     tokens: list[str] = [
         "SEC",
         str(int(t)),
@@ -90,12 +93,12 @@ def poincare_section_mojo(
 
 
 def phase_poincare_mojo(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     t: int,
     n: int,
     oscillator_idx: int,
     section_phase: float,
-) -> tuple[NDArray, NDArray, int]:
+) -> tuple[FloatArray, FloatArray, int]:
     tokens: list[str] = [
         "PHASE",
         str(int(t)),

@@ -10,6 +10,95 @@ designed for a 60-second video with terminal output. Pin in README.
 
 ---
 
+## Roadmap Walkthrough Set (v1.0 Adoption Track)
+
+These five scripts match the roadmap onboarding targets exactly:
+
+1. first run
+2. binding-spec authoring
+3. policy debugging
+4. audit replay
+5. deployment profiles
+
+### A. "First Run" (60s)
+
+**Screen:** Terminal
+
+```bash
+pip install scpn-phase-orchestrator
+spo validate domainpacks/minimal_domain/binding_spec.yaml
+spo run domainpacks/minimal_domain/binding_spec.yaml --steps 120 --audit first_run_audit.jsonl --seed 42
+spo report first_run_audit.jsonl
+```
+
+Voiceover points:
+- install
+- validate
+- run
+- report from the same audit trace
+
+### B. "Binding-Spec Authoring" (60s)
+
+**Screen:** Editor + terminal
+
+```bash
+spo scaffold my_domain
+$EDITOR domainpacks/my_domain/binding_spec.yaml
+spo validate domainpacks/my_domain/binding_spec.yaml
+```
+
+Voiceover points:
+- map raw sources into P/I/S oscillator families
+- define layers/objectives/actuators
+- validate after each edit
+
+### C. "Policy Debugging" (60s)
+
+**Screen:** Editor + terminal
+
+```bash
+$EDITOR domainpacks/my_domain/policy.yaml
+spo run domainpacks/my_domain/binding_spec.yaml --steps 200 --audit policy_debug_audit.jsonl --seed 7
+spo report policy_debug_audit.jsonl
+```
+
+Voiceover points:
+- show one threshold/action rule
+- run with audit
+- verify actions/regimes in report output
+
+### D. "Audit Replay" (60s)
+
+**Screen:** Terminal
+
+```bash
+spo replay policy_debug_audit.jsonl --verify
+spo report policy_debug_audit.jsonl
+```
+
+Voiceover points:
+- deterministic replay
+- hash-chain verification
+- identical run evidence for review and incident analysis
+
+### E. "Deployment Profiles" (60s)
+
+**Screen:** Terminal + docs page
+
+```bash
+python -m scpn_phase_orchestrator.cli --help
+python -c "import spo_kernel; print('spo_kernel OK')"
+python -c "from scpn_phase_orchestrator.nn import HAS_JAX; print(HAS_JAX)"
+python -m pytest -q tests/test_backend_module_imports.py
+```
+
+Voiceover points:
+- Python-only, Rust FFI, JAX, and full profiles
+- each profile has an explicit preflight command
+- expected fallback behavior is documented
+
+---
+
 ## 1. "What is SPO?" (60s)
 
 **Screen:** Terminal

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
@@ -117,6 +119,17 @@ class TestEffectiveTemperature:
     def test_zero_mean_returns_zero(self):
         costs = np.array([1.0, -1.0, 1.0, -1.0])
         assert effective_temperature(costs) == pytest.approx(0.0)
+
+
+class TestFreeEnergyTypeHints:
+    def test_public_array_contracts_are_parameterised(self) -> None:
+        for hint in [
+            get_type_hints(add_langevin_noise)["z"],
+            get_type_hints(add_langevin_noise)["return"],
+            get_type_hints(effective_temperature)["costs_history"],
+        ]:
+            assert "numpy.ndarray" in str(hint)
+            assert "float64" in str(hint)
 
 
 class TestFreeEnergyPipelineWiring:

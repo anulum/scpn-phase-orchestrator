@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Real
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 __all__ = ["StochasticInjector", "NoiseProfile", "find_optimal_noise"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -72,13 +74,13 @@ class StochasticInjector:
     def D(self, value: float) -> None:
         self._D = _validate_finite_non_negative(value, name="D")
 
-    def inject(self, phases: NDArray, dt: float) -> NDArray:
+    def inject(self, phases: FloatArray, dt: float) -> FloatArray:
         """Add Wiener noise to phases: θ += √(2D*dt) * N(0,1)."""
         dt = _validate_finite_positive(dt, name="dt")
         if self._D == 0.0:
             return phases
         noise = self._rng.standard_normal(len(phases))
-        result: NDArray = (phases + np.sqrt(2.0 * self._D * dt) * noise) % TWO_PI
+        result: FloatArray = (phases + np.sqrt(2.0 * self._D * dt) * noise) % TWO_PI
         return result
 
 
@@ -112,11 +114,11 @@ def optimal_D(K: float, R_det: float) -> float:
 
 def find_optimal_noise(
     engine: UPDEEngine,
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
-    D_range: NDArray | None = None,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    D_range: FloatArray | None = None,
     n_steps: int = 500,
     seed: int = 42,
 ) -> NoiseProfile:

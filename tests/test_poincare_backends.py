@@ -13,11 +13,24 @@ count, crossing coordinates (to 1e-9), and times."""
 from __future__ import annotations
 
 import math
+from typing import get_type_hints
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor import poincare as p_mod
+from scpn_phase_orchestrator.monitor._poincare_go import (
+    phase_poincare_go,
+    poincare_section_go,
+)
+from scpn_phase_orchestrator.monitor._poincare_julia import (
+    phase_poincare_julia,
+    poincare_section_julia,
+)
+from scpn_phase_orchestrator.monitor._poincare_mojo import (
+    phase_poincare_mojo,
+    poincare_section_mojo,
+)
 from scpn_phase_orchestrator.monitor.poincare import (
     AVAILABLE_BACKENDS,
     phase_poincare,
@@ -64,6 +77,23 @@ def _phase_traj(seed: int, t: int = 300, n: int = 4) -> np.ndarray:
     for i in range(1, t):
         phases[i] = phases[i - 1] + omegas * 0.1
     return phases
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        poincare_section_go,
+        poincare_section_julia,
+        poincare_section_mojo,
+        phase_poincare_go,
+        phase_poincare_julia,
+        phase_poincare_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        for key in hints:
+            if key in {"traj_flat", "normal", "phases_flat", "return"}:
+                assert "numpy.ndarray" in str(hints[key])
+                assert "float64" in str(hints[key])
 
 
 class TestPoincareSectionParity:

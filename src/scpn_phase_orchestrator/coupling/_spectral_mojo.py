@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "spectral_eig_mojo"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "spectral_mojo"
 
@@ -31,9 +33,9 @@ def _ensure_exe() -> Path:
 
 
 def spectral_eig_mojo(
-    knm_flat: NDArray,
+    knm_flat: FloatArray,
     n: int,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     exe = _ensure_exe()
     tokens: list[str] = ["EIG", str(int(n))]
     tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())

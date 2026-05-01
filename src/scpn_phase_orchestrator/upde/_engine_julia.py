@@ -11,12 +11,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["upde_run_julia"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "upde_engine.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,10 +37,10 @@ def _ensure() -> Any:
 
 
 def upde_run_julia(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
@@ -48,7 +49,7 @@ def upde_run_julia(
     n_substeps: int,
     atol: float,
     rtol: float,
-) -> NDArray:
+) -> FloatArray:
     jl = _ensure()
     n = int(phases.size)
     return np.asarray(

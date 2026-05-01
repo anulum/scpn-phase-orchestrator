@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -27,6 +28,8 @@ except ImportError:
 
 __all__ = ["SSGFCosts", "compute_ssgf_costs"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class SSGFCosts:
@@ -38,8 +41,8 @@ class SSGFCosts:
 
 
 def compute_ssgf_costs(
-    W: NDArray,
-    phases: NDArray,
+    W: FloatArray,
+    phases: FloatArray,
     weights: tuple[float, ...] = (1.0, 0.5, 0.1, 0.1),
 ) -> SSGFCosts:
     """Compute SSGF cost terms for geometry W given current phases.
@@ -52,12 +55,12 @@ def compute_ssgf_costs(
     U_total = w1·C1 + w2·C2 + w3·C3 + w4·C4
     """
     w1, w2, w3, w4 = weights
-    W = np.asarray(W, dtype=np.float64)
-    n = W.shape[0]
+    W_array: FloatArray = np.asarray(W, dtype=np.float64)
+    n = W_array.shape[0]
 
     if _HAS_RUST:
-        w_flat = np.ascontiguousarray(W.ravel())
-        p = np.ascontiguousarray(phases, dtype=np.float64)
+        w_flat: FloatArray = np.ascontiguousarray(W_array.ravel())
+        p: FloatArray = np.ascontiguousarray(phases, dtype=np.float64)
         c1, c2, c3, c4, ut = _rust_costs(w_flat, p, n, w1, w2, w3, w4)
         return SSGFCosts(
             c1_sync=c1,
@@ -70,12 +73,12 @@ def compute_ssgf_costs(
     R, _ = compute_order_parameter(phases)
     c1 = 1.0 - R
 
-    lam2 = fiedler_value(W)
+    lam2 = fiedler_value(W_array)
     c2 = -lam2  # minimize → maximize algebraic connectivity
 
-    c3 = float(np.sum(np.abs(W))) / (n * n) if n > 0 else 0.0
+    c3 = float(np.sum(np.abs(W_array))) / (n * n) if n > 0 else 0.0
 
-    c4 = float(np.linalg.norm(W - W.T, "fro")) / n if n > 0 else 0.0
+    c4 = float(np.linalg.norm(W_array - W_array.T, "fro")) / n if n > 0 else 0.0
 
     u_total = w1 * c1 + w2 * c2 + w3 * c3 + w4 * c4
 

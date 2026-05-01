@@ -49,10 +49,7 @@ class SupervisorPolicy:
         petri_ctx: dict[str, float] | None = None,
     ) -> list[ControlAction]:
         """Evaluate regime and return control actions for the current state."""
-        if self._petri_adapter is not None and petri_ctx is not None:
-            proposed = self._petri_adapter.step(petri_ctx)
-        else:
-            proposed = self._regime_manager.evaluate(upde_state, boundary_state)
+        proposed = self._proposed_regime(upde_state, boundary_state, petri_ctx)
         regime = self._regime_manager.transition(proposed)
 
         actions = self._actions_for_regime(regime, upde_state)
@@ -120,6 +117,21 @@ class SupervisorPolicy:
                 justification="recovery: gradual coupling restore",
             )
         ]
+
+    def _proposed_regime(
+        self,
+        upde_state: UPDEState,
+        boundary_state: BoundaryState,
+        petri_ctx: dict[str, float] | None,
+    ) -> Regime:
+        if self._petri_adapter is not None and petri_ctx is not None:
+            try:
+                return self._petri_adapter.step(petri_ctx)
+            except Exception:
+                # Fault-injection hardening: supervisor remains operational if
+                # Petri stepping fails and falls back to direct regime logic.
+                return self._regime_manager.evaluate(upde_state, boundary_state)
+        return self._regime_manager.evaluate(upde_state, boundary_state)
 
     def _worst_layer(self, upde_state: UPDEState) -> int | None:
         if not upde_state.layers:

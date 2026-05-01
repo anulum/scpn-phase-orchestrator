@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_distance_matrix_go", "compute_npe_go"]
 
@@ -49,7 +52,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def phase_distance_matrix_go(phases: NDArray) -> NDArray:
+def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     n = p.size
@@ -64,7 +67,7 @@ def phase_distance_matrix_go(phases: NDArray) -> NDArray:
     return out
 
 
-def compute_npe_go(phases: NDArray, max_radius: float) -> float:
+def compute_npe_go(phases: FloatArray, max_radius: float) -> float:
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "_ensure_exe",
@@ -51,13 +55,13 @@ def _run(payload: str) -> list[float]:
 
 
 def correlation_integral_mojo(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
-    idx_i: NDArray,
-    idx_j: NDArray,
-    epsilons: NDArray,
-) -> NDArray:
+    idx_i: IntArray,
+    idx_j: IntArray,
+    epsilons: FloatArray,
+) -> FloatArray:
     n_p = int(idx_i.size)
     n_k = int(epsilons.size)
     tokens: list[str] = [
@@ -77,7 +81,7 @@ def correlation_integral_mojo(
     return np.array(result, dtype=np.float64)
 
 
-def kaplan_yorke_dimension_mojo(lyapunov_exponents: NDArray) -> float:
+def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
     le = np.asarray(lyapunov_exponents, dtype=np.float64).ravel()
     n = int(le.size)
     tokens: list[str] = ["KY", str(n)]

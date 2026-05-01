@@ -28,10 +28,13 @@ coupling from source to target.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.integer[Any]]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -118,7 +121,7 @@ def _dispatch(fn_name: str) -> object:
 
 
 def _conditional_entropy(
-    target: NDArray, condition: NDArray, n_cond_bins: int
+    target: IntArray, condition: IntArray, n_cond_bins: int
 ) -> float:
     """``H(target | condition)`` via histogram."""
     n = len(target)
@@ -135,60 +138,72 @@ def _conditional_entropy(
     return h
 
 
-def phase_transfer_entropy(source: NDArray, target: NDArray, n_bins: int = 16) -> float:
+def phase_transfer_entropy(
+    source: FloatArray, target: FloatArray, n_bins: int = 16
+) -> float:
     """Transfer entropy ``TE(X → Y)`` on binned phase series."""
+    source_values: FloatArray = np.asarray(source, dtype=np.float64)
+    target_values: FloatArray = np.asarray(target, dtype=np.float64)
     backend_fn = _dispatch("phase_te")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, NDArray, int], float]", backend_fn)
+        fn = cast("Callable[[FloatArray, FloatArray, int], float]", backend_fn)
         return float(
             fn(
-                np.ascontiguousarray(source, dtype=np.float64),
-                np.ascontiguousarray(target, dtype=np.float64),
+                np.ascontiguousarray(source_values, dtype=np.float64),
+                np.ascontiguousarray(target_values, dtype=np.float64),
                 n_bins,
             )
         )
 
-    if len(source) < 3 or len(target) < 3:
+    if len(source_values) < 3 or len(target_values) < 3:
         return 0.0
-    n = min(len(source), len(target)) - 1
+    n = min(len(source_values), len(target_values)) - 1
     bins = np.linspace(0, 2 * np.pi, n_bins + 1)
-    src_binned = np.digitize(source[:n] % (2 * np.pi), bins) - 1
-    tgt_binned = np.digitize(target[:n] % (2 * np.pi), bins) - 1
-    tgt_next = np.digitize(target[1 : n + 1] % (2 * np.pi), bins) - 1
-    src_binned = np.clip(src_binned, 0, n_bins - 1)
-    tgt_binned = np.clip(tgt_binned, 0, n_bins - 1)
-    tgt_next = np.clip(tgt_next, 0, n_bins - 1)
+    src_binned: IntArray = np.clip(
+        np.digitize(source_values[:n] % (2 * np.pi), bins) - 1,
+        0,
+        n_bins - 1,
+    )
+    tgt_binned: IntArray = np.clip(
+        np.digitize(target_values[:n] % (2 * np.pi), bins) - 1,
+        0,
+        n_bins - 1,
+    )
+    tgt_next: IntArray = np.clip(
+        np.digitize(target_values[1 : n + 1] % (2 * np.pi), bins) - 1,
+        0,
+        n_bins - 1,
+    )
     h_y_yt = _conditional_entropy(tgt_next, tgt_binned, n_bins)
-    joint_cond = tgt_binned * n_bins + src_binned
+    joint_cond: IntArray = tgt_binned * n_bins + src_binned
     h_y_yt_x = _conditional_entropy(tgt_next, joint_cond, n_bins * n_bins)
     return max(0.0, h_y_yt - h_y_yt_x)
 
 
-def transfer_entropy_matrix(phase_series: NDArray, n_bins: int = 16) -> NDArray:
+def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> FloatArray:
     """Pairwise TE matrix; entry ``[i, j] = TE(i → j)`` for all
     oscillator pairs with zero diagonal."""
-    if phase_series.ndim != 2:
+    series: FloatArray = np.asarray(phase_series, dtype=np.float64)
+    if series.ndim != 2:
         raise ValueError(
             f"phase_series must be 2-D (oscillators, timesteps), "
-            f"got shape {phase_series.shape}"
+            f"got shape {series.shape}"
         )
-    n_osc, n_time = phase_series.shape
+    n_osc, n_time = series.shape
     backend_fn = _dispatch("te_matrix")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, int, int, int], NDArray]", backend_fn)
+        fn = cast("Callable[[FloatArray, int, int, int], FloatArray]", backend_fn)
         flat = fn(
-            np.ascontiguousarray(phase_series.ravel(), dtype=np.float64),
+            np.ascontiguousarray(series.ravel(), dtype=np.float64),
             n_osc,
             n_time,
             n_bins,
         )
         return np.asarray(flat, dtype=np.float64).reshape(n_osc, n_osc)
 
-    te = np.zeros((n_osc, n_osc), dtype=np.float64)
+    te: FloatArray = np.zeros((n_osc, n_osc), dtype=np.float64)
     for i in range(n_osc):
         for j in range(n_osc):
             if i != j:
-                te[i, j] = phase_transfer_entropy(
-                    phase_series[i], phase_series[j], n_bins
-                )
+                te[i, j] = phase_transfer_entropy(series[i], series[j], n_bins)
     return te

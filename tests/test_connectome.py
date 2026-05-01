@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
@@ -15,6 +17,16 @@ from scpn_phase_orchestrator.coupling.connectome import (
     load_hcp_connectome,
     load_neurolib_hcp,
 )
+
+
+def test_public_array_contracts_are_parameterised() -> None:
+    """Public connectome loaders return typed float arrays."""
+    for hint in [
+        get_type_hints(load_hcp_connectome)["return"],
+        get_type_hints(load_neurolib_hcp)["return"],
+    ]:
+        assert "numpy.ndarray" in str(hint)
+        assert "float64" in str(hint)
 
 
 def test_output_shape():

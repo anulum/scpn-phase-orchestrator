@@ -148,8 +148,25 @@ exporter.record_regime_change("nominal", "degraded")
 
 ### PrometheusAdapter
 
-Fetches time-series metrics from a Prometheus endpoint. Currently a stub
-(planned for full implementation).
+Fetches range and instant metrics from a Prometheus endpoint with validated
+HTTP(S) endpoint, timeout, and query parameters.
+
+```python
+from scpn_phase_orchestrator.adapters import PrometheusAdapter
+
+prom = PrometheusAdapter("https://prometheus.internal", timeout=5.0)
+series = prom.fetch_metric("up", start=0.0, end=60.0, step=5.0)
+instant = prom.fetch_instant("up")
+```
+
+## Production Defaults (Auth + Rate Limits)
+
+- Modbus/TLS: use mutual-TLS certificates and CA verification
+  (`SecureModbusAdapter` with `ca_cert_path` set).
+- QueueWaves network endpoints: use `security.mode: production`,
+  `api_key_env`, and positive `security.rate_limit_per_minute`.
+- Prometheus access: terminate auth at a reverse proxy and inject
+  short-lived bearer credentials upstream; never commit token-bearing URLs.
 
 ## Optional Dependencies
 
