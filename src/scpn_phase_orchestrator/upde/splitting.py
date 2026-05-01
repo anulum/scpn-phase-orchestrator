@@ -43,7 +43,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from numbers import Integral, Real
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -56,24 +56,26 @@ __all__ = [
     "SplittingEngine",
 ]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray]:
+def _load_rust_fn() -> Callable[..., FloatArray]:
     from spo_kernel import splitting_run_rust
 
     def _rust(
-        phases: NDArray,
-        omegas: NDArray,
-        knm_flat: NDArray,
-        alpha_flat: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm_flat: FloatArray,
+        alpha_flat: FloatArray,
         n: int,
         zeta: float,
         psi: float,
         dt: float,
         n_steps: int,
-    ) -> NDArray:
+    ) -> FloatArray:
         # The Rust FFI reads N from ``phases.len()`` and ignores the
         # positional ``_n`` argument (hence the leading underscore in
         # its signature). We still pass ``n`` for future-proofing.
@@ -95,7 +97,7 @@ def _load_rust_fn() -> Callable[..., NDArray]:
     return _rust
 
 
-def _load_mojo_fn() -> Callable[..., NDArray]:
+def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._splitting_mojo import (
         _ensure_exe,
@@ -106,7 +108,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:
     return splitting_run_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray]:
+def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._splitting_julia import (
@@ -116,7 +118,7 @@ def _load_julia_fn() -> Callable[..., NDArray]:
     return splitting_run_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray]:
+def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._splitting_go import (
         _load_lib,
@@ -127,7 +129,7 @@ def _load_go_fn() -> Callable[..., NDArray]:
     return splitting_run_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -150,7 +152,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray] | None:
+def _dispatch() -> Callable[..., FloatArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -172,13 +174,13 @@ def _validate_nonzero_finite_float(value: object, *, name: str) -> float:
 
 
 def _coupling_deriv(
-    theta: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    theta: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     alpha_zero: bool,
-) -> NDArray:
+) -> FloatArray:
     s = np.sin(theta)
     c = np.cos(theta)
     if alpha_zero:
@@ -193,18 +195,18 @@ def _coupling_deriv(
     if zeta != 0.0:
         # ζ · sin(ψ − θ) = ζ·sin(ψ)·cos(θ) − ζ·cos(ψ)·sin(θ)
         out = out + zeta * np.sin(psi) * c - zeta * np.cos(psi) * s
-    return cast("NDArray", out)
+    return cast("FloatArray", out)
 
 
 def _rk4_coupling(
-    p: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    p: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
     alpha_zero: bool,
-) -> NDArray:
+) -> FloatArray:
     k1 = _coupling_deriv(p, knm, alpha, zeta, psi, alpha_zero)
     k2 = _coupling_deriv(
         (p + 0.5 * dt * k1) % TWO_PI,
@@ -230,20 +232,20 @@ def _rk4_coupling(
         psi,
         alpha_zero,
     )
-    return cast("NDArray", (p + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI)
+    return (p + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
 
 
 def _python_run(
-    phases: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> FloatArray:
     """Python reference aligned to the Rust kernel exactly.
 
     Uses the sincos expansion on the alpha-zero branch and the
@@ -283,26 +285,26 @@ class SplittingEngine:
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: FloatArray,
+    ) -> FloatArray:
         """One Strang-split step: A(dt/2) → B(dt) → A(dt/2)."""
         return self.run(phases, omegas, knm, zeta, psi, alpha, n_steps=1)
 
     def run(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
+        alpha: FloatArray,
         n_steps: int,
-    ) -> NDArray:
+    ) -> FloatArray:
         knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
         alpha_flat = np.ascontiguousarray(alpha, dtype=np.float64).ravel()
         backend_fn = _dispatch() if self._dt > 0.0 else None
@@ -333,6 +335,6 @@ class SplittingEngine:
             int(n_steps),
         )
 
-    def order_parameter(self, phases: NDArray) -> float:
+    def order_parameter(self, phases: FloatArray) -> float:
         """Standard Kuramoto R = |<exp(iθ)>|."""
         return float(np.abs(np.mean(np.exp(1j * phases))))
