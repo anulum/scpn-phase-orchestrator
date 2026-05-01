@@ -249,6 +249,13 @@ dynamics. Only oscillators with quality ≥ min_quality participate.
 
 ::: scpn_phase_orchestrator.oscillators.base
 
+## Phase Initialisation
+
+Utilities for deterministic and random initial phase generation used in
+simulation setup and reproducible experiment seeds.
+
+::: scpn_phase_orchestrator.oscillators.init_phases
+
 ---
 
 ## Cross-channel composition
