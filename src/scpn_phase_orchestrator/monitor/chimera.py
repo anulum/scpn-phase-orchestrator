@@ -27,10 +27,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -49,10 +51,10 @@ _INCOHERENT_THRESHOLD = 0.3
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray]:
+def _load_rust_fn() -> Callable[..., FloatArray]:
     from spo_kernel import detect_chimera_rust
 
-    def _rust(phases: NDArray, knm_flat: NDArray, n: int) -> NDArray:
+    def _rust(phases: FloatArray, knm_flat: FloatArray, n: int) -> FloatArray:
         _coh, _incoh, _ci, local = detect_chimera_rust(
             np.ascontiguousarray(phases, dtype=np.float64),
             np.ascontiguousarray(knm_flat, dtype=np.float64),
@@ -60,10 +62,10 @@ def _load_rust_fn() -> Callable[..., NDArray]:
         )
         return np.asarray(local, dtype=np.float64)
 
-    return cast("Callable[..., NDArray]", _rust)
+    return cast("Callable[..., FloatArray]", _rust)
 
 
-def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._chimera_mojo import (
         _ensure_exe,
         local_order_parameter_mojo,
@@ -73,7 +75,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     return local_order_parameter_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.monitor._chimera_julia import (
         local_order_parameter_julia,
@@ -82,7 +84,7 @@ def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchai
     return local_order_parameter_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_go_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
     from scpn_phase_orchestrator.monitor._chimera_go import (
         _load_lib,
         local_order_parameter_go,
@@ -92,7 +94,7 @@ def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     return local_order_parameter_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -115,7 +117,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray] | None:
+def _dispatch() -> Callable[..., FloatArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -130,7 +132,7 @@ class ChimeraState:
     chimera_index: float = 0.0
 
 
-def local_order_parameter(phases: NDArray, knm: NDArray) -> NDArray:
+def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
     """Per-oscillator local order parameter.
 
     ``R_i = |⟨exp(i(θ_j − θ_i))⟩_{j ∈ N(i)}|`` with ``N(i) =
@@ -160,7 +162,7 @@ def local_order_parameter(phases: NDArray, knm: NDArray) -> NDArray:
     return r_local
 
 
-def detect_chimera(phases: NDArray, knm: NDArray) -> ChimeraState:
+def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
     """Detect chimera states in a Kuramoto network.
 
     Args:

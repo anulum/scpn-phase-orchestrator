@@ -10,12 +10,26 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import npe as npe_mod
+from scpn_phase_orchestrator.monitor._npe_go import (
+    compute_npe_go,
+    phase_distance_matrix_go,
+)
+from scpn_phase_orchestrator.monitor._npe_julia import (
+    compute_npe_julia,
+    phase_distance_matrix_julia,
+)
+from scpn_phase_orchestrator.monitor._npe_mojo import (
+    compute_npe_mojo,
+    phase_distance_matrix_mojo,
+)
 from scpn_phase_orchestrator.monitor.npe import (
     AVAILABLE_BACKENDS,
     compute_npe,
@@ -45,6 +59,24 @@ def _reference(
     finally:
         _reset(prev)
     return pdm, npe
+
+
+def test_backend_array_contracts_are_parameterised() -> None:
+    functions = (
+        phase_distance_matrix_go,
+        phase_distance_matrix_julia,
+        phase_distance_matrix_mojo,
+        compute_npe_go,
+        compute_npe_julia,
+        compute_npe_mojo,
+    )
+    for fn in functions:
+        hints = get_type_hints(fn)
+        assert "numpy.ndarray" in str(hints["phases"])
+        assert "float64" in str(hints["phases"])
+        if fn.__name__.startswith("phase_distance_matrix"):
+            assert "numpy.ndarray" in str(hints["return"])
+            assert "float64" in str(hints["return"])
 
 
 class TestRustParity:

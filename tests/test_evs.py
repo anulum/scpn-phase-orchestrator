@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -46,6 +47,21 @@ def test_entrained_signal_passes():
     assert result.is_entrained
     assert result.itpc_value > 0.6
     assert result.persistence_score > 0.4
+
+
+def test_public_array_contracts_are_parameterised():
+    evaluate_hints = get_type_hints(EVSMonitor.evaluate)
+    specificity_hints = get_type_hints(EVSMonitor._frequency_specificity)
+    hints = (
+        evaluate_hints["phases_trials"],
+        evaluate_hints["pause_indices"],
+        specificity_hints["phases_trials"],
+    )
+    for hint in hints:
+        assert "numpy.ndarray" in str(hint)
+    assert "float64" in str(evaluate_hints["phases_trials"])
+    assert "int64" in str(evaluate_hints["pause_indices"])
+    assert "float64" in str(specificity_hints["phases_trials"])
 
 
 def test_random_signal_fails():

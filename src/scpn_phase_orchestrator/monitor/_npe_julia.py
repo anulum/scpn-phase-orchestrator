@@ -11,10 +11,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_distance_matrix_julia", "compute_npe_julia"]
 
@@ -35,7 +37,7 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def phase_distance_matrix_julia(phases: NDArray) -> NDArray:
+def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
     jl = _ensure()
     return np.asarray(
         jl.phase_distance_matrix(
@@ -45,7 +47,7 @@ def phase_distance_matrix_julia(phases: NDArray) -> NDArray:
     )
 
 
-def compute_npe_julia(phases: NDArray, max_radius: float) -> float:
+def compute_npe_julia(phases: FloatArray, max_radius: float) -> float:
     jl = _ensure()
     return float(
         jl.compute_npe(
