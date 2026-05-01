@@ -31,7 +31,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          pip install --require-hashes --no-deps -r requirements/release-tools.txt
+          pip install --require-hashes -r requirements/release-tools.txt
           python -m build --sdist
 
       - name: Generate SBOM
