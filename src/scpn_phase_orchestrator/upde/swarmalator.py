@@ -25,7 +25,7 @@ cube guard against singularities at coincident agents.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -38,17 +38,19 @@ __all__ = [
     "SwarmalatorEngine",
 ]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     from spo_kernel import PySwarmalatorStepper
 
     def _rust(
-        pos: NDArray,
-        phases: NDArray,
-        omegas: NDArray,
+        pos: FloatArray,
+        phases: FloatArray,
+        omegas: FloatArray,
         n: int,
         dim: int,
         a: float,
@@ -56,7 +58,7 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
         j: float,
         k: float,
         dt: float,
-    ) -> tuple[NDArray, NDArray]:
+    ) -> tuple[FloatArray, FloatArray]:
         stepper = PySwarmalatorStepper(int(n), int(dim), float(dt))
         new_pos, new_phases = stepper.step(
             np.ascontiguousarray(pos.ravel(), dtype=np.float64),
@@ -72,10 +74,10 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
             np.asarray(new_phases, dtype=np.float64),
         )
 
-    return cast("Callable[..., tuple[NDArray, NDArray]]", _rust)
+    return cast("Callable[..., tuple[FloatArray, FloatArray]]", _rust)
 
 
-def _load_mojo_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._swarmalator_mojo import (
         _ensure_exe,
@@ -86,7 +88,7 @@ def _load_mojo_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     return swarmalator_step_mojo
 
 
-def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._swarmalator_julia import (
@@ -96,7 +98,7 @@ def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     return swarmalator_step_julia
 
 
-def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+def _load_go_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._swarmalator_go import (
         _load_lib,
@@ -107,7 +109,10 @@ def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     return swarmalator_step_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., tuple[NDArray, NDArray]]]] = {
+_LOADERS: dict[
+    str,
+    Callable[[], Callable[..., tuple[FloatArray, FloatArray]]],
+] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -130,16 +135,16 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., tuple[NDArray, NDArray]] | None:
+def _dispatch() -> Callable[..., tuple[FloatArray, FloatArray]] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
 
 
 def _python_step(
-    pos: NDArray,
-    phases: NDArray,
-    omegas: NDArray,
+    pos: FloatArray,
+    phases: FloatArray,
+    omegas: FloatArray,
     n: int,
     dim: int,
     a: float,
@@ -147,7 +152,7 @@ def _python_step(
     j: float,
     k: float,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     """Python reference matching the Rust kernel exactly.
 
     Note on ``repulse``: Rust uses ``b / (dist · d²ₛᵤₘ + eps)`` where
@@ -201,14 +206,14 @@ class SwarmalatorEngine:
 
     def step(
         self,
-        pos: NDArray,
-        phases: NDArray,
-        omegas: NDArray,
+        pos: FloatArray,
+        phases: FloatArray,
+        omegas: FloatArray,
         a: float = 1.0,
         b: float = 1.0,
         j: float = 1.0,
         k: float = 1.0,
-    ) -> tuple[NDArray, NDArray]:
+    ) -> tuple[FloatArray, FloatArray]:
         """Advance coupled swarmalator positions and phases by one step.
 
         Parameters
@@ -268,15 +273,15 @@ class SwarmalatorEngine:
 
     def run(
         self,
-        pos: NDArray,
-        phases: NDArray,
-        omegas: NDArray,
+        pos: FloatArray,
+        phases: FloatArray,
+        omegas: FloatArray,
         a: float = 1.0,
         b: float = 1.0,
         j: float = 1.0,
         k: float = 1.0,
         n_steps: int = 100,
-    ) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+    ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
         curr_pos, curr_phases = pos.copy(), phases.copy()
         pos_traj = np.empty((n_steps, self._n, self._dim))
         phase_traj = np.empty((n_steps, self._n))
@@ -294,5 +299,5 @@ class SwarmalatorEngine:
             phase_traj[i] = curr_phases
         return curr_pos, curr_phases, pos_traj, phase_traj
 
-    def order_parameter(self, phases: NDArray) -> float:
+    def order_parameter(self, phases: FloatArray) -> float:
         return float(np.abs(np.mean(np.exp(1j * phases))))
