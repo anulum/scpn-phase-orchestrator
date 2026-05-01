@@ -73,6 +73,7 @@ nav:
       - Backend Strategy: guide/backend_strategy.md
       - Adapter Bridges: guide/adapters.md
       - Performance Tuning: guide/performance.md
+      - Dependency Locks: guide/dependency_locks.md
       - Production Deployment: guide/production.md
       - Differentiable Kuramoto Layer: guide/differentiable_kuramoto.md
       - Advanced Dynamics: guide/advanced_dynamics.md

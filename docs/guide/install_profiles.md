@@ -62,3 +62,4 @@ behaviour before production or benchmark runs.
 
 - [Backend Fallback Chain](backend_fallbacks.md)
 - [Multi-Language Backend Review Gate](backend_review_gate.md)
+- [Dependency Locks](dependency_locks.md)

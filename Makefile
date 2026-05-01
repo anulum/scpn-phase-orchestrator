@@ -9,6 +9,7 @@
 
 .PHONY: help install install-dev quickstart test test-rust test-all lint fmt bandit sast \
         preflight preflight-fast docs docs-build bench bench-rust bridge \
+        lock-refresh lock-check \
         build docker-build docker-run clean install-hooks
 
 help:  ## Show this help
@@ -62,6 +63,19 @@ docs:  ## Live docs preview
 
 docs-build:  ## Build docs (strict)
 	mkdocs build --strict
+
+lock-refresh:  ## Regenerate hash-pinned dependency lockfiles via pip-compile
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock.txt --strip-extras pyproject.toml
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-py311.txt --strip-extras pyproject.toml
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-py313.txt --strip-extras pyproject.toml
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-windows-ffi-py311.txt --strip-extras pyproject.toml
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-windows-ffi-py312.txt --strip-extras pyproject.toml
+	pip-compile --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/queuewaves-lock.txt --strip-extras pyproject.toml
+
+lock-check:  ## Verify lockfiles are hash-pinned and installable
+	pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+	pip install --require-hashes --no-deps -r requirements/runtime-lock.txt
+	pip install --require-hashes --no-deps -r requirements/queuewaves-lock.txt
 
 bench:  ## Python benchmarks
 	python bench/run_benchmarks.py
