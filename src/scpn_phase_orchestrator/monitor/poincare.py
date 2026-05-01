@@ -26,10 +26,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -49,13 +51,13 @@ def _load_rust_fns() -> dict[str, object]:
     from spo_kernel import phase_poincare_rust, poincare_section_rust
 
     def _rust_section(
-        traj_flat: NDArray,
+        traj_flat: FloatArray,
         t: int,
         d: int,
-        normal: NDArray,
+        normal: FloatArray,
         offset: float,
         direction_id: int,
-    ) -> tuple[NDArray, NDArray, int]:
+    ) -> tuple[FloatArray, FloatArray, int]:
         dir_str = {0: "positive", 1: "negative", 2: "both"}[int(direction_id)]
         cr, times, n_cr = poincare_section_rust(
             np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
@@ -74,12 +76,12 @@ def _load_rust_fns() -> dict[str, object]:
         return pad_cr, pad_times, int(n_cr)
 
     def _rust_phase(
-        phases_flat: NDArray,
+        phases_flat: FloatArray,
         t: int,
         n: int,
         oscillator_idx: int,
         section_phase: float,
-    ) -> tuple[NDArray, NDArray, int]:
+    ) -> tuple[FloatArray, FloatArray, int]:
         cr, times, n_cr = phase_poincare_rust(
             np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
             int(t),
@@ -163,16 +165,16 @@ def _dispatch(fn_name: str) -> object | None:
 class PoincareResult:
     """Poincaré-section output."""
 
-    crossings: NDArray
-    crossing_times: NDArray
-    return_times: NDArray
+    crossings: FloatArray
+    crossing_times: FloatArray
+    return_times: FloatArray
     mean_return_time: float
     std_return_time: float
 
 
 def _assemble_result(
-    crossings_flat: NDArray,
-    times: NDArray,
+    crossings_flat: FloatArray,
+    times: FloatArray,
     n_cr: int,
     dim: int,
 ) -> PoincareResult:
@@ -197,8 +199,8 @@ def _assemble_result(
 
 
 def poincare_section(
-    trajectory: NDArray,
-    normal: NDArray,
+    trajectory: FloatArray,
+    normal: FloatArray,
     offset: float = 0.0,
     direction: str = "positive",
 ) -> PoincareResult:
@@ -215,8 +217,8 @@ def poincare_section(
     backend_fn = _dispatch("section")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray, int, int, NDArray, float, int], "
-            "tuple[NDArray, NDArray, int]]",
+            "Callable[[FloatArray, int, int, FloatArray, float, int], "
+            "tuple[FloatArray, FloatArray, int]]",
             backend_fn,
         )
         cr_flat, times, n_cr = fn(
@@ -257,10 +259,10 @@ def poincare_section(
 
 
 def return_times(
-    trajectory: NDArray,
-    normal: NDArray,
+    trajectory: FloatArray,
+    normal: FloatArray,
     offset: float = 0.0,
-) -> NDArray:
+) -> FloatArray:
     """Shortcut: return only the return-time sequence."""
     return poincare_section(
         trajectory,
@@ -271,7 +273,7 @@ def return_times(
 
 
 def phase_poincare(
-    phases: NDArray,
+    phases: FloatArray,
     oscillator_idx: int = 0,
     section_phase: float = 0.0,
 ) -> PoincareResult:
@@ -286,7 +288,8 @@ def phase_poincare(
     backend_fn = _dispatch("phase")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray, int, int, int, float], tuple[NDArray, NDArray, int]]",
+            "Callable[[FloatArray, int, int, int, float], "
+            "tuple[FloatArray, FloatArray, int]]",
             backend_fn,
         )
         cr_flat, times, n_cr = fn(

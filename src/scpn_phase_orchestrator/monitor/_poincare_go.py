@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_poincare_go", "poincare_section_go"]
 
@@ -59,13 +62,13 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def poincare_section_go(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
-    normal: NDArray,
+    normal: FloatArray,
     offset: float,
     direction_id: int,
-) -> tuple[NDArray, NDArray, int]:
+) -> tuple[FloatArray, FloatArray, int]:
     lib = _load_lib()
     traj = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
     nrm = np.ascontiguousarray(normal.ravel(), dtype=np.float64)
@@ -85,12 +88,12 @@ def poincare_section_go(
 
 
 def phase_poincare_go(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     t: int,
     n: int,
     oscillator_idx: int,
     section_phase: float,
-) -> tuple[NDArray, NDArray, int]:
+) -> tuple[FloatArray, FloatArray, int]:
     lib = _load_lib()
     phases = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     crossings = np.zeros(t * n, dtype=np.float64)

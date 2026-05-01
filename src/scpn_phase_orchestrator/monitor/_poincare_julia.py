@@ -11,10 +11,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["phase_poincare_julia", "poincare_section_julia"]
 
@@ -36,13 +38,13 @@ def _ensure() -> Any:
 
 
 def poincare_section_julia(
-    traj_flat: NDArray,
+    traj_flat: FloatArray,
     t: int,
     d: int,
-    normal: NDArray,
+    normal: FloatArray,
     offset: float,
     direction_id: int,
-) -> tuple[NDArray, NDArray, int]:
+) -> tuple[FloatArray, FloatArray, int]:
     jl = _ensure()
     cr, times, n_cr = jl.poincare_section(
         np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
@@ -60,12 +62,12 @@ def poincare_section_julia(
 
 
 def phase_poincare_julia(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     t: int,
     n: int,
     oscillator_idx: int,
     section_phase: float,
-) -> tuple[NDArray, NDArray, int]:
+) -> tuple[FloatArray, FloatArray, int]:
     jl = _ensure()
     cr, times, n_cr = jl.phase_poincare(
         np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),
