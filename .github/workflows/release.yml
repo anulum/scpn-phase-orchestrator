@@ -37,7 +37,9 @@ jobs:
 
       - name: Generate SBOM
         run: |
-          pip install --require-hashes -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r requirements/release-tools.txt
+          pip install cyclonedx-bom
+          pip install --no-deps -e .
           cyclonedx-py environment -o sbom.json --output-format json
 
       - name: Extract changelog
