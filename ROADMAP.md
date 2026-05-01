@@ -81,6 +81,12 @@
 - ~~DP tableau deduplication between upde.rs and stuart_landau.rs~~ (done)
 - Stable public API freeze with semver guarantees
 
+### Deferred track (documented, not current focus)
+
+- Typed-array contract sweep (Python type precision):
+  - Approximately 700 loose `NDArray` signatures remain in `src/` and are still to be parameterised.
+  - This remains a tracked maintenance task, but active execution focus is moved to other roadmap items.
+
 ### v1.0 adoption and credibility track
 
 - Ship 5-6 end-to-end tutorial notebooks that start from raw sources and finish with run, visualisation, and deterministic replay:
