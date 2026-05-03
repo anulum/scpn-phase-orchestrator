@@ -47,6 +47,7 @@ class AuditLogger:
         seed: int | None = None,
         amplitude_mode: bool = False,
         binding_config: dict[str, object] | None = None,
+        binding_summary: dict[str, object] | None = None,
     ) -> None:
         """Engine configuration record for replay reconstruction."""
         record: dict = {
@@ -59,6 +60,11 @@ class AuditLogger:
             record["seed"] = seed
         if amplitude_mode:
             record["amplitude_mode"] = True
+
+        if binding_summary is None:
+            binding_summary = binding_config
+        if binding_summary is not None:
+            record["binding_summary"] = binding_summary
         if binding_config is not None:
             record["binding_config"] = binding_config
         self._write_record(record)

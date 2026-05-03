@@ -142,6 +142,8 @@ def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_p
     header = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
     assert header["binding_config"]["name"] == "cli-test"
     assert header["binding_config"]["engine_mode"] == "kuramoto"
+    assert header["binding_summary"]["name"] == "cli-test"
+    assert header["binding_summary"]["engine_mode"] == "kuramoto"
     assert "P" in header["binding_config"]["channels"]
 
 

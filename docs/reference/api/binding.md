@@ -80,6 +80,15 @@ actuators:
 The schema is defined in `docs/specs/binding_spec.schema.json` and
 enforced by the validator at load time.
 
+## Resolved Runtime Summary
+
+`validate`/`inspect`/`run` commands rely on a resolved summary that is
+produced from the YAML and includes inferred defaults (for example
+`control_interval_steps` and `engine_mode`). The full contract is documented in
+`Resolved Runtime Defaults` and exposed as a CLI summary plus audit metadata.
+
+::: scpn_phase_orchestrator.binding.resolved
+
 ## Types
 
 Core type definitions shared across the binding subsystem.

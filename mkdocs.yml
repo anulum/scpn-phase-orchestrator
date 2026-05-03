@@ -95,6 +95,7 @@ nav:
       - Boundary Contract: specs/boundary_contract.md
       - Action Compose: specs/action_compose.md
       - Eval Protocol: specs/eval_protocol.md
+      - Resolved Runtime Defaults: specs/resolved_runtime_defaults.md
       - Plugin API: specs/plugin_api.md
       - Policy DSL: specs/policy_dsl.md
       - Imprint Dynamics: specs/imprint_dynamics.md

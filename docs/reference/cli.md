@@ -72,7 +72,8 @@ spo run <binding_spec> [OPTIONS]
 
 **Output:** Resolved binding configuration, then final `R_good`, `R_bad`, and
 regime. If `--audit` is set, the audit header contains the same resolved
-configuration summary.
+configuration summary under `binding_summary` (with legacy-compatible
+`binding_config` key).
 
 **Example:**
 

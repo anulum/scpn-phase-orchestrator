@@ -324,6 +324,24 @@ class TestAuditHeader:
 
         record = json.loads(log_path.read_text().strip())
         assert record["binding_config"] == binding_config
+        assert record["binding_summary"] == binding_config
+
+    def test_header_contains_binding_summary_when_provided(self, tmp_path):
+        log_path = tmp_path / "audit.jsonl"
+        binding_summary = {
+            "name": "resolved",
+            "engine_mode": "stuart_landau",
+            "channels": {"P": {"driver_keys": ["frequency"]}},
+        }
+        with AuditLogger(log_path) as logger:
+            logger.log_header(
+                n_oscillators=2,
+                dt=0.01,
+                binding_summary=binding_summary,
+            )
+
+        record = json.loads(log_path.read_text().strip())
+        assert record["binding_summary"] == binding_summary
 
     def test_header_without_seed_omits_field(self, tmp_path):
         """Optional fields must be absent, not null, when not provided."""
