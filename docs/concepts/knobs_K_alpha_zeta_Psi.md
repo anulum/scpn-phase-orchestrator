@@ -250,19 +250,114 @@ The `ActuationMapper` resolves scope to specific matrix indices. The
 `ActionProjector` clips values to bounds and enforces rate limits
 before the action is applied to the integration engine.
 
-### Rate Limits and Bounds
+### Actuation Range and Limits
 
-| Knob | Typical range | Rate limit (per step) |
-|------|--------------|----------------------|
-| K | [0, 5.0] | 0.1 |
-| alpha | [-pi, pi] | 0.05 |
-| zeta | [0, 2.0] | 0.2 |
-| Psi | [0, 2*pi) | no limit |
+Each run applies controls through two guardrails:
 
-These are defaults. Actual ranges and rate limits are domain-specific,
-configured in the binding spec `actuators` section. The
-`ActionProjector` enforces both value bounds and rate limits — see
-[action_compose.md](../specs/action_compose.md).
+1. **Domainpack actuator limits** from `binding_spec.yaml` (`actuators[].limits`)
+2. **Action projector defaults** in the CLI when actuator limits are missing
+
+Domainpack defaults in the current roadmap baseline are typically:
+
+| Knob | Common bound | Typical rate limit |
+|------|--------------|-------------------|
+| K | [0, 5.0] | 0.1 per step |
+| alpha | [−π, π] | 0.1 per step |
+| zeta | [0, 2.0] | 0.2 per step |
+| Psi | [0, 2π) | 0.5 per step |
+
+The CLI fallback (used when limits are not specified in the binding spec) is:
+
+| Knob | Fallback bound | Rate limit |
+|------|----------------|-----------|
+| K | [−0.5, 0.5] | 0.1 |
+| alpha | [−1.0, 1.0] | 0.1 |
+| zeta | [0.0, 0.5] | 0.2 |
+| Psi | [−∞, ∞] | 0.5 |
+
+`ActionProjector` applies both value clipping and ramp limiting before
+the action reaches the engine.
+
+## Delay and Lag
+
+In many domains coupling is not instantaneous. The delayed model uses:
+
+```text
+dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j(t - τ_ij) - θ_i(t) - α_ij) + ζ sin(Ψ - θ_i)
+```
+
+where `τ_ij` is a transport delay. This appears in the delayed engine as
+state lookup from a circular buffer.
+
+- **Small delay** shifts the effective coupling phase and often behaves
+  like an extra lag component.
+- **Larger delay** can stabilise or destabilise depending on network
+  structure and coupling strength.
+
+Use delayed dynamics when transport or inference latency is a governing
+feature of the physical process you model.
+
+## Coupling Priors
+
+Before policy control starts, base coupling shape still comes from priors:
+
+- `binding_spec.coupling.base_strength` and `decay_alpha`
+- `UniversalPrior` defaults (`K_base_mean = 0.47`, `decay_alpha_mean = 0.25`)
+  for Bayesian auto-tune starting points
+
+Why this matters:
+
+- It defines a safe initial operating regime.
+- It determines the starting point for any `K`/`alpha` trajectory.
+- It reduces brittle over-fitting to one particular topology.
+
+For more detail, see [coupling_prior.md](../reference/api/coupling_prior.md).
+
+## Damping
+
+`damping` is the rate-loss parameter in inertial models:
+
+```text
+dω/dt = (P - Dω + coupling + injections) / M
+```
+
+where `D` is damping and `M` is inertia. Higher damping damps oscillatory
+ringing after disturbances; lower damping responds faster but can oscillate.
+
+SPO currently routes this through domainpack-specific actuator wiring.
+In practice this is often declared as a named actuator (for example,
+`damping`) while still using the existing action contract and mapped to
+domain physics.
+
+## Supervisor Thresholds
+
+Supervisor thresholds are defined in code and tuned to finite-N dynamics:
+
+- `_R_CRITICAL = 0.3` (`supervisor/regimes.py`)
+- `_R_DEGRADED = 0.6`
+- `hysteresis = 0.05`
+- `cooldown_steps = 10`
+
+Policy action tuning values are:
+
+- `_K_BUMP = 0.05`
+- `_ZETA_BUMP = 0.1`
+- `_K_REDUCE = -0.03`
+- `_RESTORE_FRACTION = 0.5`
+
+These numbers appear in the default `SupervisorPolicy` and `RegimeManager`.
+
+## Actuation Limits in Practice
+
+For policy-engine actions, the order is:
+
+1. Validate action schema.
+2. Resolve scope and matching actuators.
+3. Apply rate and value projection.
+4. Emit actuator commands to domain runtime.
+
+The explicit actuator table in `binding_spec.yaml` is therefore the
+first source of truth for operator-facing limits.
 
 ## Interaction Between Knobs
 
