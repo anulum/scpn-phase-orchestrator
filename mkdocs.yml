@@ -156,6 +156,8 @@ nav:
       - CLI Reference: reference/cli.md
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md
+      - Cardiac Rhythm Benchmark: galleries/cardiac_rhythm_benchmark.md
+      - Power Grid Benchmark: galleries/power_grid_benchmark.md
       - Capabilities & Use Cases: galleries/capabilities.md
   - Reference:
       - Assumptions & Constants: ASSUMPTIONS.md
