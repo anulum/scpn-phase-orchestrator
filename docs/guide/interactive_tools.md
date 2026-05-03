@@ -58,6 +58,29 @@ Opens at `http://localhost:8501`.
 - **Minimal scaffold** — write `binding_spec.yaml` and emit a reproducible
   domainpack folder with baseline `README.md`
 
+## Policy Studio (Streamlit)
+
+An interactive builder for supervisor policy rules with validation and dry-run
+analysis.
+
+### Quick Start
+
+```bash
+streamlit run tools/policy_studio.py
+```
+
+Opens at `http://localhost:8501`.
+
+### Features
+
+- **Structured rule builder** — compose rule name, regimes, conditions, and knob
+  actions interactively with validated schema fields
+- **Cooldown + cap preview** — visualise per-rule fire limits over a step horizon
+- **Dry-run diagnostics** — upload `audit.jsonl` and inspect unreachable rules,
+  overlaps, collisions, and fire counts
+- **Binding-aware diagnostics** — validate rules against selected/loading or
+  uploaded binding specs before running production policies
+
 ## WASM Browser Demo
 
 A 66KB WebAssembly build of the Kuramoto engine that runs entirely

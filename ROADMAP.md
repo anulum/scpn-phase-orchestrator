@@ -104,7 +104,8 @@
   version: load/save `binding_spec.yaml`, validate schema, expose P/I/S channel
   mappings, preview extractor outputs, and produce a minimal reproducible domainpack.~~
   (done — `tools/binding_spec_studio.py`, `docs/guide/interactive_tools.md`)
-- Add an interactive supervisor-policy editor and validation loop for the DSL: structured rule builder, trigger/action autocomplete, cooldown/rate-limit previews, schema diagnostics, dry-run evaluation against `audit.jsonl`, and warnings for unreachable or overlapping rules.
+- ~~Add an interactive supervisor-policy editor and validation loop for the DSL: structured rule builder, trigger/action autocomplete, cooldown/rate-limit previews, schema diagnostics, dry-run evaluation against `audit.jsonl`, and warnings for unreachable or overlapping rules.~~
+  (done — `tools/policy_studio.py`, documented in `docs/guide/interactive_tools.md`)
 - Reduce hidden YAML behaviour by documenting every inferred default in generated docs and surfacing resolved runtime configuration in CLI output and audit metadata.
 - ~~Make the mkdocs site the primary entry point: one-page "how the pipeline fires" diagram mapping YAML -> extractors -> engines -> supervisor -> actuation, plus autodoc coverage for every public module.~~ (done — `docs/concepts/pipeline_firing.md`, API nav/index coverage including `reference/api/artifacts.md` and `reference/api/visualization.md`)
 - Publish head-to-head benchmark pages for domainpacks against domain-specific baselines where appropriate, starting with power-grid swing-equation solvers and cardiac rhythm references.
