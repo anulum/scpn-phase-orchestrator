@@ -81,7 +81,7 @@
 - ~~API docs slice: wire missing mkdocstrings API pages into nav/index (autotune, ssgf, visualization)~~ (done — `mkdocs.yml`, `docs/reference/api/index.md`)
 - ~~API docs hardening slice: remove broken mkdocstrings import target for non-public ActiveInferenceAgent~~ (done — `docs/reference/api/supervisor.md`)
 - ~~API docs slice: add mkdocstrings coverage for core modules (`upde.metrics`, `upde.splitting`, `monitor.npe`, `oscillators.init_phases`)~~ (done — `docs/reference/api/upde.md`, `docs/reference/api/monitor.md`, `docs/reference/api/oscillators.md`)
-- Docker multi-stage build with security scanning (Trivy/Grype)
+- ~~Docker multi-stage build with security scanning (Trivy/Grype)~~ (done — `.github/workflows/publish.yml`, `docs/guide/production.md`)
 - ~~BoundaryObserver configurable default severity~~ (done — defaults to hard with warning)
 - ~~DP tableau deduplication between upde.rs and stuart_landau.rs~~ (done)
 - Stable public API freeze with semver guarantees

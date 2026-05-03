@@ -218,7 +218,7 @@ docker pull ghcr.io/anulum/scpn-phase-orchestrator:0.5.0
 The publish pipeline (`.github/workflows/publish.yml`) performs:
 
 1. **Build** — multi-stage Dockerfile with Rust FFI + Python
-2. **Scan** — Trivy checks for CRITICAL/HIGH CVEs (blocks publish on failure)
+2. **Scan** — Trivy and Grype checks for CRITICAL/HIGH CVEs (either gate blocks publish on failure)
 3. **Push** — tagged version + `latest` to `ghcr.io/anulum/`
 
 Container images include the Rust kernel for maximum performance.

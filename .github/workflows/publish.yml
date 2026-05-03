@@ -170,6 +170,17 @@ jobs:
           exit-code: 1
           severity: CRITICAL,HIGH
 
+      - name: Scan image with Grype
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v /tmp:/tmp \
+            anchore/grype:v0.82.0 \
+            ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }} \
+            --scope all-layers \
+            --fail-on high \
+            -o table
+
       - name: Push to GHCR
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v6
         with:
