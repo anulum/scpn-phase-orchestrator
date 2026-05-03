@@ -95,7 +95,7 @@
 
 ### v1.0 adoption and credibility track
 
-- Ship 5-6 end-to-end tutorial notebooks that start from raw sources and finish with run, visualisation, and deterministic replay:
+- ~~Ship 5-6 end-to-end tutorial notebooks that start from raw sources and finish with run, visualisation, and deterministic replay~~ (done — `docs/tutorials/05_from_raw_sources_to_run.md`, `docs/tutorials/06_deterministic_replay_for_debugging.md`).
   - CSV sensor stream -> P channel, event log -> I channel, state-machine trace -> S channel, binding spec, engine run, supervisor decisions, actuation output, and `audit.jsonl` replay.
 - ~~Add a "minimal viable domainpack in 5 minutes" guide using bundled real sample data, from raw CSV/event/state inputs through scaffold, binding spec, run, visualisation, and replay.~~ (covered by `domainpacks/minimal_domain` and `docs/getting-started/minimal_domainpack_5min.md`)
 - ~~Add a high-level "why this knob does what" explainer for K, alpha, zeta, Psi, damping, delay, coupling priors, supervisor thresholds, and actuation limits, aimed at users who do not already know Kuramoto control theory.~~
