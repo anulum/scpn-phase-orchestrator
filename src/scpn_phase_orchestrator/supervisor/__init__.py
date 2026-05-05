@@ -47,6 +47,11 @@ from scpn_phase_orchestrator.supervisor.predictive import (
     PredictiveSupervisor,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.supervisor.topology import (
+    HigherOrderTopologySupervisor,
+    TopologyMutationPolicy,
+    TopologyMutationResult,
+)
 
 __all__ = [
     "Arc",
@@ -55,6 +60,7 @@ __all__ = [
     "ControlAction",
     "CounterfactualRollout",
     "EventBus",
+    "HigherOrderTopologySupervisor",
     "InterventionParameters",
     "Marking",
     "PetriNet",
@@ -74,6 +80,8 @@ __all__ = [
     "RegimeManager",
     "SupervisorPolicy",
     "Transition",
+    "TopologyMutationPolicy",
+    "TopologyMutationResult",
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_policy_rules_prism",

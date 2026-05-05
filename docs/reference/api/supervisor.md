@@ -110,6 +110,48 @@ last 100 transitions as (step_number, old_regime, new_regime).
 
 ---
 
+## Higher-Order Topology Adaptation
+
+`HigherOrderTopologySupervisor` is the first supervisor-side topology editor.
+It consumes live phases plus the current pairwise `K_nm` matrix and returns a
+next-step topology:
+
+- bounded pairwise coupling updates from local phase alignment
+- optional triadic `Hyperedge` proposals when global coherence is below target
+- pruning of stale or incoherent higher-order edges
+- serialisable audit metadata for added/pruned simplices and pairwise delta norm
+
+The core control knob is `TopologyMutationPolicy.mutation_rate`. A value of
+`0.0` freezes topology; larger values increase the maximum per-step pairwise
+and triadic changes while preserving non-negative couplings and a zero
+diagonal.
+
+```python
+import numpy as np
+
+from scpn_phase_orchestrator.supervisor import (
+    HigherOrderTopologySupervisor,
+    TopologyMutationPolicy,
+)
+from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
+
+policy = TopologyMutationPolicy(mutation_rate=0.2, coherence_floor=0.8)
+topology = HigherOrderTopologySupervisor(policy)
+result = topology.mutate(phases, knm)
+
+engine = HypergraphEngine(len(phases), dt=0.01, hyperedges=list(result.hyperedges))
+next_phases = engine.step(phases, omegas, pairwise_knm=result.knm)
+audit_payload = result.to_audit_record()
+```
+
+This slice does not claim autonomous online structural control. It provides the
+auditable mutation primitive that existing policy, causal, STL, simplicial, and
+hypergraph paths can gate before applying a topology change.
+
+::: scpn_phase_orchestrator.supervisor.topology
+
+---
+
 ## Policy Engine
 
 Rule-based evaluation of supervisor actions.
