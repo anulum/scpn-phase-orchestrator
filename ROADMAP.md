@@ -144,15 +144,18 @@
 - Formal verification hooks: export Petri-net regimes and policy rules to PRISM, TLA+, SPIN, or equivalent model-checking workflows, with CI artefacts for safety-critical policies.
 - Neuromorphic and quantum-native backends: extend existing SNN and quantum-control bridges so the orchestrator can emit Lava/BrainScaleS-style neuromorphic schedules and QPU control schedules directly from validated phase-control plans.
 - Extractor and actuator plugin ecosystem: define a stable Python/Rust plugin interface for custom `PhaseExtractor` and `ActuationMapper` implementations, including schema validation, entry-point discovery, audit metadata, compatibility tests, and versioned capability declarations.
+  - Python manifest foundation is in place: `plugins.registry` provides entry-point discovery, versioned capability declarations, compatibility reports, audit records, tests, and API documentation.
 
 ### Usability moat — finish the job
 
 - One-click SPO Studio web UI for new control engineers: drag/drop oscillators, live `R`/`Psi`/`K` visualisation, real-time knob tuning, and deploy/export paths for Docker, WASM, and FPGA.
 - Auto-binding prototype: SINDy-style or graph-learning pipeline from raw time-series, event logs, and graph signals to a proposed `binding_spec.yaml` that stays reviewable by a domain expert.
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
+  - Reward-evaluation foundation is in place; next scope is replay-trained candidate ranking before any live learner or actuation loop.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
 - Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
+  - Plugin manifest registry foundation is in place; marketplace packaging, examples, and Rust-side integration remain open.
 
 ### Minor polish before v1.0
 

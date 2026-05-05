@@ -63,7 +63,7 @@ control engineers who do not already live in phase dynamics.
 |------|----------------|
 | Dynamic higher-order topology adaptation | supervisor edits hyperedges/simplices based on coherence, Lyapunov, transfer-entropy, or policy objectives |
 | Causal intervention engine | pair every material knob/topology change with counterfactual UPDE/JAX rollouts and audit both observed and counterfactual trajectories |
-| RL/autotune layer on JAX `nn` backend | learn `K`, `alpha`, `zeta`, and `Psi` policies from rewards such as coherence minus `R_bad` and unsafe-actuation penalties |
+| RL/autotune layer on JAX `nn` backend | reward-evaluation foundation is implemented; next step is replay-trained candidate ranking before PPO/SAC or live actuation |
 | FEP / predictive-coding supervisor backend | ActiveInferenceAgent-backed mode that minimises variational free energy across N-channel hierarchy before regime loss occurs |
 | Full N-channel algebra | formalise channel groups, required/optional channels, derived channels, cross-channel coupling, replay, and reporting |
 | Hierarchical orchestration | nested supervisors plus edge/cloud synchronisation protocol for distributed coherence control |
@@ -71,7 +71,7 @@ control engineers who do not already live in phase dynamics.
 | STL runtime verification | augment policy DSL with Signal Temporal Logic formulas, robustness metrics, and satisfaction traces in audits |
 | Symbolic-to-binding compiler | generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local corpus retrieval |
 | Cross-domain meta-transfer | learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains |
-| Plugin ecosystem | stable interfaces for domainpacks, extractors, actuators, bridges, and compatibility tests so domain experts can publish extensions without forking |
+| Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, and audit records; marketplace packaging remains open |
 
 ## Deferred Maintenance Track
 
