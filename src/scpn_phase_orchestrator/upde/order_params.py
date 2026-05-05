@@ -147,7 +147,7 @@ def _dispatch(fn_name: str) -> object:
 # ---------------------------------------------------------------------
 
 
-def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
+def compute_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
     """Kuramoto global order parameter ``(R, ψ)``.
 
     ``R = |mean(exp(i · θ))|``;
@@ -157,7 +157,7 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
         return (0.0, 0.0)
     backend_fn = _dispatch("order_parameter")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray], tuple[float, float]]", backend_fn)
+        fn = cast("Callable[[NDArray[np.float64]], tuple[float, float]]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         r, psi = fn(p)
         return float(r), float(psi)
@@ -167,7 +167,7 @@ def compute_order_parameter(phases: NDArray) -> tuple[float, float]:
     return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
 
-def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
+def compute_plv(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
     """Phase-locking value between two equal-length phase series.
 
     PLV = ``|mean(exp(i · (φ_a − φ_b)))|`` over samples.
@@ -180,7 +180,10 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
         )
     backend_fn = _dispatch("plv")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, NDArray], float]", backend_fn)
+        fn = cast(
+            "Callable[[NDArray[np.float64], NDArray[np.float64]], float]",
+            backend_fn,
+        )
         a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
         b = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
         return float(fn(a, b))
@@ -188,7 +191,9 @@ def compute_plv(phases_a: NDArray, phases_b: NDArray) -> float:
     return float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b)))))
 
 
-def compute_layer_coherence(phases: NDArray, layer_mask: NDArray) -> float:
+def compute_layer_coherence(
+    phases: NDArray[np.float64], layer_mask: NDArray[np.int64]
+) -> float:
     """Order parameter R for the subset of oscillators selected by
     ``layer_mask`` (boolean mask *or* integer index array)."""
     mask = np.asarray(layer_mask)
@@ -200,7 +205,9 @@ def compute_layer_coherence(phases: NDArray, layer_mask: NDArray) -> float:
         return 0.0
     backend_fn = _dispatch("layer_coherence")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, NDArray], float]", backend_fn)
+        fn = cast(
+            "Callable[[NDArray[np.float64], NDArray[np.int64]], float]", backend_fn
+        )
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         return float(fn(p, indices))
 

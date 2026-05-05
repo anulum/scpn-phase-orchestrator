@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -17,6 +18,9 @@ from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = ["SparseUPDEEngine"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.integer[Any]]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -105,15 +109,15 @@ class SparseUPDEEngine:
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        row_ptr: NDArray,
-        col_indices: NDArray,
-        knm_values: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
         zeta: float,
         psi: float,
-        alpha_values: NDArray,
-    ) -> NDArray:
+        alpha_values: FloatArray,
+    ) -> FloatArray:
         """Advance phases by one sparse timestep, return new phases in [0, 2*pi).
 
         Args:
@@ -171,16 +175,16 @@ class SparseUPDEEngine:
 
     def run(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        row_ptr: NDArray,
-        col_indices: NDArray,
-        knm_values: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
         zeta: float,
         psi: float,
-        alpha_values: NDArray,
+        alpha_values: FloatArray,
         n_steps: int,
-    ) -> NDArray:
+    ) -> FloatArray:
         """Run multiple steps in a batch, return final phases.
 
         Args:
@@ -220,15 +224,15 @@ class SparseUPDEEngine:
 
     def _derivative(
         self,
-        theta: NDArray,
-        omegas: NDArray,
-        row_ptr: NDArray,
-        col_indices: NDArray,
-        knm_values: NDArray,
+        theta: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
         zeta: float,
         psi: float,
-        alpha_values: NDArray,
-    ) -> NDArray:
+        alpha_values: FloatArray,
+    ) -> FloatArray:
         """Internal UPDE derivative calculation (Python fallback)."""
         n = len(theta)
         dtheta = omegas.copy()
@@ -248,15 +252,15 @@ class SparseUPDEEngine:
 
     def _rk4_step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        row_ptr: NDArray,
-        col_indices: NDArray,
-        knm_values: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
         zeta: float,
         psi: float,
-        alpha_values: NDArray,
-    ) -> NDArray:
+        alpha_values: FloatArray,
+    ) -> FloatArray:
         """Single RK4 integration step (Python fallback for rk4/rk45)."""
         dt = self._dt
         args = (omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
@@ -264,23 +268,25 @@ class SparseUPDEEngine:
         k2 = self._derivative((phases + 0.5 * dt * k1) % TWO_PI, *args)
         k3 = self._derivative((phases + 0.5 * dt * k2) % TWO_PI, *args)
         k4 = self._derivative((phases + dt * k3) % TWO_PI, *args)
-        result: NDArray = (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+        result: FloatArray = (
+            phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
+        ) % TWO_PI
         return result
 
     def _euler_step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        row_ptr: NDArray,
-        col_indices: NDArray,
-        knm_values: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
         zeta: float,
         psi: float,
-        alpha_values: NDArray,
-    ) -> NDArray:
+        alpha_values: FloatArray,
+    ) -> FloatArray:
         """Single Euler integration step (Python fallback)."""
         dtheta = self._derivative(
             phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
         )
-        result: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
         return result

@@ -19,6 +19,7 @@ RK45 step calls.
 from __future__ import annotations
 
 import threading
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,6 +38,8 @@ __all__ = [
     "UPDEEngine",
     "upde_run",
 ]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class UPDEEngine:
@@ -113,13 +116,13 @@ class UPDEEngine:
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: FloatArray,
+    ) -> FloatArray:
         """Advance one UPDE integration step.
 
         Parameters
@@ -171,14 +174,14 @@ class UPDEEngine:
 
     def run(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
+        alpha: FloatArray,
         n_steps: int,
-    ) -> NDArray:
+    ) -> FloatArray:
         """Run n_steps, return final phases. Dispatches to the fastest
         available backend via the module-level ``upde_run``."""
         with self._lock:
@@ -197,7 +200,7 @@ class UPDEEngine:
                 self._rtol,
             )
 
-    def compute_order_parameter(self, phases: NDArray) -> tuple[float, float]:
+    def compute_order_parameter(self, phases: FloatArray) -> tuple[float, float]:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -205,10 +208,10 @@ class UPDEEngine:
 
     def _validate_inputs(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
-        alpha: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
+        alpha: FloatArray,
         zeta: float,
         psi: float,
     ) -> None:
@@ -230,13 +233,13 @@ class UPDEEngine:
 
     def _derivative(
         self,
-        theta: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        theta: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: FloatArray,
+    ) -> FloatArray:
         # Sakaguchi-Kuramoto coupling: K_ij sin(θ_j - θ_i - α_ij)
         # α_ij is the Sakaguchi phase-lag (Sakaguchi & Kuramoto 1986)
         np.subtract(theta[np.newaxis, :], theta[:, np.newaxis], out=self._phase_diff)
@@ -254,27 +257,27 @@ class UPDEEngine:
 
     def _euler_step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: FloatArray,
+    ) -> FloatArray:
         dtheta = self._derivative(phases, omegas, knm, zeta, psi, alpha)
         # Mod 2π keeps phases on S¹ (circle topology)
-        result: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
         return result
 
     def _rk4_step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: FloatArray,
+    ) -> FloatArray:
         # Classic RK4: 4th-order Runge-Kutta (1/6, 1/3, 1/3, 1/6 weights)
         dt = self._dt
         k1 = self._derivative(phases, omegas, knm, zeta, psi, alpha).copy()
@@ -286,17 +289,17 @@ class UPDEEngine:
         ).copy()
         k4 = self._derivative(phases + dt * k3, omegas, knm, zeta, psi, alpha)
         weighted = k1 + 2.0 * k2 + 2.0 * k3 + k4
-        result: NDArray = (phases + (dt / 6.0) * weighted) % TWO_PI
+        result: FloatArray = (phases + (dt / 6.0) * weighted) % TWO_PI
         return result
 
     def _rk45_stage_vector(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
+        alpha: FloatArray,
         dt: float,
     ) -> None:
         """Evaluate all 7 Dormand-Prince stages into ``self._ks``."""
@@ -309,13 +312,13 @@ class UPDEEngine:
 
     def _rk45_step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: FloatArray,
+    ) -> FloatArray:
         """Dormand-Prince RK45 with embedded error estimation and adaptive dt."""
         dt = self._last_dt
         max_reject = 3
@@ -336,12 +339,12 @@ class UPDEEngine:
             if err_norm <= 1.0:
                 factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
                 self._last_dt = min(dt * factor, self._dt * 10.0)
-                result: NDArray = y5 % TWO_PI
+                result: FloatArray = y5 % TWO_PI
                 return result
 
             factor = max(0.2, 0.9 * err_norm ** (-0.25))  # pragma: no cover
             dt = dt * factor  # pragma: no cover
 
         self._last_dt = dt  # pragma: no cover
-        result_fallback: NDArray = y5 % TWO_PI  # pragma: no cover
+        result_fallback: FloatArray = y5 % TWO_PI  # pragma: no cover
         return result_fallback  # pragma: no cover

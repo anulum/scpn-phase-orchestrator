@@ -36,8 +36,10 @@ import threading
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
@@ -79,6 +81,7 @@ __all__ = ["create_app", "SimulationState"]
 logger = logging.getLogger(__name__)
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
 HEALTH_CHECK_EXCEPTIONS = (
     RuntimeError,
     ValueError,
@@ -115,8 +118,8 @@ class SimulationState:
         self.step_count = 0
         self.amplitude_mode = spec.amplitude is not None
         self.sl_engine: StuartLandauEngine | None = None
-        self.sl_state: np.ndarray | None = None
-        self.mu: np.ndarray | None = None
+        self.sl_state: FloatArray | None = None
+        self.mu: FloatArray | None = None
 
         self.imprint_model: ImprintModel | None = None
         self.imprint_state: ImprintState | None = None

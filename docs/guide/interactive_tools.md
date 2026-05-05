@@ -1,6 +1,6 @@
 # Interactive Tools
 
-SPO ships with two interactive interfaces for exploring phase dynamics
+SPO ships with three interactive interfaces for exploring phase dynamics
 without writing code.
 
 ## SPO Studio (Streamlit)
@@ -32,6 +32,54 @@ Opens at `http://localhost:8501`.
 - **Domain exploration**: browse domainpacks before writing binding specs
 - **Parameter tuning**: find good K/ζ values for a new domain
 - **Demos**: live presentations without terminal commands
+
+## Binding Spec Studio (Streamlit)
+
+A compact helper for binding-spec editing and validation before running a domainpack.
+
+### Quick Start
+
+```bash
+streamlit run tools/binding_spec_studio.py
+```
+
+Opens at `http://localhost:8501`.
+
+### Features
+
+- **YAML load/save loop** — open an existing `binding_spec.yaml`, edit, and
+  save locally
+- **Live validation** — parses YAML and runs binding schema checks
+- **P/I/S mapping table** — inspect family/channel-to-driver assignments and
+  extra declared channels
+- **Preview output** — generate synthetic extractor previews for each family
+- **Resolved defaults** — inspect computed runtime binding defaults for quick
+  sanity checks
+- **Minimal scaffold** — write `binding_spec.yaml` and emit a reproducible
+  domainpack folder with baseline `README.md`
+
+## Policy Studio (Streamlit)
+
+An interactive builder for supervisor policy rules with validation and dry-run
+analysis.
+
+### Quick Start
+
+```bash
+streamlit run tools/policy_studio.py
+```
+
+Opens at `http://localhost:8501`.
+
+### Features
+
+- **Structured rule builder** — compose rule name, regimes, conditions, and knob
+  actions interactively with validated schema fields
+- **Cooldown + cap preview** — visualise per-rule fire limits over a step horizon
+- **Dry-run diagnostics** — upload `audit.jsonl` and inspect unreachable rules,
+  overlaps, collisions, and fire counts
+- **Binding-aware diagnostics** — validate rules against selected/loading or
+  uploaded binding specs before running production policies
 
 ## WASM Browser Demo
 

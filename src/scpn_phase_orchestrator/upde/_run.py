@@ -34,14 +34,14 @@ __all__ = ["ACTIVE_BACKEND", "AVAILABLE_BACKENDS", "upde_run"]
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray]:
+def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
     from spo_kernel import PyUPDEStepper  # noqa: F401
 
     def _rust_run(
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
-        alpha: NDArray,
+        phases: NDArray[np.float64],
+        omegas: NDArray[np.float64],
+        knm: NDArray[np.float64],
+        alpha: NDArray[np.float64],
         zeta: float,
         psi: float,
         dt: float,
@@ -50,7 +50,7 @@ def _load_rust_fn() -> Callable[..., NDArray]:
         n_substeps: int,
         atol: float,
         rtol: float,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         n = int(phases.size)
         stepper = PyUPDEStepper(
             n, dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
@@ -68,10 +68,11 @@ def _load_rust_fn() -> Callable[..., NDArray]:
             dtype=np.float64,
         )
 
-    return cast("Callable[..., NDArray]", _rust_run)
+    return cast("Callable[..., NDArray[np.float64]]", _rust_run)
 
 
-def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
+    # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._engine_mojo import (
         _ensure_exe,
         upde_run_mojo,
@@ -81,21 +82,23 @@ def _load_mojo_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
     return upde_run_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
+    # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._engine_julia import upde_run_julia
 
     return upde_run_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray]:  # pragma: no cover — toolchain
+def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
+    # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._engine_go import _load_lib, upde_run_go
 
     _load_lib()
     return upde_run_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., NDArray[np.float64]]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -118,17 +121,17 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray] | None:
+def _dispatch() -> Callable[..., NDArray[np.float64]] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
 
 
 def upde_run(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
+    knm: NDArray[np.float64],
+    alpha: NDArray[np.float64],
     zeta: float,
     psi: float,
     dt: float,
@@ -137,7 +140,7 @@ def upde_run(
     n_substeps: int = 1,
     atol: float = 1e-6,
     rtol: float = 1e-3,
-) -> NDArray:
+) -> NDArray[np.float64]:
     """Stateless batched UPDE integrator.
 
     Dispatches to the first available backend per the SPO chain

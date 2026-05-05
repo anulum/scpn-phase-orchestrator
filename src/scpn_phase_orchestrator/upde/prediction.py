@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -31,15 +32,17 @@ __all__ = [
     "VariationalState",
 ]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 @dataclass
 class PredictionState:
     """Snapshot of the forward prediction model after one update step."""
 
-    predicted_phases: NDArray
-    prediction_error: NDArray
+    predicted_phases: FloatArray
+    prediction_error: FloatArray
     mean_error: float
-    weights: NDArray
+    weights: FloatArray
 
 
 class PredictionModel:
@@ -67,11 +70,11 @@ class PredictionModel:
         self._lr = learning_rate
         self._error_gain = error_gain
         self._W = np.zeros((n_oscillators, n_oscillators), dtype=np.float64)
-        self._prev_phases: NDArray | None = None
-        self._prev_predicted: NDArray | None = None
+        self._prev_phases: FloatArray | None = None
+        self._prev_predicted: FloatArray | None = None
 
     @property
-    def weights(self) -> NDArray:
+    def weights(self) -> FloatArray:
         """Copy of the current learned weight matrix W."""
         return self._W.copy()
 
@@ -80,14 +83,16 @@ class PredictionModel:
         """Scaling factor applied to prediction error before injection."""
         return self._error_gain
 
-    def predict(self, phases: NDArray, omegas: NDArray, dt: float) -> NDArray:
+    def predict(self, phases: FloatArray, omegas: FloatArray, dt: float) -> FloatArray:
         """Predict phases at next timestep."""
         diff = phases[np.newaxis, :] - phases[:, np.newaxis]
         coupling_pred = np.sum(self._W * np.sin(diff), axis=1)
-        predicted: NDArray = (phases + dt * (omegas + coupling_pred)) % TWO_PI
+        predicted: FloatArray = (phases + dt * (omegas + coupling_pred)) % TWO_PI
         return predicted
 
-    def update(self, phases: NDArray, omegas: NDArray, dt: float) -> PredictionState:
+    def update(
+        self, phases: FloatArray, omegas: FloatArray, dt: float
+    ) -> PredictionState:
         """Compute prediction error and update weights.
 
         Call once per timestep AFTER the solver step.
@@ -126,7 +131,9 @@ class PredictionModel:
             weights=self._W.copy(),
         )
 
-    def error_coupling(self, phases: NDArray, omegas: NDArray, dt: float) -> NDArray:
+    def error_coupling(
+        self, phases: FloatArray, omegas: FloatArray, dt: float
+    ) -> FloatArray:
         """Prediction-error signal for injection into UPDE.
 
         Returns ε_gain · ε_i, where ε_i = θ_actual - θ̂_predicted.
@@ -137,7 +144,7 @@ class PredictionModel:
             return np.zeros(self._n)
         error = phases - self._prev_predicted
         error = (error + np.pi) % TWO_PI - np.pi
-        out: NDArray = self._error_gain * error
+        out: FloatArray = self._error_gain * error
         return out
 
     def reset(self) -> None:
@@ -151,10 +158,10 @@ class PredictionModel:
 class VariationalState:
     """Snapshot of the variational predictor after one update step."""
 
-    predicted_phases: NDArray
-    error: NDArray
+    predicted_phases: FloatArray
+    error: FloatArray
     free_energy: float
-    precision: NDArray
+    precision: FloatArray
     complexity: float
 
 
@@ -197,18 +204,21 @@ class VariationalPredictor:
         self._precision = np.full(n_oscillators, prior_precision, dtype=np.float64)
         self._prior_precision = prior_precision
         self._mu = np.zeros(n_oscillators, dtype=np.float64)
-        self._omegas: NDArray | None = None
-        self._error_history: list[NDArray] = []
+        self._omegas: FloatArray | None = None
+        self._error_history: list[FloatArray] = []
         # Exponential moving average decay for precision updates
         self._ema_alpha = 0.1
 
     @property
-    def precision(self) -> NDArray:
+    def precision(self) -> FloatArray:
         """Copy of the current per-oscillator precision vector."""
         return self._precision.copy()
 
     def free_energy(
-        self, predicted: NDArray, observed: NDArray, precision: NDArray
+        self,
+        predicted: FloatArray,
+        observed: FloatArray,
+        precision: FloatArray,
     ) -> float:
         """Variational free energy F.
 
@@ -226,7 +236,9 @@ class VariationalPredictor:
         complexity = float(np.sum(np.log(np.maximum(precision, 1e-12))))
         return accuracy + complexity
 
-    def update(self, phases: NDArray, omegas: NDArray, dt: float) -> VariationalState:
+    def update(
+        self, phases: FloatArray, omegas: FloatArray, dt: float
+    ) -> VariationalState:
         """One variational update step.
 
         1. Predict phases from current sufficient statistics mu.
@@ -277,7 +289,7 @@ class VariationalPredictor:
             complexity=complexity,
         )
 
-    def precision_weighted_coupling(self) -> NDArray:
+    def precision_weighted_coupling(self) -> FloatArray:
         """Precision matrix interpretable as K_ij.
 
         Under the FEP-Kuramoto correspondence (Friston 2010, Laplace

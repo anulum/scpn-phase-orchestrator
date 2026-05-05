@@ -31,19 +31,19 @@ def _ensure_exe() -> Path:
 
 
 def hypergraph_run_mojo(
-    phases: NDArray,
-    omegas: NDArray,
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
     n: int,
-    edge_nodes: NDArray,
-    edge_offsets: NDArray,
-    edge_strengths: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    edge_nodes: NDArray[np.int64],
+    edge_offsets: NDArray[np.int64],
+    edge_strengths: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    alpha_flat: NDArray[np.float64],
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     exe = _ensure_exe()
     en = np.asarray(edge_nodes).ravel()
     eo = np.asarray(edge_offsets).ravel()

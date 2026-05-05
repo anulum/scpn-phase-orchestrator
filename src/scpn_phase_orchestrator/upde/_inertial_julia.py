@@ -36,15 +36,15 @@ def _ensure() -> Any:
 
 
 def inertial_step_julia(
-    theta: NDArray,
-    omega_dot: NDArray,
-    power: NDArray,
-    knm_flat: NDArray,
-    inertia: NDArray,
-    damping: NDArray,
+    theta: NDArray[np.float64],
+    omega_dot: NDArray[np.float64],
+    power: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    inertia: NDArray[np.float64],
+    damping: NDArray[np.float64],
     n: int,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     jl = _ensure()
     new_theta, new_omega_dot = jl.inertial_step(
         np.ascontiguousarray(theta, dtype=np.float64),

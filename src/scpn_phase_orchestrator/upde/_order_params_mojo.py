@@ -54,7 +54,7 @@ def _run(payload: str) -> list[float]:
     return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def order_parameter_mojo(phases: NDArray) -> tuple[float, float]:
+def order_parameter_mojo(phases: NDArray[np.float64]) -> tuple[float, float]:
     if phases.size == 0:
         return (0.0, 0.0)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
@@ -66,7 +66,7 @@ def order_parameter_mojo(phases: NDArray) -> tuple[float, float]:
     return float(result[0]), float(result[1])
 
 
-def plv_mojo(phases_a: NDArray, phases_b: NDArray) -> float:
+def plv_mojo(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
     if phases_a.size == 0 or phases_b.size == 0:
         return 0.0
     if phases_a.size != phases_b.size:
@@ -82,7 +82,9 @@ def plv_mojo(phases_a: NDArray, phases_b: NDArray) -> float:
     return float(result[0])
 
 
-def layer_coherence_mojo(phases: NDArray, indices: NDArray) -> float:
+def layer_coherence_mojo(
+    phases: NDArray[np.float64], indices: NDArray[np.int64]
+) -> float:
     if indices.size == 0:
         return 0.0
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

@@ -37,6 +37,7 @@ the N_points × dispatch-call path.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -63,6 +64,7 @@ __all__ = [
     "find_critical_coupling",
     "trace_sync_transition",
 ]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -78,20 +80,20 @@ class BifurcationDiagram:
     K_critical: float | None = None
 
     @property
-    def K_values(self) -> NDArray:
+    def K_values(self) -> FloatArray:
         return np.array([p.K for p in self.points])
 
     @property
-    def R_values(self) -> NDArray:
+    def R_values(self) -> FloatArray:
         return np.array([p.R for p in self.points])
 
 
 def _steady_state_R_dispatch(
-    phases_init: NDArray,
-    omegas: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
     K_scale: float,
-    knm_template: NDArray,
-    alpha: NDArray,
+    knm_template: FloatArray,
+    alpha: FloatArray,
     dt: float,
     n_transient: int,
     n_measure: int,
@@ -116,9 +118,9 @@ def _steady_state_R_dispatch(
 
 
 def trace_sync_transition(
-    omegas: NDArray,
-    knm_template: NDArray | None = None,
-    alpha: NDArray | None = None,
+    omegas: FloatArray,
+    knm_template: FloatArray | None = None,
+    alpha: FloatArray | None = None,
     K_range: tuple[float, float] = (0.0, 5.0),
     n_points: int = 50,
     dt: float = 0.01,
@@ -219,8 +221,8 @@ def trace_sync_transition(
 
 
 def find_critical_coupling(
-    omegas: NDArray,
-    knm_template: NDArray | None = None,
+    omegas: FloatArray,
+    knm_template: FloatArray | None = None,
     dt: float = 0.01,
     n_transient: int = 3000,
     n_measure: int = 1000,

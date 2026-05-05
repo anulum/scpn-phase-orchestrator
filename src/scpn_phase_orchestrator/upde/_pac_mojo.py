@@ -46,7 +46,9 @@ def _run(payload: str) -> list[float]:
     return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def modulation_index_mojo(theta_low: NDArray, amp_high: NDArray, n_bins: int) -> float:
+def modulation_index_mojo(
+    theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int
+) -> float:
     t = np.ascontiguousarray(theta_low.ravel(), dtype=np.float64)
     a = np.ascontiguousarray(amp_high.ravel(), dtype=np.float64)
     n = int(min(t.size, a.size))
@@ -60,12 +62,12 @@ def modulation_index_mojo(theta_low: NDArray, amp_high: NDArray, n_bins: int) ->
 
 
 def pac_matrix_mojo(
-    phases_flat: NDArray,
-    amplitudes_flat: NDArray,
+    phases_flat: NDArray[np.float64],
+    amplitudes_flat: NDArray[np.float64],
     t: int,
     n: int,
     n_bins: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     p = np.ascontiguousarray(phases_flat, dtype=np.float64)
     a = np.ascontiguousarray(amplitudes_flat, dtype=np.float64)
     tokens = ["MAT", str(t), str(n), str(n_bins)]

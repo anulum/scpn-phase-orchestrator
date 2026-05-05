@@ -35,7 +35,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -43,6 +43,7 @@ from numpy.typing import NDArray
 __all__ = ["SynapseChannelBridge", "AgentState"]
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -147,7 +148,7 @@ class SynapseChannelBridge:
         elif msg_type == "chat":
             state.message_count += 1
 
-    def get_phases(self) -> NDArray:
+    def get_phases(self) -> FloatArray:
         """Extract current oscillator phases from agent activity.
 
         P-channel: phase advances at heartbeat frequency.
@@ -169,7 +170,7 @@ class SynapseChannelBridge:
 
         return phases
 
-    def get_coupling(self) -> NDArray:
+    def get_coupling(self) -> FloatArray:
         """Compute coupling from shared task context.
 
         Agents working on related tasks couple strongly.

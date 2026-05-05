@@ -27,11 +27,13 @@ from __future__ import annotations
 import json
 import urllib.request
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["RemanentiaBridge", "CoherenceMemorySnapshot"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -176,7 +178,7 @@ class RemanentiaBridge:
         self,
         queries: list[str],
         scale: float = 0.5,
-    ) -> NDArray:
+    ) -> FloatArray:
         """Convert per-agent novelty scores to coupling adjustment.
 
         Each agent's recent work is queried against Remanentia.

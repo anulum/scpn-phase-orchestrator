@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from numbers import Integral
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -16,6 +17,7 @@ from numpy.typing import NDArray
 __all__ = ["FusionCoreBridge"]
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
 
 BETA_N_LIMIT = 2.8  # Troyon no-wall limit
 Q_MIN_STABLE = 1.0  # Kruskal-Shafranov limit
@@ -52,7 +54,7 @@ class FusionCoreBridge:
             )
         self._n_layers = int(n_layers)
 
-    def observables_to_phases(self, snapshot: dict) -> NDArray:
+    def observables_to_phases(self, snapshot: dict) -> FloatArray:
         """Map 6 fusion observables to [0, 2*pi) phases.
 
         Observable → Phase formula:
@@ -87,7 +89,11 @@ class FusionCoreBridge:
 
         return phases[: self._n_layers]
 
-    def phases_to_feedback(self, phases: NDArray, omegas: NDArray) -> dict:
+    def phases_to_feedback(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+    ) -> dict:
         """Convert phase state back to feedback signals for the equilibrium solver."""
         n = min(len(phases), self._n_layers)
         z = np.exp(1j * phases[:n])

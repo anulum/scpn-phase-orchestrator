@@ -95,17 +95,20 @@ nav:
       - Boundary Contract: specs/boundary_contract.md
       - Action Compose: specs/action_compose.md
       - Eval Protocol: specs/eval_protocol.md
+      - Resolved Runtime Defaults: specs/resolved_runtime_defaults.md
       - Plugin API: specs/plugin_api.md
       - Policy DSL: specs/policy_dsl.md
       - Imprint Dynamics: specs/imprint_dynamics.md
       - Geometry Constraints: specs/geometry_constraints.md
       - Knm Calibration: specs/knm_calibration.md
       - Audit Trace: specs/audit_trace.md
-  - Tutorials:
+      - Tutorials:
       - "01 — New Domain Checklist": tutorials/01_new_domain_checklist.md
       - "02 — Oscillator Hunt Sheet": tutorials/02_oscillator_hunt_sheet.md
       - "03 — Build Knm Templates": tutorials/03_build_knm_templates.md
       - "04 — Differentiable Kuramoto": tutorials/04_differentiable_kuramoto.md
+      - "05 — End-to-End From Raw Sources": tutorials/05_from_raw_sources_to_run.md
+      - "06 — Deterministic Replay for Debugging": tutorials/06_deterministic_replay_for_debugging.md
   - API Reference:
       - Overview: reference/api/index.md
       - Core & Exceptions: reference/api/core.md
@@ -153,6 +156,8 @@ nav:
       - CLI Reference: reference/cli.md
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md
+      - Cardiac Rhythm Benchmark: galleries/cardiac_rhythm_benchmark.md
+      - Power Grid Benchmark: galleries/power_grid_benchmark.md
       - Capabilities & Use Cases: galleries/capabilities.md
   - Reference:
       - Assumptions & Constants: ASSUMPTIONS.md

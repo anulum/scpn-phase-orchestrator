@@ -124,7 +124,9 @@ def _dispatch(fn_name: str) -> object:
         return None
 
 
-def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) -> float:
+def modulation_index(
+    theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int = 18
+) -> float:
     """Phase-amplitude coupling via Tort et al. 2010, J. Neurophysiol.
 
     Bins amplitude by phase, computes KL divergence from uniform,
@@ -138,7 +140,10 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
 
     backend_fn = _dispatch("modulation_index")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray, NDArray, int], float]", backend_fn)
+        fn = cast(
+            "Callable[[NDArray[np.float64], NDArray[np.float64], int], float]",
+            backend_fn,
+        )
         return float(
             fn(
                 np.ascontiguousarray(theta_low, dtype=np.float64),
@@ -174,10 +179,10 @@ def modulation_index(theta_low: NDArray, amp_high: NDArray, n_bins: int = 18) ->
 
 
 def pac_matrix(
-    phases_history: NDArray,
-    amplitudes_history: NDArray,
+    phases_history: NDArray[np.float64],
+    amplitudes_history: NDArray[np.float64],
     n_bins: int = 18,
-) -> NDArray:
+) -> NDArray[np.float64]:
     """``(N, N)`` PAC matrix. Entry ``[i, j]`` is
     ``MI(phase_i, amplitude_j)`` over the ``T`` timesteps.
 
@@ -195,7 +200,10 @@ def pac_matrix(
     backend_fn = _dispatch("pac_matrix")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray, NDArray, int, int, int], NDArray]",
+            (
+                "Callable[[NDArray[np.float64], NDArray[np.float64], int, int, int],"
+                " NDArray[np.float64]]"
+            ),
             backend_fn,
         )
         flat = fn(

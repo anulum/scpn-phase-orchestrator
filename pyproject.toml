@@ -61,7 +61,13 @@ nengo = []  # pure-numpy LIF engine, no external deps
 lava = ["lava-nc>=0.9"]
 otel = ["opentelemetry-api>=1.20,<2.0", "opentelemetry-sdk>=1.20,<2.0"]
 plot = ["matplotlib>=3.7,<4.0"]
-notebook = ["jupyter>=1.0,<2.0", "nbconvert>=7.0,<8.0", "matplotlib>=3.7,<4.0"]
+notebook = [
+    "jupyter>=1.0,<2.0",
+    "jupyterlab>=4.5.7,<5.0",
+    "notebook>=7.5.6,<8.0",
+    "nbconvert>=7.0,<8.0",
+    "matplotlib>=3.7,<4.0",
+]
 full = [
     "neurolib>=0.6,<1.0",
     "grpcio>=1.60,<2.0",

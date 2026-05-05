@@ -17,9 +17,15 @@ SCADA: Modbus TCP via pymodbus. Install: pip install pymodbus
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator.adapters._schema import (
+    require_non_empty_str,
+    require_tcp_port,
+)
 
 __all__ = [
     "BrainFlowAdapter",
@@ -29,6 +35,8 @@ __all__ = [
     "HAS_BRAINFLOW",
     "HAS_MODBUS",
 ]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 try:
     # type ignore: BrainFlow is optional and lacks complete typing metadata.
@@ -58,14 +66,14 @@ class SampleBuffer:
 
     capacity: int
     n_channels: int
-    buffer: NDArray = field(init=False)
+    buffer: FloatArray = field(init=False)
     write_idx: int = field(init=False, default=0)
     count: int = field(init=False, default=0)
 
     def __post_init__(self) -> None:
         self.buffer = np.zeros((self.n_channels, self.capacity))
 
-    def push(self, samples: NDArray) -> None:
+    def push(self, samples: FloatArray) -> None:
         """Push (n_channels, n_samples) into the ring buffer."""
         if samples.ndim != 2:
             raise ValueError(
@@ -85,7 +93,7 @@ class SampleBuffer:
             self.write_idx += 1
         self.count = min(self.count + n_samples, self.capacity)
 
-    def get_recent(self, n: int) -> NDArray:
+    def get_recent(self, n: int) -> FloatArray:
         """Get the last n samples as (n_channels, n)."""
         n = min(n, self.count)
         if n == 0:
@@ -156,13 +164,13 @@ class BrainFlowAdapter:  # pragma: no cover
             self._board.release_session()
             self._running = False
 
-    def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> NDArray:
+    def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> FloatArray:
         """Get recent samples from one EEG channel."""
         data = self._board.get_current_board_data(n_samples)
         ch = self._eeg_channels[channel_idx]
         return np.asarray(data[ch])
 
-    def get_all_eeg(self, n_samples: int = 256) -> NDArray:
+    def get_all_eeg(self, n_samples: int = 256) -> FloatArray:
         """Get (n_eeg_channels, n_samples) of recent EEG data."""
         data = self._board.get_current_board_data(n_samples)
         return np.asarray(data[self._eeg_channels])
@@ -178,7 +186,7 @@ class SimulatedBoardAdapter:
         self,
         n_channels: int = 8,
         sample_rate: int = 256,
-        frequencies: NDArray | None = None,
+        frequencies: FloatArray | None = None,
     ) -> None:
         self._n_channels = n_channels
         self._sample_rate = sample_rate
@@ -209,14 +217,14 @@ class SimulatedBoardAdapter:
         """Mark the simulated board as stopped."""
         self._running = False
 
-    def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> NDArray:
+    def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> FloatArray:
         """Return synthetic sinusoidal samples for one channel."""
         sr = self._sample_rate
         t = np.arange(n_samples) / sr + self._t
         self._t += n_samples / sr
         return np.asarray(np.sin(2.0 * np.pi * self._freqs[channel_idx] * t))
 
-    def get_all_eeg(self, n_samples: int = 256) -> NDArray:
+    def get_all_eeg(self, n_samples: int = 256) -> FloatArray:
         """Return synthetic (n_channels, n_samples) sinusoidal data."""
         sr = self._sample_rate
         t = np.arange(n_samples) / sr + self._t
@@ -238,7 +246,10 @@ class ModbusAdapter:  # pragma: no cover
         if not HAS_MODBUS:
             msg = "pymodbus not installed. pip install pymodbus"
             raise ImportError(msg)
-        self._client = ModbusTcpClient(host, port=port)
+        host_text = require_non_empty_str(host, field="Modbus host")
+        self._host = host_text
+        self._port = require_tcp_port(port, field="Modbus port")
+        self._client = ModbusTcpClient(host_text, port=self._port)
         self._connected = False
 
     def connect(self) -> None:
@@ -252,7 +263,7 @@ class ModbusAdapter:  # pragma: no cover
             self._client.close()
             self._connected = False
 
-    def read_holding_registers(self, address: int, count: int = 1) -> NDArray:
+    def read_holding_registers(self, address: int, count: int = 1) -> FloatArray:
         """Read holding registers, return as float64 array."""
         if address < 0:
             raise ValueError("address must be >= 0")

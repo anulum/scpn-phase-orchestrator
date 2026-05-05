@@ -45,6 +45,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Real
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -60,6 +61,8 @@ try:
     _HAS_RUST_SCALAR = True
 except ImportError:
     _HAS_RUST_SCALAR = False
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -319,7 +322,7 @@ class OttAntonsenReduction:
 
     def predict_from_oscillators(
         self,
-        omegas: NDArray,
+        omegas: FloatArray,
         K: float,
     ) -> OAState:
         """Fit Lorentzian to ``omegas`` (median → ω₀,

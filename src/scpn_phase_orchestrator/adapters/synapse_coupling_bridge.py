@@ -29,6 +29,7 @@ Requires: pip install sc-neurocore>=3.13.0
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,15 +38,16 @@ __all__ = [
     "SynapseCouplingBridge",
     "SynapseSnapshot",
 ]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
 class SynapseSnapshot:
     """Snapshot of synapse state mapped to SPO parameters."""
 
-    knm_delta: NDArray
-    gap_coupling: NDArray
-    astrocyte_modulation: NDArray
+    knm_delta: FloatArray
+    gap_coupling: FloatArray
+    astrocyte_modulation: FloatArray
     mean_weight_change: float
     mean_conductance: float
     mean_ca: float
@@ -83,12 +85,21 @@ class SynapseCouplingBridge:
         self._gap_scale = gap_scale
         self._ca_scale = ca_scale
 
-        self._stdp_weights: NDArray = np.zeros((n_oscillators, n_oscillators))
-        self._prev_weights: NDArray = np.zeros((n_oscillators, n_oscillators))
-        self._gap_conductances: NDArray = np.zeros((n_oscillators, n_oscillators))
-        self._ca_levels: NDArray = np.zeros(n_oscillators)
+        self._stdp_weights: FloatArray = np.zeros(
+            (n_oscillators, n_oscillators),
+            dtype=np.float64,
+        )
+        self._prev_weights: FloatArray = np.zeros(
+            (n_oscillators, n_oscillators),
+            dtype=np.float64,
+        )
+        self._gap_conductances: FloatArray = np.zeros(
+            (n_oscillators, n_oscillators),
+            dtype=np.float64,
+        )
+        self._ca_levels: FloatArray = np.zeros(n_oscillators, dtype=np.float64)
 
-    def update_stdp_weights(self, weights: NDArray) -> None:
+    def update_stdp_weights(self, weights: FloatArray) -> None:
         """Feed current STDP weight matrix from sc-neurocore.
 
         The bridge computes dW = weights - prev_weights and maps
@@ -97,7 +108,7 @@ class SynapseCouplingBridge:
         self._prev_weights = self._stdp_weights.copy()
         self._stdp_weights = np.asarray(weights, dtype=np.float64)
 
-    def update_gap_conductances(self, conductances: NDArray) -> None:
+    def update_gap_conductances(self, conductances: FloatArray) -> None:
         """Feed gap junction conductance matrix.
 
         Symmetric: g_c(i,j) = g_c(j,i). Maps directly to K_ij.
@@ -106,7 +117,7 @@ class SynapseCouplingBridge:
         self._gap_conductances = 0.5 * (g + g.T)
         np.fill_diagonal(self._gap_conductances, 0.0)
 
-    def update_astrocyte_ca(self, ca_levels: NDArray) -> None:
+    def update_astrocyte_ca(self, ca_levels: FloatArray) -> None:
         """Feed astrocyte Ca²⁺ concentration per oscillator.
 
         High Ca²⁺ → strong imprint modulation (facilitates learning).
@@ -136,16 +147,16 @@ class SynapseCouplingBridge:
             mean_ca=float(np.mean(self._ca_levels)),
         )
 
-    def apply_to_knm(self, knm_base: NDArray) -> NDArray:
+    def apply_to_knm(self, knm_base: FloatArray) -> FloatArray:
         """Apply all synapse-derived modifications to a base K_nm."""
         snap = self.snapshot()
         knm = knm_base + snap.knm_delta + snap.gap_coupling
-        result: NDArray = np.maximum(knm, 0.0)
+        result: FloatArray = np.maximum(knm, 0.0)
         np.fill_diagonal(result, 0.0)
         return result
 
-    def apply_to_imprint(self, m_k: NDArray) -> NDArray:
+    def apply_to_imprint(self, m_k: FloatArray) -> FloatArray:
         """Modulate imprint vector by astrocyte Ca²⁺ levels."""
         snap = self.snapshot()
-        result: NDArray = m_k * (1.0 + snap.astrocyte_modulation)
+        result: FloatArray = m_k * (1.0 + snap.astrocyte_modulation)
         return result

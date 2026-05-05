@@ -44,13 +44,13 @@ def _ensure_julia_loaded() -> Any:
     return _JULIA_MODULE
 
 
-def order_parameter_julia(phases: NDArray) -> tuple[float, float]:
+def order_parameter_julia(phases: NDArray[np.float64]) -> tuple[float, float]:
     jl = _ensure_julia_loaded()
     r, psi = jl.order_parameter(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
     return float(r), float(psi)
 
 
-def plv_julia(phases_a: NDArray, phases_b: NDArray) -> float:
+def plv_julia(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
     jl = _ensure_julia_loaded()
     return float(
         jl.plv(
@@ -60,7 +60,9 @@ def plv_julia(phases_a: NDArray, phases_b: NDArray) -> float:
     )
 
 
-def layer_coherence_julia(phases: NDArray, indices: NDArray) -> float:
+def layer_coherence_julia(
+    phases: NDArray[np.float64], indices: NDArray[np.int64]
+) -> float:
     jl = _ensure_julia_loaded()
     return float(
         jl.layer_coherence(

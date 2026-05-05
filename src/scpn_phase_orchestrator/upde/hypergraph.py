@@ -80,23 +80,23 @@ class Hyperedge:
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray]:
+def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
     from spo_kernel import hypergraph_run_rust
 
     def _rust(
-        phases: NDArray,
-        omegas: NDArray,
+        phases: NDArray[np.float64],
+        omegas: NDArray[np.float64],
         n: int,
-        edge_nodes: NDArray,
-        edge_offsets: NDArray,
-        edge_strengths: NDArray,
-        knm_flat: NDArray,
-        alpha_flat: NDArray,
+        edge_nodes: NDArray[np.int64],
+        edge_offsets: NDArray[np.int64],
+        edge_strengths: NDArray[np.float64],
+        knm_flat: NDArray[np.float64],
+        alpha_flat: NDArray[np.float64],
         zeta: float,
         psi: float,
         dt: float,
         n_steps: int,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         return np.asarray(
             hypergraph_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -118,7 +118,7 @@ def _load_rust_fn() -> Callable[..., NDArray]:
     return _rust
 
 
-def _load_mojo_fn() -> Callable[..., NDArray]:
+def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._hypergraph_mojo import (
         _ensure_exe,
@@ -129,7 +129,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:
     return hypergraph_run_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray]:
+def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._hypergraph_julia import (
@@ -139,7 +139,7 @@ def _load_julia_fn() -> Callable[..., NDArray]:
     return hypergraph_run_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray]:
+def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._hypergraph_go import (
         _load_lib,
@@ -150,7 +150,7 @@ def _load_go_fn() -> Callable[..., NDArray]:
     return hypergraph_run_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., NDArray[np.float64]]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -173,26 +173,26 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray] | None:
+def _dispatch() -> Callable[..., NDArray[np.float64]] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
 
 
 def _python_run(
-    phases: NDArray,
-    omegas: NDArray,
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
     n: int,
-    edge_nodes: NDArray,
-    edge_offsets: NDArray,
-    edge_strengths: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    edge_nodes: NDArray[np.int64],
+    edge_offsets: NDArray[np.int64],
+    edge_strengths: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    alpha_flat: NDArray[np.float64],
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     """Python reference aligned to the Rust kernel.
 
     Uses the ``sin(θ_j − θ_i) = s_j·c_i − c_j·s_i`` expansion for
@@ -276,7 +276,9 @@ class HypergraphEngine:
     def n_edges(self) -> int:
         return len(self._hyperedges)
 
-    def _encode_edges(self) -> tuple[NDArray, NDArray, NDArray]:
+    def _encode_edges(
+        self,
+    ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
         edge_nodes_list: list[int] = []
         edge_offsets_list: list[int] = []
         edge_strengths_list: list[float] = []
@@ -292,13 +294,13 @@ class HypergraphEngine:
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        pairwise_knm: NDArray | None = None,
-        alpha: NDArray | None = None,
+        phases: NDArray[np.float64],
+        omegas: NDArray[np.float64],
+        pairwise_knm: NDArray[np.float64] | None = None,
+        alpha: NDArray[np.float64] | None = None,
         zeta: float = 0.0,
         psi: float = 0.0,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """One explicit-Euler step."""
         return self.run(
             phases,
@@ -312,14 +314,14 @@ class HypergraphEngine:
 
     def run(
         self,
-        phases: NDArray,
-        omegas: NDArray,
+        phases: NDArray[np.float64],
+        omegas: NDArray[np.float64],
         n_steps: int,
-        pairwise_knm: NDArray | None = None,
-        alpha: NDArray | None = None,
+        pairwise_knm: NDArray[np.float64] | None = None,
+        alpha: NDArray[np.float64] | None = None,
         zeta: float = 0.0,
         psi: float = 0.0,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Integrate ``n_steps`` Euler steps through the fastest
         available backend; return final phases."""
         en, eo, es = self._encode_edges()
@@ -364,6 +366,6 @@ class HypergraphEngine:
             int(n_steps),
         )
 
-    def order_parameter(self, phases: NDArray) -> float:
+    def order_parameter(self, phases: NDArray[np.float64]) -> float:
         """Standard Kuramoto R = |<exp(iθ)>|."""
         return float(np.abs(np.mean(np.exp(1j * phases))))

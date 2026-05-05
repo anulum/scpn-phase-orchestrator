@@ -53,10 +53,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def market_order_parameter_go(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat, dtype=np.float64)
     out = np.zeros(int(t), dtype=np.float64)
@@ -72,11 +72,11 @@ def market_order_parameter_go(
 
 
 def market_plv_go(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
     window: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     lib = _load_lib()
     n_windows = int(t) - int(window) + 1
     p = np.ascontiguousarray(phases_flat, dtype=np.float64)

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -27,6 +28,7 @@ from numpy.typing import NDArray
 __all__ = ["attnres_modulate_mojo"]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "attnres_mojo"
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _ensure_exe() -> Path:
@@ -39,18 +41,18 @@ def _ensure_exe() -> Path:
 
 
 def attnres_modulate_mojo(
-    knm_flat: NDArray,
-    theta: NDArray,
-    w_q: NDArray,
-    w_k: NDArray,
-    w_v: NDArray,
-    w_o: NDArray,
+    knm_flat: FloatArray,
+    theta: FloatArray,
+    w_q: FloatArray,
+    w_k: FloatArray,
+    w_v: FloatArray,
+    w_o: FloatArray,
     n: int,
     n_heads: int,
     block_size: int,
     temperature: float,
     lambda_: float,
-) -> NDArray:
+) -> FloatArray:
     """Mojo-backed multi-head AttnRes. Signature matches the Rust FFI.
 
     Pays a subprocess spawn + text-serialisation cost; used as the

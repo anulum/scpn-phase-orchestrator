@@ -36,10 +36,10 @@ def _ensure() -> Any:
 
 
 def market_order_parameter_julia(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     jl = _ensure()
     result = jl.market_order_parameter(
         np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -50,11 +50,11 @@ def market_order_parameter_julia(
 
 
 def market_plv_julia(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
     window: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     jl = _ensure()
     result = jl.market_plv(
         np.ascontiguousarray(phases_flat, dtype=np.float64),

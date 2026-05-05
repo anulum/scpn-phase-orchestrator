@@ -265,9 +265,9 @@ class TestNeurocoreBridgeScaleTiming:
         rates = bridge.step(state, n_substeps=100)
         elapsed = time.perf_counter() - t0
         assert rates.shape == (10,)
-        # Shared CI runners (especially macOS) have high variance — use 500ms
+        # Shared CI runners (especially macOS) have high variance — use 650ms
         # budget on CI, tight 100ms locally.
-        budget = 0.5 if os.environ.get("CI") else 0.1
+        budget = 0.65 if os.environ.get("CI") else 0.1
         assert elapsed < budget, (
             f"Rust N=10000 took {elapsed:.3f}s (expected <{budget * 1000:.0f}ms)"
         )

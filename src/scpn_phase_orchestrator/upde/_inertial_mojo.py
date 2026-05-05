@@ -31,15 +31,15 @@ def _ensure_exe() -> Path:
 
 
 def inertial_step_mojo(
-    theta: NDArray,
-    omega_dot: NDArray,
-    power: NDArray,
-    knm_flat: NDArray,
-    inertia: NDArray,
-    damping: NDArray,
+    theta: NDArray[np.float64],
+    omega_dot: NDArray[np.float64],
+    power: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    inertia: NDArray[np.float64],
+    damping: NDArray[np.float64],
     n: int,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     exe = _ensure_exe()
     tokens: list[str] = ["INERT", str(int(n)), repr(float(dt))]
     for arr in (theta, omega_dot, power):

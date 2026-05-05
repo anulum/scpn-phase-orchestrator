@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import threading
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -18,7 +19,17 @@ from scpn_phase_orchestrator._compat import TWO_PI
 __all__ = ["StuartLandauEngine"]
 
 # Type alias for the ODE parameter bundle passed to _derivative
-_Params = tuple[NDArray, NDArray, NDArray, NDArray, float, float, NDArray, float]
+FloatArray: TypeAlias = NDArray[np.float64]
+_Params = tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    float,
+    float,
+    FloatArray,
+    float,
+]
 
 
 class StuartLandauEngine:
@@ -103,16 +114,16 @@ class StuartLandauEngine:
 
     def step(
         self,
-        state: NDArray,
-        omegas: NDArray,
-        mu: NDArray,
-        knm: NDArray,
-        knm_r: NDArray,
+        state: FloatArray,
+        omegas: FloatArray,
+        mu: FloatArray,
+        knm: FloatArray,
+        knm_r: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
+        alpha: FloatArray,
         epsilon: float = 1.0,
-    ) -> NDArray:
+    ) -> FloatArray:
         """Advance (θ, r) by one timestep. Returns new state (2N,)."""
         self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
         with self._lock:
@@ -139,26 +150,26 @@ class StuartLandauEngine:
                 return self._rk45_step(state, p)
             return self._rk4_step(state, p)
 
-    def compute_order_parameter(self, state: NDArray) -> tuple[float, float]:
+    def compute_order_parameter(self, state: FloatArray) -> tuple[float, float]:
         """Amplitude-weighted Kuramoto: Z = mean(r_i · exp(i·θ_i))."""
         n = self._n
         z = np.mean(state[n:] * np.exp(1j * state[:n]))
         return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
-    def compute_mean_amplitude(self, state: NDArray) -> float:
+    def compute_mean_amplitude(self, state: FloatArray) -> float:
         """Mean amplitude across all oscillators."""
         return float(np.mean(state[self._n :]))
 
     def _validate(
         self,
-        state: NDArray,
-        omegas: NDArray,
-        mu: NDArray,
-        knm: NDArray,
-        knm_r: NDArray,
+        state: FloatArray,
+        omegas: FloatArray,
+        mu: FloatArray,
+        knm: FloatArray,
+        knm_r: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
+        alpha: FloatArray,
         epsilon: float = 1.0,
     ) -> None:
         n = self._n
@@ -191,7 +202,7 @@ class StuartLandauEngine:
         if not np.isfinite(epsilon):
             raise ValueError("epsilon must be finite")
 
-    def _derivative(self, state: NDArray, p: _Params) -> NDArray:
+    def _derivative(self, state: FloatArray, p: _Params) -> FloatArray:
         omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon = p
         n = self._n
         theta = state[:n]
@@ -231,17 +242,17 @@ class StuartLandauEngine:
         self._scratch_deriv[n:] = self._scratch_dr
         return self._scratch_deriv
 
-    def _post_step(self, state: NDArray) -> NDArray:
+    def _post_step(self, state: FloatArray) -> FloatArray:
         n = self._n
         state[:n] %= TWO_PI  # Phase on S¹
         np.maximum(state[n:], 0.0, out=state[n:])  # r >= 0 (physical amplitude)
         return state
 
-    def _euler_step(self, state: NDArray, p: _Params) -> NDArray:
+    def _euler_step(self, state: FloatArray, p: _Params) -> FloatArray:
         deriv = self._derivative(state, p)
         return self._post_step(state + self._dt * deriv)
 
-    def _rk4_step(self, state: NDArray, p: _Params) -> NDArray:
+    def _rk4_step(self, state: FloatArray, p: _Params) -> FloatArray:
         dt = self._dt
         k1 = self._derivative(state, p).copy()
         k2 = self._derivative(state + 0.5 * dt * k1, p).copy()
@@ -250,7 +261,7 @@ class StuartLandauEngine:
         weighted = k1 + 2.0 * k2 + 2.0 * k3 + k4
         return self._post_step(state + (dt / 6.0) * weighted)
 
-    def _rk45_step(self, state: NDArray, p: _Params) -> NDArray:
+    def _rk45_step(self, state: FloatArray, p: _Params) -> FloatArray:
         dt = self._last_dt
         A = self._DP_A
         ks = self._ks

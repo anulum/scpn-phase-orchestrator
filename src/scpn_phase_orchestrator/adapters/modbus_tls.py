@@ -17,6 +17,11 @@ from __future__ import annotations
 import ssl
 from pathlib import Path
 
+from scpn_phase_orchestrator.adapters._schema import (
+    require_non_empty_str,
+    require_tcp_port,
+)
+
 __all__ = ["SecureModbusAdapter", "HAS_PYMODBUS"]
 
 try:
@@ -57,8 +62,8 @@ class SecureModbusAdapter:
         tls_key_path: str | Path,
         ca_cert_path: str | Path | None = None,
     ) -> None:
-        self._host = host
-        self._port = port
+        self._host = require_non_empty_str(host, field="Modbus host")
+        self._port = require_tcp_port(port, field="Modbus port")
         self._cert = Path(tls_cert_path)
         self._key = Path(tls_key_path)
         self._ca = Path(ca_cert_path) if ca_cert_path is not None else None
