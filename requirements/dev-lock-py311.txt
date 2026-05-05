@@ -1284,12 +1284,13 @@ jupyter-server-terminals==0.5.4 \
     --hash=sha256:55be353fc74a80bc7f3b20e6be50a55a61cd525626f578dcb66a5708e2007d14 \
     --hash=sha256:bbda128ed41d0be9020349f9f1f2a4ab9952a73ed5f5ac9f1419794761fb87f5
     # via jupyter-server
-jupyterlab==4.5.6 \
-    --hash=sha256:642fe2cfe7f0f5922a8a558ba7a0d246c7bc133b708dfe43f7b3a826d163cf42 \
-    --hash=sha256:d6b3dac883aa4d9993348e0f8e95b24624f75099aed64eab6a4351a9cdd1e580
+jupyterlab==4.5.7 \
+    --hash=sha256:55a9822c4754da305f41e113452c68383e214dcf96de760146af89ce5d5117b0 \
+    --hash=sha256:fba4cb0e2c44a52859669d8c98b45de029d5e515f8407bf8534d2a8fc5f0964d
     # via
     #   jupyter
     #   notebook
+    #   scpn-phase-orchestrator (pyproject.toml)
 jupyterlab-pygments==0.3.0 \
     --hash=sha256:721aca4d9029252b11cfa9d185e5b5af4d54772bb8072f9b7036f4170054d35d \
     --hash=sha256:841a89020971da1d8693f1a99997aefc5dc424bb1b251fd6322462a1b8842780
@@ -2082,10 +2083,12 @@ nodeenv==1.10.0 \
     --hash=sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827 \
     --hash=sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb
     # via pre-commit
-notebook==7.5.5 \
-    --hash=sha256:a7c14dbeefa6592e87f72290ca982e0c10f5bbf3786be2a600fda9da2764a2b8 \
-    --hash=sha256:dc0bfab0f2372c8278c457423d3256c34154ac2cc76bf20e9925260c461013c3
-    # via jupyter
+notebook==7.5.6 \
+    --hash=sha256:4dde3f8fb55fa8fb7946d58c6e869ce9baf46d00fc070664f62604569d0faca0 \
+    --hash=sha256:621174aade80108f0020b0f00738000b215f75fa3cd90771ad7aa0f24536a4e1
+    # via
+    #   jupyter
+    #   scpn-phase-orchestrator (pyproject.toml)
 notebook-shim==0.2.4 \
     --hash=sha256:411a5be4e9dc882a074ccbcae671eda64cceb068767e9a3419096986560e1cef \
     --hash=sha256:b4b2cfa1b65d98307ca24361f5b30fe785b53c3fd07b7a47e89acb5e6ac638cb
