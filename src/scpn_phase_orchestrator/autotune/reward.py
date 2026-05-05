@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TypeAlias, cast
 
@@ -22,6 +23,7 @@ __all__ = [
     "RewardConfig",
     "RewardObservation",
     "evaluate_knob_policy",
+    "rank_replay_candidates",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -174,6 +176,47 @@ def evaluate_knob_policy(
         observation=observation,
         config=active_config,
     )
+
+
+def rank_replay_candidates(
+    replay_candidates: Sequence[tuple[KnobPolicyCandidate, RewardObservation]],
+    config: RewardConfig | None = None,
+    *,
+    top_k: int | None = None,
+    require_safe: bool = True,
+) -> tuple[AutotuneRewardReport, ...]:
+    """Rank replay-evaluated policy candidates by reward.
+
+    This helper is the non-actuating bridge between reward scoring and future
+    policy learners. It consumes replay or simulation observations, filters
+    unsafe rollouts by default, and returns audit-ready reports sorted from
+    highest to lowest reward.
+    """
+    if not replay_candidates:
+        raise ValueError("replay candidate ranking requires at least one candidate")
+    if top_k is not None and top_k < 1:
+        raise ValueError("top_k must be positive when provided")
+
+    reports = [
+        evaluate_knob_policy(candidate, observation, config)
+        for candidate, observation in replay_candidates
+        if not require_safe or not observation.unsafe
+    ]
+    if not reports:
+        raise ValueError("no safe replay candidates remain after filtering")
+
+    ranked = sorted(
+        reports,
+        key=lambda report: (
+            report.reward,
+            report.components["coherence_gain"],
+            report.components["actuation"],
+        ),
+        reverse=True,
+    )
+    if top_k is None:
+        return tuple(ranked)
+    return tuple(ranked[:top_k])
 
 
 def _actuation_energy(candidate: KnobPolicyCandidate) -> float:

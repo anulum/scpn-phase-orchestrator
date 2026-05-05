@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.autotune.reward import (
     RewardConfig,
     RewardObservation,
     evaluate_knob_policy,
+    rank_replay_candidates,
 )
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 
@@ -41,4 +42,5 @@ __all__ = [
     "extract_phases",
     "identify_binding_spec",
     "identify_frequencies",
+    "rank_replay_candidates",
 ]

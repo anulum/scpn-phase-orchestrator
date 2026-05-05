@@ -31,4 +31,21 @@ report = evaluate_knob_policy(candidate, observation)
 assert report.to_audit_record()["reward"] == report.reward
 ```
 
+Replay-trained or simulation-trained searches can rank multiple candidates
+without applying any control action:
+
+```python
+from scpn_phase_orchestrator.autotune import rank_replay_candidates
+
+ranked = rank_replay_candidates(
+    (
+        (KnobPolicyCandidate(K=0.15), RewardObservation(coherence=0.72)),
+        (KnobPolicyCandidate(K=0.30), RewardObservation(coherence=0.65)),
+    ),
+    top_k=1,
+)
+
+best_report = ranked[0].to_audit_record()
+```
+
 ::: scpn_phase_orchestrator.autotune.reward

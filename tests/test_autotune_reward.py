@@ -19,6 +19,7 @@ from scpn_phase_orchestrator.autotune import (
     RewardConfig,
     RewardObservation,
     evaluate_knob_policy,
+    rank_replay_candidates,
 )
 
 
@@ -29,6 +30,12 @@ class TestAutotuneRewardContract:
         assert hints["candidate"] is KnobPolicyCandidate
         assert hints["observation"] is RewardObservation
         assert hints["return"] is AutotuneRewardReport
+
+    def test_replay_ranking_contract_is_typed(self) -> None:
+        hints = get_type_hints(rank_replay_candidates)
+
+        assert "Sequence" in str(hints["replay_candidates"])
+        assert "AutotuneRewardReport" in str(hints["return"])
 
     def test_report_serialises_arrays_for_audit(self) -> None:
         candidate = KnobPolicyCandidate(
@@ -115,6 +122,70 @@ class TestAutotuneRewardScoring:
         assert strict.reward < mild.reward
 
 
+class TestAutotuneReplayRanking:
+    def test_ranks_replay_candidates_by_reward(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.2),
+                RewardObservation(coherence=0.55, previous_coherence=0.4),
+            ),
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.82, previous_coherence=0.4),
+            ),
+            (
+                KnobPolicyCandidate(K=0.5),
+                RewardObservation(coherence=0.2, previous_coherence=0.4),
+            ),
+        )
+
+        ranked = rank_replay_candidates(replay)
+
+        assert len(ranked) == 3
+        assert ranked[0].observation.coherence == 0.82
+        assert ranked[-1].observation.coherence == 0.2
+        assert ranked[0].reward >= ranked[1].reward >= ranked[2].reward
+
+    def test_replay_ranking_top_k_limits_reports(self) -> None:
+        replay = (
+            (KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.8)),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.7)),
+        )
+
+        ranked = rank_replay_candidates(replay, top_k=1)
+
+        assert len(ranked) == 1
+        assert ranked[0].observation.coherence == 0.8
+
+    def test_replay_ranking_filters_unsafe_by_default(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.9, unsafe=True),
+            ),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.6)),
+        )
+
+        ranked = rank_replay_candidates(replay)
+
+        assert len(ranked) == 1
+        assert not ranked[0].observation.unsafe
+
+    def test_replay_ranking_can_include_unsafe_rollouts_for_audit(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.9, unsafe=True),
+            ),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.6)),
+        )
+
+        ranked = rank_replay_candidates(replay, require_safe=False)
+
+        assert len(ranked) == 2
+        assert any(report.observation.unsafe for report in ranked)
+
+
 class TestAutotuneRewardValidation:
     def test_rejects_non_probability_observations(self) -> None:
         with pytest.raises(ValueError, match="coherence"):
@@ -137,3 +208,24 @@ class TestAutotuneRewardValidation:
     def test_rejects_negative_config_weights(self) -> None:
         with pytest.raises(ValueError, match="non-negative"):
             RewardConfig(actuation_penalty=-0.1)
+
+    def test_replay_ranking_rejects_empty_replays(self) -> None:
+        with pytest.raises(ValueError, match="at least one"):
+            rank_replay_candidates(())
+
+    def test_replay_ranking_rejects_empty_safe_filter_result(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.9, unsafe=True),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="no safe"):
+            rank_replay_candidates(replay)
+
+    def test_replay_ranking_rejects_non_positive_top_k(self) -> None:
+        replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.9)),)
+
+        with pytest.raises(ValueError, match="top_k"):
+            rank_replay_candidates(replay, top_k=0)

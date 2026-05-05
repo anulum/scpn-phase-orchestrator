@@ -135,6 +135,7 @@
 - Auto domain binding pipeline: turn raw time-series, event logs, and sensor streams into candidate oscillator families, extractor parameters, initial coupling matrices, and a scored `binding_spec.yaml` proposal. Start with SINDy-assisted feature discovery and leave graph-learning coupling inference behind an experimental flag until it has reproducible benchmarks.
 - RL and hybrid optimisation layer for knob tuning: leverage the JAX `nn/` backend and `autotune` module to learn policies for `K`, `alpha`, `zeta`, `Psi`, and channel weights from rewards based on coherence metrics minus penalties for `R_bad`, unsafe actuation, and regime churn. Initial scope: replay-trained model-free or hybrid PPO/SAC experiments that emit auditable policy candidates rather than direct production control.
   - Reward-evaluation foundation is in place: `autotune.reward` scores candidate knob policies from replay/simulation observations and emits audit-ready records before any learner can actuate.
+  - Replay candidate ranking is in place: `rank_replay_candidates()` orders replay/simulation candidates by reward, filters unsafe rollouts by default, and returns audit-ready reports.
 - Trainable supervisor policies: extend rule-based policy evaluation with reinforcement learning or active-inference loops that optimise long-horizon `R_good` / `R_bad` trade-offs under replayable safety constraints.
 - Uncertainty-aware phase estimation: Bayesian or ensemble phase estimates propagated through MPC/OA reduction and supervisor decisions.
 - SPO Studio GUI: web-based binding and policy builder that scaffolds, visualises, validates, and replays binding specs, with WASM-backed previews where useful.
@@ -151,7 +152,7 @@
 - One-click SPO Studio web UI for new control engineers: drag/drop oscillators, live `R`/`Psi`/`K` visualisation, real-time knob tuning, and deploy/export paths for Docker, WASM, and FPGA.
 - Auto-binding prototype: SINDy-style or graph-learning pipeline from raw time-series, event logs, and graph signals to a proposed `binding_spec.yaml` that stays reviewable by a domain expert.
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
-  - Reward-evaluation foundation is in place; next scope is replay-trained candidate ranking before any live learner or actuation loop.
+  - Reward-evaluation and replay candidate-ranking foundations are in place; next scope is offline policy-search generation before any live learner or actuation loop.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
 - Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
