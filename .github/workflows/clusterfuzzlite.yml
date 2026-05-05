@@ -13,7 +13,9 @@ on:
     paths:
       - ".clusterfuzzlite/**"
       - ".github/workflows/clusterfuzzlite.yml"
+      - ".github/workflows/release.yml"
       - "fuzzers/**"
+      - "requirements/release-tools.txt"
       - "requirements/runtime-lock.txt"
       - "src/**"
   workflow_dispatch:
