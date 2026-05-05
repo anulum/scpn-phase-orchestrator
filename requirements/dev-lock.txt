@@ -743,9 +743,9 @@ fastjsonschema==2.21.2 \
     --hash=sha256:1c797122d0a86c5cace2e54bf4e819c36223b552017172f32c5c024a6b77e463 \
     --hash=sha256:b1eb43748041c880796cd077f1a07c3d94e93ae84bba5ed36800a33554ae05de
     # via nbformat
-filelock==3.25.2 \
-    --hash=sha256:b64ece2b38f4ca29dd3e810287aa8c48182bbecd1ae6e9ae126c9b35f1382694 \
-    --hash=sha256:ca8afb0da15f229774c9ad1b455ed96e85a81373065fb10446672f64444ddf70
+filelock==3.29.0 \
+    --hash=sha256:69974355e960702e789734cb4871f884ea6fe50bd8404051a3530bc07809cf90 \
+    --hash=sha256:96f5f6344709aa1572bbf631c640e4ebeeb519e08da902c39a001882f30ac258
     # via
     #   python-discovery
     #   virtualenv
@@ -1063,9 +1063,9 @@ identify==2.6.18 \
     --hash=sha256:873ac56a5e3fd63e7438a7ecbc4d91aca692eb3fefa4534db2b7913f3fc352fd \
     --hash=sha256:8db9d3c8ea9079db92cafb0ebf97abdc09d52e97f4dcf773a2e694048b7cd737
     # via pre-commit
-idna==3.11 \
-    --hash=sha256:771a87f49d9defaf64091e6e6fe9c18d4833f140bd19464795bc32d966ca37ea \
-    --hash=sha256:795dafcc9c04ed0c1fb032c2aa73654d8e8c5023a7df64a53f39190ada629902
+idna==3.13 \
+    --hash=sha256:585ea8fe5d69b9181ec1afba340451fba6ba764af97026f92a91d4eef164a242 \
+    --hash=sha256:892ea0cde124a99ce773decba204c5552b69c3c67ffd5f232eb7696135bc8bb3
     # via
     #   anyio
     #   httpx
@@ -2340,9 +2340,9 @@ pandocfilters==1.5.1 \
     --hash=sha256:002b4a555ee4ebc03f8b66307e287fa492e4a77b4ea14d3f934328297bb4939e \
     --hash=sha256:93be382804a9cdb0a7267585f157e5d1731bbe5545a85b268d6f5fe6232de2bc
     # via nbconvert
-parso==0.8.6 \
-    --hash=sha256:2b9a0332696df97d454fa67b81618fd69c35a7b90327cbe6ba5c92d2c68a7bfd \
-    --hash=sha256:2c549f800b70a5c4952197248825584cb00f033b29c692671d3bf08bf380baff
+parso==0.8.7 \
+    --hash=sha256:a8926eb2a1b915486941fdbd31e86a4baf88fe8c210f25f2f35ecec5b574ca1c \
+    --hash=sha256:eaaac4c9fdd5e9e8852dc778d2d7405897ec510f2a298071453e5e3a07914bb1
     # via jedi
 pathspec==1.0.4 \
     --hash=sha256:0210e2ae8a21a9137c0d470578cb0e595af87edaa6ebf12ff176f14a02e0e645 \
@@ -3460,9 +3460,9 @@ twine==5.1.1 \
     --hash=sha256:215dbe7b4b94c2c50a7315c0275d2258399280fbb7d04182c7e55e24b5f93997 \
     --hash=sha256:9aa0825139c02b3434d913545c7b847a21c835e11597f5255842d457da2322db
     # via scpn-phase-orchestrator (pyproject.toml)
-types-pyyaml==6.0.12.20250915 \
-    --hash=sha256:0f8b54a528c303f0e6f7165687dd33fafa81c807fcac23f632b63aa624ced1d3 \
-    --hash=sha256:e7d4d9e064e89a3b3cae120b4990cd370874d2bf12fa5f46c97018dd5d3c9ab6
+types-pyyaml==6.0.12.20260408 \
+    --hash=sha256:92a73f2b8d7f39ef392a38131f76b970f8c66e4c42b3125ae872b7c93b556307 \
+    --hash=sha256:fbc42037d12159d9c801ebfcc79ebd28335a7c13b08a4cfbc6916df78fee9384
     # via scpn-phase-orchestrator (pyproject.toml)
 typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
