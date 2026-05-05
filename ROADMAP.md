@@ -184,6 +184,15 @@ Speculative research watchlist:
 - Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
+- Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.
+- Sheaf-theoretic coherence manifold: obstruction-aware control primitive over a sheaf Laplacian with audit-visible cohomology dimensions.
+- Constitutional value-alignment guard: Pareto objective constraints in binding specs, counterfactual violation logs, and forced safe fallback path.
+- Strange-loop meta-orchestrator: self-referential supervisor channel that monitors and damps policy drift, over-control, or control-loop oscillation.
+- Morphogenetic field topology: reaction-diffusion-style field over coupling topology with grow/shrink primitives and field snapshot audit records.
+- Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
+- Topos-theoretic semantic binding: categorical validation prototype for binding and policy composition with explicit proof obligations.
+- Multiverse counterfactual simulator: vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation.
+- Entanglement-aware hybrid order parameters: quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi`.
 
 Priority order for first implementation tranche:
 
@@ -192,3 +201,11 @@ Priority order for first implementation tranche:
 3. Dynamic higher-order topology adaptation.
 4. FEP / predictive-coding supervisor backend.
 5. Symbolic-to-binding compiler.
+
+Speculative priority order after first tranche:
+
+1. Strange-loop meta-orchestrator.
+2. Morphogenetic field topology.
+3. Integrated-information monitor.
+4. Sheaf-theoretic coherence manifold.
+5. Constitutional value-alignment guard.
