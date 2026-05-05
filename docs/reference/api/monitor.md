@@ -156,6 +156,31 @@ higher-order functional relationships invisible to pairwise PLV.
 
 ::: scpn_phase_orchestrator.monitor.pid
 
+## Integrated-Information Monitor
+
+Estimates an approximate Phi-style global integration metric from
+phase trajectories. The monitor builds a pairwise circular
+mutual-information matrix, evaluates unique bipartitions, and reports
+the minimum cross-partition information as `phi`.
+
+This is an engineering proxy for comparing regime traces and writing
+audit records. It is not an exact IIT quantity and is not a
+consciousness claim.
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.monitor import (
+    integrated_information,
+)
+
+# phase_series: (n_oscillators, n_samples)
+result = integrated_information(phase_series, n_bins=16)
+record = result.to_audit_record()
+```
+
+::: scpn_phase_orchestrator.monitor.information_integration
+
 ## Lyapunov Exponent
 
 Real-time estimation of the maximal Lyapunov exponent from phase
