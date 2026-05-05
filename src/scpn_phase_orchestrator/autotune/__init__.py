@@ -18,13 +18,25 @@ from scpn_phase_orchestrator.autotune.pipeline import (
     AutoTuneResult,
     identify_binding_spec,
 )
+from scpn_phase_orchestrator.autotune.reward import (
+    AutotuneRewardReport,
+    KnobPolicyCandidate,
+    RewardConfig,
+    RewardObservation,
+    evaluate_knob_policy,
+)
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 
 __all__ = [
     "AutoTuneResult",
+    "AutotuneRewardReport",
     "FrequencyResult",
+    "KnobPolicyCandidate",
     "PhaseResult",
     "PhaseSINDy",
+    "RewardConfig",
+    "RewardObservation",
+    "evaluate_knob_policy",
     "estimate_coupling",
     "extract_phases",
     "identify_binding_spec",
