@@ -84,9 +84,9 @@ Tested on the SAME power_grid data as core pipeline:
 
 ---
 
-## 6. All 33 Domainpacks
+## 6. Domainpack Load Snapshot
 
-Every domainpack loads without error:
+The 2026-03-29 wiring audit snapshot loaded 33 domainpacks without error:
 
 ```
 agent_coordination, autonomous_vehicles, brain_connectome,
@@ -101,7 +101,7 @@ sleep_architecture, social_opinion, swarm_robotics,
 traffic_flow, vortex_shedding, weather_teleconnection, wildlife_migration
 ```
 
-**33/33 OK**
+**33/33 snapshot OK**
 
 ---
 
@@ -146,7 +146,7 @@ Difference: 0.0000 (float32 sufficient for this configuration).
 | Imprint | `imprint.update`, `imprint.state` → modulate_coupling | OK |
 | Actuation | `supervisor.ControlAction` → knob, scope, value, justification | OK |
 | PI/S Drivers | `drivers.psi_physical/informational/symbolic` | OK |
-| 33 domainpacks | All load without error | OK |
+| 33-domainpack snapshot | All load without error | OK |
 | CLI | `cli.main` Click Group | OK |
 | Adapters | 3 bridge modules | OK |
 | Advanced supervisor | PetriNet, EventBus, Policy, Predictive | OK |

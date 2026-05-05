@@ -69,9 +69,9 @@ simulations.
 | `traffic_flow` | Transportation | 4 | 10 | P/I |
 | `vortex_shedding` | Wake dynamics (Stuart-Landau) | 3 | 9 | P/I/S |
 
-## Benchmark Results (Measured 2026-03-28)
+## Benchmark Results (33-Domainpack Snapshot, Measured 2026-03-28)
 
-All 33 domainpacks tested via `spo demo --steps 20` on Kaggle (Linux, Python 3.12,
+The 2026-03-28 benchmark snapshot tested 33 domainpacks via `spo demo --steps 20` on Kaggle (Linux, Python 3.12,
 NumPy fallback — no Rust kernel). Zero failures.
 
 | Domainpack | Oscillators | Layers | R (20 steps) | Regime |

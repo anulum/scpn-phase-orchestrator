@@ -50,6 +50,7 @@ theme:
 nav:
   - Home: index.md
   - Getting Started:
+      - Onboarding Handbook: getting-started/onboarding.md
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
       - "Minimal Domainpack in 5 Minutes": getting-started/minimal_domainpack_5min.md
@@ -102,7 +103,7 @@ nav:
       - Geometry Constraints: specs/geometry_constraints.md
       - Knm Calibration: specs/knm_calibration.md
       - Audit Trace: specs/audit_trace.md
-      - Tutorials:
+  - Tutorials:
       - "01 — New Domain Checklist": tutorials/01_new_domain_checklist.md
       - "02 — Oscillator Hunt Sheet": tutorials/02_oscillator_hunt_sheet.md
       - "03 — Build Knm Templates": tutorials/03_build_knm_templates.md
@@ -120,15 +121,35 @@ nav:
       - "UPDE — Envelope (RMS)": reference/api/upde_envelope.md
       - "UPDE — Ott-Antonsen Reduction": reference/api/upde_reduction.md
       - "UPDE — Strang Splitting": reference/api/upde_splitting.md
+      - "UPDE — Basin Stability": reference/api/upde_basin_stability.md
+      - "UPDE — Bifurcation": reference/api/upde_bifurcation.md
+      - "UPDE — Delay": reference/api/upde_delay.md
+      - "UPDE — Inertial": reference/api/upde_inertial.md
+      - "UPDE — Market": reference/api/upde_market.md
+      - "UPDE — Order Parameters": reference/api/upde_order_params.md
+      - "UPDE — PAC": reference/api/upde_pac.md
+      - "UPDE — Stochastic": reference/api/upde_stochastic.md
+      - "UPDE — Stuart-Landau": reference/api/upde_stuart_landau.md
+      - "UPDE — Swarmalator": reference/api/upde_swarmalator.md
       - Oscillators: reference/api/oscillators.md
       - Coupling: reference/api/coupling.md
+      - "Coupling — Attention Residuals": reference/api/coupling_attention_residuals.md
       - "Coupling — TE Adaptive": reference/api/coupling_te_adaptive.md
       - "Coupling — Universal Prior": reference/api/coupling_prior.md
       - "Coupling — HCP Connectome": reference/api/coupling_connectome.md
       - Supervisor: reference/api/supervisor.md
       - Monitor: reference/api/monitor.md
+      - "Monitor — Chimera": reference/api/monitor_chimera.md
+      - "Monitor — Dimension": reference/api/monitor_dimension.md
+      - "Monitor — Entropy Production": reference/api/monitor_entropy_prod.md
       - "Monitor — Sleep Staging": reference/api/monitor_sleep_staging.md
       - "Monitor — EVS (Entrainment)": reference/api/monitor_evs.md
+      - "Monitor — ITPC": reference/api/monitor_itpc.md
+      - "Monitor — Lyapunov": reference/api/monitor_lyapunov.md
+      - "Monitor — NPE": reference/api/monitor_npe.md
+      - "Monitor — Recurrence": reference/api/monitor_recurrence.md
+      - "Monitor — Transfer Entropy": reference/api/monitor_transfer_entropy.md
+      - "Monitor — Winding": reference/api/monitor_winding.md
       - SSGF: reference/api/ssgf.md
       - "SSGF — Geometry Carrier": reference/api/ssgf_carrier.md
       - "SSGF — Ethical Cost (C15)": reference/api/ssgf_ethical.md
@@ -146,16 +167,15 @@ nav:
       - Visualization: reference/api/visualization.md
       - Adapters: reference/api/adapters.md
       - QueueWaves: reference/api/queuewaves.md
-      - Autotune: reference/api/autotune.md
-      - SSGF: reference/api/ssgf.md
-      - Visualization: reference/api/visualization.md
       - "Neural Network (nn)": reference/api/nn.md
       - "nn/ Module — Full Reference": reference/nn.md
       - "nn/ Physics Validation": reference/nn_physics_validation_plan.md
       - "End-to-End Wiring Audit": reference/end_to_end_wiring_audit.md
+      - Documentation Coverage: reference/documentation_coverage.md
       - CLI Reference: reference/cli.md
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md
+      - Notebooks & Demos: galleries/notebooks_and_demos.md
       - Cardiac Rhythm Benchmark: galleries/cardiac_rhythm_benchmark.md
       - Power Grid Benchmark: galleries/power_grid_benchmark.md
       - Capabilities & Use Cases: galleries/capabilities.md
