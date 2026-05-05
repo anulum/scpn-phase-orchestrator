@@ -6,7 +6,25 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - Semantic Compiler tests
 
-from scpn_phase_orchestrator.binding.semantic import SemanticDomainCompiler
+from __future__ import annotations
+
+import json
+
+import numpy as np
+import pytest
+from click.testing import CliRunner
+
+from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding.semantic import (
+    GeneratedBindingArtifacts,
+    SemanticDomainCompiler,
+    compile_symbolic_binding,
+)
+from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
+from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 
 def test_semantic_compilation_physics():
@@ -109,6 +127,101 @@ def test_empty_prompt_falls_back_to_defaults():
     spec = compiler.compile("")
     assert len(spec.layers) == 2
     assert spec.layers[0].omegas[0] == 1.0  # default base freq
+
+
+def test_compile_artifacts_returns_reviewable_valid_outputs(tmp_path):
+    compiler = SemanticDomainCompiler()
+    artefacts = compiler.compile_artifacts(
+        "A 3-layer cardiac rhythm suppression system with actuator feedback",
+        name="cardiac_review",
+        oscillators_per_layer=3,
+        dry_run_steps=4,
+    )
+
+    assert isinstance(artefacts, GeneratedBindingArtifacts)
+    assert artefacts.schema_valid
+    assert artefacts.validation_errors == []
+    assert artefacts.audit_record["schema_valid"] is True
+    assert artefacts.audit_record["domain_family"] == "biological"
+    assert "cardiac" in artefacts.audit_record["matched_keywords"]
+    assert 0.0 <= artefacts.dry_run_order_parameter <= 1.0
+
+    spec_path = tmp_path / "binding_spec.yaml"
+    policy_path = tmp_path / "policy.yaml"
+    spec_path.write_text(artefacts.binding_yaml, encoding="utf-8")
+    policy_path.write_text(artefacts.policy_yaml, encoding="utf-8")
+
+    loaded = load_binding_spec(spec_path)
+    assert validate_binding_spec(loaded) == []
+    assert loaded.name == "cardiac_review"
+    assert loaded.protocol_net is not None
+    assert load_policy_rules(policy_path)[0].name == "recover_low_coherence"
+
+
+def test_compile_symbolic_binding_pipeline_drives_engine():
+    artefacts = compile_symbolic_binding(
+        "A 2-layer power grid with operator intervention",
+        name="grid_review",
+        oscillators_per_layer=2,
+    )
+    spec = artefacts.binding_spec
+    n = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    coupling = CouplingBuilder().build(
+        n,
+        spec.coupling.base_strength,
+        spec.coupling.decay_alpha,
+    )
+    engine = UPDEEngine(n, dt=spec.sample_period_s)
+    phases = np.linspace(0.0, 2.0 * np.pi, n, endpoint=False)
+    omegas = np.asarray(spec.get_omegas(), dtype=np.float64)
+
+    for _ in range(12):
+        phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
+
+    r_value, _ = compute_order_parameter(phases)
+    assert 0.0 <= r_value <= 1.0
+    assert artefacts.audit_record["petri_reachability"]["target_place"] == "validated"
+
+
+def test_write_domainpack_and_cli_generate(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "generate",
+            "A 2-layer traffic flow phase control system",
+            "--name",
+            "traffic_review",
+            "--oscillators-per-layer",
+            "2",
+            "--dry-run-steps",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    output_dir = tmp_path / "domainpacks" / "traffic_review"
+    assert (output_dir / "binding_spec.yaml").exists()
+    assert (output_dir / "policy.yaml").exists()
+    assert (output_dir / "README.md").exists()
+    audit = json.loads((output_dir / "audit.json").read_text(encoding="utf-8"))
+    assert audit["schema_valid"] is True
+    assert audit["domain_family"] == "network"
+    assert load_policy_rules(output_dir / "policy.yaml")
+    loaded = load_binding_spec(output_dir / "binding_spec.yaml")
+    assert validate_binding_spec(loaded) == []
+
+
+def test_compile_artifacts_rejects_invalid_generation_parameters():
+    compiler = SemanticDomainCompiler()
+    for kwargs in [
+        {"name": "bad name"},
+        {"oscillators_per_layer": 0},
+        {"dry_run_steps": 0},
+    ]:
+        with pytest.raises(ValueError):
+            compiler.compile_artifacts("A 2-layer system", **kwargs)
 
 
 # Pipeline wiring: SemanticDomainCompiler is the natural-language frontend

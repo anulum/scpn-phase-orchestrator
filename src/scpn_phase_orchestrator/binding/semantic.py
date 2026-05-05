@@ -9,17 +9,67 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, cast
 
 from scpn_phase_orchestrator.binding.types import (
+    ActuatorMapping,
     BindingSpec,
+    BoundaryDef,
+    ChannelGroupSpec,
+    ChannelSpec,
     CouplingSpec,
     DriverSpec,
     HierarchyLayer,
     ObjectivePartition,
     OscillatorFamily,
+    ProtocolNetSpec,
+    ProtocolTransitionSpec,
 )
+from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
-__all__ = ["SemanticDomainCompiler"]
+__all__ = [
+    "GeneratedBindingArtifacts",
+    "SemanticDomainCompiler",
+    "compile_symbolic_binding",
+]
+
+
+@dataclass(frozen=True)
+class GeneratedBindingArtifacts:
+    """Reviewable outputs from symbolic domain intent compilation."""
+
+    binding_spec: BindingSpec
+    binding_yaml: str
+    policy_yaml: str
+    audit_record: dict[str, Any]
+    validation_errors: list[str]
+    dry_run_order_parameter: float
+
+    @property
+    def schema_valid(self) -> bool:
+        """Return True when the generated binding passed validator checks."""
+        return not self.validation_errors
+
+    def write_domainpack(self, output_dir: str | Path) -> None:
+        """Write generated artefacts as a reviewable domainpack directory."""
+        import json
+
+        path = Path(output_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "binding_spec.yaml").write_text(self.binding_yaml, encoding="utf-8")
+        (path / "policy.yaml").write_text(self.policy_yaml, encoding="utf-8")
+        (path / "audit.json").write_text(
+            json.dumps(self.audit_record, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        readme = (
+            f"# {self.binding_spec.name} domainpack\n\n"
+            "Generated from symbolic intent. Review `binding_spec.yaml`, "
+            "`policy.yaml`, and `audit.json` before use with live systems.\n"
+        )
+        (path / "README.md").write_text(readme, encoding="utf-8")
 
 
 class SemanticDomainCompiler:
@@ -30,20 +80,75 @@ class SemanticDomainCompiler:
     frequencies, and coupling constraints from text.
     """
 
-    def compile(self, prompt: str) -> BindingSpec:
-        """Translate a natural language prompt into a BindingSpec."""
+    def compile(
+        self,
+        prompt: str,
+        *,
+        name: str = "semantically_generated_domain",
+        oscillators_per_layer: int = 8,
+    ) -> BindingSpec:
+        """Translate a symbolic domain prompt into a BindingSpec."""
+        return self.compile_artifacts(
+            prompt,
+            name=name,
+            oscillators_per_layer=oscillators_per_layer,
+            dry_run_steps=3,
+        ).binding_spec
+
+    def compile_artifacts(
+        self,
+        prompt: str,
+        *,
+        name: str = "semantically_generated_domain",
+        oscillators_per_layer: int = 8,
+        dry_run_steps: int = 8,
+    ) -> GeneratedBindingArtifacts:
+        """Compile domain intent into binding, policy, audit, and dry-run artefacts."""
+        if not name or not re.match(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$", name):
+            raise ValueError("name must match [A-Za-z][A-Za-z0-9_-]{0,63}")
+        if oscillators_per_layer < 1:
+            raise ValueError("oscillators_per_layer must be >= 1")
+        if dry_run_steps < 1:
+            raise ValueError("dry_run_steps must be >= 1")
 
         # Heuristic: Layer detection
         layer_match = re.search(r"(\d+)[ -]layer", prompt, re.IGNORECASE)
         num_layers = int(layer_match.group(1)) if layer_match else 2
+        if num_layers < 1:
+            raise ValueError("layer count must be >= 1")
 
         # Heuristic: Discipline detection
-        if any(word in prompt.lower() for word in ["bio", "cell", "brain"]):
+        lowered = prompt.lower()
+        matched_keywords = sorted(
+            {
+                word
+                for word in (
+                    "bio",
+                    "brain",
+                    "cardiac",
+                    "cell",
+                    "finance",
+                    "fusion",
+                    "grid",
+                    "plasma",
+                    "power",
+                    "traffic",
+                )
+                if word in lowered
+            }
+        )
+        if any(word in lowered for word in ["bio", "cell", "brain", "cardiac"]):
             base_freq = 10.0
-        elif any(word in prompt.lower() for word in ["power", "grid", "fusion"]):
+            domain_family = "biological"
+        elif any(word in lowered for word in ["power", "grid", "fusion", "plasma"]):
             base_freq = 50.0
+            domain_family = "physical"
+        elif any(word in lowered for word in ["finance", "traffic"]):
+            base_freq = 1.0
+            domain_family = "network"
         else:
             base_freq = 1.0
+            domain_family = "generic"
 
         layers = []
         for i in range(num_layers):
@@ -51,8 +156,10 @@ class SemanticDomainCompiler:
                 HierarchyLayer(
                     name=f"layer_{i}",
                     index=i,
-                    oscillator_ids=[f"osc_{i}_{j}" for j in range(8)],
-                    omegas=[base_freq * (10**i)] * 8,
+                    oscillator_ids=[
+                        f"osc_{i}_{j}" for j in range(oscillators_per_layer)
+                    ],
+                    omegas=[base_freq * (10**i)] * oscillators_per_layer,
                     family="default",
                 )
             )
@@ -69,8 +176,8 @@ class SemanticDomainCompiler:
             good_layers=list(range(num_layers)), bad_layers=[]
         )
 
-        return BindingSpec(
-            name="semantically_generated_domain",
+        spec = BindingSpec(
+            name=name,
             version="1.0.0",
             safety_tier="research",
             sample_period_s=0.01,
@@ -80,6 +187,260 @@ class SemanticDomainCompiler:
             coupling=coupling,
             drivers=drivers,
             objectives=objectives,
-            boundaries=[],
-            actuators=[],
+            boundaries=[
+                BoundaryDef(
+                    name="low_global_coherence",
+                    variable="R_good",
+                    lower=0.0,
+                    upper=1.0,
+                    severity="soft",
+                )
+            ],
+            actuators=[
+                ActuatorMapping("global_coupling", "K", "global", (0.0, 2.0)),
+                ActuatorMapping("global_drive", "zeta", "global", (0.0, 1.0)),
+            ],
+            channels={
+                "P": ChannelSpec(
+                    role=domain_family,
+                    units="rad",
+                    metric_semantics="phase",
+                    replay_semantics="phase",
+                ),
+            },
+            channel_groups={
+                "primary": ChannelGroupSpec(
+                    channels=["P"],
+                    description="Primary phase-observation channel",
+                ),
+            },
+            protocol_net=ProtocolNetSpec(
+                places=["draft", "validated"],
+                initial={"draft": 1},
+                place_regime={"draft": "NOMINAL", "validated": "NOMINAL"},
+                transitions=[
+                    ProtocolTransitionSpec(
+                        name="accept_after_review",
+                        inputs=[{"place": "draft"}],
+                        outputs=[{"place": "validated"}],
+                        guard="stability_proxy > 0.0",
+                    )
+                ],
+            ),
         )
+        validation_errors = validate_binding_spec(spec)
+        dry_run_r = _dry_run_order_parameter(spec, dry_run_steps)
+        binding_yaml = _binding_spec_to_yaml(spec)
+        policy_yaml = _policy_yaml_for(spec)
+        confidence = _confidence(
+            matched_keywords=matched_keywords,
+            has_layer_count=layer_match is not None,
+            domain_family=domain_family,
+        )
+        audit_record = {
+            "compiler": "symbolic_binding_v0",
+            "schema_valid": not validation_errors,
+            "validation_errors": validation_errors,
+            "confidence": confidence,
+            "domain_family": domain_family,
+            "matched_keywords": matched_keywords,
+            "layers": num_layers,
+            "oscillators_per_layer": oscillators_per_layer,
+            "dry_run_steps": dry_run_steps,
+            "dry_run_order_parameter": dry_run_r,
+            "petri_reachability": {
+                "initial_place": "draft",
+                "review_transition": "accept_after_review",
+                "target_place": "validated",
+            },
+        }
+        return GeneratedBindingArtifacts(
+            binding_spec=spec,
+            binding_yaml=binding_yaml,
+            policy_yaml=policy_yaml,
+            audit_record=audit_record,
+            validation_errors=validation_errors,
+            dry_run_order_parameter=dry_run_r,
+        )
+
+
+def compile_symbolic_binding(
+    prompt: str,
+    *,
+    name: str = "semantically_generated_domain",
+    oscillators_per_layer: int = 8,
+    dry_run_steps: int = 8,
+) -> GeneratedBindingArtifacts:
+    """Compile domain intent into a reviewable generated domainpack."""
+    return SemanticDomainCompiler().compile_artifacts(
+        prompt,
+        name=name,
+        oscillators_per_layer=oscillators_per_layer,
+        dry_run_steps=dry_run_steps,
+    )
+
+
+def _confidence(
+    *,
+    matched_keywords: list[str],
+    has_layer_count: bool,
+    domain_family: str,
+) -> float:
+    score = 0.35 + min(0.25, 0.05 * len(matched_keywords))
+    if has_layer_count:
+        score += 0.15
+    if domain_family != "generic":
+        score += 0.2
+    return round(min(score, 0.95), 3)
+
+
+def _dry_run_order_parameter(spec: BindingSpec, steps: int) -> float:
+    import numpy as np
+
+    from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+    from scpn_phase_orchestrator.upde.engine import UPDEEngine
+    from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+    n = sum(len(layer.oscillator_ids) for layer in spec.layers)
+    coupling = CouplingBuilder().build(
+        n,
+        spec.coupling.base_strength,
+        spec.coupling.decay_alpha,
+    )
+    engine = UPDEEngine(n, dt=spec.sample_period_s)
+    phases = np.linspace(0.0, 2.0 * np.pi, n, endpoint=False, dtype=np.float64)
+    omegas = np.asarray(spec.get_omegas(), dtype=np.float64)
+    for _ in range(steps):
+        phases = engine.step(phases, omegas, coupling.knm, 0.0, 0.0, coupling.alpha)
+    r_value, _ = compute_order_parameter(phases)
+    return float(r_value)
+
+
+def _policy_yaml_for(spec: BindingSpec) -> str:
+    import yaml
+
+    policy = {
+        "rules": [
+            {
+                "name": "recover_low_coherence",
+                "regime": ["DEGRADED", "CRITICAL"],
+                "condition": {
+                    "metric": "R_good",
+                    "op": "<",
+                    "threshold": 0.7,
+                },
+                "action": {
+                    "knob": "K",
+                    "scope": "global",
+                    "value": 0.1,
+                    "ttl_s": max(spec.control_period_s, 1.0),
+                },
+            }
+        ]
+    }
+    return cast(str, yaml.safe_dump(policy, sort_keys=False))
+
+
+def _binding_spec_to_yaml(spec: BindingSpec) -> str:
+    import yaml
+
+    data = {
+        "name": spec.name,
+        "version": spec.version,
+        "safety_tier": spec.safety_tier,
+        "sample_period_s": spec.sample_period_s,
+        "control_period_s": spec.control_period_s,
+        "layers": [
+            {
+                "name": layer.name,
+                "index": layer.index,
+                "oscillator_ids": layer.oscillator_ids,
+                "omegas": layer.omegas,
+                "family": layer.family,
+            }
+            for layer in spec.layers
+        ],
+        "oscillator_families": {
+            key: {
+                "channel": family.channel,
+                "extractor_type": family.extractor_type,
+                "config": family.config,
+            }
+            for key, family in spec.oscillator_families.items()
+        },
+        "coupling": {
+            "base_strength": spec.coupling.base_strength,
+            "decay_alpha": spec.coupling.decay_alpha,
+            "templates": spec.coupling.templates,
+        },
+        "drivers": {
+            "physical": spec.drivers.physical,
+            "informational": spec.drivers.informational,
+            "symbolic": spec.drivers.symbolic,
+        },
+        "channels": {
+            key: {
+                "role": channel.role,
+                "required": channel.required,
+                "units": channel.units,
+                "metric_semantics": channel.metric_semantics,
+                "coupling_participation": channel.coupling_participation,
+                "audit_serialisation": channel.audit_serialisation,
+                "replay_semantics": channel.replay_semantics,
+                "supervisor_visibility": channel.supervisor_visibility,
+                "derived_from": channel.derived_from,
+                "derive_rule": channel.derive_rule,
+            }
+            for key, channel in spec.channels.items()
+        },
+        "channel_groups": {
+            key: {
+                "channels": group.channels,
+                "required": group.required,
+                "description": group.description,
+            }
+            for key, group in spec.channel_groups.items()
+        },
+        "objectives": {
+            "good_layers": spec.objectives.good_layers,
+            "bad_layers": spec.objectives.bad_layers,
+            "good_weight": spec.objectives.good_weight,
+            "bad_weight": spec.objectives.bad_weight,
+        },
+        "boundaries": [
+            {
+                "name": boundary.name,
+                "variable": boundary.variable,
+                "lower": boundary.lower,
+                "upper": boundary.upper,
+                "severity": boundary.severity,
+            }
+            for boundary in spec.boundaries
+        ],
+        "actuators": [
+            {
+                "name": actuator.name,
+                "knob": actuator.knob,
+                "scope": actuator.scope,
+                "limits": list(actuator.limits),
+            }
+            for actuator in spec.actuators
+        ],
+        "protocol_net": {
+            "places": spec.protocol_net.places if spec.protocol_net else [],
+            "initial": spec.protocol_net.initial if spec.protocol_net else {},
+            "place_regime": spec.protocol_net.place_regime if spec.protocol_net else {},
+            "transitions": [
+                {
+                    "name": transition.name,
+                    "inputs": transition.inputs,
+                    "outputs": transition.outputs,
+                    "guard": transition.guard,
+                }
+                for transition in (
+                    spec.protocol_net.transitions if spec.protocol_net else []
+                )
+            ],
+        },
+    }
+    return cast(str, yaml.safe_dump(data, sort_keys=False))

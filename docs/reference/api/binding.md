@@ -130,7 +130,7 @@ Loads binding specifications from YAML files. Supports:
 
 - Single-file specs (most domainpacks)
 - Multi-file specs with `$ref` template references
-- Environment variable interpolation for secrets (API keys, endpoints)
+- Environment variable interpolation for credentials and endpoints
 - Default value injection for optional fields
 
 The loader does *not* validate — that is the validator's job. This
@@ -188,29 +188,31 @@ domainpacks produce detailed error messages listing all violations.
 
 **Performance:** `load_binding_spec()` < 10 ms.
 
-## Semantic Domain Compiler
+## Symbolic Binding Compiler
 
-The `SemanticDomainCompiler` provides a **natural language interface** for
-generating system configurations. It allows domain experts to describe
-complex oscillatory systems in plain English and automatically translates
-them into formal `BindingSpec` objects.
+The `SemanticDomainCompiler` is the first review-gated symbolic-to-binding
+path. It translates a domain intent string into a `BindingSpec` and can also
+emit a complete artefact bundle:
 
-### Heuristic & LLM Reasoning
+- `binding_spec.yaml` for the domain interface
+- `policy.yaml` with a conservative low-coherence recovery rule
+- `audit.json` with confidence, matched keywords, validation status, dry-run
+  coherence, and Petri-net review reachability metadata
+- `README.md` for the generated domainpack directory
 
-The compiler uses a hybrid approach to translate semantic descriptions:
-1. **Structural Extraction:** Identifies the number of hierarchical layers
-   and oscillator counts.
-2. **Domain Mapping:** Detects the discipline (Biology, Physics, Finance)
-   to set realistic baseline frequency ranges ($\omega$).
-3. **Coupling Synthesis:** Heuristically determines coupling strengths
-   and decay constants based on the described connectivity.
+The compiler remains deterministic and local. It extracts layer counts,
+domain-family keywords, oscillator counts, channel declarations, safe default
+actuator mappings, and a review transition in `protocol_net`. The generated
+binding is passed through `validate_binding_spec()` and a short
+`UPDEEngine` dry run before artefacts are returned.
 
-### Future: LLM Integration
+CLI usage:
 
-While the current implementation uses heuristic parsing, the
-architecture is designed to plug directly into Large Language Models (LLMs).
-In an LLM-enabled mode, the compiler can synthesize deep ontological
-mappings, such as assigning specific phase lags ($\alpha$) based on
-published biological transport delays or chemical reaction rates.
+```bash
+spo generate "A 3-layer cardiac rhythm suppression system" \
+  --name cardiac_review \
+  --output-dir domainpacks/cardiac_review
+spo validate domainpacks/cardiac_review/binding_spec.yaml
+```
 
 ::: scpn_phase_orchestrator.binding.semantic

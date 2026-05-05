@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding import (
+    compile_symbolic_binding,
     format_resolved_binding_config,
     load_binding_spec,
     resolved_binding_config,
@@ -963,6 +964,53 @@ def scaffold(domain_name: str) -> None:
     if not readme.exists():
         readme.write_text(f"# {domain_name} domainpack\n", encoding="utf-8")
     click.echo(f"Scaffolded domainpack at {base}")
+
+
+@main.command("generate")
+@click.argument("intent")
+@click.option(
+    "--name",
+    default="generated_domain",
+    help="Generated domainpack name.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, dir_okay=True),
+    default=None,
+    help="Directory for binding_spec.yaml, policy.yaml, README.md, and audit.json.",
+)
+@click.option(
+    "--oscillators-per-layer",
+    default=8,
+    show_default=True,
+    help="Oscillators assigned to each inferred layer.",
+)
+@click.option(
+    "--dry-run-steps",
+    default=8,
+    show_default=True,
+    help="Validation simulation steps before artefacts are emitted.",
+)
+def generate(
+    intent: str,
+    name: str,
+    output_dir: str | None,
+    oscillators_per_layer: int,
+    dry_run_steps: int,
+) -> None:
+    """Generate reviewable binding artefacts from symbolic domain intent."""
+    artefacts = compile_symbolic_binding(
+        intent,
+        name=name,
+        oscillators_per_layer=oscillators_per_layer,
+        dry_run_steps=dry_run_steps,
+    )
+    output_path = Path("domainpacks") / name if output_dir is None else Path(output_dir)
+    artefacts.write_domainpack(output_path)
+    click.echo(f"Generated domainpack at {output_path}")
+    click.echo(f"schema_valid={artefacts.schema_valid}")
+    click.echo(f"confidence={artefacts.audit_record['confidence']:.3f}")
+    click.echo(f"dry_run_R={artefacts.dry_run_order_parameter:.6f}")
 
 
 @main.command()

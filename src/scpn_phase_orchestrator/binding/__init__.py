@@ -13,14 +13,20 @@ from scpn_phase_orchestrator.binding.resolved import (
     format_resolved_binding_config,
     resolved_binding_config,
 )
-from scpn_phase_orchestrator.binding.semantic import SemanticDomainCompiler
+from scpn_phase_orchestrator.binding.semantic import (
+    GeneratedBindingArtifacts,
+    SemanticDomainCompiler,
+    compile_symbolic_binding,
+)
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
 __all__ = [
     "BindingLoadError",
     "BindingSpec",
+    "GeneratedBindingArtifacts",
     "SemanticDomainCompiler",
+    "compile_symbolic_binding",
     "format_resolved_binding_config",
     "load_binding_spec",
     "resolved_binding_config",
