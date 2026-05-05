@@ -43,25 +43,6 @@ VALID_EXTRACTOR_PREVIEW = {
 PREVIEW_SIGNAL = np.linspace(0.0, 2.0, 160)
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _safe_domainpacks_root() -> Path:
-    return (_repo_root() / "domainpacks").resolve()
-
-
-def _binding_spec_path_for_domainpack(name: str) -> Path:
-    if not VALID_NAME.fullmatch(name):
-        msg = "Domainpack name must be letters, digits, underscores, or hyphens."
-        raise ValueError(msg)
-    return _safe_domainpacks_root() / name / "binding_spec.yaml"
-
-
-def _domainpack_dir_for_name(name: str) -> Path:
-    return _binding_spec_path_for_domainpack(name).parent
-
-
 def _read_text_file(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -226,48 +207,11 @@ def _resolved_summary(spec: BindingSpec) -> None:
             st.text(line)
 
 
-def _emit_default_readme(name: str, target: Path) -> None:
-    readme = target / "README.md"
-    if readme.exists():
-        return
-    readme.write_text(
-        f"""# {name} domainpack
-
-Generated from the binding-spec studio.
-
-Files:
-- `binding_spec.yaml` — executable binding spec
-- `README.md` — this document
-""",
-        encoding="utf-8",
-    )
-
-
-def _emit_domainpack(
-    name: str,
-    yaml_text: str,
-) -> tuple[bool, str]:
-    if not VALID_NAME.fullmatch(name):
-        return (
-            False,
-            "Domainpack name must be letters, digits, underscores, or hyphens.",
-        )
-    domainpack_dir = _domainpack_dir_for_name(name)
-    domainpack_dir.mkdir(parents=True, exist_ok=True)
-    spec_path = domainpack_dir / "binding_spec.yaml"
-    if spec_path.exists():
-        return False, f"Refuse to overwrite existing file: {spec_path}"
-
-    spec_path.write_text(yaml_text, encoding="utf-8")
-    _emit_default_readme(name, domainpack_dir)
-    return True, f"Created domainpack at {domainpack_dir}"
-
-
 def _domainpacks_dir() -> Path:
-    candidate = _safe_domainpacks_root()
+    candidate = Path(__file__).resolve().parent.parent / "domainpacks"
     if candidate.exists():
         return candidate
-    return candidate
+    return Path("domainpacks")
 
 
 def main() -> None:
@@ -342,36 +286,16 @@ def main() -> None:
     st.subheader("4) Extractor output preview")
     _render_preview(spec)
 
-    st.subheader("5) Save and scaffold domainpack")
-    with st.form("save_form"):
-        save_pack_name = st.text_input(
-            "Save into domainpack",
-            value="studio",
-            help="Writes to domainpacks/<name>/binding_spec.yaml.",
-        )
-        save_btn = st.form_submit_button("Save YAML")
-        if save_btn:
-            try:
-                target = _binding_spec_path_for_domainpack(save_pack_name)
-            except ValueError as exc:
-                st.error(str(exc))
-            else:
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(spec_text, encoding="utf-8")
-                st.success(f"Saved binding spec to {target}")
-
-    with st.form("emit_form"):
-        domainpack_name = st.text_input("Domainpack name", value="studio_domainpack")
-        emit_btn = st.form_submit_button("Create minimal domainpack")
-        if emit_btn:
-            if not errors:
-                ok, msg = _emit_domainpack(domainpack_name, spec_text)
-                if ok:
-                    st.success(msg)
-                else:
-                    st.error(msg)
-            else:
-                st.error("Fix validation errors before creating a domainpack.")
+    st.subheader("5) Export binding spec")
+    st.download_button(
+        "Download binding_spec.yaml",
+        data=spec_text,
+        file_name="binding_spec.yaml",
+        mime="application/x-yaml",
+        disabled=bool(errors),
+    )
+    if errors:
+        st.info("Fix validation errors before exporting the binding spec.")
 
 
 if __name__ == "__main__":
