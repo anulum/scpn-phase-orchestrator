@@ -9,6 +9,13 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.supervisor.alignment import (
+    ValueAlignmentDecision,
+    ValueAlignmentGuard,
+    ValueAlignmentPolicy,
+    ValueConstraint,
+    ValueViolation,
+)
 from scpn_phase_orchestrator.supervisor.causal import (
     CausalInterventionEngine,
     CounterfactualRollout,
@@ -110,6 +117,11 @@ __all__ = [
     "Transition",
     "TopologyMutationPolicy",
     "TopologyMutationResult",
+    "ValueAlignmentDecision",
+    "ValueAlignmentGuard",
+    "ValueAlignmentPolicy",
+    "ValueConstraint",
+    "ValueViolation",
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_policy_rules_prism",

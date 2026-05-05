@@ -236,6 +236,41 @@ if result.obstruction_score > 0.1:
 
 ---
 
+## Value-Alignment Guard
+
+`ValueAlignmentGuard` is a hard safety wrapper around proposed
+`ControlAction` lists. It evaluates explicit objective constraints, blocks
+violating actions, and returns a forced fallback action set when the proposal
+does not satisfy the configured score threshold.
+
+The guard is intentionally simple and auditable: no hidden reward model is
+loaded at runtime. Domainpacks can translate their safety or objective priors
+into `ValueConstraint` entries and attach the resulting decision record to the
+normal audit trace.
+
+```python
+from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.supervisor import (
+    ValueAlignmentGuard,
+    ValueAlignmentPolicy,
+    ValueConstraint,
+)
+
+policy = ValueAlignmentPolicy(
+    constraints=(ValueConstraint("limit-coupling", knob="K", max_abs_value=0.1),),
+    fallback_actions=(
+        ControlAction("zeta", "global", 0.0, 1.0, "alignment fallback: hold"),
+    ),
+)
+decision = ValueAlignmentGuard(policy).evaluate(proposed_actions)
+actions_to_apply = decision.actions_to_apply
+audit_payload = decision.to_audit_record()
+```
+
+::: scpn_phase_orchestrator.supervisor.alignment
+
+---
+
 ## Policy Engine
 
 Rule-based evaluation of supervisor actions.
