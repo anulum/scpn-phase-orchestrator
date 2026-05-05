@@ -43,6 +43,25 @@ VALID_EXTRACTOR_PREVIEW = {
 PREVIEW_SIGNAL = np.linspace(0.0, 2.0, 160)
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def _safe_domainpacks_root() -> Path:
+    return (_repo_root() / "domainpacks").resolve()
+
+
+def _binding_spec_path_for_domainpack(name: str) -> Path:
+    if not VALID_NAME.fullmatch(name):
+        msg = "Domainpack name must be letters, digits, underscores, or hyphens."
+        raise ValueError(msg)
+    return _safe_domainpacks_root() / name / "binding_spec.yaml"
+
+
+def _domainpack_dir_for_name(name: str) -> Path:
+    return _binding_spec_path_for_domainpack(name).parent
+
+
 def _read_text_file(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -84,8 +103,7 @@ def _render_mapping_table(spec: BindingSpec) -> None:
                 "extractor": family.extractor_type,
                 "driver_config": bool(family.config),
                 "nodes": ", ".join(
-                    str(value)
-                    for value in (family.config or {}).get("channel_ids", [])
+                    str(value) for value in (family.config or {}).get("channel_ids", [])
                 ),
             }
         )
@@ -155,9 +173,9 @@ def _extractor_preview(
         elif extractor == "event":
             events = np.cumsum([0.05, 0.37, 0.18, 0.40], dtype=np.float64)
             events = np.cumsum(events)
-            state = InformationalExtractor(
-                node_id=f"preview-{family_name}"
-            ).extract(events, sample_rate=sample_rate)[0]
+            state = InformationalExtractor(node_id=f"preview-{family_name}").extract(
+                events, sample_rate=sample_rate
+            )[0]
         else:
             cfg = family.config or {}
             n_states = int(cfg.get("n_states", 4))
@@ -226,7 +244,6 @@ Files:
 
 
 def _emit_domainpack(
-    target_root: Path,
     name: str,
     yaml_text: str,
 ) -> tuple[bool, str]:
@@ -235,7 +252,7 @@ def _emit_domainpack(
             False,
             "Domainpack name must be letters, digits, underscores, or hyphens.",
         )
-    domainpack_dir = target_root / name
+    domainpack_dir = _domainpack_dir_for_name(name)
     domainpack_dir.mkdir(parents=True, exist_ok=True)
     spec_path = domainpack_dir / "binding_spec.yaml"
     if spec_path.exists():
@@ -247,10 +264,10 @@ def _emit_domainpack(
 
 
 def _domainpacks_dir() -> Path:
-    candidate = Path(__file__).resolve().parent.parent / "domainpacks"
+    candidate = _safe_domainpacks_root()
     if candidate.exists():
         return candidate
-    return Path("domainpacks")
+    return candidate
 
 
 def main() -> None:
@@ -327,26 +344,28 @@ def main() -> None:
 
     st.subheader("5) Save and scaffold domainpack")
     with st.form("save_form"):
-        save_path = st.text_input(
-            "Write spec to file",
-            value=str(Path.cwd() / "domainpacks" / "studio" / "binding_spec.yaml"),
+        save_pack_name = st.text_input(
+            "Save into domainpack",
+            value="studio",
+            help="Writes to domainpacks/<name>/binding_spec.yaml.",
         )
         save_btn = st.form_submit_button("Save YAML")
         if save_btn:
-            target = Path(save_path)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(spec_text, encoding="utf-8")
-            st.success(f"Saved binding spec to {target}")
+            try:
+                target = _binding_spec_path_for_domainpack(save_pack_name)
+            except ValueError as exc:
+                st.error(str(exc))
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(spec_text, encoding="utf-8")
+                st.success(f"Saved binding spec to {target}")
 
     with st.form("emit_form"):
         domainpack_name = st.text_input("Domainpack name", value="studio_domainpack")
-        target_root = st.text_input("Root folder", value=str(domainpacks_dir))
         emit_btn = st.form_submit_button("Create minimal domainpack")
         if emit_btn:
             if not errors:
-                ok, msg = _emit_domainpack(
-                    Path(target_root), domainpack_name, spec_text
-                )
+                ok, msg = _emit_domainpack(domainpack_name, spec_text)
                 if ok:
                     st.success(msg)
                 else:

@@ -306,8 +306,7 @@ def _render_diagnostic_summary(report: PolicyDryRunReport) -> None:
         )
 
     counts = [
-        {"rule": rule, "fires": report.fire_counts[rule]}
-        for rule in report.rules
+        {"rule": rule, "fires": report.fire_counts[rule]} for rule in report.rules
     ]
     st.markdown("#### Rule fire counts")
     if counts:
@@ -364,9 +363,7 @@ def main() -> None:
         if st.button("Load selected policy", key="load_pack"):
             if pack_name:
                 pack_dir = (
-                    Path(__file__).resolve().parent.parent
-                    / "domainpacks"
-                    / pack_name
+                    Path(__file__).resolve().parent.parent / "domainpacks" / pack_name
                 )
                 st.session_state["policy_text"] = _read_text(pack_dir / "policy.yaml")
                 st.session_state["binding_text"] = _read_text(
@@ -559,8 +556,7 @@ def main() -> None:
 
     st.subheader("4) Dry-run against audit log")
     st.write(
-        "Upload an `audit.jsonl` file to test rule firing, overlaps, and "
-        "collisions."
+        "Upload an `audit.jsonl` file to test rule firing, overlaps, and collisions."
     )
     audit_file = st.file_uploader("Upload audit.jsonl", type=["jsonl", "json"])
     uploaded_binding = st.file_uploader(
@@ -592,8 +588,7 @@ def main() -> None:
         binding_text = st.session_state["binding_text"].strip()
         if not binding_text:
             st.error(
-                "Upload a binding spec or load a domainpack with "
-                "binding_spec.yaml."
+                "Upload a binding spec or load a domainpack with binding_spec.yaml."
             )
             return
 
