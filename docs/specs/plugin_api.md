@@ -82,7 +82,35 @@ class MyDriver:
 
 ## Registration
 
-All custom classes are resolved at binding-spec load time via Python's `importlib`. The module must be importable from the Python path. No global registry -- resolution is per-spec.
+For one-off local experiments, custom classes may still be resolved at
+binding-spec load time via Python's `importlib`. The module must be importable
+from the Python path.
+
+For reusable extensions, publish a plugin manifest through the
+`scpn_phase_orchestrator.plugins` Python entry-point group. The manifest
+declares versioned capabilities before runtime code is imported:
+
+```python
+from scpn_phase_orchestrator.plugins import PluginCapability, PluginManifest
+
+def spo_plugin_manifest():
+    return PluginManifest(
+        name="my_domain_pack",
+        version="0.1.0",
+        package="my_domain_pack",
+        capabilities=(
+            PluginCapability(
+                kind="extractor",
+                name="my_sensor",
+                target="my_domain_pack.extractors:MyExtractor",
+                channels=("P",),
+            ),
+        ),
+    )
+```
+
+`validate_plugin_manifest()` and `compatibility_report()` provide the stable
+CI gate for domainpack, extractor, actuator, and bridge extensions.
 
 ## References
 

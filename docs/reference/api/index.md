@@ -34,6 +34,7 @@ from scpn_phase_orchestrator import (
 | [Artifacts](artifacts.md) | Portable run artifacts and QPU data packaging/validation |
 | [Visualization](visualization.md) | Real-time WebXR/network/torus visualization surfaces |
 | [Adapters](adapters.md) | Bridges to SCPN ecosystem, observability, SNN controllers |
+| [Plugins](plugins.md) | Extension manifests and compatibility checks |
 | [QueueWaves](queuewaves.md) | Real-time cascade failure detector for microservices |
 | [SSGF](ssgf.md) | Self-Stabilizing Gauge Field: geometry carrier, ethical cost, PGBO, TCBO |
 | [Autotune](autotune_sindy.md) | Auto-calibration: SINDy, coupling estimation, phase extraction, frequency ID |
