@@ -167,12 +167,18 @@
 
 Near-term candidate tracks:
 
-- Dynamic higher-order topology adaptation in the supervisor: edit hyperedges and 2-/3-simplices based on coherence, Lyapunov, transfer-entropy, or policy objectives. First gate: a JAX-backed simplicial-complex operator, a topology mutation-rate policy knob, and two domainpack demos.
-- Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories. First gate: a `supervisor/causal/` module and two domainpack attribution demos.
-- FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy. First gate: single-domainpack FEP-MPC proof-of-concept.
-- STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces. First gate: parser/evaluator plus fault-injection coverage.
-- Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks. First gate: generated artefact audit trail, schema validation, dry-run simulation, and Petri-net reachability check.
-- Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains. First gate: optional `scpn-meta` extra with replay-trained embeddings.
+- Dynamic higher-order topology adaptation in the supervisor: edit hyperedges and 2-/3-simplices based on coherence, Lyapunov, transfer-entropy, or policy objectives.
+  - Foundation is in place: topology adaptation supervisor support exists; remaining scope is domainpack demonstrations and policy hardening.
+- Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
+  - Foundation is in place: causal counterfactual rollout support exists; remaining scope is attribution demos and deeper causal-model learning.
+- FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.
+  - Foundation is in place: predictive FEP supervisor support exists; remaining scope is wider hierarchy/domainpack proof work.
+- STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces.
+  - Foundation is in place: built-in STL robustness monitoring exists; remaining scope is policy DSL integration and model-checker export linkage.
+- Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
+  - Foundation is in place: symbolic binding compiler support exists; remaining scope is retrieval depth, confidence scoring, and generated notebook polish.
+- Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains.
+  - Foundation is in place: replay-backed meta-transfer proposals exist; remaining scope is larger audit-history training and optional packaging.
 - Quantum-native compiler target: output Qiskit/PennyLane or OpenPulse/QASM fragments for the `quantum_simulation` path with co-simulation validation.
 - Neuromorphic compiler target: emit Lava/PyNN or hardware-oriented HDL fragments from binding specs and supervisor policies, with simulator parity evidence.
 
@@ -182,34 +188,39 @@ Speculative research watchlist:
 - Evolutionary supervisor policy search over policy DSL, Petri nets, and topology mutations, initially offline over `audit.jsonl` with STL and counterfactual safety filters.
 - Information-geometry control layer using Fisher-Rao or Wasserstein metrics as supervisor control primitives.
 - Sheaf-cohomology control over N-channel states, with sheaf Laplacian and obstruction metrics.
+  - Foundation is in place: sheaf coherence supervisor support exists; remaining scope is heterogeneous-domain demos and obstruction hardening.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
 - Byzantine-fault-tolerant meta-orchestrator fabric over signed policy/topology proposals and hash-linked audit evidence.
 - Hybrid neuromorphic-quantum co-compiler with shared N-channel audit semantics.
 - Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
+  - Foundation is in place: value-alignment guard support exists; remaining scope is binding-spec objective templates and counterfactual violation reporting.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
 - Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.
 - Sheaf-theoretic coherence manifold: obstruction-aware control primitive over a sheaf Laplacian with audit-visible cohomology dimensions.
 - Constitutional value-alignment guard: Pareto objective constraints in binding specs, counterfactual violation logs, and forced safe fallback path.
 - Strange-loop meta-orchestrator: self-referential supervisor channel that monitors and damps policy drift, over-control, or control-loop oscillation.
+  - Foundation is in place: strange-loop supervisor monitor exists; remaining scope is long-run drift scenarios and studio surfacing.
 - Morphogenetic field topology: reaction-diffusion-style field over coupling topology with grow/shrink primitives and field snapshot audit records.
+  - Foundation is in place: morphogenetic topology field support exists; remaining scope is field snapshot visualisation and domainpack demos.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
+  - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations and reporting integration.
 - Topos-theoretic semantic binding: categorical validation prototype for binding and policy composition with explicit proof obligations.
 - Multiverse counterfactual simulator: vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation.
 - Entanglement-aware hybrid order parameters: quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi`.
 
 Priority order for first implementation tranche:
 
-1. Causal intervention engine.
-2. STL runtime verification.
-3. Dynamic higher-order topology adaptation.
-4. FEP / predictive-coding supervisor backend.
-5. Symbolic-to-binding compiler.
+1. ~~Causal intervention engine foundation.~~
+2. ~~STL runtime verification foundation.~~
+3. ~~Dynamic higher-order topology adaptation foundation.~~
+4. ~~FEP / predictive-coding supervisor backend foundation.~~
+5. ~~Symbolic-to-binding compiler foundation.~~
 
 Speculative priority order after first tranche:
 
-1. Strange-loop meta-orchestrator.
-2. Morphogenetic field topology.
-3. Integrated-information monitor.
-4. Sheaf-theoretic coherence manifold.
-5. Constitutional value-alignment guard.
+1. ~~Strange-loop meta-orchestrator foundation.~~
+2. ~~Morphogenetic field topology foundation.~~
+3. ~~Integrated-information monitor foundation.~~
+4. ~~Sheaf-theoretic coherence manifold foundation.~~
+5. ~~Constitutional value-alignment guard foundation.~~
