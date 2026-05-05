@@ -20,12 +20,14 @@ from __future__ import annotations
 
 from math import isfinite
 from numbers import Integral, Real
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["JaxUPDEEngine", "HAS_JAX"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 TWO_PI = 2.0 * np.pi
 
@@ -151,13 +153,13 @@ class JaxUPDEEngine:  # pragma: no cover
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: FloatArray,
+    ) -> FloatArray:
         """Advance phases by one Kuramoto step on GPU via JIT-compiled JAX."""
         jp = jnp.asarray(phases)
         jo = jnp.asarray(omegas)
@@ -185,16 +187,16 @@ class JaxStuartLandauEngine:  # pragma: no cover
 
     def step(
         self,
-        state: NDArray,
-        omegas: NDArray,
-        mu: NDArray,
-        knm: NDArray,
-        knm_r: NDArray,
+        state: FloatArray,
+        omegas: FloatArray,
+        mu: FloatArray,
+        knm: FloatArray,
+        knm_r: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray,
+        alpha: FloatArray,
         epsilon: float = 1.0,
-    ) -> NDArray:
+    ) -> FloatArray:
         """Advance Stuart-Landau state by one RK4 step via JIT-compiled JAX."""
         js = jnp.asarray(state)
         result = self._sl_rk4(

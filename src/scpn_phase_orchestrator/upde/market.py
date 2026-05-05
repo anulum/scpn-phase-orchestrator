@@ -47,11 +47,15 @@ __all__ = [
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
+_MarketFn = Callable[..., NDArray[np.float64]]
 
-def _load_rust_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
+
+def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
     from spo_kernel import market_order_parameter_rust, market_plv_rust
 
-    def _rust_op(phases_flat: NDArray, t: int, n: int) -> NDArray:
+    def _rust_op(
+        phases_flat: NDArray[np.float64], t: int, n: int
+    ) -> NDArray[np.float64]:
         return np.asarray(
             market_order_parameter_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -62,11 +66,11 @@ def _load_rust_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
         )
 
     def _rust_plv(
-        phases_flat: NDArray,
+        phases_flat: NDArray[np.float64],
         t: int,
         n: int,
         window: int,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         return np.asarray(
             market_plv_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -80,7 +84,7 @@ def _load_rust_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
     return _rust_op, _rust_plv
 
 
-def _load_mojo_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
+def _load_mojo_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._market_mojo import (
         _ensure_exe,
@@ -92,7 +96,7 @@ def _load_mojo_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
     return market_order_parameter_mojo, market_plv_mojo
 
 
-def _load_julia_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
+def _load_julia_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._market_julia import (
@@ -103,7 +107,7 @@ def _load_julia_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
     return market_order_parameter_julia, market_plv_julia
 
 
-def _load_go_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
+def _load_go_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._market_go import (
         _load_lib,
@@ -115,9 +119,7 @@ def _load_go_fn() -> tuple[Callable[..., NDArray], Callable[..., NDArray]]:
     return market_order_parameter_go, market_plv_go
 
 
-_LOADERS: dict[
-    str, Callable[[], tuple[Callable[..., NDArray], Callable[..., NDArray]]]
-] = {
+_LOADERS: dict[str, Callable[[], tuple[_MarketFn, _MarketFn]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -140,13 +142,13 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> tuple[Callable[..., NDArray], Callable[..., NDArray]] | None:
+def _dispatch() -> tuple[_MarketFn, _MarketFn] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
 
 
-def extract_phase(series: NDArray) -> NDArray:
+def extract_phase(series: NDArray[np.float64]) -> NDArray[np.float64]:
     """Extract instantaneous phase from a time series via the
     Hilbert transform. Shape-preserving; output in ``[0, 2π)``.
 
@@ -155,24 +157,24 @@ def extract_phase(series: NDArray) -> NDArray:
     ship an FFT library.
     """
     analytic = hilbert(series, axis=0)
-    phase: NDArray = np.angle(analytic) % (2.0 * np.pi)
+    phase: NDArray[np.float64] = np.angle(analytic) % (2.0 * np.pi)
     return phase
 
 
 def _python_market_order_parameter(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     if t == 0 or n == 0:
         return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)
     z = np.exp(1j * phases)
-    R: NDArray = np.abs(np.mean(z, axis=1))
+    R: NDArray[np.float64] = np.abs(np.mean(z, axis=1))
     return np.ascontiguousarray(R, dtype=np.float64)
 
 
-def market_order_parameter(phases: NDArray) -> NDArray:
+def market_order_parameter(phases: NDArray[np.float64]) -> NDArray[np.float64]:
     """Kuramoto order parameter ``R(t)`` across ``N`` assets at
     every timestep."""
     phases = np.asarray(phases, dtype=np.float64)
@@ -188,11 +190,11 @@ def market_order_parameter(phases: NDArray) -> NDArray:
 
 
 def _python_market_plv(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
     window: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     if t < window or n == 0 or window == 0:
         return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)
@@ -212,7 +214,7 @@ def _python_market_plv(
     return out
 
 
-def market_plv(phases: NDArray, window: int = 50) -> NDArray:
+def market_plv(phases: NDArray[np.float64], window: int = 50) -> NDArray[np.float64]:
     """Rolling phase-locking-value matrix between assets.
 
     Returns shape ``(T − window + 1, N, N)``.
@@ -235,10 +237,10 @@ def market_plv(phases: NDArray, window: int = 50) -> NDArray:
 
 
 def detect_regimes(
-    R: NDArray,
+    R: NDArray[np.float64],
     sync_threshold: float = 0.7,
     desync_threshold: float = 0.3,
-) -> NDArray:
+) -> NDArray[np.int32]:
     """Classify market synchronisation regimes from ``R(t)``.
 
     Returns ``int32`` labels: 0 = desynchronised, 1 = transition,
@@ -261,10 +263,10 @@ def detect_regimes(
 
 
 def sync_warning(
-    R: NDArray,
+    R: NDArray[np.float64],
     threshold: float = 0.7,
     lookback: int = 10,
-) -> NDArray:
+) -> NDArray[np.bool_]:
     """Detect synchronisation warning signals — timesteps where
     the smoothed ``R`` crosses the threshold from below."""
     if lookback > 1:

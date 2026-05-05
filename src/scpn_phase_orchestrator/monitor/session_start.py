@@ -9,8 +9,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.oscillators.base import PhaseState
@@ -20,6 +22,7 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 __all__ = ["SessionCoherenceReport", "check_session_start"]
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass
@@ -36,7 +39,7 @@ class SessionCoherenceReport:
 
 def check_session_start(
     phase_states: list[PhaseState],
-    initial_phases: np.ndarray,
+    initial_phases: FloatArray,
     imprint_state: ImprintState,
     n_osc: int,
 ) -> SessionCoherenceReport:

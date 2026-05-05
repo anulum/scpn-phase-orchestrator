@@ -50,19 +50,22 @@ __all__ = [
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+_Loader = Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]
+
+
+def _load_rust_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]:
     from spo_kernel import inertial_step_rust
 
     def _rust(
-        theta: NDArray,
-        omega_dot: NDArray,
-        power: NDArray,
-        knm_flat: NDArray,
-        inertia: NDArray,
-        damping: NDArray,
+        theta: NDArray[np.float64],
+        omega_dot: NDArray[np.float64],
+        power: NDArray[np.float64],
+        knm_flat: NDArray[np.float64],
+        inertia: NDArray[np.float64],
+        damping: NDArray[np.float64],
         n: int,
         dt: float,
-    ) -> tuple[NDArray, NDArray]:
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         new_th, new_od = inertial_step_rust(
             np.ascontiguousarray(theta, dtype=np.float64),
             np.ascontiguousarray(omega_dot, dtype=np.float64),
@@ -81,7 +84,7 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     return _rust
 
 
-def _load_mojo_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+def _load_mojo_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._inertial_mojo import (
         _ensure_exe,
@@ -92,7 +95,7 @@ def _load_mojo_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     return inertial_step_mojo
 
 
-def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+def _load_julia_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._inertial_julia import (
@@ -102,7 +105,7 @@ def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     return inertial_step_julia
 
 
-def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray]]:
+def _load_go_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._inertial_go import _load_lib, inertial_step_go
 
@@ -110,7 +113,7 @@ def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray]]:
     return inertial_step_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., tuple[NDArray, NDArray]]]] = {
+_LOADERS: dict[str, Callable[[], _Loader]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -133,7 +136,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., tuple[NDArray, NDArray]] | None:
+def _dispatch() -> _Loader | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -155,20 +158,22 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _python_step(
-    theta: NDArray,
-    omega_dot: NDArray,
-    power: NDArray,
-    knm_flat: NDArray,
-    inertia: NDArray,
-    damping: NDArray,
+    theta: NDArray[np.float64],
+    omega_dot: NDArray[np.float64],
+    power: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    inertia: NDArray[np.float64],
+    damping: NDArray[np.float64],
     n: int,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Python reference using the same ``sin(θ_j − θ_i) =
     s_j·c_i − c_j·s_i`` expansion as the Rust kernel."""
     knm = np.asarray(knm_flat).reshape(n, n)
 
-    def deriv(th: NDArray, od: NDArray) -> tuple[NDArray, NDArray]:
+    def deriv(
+        th: NDArray[np.float64], od: NDArray[np.float64]
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         s = np.sin(th)
         c = np.cos(th)
         # sin(θ_j − θ_i) = s_j · c_i − c_j · s_i  (row-i, col-j)
@@ -202,13 +207,13 @@ class InertialKuramotoEngine:
 
     def step(
         self,
-        theta: NDArray,
-        omega_dot: NDArray,
-        power: NDArray,
-        knm: NDArray,
-        inertia: NDArray,
-        damping: NDArray,
-    ) -> tuple[NDArray, NDArray]:
+        theta: NDArray[np.float64],
+        omega_dot: NDArray[np.float64],
+        power: NDArray[np.float64],
+        knm: NDArray[np.float64],
+        inertia: NDArray[np.float64],
+        damping: NDArray[np.float64],
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
         backend_fn = _dispatch()
         if backend_fn is not None:
@@ -235,14 +240,19 @@ class InertialKuramotoEngine:
 
     def run(
         self,
-        theta: NDArray,
-        omega_dot: NDArray,
-        power: NDArray,
-        knm: NDArray,
-        inertia: NDArray,
-        damping: NDArray,
+        theta: NDArray[np.float64],
+        omega_dot: NDArray[np.float64],
+        power: NDArray[np.float64],
+        knm: NDArray[np.float64],
+        inertia: NDArray[np.float64],
+        damping: NDArray[np.float64],
         n_steps: int,
-    ) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+    ) -> tuple[
+        NDArray[np.float64],
+        NDArray[np.float64],
+        NDArray[np.float64],
+        NDArray[np.float64],
+    ]:
         theta_traj = np.empty((n_steps, self._n))
         omega_traj = np.empty((n_steps, self._n))
         th, od = theta.copy(), omega_dot.copy()
@@ -252,8 +262,8 @@ class InertialKuramotoEngine:
             omega_traj[i] = od
         return th, od, theta_traj, omega_traj
 
-    def frequency_deviation(self, omega_dot: NDArray) -> float:
+    def frequency_deviation(self, omega_dot: NDArray[np.float64]) -> float:
         return float(np.max(np.abs(omega_dot)) / TWO_PI)
 
-    def coherence(self, theta: NDArray) -> float:
+    def coherence(self, theta: NDArray[np.float64]) -> float:
         return float(np.abs(np.mean(np.exp(1j * theta))))

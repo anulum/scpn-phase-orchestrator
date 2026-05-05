@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,6 +37,7 @@ __all__ = [
 
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _load_rust_fns() -> dict[str, object]:
@@ -45,7 +46,7 @@ def _load_rust_fns() -> dict[str, object]:
         extract_envelope_rust,
     )
 
-    def _rust_extract(amps: NDArray, window: int) -> NDArray:
+    def _rust_extract(amps: FloatArray, window: int) -> FloatArray:
         return np.asarray(
             extract_envelope_rust(
                 np.ascontiguousarray(amps.ravel(), dtype=np.float64),
@@ -54,7 +55,7 @@ def _load_rust_fns() -> dict[str, object]:
             dtype=np.float64,
         )
 
-    def _rust_mod(env: NDArray) -> float:
+    def _rust_mod(env: FloatArray) -> float:
         return float(
             envelope_modulation_depth_rust(
                 np.ascontiguousarray(env.ravel(), dtype=np.float64),
@@ -134,7 +135,7 @@ def _dispatch(fn_name: str) -> object | None:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
-def _extract_1d_python(amps: NDArray, window: int) -> NDArray:
+def _extract_1d_python(amps: FloatArray, window: int) -> FloatArray:
     t = amps.size
     sq = amps.astype(np.float64) ** 2
     # Window exceeds series — fall back to a single constant RMS
@@ -150,9 +151,9 @@ def _extract_1d_python(amps: NDArray, window: int) -> NDArray:
 
 
 def extract_envelope(
-    amplitudes_history: NDArray,
+    amplitudes_history: FloatArray,
     window: int = 10,
-) -> NDArray:
+) -> FloatArray:
     """Sliding-window RMS envelope.
 
     Args:
@@ -175,10 +176,7 @@ def extract_envelope(
     if amplitudes.ndim == 1:
         backend_fn = _dispatch("extract")
         if backend_fn is not None:
-            fn = cast(
-                "Callable[[NDArray, int], NDArray]",
-                backend_fn,
-            )
+            fn = cast("Callable[[FloatArray, int], FloatArray]", backend_fn)
             return np.asarray(
                 fn(amplitudes, int(window)),
                 dtype=np.float64,
@@ -194,7 +192,7 @@ def extract_envelope(
     return np.vstack([np.tile(first, (window - 1, 1)), rms])
 
 
-def envelope_modulation_depth(envelope: NDArray) -> float:
+def envelope_modulation_depth(envelope: FloatArray) -> float:
     """Modulation depth ``(max − min) / (max + min) ∈ [0, 1]``.
 
     Returns ``0.0`` for empty or non-positive envelopes.
@@ -203,7 +201,7 @@ def envelope_modulation_depth(envelope: NDArray) -> float:
         return 0.0
     backend_fn = _dispatch("mod")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray], float]", backend_fn)
+        fn = cast("Callable[[FloatArray], float]", backend_fn)
         return float(fn(envelope))
     flat = envelope.ravel()
     vmax = float(np.max(flat))

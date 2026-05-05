@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -33,6 +34,11 @@ PYTEST_HEAVY_IGNORES = [
 ]
 
 PYTHON_GATES: list[tuple[str, list[str], Path]] = [
+    (
+        "ndarray-hygiene",
+        [_PY, "tools/check_ndarray_type_hygiene.py"],
+        ROOT,
+    ),
     ("ruff check", [_PY, "-m", "ruff", "check", "src/", "tests/"], ROOT),
     (
         "ruff format",
@@ -118,12 +124,22 @@ COVERAGE_CHECK: tuple[str, list[str], Path] = (
 
 
 def run_gate(name: str, cmd: list[str], cwd: Path) -> bool:
+    env = os.environ.copy()
+    if "pytest" in cmd:
+        src_path = str((ROOT / "src").resolve())
+        existing = env.get("PYTHONPATH")
+        if existing:
+            env["PYTHONPATH"] = f"{src_path}:{existing}"
+        else:
+            env["PYTHONPATH"] = src_path
+
     t0 = time.monotonic()
     result = subprocess.run(
         cmd,
         cwd=cwd,
         capture_output=True,
         text=True,
+        env=env,
         check=False,
     )
     elapsed = time.monotonic() - t0

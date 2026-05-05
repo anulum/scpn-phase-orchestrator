@@ -9,10 +9,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypeAlias
 
+import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["LockSignature", "LayerState", "UPDEState"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -41,7 +44,7 @@ class UPDEState:
     """Full UPDE diagnostic snapshot: per-layer states and aggregates."""
 
     layers: list[LayerState]
-    cross_layer_alignment: NDArray
+    cross_layer_alignment: FloatArray
     stability_proxy: float
     regime_id: str
     mean_amplitude: float = 0.0

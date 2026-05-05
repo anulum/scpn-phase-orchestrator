@@ -29,12 +29,16 @@ Install sc-neurocore: pip install sc-neurocore
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.upde.metrics import UPDEState
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["NeurocoreBridge", "HAS_NEUROCORE"]
 
@@ -119,7 +123,7 @@ class NeurocoreBridge:
         self._spike_counts = np.zeros(self._n_total, dtype=np.int64)
         self._step_count = 0
 
-    def step(self, state: UPDEState, n_substeps: int = 10) -> NDArray:
+    def step(self, state: UPDEState, n_substeps: int = 10) -> FloatArray:
         """Run neuron ensemble for n_substeps, return per-layer spike rates."""
         r_values = np.array(
             [ls.R for ls in state.layers[: self._n_layers]],
@@ -141,14 +145,14 @@ class NeurocoreBridge:
             return np.zeros(self._n_layers)
 
         spikes_2d = self._spike_counts.reshape(self._n_layers, self._n_per)
-        layer_spikes: NDArray = spikes_2d.sum(axis=1)
+        layer_spikes: FloatArray = spikes_2d.sum(axis=1)
         return layer_spikes / (self._n_per * duration_s)
 
-    def _step_rust(self, layer_currents: NDArray, n_substeps: int) -> NDArray:
+    def _step_rust(self, layer_currents: FloatArray, n_substeps: int) -> FloatArray:
         """Delegate to Rust PyLIFEnsemble — fastest path."""
         return np.asarray(self._rust_ensemble.step(layer_currents, n_substeps))
 
-    def _step_numpy(self, currents: NDArray, n_substeps: int) -> None:
+    def _step_numpy(self, currents: FloatArray, n_substeps: int) -> None:
         """Vectorised LIF Euler-Maruyama integration over all neurons."""
         v = self._v
         refractory = self._refractory
@@ -176,7 +180,7 @@ class NeurocoreBridge:
 
             self._step_count += 1
 
-    def _step_scalar(self, currents: NDArray, n_substeps: int) -> None:
+    def _step_scalar(self, currents: FloatArray, n_substeps: int) -> None:
         """Per-neuron stepping via sc-neurocore objects (slow, for validation)."""
         for _ in range(n_substeps):
             for nidx in range(self._n_total):
@@ -185,7 +189,7 @@ class NeurocoreBridge:
                     self._spike_counts[nidx] += 1
             self._step_count += 1
 
-    def rates_to_actions(self, rates: NDArray) -> list[ControlAction]:
+    def rates_to_actions(self, rates: FloatArray) -> list[ControlAction]:
         """Convert per-layer spike rates to coupling boost actions."""
         actions: list[ControlAction] = []
         for layer_idx, rate in enumerate(rates):

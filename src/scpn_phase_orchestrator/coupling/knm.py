@@ -11,11 +11,15 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
+
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 __all__ = [
     "CouplingState",
@@ -80,10 +84,10 @@ SCPN_CALIBRATION_ANCHORS: dict[tuple[int, int], float] = {
 class CouplingState:
     """Immutable snapshot of phase/amplitude coupling matrices and template."""
 
-    knm: NDArray
-    alpha: NDArray
+    knm: FloatArray
+    alpha: FloatArray
     active_template: str
-    knm_r: NDArray | None = None
+    knm_r: FloatArray | None = None
 
 
 class CouplingBuilder:
@@ -250,7 +254,7 @@ class CouplingBuilder:
         self,
         state: CouplingState,
         template_name: str,
-        templates: dict[str, NDArray],
+        templates: dict[str, FloatArray],
     ) -> CouplingState:
         """Replace the active K_nm with a named template matrix."""
         if template_name not in templates:
@@ -279,7 +283,7 @@ class CouplingBuilder:
         return float(np.clip(val, 0.1, 0.5))
 
 
-def _set_symmetric(K: NDArray, n: int, m: int, val: float) -> None:
+def _set_symmetric(K: FloatArray, n: int, m: int, val: float) -> None:
     """Set K[n-1, m-1] and K[m-1, n-1] to val (1-indexed layer numbers)."""
     K[n - 1, m - 1] = val
     K[m - 1, n - 1] = val

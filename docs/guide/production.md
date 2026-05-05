@@ -236,6 +236,22 @@ The pure-Python fallback wheel is published separately to PyPI.
 - **WebSocket**: QueueWaves WebSocket has no built-in authentication. Add
   auth at the reverse proxy layer.
 
+For hardening adapter traffic, deploy sane environment defaults:
+
+```bash
+export SPO_ADAPTER_RATE_LIMIT_PER_MINUTE=120
+export QUEUEWAVES_API_KEY="$(openssl rand -hex 32)"
+export PROMETHEUS_TOKEN_PATH=/run/secrets/prometheus/token
+
+# TLS client certs for SCADA bindings come from mounted secret volume.
+export SPO_MODBUS_TLS_CERT_PATH=/run/secrets/scada/client.pem
+export SPO_MODBUS_TLS_KEY_PATH=/run/secrets/scada/client.key
+export SPO_MODBUS_CA_CERT_PATH=/run/secrets/scada/ca.pem
+```
+
+Use host/port validation and rate-limit checks before each write path so malformed
+production inputs fail fast with generic errors.
+
 ## Scaling
 
 One SPO instance per domain. The UPDE engine is stateful (phases, coupling,

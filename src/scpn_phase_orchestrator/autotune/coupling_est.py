@@ -9,18 +9,21 @@
 from __future__ import annotations
 
 import contextlib
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["estimate_coupling"]
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 def estimate_coupling(
-    phases: NDArray,
-    omegas: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
     dt: float,
-) -> NDArray:
+) -> FloatArray:
     """Estimate K_ij coupling matrix from observed phase trajectories.
 
     Least-squares fit of dθ_i/dt - ω_i = Σ_j K_ij sin(θ_j - θ_i).
@@ -67,11 +70,11 @@ def estimate_coupling(
 
 
 def estimate_coupling_harmonics(
-    phases: NDArray,
-    omegas: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
     dt: float,
     n_harmonics: int = 2,
-) -> dict[str, NDArray]:
+) -> dict[str, FloatArray]:
     """Estimate coupling with higher Fourier harmonics.
 
     Fits: dθ_i/dt - ω_i = Σ_j Σ_k [a_jk sin(k·Δθ) + b_jk cos(k·Δθ)]
@@ -92,7 +95,7 @@ def estimate_coupling_harmonics(
     phases_mid = phases[:, :-1]
     T_eff = dphase.shape[1]
 
-    result: dict[str, NDArray] = {}
+    result: dict[str, FloatArray] = {}
     for k in range(1, n_harmonics + 1):
         result[f"sin_{k}"] = np.zeros((n, n), dtype=np.float64)
         result[f"cos_{k}"] = np.zeros((n, n), dtype=np.float64)

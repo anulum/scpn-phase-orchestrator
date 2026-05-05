@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,9 +21,10 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 __all__ = ["cost_R", "gradient_knm_fd", "gradient_knm_jax"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
-def cost_R(phases: NDArray) -> float:
+def cost_R(phases: FloatArray) -> float:
     """Cost = 1 - R (minimize to maximize synchronization)."""
     R, _ = compute_order_parameter(phases)
     return 1.0 - R
@@ -31,15 +32,15 @@ def cost_R(phases: NDArray) -> float:
 
 def gradient_knm_fd(
     engine: UPDEEngine,
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     n_steps: int = 100,
     epsilon: float = 1e-4,
     zeta: float = 0.0,
     psi: float = 0.0,
-) -> NDArray:
+) -> FloatArray:
     """Finite-difference gradient of cost_R w.r.t. knm entries.
 
     For each K_ij (i≠j), perturbs by ±ε and measures the effect on R
@@ -78,13 +79,13 @@ def gradient_knm_fd(
 
 
 def gradient_knm_jax(  # pragma: no cover — requires JAX
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     n_steps: int = 100,
     dt: float = 0.01,
-) -> NDArray:
+) -> FloatArray:
     """Exact gradient of cost_R w.r.t. knm via JAX autodiff.
 
     JIT-compiles a forward Kuramoto simulation and differentiates through it

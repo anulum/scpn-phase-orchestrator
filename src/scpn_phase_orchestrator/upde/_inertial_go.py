@@ -51,15 +51,15 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def inertial_step_go(
-    theta: NDArray,
-    omega_dot: NDArray,
-    power: NDArray,
-    knm_flat: NDArray,
-    inertia: NDArray,
-    damping: NDArray,
+    theta: NDArray[np.float64],
+    omega_dot: NDArray[np.float64],
+    power: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    inertia: NDArray[np.float64],
+    damping: NDArray[np.float64],
     n: int,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     lib = _load_lib()
     th = np.ascontiguousarray(theta, dtype=np.float64)
     od = np.ascontiguousarray(omega_dot, dtype=np.float64)

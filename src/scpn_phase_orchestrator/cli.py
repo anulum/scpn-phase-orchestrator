@@ -11,9 +11,11 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import TypeAlias
 
 import click
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
@@ -70,6 +72,8 @@ from scpn_phase_orchestrator.upde.order_params import (
 )
 from scpn_phase_orchestrator.upde.pac import modulation_index
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 @click.group()
@@ -339,7 +343,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
     amplitude_mode = spec.amplitude is not None
     sl_engine: StuartLandauEngine | None = None
     upde_engine: UPDEEngine | None = None
-    mu: np.ndarray | None = None
+    mu: FloatArray | None = None
 
     if amplitude_mode:
         amp = spec.amplitude
@@ -426,8 +430,8 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
     if amplitude_mode and mu is not None:
         r_init = np.sqrt(np.maximum(mu, 0.0))
         sl_state = np.concatenate([phases, r_init])
-        phases_history: list[np.ndarray] = []
-        amps_history: list[np.ndarray] = []
+        phases_history: list[FloatArray] = []
+        amps_history: list[FloatArray] = []
 
     layer_osc_ranges: dict[int, list[int]] = {}
     osc_idx = 0

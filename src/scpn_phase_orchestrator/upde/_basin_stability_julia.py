@@ -36,10 +36,10 @@ def _ensure() -> Any:
 
 
 def steady_state_r_julia(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases_init: NDArray[np.float64],
+    omegas: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    alpha_flat: NDArray[np.float64],
     n: int,
     k_scale: float,
     dt: float,

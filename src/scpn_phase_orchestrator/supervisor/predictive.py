@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,6 +21,8 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 
 __all__ = ["PredictiveSupervisor", "Prediction"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _R_CRITICAL = 0.3
 _R_DEGRADED = 0.6
@@ -58,10 +61,10 @@ class PredictiveSupervisor:
 
     def predict(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
-        alpha: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
+        alpha: FloatArray,
     ) -> Prediction:
         """Predict R trajectory using OA reduction as fast forward model."""
         R_current, psi = compute_order_parameter(phases)
@@ -102,10 +105,10 @@ class PredictiveSupervisor:
 
     def decide(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
-        alpha: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
+        alpha: FloatArray,
         upde_state: UPDEState,
         boundary_state: BoundaryState,
     ) -> list[ControlAction]:

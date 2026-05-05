@@ -26,10 +26,15 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+HodgeTuple: TypeAlias = tuple[FloatArray, FloatArray, FloatArray]
+HodgeBackend: TypeAlias = Callable[..., HodgeTuple]
+
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -42,14 +47,14 @@ __all__ = [
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
+def _load_rust_fn() -> HodgeBackend:
     from spo_kernel import hodge_decomposition_rust
 
     def _rust(
-        knm_flat: NDArray,
-        phases: NDArray,
+        knm_flat: FloatArray,
+        phases: FloatArray,
         n: int,
-    ) -> tuple[NDArray, NDArray, NDArray]:
+    ) -> HodgeTuple:
         g, c, h = hodge_decomposition_rust(
             np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
@@ -62,12 +67,12 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
         )
 
     return cast(
-        "Callable[..., tuple[NDArray, NDArray, NDArray]]",
+        "HodgeBackend",
         _rust,
     )
 
 
-def _load_mojo_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
+def _load_mojo_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.coupling._hodge_mojo import (
         _ensure_exe,
@@ -78,7 +83,7 @@ def _load_mojo_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
     return hodge_decomposition_mojo
 
 
-def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
+def _load_julia_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.coupling._hodge_julia import (
@@ -88,7 +93,7 @@ def _load_julia_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
     return hodge_decomposition_julia
 
 
-def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
+def _load_go_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.coupling._hodge_go import (
         _load_lib,
@@ -101,7 +106,7 @@ def _load_go_fn() -> Callable[..., tuple[NDArray, NDArray, NDArray]]:
 
 _LOADERS: dict[
     str,
-    Callable[[], Callable[..., tuple[NDArray, NDArray, NDArray]]],
+    Callable[[], HodgeBackend],
 ] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
@@ -125,7 +130,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., tuple[NDArray, NDArray, NDArray]] | None:
+def _dispatch() -> HodgeBackend | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -142,12 +147,12 @@ class HodgeResult:
       perfect sym/anti split of ``K``).
     """
 
-    gradient: NDArray
-    curl: NDArray
-    harmonic: NDArray
+    gradient: FloatArray
+    curl: FloatArray
+    harmonic: FloatArray
 
 
-def hodge_decomposition(knm: NDArray, phases: NDArray) -> HodgeResult:
+def hodge_decomposition(knm: FloatArray, phases: FloatArray) -> HodgeResult:
     """Decompose coupling dynamics into gradient / curl / harmonic
     per-oscillator contributions."""
     phases = np.asarray(phases, dtype=np.float64)

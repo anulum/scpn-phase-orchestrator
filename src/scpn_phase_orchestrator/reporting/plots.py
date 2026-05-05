@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 
 # Probe availability without actually importing matplotlib — keeps the
 # module import free of backend initialisation cost.
@@ -49,6 +50,8 @@ def _require_matplotlib() -> tuple[Any, Any]:
 
 
 __all__ = ["CoherencePlot"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _REGIME_COLORS = {
     "NOMINAL": "#2ecc71",
@@ -115,7 +118,7 @@ class CoherencePlot:
         sub_frac = [s.get("subcritical_fraction", 0.0) for s in steps]
         return x, amps, sub_frac
 
-    def _extract_pac_matrix(self) -> tuple[int, np.ndarray]:
+    def _extract_pac_matrix(self) -> tuple[int, FloatArray]:
         pac_record = None
         for d in reversed(self._data):
             if "pac_matrix" in d:

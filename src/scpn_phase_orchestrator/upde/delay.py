@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections import deque
 from math import isfinite
 from numbers import Integral, Real
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -27,6 +28,7 @@ except ImportError:
     _HAS_RUST = False
 
 __all__ = ["DelayBuffer", "DelayedEngine"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -54,13 +56,13 @@ class DelayBuffer:
     def __init__(self, n_oscillators: int, max_delay_steps: int):
         self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
         self._max = _validate_positive_int(max_delay_steps, name="max_delay_steps")
-        self._buffer: deque[NDArray] = deque(maxlen=self._max)
+        self._buffer: deque[FloatArray] = deque(maxlen=self._max)
 
-    def push(self, phases: NDArray) -> None:
+    def push(self, phases: FloatArray) -> None:
         """Append a phase snapshot to the buffer."""
         self._buffer.append(phases.copy())
 
-    def get_delayed(self, delay_steps: int) -> NDArray | None:
+    def get_delayed(self, delay_steps: int) -> FloatArray | None:
         """Return phases from `delay_steps` ago, or None if not enough history."""
         if delay_steps < 1 or delay_steps > len(self._buffer):
             return None
@@ -86,7 +88,7 @@ class DelayedEngine:
         self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
         self._dt = _validate_positive_float(dt, name="dt")
         self._delay_steps = _validate_positive_int(delay_steps, name="delay_steps")
-        self._buffer: deque[NDArray] = deque(maxlen=self._delay_steps + 1)
+        self._buffer: deque[FloatArray] = deque(maxlen=self._delay_steps + 1)
 
     @property
     def delay_steps(self) -> int:
@@ -94,14 +96,14 @@ class DelayedEngine:
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float = 0.0,
         psi: float = 0.0,
-        alpha: NDArray | None = None,
+        alpha: FloatArray | None = None,
         step_idx: int = 0,
-    ) -> NDArray:
+    ) -> FloatArray:
         self._buffer.append(phases.copy())
         delayed = self._buffer[0] if len(self._buffer) > self._delay_steps else phases
         if alpha is None:
@@ -111,19 +113,19 @@ class DelayedEngine:
         dtheta = omegas + coupling
         if zeta != 0.0:
             dtheta += zeta * np.sin(psi - phases)
-        step_out: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        step_out: FloatArray = (phases + self._dt * dtheta) % TWO_PI
         return step_out
 
     def run(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float = 0.0,
         psi: float = 0.0,
-        alpha: NDArray | None = None,
+        alpha: FloatArray | None = None,
         n_steps: int = 100,
-    ) -> NDArray:
+    ) -> FloatArray:
         if _HAS_RUST:
             p = np.ascontiguousarray(phases, dtype=np.float64)
             o = np.ascontiguousarray(omegas, dtype=np.float64)
@@ -132,7 +134,7 @@ class DelayedEngine:
                 alpha.ravel() if alpha is not None else np.zeros(self._n * self._n),
                 dtype=np.float64,
             )
-            result: NDArray = np.asarray(
+            result: FloatArray = np.asarray(
                 _rust_delayed_run(
                     p,
                     o,
@@ -146,7 +148,7 @@ class DelayedEngine:
                     n_steps,
                 )
             )
-            return result
+            return np.asarray(result, dtype=np.float64)
         p = phases.copy()
         for i in range(n_steps):
             p = self.step(p, omegas, knm, zeta, psi, alpha, step_idx=i)

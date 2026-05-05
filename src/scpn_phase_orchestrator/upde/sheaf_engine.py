@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias, cast
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -15,6 +17,8 @@ from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = ["SheafUPDEEngine"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class SheafUPDEEngine:
@@ -70,12 +74,12 @@ class SheafUPDEEngine:
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        restriction_maps: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
         zeta: float,
-        psi: NDArray,
-    ) -> NDArray:
+        psi: FloatArray,
+    ) -> FloatArray:
         """Advance phases by one timestep.
 
         Args:
@@ -96,7 +100,10 @@ class SheafUPDEEngine:
                 float(zeta),
                 np.ascontiguousarray(psi.ravel(), dtype=np.float64),
             )
-            return np.asarray(res).reshape((self._n, self._d))
+            return cast(
+                "FloatArray",
+                np.asarray(res).reshape((self._n, self._d)),
+            )
 
         if self._method == "euler":
             return self._euler_step(phases, omegas, restriction_maps, zeta, psi)
@@ -108,13 +115,13 @@ class SheafUPDEEngine:
 
     def run(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        restriction_maps: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
         zeta: float,
-        psi: NDArray,
+        psi: FloatArray,
         n_steps: int,
-    ) -> NDArray:
+    ) -> FloatArray:
         """Run multiple steps in a batch, return final phases."""
         if self._rust is not None:
             res = self._rust.run(
@@ -125,7 +132,10 @@ class SheafUPDEEngine:
                 np.ascontiguousarray(psi.ravel(), dtype=np.float64),
                 n_steps,
             )
-            return np.asarray(res).reshape((self._n, self._d))
+            return cast(
+                "FloatArray",
+                np.asarray(res).reshape((self._n, self._d)),
+            )
 
         p = phases.copy()
         for _ in range(n_steps):
@@ -134,12 +144,12 @@ class SheafUPDEEngine:
 
     def _derivative(
         self,
-        theta: NDArray,
-        omegas: NDArray,
-        restriction_maps: NDArray,
+        theta: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
         zeta: float,
-        psi: NDArray,
-    ) -> NDArray:
+        psi: FloatArray,
+    ) -> FloatArray:
         n, d = self._n, self._d
         dtheta = omegas.copy()
         for i in range(n):
@@ -157,12 +167,12 @@ class SheafUPDEEngine:
 
     def _rk4_step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        restriction_maps: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
         zeta: float,
-        psi: NDArray,
-    ) -> NDArray:
+        psi: FloatArray,
+    ) -> FloatArray:
         """Single RK4 integration step (Python fallback for rk4/rk45)."""
         dt = self._dt
         args = (omegas, restriction_maps, zeta, psi)
@@ -170,17 +180,19 @@ class SheafUPDEEngine:
         k2 = self._derivative((phases + 0.5 * dt * k1) % TWO_PI, *args)
         k3 = self._derivative((phases + 0.5 * dt * k2) % TWO_PI, *args)
         k4 = self._derivative((phases + dt * k3) % TWO_PI, *args)
-        result: NDArray = (phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)) % TWO_PI
+        result: FloatArray = (
+            phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
+        ) % TWO_PI
         return result
 
     def _euler_step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        restriction_maps: NDArray,
+        phases: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
         zeta: float,
-        psi: NDArray,
-    ) -> NDArray:
+        psi: FloatArray,
+    ) -> FloatArray:
         dtheta = self._derivative(phases, omegas, restriction_maps, zeta, psi)
-        result: NDArray = (phases + self._dt * dtheta) % TWO_PI
+        result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
         return result

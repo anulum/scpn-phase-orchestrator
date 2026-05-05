@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -25,15 +27,16 @@ except ImportError:
     _HAS_RUST = False
 
 __all__ = ["te_adapt_coupling"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def te_adapt_coupling(
-    knm: NDArray,
-    phase_history: NDArray,
+    knm: FloatArray,
+    phase_history: FloatArray,
     lr: float = 0.01,
     decay: float = 0.0,
     n_bins: int = 8,
-) -> NDArray:
+) -> FloatArray:
     """Adapt coupling matrix using transfer entropy as learning signal.
 
     K_ij(t+1) = (1-decay) * K_ij(t) + lr * TE(i→j)
@@ -56,9 +59,12 @@ def te_adapt_coupling(
         n = knm.shape[0]
         k_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         t_flat = np.ascontiguousarray(te.ravel(), dtype=np.float64)
-        result_flat: NDArray = np.asarray(_rust_te_adapt(k_flat, t_flat, n, lr, decay))
+        result_flat: FloatArray = np.asarray(
+            _rust_te_adapt(k_flat, t_flat, n, lr, decay),
+            dtype=np.float64,
+        )
         return result_flat.reshape(n, n)
     knm_new = (1.0 - decay) * knm + lr * te
     np.fill_diagonal(knm_new, 0.0)
-    result: NDArray = np.maximum(knm_new, 0.0)
+    result: FloatArray = np.maximum(knm_new, 0.0)
     return result

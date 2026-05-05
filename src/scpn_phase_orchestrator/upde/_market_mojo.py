@@ -52,10 +52,10 @@ def _run_mojo(tokens: list[str], expected_lines: int) -> list[str]:
 
 
 def market_order_parameter_mojo(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     tokens = ["ORDER", str(int(t)), str(int(n))]
     tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())
     lines = _run_mojo(tokens, expected_lines=int(t))
@@ -63,11 +63,11 @@ def market_order_parameter_mojo(
 
 
 def market_plv_mojo(
-    phases_flat: NDArray,
+    phases_flat: NDArray[np.float64],
     t: int,
     n: int,
     window: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     n_windows = int(t) - int(window) + 1
     tokens = ["PLV", str(int(t)), str(int(n)), str(int(window))]
     tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())

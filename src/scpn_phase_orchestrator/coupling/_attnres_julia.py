@@ -18,7 +18,7 @@ plus ``juliacall`` at resolve time; missing toolchain surfaces as
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -27,6 +27,7 @@ __all__ = ["attnres_modulate_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "attnres.jl"
 _JULIA_MODULE: Any | None = None
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _ensure_julia_loaded() -> Any:
@@ -43,18 +44,18 @@ def _ensure_julia_loaded() -> Any:
 
 
 def attnres_modulate_julia(
-    knm_flat: NDArray,
-    theta: NDArray,
-    w_q: NDArray,
-    w_k: NDArray,
-    w_v: NDArray,
-    w_o: NDArray,
+    knm_flat: FloatArray,
+    theta: FloatArray,
+    w_q: FloatArray,
+    w_k: FloatArray,
+    w_v: FloatArray,
+    w_o: FloatArray,
     n: int,
     n_heads: int,
     block_size: int,
     temperature: float,
     lambda_: float,
-) -> NDArray:
+) -> FloatArray:
     """Julia-backed multi-head AttnRes modulation. Signature matches
     the Rust / Go / Mojo FFIs."""
     jl_mod = _ensure_julia_loaded()

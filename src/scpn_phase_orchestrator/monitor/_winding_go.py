@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["winding_numbers_go"]
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libwinding.so"
 _LIB: ctypes.CDLL | None = None
@@ -44,10 +47,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def winding_numbers_go(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     t: int,
     n: int,
-) -> NDArray:
+) -> IntArray:
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     out = np.zeros(n, dtype=np.int64)

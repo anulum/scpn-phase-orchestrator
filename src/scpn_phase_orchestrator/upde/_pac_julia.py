@@ -35,7 +35,9 @@ def _ensure_julia_loaded() -> Any:
     return _JULIA_MODULE
 
 
-def modulation_index_julia(theta_low: NDArray, amp_high: NDArray, n_bins: int) -> float:
+def modulation_index_julia(
+    theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int
+) -> float:
     jl = _ensure_julia_loaded()
     return float(
         jl.modulation_index(
@@ -47,12 +49,12 @@ def modulation_index_julia(theta_low: NDArray, amp_high: NDArray, n_bins: int) -
 
 
 def pac_matrix_julia(
-    phases_flat: NDArray,
-    amplitudes_flat: NDArray,
+    phases_flat: NDArray[np.float64],
+    amplitudes_flat: NDArray[np.float64],
     t: int,
     n: int,
     n_bins: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     jl = _ensure_julia_loaded()
     return np.asarray(
         jl.pac_matrix(

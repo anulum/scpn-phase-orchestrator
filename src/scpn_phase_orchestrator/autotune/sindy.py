@@ -10,8 +10,10 @@ from __future__ import annotations
 
 from math import isfinite
 from numbers import Integral, Real
+from typing import TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.linalg import lstsq
 
 try:
@@ -24,6 +26,8 @@ except ImportError:
     _HAS_RUST = False
 
 __all__ = ["PhaseSINDy"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class PhaseSINDy:
@@ -47,10 +51,10 @@ class PhaseSINDy:
         parsed_max_iter = int(max_iter)
         self.threshold: float = parsed_threshold
         self.max_iter: int = parsed_max_iter
-        self.coefficients: list[np.ndarray] = []
+        self.coefficients: list[FloatArray] = []
         self.feature_names: list[list[str]] = []
 
-    def fit(self, phases: np.ndarray, dt: float) -> list[np.ndarray]:
+    def fit(self, phases: FloatArray, dt: float) -> list[FloatArray]:
         """Discover equations node-by-node to handle independent coupling."""
         T, N = phases.shape
 

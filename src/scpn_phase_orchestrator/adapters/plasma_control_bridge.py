@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from numbers import Integral
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -25,6 +26,7 @@ Q_MIN_STABLE = 1.0  # Kruskal-Shafranov limit
 BETA_N_LIMIT = 2.8  # Troyon no-wall limit
 GREENWALD_LIMIT = 1.2  # Greenwald density fraction
 _PLASMA_LAYER_COUNT = 8
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -70,7 +72,9 @@ class PlasmaControlBridge:
 
         # Kronecker expansion: each layer block shares the inter-layer coupling
         n_total = layer_knm.shape[0] * n_per
-        knm = np.kron(layer_knm, np.ones((n_per, n_per), dtype=np.float64))
+        knm = np.kron(layer_knm, np.ones((n_per, n_per), dtype=np.float64)).astype(
+            np.float64
+        )
         np.fill_diagonal(knm, 0.0)
 
         return CouplingState(
@@ -79,7 +83,7 @@ class PlasmaControlBridge:
             active_template="plasma_import",
         )
 
-    def import_plasma_omega(self, n_osc_per_layer: int = 1) -> NDArray:
+    def import_plasma_omega(self, n_osc_per_layer: int = 1) -> FloatArray:
         """Generate natural frequencies spanning plasma timescales.
 
         Returns frequencies ordered: micro_turbulence(fast) → plasma_wall(slow).

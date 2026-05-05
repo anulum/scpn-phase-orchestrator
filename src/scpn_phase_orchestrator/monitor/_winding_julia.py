@@ -11,12 +11,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["winding_numbers_julia"]
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "winding.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,10 +38,10 @@ def _ensure() -> Any:
 
 
 def winding_numbers_julia(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     t: int,
     n: int,
-) -> NDArray:
+) -> IntArray:
     jl = _ensure()
     return np.asarray(
         jl.winding_numbers(

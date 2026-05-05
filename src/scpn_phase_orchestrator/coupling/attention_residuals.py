@@ -46,6 +46,7 @@ placeholder. See ``feedback_no_simplistic_models.md``.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -56,6 +57,8 @@ __all__ = [
     "attnres_modulate",
     "default_projections",
 ]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 # ---------------------------------------------------------------------
@@ -76,7 +79,7 @@ def default_projections(
     n_heads: int = 4,
     seed: int = 0,
     d_model: int = PHASE_EMBED_DIM,
-) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
     """Seeded Xavier-initialised projections ``(W_Q, W_K, W_V, W_O)``.
 
     Parameters
@@ -120,19 +123,19 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 _BackendFn = Callable[
     [
-        NDArray,  # knm flat (N*N,)
-        NDArray,  # theta (N,)
-        NDArray,  # w_q (H, d_model, d_head)
-        NDArray,  # w_k (H, d_model, d_head)
-        NDArray,  # w_v (H, d_model, d_head)
-        NDArray,  # w_o (H*d_head, d_model)
+        FloatArray,  # knm flat (N*N,)
+        FloatArray,  # theta (N,)
+        FloatArray,  # w_q (H, d_model, d_head)
+        FloatArray,  # w_k (H, d_model, d_head)
+        FloatArray,  # w_v (H, d_model, d_head)
+        FloatArray,  # w_o (H*d_head, d_model)
         int,  # n
         int,  # n_heads
         int,  # block_size (-1 = unbounded)
         float,  # temperature
         float,  # lambda_
     ],
-    NDArray,
+    FloatArray,
 ]
 
 
@@ -201,7 +204,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 # ---------------------------------------------------------------------
 
 
-def _embed_phase(theta: NDArray, d_model: int) -> NDArray:
+def _embed_phase(theta: FloatArray, d_model: int) -> FloatArray:
     """Fourier-feature embedding of the phase scalar to ``d_model`` dims.
 
     Produces ``[cos θ, sin θ, cos 2θ, sin 2θ, ..., cos (d/2)θ, sin (d/2)θ]``.
@@ -217,18 +220,18 @@ def _embed_phase(theta: NDArray, d_model: int) -> NDArray:
 
 
 def _python_fallback(
-    knm_flat: NDArray,
-    theta: NDArray,
-    w_q: NDArray,
-    w_k: NDArray,
-    w_v: NDArray,
-    w_o: NDArray,
+    knm_flat: FloatArray,
+    theta: FloatArray,
+    w_q: FloatArray,
+    w_k: FloatArray,
+    w_v: FloatArray,
+    w_o: FloatArray,
     n: int,
     n_heads: int,
     block_size: int,
     temperature: float,
     lambda_: float,
-) -> NDArray:
+) -> FloatArray:
     """Reference multi-head AttnRes — mirrors the paper's forward
     pass. Every compiled backend must reproduce this bit-for-bit."""
     if lambda_ == 0.0:
@@ -306,19 +309,19 @@ def _python_fallback(
 
 
 def attnres_modulate(
-    knm: NDArray,
-    theta: NDArray,
+    knm: FloatArray,
+    theta: FloatArray,
     *,
-    w_q: NDArray | None = None,
-    w_k: NDArray | None = None,
-    w_v: NDArray | None = None,
-    w_o: NDArray | None = None,
+    w_q: FloatArray | None = None,
+    w_k: FloatArray | None = None,
+    w_v: FloatArray | None = None,
+    w_o: FloatArray | None = None,
     n_heads: int = 4,
     block_size: int | None = None,
     temperature: float = 1.0,
     lambda_: float = 0.5,
     projection_seed: int = 0,
-) -> NDArray:
+) -> FloatArray:
     """Full multi-head AttnRes modulation.
 
     Parameters

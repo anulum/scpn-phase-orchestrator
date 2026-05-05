@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from numbers import Integral
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 __all__ = ["QuantumControlBridge"]
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 class QuantumControlBridge:
@@ -82,7 +83,7 @@ class QuantumControlBridge:
             "cross_alignment": state.cross_layer_alignment.tolist(),
         }
 
-    def import_knm(self, knm_array: NDArray) -> CouplingState:
+    def import_knm(self, knm_array: FloatArray) -> CouplingState:
         """Wrap a coupling matrix from quantum calibration into CouplingState."""
         knm = np.asarray(knm_array, dtype=np.float64)
         if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
@@ -94,7 +95,7 @@ class QuantumControlBridge:
             active_template="quantum_import",
         )
 
-    def build_hamiltonian(self, knm: NDArray, omegas: NDArray) -> object:
+    def build_hamiltonian(self, knm: FloatArray, omegas: FloatArray) -> object:
         """Build Kuramoto XY Hamiltonian as SparsePauliOp.
 
         Requires scpn-quantum-control.
@@ -105,8 +106,8 @@ class QuantumControlBridge:
 
     def solve_q_upde(
         self,
-        knm: NDArray,
-        omegas: NDArray,
+        knm: FloatArray,
+        omegas: FloatArray,
         t_max: float = 1.0,
         dt: float = 0.1,
         trotter_per_step: int = 5,
@@ -128,14 +129,14 @@ class QuantumControlBridge:
             trotter_order=self._trotter_order,
         )
         return cast(
-            "dict",
+            "dict[str, object]",
             solver.run(t_max=t_max, dt=dt, trotter_per_step=trotter_per_step),
         )
 
     def orchestrator_to_quantum(
         self,
         state: UPDEState,
-    ) -> NDArray:
+    ) -> FloatArray:
         """Convert orchestrator UPDEState to quantum phase array."""
         from scpn_quantum_control import (  # noqa: PLC0415
             orchestrator_to_quantum_phases,
@@ -145,11 +146,11 @@ class QuantumControlBridge:
         layer_phases = {
             f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
         }
-        return cast("NDArray", orchestrator_to_quantum_phases(layer_phases))
+        return cast("FloatArray", orchestrator_to_quantum_phases(layer_phases))
 
     def quantum_to_orchestrator(
         self,
-        quantum_theta: NDArray,
+        quantum_theta: FloatArray,
     ) -> dict:
         """Convert quantum phase array back to orchestrator-compatible dict."""
         from scpn_quantum_control import (  # noqa: PLC0415

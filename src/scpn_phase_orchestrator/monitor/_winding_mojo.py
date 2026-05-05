@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "winding_numbers_mojo"]
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 _EXE_PATH = Path(__file__).resolve().parents[3] / "mojo" / "winding_mojo"
 
@@ -47,10 +50,10 @@ def _run(payload: str) -> list[int]:
 
 
 def winding_numbers_mojo(
-    phases_flat: NDArray,
+    phases_flat: FloatArray,
     t: int,
     n: int,
-) -> NDArray:
+) -> IntArray:
     if n == 0 or t < 2:
         return np.zeros(n, dtype=np.int64)
     tokens: list[str] = ["WIND", str(int(t)), str(int(n))]

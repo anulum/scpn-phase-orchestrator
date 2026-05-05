@@ -21,7 +21,7 @@ fails.
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -29,6 +29,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = ["upde_run_python"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 # Dormand-Prince (1980) Butcher tableau — shared semantics with
@@ -58,28 +59,28 @@ _DP_B4 = (
 
 
 def _compute_derivative(
-    theta: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    theta: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
-) -> NDArray:
+) -> FloatArray:
     diff = theta[np.newaxis, :] - theta[:, np.newaxis] - alpha
-    coupling = np.sum(knm * np.sin(diff), axis=1)
+    coupling = np.asarray(np.sum(knm * np.sin(diff), axis=1), dtype=np.float64)
     driving = zeta * np.sin(psi - theta) if zeta != 0.0 else 0.0
-    return cast("NDArray", omegas + coupling + driving)
+    return omegas + coupling + driving
 
 
 def _dp_stages(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     """Seven Dormand-Prince stages; returns ``(y5, y4)``."""
     k1 = _compute_derivative(phases, omegas, knm, alpha, zeta, psi)
     k2 = _compute_derivative(
@@ -144,17 +145,17 @@ def _dp_stages(
 
 
 def _rk45_step(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     atol: float,
     rtol: float,
     dt_config: float,
     last_dt: float,
-) -> tuple[NDArray, float]:
+) -> tuple[FloatArray, float]:
     """One Dormand-Prince step with PI step-size control."""
     dt = last_dt
     for _ in range(4):
@@ -170,26 +171,26 @@ def _rk45_step(
 
 
 def _rk4_substep(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
-) -> NDArray:
+) -> FloatArray:
     k1 = _compute_derivative(phases, omegas, knm, alpha, zeta, psi)
     k2 = _compute_derivative(phases + 0.5 * dt * k1, omegas, knm, alpha, zeta, psi)
     k3 = _compute_derivative(phases + 0.5 * dt * k2, omegas, knm, alpha, zeta, psi)
     k4 = _compute_derivative(phases + dt * k3, omegas, knm, alpha, zeta, psi)
-    return cast("NDArray", phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4))
+    return phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
 
 
 def upde_run_python(
-    phases: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
@@ -198,7 +199,7 @@ def upde_run_python(
     n_substeps: int,
     atol: float,
     rtol: float,
-) -> NDArray:
+) -> FloatArray:
     """Python fallback matching the Rust kernel exactly."""
     if method not in ("euler", "rk4", "rk45"):
         raise ValueError(f"unknown method {method!r}")

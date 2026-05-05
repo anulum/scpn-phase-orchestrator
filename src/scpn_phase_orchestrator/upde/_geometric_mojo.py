@@ -31,16 +31,16 @@ def _ensure_exe() -> Path:
 
 
 def torus_run_mojo(
-    phases: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    alpha_flat: NDArray[np.float64],
     n: int,
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     exe = _ensure_exe()
     tokens: list[str] = [
         "TORUS",

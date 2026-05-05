@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -26,6 +27,7 @@ __all__ = ["attnres_modulate_go"]
 _LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libattnres.so"
 
 _LIB: ctypes.CDLL | None = None
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _load_lib() -> ctypes.CDLL:
@@ -58,18 +60,18 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def attnres_modulate_go(
-    knm_flat: NDArray,
-    theta: NDArray,
-    w_q: NDArray,
-    w_k: NDArray,
-    w_v: NDArray,
-    w_o: NDArray,
+    knm_flat: FloatArray,
+    theta: FloatArray,
+    w_q: FloatArray,
+    w_k: FloatArray,
+    w_v: FloatArray,
+    w_o: FloatArray,
     n: int,
     n_heads: int,
     block_size: int,
     temperature: float,
     lambda_: float,
-) -> NDArray:
+) -> FloatArray:
     """Go-backed multi-head AttnRes. Signature matches the Rust FFI."""
     lib = _load_lib()
     knm64 = np.ascontiguousarray(knm_flat, dtype=np.float64)

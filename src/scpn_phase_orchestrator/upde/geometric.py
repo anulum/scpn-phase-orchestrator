@@ -50,20 +50,20 @@ TWO_PI = 2.0 * np.pi
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray]:
+def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
     from spo_kernel import torus_run_rust
 
     def _rust(
-        phases: NDArray,
-        omegas: NDArray,
-        knm_flat: NDArray,
-        alpha_flat: NDArray,
+        phases: NDArray[np.float64],
+        omegas: NDArray[np.float64],
+        knm_flat: NDArray[np.float64],
+        alpha_flat: NDArray[np.float64],
         n: int,
         zeta: float,
         psi: float,
         dt: float,
         n_steps: int,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         return np.asarray(
             torus_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -82,7 +82,7 @@ def _load_rust_fn() -> Callable[..., NDArray]:
     return _rust
 
 
-def _load_mojo_fn() -> Callable[..., NDArray]:
+def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._geometric_mojo import (
         _ensure_exe,
@@ -93,7 +93,7 @@ def _load_mojo_fn() -> Callable[..., NDArray]:
     return torus_run_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray]:
+def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.upde._geometric_julia import torus_run_julia
@@ -101,7 +101,7 @@ def _load_julia_fn() -> Callable[..., NDArray]:
     return torus_run_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray]:
+def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.upde._geometric_go import _load_lib, torus_run_go
 
@@ -109,7 +109,7 @@ def _load_go_fn() -> Callable[..., NDArray]:
     return torus_run_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., NDArray[np.float64]]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -132,7 +132,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray] | None:
+def _dispatch() -> Callable[..., NDArray[np.float64]] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -154,16 +154,16 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 
 def _python_torus_run(
-    phases: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
+    knm_flat: NDArray[np.float64],
+    alpha_flat: NDArray[np.float64],
     n: int,
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray:
+) -> NDArray[np.float64]:
     """Python reference matching the Rust kernel exactly.
 
     Carries ``(z_re, z_im)`` state between steps (no atan2
@@ -208,7 +208,7 @@ def _python_torus_run(
         z_re = np.where(nonzero, nr / np.where(nonzero, norm, 1.0), nr)
         z_im = np.where(nonzero, ni / np.where(nonzero, norm, 1.0), ni)
 
-    return cast("NDArray", np.arctan2(z_im, z_re) % TWO_PI)
+    return np.arctan2(z_im, z_re) % TWO_PI
 
 
 class TorusEngine:
@@ -224,26 +224,26 @@ class TorusEngine:
 
     def step(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: NDArray[np.float64],
+        omegas: NDArray[np.float64],
+        knm: NDArray[np.float64],
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
         """One torus step; returns phases in ``[0, 2π)``."""
         return self.run(phases, omegas, knm, zeta, psi, alpha, n_steps=1)
 
     def run(
         self,
-        phases: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        phases: NDArray[np.float64],
+        omegas: NDArray[np.float64],
+        knm: NDArray[np.float64],
         zeta: float,
         psi: float,
-        alpha: NDArray,
+        alpha: NDArray[np.float64],
         n_steps: int,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
         alpha_flat = np.ascontiguousarray(alpha, dtype=np.float64).ravel()
         backend_fn = _dispatch()
@@ -271,19 +271,19 @@ class TorusEngine:
             int(n_steps),
         )
 
-    def order_parameter(self, phases: NDArray) -> float:
+    def order_parameter(self, phases: NDArray[np.float64]) -> float:
         """Standard Kuramoto R = |<exp(iθ)>|."""
         return float(np.abs(np.mean(np.exp(1j * phases))))
 
     def _derivative(
         self,
-        theta: NDArray,
-        omegas: NDArray,
-        knm: NDArray,
+        theta: NDArray[np.float64],
+        omegas: NDArray[np.float64],
+        knm: NDArray[np.float64],
         zeta: float,
         psi: float,
-        alpha: NDArray,
-    ) -> NDArray:
+        alpha: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
         """Tangent-space Kuramoto derivative ``ω_eff``.
 
         Kept as a private helper for external inspection tests
@@ -296,4 +296,4 @@ class TorusEngine:
         result = omegas + coupling
         if zeta != 0.0:
             result = result + zeta * np.sin(psi - theta)
-        return cast("NDArray", result)
+        return cast("NDArray[np.float64]", result)

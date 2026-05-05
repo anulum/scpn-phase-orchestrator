@@ -168,6 +168,41 @@ instant = prom.fetch_instant("up")
 - Prometheus access: terminate auth at a reverse proxy and inject
   short-lived bearer credentials upstream; never commit token-bearing URLs.
 
+### Adapter Schema + Rate-Limit Patterns
+
+For network/file-bound adapters, keep transport inputs explicit and bounded:
+
+```python
+from pathlib import Path
+from scpn_phase_orchestrator.adapters import SecureModbusAdapter
+from scpn_phase_orchestrator.adapters import RedisStateStore
+from scpn_phase_orchestrator.network_security import FixedWindowRateLimiter, env_int
+
+# Strictly parse transport schema before constructing adapters.
+modbus = SecureModbusAdapter(
+    host="plc.internal.example",
+    port=802,
+    tls_cert_path=Path("/etc/scad/pki/client.pem"),
+    tls_key_path=Path("/etc/scad/pki/client.key"),
+    ca_cert_path=Path("/etc/scad/pki/ca.pem"),
+)
+
+store = RedisStateStore(
+    host="redis.internal.example",
+    port=6379,
+    db=0,
+    key="spo:sim_state",
+)
+
+rate_limit = env_int("SPO_ADAPTER_RATE_LIMIT_PER_MINUTE", 120)
+limiter = FixedWindowRateLimiter(rate_limit_per_minute=rate_limit)
+if not limiter.allow("modbus-client-01"):
+    raise RuntimeError("rate limit exceeded for modbus writes")
+```
+
+Keep this pattern in deployment-specific code: validate config first, then
+instantiate adapters with sanitised defaults.
+
 ## Optional Dependencies
 
 Install extras to pull in adapter-specific packages:

@@ -39,6 +39,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -55,15 +56,17 @@ __all__ = [
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 
 def _load_rust_fn() -> Callable[..., float]:
     from spo_kernel import steady_state_r_rust
 
     def _rust(
-        phases_init: NDArray,
-        omegas: NDArray,
-        knm_flat: NDArray,
-        alpha_flat: NDArray,
+        phases_init: FloatArray,
+        omegas: FloatArray,
+        knm_flat: FloatArray,
+        alpha_flat: FloatArray,
         n: int,
         k_scale: float,
         dt: float,
@@ -149,10 +152,10 @@ def _dispatch() -> Callable[..., float] | None:
 
 
 def _python_steady_state_r(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     k_scale: float,
     dt: float,
@@ -191,10 +194,10 @@ def _python_steady_state_r(
 
 
 def steady_state_r(
-    phases_init: NDArray,
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray | None = None,
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray | None = None,
     k_scale: float = 1.0,
     dt: float = 0.01,
     n_transient: int = 500,
@@ -256,21 +259,21 @@ class BasinStabilityResult:
     S_B: float
     n_samples: int
     n_converged: int
-    R_final: NDArray
+    R_final: FloatArray
     R_threshold: float
 
 
 def _monte_carlo_R_finals(
-    omegas: NDArray,
-    knm_flat: NDArray,
-    alpha_flat: NDArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     dt: float,
     n_transient: int,
     n_measure: int,
     n_samples: int,
     seed: int,
-) -> NDArray:
+) -> FloatArray:
     rng = np.random.default_rng(seed)
     R_finals = np.zeros(n_samples)
     backend_fn = _dispatch()
@@ -306,9 +309,9 @@ def _monte_carlo_R_finals(
 
 
 def basin_stability(
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray | None = None,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray | None = None,
     dt: float = 0.01,
     n_transient: int = 500,
     n_measure: int = 200,
@@ -365,9 +368,9 @@ def basin_stability(
 
 
 def multi_basin_stability(
-    omegas: NDArray,
-    knm: NDArray,
-    alpha: NDArray | None = None,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray | None = None,
     dt: float = 0.01,
     n_transient: int = 500,
     n_measure: int = 200,

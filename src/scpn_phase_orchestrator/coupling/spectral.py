@@ -44,7 +44,7 @@ Dörfler & Bullo 2013, *IEEE Proc.* 102(10):1539-1564.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -64,21 +64,22 @@ __all__ = [
 
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
-def graph_laplacian(knm: NDArray) -> NDArray:
+def graph_laplacian(knm: FloatArray) -> FloatArray:
     """Combinatorial graph Laplacian ``L = D − |W|`` with zero
     diagonal on ``W``."""
     w = np.abs(knm)
     np.fill_diagonal(w, 0.0)
     degrees = w.sum(axis=1)
-    return cast("NDArray", np.diag(degrees) - w)
+    return cast("FloatArray", np.diag(degrees) - w)
 
 
 def _python_spectral_eig(
-    knm_flat: NDArray,
+    knm_flat: FloatArray,
     n: int,
-) -> tuple[NDArray, NDArray]:
+) -> tuple[FloatArray, FloatArray]:
     W = knm_flat.reshape(n, n)
     L = graph_laplacian(W)
     eigvals, eigvecs = np.linalg.eigh(L)
@@ -104,7 +105,9 @@ def _load_rust_bundle() -> dict[str, Any]:
     }
 
 
-def _load_mojo_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
+def _load_mojo_primitive() -> Callable[
+    [FloatArray, int], tuple[FloatArray, FloatArray]
+]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.coupling._spectral_mojo import (
         _ensure_exe,
@@ -115,7 +118,9 @@ def _load_mojo_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
     return spectral_eig_mojo
 
 
-def _load_julia_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
+def _load_julia_primitive() -> Callable[
+    [FloatArray, int], tuple[FloatArray, FloatArray]
+]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
     from scpn_phase_orchestrator.coupling._spectral_julia import (
@@ -125,7 +130,7 @@ def _load_julia_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]
     return spectral_eig_julia
 
 
-def _load_go_primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
+def _load_go_primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
     from scpn_phase_orchestrator.coupling._spectral_go import (
         _load_lib,
@@ -159,7 +164,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 _RUST_CACHE: dict[str, Any] | None = None
-_PRIM_CACHE: Callable[[NDArray, int], tuple[NDArray, NDArray]] | None = None
+_PRIM_CACHE: Callable[[FloatArray, int], tuple[FloatArray, FloatArray]] | None = None
 
 
 def _rust_bundle() -> dict[str, Any]:
@@ -169,7 +174,7 @@ def _rust_bundle() -> dict[str, Any]:
     return _RUST_CACHE
 
 
-def _primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
+def _primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
     global _PRIM_CACHE
     if ACTIVE_BACKEND == "python":
         return _python_spectral_eig
@@ -183,7 +188,7 @@ def _primitive() -> Callable[[NDArray, int], tuple[NDArray, NDArray]]:
     return _PRIM_CACHE
 
 
-def spectral_eig(knm: NDArray) -> tuple[NDArray, NDArray]:
+def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:
     """Symmetric eigendecomposition of ``L = D − |W|``.
 
     Returns ``(eigvals ascending, fiedler vector)``. Thin wrapper
@@ -196,7 +201,7 @@ def spectral_eig(knm: NDArray) -> tuple[NDArray, NDArray]:
     return _primitive()(flat, n)
 
 
-def fiedler_value(knm: NDArray) -> float:
+def fiedler_value(knm: FloatArray) -> float:
     """Algebraic connectivity ``λ₂(L)`` — second smallest
     eigenvalue (Dörfler-Bullo 2014)."""
     knm = np.asarray(knm, dtype=np.float64)
@@ -208,7 +213,7 @@ def fiedler_value(knm: NDArray) -> float:
     return float(eigvals[1]) if n > 1 else 0.0
 
 
-def fiedler_vector(knm: NDArray) -> NDArray:
+def fiedler_vector(knm: FloatArray) -> FloatArray:
     """Eigenvector for ``λ₂`` — partitions the graph into
     synchronisation clusters."""
     knm = np.asarray(knm, dtype=np.float64)
@@ -220,7 +225,7 @@ def fiedler_vector(knm: NDArray) -> NDArray:
     return fiedler
 
 
-def critical_coupling(omegas: NDArray, knm: NDArray) -> float:
+def critical_coupling(omegas: FloatArray, knm: FloatArray) -> float:
     """Dörfler-Bullo critical coupling ``K_c = Δω / λ₂``.
 
     Returns ``+inf`` if the graph is disconnected
@@ -239,7 +244,7 @@ def critical_coupling(omegas: NDArray, knm: NDArray) -> float:
     return omega_spread / lambda2
 
 
-def fiedler_partition(knm: NDArray) -> tuple[list[int], list[int]]:
+def fiedler_partition(knm: FloatArray) -> tuple[list[int], list[int]]:
     """Bisect the network using ``sign(v₂)``.
 
     Returns ``(group_positive, group_negative)`` — indices
@@ -251,7 +256,7 @@ def fiedler_partition(knm: NDArray) -> tuple[list[int], list[int]]:
     return pos, neg
 
 
-def spectral_gap(knm: NDArray) -> float:
+def spectral_gap(knm: FloatArray) -> float:
     """Gap between ``λ₂`` and ``λ₃`` — larger gap means cleaner
     two-cluster structure."""
     knm = np.asarray(knm, dtype=np.float64)
@@ -269,8 +274,8 @@ def spectral_gap(knm: NDArray) -> float:
 
 
 def sync_convergence_rate(
-    knm: NDArray,
-    omegas: NDArray,
+    knm: FloatArray,
+    omegas: FloatArray,
     gamma_max: float = 0.0,
 ) -> float:
     """Estimated convergence rate

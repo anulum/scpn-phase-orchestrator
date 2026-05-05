@@ -11,6 +11,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from scpn_phase_orchestrator.adapters._schema import (
+    require_non_empty_str,
+    require_non_negative_int,
+    require_tcp_port,
+)
+
 __all__ = ["RedisStateStore"]
 
 try:
@@ -37,13 +43,20 @@ class RedisStateStore:
         key: str = "spo:sim_state",
         client: Any = None,
     ) -> None:
-        self._key = key
+        self._host = require_non_empty_str(host, field="Redis host")
+        self._port = require_tcp_port(port, field="Redis port")
+        self._db = require_non_negative_int(db, field="Redis db")
+        self._key = require_non_empty_str(key, field="Redis key")
         if client is not None:
             self._client = client
         elif not _HAS_REDIS:
             raise RuntimeError("redis package not installed — pip install redis")
         else:
-            self._client = _redis_mod.Redis(host=host, port=port, db=db)
+            self._client = _redis_mod.Redis(
+                host=self._host,
+                port=self._port,
+                db=self._db,
+            )
 
     def save_state(self, sim_state: dict) -> None:
         """Serialise state dict to JSON and store in Redis."""
