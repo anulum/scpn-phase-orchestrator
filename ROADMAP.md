@@ -158,3 +158,37 @@
 - Public benchmark suite with reproducible numbers against reference Strogatz/Pikovsky-style implementations, including commands, environment labels, and snapshot dates.
 - Windows Rust FFI fully stable; remove the experimental label only after installation, CI, and parity evidence support it.
 - One end-to-end hardware example with real FPGA or neuromorphic output, including command, generated artefact, and verification result.
+
+### Long-horizon differentiator backlog
+
+Near-term candidate tracks:
+
+- Dynamic higher-order topology adaptation in the supervisor: edit hyperedges and 2-/3-simplices based on coherence, Lyapunov, transfer-entropy, or policy objectives. First gate: a JAX-backed simplicial-complex operator, a topology mutation-rate policy knob, and two domainpack demos.
+- Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories. First gate: a `supervisor/causal/` module and two domainpack attribution demos.
+- FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy. First gate: single-domainpack FEP-MPC proof-of-concept.
+- STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces. First gate: parser/evaluator plus fault-injection coverage.
+- Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks. First gate: generated artefact audit trail, schema validation, dry-run simulation, and Petri-net reachability check.
+- Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains. First gate: optional `scpn-meta` extra with replay-trained embeddings.
+- Quantum-native compiler target: output Qiskit/PennyLane or OpenPulse/QASM fragments for the `quantum_simulation` path with co-simulation validation.
+- Neuromorphic compiler target: emit Lava/PyNN or hardware-oriented HDL fragments from binding specs and supervisor policies, with simulator parity evidence.
+
+Speculative research watchlist:
+
+- Self-modelling embodied digital twin with a `self_model_error` monitor and controlled rebinding/reconfiguration regime.
+- Evolutionary supervisor policy search over policy DSL, Petri nets, and topology mutations, initially offline over `audit.jsonl` with STL and counterfactual safety filters.
+- Information-geometry control layer using Fisher-Rao or Wasserstein metrics as supervisor control primitives.
+- Sheaf-cohomology control over N-channel states, with sheaf Laplacian and obstruction metrics.
+- Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
+- Byzantine-fault-tolerant meta-orchestrator fabric over signed policy/topology proposals and hash-linked audit evidence.
+- Hybrid neuromorphic-quantum co-compiler with shared N-channel audit semantics.
+- Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
+- Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
+- Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
+
+Priority order for first implementation tranche:
+
+1. Causal intervention engine.
+2. STL runtime verification.
+3. Dynamic higher-order topology adaptation.
+4. FEP / predictive-coding supervisor backend.
+5. Symbolic-to-binding compiler.

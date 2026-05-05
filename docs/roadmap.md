@@ -9,7 +9,7 @@
 # Public Roadmap
 
 This roadmap is a public planning view. It avoids dates unless a release is
-already shipped, and it separates stable surfaces from research or deferred
+already published, and it separates stable surfaces from research or deferred
 maintenance tracks.
 
 ## Current Stable Surface
@@ -61,10 +61,16 @@ control engineers who do not already live in phase dynamics.
 
 | Item | Roadmap stance |
 |------|----------------|
+| Dynamic higher-order topology adaptation | supervisor edits hyperedges/simplices based on coherence, Lyapunov, transfer-entropy, or policy objectives |
+| Causal intervention engine | pair every material knob/topology change with counterfactual UPDE/JAX rollouts and audit both observed and counterfactual trajectories |
 | RL/autotune layer on JAX `nn` backend | learn `K`, `alpha`, `zeta`, and `Psi` policies from rewards such as coherence minus `R_bad` and unsafe-actuation penalties |
+| FEP / predictive-coding supervisor backend | ActiveInferenceAgent-backed mode that minimises variational free energy across N-channel hierarchy before regime loss occurs |
 | Full N-channel algebra | formalise channel groups, required/optional channels, derived channels, cross-channel coupling, replay, and reporting |
 | Hierarchical orchestration | nested supervisors plus edge/cloud synchronisation protocol for distributed coherence control |
 | Formal supervisor verification | export Petri-net and policy surfaces to PRISM, TLA+, or equivalent model-checking workflows for safety properties |
+| STL runtime verification | augment policy DSL with Signal Temporal Logic formulas, robustness metrics, and satisfaction traces in audits |
+| Symbolic-to-binding compiler | generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local corpus retrieval |
+| Cross-domain meta-transfer | learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains |
 | Plugin ecosystem | stable interfaces for domainpacks, extractors, actuators, bridges, and compatibility tests so domain experts can publish extensions without forking |
 
 ## Deferred Maintenance Track
@@ -90,6 +96,35 @@ These areas may evolve behind explicit experimental flags or separate guides:
 | Distributed edge orchestration | useful for multi-node deployments; keep audit and replay semantics central |
 | Formal verification exports | desirable for safety-critical policies, but separate from normal user onboarding |
 | Neuromorphic and quantum-native backends | bridge work remains experimental unless a maintained workload depends on it |
+
+## Long-Horizon Research Backlog
+
+These are candidate research tracks. Each needs a proof-of-concept, safety
+boundary, audit format, and reproducible domainpack demo before it can move
+into the active roadmap.
+
+| Track | First acceptance gate |
+|-------|-----------------------|
+| Self-modelling embodied digital twin | `self_model_error` monitor plus one hardware-in-the-loop or replay-backed reconfiguration demo |
+| Evolutionary supervisor policy search | offline evolution over `audit.jsonl` histories with STL/counterfactual safety filter before any live hot-patch path |
+| Information-geometry control layer | JAX-native Fisher-Rao or Wasserstein control primitive with audit-visible curvature or geodesic metrics |
+| Sheaf-cohomology control | sheaf Laplacian prototype over N-channel domain data with obstruction metrics and one heterogeneous-domain demo |
+| Federated meta-orchestrator | privacy-preserving policy-gradient aggregation across nodes without raw time-series exchange |
+| Byzantine-fault-tolerant meta-orchestrator | three-node consensus demo over signed policy/topology proposals and hash-linked audit evidence |
+| Quantum-native compiler target | Qiskit/PennyLane or OpenPulse/QASM output backend for `quantum_simulation` with co-simulation validation |
+| Neuromorphic compiler target | Lava/PyNN or HDL output from a binding spec plus supervisor policy with simulator parity evidence |
+| Hybrid neuromorphic-quantum co-compiler | co-simulation hook that keeps quantum and spiking targets under the same N-channel audit semantics |
+| Value-alignment supervisor guard | binding-spec encoded objective/value constraints evaluated as Petri-net guard conditions with counterfactual violation logs |
+| Autopoietic lineage sandbox | resource-bounded offline child-policy lineage over audit replays, with merge only through reviewable policy diffs |
+| Temporal-causal hypergraph experiments | explicitly experimental time-symmetric rollout research; no production claim without a conventional causal baseline |
+
+Priority order for the first implementation tranche:
+
+1. Causal intervention engine.
+2. STL runtime verification.
+3. Dynamic higher-order topology adaptation.
+4. FEP / predictive-coding supervisor backend.
+5. Symbolic-to-binding compiler.
 
 ## Minor Polish Before v1.0
 
