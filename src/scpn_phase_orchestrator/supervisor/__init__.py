@@ -9,6 +9,11 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.supervisor.causal import (
+    CausalInterventionEngine,
+    CounterfactualRollout,
+    InterventionParameters,
+)
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.formal_export import (
     PrismExport,
@@ -45,9 +50,12 @@ from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 
 __all__ = [
     "Arc",
+    "CausalInterventionEngine",
     "CompoundCondition",
     "ControlAction",
+    "CounterfactualRollout",
     "EventBus",
+    "InterventionParameters",
     "Marking",
     "PetriNet",
     "PetriNetAdapter",

@@ -22,6 +22,9 @@ UPDEEngine.step() ──→ phases ──→ compute_order_parameter()
                                   ↓                         ↓
                           SupervisorPolicy.decide()  ←──────┘
                                   │
+                                  ├──→ CausalInterventionEngine
+                                  │        (baseline vs intervention rollout)
+                                  │
                                   ↓
                         list[ControlAction]
                                   │
@@ -157,6 +160,39 @@ CRITICAL regardless of R values.
 **Performance:** `decide()` < 50 μs.
 
 ::: scpn_phase_orchestrator.supervisor.policy
+
+---
+
+## Causal Counterfactual Rollouts
+
+`CausalInterventionEngine` evaluates proposed supervisor actions by running
+paired UPDE trajectories from the same state:
+
+- baseline: no action
+- intervention: action-adjusted `K`, `alpha`, `zeta`, or `Psi`
+
+The result is a `CounterfactualRollout` with `R` and `Psi` trajectories,
+final and mean `R` deltas, signed final phase delta, and a serialisable audit
+payload.
+
+```python
+from scpn_phase_orchestrator.supervisor import CausalInterventionEngine
+
+engine = CausalInterventionEngine(n_oscillators=8, dt=0.01, horizon=20)
+rollout = engine.evaluate_actions(phases, omegas, knm, alpha, 0.0, 0.0, actions)
+record = rollout.to_audit_record()
+```
+
+This is the first causal-supervision slice: it does not claim formal
+do-calculus yet, but it makes every proposed actuation comparable against a
+no-action counterfactual under the same UPDE dynamics.
+
+**Backend and cost:** each evaluation performs two UPDE rollouts over the
+configured horizon, so work scales with `2 * horizon` engine steps. It uses
+the existing `UPDEEngine` backend dispatcher; Rust acceleration is used when
+available, otherwise the NumPy path is used.
+
+::: scpn_phase_orchestrator.supervisor.causal
 
 ---
 
