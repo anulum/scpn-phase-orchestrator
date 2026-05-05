@@ -20,6 +20,12 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
     export_policy_rules_prism,
 )
+from scpn_phase_orchestrator.supervisor.morphogenetic import (
+    MorphogeneticFieldPolicy,
+    MorphogeneticFieldResult,
+    MorphogeneticFieldState,
+    MorphogeneticTopologySupervisor,
+)
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
@@ -71,6 +77,10 @@ __all__ = [
     "HigherOrderTopologySupervisor",
     "InterventionParameters",
     "Marking",
+    "MorphogeneticFieldPolicy",
+    "MorphogeneticFieldResult",
+    "MorphogeneticFieldState",
+    "MorphogeneticTopologySupervisor",
     "PetriNet",
     "PetriNetAdapter",
     "Place",

@@ -180,6 +180,37 @@ dynamics are fed back into the plant.
 
 ---
 
+## Morphogenetic Topology Field
+
+`MorphogeneticTopologySupervisor` evolves a persistent field over the pairwise
+coupling topology. Each step combines:
+
+- pairwise phase-alignment reaction terms
+- incident-edge diffusion over the current topology field
+- bounded growth and shrink rates
+- a hard maximum per-step coupling delta
+
+The result is a next-step `K_nm`, a carried `MorphogeneticFieldState`, grown and
+shrunk edge lists, and compact field statistics for audit logs.
+
+```python
+from scpn_phase_orchestrator.supervisor import MorphogeneticTopologySupervisor
+
+supervisor = MorphogeneticTopologySupervisor()
+result = supervisor.step(phases, knm)
+
+next_knm = result.knm
+field_state = result.field_state
+audit_payload = result.to_audit_record()
+```
+
+This slice provides a reviewable grow/shrink primitive for topology shaping. It
+does not bypass the existing policy, causal, STL, or action-projection gates.
+
+::: scpn_phase_orchestrator.supervisor.morphogenetic
+
+---
+
 ## Policy Engine
 
 Rule-based evaluation of supervisor actions.

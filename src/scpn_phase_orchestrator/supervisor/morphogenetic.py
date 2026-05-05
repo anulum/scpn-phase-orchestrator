@@ -1,0 +1,236 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Morphogenetic topology field supervisor
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TypeAlias
+
+import numpy as np
+from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+
+__all__ = [
+    "MorphogeneticFieldPolicy",
+    "MorphogeneticFieldResult",
+    "MorphogeneticFieldState",
+    "MorphogeneticTopologySupervisor",
+]
+
+
+@dataclass(frozen=True)
+class MorphogeneticFieldPolicy:
+    """Knobs for reaction-diffusion-style topology field evolution."""
+
+    growth_rate: float = 0.2
+    shrink_rate: float = 0.15
+    diffusion_rate: float = 0.1
+    coherence_target: float = 0.75
+    max_delta: float = 0.05
+    max_coupling: float = 10.0
+
+    def __post_init__(self) -> None:
+        _require_unit_interval(self.growth_rate, "growth_rate")
+        _require_unit_interval(self.shrink_rate, "shrink_rate")
+        _require_unit_interval(self.diffusion_rate, "diffusion_rate")
+        _require_unit_interval(self.coherence_target, "coherence_target")
+        _require_non_negative(self.max_delta, "max_delta")
+        _require_non_negative(self.max_coupling, "max_coupling")
+
+
+@dataclass(frozen=True)
+class MorphogeneticFieldState:
+    """Persistent topology field carried between supervisor ticks."""
+
+    field: FloatArray
+
+    def to_audit_snapshot(self) -> dict[str, object]:
+        """Return compact, serialisable field statistics for audit logs."""
+        return {
+            "shape": list(self.field.shape),
+            "mean": float(np.mean(self.field)),
+            "minimum": float(np.min(self.field)),
+            "maximum": float(np.max(self.field)),
+            "l2_norm": float(np.linalg.norm(self.field)),
+        }
+
+
+@dataclass(frozen=True)
+class MorphogeneticFieldResult:
+    """Output of one morphogenetic topology field step."""
+
+    knm: FloatArray
+    field_state: MorphogeneticFieldState
+    grown_edges: tuple[tuple[int, int, float], ...]
+    shrunk_edges: tuple[tuple[int, int, float], ...]
+    delta_norm: float
+    global_coherence: float
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a serialisable topology-field audit payload."""
+        return {
+            "global_coherence": self.global_coherence,
+            "delta_norm": self.delta_norm,
+            "grown_edges": [
+                {"source": src, "target": dst, "delta": delta}
+                for src, dst, delta in self.grown_edges
+            ],
+            "shrunk_edges": [
+                {"source": src, "target": dst, "delta": delta}
+                for src, dst, delta in self.shrunk_edges
+            ],
+            "field": self.field_state.to_audit_snapshot(),
+        }
+
+
+class MorphogeneticTopologySupervisor:
+    """Grow or shrink pairwise topology from a persistent coherence field."""
+
+    def __init__(self, policy: MorphogeneticFieldPolicy | None = None) -> None:
+        self.policy = policy or MorphogeneticFieldPolicy()
+        self.last_result: MorphogeneticFieldResult | None = None
+
+    def step(
+        self,
+        phases: FloatArray,
+        knm: FloatArray,
+        field_state: MorphogeneticFieldState | None = None,
+    ) -> MorphogeneticFieldResult:
+        """Evolve the topology field and return the next pairwise coupling."""
+        phases_arr = _validate_phases(phases)
+        knm_arr = _validate_knm(knm, phases_arr.size)
+        field = (
+            _initial_field(knm_arr, self.policy.max_coupling)
+            if field_state is None
+            else _validate_field(field_state.field, phases_arr.size)
+        )
+        alignment = _pairwise_phase_alignment(phases_arr)
+        diffused = _incident_diffusion(field)
+        reaction = alignment - self.policy.coherence_target
+        next_field = np.clip(
+            field
+            + self.policy.diffusion_rate * (diffused - field)
+            + self.policy.growth_rate * np.maximum(reaction, 0.0)
+            - self.policy.shrink_rate * np.maximum(-reaction, 0.0),
+            0.0,
+            1.0,
+        )
+        np.fill_diagonal(next_field, 0.0)
+        field_delta = next_field - field
+        coupling_delta = self.policy.max_delta * field_delta
+        next_knm = np.clip(knm_arr + coupling_delta, 0.0, self.policy.max_coupling)
+        np.fill_diagonal(next_knm, 0.0)
+        result = MorphogeneticFieldResult(
+            knm=next_knm,
+            field_state=MorphogeneticFieldState(next_field),
+            grown_edges=_edge_deltas(coupling_delta, positive=True),
+            shrunk_edges=_edge_deltas(coupling_delta, positive=False),
+            delta_norm=float(np.linalg.norm(next_knm - knm_arr)),
+            global_coherence=_order_parameter(phases_arr),
+        )
+        self.last_result = result
+        return result
+
+    def reset(self) -> None:
+        """Clear the cached result; caller owns persistent field snapshots."""
+        self.last_result = None
+
+
+def _validate_phases(phases: FloatArray) -> FloatArray:
+    arr = np.asarray(phases, dtype=np.float64)
+    if arr.ndim != 1:
+        raise ValueError("phases must be a one-dimensional array")
+    if arr.size < 1:
+        raise ValueError("phases must contain at least one oscillator")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("phases must be finite")
+    return arr
+
+
+def _validate_knm(knm: FloatArray, n: int) -> FloatArray:
+    arr = np.asarray(knm, dtype=np.float64)
+    if arr.shape != (n, n):
+        raise ValueError(f"knm must have shape ({n}, {n})")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("knm must be finite")
+    if np.any(arr < 0.0):
+        raise ValueError("knm must be non-negative")
+    return arr
+
+
+def _validate_field(field: FloatArray, n: int) -> FloatArray:
+    arr = np.asarray(field, dtype=np.float64)
+    if arr.shape != (n, n):
+        raise ValueError(f"field must have shape ({n}, {n})")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("field must be finite")
+    if np.any((arr < 0.0) | (arr > 1.0)):
+        raise ValueError("field values must be in [0, 1]")
+    return arr
+
+
+def _initial_field(knm: FloatArray, max_coupling: float) -> FloatArray:
+    if max_coupling <= 0.0:
+        return np.zeros_like(knm)
+    field = np.clip(knm / max_coupling, 0.0, 1.0)
+    np.fill_diagonal(field, 0.0)
+    return field
+
+
+def _pairwise_phase_alignment(phases: FloatArray) -> FloatArray:
+    diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
+    alignment = 0.5 * (np.cos(diffs) + 1.0)
+    np.fill_diagonal(alignment, 0.0)
+    result: FloatArray = alignment
+    return result
+
+
+def _incident_diffusion(field: FloatArray) -> FloatArray:
+    n = field.shape[0]
+    if n == 1:
+        return np.zeros_like(field)
+    row_mean = np.sum(field, axis=1) / max(1, n - 1)
+    col_mean = np.sum(field, axis=0) / max(1, n - 1)
+    diffused = 0.25 * (
+        row_mean[:, np.newaxis]
+        + row_mean[np.newaxis, :]
+        + col_mean[:, np.newaxis]
+        + col_mean[np.newaxis, :]
+    )
+    np.fill_diagonal(diffused, 0.0)
+    result: FloatArray = diffused
+    return result
+
+
+def _edge_deltas(
+    delta: FloatArray,
+    *,
+    positive: bool,
+) -> tuple[tuple[int, int, float], ...]:
+    mask = delta > 1e-12 if positive else delta < -1e-12
+    edges = []
+    for src, dst in np.argwhere(mask):
+        if src == dst:
+            continue
+        edges.append((int(src), int(dst), float(delta[src, dst])))
+    return tuple(edges)
+
+
+def _order_parameter(phases: FloatArray) -> float:
+    return float(np.abs(np.mean(np.exp(1j * phases))))
+
+
+def _require_unit_interval(value: float, name: str) -> None:
+    if not np.isfinite(value) or value < 0.0 or value > 1.0:
+        raise ValueError(f"{name} must be finite and in [0, 1]")
+
+
+def _require_non_negative(value: float, name: str) -> None:
+    if not np.isfinite(value) or value < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
