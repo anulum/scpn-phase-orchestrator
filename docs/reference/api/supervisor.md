@@ -211,6 +211,31 @@ does not bypass the existing policy, causal, STL, or action-projection gates.
 
 ---
 
+## Sheaf Coherence Supervisor
+
+`SheafCoherenceSupervisor` evaluates N-channel node states against directed
+restriction maps. It builds the block sheaf Laplacian, computes edge residuals,
+and reports obstruction metrics for audit logs.
+
+This is the first supervisor-facing sheaf-cohomology slice: it exposes
+obstruction score, consistency energy, approximate kernel dimension, and
+obstruction dimension. It does not claim a complete formal proof system or
+autonomous sheaf-control loop.
+
+```python
+from scpn_phase_orchestrator.supervisor import SheafCoherenceSupervisor
+
+supervisor = SheafCoherenceSupervisor(tolerance=1e-8)
+result = supervisor.assess(node_states, restriction_maps)
+
+if result.obstruction_score > 0.1:
+    audit_payload = result.to_audit_record()
+```
+
+::: scpn_phase_orchestrator.supervisor.sheaf
+
+---
+
 ## Policy Engine
 
 Rule-based evaluation of supervisor actions.

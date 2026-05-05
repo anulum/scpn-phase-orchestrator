@@ -55,6 +55,12 @@ from scpn_phase_orchestrator.supervisor.predictive import (
     PredictiveSupervisor,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.supervisor.sheaf import (
+    SheafCoherenceResult,
+    SheafCoherenceSupervisor,
+    sheaf_coherence,
+    sheaf_laplacian,
+)
 from scpn_phase_orchestrator.supervisor.strange_loop import (
     StrangeLoopAssessment,
     StrangeLoopSupervisor,
@@ -96,6 +102,8 @@ __all__ = [
     "Regime",
     "RegimeEvent",
     "RegimeManager",
+    "SheafCoherenceResult",
+    "SheafCoherenceSupervisor",
     "StrangeLoopAssessment",
     "StrangeLoopSupervisor",
     "SupervisorPolicy",
@@ -106,4 +114,6 @@ __all__ = [
     "export_petri_net_prism",
     "export_policy_rules_prism",
     "load_policy_rules",
+    "sheaf_coherence",
+    "sheaf_laplacian",
 ]
