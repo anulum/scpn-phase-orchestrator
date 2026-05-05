@@ -37,4 +37,5 @@ from scpn_phase_orchestrator import (
 | [QueueWaves](queuewaves.md) | Real-time cascade failure detector for microservices |
 | [SSGF](ssgf.md) | Self-Stabilizing Gauge Field: geometry carrier, ethical cost, PGBO, TCBO |
 | [Autotune](autotune_sindy.md) | Auto-calibration: SINDy, coupling estimation, phase extraction, frequency ID |
+| [Meta-Transfer](meta.md) | Replay-backed cross-domain initial policy proposals |
 | [CLI](../cli.md) | `spo` command-line interface |

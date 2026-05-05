@@ -155,6 +155,7 @@ nav:
       - SSGF: reference/api/ssgf.md
       - "SSGF — Geometry Carrier": reference/api/ssgf_carrier.md
       - "SSGF — Ethical Cost (C15)": reference/api/ssgf_ethical.md
+      - Meta-Transfer: reference/api/meta.md
       - Autotune:
           - "Phase-SINDy": reference/api/autotune_sindy.md
           - "Coupling Estimation": reference/api/autotune_coupling_est.md
