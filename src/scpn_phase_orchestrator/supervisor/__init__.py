@@ -49,6 +49,10 @@ from scpn_phase_orchestrator.supervisor.predictive import (
     PredictiveSupervisor,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.supervisor.strange_loop import (
+    StrangeLoopAssessment,
+    StrangeLoopSupervisor,
+)
 from scpn_phase_orchestrator.supervisor.topology import (
     HigherOrderTopologySupervisor,
     TopologyMutationPolicy,
@@ -82,6 +86,8 @@ __all__ = [
     "Regime",
     "RegimeEvent",
     "RegimeManager",
+    "StrangeLoopAssessment",
+    "StrangeLoopSupervisor",
     "SupervisorPolicy",
     "Transition",
     "TopologyMutationPolicy",

@@ -152,6 +152,34 @@ hypergraph paths can gate before applying a topology change.
 
 ---
 
+## Strange-Loop Supervisor Monitor
+
+`StrangeLoopSupervisor` is the first self-referential supervisor slice. It
+treats the supervisor's own action stream as a four-dimensional control
+channel over `K`, `alpha`, `zeta`, and `Psi`. The monitor records recent
+action bundles, computes a control phase, control coherence, drift score,
+oscillation score, and over-control score, then returns conservative damping
+recommendations for a normal policy or safety gate to approve.
+
+```python
+from scpn_phase_orchestrator.supervisor import StrangeLoopSupervisor
+
+loop = StrangeLoopSupervisor(overcontrol_threshold=0.2)
+assessment = loop.observe(actions_from_supervisor_policy)
+
+if assessment.recommended_actions:
+    audit_payload = assessment.to_audit_record()
+```
+
+This slice does not hot-patch the supervisor or claim autonomous
+self-awareness. It provides an auditable meta-control signal that can detect
+policy drift, control-loop oscillation, and excessive actuation before those
+dynamics are fed back into the plant.
+
+::: scpn_phase_orchestrator.supervisor.strange_loop
+
+---
+
 ## Policy Engine
 
 Rule-based evaluation of supervisor actions.
