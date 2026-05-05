@@ -13,15 +13,48 @@ rtamt is an optional dependency: ``pip install rtamt``
 
 from __future__ import annotations
 
-__all__ = ["STLMonitor", "HAS_RTAMT"]
+import re
+import warnings
+from dataclasses import dataclass
+
+import numpy as np
+
+__all__ = ["STLMonitor", "STLTraceResult", "HAS_RTAMT"]
 
 try:
-    import rtamt
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        import rtamt
 
     HAS_RTAMT = True
-except Exception:  # rtamt's antlr4 dep breaks on Python >=3.12
+except ImportError:
     rtamt = None
     HAS_RTAMT = False
+
+
+_SIMPLE_SPEC_RE = re.compile(r"^(always|eventually)\s*\((.*)\)\s*$")
+_PREDICATE_RE = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|==)\s*([-+]?\d+(?:\.\d+)?)\s*$"
+)
+
+
+@dataclass(frozen=True)
+class STLTraceResult:
+    """Robustness summary for an STL monitor evaluation."""
+
+    spec: str
+    robustness: float
+    satisfied: bool
+    backend: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable STL audit payload."""
+        return {
+            "spec": self.spec,
+            "robustness": self.robustness,
+            "satisfied": self.satisfied,
+            "backend": self.backend,
+        }
 
 
 class STLMonitor:
@@ -40,12 +73,9 @@ class STLMonitor:
     COUPLING_BOUND = "always (K <= 10.0)"
 
     def __init__(self, spec: str) -> None:
-        if rtamt is None:
-            raise ImportError(
-                "rtamt is required for STL monitoring. Install: pip install rtamt"
-            )
         self._spec_str = spec
-        self._stl = rtamt.StlDiscreteTimeSpecification()
+        self._simple = _parse_simple_spec(spec)
+        self._stl = rtamt.StlDiscreteTimeSpecification() if rtamt is not None else None
         self._parsed = False
 
     def evaluate(self, trace: dict[str, list[float]]) -> float:
@@ -64,6 +94,14 @@ class STLMonitor:
         length = lengths.pop()
         if length == 0:
             raise ValueError("trace signals must be non-empty")
+
+        if self._simple is not None:
+            return _evaluate_simple(self._simple, trace)
+
+        if self._stl is None:
+            raise ImportError(
+                "rtamt is required for this STL syntax. Install: pip install rtamt"
+            )
 
         if not self._parsed:
             for name in trace:
@@ -84,3 +122,64 @@ class STLMonitor:
         if isinstance(robustness, list) and robustness:
             return float(min(r[1] for r in robustness))
         return float(robustness)
+
+    def evaluate_result(self, trace: dict[str, list[float]]) -> STLTraceResult:
+        """Evaluate and return robustness plus audit metadata."""
+        robustness = self.evaluate(trace)
+        backend = "builtin" if self._simple is not None else "rtamt"
+        return STLTraceResult(
+            spec=self._spec_str,
+            robustness=robustness,
+            satisfied=robustness >= 0.0,
+            backend=backend,
+        )
+
+
+def _parse_simple_spec(spec: str) -> tuple[str, list[tuple[str, str, float]]] | None:
+    match = _SIMPLE_SPEC_RE.match(spec.strip())
+    if match is None:
+        return None
+    temporal_op = match.group(1)
+    predicates: list[tuple[str, str, float]] = []
+    for raw_predicate in re.split(r"\s+(?:and|&&)\s+", match.group(2)):
+        predicate_match = _PREDICATE_RE.match(raw_predicate)
+        if predicate_match is None:
+            return None
+        signal, op, threshold = predicate_match.groups()
+        predicates.append((signal, op, float(threshold)))
+    return temporal_op, predicates
+
+
+def _evaluate_simple(
+    parsed: tuple[str, list[tuple[str, str, float]]],
+    trace: dict[str, list[float]],
+) -> float:
+    temporal_op, predicates = parsed
+    per_predicate = [
+        _predicate_robustness(signal, op, threshold, trace)
+        for signal, op, threshold in predicates
+    ]
+    pointwise = np.min(np.vstack(per_predicate), axis=0)
+    if temporal_op == "always":
+        return float(np.min(pointwise))
+    if temporal_op == "eventually":
+        return float(np.max(pointwise))
+    raise ValueError(f"unsupported STL temporal operator {temporal_op!r}")
+
+
+def _predicate_robustness(
+    signal: str,
+    op: str,
+    threshold: float,
+    trace: dict[str, list[float]],
+) -> np.ndarray:
+    if signal not in trace:
+        raise ValueError(f"trace missing signal {signal!r}")
+    values = np.asarray(trace[signal], dtype=np.float64)
+    if op in {">=", ">"}:
+        return values - threshold
+    if op in {"<=", "<"}:
+        return threshold - values
+    if op == "==":
+        return -np.abs(values - threshold)
+    raise ValueError(f"unsupported STL comparison operator {op!r}")

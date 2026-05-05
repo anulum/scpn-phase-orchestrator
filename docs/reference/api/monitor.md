@@ -31,6 +31,30 @@ from acting on transient startup dynamics.
 
 ::: scpn_phase_orchestrator.monitor.session_start
 
+## Signal Temporal Logic Runtime Verification
+
+`STLMonitor` evaluates runtime safety formulas over scalar monitor traces.
+It uses `rtamt` when available for full STL syntax and includes a builtin
+robustness evaluator for common safety forms:
+
+- `always (R >= 0.3)`
+- `eventually (R >= 0.8)`
+- `always (R >= 0.85 and amplitude_spread < 0.2)`
+
+Positive robustness means the formula is satisfied; negative robustness
+means violated. `evaluate_result()` returns an audit-ready result with
+the formula, robustness, satisfaction boolean, and backend name.
+
+```python
+from scpn_phase_orchestrator.monitor.stl import STLMonitor
+
+monitor = STLMonitor("always (R >= 0.3)")
+result = monitor.evaluate_result({"R": [0.9, 0.8, 0.6]})
+assert result.satisfied
+```
+
+::: scpn_phase_orchestrator.monitor.stl
+
 ## Chimera State Detection
 
 Detects chimera states: the coexistence of coherent (phase-locked) and
