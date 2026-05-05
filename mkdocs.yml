@@ -86,6 +86,7 @@ nav:
       - "Notebook → Production": guide/notebook_to_production.md
       - Interactive Tools: guide/interactive_tools.md
       - Testing: guide/testing.md
+      - Contributor Onboarding: guide/contributor_onboarding.md
       - Video Scripts: video_scripts.md
   - Specifications:
       - Binding Spec Schema: specs/binding_spec.schema.json
@@ -182,6 +183,7 @@ nav:
       - Power Grid Benchmark: galleries/power_grid_benchmark.md
       - Capabilities & Use Cases: galleries/capabilities.md
   - Reference:
+      - Public Roadmap: roadmap.md
       - Assumptions & Constants: ASSUMPTIONS.md
       - Competitive Analysis: competitive_analysis.md
       - "What SPO Does That No One Else Can": competitive_comparison.md

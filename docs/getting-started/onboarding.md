@@ -69,6 +69,7 @@ reference in one route.
 | Platform operator | [Production Deployment](../guide/production.md) | `spo serve ...` | Prometheus, OpenTelemetry, gRPC |
 | API integrator | [Core API](../reference/api/core.md) | Python imports | adapters, server, CLI |
 | Demo presenter | [Interactive Tools](../guide/interactive_tools.md) | Streamlit, WASM, `spo demo` | domainpack gallery |
+| Contributor | [Contributor Onboarding](../guide/contributor_onboarding.md) | scoped checks | docs, tests, examples |
 
 ## Repository Map
 
@@ -99,3 +100,5 @@ Before considering a new module, domainpack, or guide complete:
 See [Documentation Coverage](../reference/documentation_coverage.md) for the
 current public documentation inventory and the policy for API, guide,
 notebook, and demo coverage.
+
+For planned work, see the [Public Roadmap](../roadmap.md).

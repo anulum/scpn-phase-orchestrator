@@ -22,6 +22,7 @@ searching the source tree.
 | Quickstart | Minimal Python and CLI run path | [Quickstart](../getting-started/quickstart.md) |
 | Tutorials | Six task-oriented tutorials | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) |
 | Guides | Runtime, production, testing, adapters, backend, notebooks | [Guides](../guide/production.md) |
+| Contributor onboarding | setup, repository map, checks, documentation duties | [Contributor Onboarding](../guide/contributor_onboarding.md) |
 | API reference | 58 MkDocs API pages | [API Reference](api/index.md) |
 | Domainpacks | 36 domainpacks documented in the gallery | [Domainpack Gallery](../galleries/domainpack_gallery.md) |
 | Notebooks | 19 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
@@ -29,6 +30,7 @@ searching the source tree.
 | Examples | 27 terminal-first Python examples | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Interactive demos | Streamlit tools, browser WASM demo, CLI demo | [Interactive Tools](../guide/interactive_tools.md) |
 | Validation | V&V report, study protocol, testing guide | [V&V Report](../VALIDATION_REPORT.md) |
+| Roadmap | public stable, active, deferred, and research tracks | [Public Roadmap](../roadmap.md) |
 
 Counts above are derived from the repository tree at the time this page
 was updated: `36` domainpack directories, `27` `examples/*.py` scripts,
