@@ -43,6 +43,8 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     load_policy_rules,
 )
 from scpn_phase_orchestrator.supervisor.predictive import (
+    FEPPredictionAssessment,
+    FEPPredictiveSupervisor,
     Prediction,
     PredictiveSupervisor,
 )
@@ -60,6 +62,8 @@ __all__ = [
     "ControlAction",
     "CounterfactualRollout",
     "EventBus",
+    "FEPPredictionAssessment",
+    "FEPPredictiveSupervisor",
     "HigherOrderTopologySupervisor",
     "InterventionParameters",
     "Marking",

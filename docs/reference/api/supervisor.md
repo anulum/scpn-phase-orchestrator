@@ -410,6 +410,40 @@ MPC prediction costs ~10 ODE steps versus 10000 Euler steps.
 
 ---
 
+## FEP Predictive Supervisor
+
+`FEPPredictiveSupervisor` is the first Python supervisor mode that uses the
+existing `VariationalPredictor` as an auditable free-energy signal. It observes
+the current phase vector, updates the variational predictor, and emits bounded
+`zeta` / `Psi` actions only when free energy, prediction error, or stability
+proxy thresholds indicate a pre-emptive correction is needed.
+
+```python
+from scpn_phase_orchestrator.supervisor import FEPPredictiveSupervisor
+
+fep = FEPPredictiveSupervisor(
+    n_oscillators=len(phases),
+    dt=0.01,
+    target_R=0.8,
+    free_energy_threshold=1.0,
+)
+assessment = fep.assess(phases, omegas)
+actions = fep.decide(phases, omegas, upde_state, boundary_state)
+audit_payload = assessment.to_audit_record()
+```
+
+`FEPPredictionAssessment` records free energy, complexity, mean absolute
+prediction error, precision statistics, observed and predicted order
+parameters, target `R`, and a scalar surprise proxy. This keeps the FEP path
+reviewable in the same audit trail as policy, causal, STL, and topology
+decisions.
+
+This slice is intentionally conservative: it is a FEP-Kuramoto correspondence
+controller over the existing variational predictor, not a claim of a complete
+biological active-inference agent.
+
+---
+
 ## Performance summary
 
 | Operation | Budget | Notes |
