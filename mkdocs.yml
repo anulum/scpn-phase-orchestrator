@@ -53,6 +53,7 @@ nav:
       - Onboarding Handbook: getting-started/onboarding.md
       - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
+      - Troubleshooting: getting-started/troubleshooting.md
       - "Minimal Domainpack in 5 Minutes": getting-started/minimal_domainpack_5min.md
       - "Tutorial: Hello World": getting-started/hello_world.md
       - Start Here (Learning Path): getting-started/start_here.md
@@ -176,6 +177,7 @@ nav:
   - Gallery:
       - Domainpack Gallery: galleries/domainpack_gallery.md
       - Notebooks & Demos: galleries/notebooks_and_demos.md
+      - Notebook Execution Matrix: galleries/notebook_execution_matrix.md
       - Cardiac Rhythm Benchmark: galleries/cardiac_rhythm_benchmark.md
       - Power Grid Benchmark: galleries/power_grid_benchmark.md
       - Capabilities & Use Cases: galleries/capabilities.md

@@ -122,9 +122,10 @@ pip install -e ".[dev,plot]"
 jupyter lab notebooks/
 ```
 
-19 notebooks total. Notebooks 01--07 are validated in CI via `jupyter nbconvert --execute`;
-the remaining 12 run locally but are excluded from CI due to optional dependencies (JAX,
-Qiskit) or nbconvert performance constraints.
+19 notebooks total. CI executes the shipped notebook suite on Python 3.12
+with `jupyter nbconvert --execute`; see
+[Notebook Execution Matrix](notebook_execution_matrix.md) for per-notebook
+extras, runtime class, and CI expectation.
 
 ## Adding a New Domainpack
 

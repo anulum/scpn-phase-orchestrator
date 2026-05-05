@@ -25,6 +25,7 @@ searching the source tree.
 | API reference | 58 MkDocs API pages | [API Reference](api/index.md) |
 | Domainpacks | 36 domainpacks documented in the gallery | [Domainpack Gallery](../galleries/domainpack_gallery.md) |
 | Notebooks | 19 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
+| Notebook CI matrix | per-notebook extras and execution expectations | [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) |
 | Examples | 27 terminal-first Python examples | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Interactive demos | Streamlit tools, browser WASM demo, CLI demo | [Interactive Tools](../guide/interactive_tools.md) |
 | Validation | V&V report, study protocol, testing guide | [V&V Report](../VALIDATION_REPORT.md) |

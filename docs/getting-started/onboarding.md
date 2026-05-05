@@ -24,6 +24,7 @@ reference in one route.
 | Move from notebook to service | [Notebook to Production](../guide/notebook_to_production.md) | `spo replay audit.jsonl --verify` |
 | Explore APIs | [API Reference](../reference/api/index.md) | import the documented class/function |
 | Present or teach the system | [Notebooks & Demos](../galleries/notebooks_and_demos.md) | run the listed notebook or demo command |
+| Fix a local failure | [Troubleshooting](troubleshooting.md) | reproduce with exact command, seed, and environment |
 
 ## First Hour
 

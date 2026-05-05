@@ -43,9 +43,9 @@ jupyter lab notebooks/
 | `18_market_regime_detection.ipynb` | Finance | Market phase extraction and regime detection |
 | `19_swarmalator_dynamics.ipynb` | Robotics | Spatial + phase swarmalator dynamics |
 
-CI executes the early notebook slice documented in the gallery; later
-notebooks are local workflows when optional dependencies or runtime cost
-make CI execution inappropriate.
+CI executes the shipped notebook suite on Python 3.12 with `nbconvert`.
+See the [Notebook Execution Matrix](notebook_execution_matrix.md) for
+per-notebook extras, runtime class, and CI expectation.
 
 ## Terminal Examples
 
