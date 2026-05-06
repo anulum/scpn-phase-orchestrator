@@ -11,8 +11,10 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from math import isfinite
+from typing import TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 
@@ -21,6 +23,7 @@ __all__ = [
     "StrangeLoopSupervisor",
 ]
 
+FloatArray: TypeAlias = NDArray[np.float64]
 _KNOB_INDEX = {"K": 0, "alpha": 1, "zeta": 2, "Psi": 3}
 
 
@@ -86,7 +89,7 @@ class StrangeLoopSupervisor:
         }.items():
             if not isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} must be finite and > 0")
-        self._history: deque[np.ndarray] = deque(maxlen=history_size)
+        self._history: deque[FloatArray] = deque(maxlen=history_size)
         self._drift_threshold = float(drift_threshold)
         self._oscillation_threshold = float(oscillation_threshold)
         self._overcontrol_threshold = float(overcontrol_threshold)
@@ -165,7 +168,7 @@ class StrangeLoopSupervisor:
         ]
 
 
-def _actions_to_vector(actions: list[ControlAction]) -> np.ndarray:
+def _actions_to_vector(actions: list[ControlAction]) -> FloatArray:
     vector = np.zeros(4, dtype=np.float64)
     for action in actions:
         if action.knob not in _KNOB_INDEX:
@@ -176,7 +179,7 @@ def _actions_to_vector(actions: list[ControlAction]) -> np.ndarray:
     return vector
 
 
-def _control_coherence(matrix: np.ndarray) -> float:
+def _control_coherence(matrix: FloatArray) -> float:
     norms = np.linalg.norm(matrix, axis=1)
     active = norms > 0.0
     if not np.any(active):
@@ -186,13 +189,13 @@ def _control_coherence(matrix: np.ndarray) -> float:
     return float(np.clip(np.linalg.norm(mean_vector), 0.0, 1.0))
 
 
-def _drift_score(matrix: np.ndarray) -> float:
+def _drift_score(matrix: FloatArray) -> float:
     if matrix.shape[0] < 2:
         return 0.0
     return float(np.mean(np.linalg.norm(np.diff(matrix, axis=0), axis=1)))
 
 
-def _oscillation_score(matrix: np.ndarray) -> float:
+def _oscillation_score(matrix: FloatArray) -> float:
     if matrix.shape[0] < 3:
         return 0.0
     deltas = np.diff(matrix, axis=0)

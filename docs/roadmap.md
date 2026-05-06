@@ -79,7 +79,7 @@ These items are acknowledged but not the current documentation slice:
 
 | Item | Status |
 |------|--------|
-| Typed NumPy signature sweep | tracked as maintenance; STL fallback robustness return is parameterised; continue scoped module-by-module sweeps |
+| Typed NumPy signature sweep | tracked as maintenance; STL fallback robustness and strange-loop supervisor helper arrays are parameterised; continue scoped module-by-module sweeps |
 | Visual and batch-heavy features | deferred unless a user-facing workflow needs them immediately |
 | Broad benchmark-file expansion | useful, but benchmark numbers must be measured and reproducible before publication |
 | Thin-test strengthening | quality backlog item; prefer focused property or parity tests tied to changed code |

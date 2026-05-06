@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
@@ -19,6 +21,7 @@ from scpn_phase_orchestrator.supervisor import (
     StrangeLoopSupervisor,
     SupervisorPolicy,
 )
+from scpn_phase_orchestrator.supervisor import strange_loop as strange_loop_module
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
@@ -57,6 +60,26 @@ class TestStrangeLoopValidation:
 
 
 class TestStrangeLoopAssessment:
+    def test_internal_array_helpers_have_parameterised_signatures(self) -> None:
+        vector_hints = get_type_hints(strange_loop_module._actions_to_vector)
+        coherence_hints = get_type_hints(strange_loop_module._control_coherence)
+        drift_hints = get_type_hints(strange_loop_module._drift_score)
+        oscillation_hints = get_type_hints(strange_loop_module._oscillation_score)
+
+        assert "numpy.ndarray" in str(vector_hints["return"])
+        assert "float64" in str(vector_hints["return"])
+        for hints in (coherence_hints, drift_hints, oscillation_hints):
+            assert "numpy.ndarray" in str(hints["matrix"])
+            assert "float64" in str(hints["matrix"])
+
+    def test_actions_to_vector_returns_float64_vector(self) -> None:
+        vector = strange_loop_module._actions_to_vector(
+            [_action("K", 0.2), _action("zeta", -0.1)]
+        )
+
+        assert vector.dtype == np.float64
+        assert vector.tolist() == pytest.approx([0.2, 0.0, -0.1, 0.0])
+
     def test_quiet_supervisor_needs_no_damping(self) -> None:
         supervisor = StrangeLoopSupervisor()
 
