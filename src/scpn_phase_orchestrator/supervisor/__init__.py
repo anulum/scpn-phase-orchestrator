@@ -27,8 +27,11 @@ from scpn_phase_orchestrator.supervisor.causal import (
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.formal_export import (
     PrismExport,
+    TLAExport,
     export_petri_net_prism,
+    export_petri_net_tla,
     export_policy_rules_prism,
+    export_policy_rules_tla,
     export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
@@ -138,6 +141,7 @@ __all__ = [
     "Transition",
     "TopologyMutationPolicy",
     "TopologyMutationResult",
+    "TLAExport",
     "ValueAlignmentDecision",
     "ValueAlignmentGuard",
     "ValueAlignmentPolicy",
@@ -146,7 +150,9 @@ __all__ = [
     "assess_fep_hierarchy",
     "dry_run_policy_rules",
     "export_petri_net_prism",
+    "export_petri_net_tla",
     "export_policy_rules_prism",
+    "export_policy_rules_tla",
     "export_stl_specs_prism",
     "evaluate_policy_stl_specs",
     "load_policy_rules",

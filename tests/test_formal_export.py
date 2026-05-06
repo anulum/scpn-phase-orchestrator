@@ -23,10 +23,12 @@ from scpn_phase_orchestrator.supervisor import (
     PolicyRule,
     PolicySTLSpec,
     export_petri_net_prism,
+    export_petri_net_tla,
     export_policy_rules_prism,
+    export_policy_rules_tla,
     export_stl_specs_prism,
 )
-from scpn_phase_orchestrator.supervisor.formal_export import PrismExport
+from scpn_phase_orchestrator.supervisor.formal_export import PrismExport, TLAExport
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
     Guard,
@@ -111,6 +113,40 @@ def test_petri_net_prism_export_rejects_initial_tokens_above_bound() -> None:
         export_petri_net_prism(_net(), Marking(tokens={"warmup": 3}), max_tokens=2)
 
 
+def test_petri_net_tla_export_serialises_actions_and_invariants() -> None:
+    export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+
+    assert isinstance(export, TLAExport)
+    assert export.metric_names == {
+        "R_bad.0": "R_bad_0",
+        "stability.proxy": "stability_proxy",
+    }
+    assert "---- MODULE supervisor_net ----" in export.module
+    assert "EXTENDS Naturals, TLC" in export.module
+    assert "CONSTANTS R_bad_0, stability_proxy" in export.module
+    assert "VARIABLES cool_down, done, nominal, warmup" in export.module
+    assert "Init ==" in export.module
+    assert "  /\\ warmup = 1" in export.module
+    assert "TypeOK ==" in export.module
+    assert "  /\\ nominal \\in 0..2" in export.module
+    assert "start ==" in export.module
+    assert "  /\\ stability_proxy > 0.59999999999999998" in export.module
+    assert "  /\\ warmup >= 1" in export.module
+    assert "  /\\ warmup' = warmup - 1" in export.module
+    assert "  /\\ nominal' = nominal + 1" in export.module
+    assert "wind_down ==" in export.module
+    assert "  /\\ R_bad_0 <= 0.29999999999999999" in export.module
+    assert "Spec == Init /\\ [][Next]_<<cool_down, done, nominal, warmup>>" in (
+        export.module
+    )
+    assert "Safety == TypeOK" in export.module
+    assert "Active_done == done > 0" in export.module
+
+
 def _rules() -> list[PolicyRule]:
     return [
         PolicyRule(
@@ -189,6 +225,35 @@ def test_policy_rules_prism_export_rejects_bad_rules() -> None:
     )
     with pytest.raises(PolicyError, match="unsupported operator"):
         export_policy_rules_prism([bad])
+
+
+def test_policy_rules_tla_export_serialises_guards_and_emission_predicates() -> None:
+    export = export_policy_rules_tla(_rules(), module_name="policy model")
+
+    assert isinstance(export, TLAExport)
+    assert export.rule_names == {"boost K": "boost_K", "damp_bad": "damp_bad"}
+    assert export.metric_names == {
+        "R_bad.0": "R_bad_0",
+        "R_good.0": "R_good_0",
+        "stability_proxy": "stability_proxy",
+    }
+    assert "---- MODULE policy_model ----" in export.module
+    assert "CONSTANTS regime, R_bad_0, R_good_0, stability_proxy" in export.module
+    assert "VARIABLES boost_K_fires, damp_bad_fires" in export.module
+    assert "  /\\ boost_K_fires \\in 0..2" in export.module
+    assert "boost_K ==" in export.module
+    assert "  /\\ (regime = 1 \\/ regime = 0)" in export.module
+    assert "  /\\ R_good_0 < 0.59999999999999998" in export.module
+    assert "  /\\ boost_K_fires' = boost_K_fires + 1" in export.module
+    assert "  /\\ damp_bad_fires' = damp_bad_fires" in export.module
+    assert (
+        "  /\\ (R_bad_0 > 0.40000000000000002 /\\ stability_proxy <= 0.5)"
+    ) in export.module
+    assert (
+        "Spec == Init /\\ [][Next]_<<boost_K_fires, damp_bad_fires>>"
+    ) in export.module
+    assert "Fires_boost_K == boost_K_fires > 0" in export.module
+    assert "Emits_boost_K_K_global_0 == boost_K_fires > 0" in export.module
 
 
 def test_stl_specs_prism_export_serialises_satisfaction_labels() -> None:
@@ -284,6 +349,65 @@ def test_formal_export_cli_writes_prism_model(tmp_path: Path) -> None:
     assert "[start] stability_proxy > 0 & warmup >= 1" in model
 
 
+def test_formal_export_cli_writes_protocol_tla_model(tmp_path: Path) -> None:
+    spec = {
+        "name": "formal-tla-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.01,
+        "layers": [
+            {"name": "L1", "index": 0, "oscillator_ids": ["o0", "o1"]},
+        ],
+        "oscillator_families": {
+            "p": {"channel": "P", "extractor_type": "hilbert"},
+        },
+        "coupling": {"base_strength": 0.45, "decay_alpha": 0.3},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+        "protocol_net": {
+            "places": ["warmup", "nominal"],
+            "initial": {"warmup": 1},
+            "place_regime": {"warmup": "NOMINAL", "nominal": "NOMINAL"},
+            "transitions": [
+                {
+                    "name": "start",
+                    "inputs": [{"place": "warmup"}],
+                    "outputs": [{"place": "nominal"}],
+                    "guard": "stability_proxy > 0.0",
+                },
+            ],
+        },
+    }
+    spec_path = tmp_path / "binding_spec.yaml"
+    out_path = tmp_path / "protocol.tla"
+    spec_path.write_text(yaml.safe_dump(spec), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "protocol-tla",
+            "--output",
+            str(out_path),
+            "--module-name",
+            "FormalTLA",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "TLA+ model written:" in result.output
+    model = out_path.read_text(encoding="utf-8")
+    assert "---- MODULE FormalTLA ----" in model
+    assert "start ==" in model
+    assert "  /\\ stability_proxy > 0" in model
+    assert "Spec == Init /\\ [][Next]_<<nominal, warmup>>" in model
+
+
 def test_formal_export_cli_writes_policy_prism_model(tmp_path: Path) -> None:
     spec = {
         "name": "formal-policy-test",
@@ -343,6 +467,69 @@ def test_formal_export_cli_writes_policy_prism_model(tmp_path: Path) -> None:
     model = out_path.read_text(encoding="utf-8")
     assert "module policy_test" in model
     assert "[boost] (regime = 0) & R_good_0 < 0.69999999999999996" in model
+
+
+def test_formal_export_cli_writes_policy_tla_model(tmp_path: Path) -> None:
+    spec = {
+        "name": "formal-policy-tla-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.01,
+        "layers": [
+            {"name": "L1", "index": 0, "oscillator_ids": ["o0", "o1"]},
+        ],
+        "oscillator_families": {
+            "p": {"channel": "P", "extractor_type": "hilbert"},
+        },
+        "coupling": {"base_strength": 0.45, "decay_alpha": 0.3},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+    policy = {
+        "rules": [
+            {
+                "name": "boost",
+                "regime": ["DEGRADED"],
+                "condition": {
+                    "metric": "R_good",
+                    "layer": 0,
+                    "op": "<",
+                    "threshold": 0.7,
+                },
+                "action": {"knob": "K", "scope": "global", "value": 0.1, "ttl_s": 5.0},
+            }
+        ]
+    }
+    spec_path = tmp_path / "binding_spec.yaml"
+    policy_path = tmp_path / "policy.yaml"
+    out_path = tmp_path / "policy.tla"
+    spec_path.write_text(yaml.safe_dump(spec), encoding="utf-8")
+    policy_path.write_text(yaml.safe_dump(policy), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "policy-tla",
+            "--output",
+            str(out_path),
+            "--module-name",
+            "PolicyTLA",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "TLA+ model written:" in result.output
+    model = out_path.read_text(encoding="utf-8")
+    assert "---- MODULE PolicyTLA ----" in model
+    assert "boost ==" in model
+    assert "  /\\ R_good_0 < 0.69999999999999996" in model
+    assert "Fires_boost == boost_fires > 0" in model
 
 
 def test_formal_export_cli_writes_stl_prism_model(tmp_path: Path) -> None:

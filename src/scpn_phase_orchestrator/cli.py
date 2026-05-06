@@ -50,7 +50,9 @@ from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
+    export_petri_net_tla,
     export_policy_rules_prism,
+    export_policy_rules_tla,
     export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
@@ -178,14 +180,14 @@ def plugins_catalog(include_incompatible: bool, rust_registry: bool) -> None:
     "-o",
     default=None,
     type=click.Path(),
-    help="Write PRISM model to a file instead of stdout",
+    help="Write formal model to a file instead of stdout",
 )
-@click.option("--module-name", default="spo_petri", help="PRISM module name")
+@click.option("--module-name", default="spo_petri", help="Formal module name")
 @click.option("--max-tokens", default=None, type=int, help="Token upper bound")
 @click.option(
     "--export",
     "export_target",
-    type=click.Choice(["protocol", "policy", "stl"]),
+    type=click.Choice(["protocol", "protocol-tla", "policy", "policy-tla", "stl"]),
     default="protocol",
     show_default=True,
     help="Supervisor artefact to export",
@@ -214,7 +216,7 @@ def formal_export(
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
 
-    if export_target in {"policy", "stl"}:
+    if export_target in {"policy", "policy-tla", "stl"}:
         policy_file = (
             Path(policy_path)
             if policy_path is not None
@@ -239,6 +241,14 @@ def formal_export(
         if not rules:
             click.echo("ERROR: policy file contains no rules", err=True)
             raise SystemExit(1)
+        if export_target == "policy-tla":
+            tla_export = export_policy_rules_tla(rules, module_name=module_name)
+            if output is None:
+                click.echo(tla_export.module, nl=False)
+                return
+            Path(output).write_text(tla_export.module, encoding="utf-8")
+            click.echo(f"TLA+ model written: {output}")
+            return
         export = export_policy_rules_prism(rules, module_name=module_name)
         if output is None:
             click.echo(export.model, nl=False)
@@ -252,6 +262,19 @@ def formal_export(
         raise SystemExit(1)
 
     net, marking = _petri_net_from_protocol(spec.protocol_net)
+    if export_target == "protocol-tla":
+        tla_export = export_petri_net_tla(
+            net,
+            marking,
+            module_name=module_name,
+            max_tokens=max_tokens,
+        )
+        if output is None:
+            click.echo(tla_export.module, nl=False)
+            return
+        Path(output).write_text(tla_export.module, encoding="utf-8")
+        click.echo(f"TLA+ model written: {output}")
+        return
     export = export_petri_net_prism(
         net,
         marking,

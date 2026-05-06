@@ -475,7 +475,9 @@ action output before a rule set is allowed into a live supervisor path.
 ## Formal Export
 
 Export helpers translate Petri-net, policy-rule, and policy-declared STL
-surfaces into PRISM models for independent safety analysis.
+surfaces into model-checker artefacts for independent safety analysis. PRISM
+exports remain the default; TLA+ modules are available for protocol and policy
+transition-system checks.
 
 The CLI supports:
 
@@ -483,12 +485,18 @@ The CLI supports:
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export protocol
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy
 spo formal-export domainpacks/my_domain/binding_spec.yaml --export stl
+spo formal-export domainpacks/my_domain/binding_spec.yaml --export protocol-tla
+spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy-tla
 ```
 
 `--export stl` reads `stl_monitors` from the sibling `policy.yaml` by default
 and emits signal constants plus satisfied/violated labels for the builtin STL
 subset. This is a model-checker linkage surface; full temporal automata
-synthesis remains future work.
+synthesis remains future work. `--export protocol-tla` emits a bounded TLA+
+module with Petri places as variables, transition guards as constants, `Init`,
+`Next`, `Spec`, and `Safety == TypeOK`. `--export policy-tla` emits bounded
+rule-fire counters plus reachability predicates for fired rules and emitted
+actions.
 
 ::: scpn_phase_orchestrator.supervisor.formal_export
 

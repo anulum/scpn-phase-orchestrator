@@ -23,8 +23,11 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 
 __all__ = [
     "PrismExport",
+    "TLAExport",
     "export_petri_net_prism",
+    "export_petri_net_tla",
     "export_policy_rules_prism",
+    "export_policy_rules_tla",
     "export_stl_specs_prism",
 ]
 
@@ -49,6 +52,18 @@ class PrismExport:
     stl_names: dict[str, str] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class TLAExport:
+    """TLA+ module text plus the identifier mapping used during export."""
+
+    module: str
+    place_names: dict[str, str]
+    metric_names: dict[str, str]
+    transition_names: dict[str, str]
+    rule_names: dict[str, str] = field(default_factory=dict)
+    action_names: dict[str, str] = field(default_factory=dict)
+
+
 def _identifier(raw: str, *, prefix: str) -> str:
     cleaned = _IDENT_RE.sub("_", raw).strip("_")
     if not cleaned:
@@ -56,6 +71,13 @@ def _identifier(raw: str, *, prefix: str) -> str:
     if cleaned[0].isdigit():
         cleaned = f"{prefix}_{cleaned}"
     return cleaned
+
+
+def _tla_module_identifier(raw: str) -> str:
+    identifier = _identifier(raw, prefix="SpoModule")
+    if not identifier[0].isalpha():
+        identifier = f"Spo{identifier}"
+    return identifier
 
 
 def _unique_identifier(
@@ -170,12 +192,23 @@ def _guard_expr(transition: Transition, metric_names: dict[str, str]) -> str:
     return f"{metric_names[guard.metric]} {guard.op} {guard.threshold:.17g}"
 
 
+def _tla_guard_expr(transition: Transition, metric_names: dict[str, str]) -> str:
+    return _guard_expr(transition, metric_names).replace("==", "=")
+
+
 def _policy_condition_expr(
     condition: PolicyCondition,
     metric_names: dict[str, str],
 ) -> str:
     metric = metric_names[_policy_metric_key(condition)]
     return f"{metric} {condition.op} {condition.threshold:.17g}"
+
+
+def _tla_policy_condition_expr(
+    condition: PolicyCondition,
+    metric_names: dict[str, str],
+) -> str:
+    return _policy_condition_expr(condition, metric_names).replace("==", "=")
 
 
 def _policy_guard_expr(
@@ -193,6 +226,22 @@ def _policy_guard_expr(
     return _policy_condition_expr(condition, metric_names)
 
 
+def _tla_policy_guard_expr(
+    condition: PolicyCondition | CompoundCondition,
+    metric_names: dict[str, str],
+) -> str:
+    if isinstance(condition, CompoundCondition):
+        if not condition.conditions:
+            raise PolicyError("compound policy condition must not be empty")
+        op = "\\/" if condition.logic.upper() == "OR" else "/\\"
+        parts = [
+            _tla_policy_condition_expr(item, metric_names)
+            for item in condition.conditions
+        ]
+        return "(" + f" {op} ".join(parts) + ")"
+    return _tla_policy_condition_expr(condition, metric_names)
+
+
 def _regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
     regimes = [regime.upper() for regime in rule.regimes]
     if not regimes:
@@ -201,10 +250,26 @@ def _regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
     return "(" + " | ".join(parts) + ")"
 
 
+def _tla_regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
+    regimes = [regime.upper() for regime in rule.regimes]
+    if not regimes:
+        raise PolicyError(f"policy rule {rule.name!r} has no regimes")
+    parts = [f"regime = {regime_names[regime]}" for regime in regimes]
+    return "(" + " \\/ ".join(parts) + ")"
+
+
 def _input_expr(transition: Transition, place_names: dict[str, str]) -> str:
     if not transition.inputs:
         return "true"
     return " & ".join(
+        f"{place_names[arc.place]} >= {arc.weight}" for arc in transition.inputs
+    )
+
+
+def _tla_input_expr(transition: Transition, place_names: dict[str, str]) -> str:
+    if not transition.inputs:
+        return "TRUE"
+    return " /\\ ".join(
         f"{place_names[arc.place]} >= {arc.weight}" for arc in transition.inputs
     )
 
@@ -225,6 +290,39 @@ def _update_expr(transition: Transition, place_names: dict[str, str]) -> str:
         else:
             updates.append(f"({identifier}'={identifier}-{abs(delta)})")
     return " & ".join(updates)
+
+
+def _tla_next_value_lines(
+    transition: Transition,
+    place_names: dict[str, str],
+) -> list[str]:
+    deltas = dict.fromkeys(place_names, 0)
+    for arc in transition.inputs:
+        deltas[arc.place] -= arc.weight
+    for arc in transition.outputs:
+        deltas[arc.place] += arc.weight
+    lines: list[str] = []
+    for place, identifier in place_names.items():
+        delta = deltas[place]
+        if delta == 0:
+            next_value = identifier
+        elif delta > 0:
+            next_value = f"{identifier} + {delta}"
+        else:
+            next_value = f"{identifier} - {abs(delta)}"
+        lines.append(f"  /\\ {identifier}' = {next_value}")
+    return lines
+
+
+def _tla_unchanged_counter_lines(
+    changed: str,
+    rule_names: dict[str, str],
+) -> list[str]:
+    return [
+        f"  /\\ {rule_id}_fires' = {rule_id}_fires"
+        for rule_id in rule_names.values()
+        if rule_id != changed
+    ]
 
 
 def _token_upper_bound(
@@ -366,6 +464,103 @@ def export_petri_net_prism(
     )
 
 
+def export_petri_net_tla(
+    net: PetriNet,
+    initial_marking: Marking,
+    *,
+    module_name: str = "SpoPetri",
+    max_tokens: int | None = None,
+) -> TLAExport:
+    """Serialise a Petri net into a bounded TLA+ transition-system module.
+
+    Guard metrics become TLA+ constants. Places become bounded natural-number
+    variables, and each Petri transition becomes a named next-state action that
+    preserves all unaffected places explicitly.
+    """
+
+    if not net.place_names:
+        raise PolicyError("cannot export Petri net without places")
+    if max_tokens is not None and max_tokens < 1:
+        raise PolicyError("max_tokens must be >= 1")
+
+    place_names = _place_mapping(net)
+    transition_names = _transition_mapping(net)
+    metric_names = _metric_mapping(net)
+    token_bound = max_tokens or _token_upper_bound(net, initial_marking, minimum=1)
+    module_identifier = _tla_module_identifier(module_name)
+    variables = list(place_names.values())
+    variable_tuple = "<<" + ", ".join(variables) + ">>"
+
+    lines = [
+        f"---- MODULE {module_identifier} ----",
+        "EXTENDS Naturals, TLC",
+        "",
+        "\\* Generated from SCPN PetriNet for TLA+ model checking.",
+    ]
+    if any(raw != mapped for raw, mapped in place_names.items()):
+        lines.append("\\* Place identifiers:")
+        lines.extend(f"\\*   {raw} -> {mapped}" for raw, mapped in place_names.items())
+    if metric_names:
+        lines.append("\\* Guard metric constants:")
+        lines.extend(f"\\*   {raw} -> {mapped}" for raw, mapped in metric_names.items())
+        lines.append("CONSTANTS " + ", ".join(metric_names.values()))
+    lines.extend(["", "VARIABLES " + ", ".join(variables), "", "Init =="])
+
+    for raw_name, identifier in place_names.items():
+        initial = initial_marking[raw_name]
+        if initial > token_bound:
+            raise PolicyError(
+                f"initial marking for {raw_name!r} exceeds max_tokens={token_bound}"
+            )
+        lines.append(f"  /\\ {identifier} = {initial}")
+
+    lines.extend(["", "TypeOK =="])
+    lines.extend(
+        f"  /\\ {identifier} \\in 0..{token_bound}" for identifier in variables
+    )
+
+    for transition in net.transitions:
+        action = transition_names[transition.name]
+        lines.extend(["", f"{action} =="])
+        guard = _tla_guard_expr(transition, metric_names)
+        if guard != "true":
+            lines.append(f"  /\\ {guard}")
+        inputs = _tla_input_expr(transition, place_names)
+        if inputs != "TRUE":
+            lines.append(f"  /\\ {inputs}")
+        lines.extend(_tla_next_value_lines(transition, place_names))
+
+    next_terms = [transition_names[transition.name] for transition in net.transitions]
+    lines.extend(["", "Next =="])
+    if next_terms:
+        first, *rest = next_terms
+        lines.append(f"  \\/ {first}")
+        lines.extend(f"  \\/ {term}" for term in rest)
+    else:
+        lines.append("  /\\ UNCHANGED " + variable_tuple)
+
+    lines.extend(
+        [
+            "",
+            f"Spec == Init /\\ [][Next]_{variable_tuple}",
+            "Safety == TypeOK",
+            "",
+        ]
+    )
+    for raw_name, identifier in place_names.items():
+        lines.append(f"Active_{identifier} == {identifier} > 0")
+        if raw_name != identifier:
+            lines.append(f"\\* Active_{identifier} maps original place {raw_name!r}")
+    lines.append("====")
+
+    return TLAExport(
+        module="\n".join(lines) + "\n",
+        place_names=place_names,
+        metric_names=metric_names,
+        transition_names=transition_names,
+    )
+
+
 def export_policy_rules_prism(
     rules: list[PolicyRule],
     *,
@@ -450,6 +645,108 @@ def export_policy_rules_prism(
 
     return PrismExport(
         model="\n".join(lines) + "\n",
+        place_names={},
+        metric_names=metric_names,
+        transition_names={},
+        rule_names=rule_names,
+        action_names=action_names,
+    )
+
+
+def export_policy_rules_tla(
+    rules: list[PolicyRule],
+    *,
+    module_name: str = "SpoPolicy",
+) -> TLAExport:
+    """Serialise policy rules into a bounded TLA+ transition-system module."""
+
+    if not rules:
+        raise PolicyError("cannot export policy rules without rules")
+
+    for rule in rules:
+        if not rule.name:
+            raise PolicyError("policy rule names must not be empty")
+        if not rule.regimes:
+            raise PolicyError(f"policy rule {rule.name!r} has no regimes")
+        if not rule.actions:
+            raise PolicyError(f"policy rule {rule.name!r} has no actions")
+        for condition in _policy_conditions(rule.condition):
+            if not condition.metric:
+                raise PolicyError(f"policy rule {rule.name!r} has an empty metric")
+            if not isfinite(condition.threshold):
+                raise PolicyError(f"policy rule {rule.name!r} has non-finite threshold")
+            if condition.op not in {">", ">=", "<", "<=", "=="}:
+                raise PolicyError(
+                    f"policy rule {rule.name!r} has unsupported operator "
+                    f"{condition.op!r}"
+                )
+
+    metric_names = _policy_metric_mapping(rules)
+    rule_names = _rule_mapping(rules)
+    action_names = _action_mapping(rules)
+    regime_names = _regime_mapping(rules)
+    module_identifier = _tla_module_identifier(module_name)
+    counters = [f"{rule_id}_fires" for rule_id in rule_names.values()]
+    counter_tuple = "<<" + ", ".join(counters) + ">>"
+
+    lines = [
+        f"---- MODULE {module_identifier} ----",
+        "EXTENDS Naturals, TLC",
+        "",
+        "\\* Generated from SCPN PolicyEngine rules for TLA+ model checking.",
+        "\\* Regime constants:",
+    ]
+    lines.extend(f"\\*   {name} -> {value}" for name, value in regime_names.items())
+    constants = ["regime", *metric_names.values()]
+    lines.append("CONSTANTS " + ", ".join(constants))
+    if metric_names:
+        lines.append("\\* Policy metric constants:")
+        lines.extend(f"\\*   {raw} -> {mapped}" for raw, mapped in metric_names.items())
+    lines.extend(["", "VARIABLES " + ", ".join(counters), "", "Init =="])
+    lines.extend(f"  /\\ {counter} = 0" for counter in counters)
+    lines.extend(["", "TypeOK =="])
+    for rule in rules:
+        rule_id = rule_names[rule.name]
+        lines.append(f"  /\\ {rule_id}_fires \\in 0..{_policy_fire_bound(rule)}")
+
+    for rule in rules:
+        rule_id = rule_names[rule.name]
+        lines.extend(["", f"{rule_id} =="])
+        lines.append(f"  /\\ {_tla_regime_guard_expr(rule, regime_names)}")
+        lines.append(f"  /\\ {_tla_policy_guard_expr(rule.condition, metric_names)}")
+        lines.append(f"  /\\ {rule_id}_fires < {_policy_fire_bound(rule)}")
+        lines.append(f"  /\\ {rule_id}_fires' = {rule_id}_fires + 1")
+        lines.extend(_tla_unchanged_counter_lines(rule_id, rule_names))
+
+    next_terms = list(rule_names.values())
+    lines.extend(["", "Next =="])
+    first, *rest = next_terms
+    lines.append(f"  \\/ {first}")
+    lines.extend(f"  \\/ {term}" for term in rest)
+
+    lines.extend(
+        [
+            "",
+            f"Spec == Init /\\ [][Next]_{counter_tuple}",
+            "Safety == TypeOK",
+            "",
+        ]
+    )
+    for rule in rules:
+        rule_id = rule_names[rule.name]
+        lines.append(f"Fires_{rule_id} == {rule_id}_fires > 0")
+        for i, action in enumerate(rule.actions):
+            action_id = action_names[_action_key(rule, i)]
+            lines.append(f"Emits_{action_id} == {rule_id}_fires > 0")
+            lines.append(
+                f"\\*   {action_id}: knob={action.knob!r}, "
+                f"scope={action.scope!r}, value={action.value:.17g}, "
+                f"ttl_s={action.ttl_s:.17g}"
+            )
+    lines.append("====")
+
+    return TLAExport(
+        module="\n".join(lines) + "\n",
         place_names={},
         metric_names=metric_names,
         transition_names={},

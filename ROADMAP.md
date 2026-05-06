@@ -263,6 +263,10 @@ Near-term candidate tracks:
   - Model-checker export linkage is in place:
     `spo formal-export --export stl` emits PRISM constants and
     satisfied/violated labels for policy-declared STL monitors.
+  - TLA+ export linkage is in place for supervisor protocols and policy rules:
+    `spo formal-export --export protocol-tla` and
+    `spo formal-export --export policy-tla` emit bounded transition-system
+    modules with `Init`, `Next`, `Spec`, and `Safety == TypeOK`.
   - Monitoring automata synthesis foundation is in place:
     `synthesise_stl_monitoring_automaton()` emits audit-ready state and
     transition traces for builtin simple STL monitors.
