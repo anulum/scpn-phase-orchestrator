@@ -25,6 +25,7 @@ cube guard against singularities at coincident agents.
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -141,6 +142,21 @@ def _dispatch() -> Callable[..., tuple[FloatArray, FloatArray]] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    return coerced
+
+
 def _python_step(
     pos: FloatArray,
     phases: FloatArray,
@@ -194,15 +210,9 @@ class SwarmalatorEngine:
     """
 
     def __init__(self, n_agents: int, dim: int = 2, dt: float = 0.01):
-        if n_agents < 1:
-            raise ValueError(f"n_agents must be >= 1, got {n_agents}")
-        if dim < 1:
-            raise ValueError(f"dim must be >= 1, got {dim}")
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
-        self._n = n_agents
-        self._dim = dim
-        self._dt = dt
+        self._n = _validate_positive_int(n_agents, name="n_agents")
+        self._dim = _validate_positive_int(dim, name="dim")
+        self._dt = _validate_positive_float(dt, name="dt")
 
     def step(
         self,
@@ -282,6 +292,7 @@ class SwarmalatorEngine:
         k: float = 1.0,
         n_steps: int = 100,
     ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
         curr_pos, curr_phases = pos.copy(), phases.copy()
         pos_traj = np.empty((n_steps, self._n, self._dim))
         phase_traj = np.empty((n_steps, self._n))

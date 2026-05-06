@@ -28,9 +28,19 @@ class TestSwarmalatorEngineValidation:
         with pytest.raises(ValueError, match="n_agents must be >= 1"):
             SwarmalatorEngine(n_agents=0)
 
+    @pytest.mark.parametrize("n_agents", [False, -1, 1.5, "4"])
+    def test_rejects_invalid_agent_count(self, n_agents: Any) -> None:
+        with pytest.raises(ValueError, match="n_agents must be >= 1"):
+            SwarmalatorEngine(n_agents=n_agents)
+
     def test_rejects_zero_dimension(self) -> None:
         with pytest.raises(ValueError, match="dim must be >= 1"):
             SwarmalatorEngine(n_agents=4, dim=0)
+
+    @pytest.mark.parametrize("dim", [False, -1, 1.5, "2"])
+    def test_rejects_invalid_dimension(self, dim: Any) -> None:
+        with pytest.raises(ValueError, match="dim must be >= 1"):
+            SwarmalatorEngine(n_agents=4, dim=dim)
 
     def test_rejects_zero_dt(self) -> None:
         with pytest.raises(ValueError, match="dt must be positive"):
@@ -39,6 +49,32 @@ class TestSwarmalatorEngineValidation:
     def test_rejects_negative_dt(self) -> None:
         with pytest.raises(ValueError, match="dt must be positive"):
             SwarmalatorEngine(n_agents=4, dt=-0.01)
+
+    @pytest.mark.parametrize("dt", [False, float("nan"), float("inf"), "0.01"])
+    def test_rejects_invalid_dt(self, dt: Any) -> None:
+        with pytest.raises(ValueError, match="dt must be positive"):
+            SwarmalatorEngine(n_agents=4, dt=dt)
+
+    @pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "10"])
+    def test_run_rejects_invalid_step_count(self, n_steps: Any) -> None:
+        engine = SwarmalatorEngine(n_agents=4, dim=2, dt=0.01)
+        pos = np.zeros((4, 2), dtype=np.float64)
+        phases = np.zeros(4, dtype=np.float64)
+        omegas = np.ones(4, dtype=np.float64)
+
+        with pytest.raises(ValueError, match="n_steps must be >= 1"):
+            engine.run(pos, phases, omegas, n_steps=n_steps)
+
+    def test_normalises_accepted_numpy_scalars(self) -> None:
+        engine = SwarmalatorEngine(
+            n_agents=np.int64(4),
+            dim=np.int64(2),
+            dt=np.float64(0.01),
+        )
+
+        assert engine._n == 4
+        assert engine._dim == 2
+        assert pytest.approx(0.01) == engine._dt
 
 
 class TestSimplicialEngineValidation:
