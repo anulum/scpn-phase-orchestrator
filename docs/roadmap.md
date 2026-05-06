@@ -61,7 +61,7 @@ control engineers who do not already live in phase dynamics.
 
 | Item | Roadmap stance |
 |------|----------------|
-| Dynamic higher-order topology adaptation | foundation, plasma-control demo, traffic-flow transfer-entropy demo, and pairwise-support policy hardening are implemented; broader Lyapunov policy validation remains open |
+| Dynamic higher-order topology adaptation | foundation, plasma-control demo, traffic-flow transfer-entropy demo, Lyapunov mutation validation, and pairwise-support policy hardening are implemented; broader multi-domain Lyapunov policy validation remains open |
 | Causal intervention engine | counterfactual rollout foundation plus cardiac and power-grid attribution demos are implemented; deeper causal-model learning and additional attribution demos remain open |
 | RL/autotune layer on JAX `nn` backend | reward evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, and adaptive replay refinement are implemented; next step is optional PPO/SAC or hybrid physics learners behind the same non-actuating gates |
 | FEP / predictive-coding supervisor backend | predictive supervisor foundation and power-grid hierarchy proof are implemented; broader hierarchy/domainpack proof work remains open |

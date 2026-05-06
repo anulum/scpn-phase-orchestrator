@@ -214,8 +214,9 @@ Near-term candidate tracks:
   - Traffic-flow transfer-entropy demo is in place:
     `domainpacks/traffic_flow/topology_adaptation_demo.py` derives pairwise
     support from transfer-entropy histories before proposing corridor
-    simplices.
-  - Remaining scope: broader policy validation around Lyapunov objectives.
+    simplices and records Lyapunov before/after energy evidence for the
+    proposed mutation.
+  - Remaining scope: broader multi-domain Lyapunov policy validation.
 - Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
   - Foundation is in place: causal counterfactual rollout support exists.
   - Cardiac attribution demo is in place:

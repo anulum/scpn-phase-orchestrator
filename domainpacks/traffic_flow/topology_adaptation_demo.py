@@ -16,6 +16,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard
 from scpn_phase_orchestrator.monitor.transfer_entropy import transfer_entropy_matrix
 from scpn_phase_orchestrator.supervisor import (
     HigherOrderTopologySupervisor,
@@ -74,6 +75,25 @@ def transfer_entropy_supported_knm(
     return knm, te
 
 
+def topology_lyapunov_validation(
+    phases: FloatArray,
+    before_knm: FloatArray,
+    after_knm: FloatArray,
+) -> dict[str, object]:
+    """Return Lyapunov evidence for a proposed topology mutation."""
+    before = LyapunovGuard().evaluate(phases, before_knm)
+    after = LyapunovGuard().evaluate(phases, after_knm)
+    return {
+        "before_V": before.V,
+        "after_V": after.V,
+        "delta_V": after.V - before.V,
+        "non_increasing": after.V <= before.V,
+        "before_in_basin": before.in_basin,
+        "after_in_basin": after.in_basin,
+        "after_max_phase_diff": after.max_phase_diff,
+    }
+
+
 def run_demo() -> dict[str, object]:
     """Run one transfer-entropy-supported topology mutation for traffic flow."""
     spec = load_binding_spec(SPEC_PATH)
@@ -93,6 +113,7 @@ def run_demo() -> dict[str, object]:
         simplex_pairwise_support_floor=0.10,
     )
     result = HigherOrderTopologySupervisor(policy).mutate(traffic_demo_phases(), knm)
+    lyapunov = topology_lyapunov_validation(traffic_demo_phases(), knm, result.knm)
     te_threshold = 0.25 * float(np.max(te))
     te_edges = int(np.count_nonzero(te > te_threshold)) if te_threshold > 0.0 else 0
     return {
@@ -107,6 +128,7 @@ def run_demo() -> dict[str, object]:
             "max": float(np.max(te)),
             "support_edges": te_edges,
         },
+        "lyapunov_validation": lyapunov,
         "audit": result.to_audit_record(),
     }
 

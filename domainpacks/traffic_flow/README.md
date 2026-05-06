@@ -50,7 +50,9 @@ adaptive signal control -> green wave recovery.
 higher-order topology mutation for signal coordination. The demo builds a
 pairwise support matrix from deterministic corridor phase histories, applies a
 `TopologyMutationPolicy` with a pairwise support floor, and emits an audit
-payload for newly proposed 2-simplices.
+payload for newly proposed 2-simplices. It also evaluates the proposal with
+`LyapunovGuard` so the demo records before/after energy, basin status, and the
+mutation energy delta.
 
 Run it with:
 
@@ -58,5 +60,5 @@ Run it with:
 PYTHONPATH=src python domainpacks/traffic_flow/topology_adaptation_demo.py
 ```
 
-The output includes transfer-entropy support counts, the mutation policy, and
-the supervisor topology audit record.
+The output includes transfer-entropy support counts, the mutation policy,
+Lyapunov validation evidence, and the supervisor topology audit record.

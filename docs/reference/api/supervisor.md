@@ -158,7 +158,8 @@ Domainpack demos:
   JSON.
 - `domainpacks/traffic_flow/topology_adaptation_demo.py` builds pairwise
   support from transfer-entropy evidence before proposing traffic-corridor
-  simplices.
+  simplices, then records Lyapunov before/after energy and basin evidence for
+  the proposed mutation.
 
 ::: scpn_phase_orchestrator.supervisor.topology
 
