@@ -89,6 +89,30 @@ produced from the YAML and includes inferred defaults (for example
 
 ::: scpn_phase_orchestrator.binding.resolved
 
+## N-Channel Algebra Summary
+
+`build_channel_algebra_report()` produces a deterministic, JSON-safe view of
+declared channels, required/optional status, derived channels, group
+membership, supervisor visibility, coupling participation, and cross-channel
+edges. It is intended for audit, replay, and reporting surfaces that need a
+channel-count-agnostic view without re-parsing YAML.
+
+```python
+from scpn_phase_orchestrator.binding import (
+    build_channel_algebra_report,
+    load_binding_spec,
+)
+
+spec = load_binding_spec("domainpacks/power_safety_nchannel/binding_spec.yaml")
+report = build_channel_algebra_report(spec)
+audit_record = report.to_audit_record()
+```
+
+This report is read-only. It complements `validate_binding_spec()` rather than
+replacing validation gates.
+
+::: scpn_phase_orchestrator.binding.channel_algebra
+
 ## Types
 
 Core type definitions shared across the binding subsystem.

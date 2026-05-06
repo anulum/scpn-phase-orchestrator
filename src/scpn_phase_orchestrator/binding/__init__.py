@@ -8,6 +8,11 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.binding.channel_algebra import (
+    ChannelAlgebraReport,
+    ChannelCouplingEdge,
+    build_channel_algebra_report,
+)
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.resolved import (
     format_resolved_binding_config,
@@ -24,8 +29,11 @@ from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 __all__ = [
     "BindingLoadError",
     "BindingSpec",
+    "ChannelAlgebraReport",
+    "ChannelCouplingEdge",
     "GeneratedBindingArtifacts",
     "SemanticDomainCompiler",
+    "build_channel_algebra_report",
     "compile_symbolic_binding",
     "format_resolved_binding_config",
     "load_binding_spec",
