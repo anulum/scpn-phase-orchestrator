@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Any, NoReturn
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
-from scpn_phase_orchestrator.monitor.stl import STLMonitor, STLTraceResult
+from scpn_phase_orchestrator.monitor.stl import (
+    STLMonitor,
+    STLMonitoringAutomaton,
+    STLTraceResult,
+    synthesise_stl_monitoring_automaton,
+)
 from scpn_phase_orchestrator.supervisor.regimes import Regime
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
@@ -24,9 +29,12 @@ __all__ = [
     "CompoundCondition",
     "PolicyAction",
     "PolicyRule",
+    "PolicySTLAutomaton",
     "PolicySTLResult",
     "PolicySTLSpec",
     "PolicyEngine",
+    "synthesise_policy_stl_automata",
+    "synthesize_policy_stl_automata",
     "evaluate_policy_stl_specs",
     "load_policy_rules",
     "load_policy_stl_specs",
@@ -107,6 +115,22 @@ class PolicySTLResult:
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe policy STL audit record."""
         payload = self.result.to_audit_record()
+        payload["name"] = self.name
+        payload["severity"] = self.severity
+        return payload
+
+
+@dataclass(frozen=True)
+class PolicySTLAutomaton:
+    """Policy-level synthesized STL automaton with monitor name and severity."""
+
+    name: str
+    severity: str
+    automaton: STLMonitoringAutomaton
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe policy STL automaton audit record."""
+        payload = self.automaton.to_audit_record()
         payload["name"] = self.name
         payload["severity"] = self.severity
         return payload
@@ -385,6 +409,24 @@ def evaluate_policy_stl_specs(
         )
         for spec in specs
     ]
+
+
+def synthesise_policy_stl_automata(
+    specs: list[PolicySTLSpec] | tuple[PolicySTLSpec, ...],
+    trace: dict[str, list[float]],
+) -> list[PolicySTLAutomaton]:
+    """Synthesize audit automata for policy-declared builtin STL monitors."""
+    return [
+        PolicySTLAutomaton(
+            name=spec.name,
+            severity=spec.severity,
+            automaton=synthesise_stl_monitoring_automaton(spec.spec, trace),
+        )
+        for spec in specs
+    ]
+
+
+synthesize_policy_stl_automata = synthesise_policy_stl_automata
 
 
 def load_policy_rules(path: str | Path) -> list[PolicyRule]:

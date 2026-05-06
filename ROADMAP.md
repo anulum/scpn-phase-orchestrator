@@ -241,7 +241,7 @@ Near-term candidate tracks:
     supervisors and a parent supervisor over reduced child coherence.
   - Remaining scope: broader hierarchy/domainpack proof work and deeper
     predictive-coding world-model integration.
-- STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces.
+- STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, audit satisfaction traces, and controller-synthesis linkage. The builtin monitoring automata foundation is implemented; controller synthesis remains open.
   - Foundation is in place: built-in STL robustness monitoring exists.
   - Policy DSL integration is in place: policy YAML can declare
     `stl_monitors`, load them with `load_policy_stl_specs()`, evaluate traces

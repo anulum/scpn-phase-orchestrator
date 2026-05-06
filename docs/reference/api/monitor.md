@@ -53,11 +53,29 @@ result = monitor.evaluate_result({"R": [0.9, 0.8, 0.6]})
 assert result.satisfied
 ```
 
-Policy YAML integration is available through
-`load_policy_stl_specs()` and `evaluate_policy_stl_specs()` in
+`synthesise_stl_monitoring_automaton()` converts supported builtin formulas
+into an audit-ready runtime automaton. The automaton records the state
+sequence, trace-indexed transitions, first violation or satisfaction index,
+pointwise robustness margins, and final satisfaction result.
+
+```python
+from scpn_phase_orchestrator.monitor.stl import (
+    synthesise_stl_monitoring_automaton,
+)
+
+automaton = synthesise_stl_monitoring_automaton(
+    "always (R >= 0.3)",
+    {"R": [0.9, 0.2, 0.6]},
+)
+audit_payload = automaton.to_audit_record()
+assert audit_payload["states"][1]["first_hit_index"] == 1
+```
+
+Policy YAML integration is available through `load_policy_stl_specs()`,
+`evaluate_policy_stl_specs()`, and `synthesise_policy_stl_automata()` in
 `scpn_phase_orchestrator.supervisor.policy_rules`. This keeps STL
-specification loading in the policy DSL while preserving `STLMonitor` as the
-runtime evaluator.
+specification loading in the policy DSL while preserving `STLMonitor` and the
+automata synthesizer as runtime evaluators.
 
 ::: scpn_phase_orchestrator.monitor.stl
 
