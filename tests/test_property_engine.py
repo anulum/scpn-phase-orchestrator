@@ -23,11 +23,15 @@ Two Phase-7 invariants from the SPO backlog are covered here:
 * Integration reversibility — ``SplittingEngine`` must return to the
   original torus point after a forward trajectory followed by the same
   number of negative-``dt`` steps.
+* JAX ↔ NumPy parity — differentiable JAX Kuramoto steps agree with
+  the NumPy ``UPDEEngine`` reference for the shared zero-lag,
+  zero-drive model surface.
 """
 
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -175,6 +179,50 @@ def test_splitting_forward_backward_reversibility(
 
     diff = ((phases - phases0 + np.pi) % TWO_PI) - np.pi
     np.testing.assert_allclose(diff, np.zeros_like(diff), atol=1e-12)
+
+
+# ---------------------------------------------------------------------
+# JAX ↔ NumPy parity
+# ---------------------------------------------------------------------
+
+
+@given(
+    n=st.integers(min_value=3, max_value=10),
+    method=st.sampled_from(("euler", "rk4")),
+    seed=st.integers(min_value=0, max_value=2**31 - 1),
+)
+@settings(
+    max_examples=24,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+def test_jax_numpy_kuramoto_step_parity(n: int, method: str, seed: int) -> None:
+    """JAX functional steps match the NumPy engine on the shared model."""
+    jnp = pytest.importorskip("jax.numpy", reason="JAX required for parity test")
+    from scpn_phase_orchestrator.nn.functional import (
+        kuramoto_rk4_step,
+        kuramoto_step,
+    )
+
+    rng = np.random.default_rng(seed)
+    dt = 0.01
+    phases = rng.uniform(0.0, TWO_PI, size=n).astype(np.float64)
+    omegas = rng.normal(loc=1.0, scale=0.2, size=n).astype(np.float64)
+    knm = rng.uniform(0.0, 0.25, size=(n, n)).astype(np.float64)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n), dtype=np.float64)
+
+    numpy_engine = UPDEEngine(n_oscillators=n, dt=dt, method=method)
+    numpy_out = numpy_engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+    jax_step = kuramoto_step if method == "euler" else kuramoto_rk4_step
+    jax_out = np.asarray(
+        jax_step(jnp.asarray(phases), jnp.asarray(omegas), jnp.asarray(knm), dt),
+        dtype=np.float64,
+    )
+
+    diff = ((numpy_out - jax_out + np.pi) % TWO_PI) - np.pi
+    np.testing.assert_allclose(diff, np.zeros_like(diff), atol=1e-6)
 
 
 # ---------------------------------------------------------------------
