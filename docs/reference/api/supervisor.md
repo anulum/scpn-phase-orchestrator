@@ -588,6 +588,12 @@ This slice is intentionally conservative: it is a FEP-Kuramoto correspondence
 controller over the existing variational predictor, not a claim of a complete
 biological active-inference agent.
 
+`domainpacks/power_grid/fep_hierarchy_demo.py` demonstrates the current
+hierarchy proof. It runs two child `FEPPredictiveSupervisor` instances for
+generation and demand/renewable regions, reduces their observed coherence into
+a parent phase vector, and records the parent-level free-energy assessment plus
+bounded corrective actions.
+
 ---
 
 ## Performance summary

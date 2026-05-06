@@ -222,7 +222,12 @@ Near-term candidate tracks:
   - Remaining scope: deeper causal-model learning and broader domainpack
     attribution demonstrations.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.
-  - Foundation is in place: predictive FEP supervisor support exists; remaining scope is wider hierarchy/domainpack proof work.
+  - Foundation is in place: predictive FEP supervisor support exists.
+  - Power-grid hierarchy proof is in place:
+    `domainpacks/power_grid/fep_hierarchy_demo.py` runs two child FEP
+    supervisors and a parent supervisor over reduced child coherence.
+  - Remaining scope: broader hierarchy/domainpack proof work and deeper
+    predictive-coding world-model integration.
 - STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces.
   - Foundation is in place: built-in STL robustness monitoring exists; remaining scope is policy DSL integration and model-checker export linkage.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.

@@ -46,3 +46,21 @@ transmission capacity over years of operation.
 
 250 steps: steady-state → sudden load step → renewable ramp → generator
 trip fault → AGC + policy restore synchronism.
+
+## FEP Hierarchy Demo
+
+`fep_hierarchy_demo.py` provides a deterministic proof that the
+`FEPPredictiveSupervisor` can run as a two-level hierarchy for this domainpack.
+It evaluates generation and demand/renewable child regions independently, then
+feeds their observed coherence into a parent FEP supervisor that emits a
+hierarchy-level corrective action record.
+
+Run the proof with:
+
+```bash
+PYTHONPATH=src python domainpacks/power_grid/fep_hierarchy_demo.py
+```
+
+The emitted JSON is audit-ready: each child record includes free energy,
+surprise, observed/predicted `R`, and bounded `zeta` / `Psi` proposals, while
+the parent record documents the aggregate N-channel hierarchy response.
