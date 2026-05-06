@@ -118,3 +118,10 @@ plotter.plot_pac_heatmap("output/pac.png")
 ## Summary Builder
 
 ::: scpn_phase_orchestrator.reporting.summary
+
+## Explainability
+
+Human-readable report helpers that translate audit and supervisor records into
+plain diagnostic summaries for notebooks, demos, and operator-facing reports.
+
+::: scpn_phase_orchestrator.reporting.explainability

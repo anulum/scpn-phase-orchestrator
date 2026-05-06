@@ -341,6 +341,10 @@ embedded = delay_embed(signal, delay=tau, dimension=m)
 
 ::: scpn_phase_orchestrator.monitor.embedding
 
+## Psychedelic State Metrics
+
+::: scpn_phase_orchestrator.monitor.psychedelic
+
 ## Fractal Dimension
 
 Estimates the fractal dimension of attractors from embedded trajectories.

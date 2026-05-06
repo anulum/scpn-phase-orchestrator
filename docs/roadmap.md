@@ -21,7 +21,7 @@ maintenance tracks.
 | Supervisor and policy DSL | regime management, policy rules, Petri net sequencing, audit trace |
 | Domainpacks | 36 bundled domainpacks with README coverage and gallery inventory |
 | Notebooks and demos | 19 notebooks, 27 terminal examples, Streamlit tools, CLI demo, WASM demo |
-| API documentation | package-level and detailed MkDocs API pages |
+| API documentation | package-level and detailed MkDocs API pages with public-module autodoc coverage guarded by tests |
 | Deployment docs | production, backend fallback, dependency locks, interactive tools |
 | Audit/replay | deterministic audit trace and replay documentation |
 
@@ -32,7 +32,7 @@ maintenance tracks.
 | Onboarding | role-based first-hour handbook exists | keep failure paths and contributor paths linked from every first-run page |
 | Troubleshooting | install, notebooks, docs, FFI, validation, audit replay, and demos covered | add issue templates if repeated failure classes emerge |
 | Notebook operations | execution matrix documents extras and CI expectation | keep matrix updated when notebooks are added or made local-only |
-| API examples | package-level API pages exist | add compact copy/paste examples to subsystem pages that lack them |
+| API examples | public modules have mkdocstrings coverage; package-level API pages exist | add compact copy/paste examples to subsystem pages that lack them |
 | Domainpack docs | 36 README files exist | keep examples and gallery aligned with every new domainpack |
 
 ## Usability Moat Track

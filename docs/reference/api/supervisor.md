@@ -395,6 +395,20 @@ Rules are evaluated in list order. Each rule fires if:
 
 ::: scpn_phase_orchestrator.supervisor.policy_rules
 
+## Policy Diagnostics
+
+Dry-run helpers for validating policy reachability, overlap, cooldown, and
+action output before a rule set is allowed into a live supervisor path.
+
+::: scpn_phase_orchestrator.supervisor.policy_diagnostics
+
+## Formal Export
+
+Export helpers translate Petri-net and policy-rule surfaces into external
+model-checking formats for independent safety analysis.
+
+::: scpn_phase_orchestrator.supervisor.formal_export
+
 ---
 
 ## Petri Net FSM

@@ -77,7 +77,11 @@
 - ~~Production hardening slice: SupervisorPolicy Petri fault fallback + Hypothesis fault-injection tests~~ (done — `tests/test_fault_injection_supervisor.py`)
 - ~~Benchmark suite slice: unified Kuramoto/Stuart-Landau/Petri reference harness~~ (done — `benchmarks/reference_suite.py`, `tests/test_reference_benchmark_suite.py`)
 - ~~RK45 exhausted-retry fallback test coverage~~ (done)
-- Complete API documentation with mkdocstrings autodoc for all public modules
+- ~~Complete API documentation with mkdocstrings autodoc for all public modules~~
+  (done — maintained public modules under `src/scpn_phase_orchestrator` now
+  have API-reference mkdocstrings coverage, guarded by
+  `tests/test_api_docs_navigation.py`; generated protobuf stubs remain
+  documented through the gRPC facade rather than direct autodoc)
 - ~~API docs navigation coverage slice: every `docs/reference/api/*.md` page is
   now wired into `mkdocs.yml` and protected by a regression test~~ (done —
   `tests/test_api_docs_navigation.py`)

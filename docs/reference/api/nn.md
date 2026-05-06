@@ -206,6 +206,26 @@ Universal approximation near edge-of-bifurcation (arXiv:2407.16172).
 
 ::: scpn_phase_orchestrator.nn.reservoir
 
+## Differentiable Chimera Metrics
+
+JAX-native local order-parameter and chimera-index helpers for gradient-aware
+topology searches.
+
+::: scpn_phase_orchestrator.nn.chimera
+
+## Differentiable Spectral Metrics
+
+JAX-native graph Laplacian metrics used by topology and synchronisability
+experiments.
+
+::: scpn_phase_orchestrator.nn.spectral
+
+## Theta Neuron Dynamics
+
+Differentiable Ermentrout-Kopell theta-neuron dynamics for excitable systems.
+
+::: scpn_phase_orchestrator.nn.theta_neuron
+
 ---
 
 ## UDE-Kuramoto (Universal Differential Equation)

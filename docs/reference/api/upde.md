@@ -75,6 +75,15 @@ Supports Euler, RK4, and RK45 (adaptive) integration. Optional Rust FFI
 acceleration via `spo_kernel.PyUPDEStepper`.
 
 ::: scpn_phase_orchestrator.upde.engine
+    options:
+      members: false
+
+## JAX-Accelerated Kuramoto Engine
+
+Optional JAX implementation for GPU-oriented Kuramoto rollouts. It preserves
+the same validated inputs and phase wrapping semantics as the NumPy engine.
+
+::: scpn_phase_orchestrator.upde.jax_engine
 
 ## Stuart-Landau Amplitude Engine
 

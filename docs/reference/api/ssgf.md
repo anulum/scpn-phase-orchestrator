@@ -54,6 +54,20 @@ minimization:
 
 ::: scpn_phase_orchestrator.ssgf.costs
 
+## Closure Diagnostics
+
+Closure helpers track whether geometry and phase updates remain inside the
+configured SSGF stability envelope.
+
+::: scpn_phase_orchestrator.ssgf.closure
+
+## Free-Energy Terms
+
+Variational free-energy primitives shared by the SSGF monitors and predictive
+supervisor paths.
+
+::: scpn_phase_orchestrator.ssgf.free_energy
+
 ## Architecture & Theory
 
 The SSGF (Self-Stabilizing Gauge Field) framework is built upon the

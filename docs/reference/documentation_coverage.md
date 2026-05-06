@@ -36,7 +36,9 @@ Counts above are derived from the repository tree at the time this page
 was updated: `36` domainpack directories, `27` `examples/*.py` scripts,
 `19` notebooks, and `58` files under `docs/reference/api/`.
 `tests/test_api_docs_navigation.py` guards that every API reference page is
-listed in `mkdocs.yml`.
+listed in `mkdocs.yml` and that every maintained public source module has a
+mkdocstrings directive in the API reference. Generated protobuf stubs are
+covered through the gRPC facade rather than direct autodoc.
 
 ## API Documentation Policy
 
