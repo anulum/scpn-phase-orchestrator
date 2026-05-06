@@ -12,7 +12,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
@@ -561,7 +561,8 @@ def _policy_yaml_for(spec: BindingSpec) -> str:
             }
         ]
     }
-    return cast(str, yaml.safe_dump(policy, sort_keys=False))
+    rendered: str = yaml.safe_dump(policy, sort_keys=False)
+    return rendered
 
 
 def _binding_spec_to_yaml(spec: BindingSpec) -> str:
@@ -666,4 +667,5 @@ def _binding_spec_to_yaml(spec: BindingSpec) -> str:
             ],
         },
     }
-    return cast(str, yaml.safe_dump(data, sort_keys=False))
+    rendered: str = yaml.safe_dump(data, sort_keys=False)
+    return rendered
