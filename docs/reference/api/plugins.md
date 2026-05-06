@@ -59,4 +59,15 @@ A runnable metadata-only example is available at
 extractor/actuator manifest and prints the resulting catalogue JSON without
 loading the implementation targets declared in the manifest.
 
+The same catalogue is available from the command line:
+
+```bash
+spo plugins catalog
+spo plugins catalog --include-incompatible
+```
+
+The default output omits incompatible entries from `plugins` while still
+counting them. Use `--include-incompatible` in CI or review jobs that need the
+full rejection reason list.
+
 ::: scpn_phase_orchestrator.plugins.registry

@@ -41,6 +41,10 @@ from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.plugins import (
+    build_plugin_marketplace_catalog,
+    discover_plugin_manifests,
+)
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
@@ -134,6 +138,27 @@ def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marki
             )
         )
     return PetriNet(places, transitions), Marking(tokens=dict(protocol.initial))
+
+
+@main.group("plugins")
+def plugins_group() -> None:
+    """Inspect extension plugin manifests."""
+
+
+@plugins_group.command("catalog")
+@click.option(
+    "--include-incompatible",
+    is_flag=True,
+    help="Include incompatible manifests and rejection reasons in the output",
+)
+def plugins_catalog(include_incompatible: bool) -> None:
+    """Print the discovered plugin marketplace catalogue as JSON."""
+    manifests = discover_plugin_manifests()
+    catalog = build_plugin_marketplace_catalog(
+        manifests,
+        include_incompatible=include_incompatible,
+    )
+    click.echo(json.dumps(catalog, indent=2, sort_keys=True))
 
 
 @main.command("formal-export")

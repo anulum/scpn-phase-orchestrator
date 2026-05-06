@@ -14,7 +14,9 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+import scpn_phase_orchestrator.cli as cli_module
 from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.plugins import PluginCapability, PluginManifest
 
 
 @pytest.fixture
@@ -277,6 +279,71 @@ def test_report_text_exposes_binding_channel_algebra(
         "Channel algebra: required=0 optional=0 derived=0 delayed=0 uncertain=0"
         in result.output
     )
+
+
+def test_plugins_catalog_outputs_discovered_marketplace_catalog(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="extractor",
+                name="phase",
+                target="cli_plugin.extractors:PhaseExtractor",
+                channels=("P",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(main, ["plugins", "catalog"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["plugin_count"] == 1
+    assert data["compatible_count"] == 1
+    assert data["incompatible_count"] == 0
+    assert data["plugins"][0]["manifest"]["name"] == "cli_plugin"
+    assert data["capability_counts"]["extractor"] == 1
+
+
+def test_plugins_catalog_can_include_incompatible_manifests(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    invalid = PluginManifest(
+        name="bad_cli_plugin",
+        version="0.1.0",
+        package="bad_cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="extractor",
+                name="empty",
+                target="bad_cli_plugin.extractors:Empty",
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (invalid,))
+
+    default_result = runner.invoke(main, ["plugins", "catalog"])
+    full_result = runner.invoke(
+        main,
+        ["plugins", "catalog", "--include-incompatible"],
+    )
+
+    assert default_result.exit_code == 0
+    default_data = json.loads(default_result.output)
+    assert default_data["plugin_count"] == 0
+    assert default_data["incompatible_count"] == 1
+    assert full_result.exit_code == 0
+    full_data = json.loads(full_result.output)
+    assert full_data["plugin_count"] == 1
+    assert full_data["plugins"][0]["compatible"] is False
+    assert "must declare channels" in full_data["plugins"][0]["reasons"][0]
 
 
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):

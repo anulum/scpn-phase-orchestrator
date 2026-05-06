@@ -170,6 +170,7 @@
   - Plugin manifest registry foundation is in place; Rust-side integration remains open.
   - Marketplace catalogue packaging is in place: `build_plugin_marketplace_catalog()` emits deterministic metadata-only catalogue payloads with compatibility records and capability counts.
   - Marketplace example is in place: `examples/plugin_marketplace_catalog.py` builds a validated extractor/actuator manifest and catalogue payload without loading plugin targets.
+  - CLI catalogue export is in place: `spo plugins catalog` emits discovered marketplace metadata, with optional incompatible-report inclusion for review jobs.
 
 ### Minor polish before v1.0
 
