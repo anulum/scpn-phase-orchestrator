@@ -83,6 +83,7 @@ These items are acknowledged but not the current documentation slice:
 | Visual and batch-heavy features | deferred unless a user-facing workflow needs them immediately |
 | Broad benchmark-file expansion | useful, but benchmark numbers must be measured and reproducible before publication |
 | Thin-test strengthening | quality backlog item; prefer focused property or parity tests tied to changed code |
+| Superficial assertion audit | after the coverage-recovery run, audit assertion-only tests that do not validate behaviour, invariants, error semantics, or pipeline effects; flag weak tests for replacement rather than counting them as quality coverage |
 | Auxiliary backend review | keep non-primary backends experimental unless measured value justifies maintenance cost |
 
 ## Research And Experimental Track
