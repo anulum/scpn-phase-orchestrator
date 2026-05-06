@@ -64,6 +64,12 @@ The reporting module consumes audit log output. It does not connect
 to the engine directly — all data passes through the audit trail,
 ensuring that plots match the auditable record.
 
+When the audit trail contains a run header, `spo report --json-out` includes
+the resolved `binding_summary`. N-channel runs also expose `channel_algebra` at
+the top level of the JSON report so downstream tools can read channel groups,
+derived channels, runtime evidence, and missing required channel evidence
+without re-parsing the binding spec.
+
 ## Usage
 
 ```python

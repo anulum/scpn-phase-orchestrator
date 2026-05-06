@@ -65,7 +65,7 @@ control engineers who do not already live in phase dynamics.
 | Causal intervention engine | counterfactual rollout foundation is implemented; attribution demos and deeper causal-model learning remain open |
 | RL/autotune layer on JAX `nn` backend | reward evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, and adaptive replay refinement are implemented; next step is optional PPO/SAC or hybrid physics learners behind the same non-actuating gates |
 | FEP / predictive-coding supervisor backend | predictive supervisor foundation is implemented; hierarchy/domainpack proof work remains open |
-| Full N-channel algebra | channel algebra summary, resolved-config integration, and audit-header coverage are implemented for groups, required/optional channels, derived channels, supervisor visibility, coupling participation, cross-channel edges, and missing required channel evidence; delayed/uncertain runtime policies remain open |
+| Full N-channel algebra | channel algebra summary, resolved-config integration, audit-header coverage, and report JSON exposure are implemented for groups, required/optional channels, derived channels, supervisor visibility, coupling participation, cross-channel edges, and missing required channel evidence; delayed/uncertain runtime policies remain open |
 | Hierarchical orchestration | nested supervisors plus edge/cloud synchronisation protocol for distributed coherence control |
 | Formal supervisor verification | export Petri-net and policy surfaces to PRISM, TLA+, or equivalent model-checking workflows for safety properties |
 | STL runtime verification | robustness monitor foundation is implemented; policy DSL integration and model-checker export linkage remain open |

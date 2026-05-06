@@ -187,6 +187,27 @@ def test_report_json(runner, audit_log_path):
     assert data["hash_chain_ok"] is True
 
 
+def test_report_json_exposes_binding_channel_algebra(
+    runner,
+    valid_spec_path,
+    tmp_path,
+):
+    audit_path = tmp_path / "audit.jsonl"
+    run_result = runner.invoke(
+        main,
+        ["run", valid_spec_path, "--steps", "2", "--audit", str(audit_path)],
+    )
+    assert run_result.exit_code == 0
+
+    result = runner.invoke(main, ["report", str(audit_path), "--json-out"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["binding_summary"]["name"] == "cli-test"
+    assert data["channel_algebra"]["runtime_evidence_channels"] == ["P"]
+    assert data["channel_algebra"]["required_channels"] == []
+
+
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(main, ["scaffold", "test_domain"])

@@ -794,6 +794,13 @@ def report(log_path: str, json_out: bool) -> None:
         "hash_chain_ok": integrity_ok,
         "hash_chain_verified": n_verified,
     }
+    if header is not None:
+        binding_summary = header.get("binding_summary") or header.get("binding_config")
+        if isinstance(binding_summary, dict):
+            summary["binding_summary"] = binding_summary
+            channel_algebra = binding_summary.get("channel_algebra")
+            if isinstance(channel_algebra, dict):
+                summary["channel_algebra"] = channel_algebra
 
     if json_out:
         click.echo(_json.dumps(summary, indent=2))
