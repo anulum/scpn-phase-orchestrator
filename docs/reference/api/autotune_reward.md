@@ -81,4 +81,8 @@ proposal = propose_replay_policy(
 audit_record = proposal.to_audit_record()
 ```
 
+For the higher-level replay-only search wrapper that generates candidates,
+evaluates them through a caller-supplied replay adapter, and returns a proposal
+record, see [Autotune Replay Policy Search](autotune_policy_search.md).
+
 ::: scpn_phase_orchestrator.autotune.reward
