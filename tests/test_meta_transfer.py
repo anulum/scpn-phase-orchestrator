@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.meta import (
     CrossDomainMetaTransfer,
     MetaPolicyRecord,
+    MetaTrainingSummary,
     MetaTransferProposal,
     records_from_audit_jsonl,
 )
@@ -62,6 +63,13 @@ class TestMetaTransferContracts:
     def test_model_requires_records(self) -> None:
         with pytest.raises(ValueError, match="at least one"):
             CrossDomainMetaTransfer.fit(())
+
+    def test_fit_audit_history_requires_positive_min_records(self, tmp_path) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text("", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="min_records"):
+            CrossDomainMetaTransfer.fit_audit_history([audit_path], min_records=0)
 
     def test_k_neighbours_must_be_positive(self) -> None:
         model = CrossDomainMetaTransfer.fit(_records())
@@ -119,6 +127,20 @@ class TestMetaTransferBehaviour:
         assert isinstance(record["feature_keys"], list)
         assert "knobs" in record
 
+    def test_training_summary_describes_replay_corpus(self) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+
+        summary = model.training_summary
+        record = summary.to_audit_record()
+
+        assert isinstance(summary, MetaTrainingSummary)
+        assert summary.record_count == 3
+        assert summary.domain_count == 3
+        assert summary.domains == ("cardiac", "power_grid", "traffic")
+        assert summary.knob_keys == ("K", "alpha", "zeta")
+        assert record["reward_min"] == pytest.approx(0.7)
+        assert record["reward_max"] == pytest.approx(0.9)
+
     def test_loads_records_from_audit_jsonl(self, tmp_path) -> None:
         audit_path = tmp_path / "audit.jsonl"
         payloads = [
@@ -145,3 +167,67 @@ class TestMetaTransferBehaviour:
         assert records[0].domain == "alpha"
         assert records[0].knobs == {"K": 0.04}
         assert records[1].domain == "beta"
+
+    def test_fit_audit_history_aggregates_multiple_jsonl_files(self, tmp_path) -> None:
+        first = tmp_path / "first.jsonl"
+        second = tmp_path / "second.jsonl"
+        first.write_text(
+            json.dumps(
+                {
+                    "domain": "alpha",
+                    "metrics": {"R_global": 0.3},
+                    "actions": [{"knob": "K", "value": 0.05}],
+                    "reward": 0.4,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        second.write_text(
+            json.dumps(
+                {
+                    "domain": "beta",
+                    "features": {"R_global": 0.9},
+                    "knobs": {"zeta": 0.02},
+                    "reward": 0.8,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        model = CrossDomainMetaTransfer.fit_audit_history(
+            [first, second],
+            min_records=2,
+        )
+        proposal = model.propose({"R_global": 0.85}, k_neighbours=1)
+
+        assert model.training_summary.record_count == 2
+        assert model.training_summary.domains == ("alpha", "beta")
+        assert proposal.neighbours[0][0] == "beta"
+
+    def test_fit_audit_history_enforces_min_records(self, tmp_path) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text("", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="audit history yielded 0 records"):
+            CrossDomainMetaTransfer.fit_audit_history([audit_path], min_records=1)
+
+    def test_json_package_round_trip_preserves_proposals(self) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+
+        package = model.to_json_package()
+        restored = CrossDomainMetaTransfer.from_json_package(package)
+        original = model.propose({"R_global": 0.42, "event_rate": 0.78})
+        loaded = restored.propose({"R_global": 0.42, "event_rate": 0.78})
+
+        assert json.loads(package)["schema"] == "scpn_meta_transfer_package_v1"
+        assert restored.training_summary.to_audit_record() == (
+            model.training_summary.to_audit_record()
+        )
+        assert loaded.knobs == pytest.approx(original.knobs)
+        assert loaded.neighbours == original.neighbours
+
+    def test_json_package_rejects_unknown_schema(self) -> None:
+        with pytest.raises(ValueError, match="schema"):
+            CrossDomainMetaTransfer.from_json_package('{"schema":"wrong"}')

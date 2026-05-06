@@ -21,6 +21,7 @@ from numpy.typing import NDArray
 __all__ = [
     "CrossDomainMetaTransfer",
     "MetaPolicyRecord",
+    "MetaTrainingSummary",
     "MetaTransferProposal",
     "records_from_audit_jsonl",
 ]
@@ -72,6 +73,33 @@ class MetaTransferProposal:
         }
 
 
+@dataclass(frozen=True)
+class MetaTrainingSummary:
+    """Audit-ready summary of the replay corpus used for meta-transfer."""
+
+    record_count: int
+    domain_count: int
+    domains: tuple[str, ...]
+    feature_keys: tuple[str, ...]
+    knob_keys: tuple[str, ...]
+    reward_mean: float
+    reward_min: float
+    reward_max: float
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe training corpus summary."""
+        return {
+            "record_count": self.record_count,
+            "domain_count": self.domain_count,
+            "domains": list(self.domains),
+            "feature_keys": list(self.feature_keys),
+            "knob_keys": list(self.knob_keys),
+            "reward_mean": self.reward_mean,
+            "reward_min": self.reward_min,
+            "reward_max": self.reward_max,
+        }
+
+
 class CrossDomainMetaTransfer:
     """Nearest-neighbour policy transfer over replay-derived embeddings."""
 
@@ -83,6 +111,7 @@ class CrossDomainMetaTransfer:
         self._matrix = np.vstack(
             [_feature_vector(record.features, self.feature_keys) for record in records]
         )
+        self.training_summary = _training_summary(records, self.feature_keys)
 
     @classmethod
     def fit(
@@ -90,6 +119,26 @@ class CrossDomainMetaTransfer:
     ) -> CrossDomainMetaTransfer:
         """Construct a meta-transfer model from replay-derived records."""
         return cls(tuple(records))
+
+    @classmethod
+    def fit_audit_history(
+        cls,
+        paths: list[str | Path] | tuple[str | Path, ...],
+        *,
+        min_records: int = 1,
+    ) -> CrossDomainMetaTransfer:
+        """Fit a model from one or more audit JSONL files."""
+        if min_records < 1:
+            raise ValueError("min_records must be at least 1")
+        records: list[MetaPolicyRecord] = []
+        for path in paths:
+            records.extend(records_from_audit_jsonl(path))
+        if len(records) < min_records:
+            raise ValueError(
+                f"audit history yielded {len(records)} records; "
+                f"min_records={min_records}"
+            )
+        return cls.fit(tuple(records))
 
     def propose(
         self,
@@ -122,6 +171,43 @@ class CrossDomainMetaTransfer:
             neighbours=neighbours,
             feature_keys=self.feature_keys,
         )
+
+    def to_json_package(self) -> str:
+        """Serialise records and training summary for reviewable reuse."""
+        package = {
+            "schema": "scpn_meta_transfer_package_v1",
+            "training_summary": self.training_summary.to_audit_record(),
+            "records": [
+                {
+                    "domain": record.domain,
+                    "features": dict(record.features),
+                    "knobs": dict(record.knobs),
+                    "reward": record.reward,
+                }
+                for record in self.records
+            ],
+        }
+        return json.dumps(package, indent=2, sort_keys=True) + "\n"
+
+    @classmethod
+    def from_json_package(cls, payload: str) -> CrossDomainMetaTransfer:
+        """Restore a packaged meta-transfer model."""
+        data = json.loads(payload)
+        if not isinstance(data, dict):
+            raise ValueError("package must be a JSON object")
+        if data.get("schema") != "scpn_meta_transfer_package_v1":
+            raise ValueError("unsupported meta-transfer package schema")
+        records_payload = data.get("records")
+        if not isinstance(records_payload, list):
+            raise ValueError("package records must be a list")
+        records = [
+            _record_from_payload(record, index)
+            for index, record in enumerate(records_payload, start=1)
+            if isinstance(record, dict)
+        ]
+        if len(records) != len(records_payload):
+            raise ValueError("package records must be objects")
+        return cls.fit(tuple(records))
 
 
 def records_from_audit_jsonl(path: str | Path) -> tuple[MetaPolicyRecord, ...]:
@@ -182,6 +268,25 @@ def _feature_keys(records: tuple[MetaPolicyRecord, ...]) -> tuple[str, ...]:
     if not keys:
         raise ValueError("records must contain at least one feature")
     return tuple(keys)
+
+
+def _training_summary(
+    records: tuple[MetaPolicyRecord, ...],
+    feature_keys: tuple[str, ...],
+) -> MetaTrainingSummary:
+    rewards = np.array([record.reward for record in records], dtype=np.float64)
+    knob_keys = sorted({knob for record in records for knob in record.knobs})
+    domains = tuple(sorted({record.domain for record in records}))
+    return MetaTrainingSummary(
+        record_count=len(records),
+        domain_count=len(domains),
+        domains=domains,
+        feature_keys=feature_keys,
+        knob_keys=tuple(knob_keys),
+        reward_mean=float(np.mean(rewards)),
+        reward_min=float(np.min(rewards)),
+        reward_max=float(np.max(rewards)),
+    )
 
 
 def _feature_vector(

@@ -238,7 +238,13 @@ Near-term candidate tracks:
   - Remaining scope: richer retrieval over long-form docs and generated
     notebook execution evidence.
 - Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains.
-  - Foundation is in place: replay-backed meta-transfer proposals exist; remaining scope is larger audit-history training and optional packaging.
+  - Foundation is in place: replay-backed meta-transfer proposals exist.
+  - Multi-audit fitting and package export are in place:
+    `CrossDomainMetaTransfer.fit_audit_history()` aggregates multiple audit
+    JSONL files, exposes an audit-ready training summary, and round-trips
+    deterministic JSON packages for proposal jobs.
+  - Remaining scope: larger real audit-history training corpora and optional
+    `scpn-meta` packaging.
 - Quantum-native compiler target: output Qiskit/PennyLane or OpenPulse/QASM fragments for the `quantum_simulation` path with co-simulation validation.
 - Neuromorphic compiler target: emit Lava/PyNN or hardware-oriented HDL fragments from binding specs and supervisor policies, with simulator parity evidence.
 
