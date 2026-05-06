@@ -137,6 +137,7 @@
   - Reward-evaluation foundation is in place: `autotune.reward` scores candidate knob policies from replay/simulation observations and emits audit-ready records before any learner can actuate.
   - Replay candidate ranking is in place: `rank_replay_candidates()` orders replay/simulation candidates by reward, filters unsafe rollouts by default, and returns audit-ready reports.
   - Offline policy-search generation is in place: `generate_offline_policy_candidates()` creates deterministic coordinate-search candidates around a seed policy for replay scoring.
+  - Replay-trained proposal records are in place: `propose_replay_policy()` applies review gates and serialises accept/reject rationale before any live learner or actuation loop.
 - Trainable supervisor policies: extend rule-based policy evaluation with reinforcement learning or active-inference loops that optimise long-horizon `R_good` / `R_bad` trade-offs under replayable safety constraints.
 - Uncertainty-aware phase estimation: Bayesian or ensemble phase estimates propagated through MPC/OA reduction and supervisor decisions.
 - SPO Studio GUI: web-based binding and policy builder that scaffolds, visualises, validates, and replays binding specs, with WASM-backed previews where useful.
@@ -153,7 +154,7 @@
 - One-click SPO Studio web UI for new control engineers: drag/drop oscillators, live `R`/`Psi`/`K` visualisation, real-time knob tuning, and deploy/export paths for Docker, WASM, and FPGA.
 - Auto-binding prototype: SINDy-style or graph-learning pipeline from raw time-series, event logs, and graph signals to a proposed `binding_spec.yaml` that stays reviewable by a domain expert.
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
-  - Reward-evaluation, replay candidate-ranking, and offline candidate-generation foundations are in place; next scope is replay-trained policy proposal records before any live learner or actuation loop.
+  - Reward-evaluation, replay ranking, offline candidate generation, and proposal-record foundations are in place; next scope is learner-backed policy search behind replay-only safety gates.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
 - Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.

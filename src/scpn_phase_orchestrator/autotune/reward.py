@@ -18,13 +18,16 @@ import numpy as np
 from numpy.typing import NDArray
 
 __all__ = [
+    "AutotunePolicyProposal",
     "AutotuneRewardReport",
     "KnobPolicyCandidate",
     "OfflinePolicySearchConfig",
+    "PolicyProposalConfig",
     "RewardConfig",
     "RewardObservation",
     "evaluate_knob_policy",
     "generate_offline_policy_candidates",
+    "propose_replay_policy",
     "rank_replay_candidates",
 ]
 
@@ -120,6 +123,23 @@ class RewardConfig:
 
 
 @dataclass(frozen=True)
+class PolicyProposalConfig:
+    """Acceptance gates for replay-trained policy proposals."""
+
+    min_reward: float = -np.inf
+    min_coherence: float = 0.0
+    max_alternatives: int = 3
+    require_safe: bool = True
+
+    def __post_init__(self) -> None:
+        if not np.isfinite(self.min_reward) and self.min_reward != -np.inf:
+            raise ValueError("min_reward must be finite or -inf")
+        _require_probability(self.min_coherence, "min_coherence")
+        if self.max_alternatives < 0:
+            raise ValueError("max_alternatives must be non-negative")
+
+
+@dataclass(frozen=True)
 class AutotuneRewardReport:
     """Reward result suitable for policy search and audit logs."""
 
@@ -155,6 +175,36 @@ class AutotuneRewardReport:
                 "actuation_penalty": self.config.actuation_penalty,
                 "churn_penalty": self.config.churn_penalty,
                 "unsafe_penalty": self.config.unsafe_penalty,
+            },
+        }
+
+
+@dataclass(frozen=True)
+class AutotunePolicyProposal:
+    """Replay-trained policy proposal record for human or CI review."""
+
+    accepted: bool
+    selected: AutotuneRewardReport | None
+    alternatives: tuple[AutotuneRewardReport, ...]
+    reasons: tuple[str, ...]
+    config: PolicyProposalConfig
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a serialisable policy proposal record."""
+        return {
+            "accepted": self.accepted,
+            "selected": (
+                self.selected.to_audit_record() if self.selected is not None else None
+            ),
+            "alternatives": [
+                alternative.to_audit_record() for alternative in self.alternatives
+            ],
+            "reasons": list(self.reasons),
+            "config": {
+                "min_reward": self.config.min_reward,
+                "min_coherence": self.config.min_coherence,
+                "max_alternatives": self.config.max_alternatives,
+                "require_safe": self.config.require_safe,
             },
         }
 
@@ -246,6 +296,48 @@ def rank_replay_candidates(
     if top_k is None:
         return tuple(ranked)
     return tuple(ranked[:top_k])
+
+
+def propose_replay_policy(
+    replay_candidates: Sequence[tuple[KnobPolicyCandidate, RewardObservation]],
+    reward_config: RewardConfig | None = None,
+    proposal_config: PolicyProposalConfig | None = None,
+) -> AutotunePolicyProposal:
+    """Build a reviewable policy proposal from replay-ranked candidates.
+
+    The proposal is an audit artefact only. A caller still has to pass it
+    through domain-specific policy review before any candidate is deployed.
+    """
+    active_config = proposal_config or PolicyProposalConfig()
+    ranked = rank_replay_candidates(
+        replay_candidates,
+        reward_config,
+        require_safe=active_config.require_safe,
+    )
+    selected = ranked[0]
+    reasons: list[str] = []
+    if selected.reward < active_config.min_reward:
+        reasons.append(
+            f"selected reward {selected.reward:.6g} below minimum "
+            f"{active_config.min_reward:.6g}"
+        )
+    if selected.observation.coherence < active_config.min_coherence:
+        reasons.append(
+            f"selected coherence {selected.observation.coherence:.6g} below "
+            f"minimum {active_config.min_coherence:.6g}"
+        )
+    if selected.observation.unsafe:
+        reasons.append("selected rollout is marked unsafe")
+
+    accepted = not reasons
+    alternatives = tuple(ranked[1 : 1 + active_config.max_alternatives])
+    return AutotunePolicyProposal(
+        accepted=accepted,
+        selected=selected if accepted else None,
+        alternatives=alternatives,
+        reasons=tuple(reasons),
+        config=active_config,
+    )
 
 
 def generate_offline_policy_candidates(

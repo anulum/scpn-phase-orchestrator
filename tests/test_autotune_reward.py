@@ -14,13 +14,16 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.autotune import (
+    AutotunePolicyProposal,
     AutotuneRewardReport,
     KnobPolicyCandidate,
     OfflinePolicySearchConfig,
+    PolicyProposalConfig,
     RewardConfig,
     RewardObservation,
     evaluate_knob_policy,
     generate_offline_policy_candidates,
+    propose_replay_policy,
     rank_replay_candidates,
 )
 
@@ -45,6 +48,13 @@ class TestAutotuneRewardContract:
         assert hints["seed"] is KnobPolicyCandidate
         assert "OfflinePolicySearchConfig" in str(hints["config"])
         assert "KnobPolicyCandidate" in str(hints["return"])
+
+    def test_policy_proposal_contract_is_typed(self) -> None:
+        hints = get_type_hints(propose_replay_policy)
+
+        assert "Sequence" in str(hints["replay_candidates"])
+        assert "PolicyProposalConfig" in str(hints["proposal_config"])
+        assert hints["return"] is AutotunePolicyProposal
 
     def test_report_serialises_arrays_for_audit(self) -> None:
         candidate = KnobPolicyCandidate(
@@ -294,6 +304,67 @@ class TestAutotuneOfflinePolicySearch:
         assert ranked[0].reward >= ranked[-1].reward
 
 
+class TestAutotunePolicyProposal:
+    def test_accepts_best_safe_candidate_when_gates_pass(self) -> None:
+        replay = (
+            (KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.65)),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.85)),
+            (KnobPolicyCandidate(K=0.3), RewardObservation(coherence=0.75)),
+        )
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(
+                min_reward=-1.0,
+                min_coherence=0.7,
+                max_alternatives=1,
+            ),
+        )
+
+        assert proposal.accepted
+        assert proposal.selected is not None
+        assert proposal.selected.observation.coherence == 0.85
+        assert len(proposal.alternatives) == 1
+        assert proposal.reasons == ()
+
+    def test_rejects_candidate_below_reward_gate(self) -> None:
+        replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.8)),)
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(min_reward=1.0),
+        )
+
+        assert not proposal.accepted
+        assert proposal.selected is None
+        assert "reward" in proposal.reasons[0]
+
+    def test_rejects_candidate_below_coherence_gate(self) -> None:
+        replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.5)),)
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(min_coherence=0.8),
+        )
+
+        assert not proposal.accepted
+        assert proposal.selected is None
+        assert "coherence" in proposal.reasons[0]
+
+    def test_proposal_serialises_for_audit(self) -> None:
+        replay = (
+            (KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.8)),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.7)),
+        )
+
+        record = propose_replay_policy(replay).to_audit_record()
+
+        assert record["accepted"] is True
+        assert record["selected"]["observation"]["coherence"] == 0.8
+        assert record["alternatives"][0]["observation"]["coherence"] == 0.7
+        assert record["config"]["require_safe"] is True
+
+
 class TestAutotuneRewardValidation:
     def test_rejects_non_probability_observations(self) -> None:
         with pytest.raises(ValueError, match="coherence"):
@@ -345,3 +416,11 @@ class TestAutotuneRewardValidation:
     def test_offline_generator_rejects_zero_clip_bound(self) -> None:
         with pytest.raises(ValueError, match="max_abs_knob"):
             OfflinePolicySearchConfig(max_abs_knob=0.0)
+
+    def test_policy_proposal_rejects_invalid_coherence_gate(self) -> None:
+        with pytest.raises(ValueError, match="min_coherence"):
+            PolicyProposalConfig(min_coherence=1.1)
+
+    def test_policy_proposal_rejects_negative_alternative_limit(self) -> None:
+        with pytest.raises(ValueError, match="max_alternatives"):
+            PolicyProposalConfig(max_alternatives=-1)

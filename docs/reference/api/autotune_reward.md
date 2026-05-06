@@ -63,4 +63,22 @@ candidates = generate_offline_policy_candidates(
 )
 ```
 
+Proposal records apply simple acceptance gates and remain review artefacts:
+
+```python
+from scpn_phase_orchestrator.autotune import (
+    PolicyProposalConfig,
+    propose_replay_policy,
+)
+
+proposal = propose_replay_policy(
+    (
+        (candidate, RewardObservation(coherence=0.82)),
+    ),
+    proposal_config=PolicyProposalConfig(min_coherence=0.75),
+)
+
+audit_record = proposal.to_audit_record()
+```
+
 ::: scpn_phase_orchestrator.autotune.reward
