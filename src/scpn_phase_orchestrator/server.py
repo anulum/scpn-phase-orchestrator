@@ -422,7 +422,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             with sim._lock:
                 sim.event_bus.clear()
 
-    app = FastAPI(title="SPO Dashboard", version="0.5.9", lifespan=_lifespan)
+    app = FastAPI(title="SPO Dashboard", version="0.5.10", lifespan=_lifespan)
 
     @app.middleware("http")
     async def _log_http_request(
