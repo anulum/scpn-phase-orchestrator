@@ -25,7 +25,9 @@ All lockfiles are hash-pinned and committed under `requirements/`:
 - `dev-lock-windows-ffi-py311.txt` — Windows FFI CI profile (Python 3.11).
 - `dev-lock-windows-ffi-py312.txt` — Windows FFI CI profile (Python 3.12).
 - `audit-tools.txt` / `docs-tools.txt` / `ci-tools.txt` / `publish-tools.txt`
-  / `release-tools.txt` — focused tooling lock sets.
+  / `release-tools.txt` — focused tooling lock sets. Publish tooling is
+  installed with dependencies from the hashed lock because `build` and `twine`
+  need their runtime dependency graphs during isolated artifact checks.
 
 ## Refresh workflow
 

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (2026-05-06 — PyPI publish release guards)
+- Added `tools/check_release_tag_version.py` and focused tests so tag-triggered
+  release workflows fail early when `GITHUB_REF_NAME` does not match the Python
+  package version in `pyproject.toml`.
+- Regenerated `requirements/publish-tools.txt` from
+  `requirements/publish-tools.in` as a complete hashed lock for `build`,
+  `twine`, and their runtime dependencies; the PyPI publish workflow no longer
+  installs these tools with `--no-deps`.
+- Added publish workflow and publish lock paths to the ClusterFuzzLite path
+  filter so required `python-fuzz` checks run on release-infrastructure PRs.
+- Documented why publish tooling must include dependency graphs for isolated
+  artifact builds and `twine check`.
+
 ### Added (2026-04-18 — coupling.spectral multi-backend)
 - `julia/spectral.jl`, `go/spectral.go` (→ `libspectral.so`),
   `mojo/spectral.mojo` (→ `spectral_mojo`) implementing the
