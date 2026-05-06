@@ -21,6 +21,7 @@ __all__ = [
     "PluginCompatibilityReport",
     "PluginManifest",
     "build_plugin_marketplace_catalog",
+    "build_rust_plugin_registry",
     "compatibility_report",
     "discover_plugin_manifests",
     "validate_plugin_manifest",
@@ -222,6 +223,71 @@ def build_plugin_marketplace_catalog(
         "compatible_count": sum(1 for report in reports if report.compatible),
         "incompatible_count": sum(1 for report in reports if not report.compatible),
         "capability_counts": _capability_counts(sorted_reports),
+    }
+
+
+def build_rust_plugin_registry(
+    manifests: tuple[PluginManifest, ...],
+    *,
+    include_incompatible: bool = False,
+) -> dict[str, object]:
+    """Build a flattened metadata registry for Rust-side dispatchers.
+
+    The payload avoids Python object graphs and implementation imports. Rust
+    consumers can parse capabilities, targets, channel/knob declarations, and
+    compatibility flags from stable JSON before deciding whether to hand a
+    target back to Python.
+    """
+    catalog = build_plugin_marketplace_catalog(
+        manifests,
+        include_incompatible=include_incompatible,
+    )
+    plugins = catalog["plugins"]
+    if not isinstance(plugins, list):
+        raise TypeError("plugin catalogue payload is malformed")
+
+    capabilities: list[dict[str, object]] = []
+    for plugin in plugins:
+        manifest = plugin["manifest"]
+        compatible = bool(plugin["compatible"])
+        if not isinstance(manifest, dict):
+            raise TypeError("plugin manifest payload is malformed")
+        manifest_capabilities = manifest["capabilities"]
+        if not isinstance(manifest_capabilities, list):
+            raise TypeError("plugin capabilities payload is malformed")
+        for capability in manifest_capabilities:
+            if not isinstance(capability, dict):
+                raise TypeError("plugin capability payload is malformed")
+            capabilities.append(
+                {
+                    "plugin": manifest["name"],
+                    "plugin_version": manifest["version"],
+                    "package": manifest["package"],
+                    "kind": capability["kind"],
+                    "name": capability["name"],
+                    "target": capability["target"],
+                    "version": capability["version"],
+                    "channels": capability["channels"],
+                    "knobs": capability["knobs"],
+                    "compatible": compatible,
+                }
+            )
+
+    capabilities.sort(
+        key=lambda item: (
+            str(item["plugin"]),
+            str(item["kind"]),
+            str(item["name"]),
+            str(item["version"]),
+        )
+    )
+    return {
+        "schema": "scpn_rust_plugin_registry_v1",
+        "spo_version": catalog["spo_version"],
+        "include_incompatible": include_incompatible,
+        "capability_count": len(capabilities),
+        "capabilities": capabilities,
+        "capability_counts": catalog["capability_counts"],
     }
 
 

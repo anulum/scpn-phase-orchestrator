@@ -346,6 +346,35 @@ def test_plugins_catalog_can_include_incompatible_manifests(
     assert "must declare channels" in full_data["plugins"][0]["reasons"][0]
 
 
+def test_plugins_catalog_can_emit_rust_registry(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(main, ["plugins", "catalog", "--rust-registry"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["schema"] == "scpn_rust_plugin_registry_v1"
+    assert data["capability_count"] == 1
+    assert data["capabilities"][0]["plugin"] == "cli_plugin"
+    assert data["capabilities"][0]["knobs"] == ["Psi"]
+
+
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(main, ["scaffold", "test_domain"])

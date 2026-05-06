@@ -54,6 +54,20 @@ SPO version, schema version, and capability counts. By default incompatible
 manifests are counted but omitted from the published `plugins` list; pass
 `include_incompatible=True` when a review job needs the full rejection report.
 
+Rust-side dispatchers can consume a flattened metadata registry without
+importing plugin implementation targets:
+
+```python
+from scpn_phase_orchestrator.plugins import build_rust_plugin_registry
+
+registry = build_rust_plugin_registry((manifest,))
+```
+
+The Rust registry uses schema `scpn_rust_plugin_registry_v1` and flattens every
+compatible capability into records containing plugin name, package, kind,
+target, channels, knobs, and compatibility status. This is the metadata bridge
+for Rust loaders that need stable JSON before any Python callback is invoked.
+
 A runnable metadata-only example is available at
 `examples/plugin_marketplace_catalog.py`. It builds a validated
 extractor/actuator manifest and prints the resulting catalogue JSON without
@@ -64,10 +78,12 @@ The same catalogue is available from the command line:
 ```bash
 spo plugins catalog
 spo plugins catalog --include-incompatible
+spo plugins catalog --rust-registry
 ```
 
 The default output omits incompatible entries from `plugins` while still
 counting them. Use `--include-incompatible` in CI or review jobs that need the
-full rejection reason list.
+full rejection reason list. Use `--rust-registry` when a Rust-side dispatcher
+needs the flattened capability registry instead of the marketplace catalogue.
 
 ::: scpn_phase_orchestrator.plugins.registry

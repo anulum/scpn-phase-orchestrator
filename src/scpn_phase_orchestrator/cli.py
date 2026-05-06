@@ -43,6 +43,7 @@ from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.plugins import (
     build_plugin_marketplace_catalog,
+    build_rust_plugin_registry,
     discover_plugin_manifests,
 )
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
@@ -153,13 +154,20 @@ def plugins_group() -> None:
     is_flag=True,
     help="Include incompatible manifests and rejection reasons in the output",
 )
-def plugins_catalog(include_incompatible: bool) -> None:
+@click.option(
+    "--rust-registry",
+    is_flag=True,
+    help="Emit flattened Rust-facing capability registry JSON",
+)
+def plugins_catalog(include_incompatible: bool, rust_registry: bool) -> None:
     """Print the discovered plugin marketplace catalogue as JSON."""
     manifests = discover_plugin_manifests()
-    catalog = build_plugin_marketplace_catalog(
-        manifests,
-        include_incompatible=include_incompatible,
+    builder = (
+        build_rust_plugin_registry
+        if rust_registry
+        else build_plugin_marketplace_catalog
     )
+    catalog = builder(manifests, include_incompatible=include_incompatible)
     click.echo(json.dumps(catalog, indent=2, sort_keys=True))
 
 

@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginCompatibilityReport,
     PluginManifest,
     build_plugin_marketplace_catalog,
+    build_rust_plugin_registry,
     compatibility_report,
     discover_plugin_manifests,
     validate_plugin_manifest,
@@ -215,6 +216,65 @@ class TestPluginMarketplaceCatalog:
         plugin_records = cast("list[dict[str, Any]]", full_catalog["plugins"])
         assert plugin_records[0]["compatible"] is False
         assert "must declare channels" in plugin_records[0]["reasons"][0]
+
+    def test_rust_plugin_registry_flattens_capabilities(self) -> None:
+        registry = build_rust_plugin_registry((_manifest(),))
+
+        assert registry["schema"] == "scpn_rust_plugin_registry_v1"
+        assert registry["capability_count"] == 2
+        capability_records = cast("list[dict[str, Any]]", registry["capabilities"])
+        assert capability_records == [
+            {
+                "plugin": "grid_pack",
+                "plugin_version": "0.1.0",
+                "package": "grid_pack",
+                "kind": "actuator",
+                "name": "breaker",
+                "target": "grid_pack.actuators:BreakerMapper",
+                "version": "0.1.0",
+                "channels": [],
+                "knobs": ["K", "zeta"],
+                "compatible": True,
+            },
+            {
+                "plugin": "grid_pack",
+                "plugin_version": "0.1.0",
+                "package": "grid_pack",
+                "kind": "extractor",
+                "name": "pmu",
+                "target": "grid_pack.extractors:PMUExtractor",
+                "version": "0.1.0",
+                "channels": ["P"],
+                "knobs": [],
+                "compatible": True,
+            },
+        ]
+
+    def test_rust_plugin_registry_can_carry_incompatible_entries(self) -> None:
+        invalid = PluginManifest(
+            name="bad_extractor",
+            version="0.1.0",
+            package="bad_extractor",
+            capabilities=(
+                PluginCapability(
+                    kind="extractor",
+                    name="empty",
+                    target="bad.extractors:Empty",
+                ),
+            ),
+        )
+
+        default_registry = build_rust_plugin_registry((_manifest(), invalid))
+        full_registry = build_rust_plugin_registry(
+            (_manifest(), invalid),
+            include_incompatible=True,
+        )
+
+        assert default_registry["capability_count"] == 2
+        assert full_registry["capability_count"] == 3
+        capability_records = cast("list[dict[str, Any]]", full_registry["capabilities"])
+        assert capability_records[0]["plugin"] == "bad_extractor"
+        assert capability_records[0]["compatible"] is False
 
     def test_marketplace_catalog_example_is_valid(self) -> None:
         example_path = (

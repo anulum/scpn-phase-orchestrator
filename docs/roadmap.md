@@ -71,7 +71,7 @@ control engineers who do not already live in phase dynamics.
 | STL runtime verification | robustness monitor foundation, policy YAML `stl_monitors` integration, PRISM export linkage, and builtin monitoring automata synthesis are implemented; full controller synthesis remains open |
 | Symbolic-to-binding compiler | compiler foundation, domainpack/docs retrieval evidence, confidence factors, generated review notebook, and notebook preflight execution evidence are implemented; deeper retrieval ranking remains open |
 | Cross-domain meta-transfer | replay-backed proposals, multi-audit fitting, nested audit-directory corpus loading, training summaries, and deterministic JSON package export are implemented; larger real audit-history corpora and optional `scpn-meta` packaging remain open |
-| Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, audit records, marketplace catalogue packaging, a runnable catalogue example, and CLI catalogue export; Rust-side integration remains open |
+| Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, audit records, marketplace catalogue packaging, a runnable catalogue example, CLI catalogue export, and Rust-facing flattened registry export; deeper Rust runtime loading remains open |
 
 ## Deferred Maintenance Track
 
