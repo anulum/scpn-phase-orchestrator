@@ -124,7 +124,10 @@ next-step topology:
 The core control knob is `TopologyMutationPolicy.mutation_rate`. A value of
 `0.0` freezes topology; larger values increase the maximum per-step pairwise
 and triadic changes while preserving non-negative couplings and a zero
-diagonal.
+diagonal. `TopologyMutationPolicy.simplex_pairwise_support_floor` is the
+policy-hardening gate for deployment reviews: a candidate 2-simplex is only
+created when every pairwise edge inside that triad is already at or above the
+configured support floor.
 
 ```python
 import numpy as np
@@ -147,6 +150,10 @@ audit_payload = result.to_audit_record()
 This slice does not claim autonomous online structural control. It provides the
 auditable mutation primitive that existing policy, causal, STL, simplicial, and
 hypergraph paths can gate before applying a topology change.
+
+Domainpack demo: `domainpacks/plasma_control/topology_adaptation_demo.py` runs
+one guarded mutation against the plasma-control binding and prints the audit
+payload as JSON.
 
 ::: scpn_phase_orchestrator.supervisor.topology
 

@@ -47,6 +47,26 @@ None. Plasma dynamics are fast relative to wall conditioning timescales.
 200 steps: equilibrium -> turbulence onset -> ELM storm -> transport
 barrier formation -> H-L back-transition -> policy recovery.
 
+## Higher-Order Topology Demo
+
+`topology_adaptation_demo.py` demonstrates the supervisor-side higher-order
+topology editor on this domainpack without applying live actuation. It builds
+the plasma coupling matrix from `binding_spec.yaml`, evaluates a deterministic
+low-global-coherence phase state, and emits an audit payload for proposed
+triadic simplices.
+
+The demo uses `TopologyMutationPolicy.simplex_pairwise_support_floor` so a
+new 2-simplex is only proposed when every supporting pairwise edge is already
+above the configured coupling floor. This keeps the higher-order topology
+mutation reviewable and prevents unsupported triads from appearing only
+because three phases are momentarily aligned.
+
+Run:
+
+```bash
+PYTHONPATH=src python domainpacks/plasma_control/topology_adaptation_demo.py
+```
+
 ## Optional Dependency
 
 Install `scpn-control` for direct KnmSpec import and Lyapunov verdict parsing.

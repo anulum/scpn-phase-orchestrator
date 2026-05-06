@@ -206,7 +206,13 @@
 Near-term candidate tracks:
 
 - Dynamic higher-order topology adaptation in the supervisor: edit hyperedges and 2-/3-simplices based on coherence, Lyapunov, transfer-entropy, or policy objectives.
-  - Foundation is in place: topology adaptation supervisor support exists; remaining scope is domainpack demonstrations and policy hardening.
+  - Foundation is in place: topology adaptation supervisor support exists.
+  - Plasma-control demo and pairwise-support policy hardening are in place:
+    `domainpacks/plasma_control/topology_adaptation_demo.py` emits guarded
+    topology audit payloads and `TopologyMutationPolicy` can require existing
+    pairwise support before creating a new 2-simplex.
+  - Remaining scope: add at least one more domainpack demonstration and broader
+    policy validation around Lyapunov or transfer-entropy objectives.
 - Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
   - Foundation is in place: causal counterfactual rollout support exists; remaining scope is attribution demos and deeper causal-model learning.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.

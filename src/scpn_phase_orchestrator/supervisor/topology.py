@@ -50,6 +50,7 @@ class TopologyMutationPolicy:
     max_simplex_strength: float = 0.2
     max_new_simplices: int = 4
     prune_threshold: float = 0.2
+    simplex_pairwise_support_floor: float = 0.0
     max_coupling: float = 10.0
 
     def __post_init__(self) -> None:
@@ -60,6 +61,9 @@ class TopologyMutationPolicy:
         _require_non_negative(self.max_pairwise_delta, "max_pairwise_delta")
         _require_non_negative(self.max_simplex_strength, "max_simplex_strength")
         _require_non_negative(self.prune_threshold, "prune_threshold")
+        _require_non_negative(
+            self.simplex_pairwise_support_floor, "simplex_pairwise_support_floor"
+        )
         _require_non_negative(self.max_coupling, "max_coupling")
         if self.max_new_simplices < 0:
             raise ValueError("max_new_simplices must be non-negative")
@@ -125,7 +129,13 @@ class HigherOrderTopologySupervisor:
         local = _pairwise_phase_alignment(phases_arr)
         mutated_knm = _mutate_pairwise(knm_arr, local, self.policy)
         kept, pruned = _prune_simplices(existing, phases_arr, self.policy)
-        added = _candidate_simplices(phases_arr, kept, self.policy, global_coherence)
+        added = _candidate_simplices(
+            phases_arr,
+            mutated_knm,
+            kept,
+            self.policy,
+            global_coherence,
+        )
         hyperedge_map = {edge.nodes: edge for edge in kept}
         for edge in added:
             hyperedge_map[edge.nodes] = edge
@@ -229,6 +239,7 @@ def _prune_simplices(
 
 def _candidate_simplices(
     phases: FloatArray,
+    knm: FloatArray,
     existing: tuple[Hyperedge, ...],
     policy: TopologyMutationPolicy,
     global_coherence: float,
@@ -241,7 +252,9 @@ def _candidate_simplices(
         if nodes in existing_nodes:
             continue
         coherence = _simplex_coherence(phases, nodes)
-        if coherence >= policy.simplex_threshold:
+        if coherence >= policy.simplex_threshold and _has_pairwise_support(
+            knm, nodes, policy.simplex_pairwise_support_floor
+        ):
             candidates.append((coherence, nodes))
     candidates.sort(reverse=True)
     strength = policy.mutation_rate * policy.max_simplex_strength
@@ -254,6 +267,14 @@ def _candidate_simplices(
 def _simplex_coherence(phases: FloatArray, nodes: tuple[int, ...]) -> float:
     local_phases = phases[np.asarray(nodes, dtype=np.int64)]
     return _order_parameter(local_phases)
+
+
+def _has_pairwise_support(
+    knm: FloatArray, nodes: tuple[int, ...], floor: float
+) -> bool:
+    if floor <= 0.0:
+        return True
+    return all(knm[i, j] >= floor for i, j in combinations(nodes, 2))
 
 
 def _require_unit_interval(value: float, name: str) -> None:

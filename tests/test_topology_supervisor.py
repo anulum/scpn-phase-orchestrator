@@ -33,6 +33,10 @@ class TestTopologyMutationPolicy:
         with pytest.raises(ValueError, match="max_new_simplices"):
             TopologyMutationPolicy(max_new_simplices=-1)
 
+    def test_rejects_negative_simplex_support_floor(self) -> None:
+        with pytest.raises(ValueError, match="simplex_pairwise_support_floor"):
+            TopologyMutationPolicy(simplex_pairwise_support_floor=-0.1)
+
 
 class TestHigherOrderTopologySupervisor:
     def test_zero_mutation_rate_freezes_topology(self) -> None:
