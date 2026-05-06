@@ -25,6 +25,7 @@ jobs:
   preflight:
     name: Pre-publish CI gate
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
@@ -33,7 +34,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: ruff check src/ tests/
-      - run: pytest tests/ -x --tb=short
+      - name: Run release preflight tests
+        timeout-minutes: 25
+        run: pytest tests/ -x -vv --tb=short --durations=25
       - run: python tools/check_version_sync.py
       - run: python tools/check_release_tag_version.py
       - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
