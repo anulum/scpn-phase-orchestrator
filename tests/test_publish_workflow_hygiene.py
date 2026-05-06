@@ -25,6 +25,13 @@ def _publish_workflow() -> dict[str, Any]:
     )
 
 
+def _ci_workflow() -> dict[str, Any]:
+    return cast(
+        "dict[str, Any]",
+        yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text()),
+    )
+
+
 def test_linux_maturin_wheels_use_executable_python312_interpreter() -> None:
     workflow = _publish_workflow()
     matrix = workflow["jobs"]["build-wheels"]["strategy"]["matrix"]["include"]
@@ -98,3 +105,37 @@ def test_container_scans_gate_only_fixable_high_findings() -> None:
     grype_command = grype_step["run"]
     assert "--fail-on high" in grype_command
     assert "--only-fixed" in grype_command
+
+
+def test_ci_slow_tests_run_once_outside_python_matrix() -> None:
+    workflow = _ci_workflow()
+    jobs = workflow["jobs"]
+
+    test_command = next(
+        step["run"]
+        for step in jobs["test"]["steps"]
+        if step.get("name") == "Run tests (with coverage on 3.12)"
+    )
+    assert '-m "not slow"' in test_command
+
+    slow_job = jobs["slow-tests"]
+    assert slow_job["timeout-minutes"] == 20
+    assert slow_job["steps"][1]["with"]["python-version"] == "3.12"
+    slow_command = slow_job["steps"][-1]["run"]
+    assert "-m slow" in slow_command
+
+    gate_needs = jobs["ci-gate"]["needs"]
+    assert "slow-tests" in gate_needs
+
+
+def test_ffi_matrix_excludes_slow_tests() -> None:
+    workflow = _ci_workflow()
+    ffi_steps = workflow["jobs"]["ffi-test"]["steps"]
+    pytest_commands = [
+        str(step["run"])
+        for step in ffi_steps
+        if "pytest tests/" in str(step.get("run"))
+    ]
+
+    assert pytest_commands
+    assert all('-m "not slow"' in command for command in pytest_commands)
