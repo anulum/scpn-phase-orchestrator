@@ -216,6 +216,24 @@ def test_load_policy_rules_recursion_error_is_parse_error(tmp_path, monkeypatch)
         load_policy_rules(p)
 
 
+def test_load_policy_rules_fuzzer_unicode_overflow_is_parse_error(tmp_path):
+    """Malformed YAML Unicode escapes from fuzzing must not escape the loader."""
+    p = tmp_path / "policy.yaml"
+    p.write_text('"\\\\\\U' + ("e" * 57) + "\\\\~", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="policy rules YAML parse error"):
+        load_policy_rules(p)
+
+
+def test_load_policy_stl_specs_fuzzer_unicode_overflow_is_parse_error(tmp_path):
+    """The STL policy loader shares the same YAML parser hardening contract."""
+    p = tmp_path / "policy.yaml"
+    p.write_text('"\\\\\\U' + ("e" * 57) + "\\\\~", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="policy rules YAML parse error"):
+        load_policy_stl_specs(p)
+
+
 def test_out_of_range_layer_returns_none():
     rule = _rule(metric="R", layer=99, op=">", threshold=0.0)
     engine = PolicyEngine([rule])

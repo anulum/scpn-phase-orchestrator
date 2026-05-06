@@ -19,3 +19,11 @@ through the GitHub API. Local actions and `docker://` actions are ignored.
 If a tag-triggered publish run fails before uploading, delete the failed tag,
 bump the release metadata, fix the workflow on a pull request, and tag the new
 version only after CI and the local release guards pass.
+
+## Fuzzing Findings
+
+ClusterFuzzLite failures are treated as release blockers when the crash is
+reproducible. For policy YAML fuzzing, malformed YAML parser failures must be
+contained at the loader boundary and reported as `ValueError` parse errors,
+rather than escaping as uncaught parser exceptions. Add a regression test with
+the minimized payload before rerunning or merging the release PR.
