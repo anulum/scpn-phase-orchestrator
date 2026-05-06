@@ -25,6 +25,12 @@ These are heuristic candidates. Review each test before changing it; some bounde
 - Highest-risk group: files named for coverage expansion or smoke-style wiring.
 - Preferred remediation: replace with behavioural assertions that would fail under a plausible wrong implementation.
 
+## Remediation Log
+
+| Date | File | Action |
+|------|------|--------|
+| 2026-05-07 | `tests/test_adapters_coverage.py` | strengthened high-confidence weak assertions with exact ring-buffer contents, simulated-signal formulas, Prometheus request semantics, Redis key usage, SNN current/rate/action mapping, and deterministic network-construction checks |
+
 ## High-Confidence Coverage-Only Hotspots
 
 | Candidate count | File |

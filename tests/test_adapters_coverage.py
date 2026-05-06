@@ -32,6 +32,9 @@ class TestSampleBuffer:
         buf = SampleBuffer(capacity=10, n_channels=2)
         recent = buf.get_recent(5)
         assert recent.shape == (2, 0)
+        np.testing.assert_array_equal(recent, np.zeros((2, 0)))
+        assert buf.write_idx == 0
+        assert buf.count == 0
 
     def test_wrap_around(self):
         from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
@@ -50,6 +53,9 @@ class TestSampleBuffer:
         buf.push(np.array([[1.0, 2.0]]))
         recent = buf.get_recent(5)
         assert recent.shape == (1, 2)
+        np.testing.assert_array_equal(recent, [[1.0, 2.0]])
+        assert buf.write_idx == 2
+        assert buf.count == 2
 
 
 class TestSimulatedBoardAdapter:
@@ -77,6 +83,13 @@ class TestSimulatedBoardAdapter:
         data = adapter.get_channel_data(0, n_samples=100)
         assert data.shape == (100,)
         assert np.all(np.abs(data) <= 1.0)
+        expected_t = np.arange(100, dtype=np.float64) / adapter.sample_rate
+        np.testing.assert_allclose(
+            data,
+            np.sin(2.0 * np.pi * adapter._freqs[0] * expected_t),
+            atol=1e-12,
+        )
+        assert adapter._t == pytest.approx(100 / adapter.sample_rate)
 
     def test_get_all_eeg(self):
         from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
@@ -85,6 +98,12 @@ class TestSimulatedBoardAdapter:
         adapter.start()
         data = adapter.get_all_eeg(n_samples=100)
         assert data.shape == (4, 100)
+        expected_t = np.arange(100, dtype=np.float64) / adapter.sample_rate
+        expected = np.array(
+            [np.sin(2.0 * np.pi * freq * expected_t) for freq in adapter._freqs]
+        )
+        np.testing.assert_allclose(data, expected, atol=1e-12)
+        assert adapter._t == pytest.approx(100 / adapter.sample_rate)
 
     def test_custom_frequencies(self):
         from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
@@ -191,7 +210,13 @@ class TestPrometheusAdapter:
             mock_urlopen.return_value = mock_resp
 
             result = adapter.fetch_metric("up", 0, 10, 1)
-            assert len(result) == 0
+            np.testing.assert_array_equal(result, np.array([], dtype=np.float64))
+            request_arg = mock_urlopen.call_args.args[0]
+            assert request_arg.full_url == (
+                "http://localhost:9090/api/v1/query_range?"
+                "query=up&start=0.0&end=10.0&step=1.0"
+            )
+            assert request_arg.headers["Accept"] == "application/json"
 
     def test_fetch_metric_network_error(self):
         from urllib.error import URLError
@@ -325,6 +350,7 @@ class TestRedisStore:
         mock_client.get.return_value = None
         store = RedisStateStore(client=mock_client)
         assert store.load_state() is None
+        mock_client.get.assert_called_once_with("spo:sim_state")
 
     def test_delete_state(self):
         from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
@@ -357,6 +383,11 @@ class TestSNNControllerBridge:
         currents = bridge.upde_state_to_input_current(state)
         assert currents.shape == (4,)
         assert np.all(np.isfinite(currents))
+        np.testing.assert_allclose(currents, [0.5, 0.5, 0.5, 0.5])
+        np.testing.assert_allclose(
+            bridge.upde_state_to_input_current(state, i_scale=2.5),
+            [1.25, 1.25, 1.25, 1.25],
+        )
 
     def test_spike_rates_to_actions(self):
         from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
@@ -364,7 +395,12 @@ class TestSNNControllerBridge:
         bridge = SNNControllerBridge()
         rates = np.array([10.0, 50.0, 100.0, 200.0])
         actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 1, 2, 3])
-        assert len(actions) > 0
+        assert [action.scope for action in actions] == ["layer_2", "layer_3"]
+        assert [action.knob for action in actions] == ["K", "K"]
+        np.testing.assert_allclose([action.value for action in actions], [0.05, 0.15])
+        assert [action.ttl_s for action in actions] == [5.0, 5.0]
+        assert actions[0].justification == "SNN group 2: 100.0 Hz"
+        assert actions[1].justification == "SNN group 3: 200.0 Hz"
 
     def test_lif_rate_estimate_monotonic(self):
         """Higher input current → higher firing rate (LIF model property)."""
@@ -388,6 +424,14 @@ class TestSNNControllerBridge:
         bridge = SNNControllerBridge()
         net = bridge.build_numpy_network(4)
         assert net is not None
+        assert net.n_layers == 4
+        assert net.synapse == 0.01
+        np.testing.assert_array_equal(net.input_node, np.zeros(4))
+        np.testing.assert_array_equal(net.output_node, np.zeros(4))
+        assert net.ensemble.n_neurons == bridge.n_neurons
+        assert net.ensemble.encoders.shape == (bridge.n_neurons, 4)
+        assert set(np.unique(net.ensemble.encoders)) == {-1.0, 1.0}
+        assert np.all(net.ensemble.alpha > 0.0)
 
     def test_snn_bridge_pipeline_wiring(self):
         """End-to-end: UPDEState → SNN currents → rates → actions.
@@ -409,3 +453,6 @@ class TestSNNControllerBridge:
         assert np.all(np.isfinite(currents))
         assert np.all(rates >= 0.0)
         assert isinstance(actions, list)
+        np.testing.assert_allclose(currents, [0.3, 0.3, 0.3, 0.3])
+        np.testing.assert_array_equal(rates, np.zeros(4))
+        assert actions == []
