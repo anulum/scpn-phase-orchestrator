@@ -1048,7 +1048,10 @@ def scaffold(domain_name: str) -> None:
     "--output-dir",
     type=click.Path(file_okay=False, dir_okay=True),
     default=None,
-    help="Directory for binding_spec.yaml, policy.yaml, README.md, and audit.json.",
+    help=(
+        "Directory for binding_spec.yaml, policy.yaml, README.md, "
+        "review_notebook.ipynb, and audit.json."
+    ),
 )
 @click.option(
     "--oscillators-per-layer",
@@ -1081,6 +1084,7 @@ def generate(
     click.echo(f"Generated domainpack at {output_path}")
     click.echo(f"schema_valid={artefacts.schema_valid}")
     click.echo(f"confidence={artefacts.audit_record['confidence']:.3f}")
+    click.echo(f"retrieval_matches={len(artefacts.retrieval_evidence)}")
     click.echo(f"dry_run_R={artefacts.dry_run_order_parameter:.6f}")
 
 

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,9 +32,31 @@ from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
 __all__ = [
     "GeneratedBindingArtifacts",
+    "RetrievalEvidence",
     "SemanticDomainCompiler",
     "compile_symbolic_binding",
 ]
+
+
+@dataclass(frozen=True)
+class RetrievalEvidence:
+    """Local domainpack evidence used during symbolic binding generation."""
+
+    domainpack: str
+    path: str
+    score: float
+    matched_terms: list[str]
+    summary: str
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-safe retrieval evidence record."""
+        return {
+            "domainpack": self.domainpack,
+            "path": self.path,
+            "score": self.score,
+            "matched_terms": self.matched_terms,
+            "summary": self.summary,
+        }
 
 
 @dataclass(frozen=True)
@@ -43,7 +66,9 @@ class GeneratedBindingArtifacts:
     binding_spec: BindingSpec
     binding_yaml: str
     policy_yaml: str
+    notebook_json: str
     audit_record: dict[str, Any]
+    retrieval_evidence: list[RetrievalEvidence]
     validation_errors: list[str]
     dry_run_order_parameter: float
 
@@ -60,6 +85,10 @@ class GeneratedBindingArtifacts:
         path.mkdir(parents=True, exist_ok=True)
         (path / "binding_spec.yaml").write_text(self.binding_yaml, encoding="utf-8")
         (path / "policy.yaml").write_text(self.policy_yaml, encoding="utf-8")
+        (path / "review_notebook.ipynb").write_text(
+            self.notebook_json,
+            encoding="utf-8",
+        )
         (path / "audit.json").write_text(
             json.dumps(self.audit_record, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -67,7 +96,8 @@ class GeneratedBindingArtifacts:
         readme = (
             f"# {self.binding_spec.name} domainpack\n\n"
             "Generated from symbolic intent. Review `binding_spec.yaml`, "
-            "`policy.yaml`, and `audit.json` before use with live systems.\n"
+            "`policy.yaml`, `review_notebook.ipynb`, and `audit.json` before "
+            "use with live systems.\n"
         )
         (path / "README.md").write_text(readme, encoding="utf-8")
 
@@ -102,6 +132,7 @@ class SemanticDomainCompiler:
         name: str = "semantically_generated_domain",
         oscillators_per_layer: int = 8,
         dry_run_steps: int = 8,
+        retrieval_root: str | Path | None = "domainpacks",
     ) -> GeneratedBindingArtifacts:
         """Compile domain intent into binding, policy, audit, and dry-run artefacts."""
         if not name or not re.match(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$", name):
@@ -232,18 +263,36 @@ class SemanticDomainCompiler:
         dry_run_r = _dry_run_order_parameter(spec, dry_run_steps)
         binding_yaml = _binding_spec_to_yaml(spec)
         policy_yaml = _policy_yaml_for(spec)
+        retrieval_evidence = _retrieve_domainpack_evidence(prompt, retrieval_root)
+        retrieval_records = [
+            evidence.to_audit_record() for evidence in retrieval_evidence
+        ]
+        retrieval_score = retrieval_evidence[0].score if retrieval_evidence else 0.0
         confidence = _confidence(
             matched_keywords=matched_keywords,
             has_layer_count=layer_match is not None,
             domain_family=domain_family,
+            retrieval_score=retrieval_score,
+        )
+        notebook_json = _review_notebook_for(
+            spec,
+            confidence=confidence,
+            retrieval_records=retrieval_records,
         )
         audit_record = {
             "compiler": "symbolic_binding_v0",
             "schema_valid": not validation_errors,
             "validation_errors": validation_errors,
             "confidence": confidence,
+            "confidence_factors": {
+                "domain_keywords": len(matched_keywords),
+                "explicit_layer_count": layer_match is not None,
+                "domain_family": domain_family,
+                "retrieval_score": retrieval_score,
+            },
             "domain_family": domain_family,
             "matched_keywords": matched_keywords,
+            "retrieval_evidence": retrieval_records,
             "layers": num_layers,
             "oscillators_per_layer": oscillators_per_layer,
             "dry_run_steps": dry_run_steps,
@@ -258,7 +307,9 @@ class SemanticDomainCompiler:
             binding_spec=spec,
             binding_yaml=binding_yaml,
             policy_yaml=policy_yaml,
+            notebook_json=notebook_json,
             audit_record=audit_record,
+            retrieval_evidence=retrieval_evidence,
             validation_errors=validation_errors,
             dry_run_order_parameter=dry_run_r,
         )
@@ -270,6 +321,7 @@ def compile_symbolic_binding(
     name: str = "semantically_generated_domain",
     oscillators_per_layer: int = 8,
     dry_run_steps: int = 8,
+    retrieval_root: str | Path | None = "domainpacks",
 ) -> GeneratedBindingArtifacts:
     """Compile domain intent into a reviewable generated domainpack."""
     return SemanticDomainCompiler().compile_artifacts(
@@ -277,6 +329,7 @@ def compile_symbolic_binding(
         name=name,
         oscillators_per_layer=oscillators_per_layer,
         dry_run_steps=dry_run_steps,
+        retrieval_root=retrieval_root,
     )
 
 
@@ -285,13 +338,183 @@ def _confidence(
     matched_keywords: list[str],
     has_layer_count: bool,
     domain_family: str,
+    retrieval_score: float,
 ) -> float:
     score = 0.35 + min(0.25, 0.05 * len(matched_keywords))
     if has_layer_count:
         score += 0.15
     if domain_family != "generic":
         score += 0.2
+    if retrieval_score > 0.0:
+        score += min(0.15, 0.05 + 0.1 * retrieval_score)
     return round(min(score, 0.95), 3)
+
+
+def _retrieve_domainpack_evidence(
+    prompt: str,
+    root: str | Path | None,
+    *,
+    limit: int = 3,
+) -> list[RetrievalEvidence]:
+    if root is None:
+        return []
+    base = Path(root)
+    if not base.exists() or not base.is_dir():
+        return []
+
+    prompt_terms = _terms(prompt)
+    if not prompt_terms:
+        return []
+
+    scored: list[RetrievalEvidence] = []
+    for spec_path in sorted(base.glob("*/binding_spec.yaml")):
+        domain_dir = spec_path.parent
+        text_parts = [domain_dir.name.replace("_", " ")]
+        text_parts.append(_safe_read(spec_path, max_chars=12000))
+        readme_path = domain_dir / "README.md"
+        if readme_path.exists():
+            text_parts.append(_safe_read(readme_path, max_chars=4000))
+        corpus = " ".join(text_parts).lower()
+        corpus_terms = set(_terms(corpus))
+        matched = sorted(prompt_terms & corpus_terms)
+        if not matched:
+            continue
+        name_bonus = sum(
+            1
+            for term in prompt_terms
+            if term in domain_dir.name.lower().replace("_", " ")
+        )
+        score = (len(matched) + name_bonus) / max(len(prompt_terms), 1)
+        scored.append(
+            RetrievalEvidence(
+                domainpack=domain_dir.name,
+                path=str(spec_path),
+                score=round(min(score, 1.0), 3),
+                matched_terms=matched[:12],
+                summary=_evidence_summary(domain_dir.name, matched),
+            )
+        )
+
+    return sorted(scored, key=lambda item: (-item.score, item.domainpack))[:limit]
+
+
+def _safe_read(path: Path, *, max_chars: int) -> str:
+    try:
+        return path.read_text(encoding="utf-8")[:max_chars]
+    except UnicodeDecodeError:
+        return ""
+
+
+def _terms(text: str) -> set[str]:
+    stopwords = {
+        "and",
+        "for",
+        "from",
+        "into",
+        "model",
+        "orchestrate",
+        "phase",
+        "system",
+        "the",
+        "under",
+        "with",
+    }
+    return {
+        term
+        for term in re.findall(r"[a-z0-9]{3,}", text.lower())
+        if term not in stopwords
+    }
+
+
+def _evidence_summary(domainpack: str, matched_terms: list[str]) -> str:
+    terms = ", ".join(matched_terms[:5])
+    return f"{domainpack} matched local terms: {terms}"
+
+
+def _review_notebook_for(
+    spec: BindingSpec,
+    *,
+    confidence: float,
+    retrieval_records: list[dict[str, Any]],
+) -> str:
+    notebook = {
+        "cells": [
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    f"# Review generated domainpack: {spec.name}\n",
+                    "\n",
+                    "This notebook validates generated binding and policy "
+                    "artifacts before any live use.\n",
+                ],
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "## Retrieval and confidence\n",
+                    "\n",
+                    f"- Confidence: `{confidence:.3f}`\n",
+                    f"- Retrieval matches: `{len(retrieval_records)}`\n",
+                ],
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "from pathlib import Path\n",
+                    "from scpn_phase_orchestrator.binding import "
+                    "load_binding_spec, validate_binding_spec\n",
+                    "spec = load_binding_spec(Path('binding_spec.yaml'))\n",
+                    "errors = validate_binding_spec(spec)\n",
+                    "assert errors == [], errors\n",
+                    "spec.name\n",
+                ],
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "outputs": [],
+                "source": [
+                    "from scpn_phase_orchestrator.supervisor.policy_rules import "
+                    "load_policy_rules\n",
+                    "rules = load_policy_rules(Path('policy.yaml'))\n",
+                    "assert rules\n",
+                    "[rule.name for rule in rules]\n",
+                ],
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "## Review checklist\n",
+                    "\n",
+                    "- Confirm layer names and oscillator counts match the plant.\n",
+                    "- Confirm actuator limits are safe for the deployment target.\n",
+                    "- Run a dry replay before connecting live adapters.\n",
+                ],
+            },
+        ],
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3",
+            },
+            "language_info": {"name": "python", "pygments_lexer": "ipython3"},
+            "scpn_phase_orchestrator": {
+                "artifact": "symbolic_binding_review",
+                "schema_version": 1,
+            },
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5,
+    }
+    return json.dumps(notebook, indent=2, sort_keys=True) + "\n"
 
 
 def _dry_run_order_parameter(spec: BindingSpec, steps: int) -> float:

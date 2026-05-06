@@ -236,8 +236,10 @@ emit a complete artefact bundle:
 
 - `binding_spec.yaml` for the domain interface
 - `policy.yaml` with a conservative low-coherence recovery rule
-- `audit.json` with confidence, matched keywords, validation status, dry-run
-  coherence, and Petri-net review reachability metadata
+- `review_notebook.ipynb` with validation and policy-review cells
+- `audit.json` with confidence factors, matched keywords, local retrieval
+  evidence, validation status, dry-run coherence, and Petri-net review
+  reachability metadata
 - `README.md` for the generated domainpack directory
 
 The compiler remains deterministic and local. It extracts layer counts,
@@ -245,6 +247,12 @@ domain-family keywords, oscillator counts, channel declarations, safe default
 actuator mappings, and a review transition in `protocol_net`. The generated
 binding is passed through `validate_binding_spec()` and a short
 `UPDEEngine` dry run before artefacts are returned.
+
+Local retrieval scans existing `domainpacks/*/binding_spec.yaml` and README
+content, records the highest-scoring matches in `audit.json`, and includes the
+top score in the generated confidence factors. Retrieval can be disabled by
+passing `retrieval_root=None` to `compile_artifacts()` or
+`compile_symbolic_binding()`.
 
 CLI usage:
 

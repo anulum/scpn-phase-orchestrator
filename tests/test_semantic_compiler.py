@@ -17,6 +17,7 @@ from click.testing import CliRunner
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.binding.semantic import (
     GeneratedBindingArtifacts,
+    RetrievalEvidence,
     SemanticDomainCompiler,
     compile_symbolic_binding,
 )
@@ -144,7 +145,11 @@ def test_compile_artifacts_returns_reviewable_valid_outputs(tmp_path):
     assert artefacts.audit_record["schema_valid"] is True
     assert artefacts.audit_record["domain_family"] == "biological"
     assert "cardiac" in artefacts.audit_record["matched_keywords"]
+    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] >= 0.0
     assert 0.0 <= artefacts.dry_run_order_parameter <= 1.0
+    notebook = json.loads(artefacts.notebook_json)
+    assert notebook["nbformat"] == 4
+    assert notebook["metadata"]["scpn_phase_orchestrator"]["schema_version"] == 1
 
     spec_path = tmp_path / "binding_spec.yaml"
     policy_path = tmp_path / "policy.yaml"
@@ -183,6 +188,34 @@ def test_compile_symbolic_binding_pipeline_drives_engine():
     assert artefacts.audit_record["petri_reachability"]["target_place"] == "validated"
 
 
+def test_compile_artifacts_records_local_domainpack_retrieval_evidence():
+    artefacts = compile_symbolic_binding(
+        "A 2-layer power grid stability controller with renewable demand",
+        name="grid_retrieval_review",
+        oscillators_per_layer=2,
+        dry_run_steps=2,
+    )
+
+    assert artefacts.retrieval_evidence
+    assert isinstance(artefacts.retrieval_evidence[0], RetrievalEvidence)
+    assert artefacts.retrieval_evidence[0].domainpack == "power_grid"
+    assert artefacts.audit_record["retrieval_evidence"][0]["domainpack"] == "power_grid"
+    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] > 0.0
+    assert artefacts.audit_record["confidence"] >= 0.8
+
+
+def test_compile_artifacts_can_disable_retrieval():
+    artefacts = compile_symbolic_binding(
+        "A 2-layer power grid stability controller",
+        name="grid_no_retrieval_review",
+        retrieval_root=None,
+    )
+
+    assert artefacts.retrieval_evidence == []
+    assert artefacts.audit_record["retrieval_evidence"] == []
+    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] == 0.0
+
+
 def test_write_domainpack_and_cli_generate(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
@@ -204,10 +237,16 @@ def test_write_domainpack_and_cli_generate(tmp_path, monkeypatch):
     output_dir = tmp_path / "domainpacks" / "traffic_review"
     assert (output_dir / "binding_spec.yaml").exists()
     assert (output_dir / "policy.yaml").exists()
+    assert (output_dir / "review_notebook.ipynb").exists()
     assert (output_dir / "README.md").exists()
     audit = json.loads((output_dir / "audit.json").read_text(encoding="utf-8"))
     assert audit["schema_valid"] is True
     assert audit["domain_family"] == "network"
+    assert "retrieval_matches=" in result.output
+    notebook = json.loads(
+        (output_dir / "review_notebook.ipynb").read_text(encoding="utf-8")
+    )
+    assert notebook["metadata"]["scpn_phase_orchestrator"]["artifact"]
     assert load_policy_rules(output_dir / "policy.yaml")
     loaded = load_binding_spec(output_dir / "binding_spec.yaml")
     assert validate_binding_spec(loaded) == []

@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.binding.resolved import (
 )
 from scpn_phase_orchestrator.binding.semantic import (
     GeneratedBindingArtifacts,
+    RetrievalEvidence,
     SemanticDomainCompiler,
     compile_symbolic_binding,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "ChannelCouplingEdge",
     "ChannelRuntimePolicy",
     "GeneratedBindingArtifacts",
+    "RetrievalEvidence",
     "SemanticDomainCompiler",
     "build_channel_algebra_report",
     "compile_symbolic_binding",

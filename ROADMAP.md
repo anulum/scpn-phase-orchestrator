@@ -231,7 +231,12 @@ Near-term candidate tracks:
 - STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces.
   - Foundation is in place: built-in STL robustness monitoring exists; remaining scope is policy DSL integration and model-checker export linkage.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
-  - Foundation is in place: symbolic binding compiler support exists; remaining scope is retrieval depth, confidence scoring, and generated notebook polish.
+  - Foundation is in place: symbolic binding compiler support exists.
+  - Retrieval, confidence, and notebook polish are in place: generation now
+    records local domainpack retrieval evidence, confidence factors, and a
+    `review_notebook.ipynb` validation notebook.
+  - Remaining scope: richer retrieval over long-form docs and generated
+    notebook execution evidence.
 - Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains.
   - Foundation is in place: replay-backed meta-transfer proposals exist; remaining scope is larger audit-history training and optional packaging.
 - Quantum-native compiler target: output Qiskit/PennyLane or OpenPulse/QASM fragments for the `quantum_simulation` path with co-simulation validation.
