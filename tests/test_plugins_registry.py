@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+from runpy import run_path
 from typing import Any, cast, get_type_hints
 
 import pytest
@@ -213,6 +215,31 @@ class TestPluginMarketplaceCatalog:
         plugin_records = cast("list[dict[str, Any]]", full_catalog["plugins"])
         assert plugin_records[0]["compatible"] is False
         assert "must declare channels" in plugin_records[0]["reasons"][0]
+
+    def test_marketplace_catalog_example_is_valid(self) -> None:
+        example_path = (
+            Path(__file__).resolve().parents[1]
+            / "examples"
+            / "plugin_marketplace_catalog.py"
+        )
+        namespace = run_path(str(example_path))
+        build_example_catalogue = namespace["build_example_catalogue"]
+        assert callable(build_example_catalogue)
+
+        catalog = cast("dict[str, Any]", build_example_catalogue())
+        plugin_records = cast("list[dict[str, Any]]", catalog["plugins"])
+
+        assert catalog["schema_version"] == "1.0.0"
+        assert catalog["plugin_count"] == 1
+        assert catalog["compatible_count"] == 1
+        assert catalog["capability_counts"] == {
+            "actuator": 1,
+            "bridge": 0,
+            "domainpack": 0,
+            "extractor": 1,
+        }
+        assert plugin_records[0]["compatible"] is True
+        assert plugin_records[0]["manifest"]["name"] == "grid_controls_pack"
 
 
 class TestPluginDiscovery:

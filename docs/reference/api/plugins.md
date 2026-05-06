@@ -54,4 +54,9 @@ SPO version, schema version, and capability counts. By default incompatible
 manifests are counted but omitted from the published `plugins` list; pass
 `include_incompatible=True` when a review job needs the full rejection report.
 
+A runnable metadata-only example is available at
+`examples/plugin_marketplace_catalog.py`. It builds a validated
+extractor/actuator manifest and prints the resulting catalogue JSON without
+loading the implementation targets declared in the manifest.
+
 ::: scpn_phase_orchestrator.plugins.registry
