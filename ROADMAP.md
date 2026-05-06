@@ -214,7 +214,13 @@ Near-term candidate tracks:
   - Remaining scope: add at least one more domainpack demonstration and broader
     policy validation around Lyapunov or transfer-entropy objectives.
 - Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
-  - Foundation is in place: causal counterfactual rollout support exists; remaining scope is attribution demos and deeper causal-model learning.
+  - Foundation is in place: causal counterfactual rollout support exists.
+  - Cardiac attribution demo is in place:
+    `domainpacks/cardiac_rhythm/causal_attribution_demo.py` compares a
+    pacing-drive candidate against a no-action ventricular-disturbance
+    baseline and emits trajectory plus attribution audit records.
+  - Remaining scope: deeper causal-model learning and broader domainpack
+    attribution demonstrations.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.
   - Foundation is in place: predictive FEP supervisor support exists; remaining scope is wider hierarchy/domainpack proof work.
 - STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces.

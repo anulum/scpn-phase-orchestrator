@@ -44,3 +44,23 @@ builds imprint that modulates coupling, representing pharmacokinetics.
 
 250 steps: normal sinus → PVCs → sustained VT → drug intervention →
 overdrive pacing → sinus recovery.
+
+## Causal Attribution Demo
+
+`causal_attribution_demo.py` runs a paired counterfactual for a deterministic
+ventricular disturbance:
+
+- baseline: continue from the same phases with no new supervisor action
+- intervention: apply a candidate global pacing drive through `zeta`
+
+The demo prints an audit payload containing both trajectories and a compact
+attribution record. The attribution record labels the candidate action as
+`stabilising`, `neutral`, or `destabilising` from the measured final and mean
+order-parameter deltas. It is a replay/simulation review aid, not a live
+medical-device decision path.
+
+Run:
+
+```bash
+PYTHONPATH=src python domainpacks/cardiac_rhythm/causal_attribution_demo.py
+```

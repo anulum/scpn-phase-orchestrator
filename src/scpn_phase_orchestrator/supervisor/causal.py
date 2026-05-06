@@ -20,12 +20,36 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 __all__ = [
+    "CausalAttribution",
     "CausalInterventionEngine",
     "CounterfactualRollout",
     "InterventionParameters",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+@dataclass(frozen=True)
+class CausalAttribution:
+    """Attribution summary derived from a paired counterfactual rollout."""
+
+    effect: str
+    confidence: float
+    score: float
+    delta_R_final: float
+    delta_R_mean: float
+    threshold: float
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable attribution payload."""
+        return {
+            "effect": self.effect,
+            "confidence": self.confidence,
+            "score": self.score,
+            "delta_R_final": self.delta_R_final,
+            "delta_R_mean": self.delta_R_mean,
+            "threshold": self.threshold,
+        }
 
 
 @dataclass(frozen=True)
@@ -72,6 +96,28 @@ class CounterfactualRollout:
                 for action in self.actions
             ],
         }
+
+    def attribute(self, threshold: float = 1e-3) -> CausalAttribution:
+        """Summarise whether the intervention caused a measurable R change."""
+        if not np.isfinite(threshold) or threshold < 0.0:
+            raise ValueError("threshold must be finite and non-negative")
+        score = 0.5 * (self.delta_R_final + self.delta_R_mean)
+        magnitude = abs(score)
+        if magnitude <= threshold:
+            effect = "neutral"
+        elif score > 0.0:
+            effect = "stabilising"
+        else:
+            effect = "destabilising"
+        confidence = 0.0 if threshold == 0.0 else min(1.0, magnitude / threshold)
+        return CausalAttribution(
+            effect=effect,
+            confidence=confidence,
+            score=float(score),
+            delta_R_final=self.delta_R_final,
+            delta_R_mean=self.delta_R_mean,
+            threshold=threshold,
+        )
 
 
 class CausalInterventionEngine:

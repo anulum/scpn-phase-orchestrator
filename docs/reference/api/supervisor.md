@@ -349,11 +349,17 @@ from scpn_phase_orchestrator.supervisor import CausalInterventionEngine
 engine = CausalInterventionEngine(n_oscillators=8, dt=0.01, horizon=20)
 rollout = engine.evaluate_actions(phases, omegas, knm, alpha, 0.0, 0.0, actions)
 record = rollout.to_audit_record()
+attribution = rollout.attribute(threshold=1e-3).to_audit_record()
 ```
 
 This is the first causal-supervision slice: it does not claim formal
 do-calculus yet, but it makes every proposed actuation comparable against a
 no-action counterfactual under the same UPDE dynamics.
+
+`CounterfactualRollout.attribute()` compresses the final and mean `R` deltas
+into an audit-ready effect label: `stabilising`, `neutral`, or `destabilising`.
+Domainpack demo: `domainpacks/cardiac_rhythm/causal_attribution_demo.py`
+evaluates a pacing-drive candidate against a ventricular-disturbance baseline.
 
 **Backend and cost:** each evaluation performs two UPDE rollouts over the
 configured horizon, so work scales with `2 * horizon` engine steps. It uses
