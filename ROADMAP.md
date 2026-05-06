@@ -127,6 +127,10 @@
 - Generalise the current three-channel P/I/S model into a typed N-channel binding architecture. P/I/S remains the default profile, not the ceiling; domainpacks must be able to declare additional named channels with extractor type, units, metric semantics, coupling participation, audit serialisation, replay semantics, and supervisor visibility.
 - Add channel algebra for N-channel runs: channel groups, required/optional channels, derived channels, cross-channel coupling policies, and validation rules for missing, delayed, or uncertain channels.
   - Channel algebra summary foundation is in place: `build_channel_algebra_report()` exposes required/optional channels, derived channels, group membership, supervisor visibility, coupling participation, and cross-channel edges for audit/reporting. Remaining scope is runtime execution of delayed/uncertain channel policies.
+  - Runtime policy records are in place: delayed channels emit
+    `hold_last_runtime_evidence`, uncertain channels emit
+    `confidence_weight_runtime_contribution`, and missing required/optional
+    channels carry deterministic runtime policies in the audit record.
   - Resolved configuration integration is in place: `resolved_binding_config()` embeds the channel algebra record and CLI formatting surfaces algebra counts plus missing required channel evidence.
   - Audit header contract is covered: `spo run --audit` carries the embedded `channel_algebra` record through `binding_config` and `binding_summary`.
 - Update audit, replay, visualisation, and reporting to be channel-count agnostic. Acceptance gate: the same run/replay/report pipeline works for three channels and for at least two domainpacks with more than three declared channels.

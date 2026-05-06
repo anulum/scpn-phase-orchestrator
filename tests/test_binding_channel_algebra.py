@@ -150,6 +150,17 @@ def test_channel_algebra_report_classifies_nchannel_relationships(tmp_path) -> N
     assert "Hidden" not in report.supervisor_visible_channels
     assert "Risk" not in report.coupling_participating_channels
     assert report.replay_semantics["Risk"] == "derived"
+    assert report.runtime_policies["Forecast"].delay_policy == (
+        "hold_last_runtime_evidence"
+    )
+    assert report.runtime_policies["Forecast"].uncertainty_policy == (
+        "confidence_weight_runtime_contribution"
+    )
+    assert report.runtime_policies["Forecast"].missing_policy == (
+        "drop_optional_channel"
+    )
+    assert report.runtime_policies["P"].delay_policy == "use_current_tick_evidence"
+    assert report.runtime_policies["P"].missing_policy == "block_required_channel"
     assert report.channel_groups["supervised"] == ("P", "H", "Risk")
     assert report.channel_membership["Risk"] == ("plant_view", "supervised")
     assert report.coupling_edges[0].source == "H"
@@ -185,5 +196,11 @@ def test_channel_algebra_report_serialises_for_audit(tmp_path) -> None:
     assert record["derived_channels"] == ["Risk"]
     assert record["delayed_channels"] == ["Forecast"]
     assert record["uncertain_channels"] == ["Estimate", "Forecast"]
+    runtime_policies = cast("dict[str, object]", record["runtime_policies"])
+    forecast_policy = cast("dict[str, object]", runtime_policies["Forecast"])
+    assert forecast_policy["delay_policy"] == "hold_last_runtime_evidence"
+    assert forecast_policy["uncertainty_policy"] == (
+        "confidence_weight_runtime_contribution"
+    )
     assert membership["P"] == ["plant_view", "supervised"]
     assert first_edge["mode"] == "directed"

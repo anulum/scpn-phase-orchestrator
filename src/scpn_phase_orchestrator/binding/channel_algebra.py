@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.binding.types import BindingSpec
 __all__ = [
     "ChannelAlgebraReport",
     "ChannelCouplingEdge",
+    "ChannelRuntimePolicy",
     "build_channel_algebra_report",
 ]
 
@@ -43,6 +44,27 @@ class ChannelCouplingEdge:
 
 
 @dataclass(frozen=True)
+class ChannelRuntimePolicy:
+    """Runtime handling policy derived from channel metadata."""
+
+    channel: str
+    evidence_required: bool
+    delay_policy: str
+    uncertainty_policy: str
+    missing_policy: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a serialisable runtime-policy record."""
+        return {
+            "channel": self.channel,
+            "evidence_required": self.evidence_required,
+            "delay_policy": self.delay_policy,
+            "uncertainty_policy": self.uncertainty_policy,
+            "missing_policy": self.missing_policy,
+        }
+
+
+@dataclass(frozen=True)
 class ChannelAlgebraReport:
     """Deterministic channel algebra view for audit, replay, and reporting."""
 
@@ -58,6 +80,7 @@ class ChannelAlgebraReport:
     supervisor_visible_channels: tuple[str, ...]
     coupling_participating_channels: tuple[str, ...]
     replay_semantics: dict[str, str]
+    runtime_policies: dict[str, ChannelRuntimePolicy]
     channel_groups: dict[str, tuple[str, ...]]
     channel_membership: dict[str, tuple[str, ...]]
     coupling_edges: tuple[ChannelCouplingEdge, ...]
@@ -79,6 +102,10 @@ class ChannelAlgebraReport:
                 self.coupling_participating_channels
             ),
             "replay_semantics": dict(sorted(self.replay_semantics.items())),
+            "runtime_policies": {
+                channel: policy.to_audit_record()
+                for channel, policy in sorted(self.runtime_policies.items())
+            },
             "channel_groups": {
                 name: list(channels)
                 for name, channels in sorted(self.channel_groups.items())
@@ -184,6 +211,12 @@ def build_channel_algebra_report(spec: BindingSpec) -> ChannelAlgebraReport:
         channel: spec.channels[channel].replay_semantics
         for channel in declared_channels
     }
+    runtime_policies = _runtime_policies(
+        declared_channels=declared_channels,
+        required_channels=required_channels,
+        delayed_channels=delayed_channels,
+        uncertain_channels=uncertain_channels,
+    )
     coupling_edges = tuple(
         ChannelCouplingEdge(
             source=coupling.source,
@@ -207,6 +240,7 @@ def build_channel_algebra_report(spec: BindingSpec) -> ChannelAlgebraReport:
         supervisor_visible_channels=supervisor_visible_channels,
         coupling_participating_channels=coupling_participating_channels,
         replay_semantics=replay_semantics,
+        runtime_policies=runtime_policies,
         channel_groups=channel_groups,
         channel_membership=channel_membership,
         coupling_edges=coupling_edges,
@@ -229,6 +263,41 @@ def _mentions_policy_marker(
 ) -> bool:
     text = " ".join(value.lower() for value in values if value)
     return any(marker in text for marker in markers)
+
+
+def _runtime_policies(
+    *,
+    declared_channels: tuple[str, ...],
+    required_channels: tuple[str, ...],
+    delayed_channels: tuple[str, ...],
+    uncertain_channels: tuple[str, ...],
+) -> dict[str, ChannelRuntimePolicy]:
+    required = set(required_channels)
+    delayed = set(delayed_channels)
+    uncertain = set(uncertain_channels)
+    policies: dict[str, ChannelRuntimePolicy] = {}
+    for channel in declared_channels:
+        evidence_required = channel in required
+        policies[channel] = ChannelRuntimePolicy(
+            channel=channel,
+            evidence_required=evidence_required,
+            delay_policy=(
+                "hold_last_runtime_evidence"
+                if channel in delayed
+                else "use_current_tick_evidence"
+            ),
+            uncertainty_policy=(
+                "confidence_weight_runtime_contribution"
+                if channel in uncertain
+                else "deterministic_runtime_contribution"
+            ),
+            missing_policy=(
+                "block_required_channel"
+                if evidence_required
+                else "drop_optional_channel"
+            ),
+        )
+    return policies
 
 
 def _channel_membership(

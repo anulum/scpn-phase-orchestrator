@@ -106,6 +106,13 @@ The same report classifies delayed and uncertain channels from existing
 reporting surfaces expose delayed/uncertain policy evidence without changing
 the binding schema.
 
+The report also emits runtime policy records for every declared channel.
+Delayed channels use `hold_last_runtime_evidence`, uncertain channels use
+`confidence_weight_runtime_contribution`, missing required channels use
+`block_required_channel`, and missing optional channels use
+`drop_optional_channel`. This gives supervisor/runtime callers deterministic
+handling semantics without adding new binding-schema fields.
+
 ```python
 from scpn_phase_orchestrator.binding import (
     build_channel_algebra_report,

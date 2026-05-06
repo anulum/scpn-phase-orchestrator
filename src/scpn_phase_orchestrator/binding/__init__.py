@@ -11,6 +11,7 @@ from __future__ import annotations
 from scpn_phase_orchestrator.binding.channel_algebra import (
     ChannelAlgebraReport,
     ChannelCouplingEdge,
+    ChannelRuntimePolicy,
     build_channel_algebra_report,
 )
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
@@ -31,6 +32,7 @@ __all__ = [
     "BindingSpec",
     "ChannelAlgebraReport",
     "ChannelCouplingEdge",
+    "ChannelRuntimePolicy",
     "GeneratedBindingArtifacts",
     "SemanticDomainCompiler",
     "build_channel_algebra_report",
