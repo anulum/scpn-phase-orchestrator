@@ -13,6 +13,7 @@ from scpn_phase_orchestrator.meta.transfer import (
     MetaPolicyRecord,
     MetaTrainingSummary,
     MetaTransferProposal,
+    records_from_audit_directory,
     records_from_audit_jsonl,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "MetaPolicyRecord",
     "MetaTrainingSummary",
     "MetaTransferProposal",
+    "records_from_audit_directory",
     "records_from_audit_jsonl",
 ]

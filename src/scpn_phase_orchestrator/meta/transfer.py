@@ -23,6 +23,7 @@ __all__ = [
     "MetaPolicyRecord",
     "MetaTrainingSummary",
     "MetaTransferProposal",
+    "records_from_audit_directory",
     "records_from_audit_jsonl",
 ]
 
@@ -140,6 +141,22 @@ class CrossDomainMetaTransfer:
             )
         return cls.fit(tuple(records))
 
+    @classmethod
+    def fit_audit_directory(
+        cls,
+        root: str | Path,
+        *,
+        pattern: str = "**/*.jsonl",
+        min_records: int = 1,
+    ) -> CrossDomainMetaTransfer:
+        """Fit a model from a recursively discovered audit JSONL corpus."""
+        records = records_from_audit_directory(
+            root,
+            pattern=pattern,
+            min_records=min_records,
+        )
+        return cls.fit(records)
+
     def propose(
         self,
         features: dict[str, float],
@@ -224,6 +241,31 @@ def records_from_audit_jsonl(path: str | Path) -> tuple[MetaPolicyRecord, ...]:
                 continue
             payload = json.loads(stripped)
             records.append(_record_from_payload(payload, line_number))
+    return tuple(records)
+
+
+def records_from_audit_directory(
+    root: str | Path,
+    *,
+    pattern: str = "**/*.jsonl",
+    min_records: int = 1,
+) -> tuple[MetaPolicyRecord, ...]:
+    """Load replay records from a nested audit-history directory."""
+    if min_records < 1:
+        raise ValueError("min_records must be at least 1")
+    base = Path(root)
+    if not base.exists() or not base.is_dir():
+        raise ValueError("audit directory must exist")
+    paths = tuple(sorted(path for path in base.glob(pattern) if path.is_file()))
+    if not paths:
+        raise ValueError("audit directory yielded no JSONL files")
+    records: list[MetaPolicyRecord] = []
+    for path in paths:
+        records.extend(records_from_audit_jsonl(path))
+    if len(records) < min_records:
+        raise ValueError(
+            f"audit directory yielded {len(records)} records; min_records={min_records}"
+        )
     return tuple(records)
 
 

@@ -22,11 +22,14 @@ proposal = model.propose({"R_global": 0.5})
 audit_payload = proposal.to_audit_record()
 ```
 
-Larger replay corpora can be loaded from multiple audit JSONL files with
-`CrossDomainMetaTransfer.fit_audit_history()`. The fitted model exposes an
-audit-ready `training_summary` with record count, domain count, feature keys,
-knob keys, and reward range. Use `to_json_package()` and
-`from_json_package()` to save and restore a deterministic review package for
-proposal jobs.
+Larger replay corpora can be loaded from explicit audit JSONL file lists with
+`CrossDomainMetaTransfer.fit_audit_history()` or from nested audit directories
+with `CrossDomainMetaTransfer.fit_audit_directory()`. Directory loading uses
+`records_from_audit_directory()` and discovers `**/*.jsonl` by default, so
+multi-domain replay corpora can be trained without hand-listing every audit
+file. The fitted model exposes an audit-ready `training_summary` with record
+count, domain count, feature keys, knob keys, and reward range. Use
+`to_json_package()` and `from_json_package()` to save and restore a
+deterministic review package for proposal jobs.
 
 ::: scpn_phase_orchestrator.meta.transfer

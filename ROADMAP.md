@@ -279,6 +279,9 @@ Near-term candidate tracks:
     `CrossDomainMetaTransfer.fit_audit_history()` aggregates multiple audit
     JSONL files, exposes an audit-ready training summary, and round-trips
     deterministic JSON packages for proposal jobs.
+  - Nested audit-directory corpus loading is in place:
+    `CrossDomainMetaTransfer.fit_audit_directory()` discovers `**/*.jsonl`
+    histories recursively for larger multi-domain replay corpora.
   - Remaining scope: larger real audit-history training corpora and optional
     `scpn-meta` packaging.
 - Quantum-native compiler target: output Qiskit/PennyLane or OpenPulse/QASM fragments for the `quantum_simulation` path with co-simulation validation.

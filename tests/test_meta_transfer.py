@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.meta import (
     MetaPolicyRecord,
     MetaTrainingSummary,
     MetaTransferProposal,
+    records_from_audit_directory,
     records_from_audit_jsonl,
 )
 
@@ -205,6 +206,57 @@ class TestMetaTransferBehaviour:
         assert model.training_summary.record_count == 2
         assert model.training_summary.domains == ("alpha", "beta")
         assert proposal.neighbours[0][0] == "beta"
+
+    def test_fit_audit_directory_discovers_nested_jsonl_corpus(self, tmp_path) -> None:
+        first_dir = tmp_path / "grid"
+        second_dir = tmp_path / "cardiac" / "nested"
+        first_dir.mkdir()
+        second_dir.mkdir(parents=True)
+        (first_dir / "audit.jsonl").write_text(
+            json.dumps(
+                {
+                    "domain": "grid",
+                    "metrics": {"R_global": 0.2, "event_rate": 0.9},
+                    "actions": [{"knob": "K", "value": 0.08}],
+                    "reward": 0.6,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (second_dir / "audit.jsonl").write_text(
+            json.dumps(
+                {
+                    "domain": "cardiac",
+                    "features": {"R_global": 0.9, "event_rate": 0.1},
+                    "knobs": {"zeta": 0.07},
+                    "reward": 0.9,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        records = records_from_audit_directory(tmp_path, min_records=2)
+        model = CrossDomainMetaTransfer.fit_audit_directory(
+            tmp_path,
+            min_records=2,
+        )
+        proposal = model.propose({"R_global": 0.88, "event_rate": 0.12})
+
+        assert {record.domain for record in records} == {"grid", "cardiac"}
+        assert model.training_summary.record_count == 2
+        assert model.training_summary.domain_count == 2
+        assert proposal.neighbours[0][0] == "cardiac"
+
+    def test_records_from_audit_directory_validates_empty_corpus(
+        self, tmp_path
+    ) -> None:
+        with pytest.raises(ValueError, match="no JSONL files"):
+            records_from_audit_directory(tmp_path)
+
+        with pytest.raises(ValueError, match="audit directory must exist"):
+            records_from_audit_directory(tmp_path / "missing")
 
     def test_fit_audit_history_enforces_min_records(self, tmp_path) -> None:
         audit_path = tmp_path / "audit.jsonl"
