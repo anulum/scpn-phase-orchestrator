@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor import stl as stl_module
@@ -25,9 +28,26 @@ class TestSTLMonitorConstants:
 
 
 class TestSTLBuiltinFallback:
+    def test_builtin_predicate_robustness_has_parameterised_array_return(self):
+        hints = get_type_hints(stl_module._predicate_robustness)
+
+        assert "numpy.ndarray" in str(hints["return"])
+        assert "float64" in str(hints["return"])
+
     def test_simple_spec_uses_builtin_backend(self):
         monitor = STLMonitor("always (x <= 1.0)")
         assert monitor.evaluate({"x": [0.2, 0.5, 0.9]}) > 0
+
+    def test_predicate_robustness_returns_float64_array(self):
+        values = stl_module._predicate_robustness(
+            "R",
+            ">=",
+            0.5,
+            {"R": [0.4, 0.6, 0.9]},
+        )
+
+        assert values.dtype == np.float64
+        assert values.tolist() == pytest.approx([-0.1, 0.1, 0.4])
 
     def test_eventually_spec(self):
         monitor = STLMonitor("eventually (R >= 0.8)")

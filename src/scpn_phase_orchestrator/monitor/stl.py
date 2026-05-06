@@ -16,10 +16,14 @@ from __future__ import annotations
 import re
 import warnings
 from dataclasses import dataclass
+from typing import TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 
 __all__ = ["STLMonitor", "STLTraceResult", "HAS_RTAMT"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 try:
     with warnings.catch_warnings():
@@ -172,7 +176,7 @@ def _predicate_robustness(
     op: str,
     threshold: float,
     trace: dict[str, list[float]],
-) -> np.ndarray:
+) -> FloatArray:
     if signal not in trace:
         raise ValueError(f"trace missing signal {signal!r}")
     values = np.asarray(trace[signal], dtype=np.float64)
