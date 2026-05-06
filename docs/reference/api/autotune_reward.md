@@ -48,4 +48,19 @@ ranked = rank_replay_candidates(
 best_report = ranked[0].to_audit_record()
 ```
 
+Offline search can generate deterministic coordinate candidates around a seed
+policy before replay scoring:
+
+```python
+from scpn_phase_orchestrator.autotune import (
+    OfflinePolicySearchConfig,
+    generate_offline_policy_candidates,
+)
+
+candidates = generate_offline_policy_candidates(
+    candidate,
+    OfflinePolicySearchConfig(K_step=0.05, zeta_step=0.02, max_abs_knob=1.0),
+)
+```
+
 ::: scpn_phase_orchestrator.autotune.reward

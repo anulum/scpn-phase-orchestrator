@@ -20,9 +20,11 @@ from numpy.typing import NDArray
 __all__ = [
     "AutotuneRewardReport",
     "KnobPolicyCandidate",
+    "OfflinePolicySearchConfig",
     "RewardConfig",
     "RewardObservation",
     "evaluate_knob_policy",
+    "generate_offline_policy_candidates",
     "rank_replay_candidates",
 ]
 
@@ -53,6 +55,33 @@ class RewardObservation:
         _require_probability(self.coherence, "coherence")
         if self.previous_coherence is not None:
             _require_probability(self.previous_coherence, "previous_coherence")
+
+
+@dataclass(frozen=True)
+class OfflinePolicySearchConfig:
+    """Deterministic candidate-generation settings for replay searches."""
+
+    K_step: float = 0.05
+    alpha_step: float = 0.05
+    zeta_step: float = 0.05
+    Psi_step: float = 0.05
+    channel_weight_step: float = 0.05
+    include_baseline: bool = True
+    max_abs_knob: float | None = None
+
+    def __post_init__(self) -> None:
+        for label, value in [
+            ("K_step", self.K_step),
+            ("alpha_step", self.alpha_step),
+            ("zeta_step", self.zeta_step),
+            ("Psi_step", self.Psi_step),
+            ("channel_weight_step", self.channel_weight_step),
+        ]:
+            _require_non_negative_finite(value, label)
+        if self.max_abs_knob is not None:
+            _require_non_negative_finite(self.max_abs_knob, "max_abs_knob")
+            if self.max_abs_knob == 0.0:
+                raise ValueError("max_abs_knob must be positive when provided")
 
 
 @dataclass(frozen=True)
@@ -219,6 +248,54 @@ def rank_replay_candidates(
     return tuple(ranked[:top_k])
 
 
+def generate_offline_policy_candidates(
+    seed: KnobPolicyCandidate,
+    config: OfflinePolicySearchConfig | None = None,
+) -> tuple[KnobPolicyCandidate, ...]:
+    """Generate deterministic replay-search candidates around a seed policy.
+
+    The generator performs a bounded coordinate search over the universal knobs
+    and channel weights. It does not inspect plant state and it does not apply
+    actions; callers must evaluate the returned candidates through replay or
+    simulation before ranking them.
+    """
+    active_config = config or OfflinePolicySearchConfig()
+    _validate_candidate(seed)
+
+    candidates: list[KnobPolicyCandidate] = []
+    if active_config.include_baseline:
+        candidates.append(seed)
+
+    for knob, step in [
+        ("K", active_config.K_step),
+        ("alpha", active_config.alpha_step),
+        ("zeta", active_config.zeta_step),
+        ("Psi", active_config.Psi_step),
+    ]:
+        if step > 0.0:
+            candidates.extend(
+                _mutate_knob(seed, knob, delta, active_config.max_abs_knob)
+                for delta in (-step, step)
+            )
+
+    if active_config.channel_weight_step > 0.0:
+        for index in range(len(seed.channel_weights)):
+            for delta in (
+                -active_config.channel_weight_step,
+                active_config.channel_weight_step,
+            ):
+                candidates.append(
+                    _mutate_channel_weight(
+                        seed,
+                        index,
+                        delta,
+                        active_config.max_abs_knob,
+                    )
+                )
+
+    return _deduplicate_candidates(candidates)
+
+
 def _actuation_energy(candidate: KnobPolicyCandidate) -> float:
     parts = [
         _mean_square(candidate.K),
@@ -245,6 +322,80 @@ def _mean_square(value: float | FloatArray) -> float:
 def _validate_candidate(candidate: KnobPolicyCandidate) -> None:
     for weight in candidate.channel_weights:
         _require_non_negative_finite(weight, "channel weight")
+
+
+def _mutate_knob(
+    seed: KnobPolicyCandidate,
+    knob: str,
+    delta: float,
+    max_abs_knob: float | None,
+) -> KnobPolicyCandidate:
+    values = {
+        "K": seed.K,
+        "alpha": seed.alpha,
+        "zeta": seed.zeta,
+        "Psi": seed.Psi,
+    }
+    values[knob] = _offset_knob(values[knob], delta, max_abs_knob)
+    return KnobPolicyCandidate(
+        K=values["K"],
+        alpha=values["alpha"],
+        zeta=values["zeta"],
+        Psi=values["Psi"],
+        channel_weights=seed.channel_weights,
+    )
+
+
+def _offset_knob(
+    value: float | FloatArray,
+    delta: float,
+    max_abs_knob: float | None,
+) -> float | FloatArray:
+    array = np.asarray(value, dtype=np.float64) + delta
+    if max_abs_knob is not None:
+        array = np.clip(array, -max_abs_knob, max_abs_knob)
+    if array.ndim == 0:
+        return float(array)
+    return array.astype(np.float64)
+
+
+def _mutate_channel_weight(
+    seed: KnobPolicyCandidate,
+    index: int,
+    delta: float,
+    max_abs_knob: float | None,
+) -> KnobPolicyCandidate:
+    weights = list(seed.channel_weights)
+    value = max(0.0, weights[index] + delta)
+    if max_abs_knob is not None:
+        value = min(max_abs_knob, value)
+    weights[index] = value
+    return KnobPolicyCandidate(
+        K=seed.K,
+        alpha=seed.alpha,
+        zeta=seed.zeta,
+        Psi=seed.Psi,
+        channel_weights=tuple(weights),
+    )
+
+
+def _deduplicate_candidates(
+    candidates: Sequence[KnobPolicyCandidate],
+) -> tuple[KnobPolicyCandidate, ...]:
+    deduplicated: list[KnobPolicyCandidate] = []
+    seen: set[tuple[object, ...]] = set()
+    for candidate in candidates:
+        key = (
+            repr(_serialise_array(candidate.K)),
+            repr(_serialise_array(candidate.alpha)),
+            repr(_serialise_array(candidate.zeta)),
+            repr(_serialise_array(candidate.Psi)),
+            candidate.channel_weights,
+        )
+        if key not in seen:
+            seen.add(key)
+            deduplicated.append(candidate)
+    return tuple(deduplicated)
 
 
 def _require_probability(value: float, label: str) -> None:

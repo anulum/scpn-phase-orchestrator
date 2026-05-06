@@ -21,9 +21,11 @@ from scpn_phase_orchestrator.autotune.pipeline import (
 from scpn_phase_orchestrator.autotune.reward import (
     AutotuneRewardReport,
     KnobPolicyCandidate,
+    OfflinePolicySearchConfig,
     RewardConfig,
     RewardObservation,
     evaluate_knob_policy,
+    generate_offline_policy_candidates,
     rank_replay_candidates,
 )
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
@@ -33,6 +35,7 @@ __all__ = [
     "AutotuneRewardReport",
     "FrequencyResult",
     "KnobPolicyCandidate",
+    "OfflinePolicySearchConfig",
     "PhaseResult",
     "PhaseSINDy",
     "RewardConfig",
@@ -40,6 +43,7 @@ __all__ = [
     "evaluate_knob_policy",
     "estimate_coupling",
     "extract_phases",
+    "generate_offline_policy_candidates",
     "identify_binding_spec",
     "identify_frequencies",
     "rank_replay_candidates",

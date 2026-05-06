@@ -16,9 +16,11 @@ import pytest
 from scpn_phase_orchestrator.autotune import (
     AutotuneRewardReport,
     KnobPolicyCandidate,
+    OfflinePolicySearchConfig,
     RewardConfig,
     RewardObservation,
     evaluate_knob_policy,
+    generate_offline_policy_candidates,
     rank_replay_candidates,
 )
 
@@ -36,6 +38,13 @@ class TestAutotuneRewardContract:
 
         assert "Sequence" in str(hints["replay_candidates"])
         assert "AutotuneRewardReport" in str(hints["return"])
+
+    def test_offline_generator_contract_is_typed(self) -> None:
+        hints = get_type_hints(generate_offline_policy_candidates)
+
+        assert hints["seed"] is KnobPolicyCandidate
+        assert "OfflinePolicySearchConfig" in str(hints["config"])
+        assert "KnobPolicyCandidate" in str(hints["return"])
 
     def test_report_serialises_arrays_for_audit(self) -> None:
         candidate = KnobPolicyCandidate(
@@ -186,6 +195,105 @@ class TestAutotuneReplayRanking:
         assert any(report.observation.unsafe for report in ranked)
 
 
+class TestAutotuneOfflinePolicySearch:
+    def test_generates_coordinate_candidates_around_scalar_seed(self) -> None:
+        seed = KnobPolicyCandidate(
+            K=0.4,
+            alpha=0.2,
+            zeta=0.1,
+            Psi=0.3,
+            channel_weights=(1.0, 0.5),
+        )
+
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                K_step=0.1,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.2,
+            ),
+        )
+
+        assert candidates[0] == seed
+        assert any(pytest.approx(0.3) == candidate.K for candidate in candidates)
+        assert any(pytest.approx(0.5) == candidate.K for candidate in candidates)
+        assert any(candidate.channel_weights == (0.8, 0.5) for candidate in candidates)
+        assert any(candidate.channel_weights == (1.0, 0.7) for candidate in candidates)
+
+    def test_generator_can_exclude_baseline_and_deduplicates_zero_steps(self) -> None:
+        seed = KnobPolicyCandidate(K=0.4)
+
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                include_baseline=False,
+                K_step=0.0,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.0,
+            ),
+        )
+
+        assert candidates == ()
+
+    def test_generator_clips_knobs_and_channel_weights(self) -> None:
+        seed = KnobPolicyCandidate(
+            K=np.array([[0.45, -0.45]], dtype=np.float64),
+            channel_weights=(0.05, 0.48),
+        )
+
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                K_step=0.1,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.1,
+                max_abs_knob=0.5,
+            ),
+        )
+
+        generated_arrays = [candidate.K for candidate in candidates]
+        assert any(
+            isinstance(value, np.ndarray) and np.max(value) == 0.5
+            for value in generated_arrays
+        )
+        assert any(candidate.channel_weights == (0.0, 0.48) for candidate in candidates)
+        assert any(candidate.channel_weights == (0.05, 0.5) for candidate in candidates)
+
+    def test_generated_candidates_feed_replay_ranking(self) -> None:
+        seed = KnobPolicyCandidate(K=0.2)
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                K_step=0.1,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.0,
+            ),
+        )
+        replay = tuple(
+            (
+                candidate,
+                RewardObservation(
+                    coherence=0.5 + 0.1 * index,
+                    previous_coherence=0.4,
+                ),
+            )
+            for index, candidate in enumerate(candidates)
+        )
+
+        ranked = rank_replay_candidates(replay)
+
+        assert ranked[0].candidate == candidates[-1]
+        assert ranked[0].reward >= ranked[-1].reward
+
+
 class TestAutotuneRewardValidation:
     def test_rejects_non_probability_observations(self) -> None:
         with pytest.raises(ValueError, match="coherence"):
@@ -229,3 +337,11 @@ class TestAutotuneRewardValidation:
 
         with pytest.raises(ValueError, match="top_k"):
             rank_replay_candidates(replay, top_k=0)
+
+    def test_offline_generator_rejects_negative_steps(self) -> None:
+        with pytest.raises(ValueError, match="K_step"):
+            OfflinePolicySearchConfig(K_step=-0.1)
+
+    def test_offline_generator_rejects_zero_clip_bound(self) -> None:
+        with pytest.raises(ValueError, match="max_abs_knob"):
+            OfflinePolicySearchConfig(max_abs_knob=0.0)
