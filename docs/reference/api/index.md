@@ -9,11 +9,36 @@ available; the public interface is identical in both backends.
 
 ```python
 from scpn_phase_orchestrator import (
-    UPDEEngine, StuartLandauEngine, CouplingBuilder, BindingSpec,
-    PhaseExtractor, PhaseState, RegimeManager, SupervisorPolicy,
-    BoundaryObserver, AuditLogger, SPOError,
+    AuditLogger,
+    BifurcationDiagram,
+    BindingSpec,
+    BoundaryObserver,
+    ControlAction,
+    CouplingBuilder,
+    PhaseExtractor,
+    PhaseState,
+    QPUDataArtifact,
+    RegimeManager,
+    SPOError,
+    SparseUPDEEngine,
+    SheafUPDEEngine,
+    StuartLandauEngine,
+    SupervisorPolicy,
+    UPDEEngine,
+    compile_domain_to_qpu_artifact,
+    emit_qpu_data_artifact,
+    find_critical_coupling,
+    lyapunov_spectrum,
+    trace_sync_transition,
+    validate_qpu_data_artifact,
 )
 ```
+
+The frozen top-level manifest is tracked in
+[`public_api_manifest.txt`](../../specs/public_api_manifest.txt). Any change to
+`scpn_phase_orchestrator.__all__` must update that manifest, this import block,
+and release notes in the same change so semantic-versioning review can classify
+the compatibility impact.
 
 ## Module index
 

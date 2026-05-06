@@ -84,7 +84,11 @@
 - ~~Docker multi-stage build with security scanning (Trivy/Grype)~~ (done — `.github/workflows/publish.yml`, `docs/guide/production.md`)
 - ~~BoundaryObserver configurable default severity~~ (done — defaults to hard with warning)
 - ~~DP tableau deduplication between upde.rs and stuart_landau.rs~~ (done)
-- Stable public API freeze with semver guarantees
+- ~~Stable public API freeze discipline slice: top-level manifest, docs, and
+  regression test guard `scpn_phase_orchestrator.__all__` drift~~ (done —
+  `docs/specs/public_api_manifest.txt`, `tests/test_public_api_manifest.py`)
+  - Remaining before v1.0 tag: classify any future public API manifest changes
+    in release notes with semantic-versioning impact.
 
 ### Deferred track (documented, not current focus)
 

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Public API Manifest
+
+# Top-level `scpn_phase_orchestrator.__all__` exports covered by the v1 API
+# freeze gate. Additions, removals, or renames require this file, API docs,
+# and compatibility notes to change in the same review.
+AuditLogger
+BifurcationDiagram
+BindingSpec
+BoundaryObserver
+ControlAction
+CouplingBuilder
+PhaseExtractor
+PhaseState
+QPUDataArtifact
+RegimeManager
+SPOError
+SparseUPDEEngine
+SheafUPDEEngine
+StuartLandauEngine
+SupervisorPolicy
+UPDEEngine
+compile_domain_to_qpu_artifact
+emit_qpu_data_artifact
+find_critical_coupling
+lyapunov_spectrum
+trace_sync_transition
+validate_qpu_data_artifact

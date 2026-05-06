@@ -51,7 +51,7 @@ control engineers who do not already live in phase dynamics.
 
 | Focus | Acceptance shape |
 |-------|------------------|
-| API freeze discipline | public entry points documented and compatibility boundaries stated |
+| API freeze discipline | top-level public manifest and drift test are in place; future manifest changes must carry compatibility notes |
 | N-channel rollout | P/I/S remains default while additional typed channels are documented and replayable |
 | Benchmark visibility | benchmark pages label commands, environment, and historical snapshot dates |
 | Production hardening | deployment defaults, security scans, dependency locks, and fallback paths remain documented |
