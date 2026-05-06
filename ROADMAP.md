@@ -225,6 +225,10 @@ Near-term candidate tracks:
   - Remaining scope: broader multi-domain Lyapunov policy validation.
 - Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
   - Foundation is in place: causal counterfactual rollout support exists.
+  - Live causal-model learning foundation is in place:
+    `learn_causal_graph()` estimates signed directed edges from lagged monitor
+    traces and records explicit `do(knob:scope) -> R` edges from paired
+    counterfactual rollouts.
   - Cardiac attribution demo is in place:
     `domainpacks/cardiac_rhythm/causal_attribution_demo.py` compares a
     pacing-drive candidate against a no-action ventricular-disturbance
@@ -232,7 +236,7 @@ Near-term candidate tracks:
   - Power-grid attribution demo is in place:
     `domainpacks/power_grid/causal_attribution_demo.py` compares a governor
     droop coupling candidate against a no-action load-step baseline.
-  - Remaining scope: deeper causal-model learning and additional attribution
+  - Remaining scope: larger causal-model learners and additional attribution
     demonstrations for other domain families.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.
   - Foundation is in place: predictive FEP supervisor support exists.
@@ -250,7 +254,10 @@ Near-term candidate tracks:
   - Model-checker export linkage is in place:
     `spo formal-export --export stl` emits PRISM constants and
     satisfied/violated labels for policy-declared STL monitors.
-  - Remaining scope: full STL monitoring automata synthesis.
+  - Monitoring automata synthesis foundation is in place:
+    `synthesise_stl_monitoring_automaton()` emits audit-ready state and
+    transition traces for builtin simple STL monitors.
+  - Remaining scope: controller synthesis from STL monitor automata.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - Retrieval, confidence, and notebook polish are in place: generation now

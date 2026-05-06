@@ -13,8 +13,11 @@ import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor import (
+    CausalGraphEstimate,
+    CausalInfluenceEdge,
     CausalInterventionEngine,
     CounterfactualRollout,
+    learn_causal_graph,
 )
 
 
@@ -154,3 +157,85 @@ def test_exported_from_supervisor_package() -> None:
     import scpn_phase_orchestrator.supervisor as supervisor
 
     assert supervisor.CausalInterventionEngine is CausalInterventionEngine
+    assert supervisor.learn_causal_graph is learn_causal_graph
+
+
+def test_learn_causal_graph_estimates_directed_lagged_influence() -> None:
+    driver = [0.0, 1.0, 2.0, 3.0, 4.0]
+    response = [0.0, 0.0, 2.0, 6.0, 12.0]
+    distractor = [1.0, 1.0, 1.0, 1.0, 1.0]
+
+    graph = learn_causal_graph(
+        {"driver": driver, "response": response, "distractor": distractor},
+        lag=1,
+        min_abs_weight=0.1,
+    )
+    records = [edge.to_audit_record() for edge in graph.edges]
+
+    assert isinstance(graph, CausalGraphEstimate)
+    assert graph.nodes == ("driver", "response", "distractor", "R")
+    assert (
+        CausalInfluenceEdge(
+            source="driver",
+            target="response",
+            weight=2.0,
+            confidence=1.0,
+            lag=1,
+            evidence="lagged_trace",
+        )
+        in graph.edges
+    )
+    assert all(record["source"] != "distractor" for record in records)
+    assert graph.to_audit_record()["edges"][0]["evidence"] == "lagged_trace"
+
+
+def test_learn_causal_graph_adds_counterfactual_do_edges() -> None:
+    phases, omegas, knm, alpha = _system()
+    engine = CausalInterventionEngine(6, dt=0.01, horizon=6)
+    rollout = engine.evaluate_actions(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        0.0,
+        0.0,
+        [
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=0.4,
+                ttl_s=5.0,
+                justification="graph intervention",
+            )
+        ],
+    )
+
+    graph = learn_causal_graph(
+        {"R_baseline": rollout.baseline_R, "R_intervention": rollout.intervention_R},
+        [rollout],
+        min_abs_weight=1e-12,
+    )
+    do_edges = [
+        edge for edge in graph.edges if edge.evidence == "counterfactual_rollout"
+    ]
+
+    assert graph.nodes[-2:] == ("do(K:global)", "R")
+    assert len(do_edges) == 1
+    assert do_edges[0].source == "do(K:global)"
+    assert do_edges[0].target == "R"
+    assert do_edges[0].weight == pytest.approx(rollout.delta_R_mean / 0.4)
+    assert 0.0 <= do_edges[0].confidence <= 1.0
+
+
+def test_learn_causal_graph_rejects_invalid_trace_inputs() -> None:
+    with pytest.raises(ValueError, match="at least two signals"):
+        learn_causal_graph({"R": [0.1, 0.2]})
+
+    with pytest.raises(ValueError, match="equal length"):
+        learn_causal_graph({"a": [0.1, 0.2], "b": [0.1]})
+
+    with pytest.raises(ValueError, match="greater than lag"):
+        learn_causal_graph({"a": [0.1], "b": [0.2]}, lag=1)
+
+    with pytest.raises(ValueError, match="positive integer"):
+        learn_causal_graph({"a": [0.1, 0.2], "b": [0.2, 0.3]}, lag=0)

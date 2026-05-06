@@ -365,6 +365,24 @@ no-action counterfactual under the same UPDE dynamics.
 `CounterfactualRollout.attribute()` compresses the final and mean `R` deltas
 into an audit-ready effect label: `stabilising`, `neutral`, or `destabilising`.
 
+`learn_causal_graph()` adds a lightweight live causal-model learner. It
+estimates signed directed edges from lagged monitor traces and appends explicit
+`do(knob:scope) -> R` edges from paired counterfactual rollouts. The output is
+a `CausalGraphEstimate` with JSON-safe nodes, edge weights, confidence scores,
+lags, and evidence labels for the audit trail.
+
+```python
+from scpn_phase_orchestrator.supervisor import learn_causal_graph
+
+graph = learn_causal_graph(
+    {"R_good": good_trace, "R_bad": bad_trace},
+    [rollout],
+    lag=1,
+    min_abs_weight=1e-4,
+)
+audit_graph = graph.to_audit_record()
+```
+
 Domainpack demos:
 
 - `domainpacks/cardiac_rhythm/causal_attribution_demo.py` evaluates a

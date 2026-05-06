@@ -17,9 +17,12 @@ from scpn_phase_orchestrator.supervisor.alignment import (
     ValueViolation,
 )
 from scpn_phase_orchestrator.supervisor.causal import (
+    CausalGraphEstimate,
+    CausalInfluenceEdge,
     CausalInterventionEngine,
     CounterfactualRollout,
     InterventionParameters,
+    learn_causal_graph,
 )
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.formal_export import (
@@ -89,6 +92,8 @@ from scpn_phase_orchestrator.supervisor.topology import (
 __all__ = [
     "Arc",
     "CausalInterventionEngine",
+    "CausalGraphEstimate",
+    "CausalInfluenceEdge",
     "CompoundCondition",
     "ControlAction",
     "CounterfactualRollout",
@@ -140,6 +145,7 @@ __all__ = [
     "evaluate_policy_stl_specs",
     "load_policy_rules",
     "load_policy_stl_specs",
+    "learn_causal_graph",
     "sheaf_coherence",
     "sheaf_laplacian",
     "synthesise_policy_stl_automata",

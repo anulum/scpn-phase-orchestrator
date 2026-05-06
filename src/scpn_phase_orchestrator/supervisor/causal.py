@@ -21,9 +21,12 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 __all__ = [
     "CausalAttribution",
+    "CausalGraphEstimate",
+    "CausalInfluenceEdge",
     "CausalInterventionEngine",
     "CounterfactualRollout",
     "InterventionParameters",
+    "learn_causal_graph",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -49,6 +52,48 @@ class CausalAttribution:
             "delta_R_final": self.delta_R_final,
             "delta_R_mean": self.delta_R_mean,
             "threshold": self.threshold,
+        }
+
+
+@dataclass(frozen=True)
+class CausalInfluenceEdge:
+    """Signed directed influence estimate between live causal graph nodes."""
+
+    source: str
+    target: str
+    weight: float
+    confidence: float
+    lag: int
+    evidence: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable causal-edge payload."""
+        return {
+            "source": self.source,
+            "target": self.target,
+            "weight": self.weight,
+            "confidence": self.confidence,
+            "lag": self.lag,
+            "evidence": self.evidence,
+        }
+
+
+@dataclass(frozen=True)
+class CausalGraphEstimate:
+    """Audit-ready directed causal graph learned from traces and interventions."""
+
+    nodes: tuple[str, ...]
+    edges: tuple[CausalInfluenceEdge, ...]
+    lag: int
+    min_abs_weight: float
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable causal graph estimate."""
+        return {
+            "nodes": list(self.nodes),
+            "edges": [edge.to_audit_record() for edge in self.edges],
+            "lag": self.lag,
+            "min_abs_weight": self.min_abs_weight,
         }
 
 
@@ -271,6 +316,77 @@ class CausalInterventionEngine:
             raise ValueError("zeta and psi must be finite")
 
 
+def learn_causal_graph(
+    trace: dict[str, list[float]],
+    rollouts: list[CounterfactualRollout] | tuple[CounterfactualRollout, ...] = (),
+    *,
+    lag: int = 1,
+    min_abs_weight: float = 1e-6,
+) -> CausalGraphEstimate:
+    """Estimate a signed live causal graph from traces and interventions.
+
+    Trace edges use lagged linear influence from ``source[t]`` to
+    ``target[t + lag] - target[t]``. Intervention edges summarise paired
+    counterfactual rollouts as explicit ``do(knob:scope) -> R`` effects. The
+    estimate is intentionally lightweight and audit-first; it is not a formal
+    do-calculus proof.
+    """
+    _validate_causal_trace(trace, lag, min_abs_weight)
+    nodes = tuple(trace)
+    edges: list[CausalInfluenceEdge] = []
+    for source in nodes:
+        source_values = np.asarray(trace[source], dtype=np.float64)
+        source_window = source_values[:-lag]
+        for target in nodes:
+            if source == target:
+                continue
+            target_values = np.asarray(trace[target], dtype=np.float64)
+            target_delta = target_values[lag:] - target_values[:-lag]
+            weight, confidence = _lagged_linear_effect(source_window, target_delta)
+            if abs(weight) >= min_abs_weight:
+                edges.append(
+                    CausalInfluenceEdge(
+                        source=source,
+                        target=target,
+                        weight=weight,
+                        confidence=confidence,
+                        lag=lag,
+                        evidence="lagged_trace",
+                    )
+                )
+
+    intervention_nodes: list[str] = []
+    for rollout in rollouts:
+        for action in rollout.actions:
+            source = f"do({action.knob}:{action.scope})"
+            intervention_nodes.append(source)
+            effect_scale = action.value if action.value != 0.0 else 1.0
+            weight = float(rollout.delta_R_mean / effect_scale)
+            if abs(weight) < min_abs_weight:
+                continue
+            magnitude = abs(rollout.delta_R_mean) + abs(rollout.delta_R_final)
+            confidence = min(1.0, magnitude / max(min_abs_weight, 1e-12))
+            edges.append(
+                CausalInfluenceEdge(
+                    source=source,
+                    target="R",
+                    weight=weight,
+                    confidence=confidence,
+                    lag=0,
+                    evidence="counterfactual_rollout",
+                )
+            )
+
+    all_nodes = tuple(dict.fromkeys((*nodes, *intervention_nodes, "R")))
+    edges.sort(key=lambda edge: (edge.source, edge.target, edge.evidence))
+    return CausalGraphEstimate(
+        nodes=all_nodes,
+        edges=tuple(edges),
+        lag=lag,
+        min_abs_weight=min_abs_weight,
+    )
+
+
 def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
     if scope == "global":
         matrix += float(value)
@@ -287,3 +403,42 @@ def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
 
 def _signed_phase_delta(a: float, b: float) -> float:
     return float((a - b + np.pi) % TWO_PI - np.pi)
+
+
+def _validate_causal_trace(
+    trace: dict[str, list[float]],
+    lag: int,
+    min_abs_weight: float,
+) -> None:
+    if isinstance(lag, bool) or int(lag) != lag or lag < 1:
+        raise ValueError("lag must be a positive integer")
+    if not np.isfinite(min_abs_weight) or min_abs_weight < 0.0:
+        raise ValueError("min_abs_weight must be finite and non-negative")
+    if len(trace) < 2:
+        raise ValueError("trace must contain at least two signals")
+    lengths = {len(values) for values in trace.values()}
+    if len(lengths) != 1:
+        raise ValueError("all trace signals must have equal length")
+    length = lengths.pop()
+    if length <= lag:
+        raise ValueError("trace length must be greater than lag")
+    for name, values in trace.items():
+        data = np.asarray(values, dtype=np.float64)
+        if not np.all(np.isfinite(data)):
+            raise ValueError(f"trace signal {name!r} contains NaN/Inf")
+
+
+def _lagged_linear_effect(
+    source: FloatArray,
+    target_delta: FloatArray,
+) -> tuple[float, float]:
+    source_centered = source - float(np.mean(source))
+    target_centered = target_delta - float(np.mean(target_delta))
+    source_var = float(np.dot(source_centered, source_centered))
+    target_var = float(np.dot(target_centered, target_centered))
+    if source_var == 0.0 or target_var == 0.0:
+        return 0.0, 0.0
+    covariance = float(np.dot(source_centered, target_centered))
+    weight = covariance / source_var
+    confidence = min(1.0, abs(covariance) / float(np.sqrt(source_var * target_var)))
+    return float(weight), float(confidence)
