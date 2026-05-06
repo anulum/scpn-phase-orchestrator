@@ -147,7 +147,7 @@ Speculative priority order after the first tranche:
 
 | Item | Required before claiming done |
 |------|-------------------------------|
-| Public benchmark suite | reproducible numbers against reference Strogatz/Pikovsky-style implementations, with commands and environment labels |
+| Public benchmark suite | reference-suite metadata and a dated JSON snapshot are in place; broader published comparison coverage remains open |
 | Windows Rust FFI stability | remove the experimental warning only after CI, installation, and parity evidence support it |
 | End-to-end hardware example | at least one real FPGA or neuromorphic output path with documented command, artefact, and verification result |
 

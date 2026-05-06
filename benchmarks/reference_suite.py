@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later | Commercial license available
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
@@ -8,8 +9,12 @@
 from __future__ import annotations
 
 import json
+import platform
+import sys
 import time
+from datetime import date
 from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 
@@ -26,6 +31,33 @@ from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 ROOT = Path(__file__).resolve().parent
 RESULTS_PATH = ROOT / "results" / "reference_suite.json"
+BENCHMARK_COMMAND = "PYTHONPATH=src python benchmarks/reference_suite.py"
+REFERENCE_SUITE_VERSION = "reference_suite_v1"
+
+
+BenchmarkValue = float | int | str
+BenchmarkRecord = dict[str, BenchmarkValue]
+
+
+class ReferenceSuiteResult(TypedDict):
+    metadata: dict[str, str]
+    benchmarks: dict[str, BenchmarkRecord]
+
+
+def build_benchmark_metadata(
+    *, snapshot_date: str | None = None
+) -> dict[str, str]:
+    return {
+        "suite_version": REFERENCE_SUITE_VERSION,
+        "snapshot_date": snapshot_date or date.today().isoformat(),
+        "command": BENCHMARK_COMMAND,
+        "backend": "python_numpy",
+        "python_version": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "numpy_version": np.__version__,
+        "platform": platform.platform(),
+        "executable": sys.executable,
+    }
 
 
 def benchmark_kuramoto_reference(
@@ -123,11 +155,16 @@ def benchmark_petri_reachability(n_steps: int = 5000) -> dict[str, float | int |
     }
 
 
-def run_reference_suite() -> dict[str, dict[str, float | int | str]]:
+def run_reference_suite(
+    *, snapshot_date: str | None = None
+) -> ReferenceSuiteResult:
     return {
-        "kuramoto": benchmark_kuramoto_reference(),
-        "stuart_landau": benchmark_stuart_landau_reference(),
-        "petri_reachability": benchmark_petri_reachability(),
+        "metadata": build_benchmark_metadata(snapshot_date=snapshot_date),
+        "benchmarks": {
+            "kuramoto": benchmark_kuramoto_reference(),
+            "stuart_landau": benchmark_stuart_landau_reference(),
+            "petri_reachability": benchmark_petri_reachability(),
+        },
     }
 
 

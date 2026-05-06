@@ -179,6 +179,11 @@
 ### Minor polish before v1.0
 
 - Public benchmark suite with reproducible numbers against reference Strogatz/Pikovsky-style implementations, including commands, environment labels, and snapshot dates.
+  - Benchmark metadata/snapshot slice is in place: `benchmarks/reference_suite.py`
+    emits command, backend, Python/NumPy versions, platform, executable, and
+    snapshot date with `benchmarks/results/reference_suite.json`.
+  - Remaining before claiming complete: expand published comparison coverage
+    beyond the current Kuramoto/Stuart-Landau/Petri reference suite as needed.
 - Windows Rust FFI fully stable; remove the experimental label only after installation, CI, and parity evidence support it.
 - One end-to-end hardware example with real FPGA or neuromorphic output, including command, generated artefact, and verification result.
 
