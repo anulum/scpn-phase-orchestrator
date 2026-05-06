@@ -6,15 +6,23 @@
 # SCPN Phase Orchestrator — Multi-stage Container Image
 
 # ── Stage 1: Build Rust FFI extension ────────────────────────────
-# Pin base images by digest for reproducible builds
-FROM rust:1.83-slim@sha256:89e45d1b4de96d61e457618ae4da44690eae5578fe2f11d26d1ed02ce5c8e412 AS rust-builder
+# Pin base images by digest for reproducible builds. Build the FFI wheel with
+# the same CPython minor as the runtime image so the extracted extension imports.
+FROM python:3.12-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS rust-builder
+
+ENV CARGO_HOME=/usr/local/cargo \
+    RUSTUP_HOME=/usr/local/rustup \
+    PATH=/usr/local/cargo/bin:$PATH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-dev python3-pip python3-venv && \
+    build-essential ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
+RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs | \
+    sh -s -- -y --profile minimal --default-toolchain 1.95.0
+
 COPY requirements/ci-tools.txt /tmp/ci-tools.txt
-RUN pip3 install --break-system-packages --no-cache-dir \
+RUN python -m pip install --no-cache-dir \
     --require-hashes --no-deps -r /tmp/ci-tools.txt
 
 WORKDIR /build
@@ -24,7 +32,7 @@ RUN cd spo-kernel && \
     maturin build --release -m crates/spo-ffi/Cargo.toml --out /wheels
 
 # ── Stage 2: Build Python package ────────────────────────────────
-FROM python:3.12-slim@sha256:2be8daddbd3438e0e0c82ddd4a37e0e7ff3c1e0a0e7e0e4ed4e3be0ba26d3e21 AS python-builder
+FROM python:3.12-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS python-builder
 
 WORKDIR /build
 
@@ -36,7 +44,7 @@ RUN python -m pip install --no-cache-dir --prefix=/install \
     python -c "import glob, pathlib, sysconfig, zipfile; target = pathlib.Path(sysconfig.get_paths(vars={'base': '/install', 'platbase': '/install'})['platlib']); target.mkdir(parents=True, exist_ok=True); wheels = glob.glob('/wheels/*.whl'); assert len(wheels) == 1, wheels; zipfile.ZipFile(wheels[0]).extractall(target)"
 
 # ── Stage 3: Production image ────────────────────────────────────
-FROM python:3.12-slim@sha256:2be8daddbd3438e0e0c82ddd4a37e0e7ff3c1e0a0e7e0e4ed4e3be0ba26d3e21 AS production
+FROM python:3.12-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS production
 
 LABEL maintainer="Miroslav Sotek <protoscience@anulum.li>"
 LABEL org.opencontainers.image.source="https://github.com/anulum/scpn-phase-orchestrator"

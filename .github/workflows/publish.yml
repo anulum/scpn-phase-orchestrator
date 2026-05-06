@@ -67,14 +67,19 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64
+            python_interpreter: /opt/python/cp312-cp312/bin/python
           - os: ubuntu-latest
             target: aarch64
+            python_interpreter: /opt/python/cp312-cp312/bin/python
           - os: macos-latest
             target: x86_64
+            python_interpreter: python
           - os: macos-latest
             target: aarch64
+            python_interpreter: python
           - os: windows-latest
             target: x86_64
+            python_interpreter: python
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -87,7 +92,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: auto
-          args: --release -m spo-kernel/crates/spo-ffi/Cargo.toml --out dist
+          args: --release -m spo-kernel/crates/spo-ffi/Cargo.toml --out dist -i ${{ matrix.python_interpreter }}
       - name: Upload wheel
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
