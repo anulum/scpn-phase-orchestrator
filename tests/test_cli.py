@@ -145,6 +145,11 @@ def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_p
     assert header["binding_summary"]["name"] == "cli-test"
     assert header["binding_summary"]["engine_mode"] == "kuramoto"
     assert "P" in header["binding_config"]["channels"]
+    assert "channel_algebra" in header["binding_config"]
+    assert header["binding_config"]["channel_algebra"]["runtime_evidence_channels"] == [
+        "P"
+    ]
+    assert header["binding_summary"]["channel_algebra"]["required_channels"] == []
 
 
 def test_run_invalid_spec(runner, invalid_spec_path):

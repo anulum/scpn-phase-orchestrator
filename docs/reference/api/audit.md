@@ -37,6 +37,12 @@ The first record uses `prev_hash = "0" * 64`. To verify the chain,
 recompute each hash and check it matches the stored value and the
 next record's `prev_hash`.
 
+The `spo run --audit` header includes the resolved binding summary under
+`binding_config` and `binding_summary`. For N-channel domainpacks this summary
+includes `channel_algebra`, covering required and optional channels, derived
+channels, runtime evidence channels, group membership, coupling participants,
+and missing required channel evidence.
+
 Design follows NIST SP 800-92 (Guide to Computer Security Log Management)
 adapted for real-time control systems.
 
