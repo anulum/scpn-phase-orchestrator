@@ -363,8 +363,13 @@ no-action counterfactual under the same UPDE dynamics.
 
 `CounterfactualRollout.attribute()` compresses the final and mean `R` deltas
 into an audit-ready effect label: `stabilising`, `neutral`, or `destabilising`.
-Domainpack demo: `domainpacks/cardiac_rhythm/causal_attribution_demo.py`
-evaluates a pacing-drive candidate against a ventricular-disturbance baseline.
+
+Domainpack demos:
+
+- `domainpacks/cardiac_rhythm/causal_attribution_demo.py` evaluates a
+  pacing-drive candidate against a ventricular-disturbance baseline.
+- `domainpacks/power_grid/causal_attribution_demo.py` evaluates a governor
+  droop coupling candidate against a no-action load-step baseline.
 
 **Backend and cost:** each evaluation performs two UPDE rollouts over the
 configured horizon, so work scales with `2 * horizon` engine steps. It uses

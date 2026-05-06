@@ -222,8 +222,11 @@ Near-term candidate tracks:
     `domainpacks/cardiac_rhythm/causal_attribution_demo.py` compares a
     pacing-drive candidate against a no-action ventricular-disturbance
     baseline and emits trajectory plus attribution audit records.
-  - Remaining scope: deeper causal-model learning and broader domainpack
-    attribution demonstrations.
+  - Power-grid attribution demo is in place:
+    `domainpacks/power_grid/causal_attribution_demo.py` compares a governor
+    droop coupling candidate against a no-action load-step baseline.
+  - Remaining scope: deeper causal-model learning and additional attribution
+    demonstrations for other domain families.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.
   - Foundation is in place: predictive FEP supervisor support exists.
   - Power-grid hierarchy proof is in place:

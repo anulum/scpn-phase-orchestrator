@@ -64,3 +64,19 @@ PYTHONPATH=src python domainpacks/power_grid/fep_hierarchy_demo.py
 The emitted JSON is audit-ready: each child record includes free energy,
 surprise, observed/predicted `R`, and bounded `zeta` / `Psi` proposals, while
 the parent record documents the aggregate N-channel hierarchy response.
+
+## Causal Attribution Demo
+
+`causal_attribution_demo.py` compares a no-action load-step rollout against a
+bounded governor-droop coupling candidate. The output includes both
+counterfactual trajectories and a compact causal attribution record.
+
+Run it with:
+
+```bash
+PYTHONPATH=src python domainpacks/power_grid/causal_attribution_demo.py
+```
+
+The demo is intentionally replay-only: it proves that a proposed `K` actuation
+can be audited against an unchanged baseline before any live grid adapter is
+allowed to apply it.
