@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TypeAlias
 
@@ -21,8 +22,11 @@ __all__ = [
     "ValueAlignmentDecision",
     "ValueAlignmentGuard",
     "ValueAlignmentPolicy",
+    "ValueScoreCounterfactual",
     "ValueConstraint",
     "ValueViolation",
+    "value_alignment_policy_from_binding_spec",
+    "value_alignment_policy_from_template",
 ]
 
 ActionTuple: TypeAlias = tuple[ControlAction, ...]
@@ -105,6 +109,23 @@ class ValueViolation:
 
 
 @dataclass(frozen=True)
+class ValueScoreCounterfactual:
+    """Counterfactual record explaining a score-threshold fallback."""
+
+    observed_score: float
+    required_score: float
+    counterfactual: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a serialisable score-threshold counterfactual."""
+        return {
+            "observed_score": self.observed_score,
+            "required_score": self.required_score,
+            "counterfactual": self.counterfactual,
+        }
+
+
+@dataclass(frozen=True)
 class ValueAlignmentPolicy:
     """Configured objective constraints and fallback actuation."""
 
@@ -127,6 +148,7 @@ class ValueAlignmentDecision:
     blocked_actions: ActionTuple
     fallback_actions: ActionTuple
     violations: tuple[ValueViolation, ...]
+    score_counterfactuals: tuple[ValueScoreCounterfactual, ...]
     alignment_score: float
     minimum_score: float
 
@@ -153,6 +175,10 @@ class ValueAlignmentDecision:
             "fallback_count": len(self.fallback_actions),
             "violations": [
                 violation.to_audit_record() for violation in self.violations
+            ],
+            "score_counterfactuals": [
+                counterfactual.to_audit_record()
+                for counterfactual in self.score_counterfactuals
             ],
             "actions_to_apply": [
                 _action_record(action) for action in self.actions_to_apply
@@ -192,6 +218,11 @@ class ValueAlignmentGuard:
             blocked_actions=tuple(blocked),
             fallback_actions=self.policy.fallback_actions,
             violations=tuple(violations),
+            score_counterfactuals=_score_counterfactuals(
+                alignment_score,
+                self.policy.minimum_score,
+                violations,
+            ),
             alignment_score=alignment_score,
             minimum_score=self.policy.minimum_score,
         )
@@ -233,6 +264,132 @@ class ValueAlignmentGuard:
         if total_weight <= 0.0:
             return 1.0
         return float(np.clip(sum(weighted_scores) / total_weight, 0.0, 1.0))
+
+
+def value_alignment_policy_from_binding_spec(
+    spec: object,
+) -> ValueAlignmentPolicy | None:
+    """Build a policy from ``BindingSpec.value_alignment`` when present."""
+
+    template = getattr(spec, "value_alignment", None)
+    if not template:
+        return None
+    if not isinstance(template, Mapping):
+        raise ValueError("binding spec value_alignment must be a mapping")
+    return value_alignment_policy_from_template(template)
+
+
+def value_alignment_policy_from_template(
+    template: Mapping[str, object],
+) -> ValueAlignmentPolicy:
+    """Build a value-alignment policy from a binding-spec template mapping.
+
+    Expected shape::
+
+        value_alignment:
+          minimum_score: 0.8
+          constraints:
+            - name: limit-coupling
+              knob: K
+              max_abs_value: 0.1
+          fallback_actions:
+            - knob: zeta
+              scope: global
+              value: 0.0
+              ttl_s: 1.0
+              justification: safe hold
+    """
+
+    constraints = tuple(
+        _constraint_from_template(item, index)
+        for index, item in enumerate(_template_list(template, "constraints"))
+    )
+    fallback_actions = tuple(
+        _action_from_template(item, index)
+        for index, item in enumerate(_template_list(template, "fallback_actions"))
+    )
+    minimum_score = _template_float(template.get("minimum_score", 0.0))
+    return ValueAlignmentPolicy(
+        constraints=constraints,
+        fallback_actions=fallback_actions,
+        minimum_score=minimum_score,
+    )
+
+
+def _score_counterfactuals(
+    alignment_score: float,
+    minimum_score: float,
+    violations: list[ValueViolation],
+) -> tuple[ValueScoreCounterfactual, ...]:
+    if violations or alignment_score >= minimum_score:
+        return ()
+    return (
+        ValueScoreCounterfactual(
+            observed_score=alignment_score,
+            required_score=minimum_score,
+            counterfactual=(
+                "fallback_applied_because_alignment_score_below_policy_minimum"
+            ),
+        ),
+    )
+
+
+def _constraint_from_template(item: object, index: int) -> ValueConstraint:
+    data = _template_mapping(item, f"constraints[{index}]")
+    return ValueConstraint(
+        name=_template_string(data.get("name"), f"constraints[{index}].name"),
+        knob=_template_string(data.get("knob", "*"), f"constraints[{index}].knob"),
+        scope=_template_string(data.get("scope", "*"), f"constraints[{index}].scope"),
+        min_value=_optional_template_float(data.get("min_value")),
+        max_value=_optional_template_float(data.get("max_value")),
+        max_abs_value=_optional_template_float(data.get("max_abs_value")),
+        weight=_template_float(data.get("weight", 1.0)),
+    )
+
+
+def _action_from_template(item: object, index: int) -> ControlAction:
+    data = _template_mapping(item, f"fallback_actions[{index}]")
+    return ControlAction(
+        knob=_template_string(data.get("knob"), f"fallback_actions[{index}].knob"),
+        scope=_template_string(data.get("scope"), f"fallback_actions[{index}].scope"),
+        value=_template_float(data.get("value")),
+        ttl_s=_template_float(data.get("ttl_s")),
+        justification=_template_string(
+            data.get("justification"),
+            f"fallback_actions[{index}].justification",
+        ),
+    )
+
+
+def _template_list(template: Mapping[str, object], key: str) -> list[object]:
+    value = template.get(key, [])
+    if not isinstance(value, list):
+        raise ValueError(f"value_alignment.{key} must be a list")
+    return value
+
+
+def _template_mapping(value: object, context: str) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"value_alignment.{context} must be a mapping")
+    return value
+
+
+def _template_string(value: object, context: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"value_alignment.{context} must be a non-empty string")
+    return value
+
+
+def _template_float(value: object) -> float:
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise ValueError("value_alignment numeric fields must be numbers")
+    return float(value)
+
+
+def _optional_template_float(value: object) -> float | None:
+    if value is None:
+        return None
+    return _template_float(value)
 
 
 def _constraint_margin(action: ControlAction, constraint: ValueConstraint) -> float:

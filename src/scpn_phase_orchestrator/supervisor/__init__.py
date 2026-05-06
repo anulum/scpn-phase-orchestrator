@@ -14,7 +14,10 @@ from scpn_phase_orchestrator.supervisor.alignment import (
     ValueAlignmentGuard,
     ValueAlignmentPolicy,
     ValueConstraint,
+    ValueScoreCounterfactual,
     ValueViolation,
+    value_alignment_policy_from_binding_spec,
+    value_alignment_policy_from_template,
 )
 from scpn_phase_orchestrator.supervisor.causal import (
     CausalGraphEstimate,
@@ -145,6 +148,7 @@ __all__ = [
     "ValueAlignmentDecision",
     "ValueAlignmentGuard",
     "ValueAlignmentPolicy",
+    "ValueScoreCounterfactual",
     "ValueConstraint",
     "ValueViolation",
     "assess_fep_hierarchy",
@@ -162,4 +166,6 @@ __all__ = [
     "sheaf_laplacian",
     "synthesise_policy_stl_automata",
     "synthesize_policy_stl_automata",
+    "value_alignment_policy_from_binding_spec",
+    "value_alignment_policy_from_template",
 ]

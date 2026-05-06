@@ -18,6 +18,8 @@ from scpn_phase_orchestrator.supervisor import (
     ValueAlignmentGuard,
     ValueAlignmentPolicy,
     ValueConstraint,
+    value_alignment_policy_from_binding_spec,
+    value_alignment_policy_from_template,
 )
 
 
@@ -137,6 +139,9 @@ class TestValueAlignmentBehaviour:
         assert not decision.satisfied
         assert not decision.violations
         assert decision.actions_to_apply == (fallback,)
+        assert decision.score_counterfactuals[0].counterfactual == (
+            "fallback_applied_because_alignment_score_below_policy_minimum"
+        )
 
     def test_audit_record_contains_counterfactual_violation(self) -> None:
         guard = ValueAlignmentGuard(
@@ -152,4 +157,64 @@ class TestValueAlignmentBehaviour:
         assert record["violations"][0]["counterfactual"] == (
             "blocked_action_prevents_constraint_violation"
         )
+        assert record["score_counterfactuals"] == []
         assert record["actions_to_apply"] == []
+
+    def test_template_loader_builds_policy_with_fallback_actions(self) -> None:
+        template = {
+            "minimum_score": 0.8,
+            "constraints": [
+                {
+                    "name": "limit-coupling",
+                    "knob": "K",
+                    "scope": "global",
+                    "max_abs_value": 0.1,
+                    "weight": 2.0,
+                }
+            ],
+            "fallback_actions": [
+                {
+                    "knob": "zeta",
+                    "scope": "global",
+                    "value": 0.0,
+                    "ttl_s": 1.0,
+                    "justification": "value guard safe hold",
+                }
+            ],
+        }
+
+        policy = value_alignment_policy_from_template(template)
+        decision = ValueAlignmentGuard(policy).evaluate([_action(value=0.2)])
+
+        assert policy.minimum_score == pytest.approx(0.8)
+        assert policy.constraints[0].name == "limit-coupling"
+        assert not decision.satisfied
+        assert decision.actions_to_apply[0].justification == "value guard safe hold"
+
+    def test_binding_spec_template_loader_returns_none_when_absent(self) -> None:
+        class Spec:
+            value_alignment: dict[str, object] = {}
+
+        assert value_alignment_policy_from_binding_spec(Spec()) is None
+
+    def test_binding_spec_template_loader_uses_value_alignment_mapping(self) -> None:
+        class Spec:
+            value_alignment = {
+                "constraints": [
+                    {"name": "limit-alpha", "knob": "alpha", "max_value": 0.2}
+                ]
+            }
+
+        policy = value_alignment_policy_from_binding_spec(Spec())
+
+        assert policy is not None
+        assert policy.constraints[0].knob == "alpha"
+
+    def test_template_loader_rejects_malformed_entries(self) -> None:
+        with pytest.raises(ValueError, match="constraints"):
+            value_alignment_policy_from_template({"constraints": ["not-a-map"]})
+
+        with pytest.raises(ValueError, match="numeric"):
+            value_alignment_policy_from_template(
+                {"minimum_score": "high", "constraints": []}
+            )

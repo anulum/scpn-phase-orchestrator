@@ -96,5 +96,42 @@ def test_valid_minimal_spec_loads(tmp_path):
     assert len(spec.layers) == 1
 
 
+def test_value_alignment_template_is_preserved_for_supervisor_guard(tmp_path):
+    import yaml
+
+    data = {
+        "name": "minimal",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.1,
+        "layers": [{"name": "L0", "index": 0}],
+        "oscillator_families": {"p": {"channel": "P", "extractor_type": "hilbert"}},
+        "coupling": {"base_strength": 0.5, "decay_alpha": 0.3},
+        "drivers": {},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "value_alignment": {
+            "minimum_score": 0.75,
+            "constraints": [{"name": "limit-K", "knob": "K", "max_abs_value": 0.1}],
+            "fallback_actions": [
+                {
+                    "knob": "zeta",
+                    "scope": "global",
+                    "value": 0.0,
+                    "ttl_s": 1.0,
+                    "justification": "value guard safe hold",
+                }
+            ],
+        },
+    }
+    p = tmp_path / "value_alignment.yaml"
+    p.write_text(yaml.dump(data), encoding="utf-8")
+
+    spec = load_binding_spec(p)
+
+    assert spec.value_alignment["minimum_score"] == 0.75
+    assert spec.value_alignment["constraints"][0]["name"] == "limit-K"
+
+
 # Pipeline wiring: loader errors are the first pipeline gate — if loading
 # fails, the entire simulation cannot start. Error tests prove robustness.

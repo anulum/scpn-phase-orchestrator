@@ -305,7 +305,13 @@ Speculative research watchlist:
 - Byzantine-fault-tolerant meta-orchestrator fabric over signed policy/topology proposals and hash-linked audit evidence.
 - Hybrid neuromorphic-quantum co-compiler with shared N-channel audit semantics.
 - Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
-  - Foundation is in place: value-alignment guard support exists; remaining scope is binding-spec objective templates and counterfactual violation reporting.
+  - Foundation is in place: value-alignment guard support exists.
+  - Binding-spec templates are in place: `value_alignment` maps can be loaded
+    from domainpack binding specs and converted with
+    `value_alignment_policy_from_binding_spec()`.
+  - Counterfactual reporting is in place: audit records distinguish hard bound
+    violations from score-threshold fallbacks.
+  - Remaining scope: domainpack-specific ethical prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
 - Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.

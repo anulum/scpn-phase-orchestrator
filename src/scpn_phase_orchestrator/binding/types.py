@@ -292,6 +292,7 @@ class BindingSpec:
     cross_channel_couplings: list[CrossChannelCouplingSpec] = field(
         default_factory=list
     )
+    value_alignment: dict = field(default_factory=dict)
 
     def get_omegas(self) -> list[float]:
         """Collect natural frequencies from all layers.

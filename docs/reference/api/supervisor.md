@@ -261,12 +261,38 @@ loaded at runtime. Domainpacks can translate their safety or objective priors
 into `ValueConstraint` entries and attach the resulting decision record to the
 normal audit trace.
 
+Binding specs may carry the same policy as a reviewable `value_alignment`
+template:
+
+```yaml
+value_alignment:
+  minimum_score: 0.8
+  constraints:
+    - name: limit-coupling
+      knob: K
+      scope: global
+      max_abs_value: 0.1
+      weight: 2.0
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: value guard safe hold
+```
+
+Use `value_alignment_policy_from_binding_spec(spec)` to convert that template
+into a `ValueAlignmentPolicy`. Audit records include hard bound violations and
+score-threshold counterfactuals so reviewers can distinguish a blocked unsafe
+action from a fallback forced by the policy's minimum alignment score.
+
 ```python
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor import (
     ValueAlignmentGuard,
     ValueAlignmentPolicy,
     ValueConstraint,
+    value_alignment_policy_from_binding_spec,
 )
 
 policy = ValueAlignmentPolicy(
@@ -278,6 +304,8 @@ policy = ValueAlignmentPolicy(
 decision = ValueAlignmentGuard(policy).evaluate(proposed_actions)
 actions_to_apply = decision.actions_to_apply
 audit_payload = decision.to_audit_record()
+
+templated_policy = value_alignment_policy_from_binding_spec(binding_spec)
 ```
 
 ::: scpn_phase_orchestrator.supervisor.alignment

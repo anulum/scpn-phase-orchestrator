@@ -546,4 +546,7 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         channels=channels,
         channel_groups=channel_groups,
         cross_channel_couplings=cross_channel_couplings,
+        value_alignment=_optional_mapping(
+            data.get("value_alignment"), "value_alignment"
+        ),
     )
