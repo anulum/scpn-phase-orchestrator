@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.9] - 2026-05-06
+
+### Fixed
+
+- Forced Linux manylinux Rust wheel builds to use the explicit CPython 3.12
+  interpreter path provided by the PyPA manylinux images, avoiding maturin's
+  ambiguous default `python3` discovery path.
+- Refreshed stale pinned Docker base-image digests for the release container
+  build after the previous Rust image digest stopped resolving from Docker Hub,
+  then aligned the FFI builder with the runtime CPython 3.12 image while
+  installing the stable Rust 1.95 toolchain inside that builder.
+
+### Added
+
+- Added release-workflow regression tests for Linux maturin interpreter
+  selection and container base-image digest pins.
+
 ## [0.5.8] - 2026-05-06
 
 ### Fixed
@@ -1450,7 +1467,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.8...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.9...HEAD
+[0.5.9]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...v0.5.8
 [0.5.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.0...v0.4.1
