@@ -7,14 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.7] - 2026-05-06
+## [0.5.8] - 2026-05-06
 
 ### Fixed
 - Aligned PyPI publish preflight test scope with the protected CI Python matrix
   so tag-triggered releases do not run the CPU-JAX physics-validation suite that
   is intentionally excluded from the standard CI path.
+- Replaced invalid pinned publish-workflow action refs for `PyO3/maturin-action`,
+  `pypa/gh-action-pypi-publish`, and `aquasecurity/trivy-action` with
+  resolvable commit pins.
+- Added `tools/check_github_action_refs.py` and tests so release preflight fails
+  before artifact fan-out when a pinned GitHub Action ref cannot be resolved.
+- Moved release metadata from the setup-failed `v0.5.7` publish attempt to
+  `0.5.8`; the `v0.5.7` run passed preflight and built pure-Python artifacts,
+  but failed before PyPI upload because multiple pinned action refs were invalid.
 - Moved release metadata from the timed-out `v0.5.6` publish attempt to
-  `0.5.7`; the `v0.5.6` run timed out before artifact build or PyPI publish.
+  `0.5.8`; the `v0.5.6` run timed out before artifact build or PyPI publish.
 - Added a bounded, verbose PyPI publish preflight test step so release runs
   fail with actionable diagnostics instead of hanging indefinitely during
   full-suite pytest execution.
@@ -1442,8 +1450,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.7...HEAD
-[0.5.7]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...v0.5.7
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.8...HEAD
+[0.5.8]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...v0.5.8
 [0.5.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.3.0...v0.4.0

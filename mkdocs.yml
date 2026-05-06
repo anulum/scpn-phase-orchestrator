@@ -86,6 +86,7 @@ nav:
       - "Notebook → Production": guide/notebook_to_production.md
       - Interactive Tools: guide/interactive_tools.md
       - Testing: guide/testing.md
+      - Release Hygiene: RELEASE_HYGIENE.md
       - Contributor Onboarding: guide/contributor_onboarding.md
       - Video Scripts: video_scripts.md
   - Specifications:

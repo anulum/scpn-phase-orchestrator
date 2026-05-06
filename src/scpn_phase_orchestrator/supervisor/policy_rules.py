@@ -362,7 +362,7 @@ def load_policy_stl_specs(path: str | Path) -> list[PolicySTLSpec]:
         raise ValueError(f"cannot read policy rules: {reason}") from None
     try:
         data = yaml.safe_load(raw)
-    except (RecursionError, yaml.YAMLError):
+    except (RecursionError, OverflowError, UnicodeError, ValueError, yaml.YAMLError):
         raise ValueError("policy rules YAML parse error") from None
     if not isinstance(data, dict) or "stl_monitors" not in data:
         return []
@@ -403,7 +403,7 @@ def load_policy_rules(path: str | Path) -> list[PolicyRule]:
         raise ValueError(f"cannot read policy rules: {reason}") from None
     try:
         data = yaml.safe_load(raw)
-    except (RecursionError, yaml.YAMLError):
+    except (RecursionError, OverflowError, UnicodeError, ValueError, yaml.YAMLError):
         raise ValueError("policy rules YAML parse error") from None
     if not isinstance(data, dict) or "rules" not in data:
         return []

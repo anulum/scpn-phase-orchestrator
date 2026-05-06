@@ -33,6 +33,9 @@ jobs:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: python tools/check_github_action_refs.py .github/workflows/publish.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: ruff check src/ tests/
       - name: Run release preflight tests
         timeout-minutes: 25
@@ -80,7 +83,7 @@ jobs:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - name: Build wheel via maturin
-        uses: PyO3/maturin-action@aef21716426562a9d8f5d75e57a8cee3f3329592 # v1
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           target: ${{ matrix.target }}
           manylinux: auto
@@ -141,7 +144,7 @@ jobs:
         with:
           name: wheel-fallback
           path: dist/
-      - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b54a752f3a06f5a68aee2013 # release/v1
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
 
   build-container:
     name: Build, scan, and push container image
@@ -178,7 +181,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947e0f18c8ea7e3fd4d # v0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }}
           format: table
