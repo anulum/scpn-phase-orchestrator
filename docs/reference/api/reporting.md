@@ -70,6 +70,10 @@ the top level of the JSON report so downstream tools can read channel groups,
 derived channels, runtime evidence, and missing required channel evidence
 without re-parsing the binding spec.
 
+The text report also prints a compact channel-algebra line when the audit
+header contains one, including required/optional/derived counts and any missing
+required channel evidence.
+
 ## Usage
 
 ```python

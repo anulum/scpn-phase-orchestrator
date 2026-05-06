@@ -208,6 +208,24 @@ def test_report_json_exposes_binding_channel_algebra(
     assert data["channel_algebra"]["required_channels"] == []
 
 
+def test_report_text_exposes_binding_channel_algebra(
+    runner,
+    valid_spec_path,
+    tmp_path,
+):
+    audit_path = tmp_path / "audit.jsonl"
+    run_result = runner.invoke(
+        main,
+        ["run", valid_spec_path, "--steps", "2", "--audit", str(audit_path)],
+    )
+    assert run_result.exit_code == 0
+
+    result = runner.invoke(main, ["report", str(audit_path)])
+
+    assert result.exit_code == 0
+    assert "Channel algebra: required=0 optional=0 derived=0" in result.output
+
+
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(main, ["scaffold", "test_domain"])

@@ -238,6 +238,12 @@ def _policy_report_dict(report: PolicyDryRunReport) -> dict[str, object]:
     }
 
 
+def _string_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
+
+
 @main.command("policy-dry-run")
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.argument("audit_log", type=click.Path(exists=True))
@@ -817,6 +823,20 @@ def report(log_path: str, json_out: bool) -> None:
             f"  L{i}: R_mean={summary['layer_r_mean'][i]:.4f}  "
             f"R_final={summary['layer_r_final'][i]:.4f}"
         )
+    channel_algebra = summary.get("channel_algebra")
+    if isinstance(channel_algebra, dict):
+        required = _string_list(channel_algebra.get("required_channels"))
+        optional = _string_list(channel_algebra.get("optional_channels"))
+        derived = _string_list(channel_algebra.get("derived_channels"))
+        missing = _string_list(channel_algebra.get("missing_required_channels"))
+        click.echo()
+        click.echo(
+            "Channel algebra: "
+            f"required={len(required)} optional={len(optional)} "
+            f"derived={len(derived)}"
+        )
+        if missing:
+            click.echo(f"  Missing required channels: {', '.join(missing)}")
     click.echo()
     click.echo("Regime distribution:")
     for regime, count in sorted(regime_counts.items()):
