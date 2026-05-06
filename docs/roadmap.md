@@ -82,8 +82,8 @@ These items are acknowledged but not the current documentation slice:
 | Typed NumPy signature sweep | tracked as maintenance; STL fallback robustness and strange-loop supervisor helper arrays are parameterised; continue scoped module-by-module sweeps |
 | Visual and batch-heavy features | deferred unless a user-facing workflow needs them immediately |
 | Broad benchmark-file expansion | useful, but benchmark numbers must be measured and reproducible before publication |
-| Thin-test strengthening | quality backlog item; prefer focused property or parity tests tied to changed code |
-| Superficial assertion audit | initial audit is recorded in `docs/internal/superficial_assertion_audit.md`; remediate flagged candidates by replacing shape/type/existence-only assertions with behavioural, invariant, error-semantic, parity, or pipeline-effect checks |
+| Thin-test strengthening | long-running maintenance backlog; do opportunistically when touching a module, but do not let broad test-hardening displace active feature/module roadmap work |
+| Superficial assertion audit | initial audit is recorded in `docs/internal/superficial_assertion_audit.md`; remediate flagged candidates incrementally as modules are changed by replacing shape/type/existence-only assertions with behavioural, invariant, error-semantic, parity, or pipeline-effect checks |
 | Auxiliary backend review | keep non-primary backends experimental unless measured value justifies maintenance cost |
 
 ## Research And Experimental Track
