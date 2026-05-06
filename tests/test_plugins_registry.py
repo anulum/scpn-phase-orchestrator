@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, get_type_hints
+from typing import Any, cast, get_type_hints
 
 import pytest
 
@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginCompatibilityReport,
     PluginManifest,
+    build_plugin_marketplace_catalog,
     compatibility_report,
     discover_plugin_manifests,
     validate_plugin_manifest,
@@ -145,6 +146,73 @@ class TestPluginCompatibility:
 
         assert not report.compatible
         assert "duplicate capability" in report.reasons[0]
+
+
+class TestPluginMarketplaceCatalog:
+    def test_catalog_contract_is_typed(self) -> None:
+        hints = get_type_hints(build_plugin_marketplace_catalog)
+
+        assert "PluginManifest" in str(hints["manifests"])
+        assert hints["include_incompatible"] is bool
+        assert "dict" in str(hints["return"])
+
+    def test_catalog_packages_compatible_manifests_deterministically(self) -> None:
+        actuator = PluginManifest(
+            name="actuator_pack",
+            version="0.2.0",
+            package="actuator_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="actuator",
+                    name="valve",
+                    target="actuator_pack.actuators:ValveMapper",
+                    knobs=("K",),
+                ),
+            ),
+        )
+        catalog = build_plugin_marketplace_catalog((_manifest(), actuator))
+
+        assert catalog["schema_version"] == "1.0.0"
+        assert catalog["plugin_count"] == 2
+        assert catalog["compatible_count"] == 2
+        assert catalog["incompatible_count"] == 0
+        assert catalog["capability_counts"] == {
+            "actuator": 2,
+            "bridge": 0,
+            "domainpack": 0,
+            "extractor": 1,
+        }
+        plugin_records = cast("list[dict[str, Any]]", catalog["plugins"])
+        assert plugin_records[0]["manifest"]["name"] == "actuator_pack"
+        assert plugin_records[1]["manifest"]["name"] == "grid_pack"
+
+    def test_catalog_can_include_incompatible_reports(self) -> None:
+        invalid = PluginManifest(
+            name="bad_extractor",
+            version="0.1.0",
+            package="bad_extractor",
+            capabilities=(
+                PluginCapability(
+                    kind="extractor",
+                    name="empty",
+                    target="bad.extractors:Empty",
+                ),
+            ),
+        )
+
+        default_catalog = build_plugin_marketplace_catalog((_manifest(), invalid))
+        full_catalog = build_plugin_marketplace_catalog(
+            (_manifest(), invalid),
+            include_incompatible=True,
+        )
+
+        assert default_catalog["plugin_count"] == 1
+        assert default_catalog["compatible_count"] == 1
+        assert default_catalog["incompatible_count"] == 1
+        assert full_catalog["plugin_count"] == 2
+        plugin_records = cast("list[dict[str, Any]]", full_catalog["plugins"])
+        assert plugin_records[0]["compatible"] is False
+        assert "must declare channels" in plugin_records[0]["reasons"][0]
 
 
 class TestPluginDiscovery:

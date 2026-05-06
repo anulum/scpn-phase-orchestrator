@@ -167,7 +167,8 @@
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
 - Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
-  - Plugin manifest registry foundation is in place; marketplace packaging, examples, and Rust-side integration remain open.
+  - Plugin manifest registry foundation is in place; examples and Rust-side integration remain open.
+  - Marketplace catalogue packaging is in place: `build_plugin_marketplace_catalog()` emits deterministic metadata-only catalogue payloads with compatibility records and capability counts.
 
 ### Minor polish before v1.0
 

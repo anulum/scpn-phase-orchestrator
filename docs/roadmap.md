@@ -71,7 +71,7 @@ control engineers who do not already live in phase dynamics.
 | STL runtime verification | robustness monitor foundation is implemented; policy DSL integration and model-checker export linkage remain open |
 | Symbolic-to-binding compiler | compiler foundation is implemented; retrieval depth, confidence scoring, and generated notebook polish remain open |
 | Cross-domain meta-transfer | replay-backed proposal foundation is implemented; larger audit-history training and optional packaging remain open |
-| Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, and audit records; marketplace packaging remains open |
+| Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, audit records, and marketplace catalogue packaging; examples remain open |
 
 ## Deferred Maintenance Track
 

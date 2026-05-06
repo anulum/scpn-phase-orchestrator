@@ -39,4 +39,19 @@ manifest = PluginManifest(
 validate_plugin_manifest(manifest)
 ```
 
+Marketplace and CI tooling can package discovered manifests into a
+deterministic metadata catalogue without importing plugin implementation
+targets:
+
+```python
+from scpn_phase_orchestrator.plugins import build_plugin_marketplace_catalog
+
+catalogue = build_plugin_marketplace_catalog((manifest,))
+```
+
+The catalogue includes the package manifest, compatibility result, reason list,
+SPO version, schema version, and capability counts. By default incompatible
+manifests are counted but omitted from the published `plugins` list; pass
+`include_incompatible=True` when a review job needs the full rejection report.
+
 ::: scpn_phase_orchestrator.plugins.registry

@@ -20,6 +20,7 @@ __all__ = [
     "PluginCapability",
     "PluginCompatibilityReport",
     "PluginManifest",
+    "build_plugin_marketplace_catalog",
     "compatibility_report",
     "discover_plugin_manifests",
     "validate_plugin_manifest",
@@ -191,6 +192,39 @@ def discover_plugin_manifests(
     return tuple(manifests)
 
 
+def build_plugin_marketplace_catalog(
+    manifests: tuple[PluginManifest, ...],
+    *,
+    include_incompatible: bool = False,
+) -> dict[str, object]:
+    """Build a deterministic catalogue payload for marketplace tooling.
+
+    The catalogue is metadata-only: it uses manifest declarations and
+    compatibility reports, and it never imports plugin implementation targets.
+    """
+    reports = tuple(compatibility_report(manifest) for manifest in manifests)
+    selected = (
+        reports
+        if include_incompatible
+        else tuple(report for report in reports if report.compatible)
+    )
+    sorted_reports = tuple(
+        sorted(
+            selected,
+            key=lambda report: (report.manifest.name, report.manifest.version),
+        )
+    )
+    return {
+        "schema_version": "1.0.0",
+        "spo_version": __version__,
+        "plugins": [report.to_audit_record() for report in sorted_reports],
+        "plugin_count": len(sorted_reports),
+        "compatible_count": sum(1 for report in reports if report.compatible),
+        "incompatible_count": sum(1 for report in reports if not report.compatible),
+        "capability_counts": _capability_counts(sorted_reports),
+    }
+
+
 def _require_identifier(value: str, label: str) -> None:
     _require_non_empty(value, label)
     if any(char.isspace() for char in value):
@@ -214,3 +248,13 @@ def _version_tuple(value: str) -> tuple[int, int, int]:
     if len(parts) < 3 or any(not part.isdigit() for part in parts[:3]):
         return (0, 0, 0)
     return (int(parts[0]), int(parts[1]), int(parts[2]))
+
+
+def _capability_counts(
+    reports: tuple[PluginCompatibilityReport, ...],
+) -> dict[str, int]:
+    counts = dict.fromkeys(sorted(_VALID_KINDS), 0)
+    for report in reports:
+        for capability in report.manifest.capabilities:
+            counts[capability.kind] += 1
+    return counts
