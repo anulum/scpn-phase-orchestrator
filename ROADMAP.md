@@ -211,8 +211,11 @@ Near-term candidate tracks:
     `domainpacks/plasma_control/topology_adaptation_demo.py` emits guarded
     topology audit payloads and `TopologyMutationPolicy` can require existing
     pairwise support before creating a new 2-simplex.
-  - Remaining scope: add at least one more domainpack demonstration and broader
-    policy validation around Lyapunov or transfer-entropy objectives.
+  - Traffic-flow transfer-entropy demo is in place:
+    `domainpacks/traffic_flow/topology_adaptation_demo.py` derives pairwise
+    support from transfer-entropy histories before proposing corridor
+    simplices.
+  - Remaining scope: broader policy validation around Lyapunov objectives.
 - Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
   - Foundation is in place: causal counterfactual rollout support exists.
   - Cardiac attribution demo is in place:

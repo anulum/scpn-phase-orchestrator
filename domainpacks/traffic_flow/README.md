@@ -43,3 +43,20 @@ over weeks-months, modulating both coupling strength and phase lag.
 
 200 steps: free-flow -> morning rush (demand spike) -> queue spillback ->
 adaptive signal control -> green wave recovery.
+
+## Topology Adaptation Demo
+
+`topology_adaptation_demo.py` demonstrates transfer-entropy-supported
+higher-order topology mutation for signal coordination. The demo builds a
+pairwise support matrix from deterministic corridor phase histories, applies a
+`TopologyMutationPolicy` with a pairwise support floor, and emits an audit
+payload for newly proposed 2-simplices.
+
+Run it with:
+
+```bash
+PYTHONPATH=src python domainpacks/traffic_flow/topology_adaptation_demo.py
+```
+
+The output includes transfer-entropy support counts, the mutation policy, and
+the supervisor topology audit record.

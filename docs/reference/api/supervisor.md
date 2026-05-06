@@ -151,9 +151,14 @@ This slice does not claim autonomous online structural control. It provides the
 auditable mutation primitive that existing policy, causal, STL, simplicial, and
 hypergraph paths can gate before applying a topology change.
 
-Domainpack demo: `domainpacks/plasma_control/topology_adaptation_demo.py` runs
-one guarded mutation against the plasma-control binding and prints the audit
-payload as JSON.
+Domainpack demos:
+
+- `domainpacks/plasma_control/topology_adaptation_demo.py` runs one guarded
+  mutation against the plasma-control binding and prints the audit payload as
+  JSON.
+- `domainpacks/traffic_flow/topology_adaptation_demo.py` builds pairwise
+  support from transfer-entropy evidence before proposing traffic-corridor
+  simplices.
 
 ::: scpn_phase_orchestrator.supervisor.topology
 
