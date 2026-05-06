@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     PrismExport,
     export_petri_net_prism,
     export_policy_rules_prism,
+    export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,
@@ -53,6 +54,7 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyCondition,
     PolicyEngine,
     PolicyRule,
+    PolicySTLSpec,
     load_policy_rules,
 )
 from scpn_phase_orchestrator.supervisor.predictive import (
@@ -103,6 +105,7 @@ __all__ = [
     "PolicyCondition",
     "PolicyEngine",
     "PolicyRule",
+    "PolicySTLSpec",
     "PrismExport",
     "Prediction",
     "PredictiveSupervisor",
@@ -125,6 +128,7 @@ __all__ = [
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_policy_rules_prism",
+    "export_stl_specs_prism",
     "load_policy_rules",
     "sheaf_coherence",
     "sheaf_laplacian",

@@ -50,6 +50,7 @@ from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
     export_policy_rules_prism,
+    export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -68,6 +69,7 @@ from scpn_phase_orchestrator.supervisor.policy_diagnostics import (
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyEngine,
     load_policy_rules,
+    load_policy_stl_specs,
 )
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -175,7 +177,7 @@ def plugins_catalog(include_incompatible: bool) -> None:
 @click.option(
     "--export",
     "export_target",
-    type=click.Choice(["protocol", "policy"]),
+    type=click.Choice(["protocol", "policy", "stl"]),
     default="protocol",
     show_default=True,
     help="Supervisor artefact to export",
@@ -185,7 +187,7 @@ def plugins_catalog(include_incompatible: bool) -> None:
     "policy_path",
     default=None,
     type=click.Path(exists=True),
-    help="Policy YAML path for --export policy; defaults to sibling policy.yaml",
+    help="Policy YAML path for --export policy/stl; defaults to sibling policy.yaml",
 )
 def formal_export(
     binding_spec: str,
@@ -204,7 +206,7 @@ def formal_export(
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
 
-    if export_target == "policy":
+    if export_target in {"policy", "stl"}:
         policy_file = (
             Path(policy_path)
             if policy_path is not None
@@ -213,6 +215,18 @@ def formal_export(
         if not policy_file.exists():
             click.echo(f"ERROR: policy file not found: {policy_file}", err=True)
             raise SystemExit(1)
+        if export_target == "stl":
+            stl_specs = load_policy_stl_specs(policy_file)
+            if not stl_specs:
+                click.echo("ERROR: policy file contains no stl_monitors", err=True)
+                raise SystemExit(1)
+            export = export_stl_specs_prism(stl_specs, module_name=module_name)
+            if output is None:
+                click.echo(export.model, nl=False)
+                return
+            Path(output).write_text(export.model, encoding="utf-8")
+            click.echo(f"PRISM model written: {output}")
+            return
         rules = load_policy_rules(policy_file)
         if not rules:
             click.echo("ERROR: policy file contains no rules", err=True)

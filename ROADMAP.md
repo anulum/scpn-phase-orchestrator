@@ -234,7 +234,10 @@ Near-term candidate tracks:
     `stl_monitors`, load them with `load_policy_stl_specs()`, evaluate traces
     with `evaluate_policy_stl_specs()`, and emit audit-ready satisfaction
     records.
-  - Remaining scope: model-checker export linkage for STL monitor surfaces.
+  - Model-checker export linkage is in place:
+    `spo formal-export --export stl` emits PRISM constants and
+    satisfied/violated labels for policy-declared STL monitors.
+  - Remaining scope: full STL monitoring automata synthesis.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - Retrieval, confidence, and notebook polish are in place: generation now
