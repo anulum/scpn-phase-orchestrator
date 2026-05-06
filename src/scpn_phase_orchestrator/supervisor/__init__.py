@@ -67,10 +67,13 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     synthesize_policy_stl_automata,
 )
 from scpn_phase_orchestrator.supervisor.predictive import (
+    FEPHierarchyAssessment,
+    FEPHierarchyChildAssessment,
     FEPPredictionAssessment,
     FEPPredictiveSupervisor,
     Prediction,
     PredictiveSupervisor,
+    assess_fep_hierarchy,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.supervisor.sheaf import (
@@ -98,6 +101,8 @@ __all__ = [
     "ControlAction",
     "CounterfactualRollout",
     "EventBus",
+    "FEPHierarchyAssessment",
+    "FEPHierarchyChildAssessment",
     "FEPPredictionAssessment",
     "FEPPredictiveSupervisor",
     "HigherOrderTopologySupervisor",
@@ -138,6 +143,7 @@ __all__ = [
     "ValueAlignmentPolicy",
     "ValueConstraint",
     "ValueViolation",
+    "assess_fep_hierarchy",
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_policy_rules_prism",

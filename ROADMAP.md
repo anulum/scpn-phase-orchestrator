@@ -240,11 +240,17 @@ Near-term candidate tracks:
     demonstrations for other domain families.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.
   - Foundation is in place: predictive FEP supervisor support exists.
+  - Reusable hierarchy assessment is in place:
+    `assess_fep_hierarchy()` runs child FEP supervisors, reduces child
+    coherence into a parent phase vector, and emits an audit-ready
+    `FEPHierarchyAssessment`.
   - Power-grid hierarchy proof is in place:
     `domainpacks/power_grid/fep_hierarchy_demo.py` runs two child FEP
     supervisors and a parent supervisor over reduced child coherence.
-  - Remaining scope: broader hierarchy/domainpack proof work and deeper
-    predictive-coding world-model integration.
+  - Cardiac hierarchy proof is in place:
+    `domainpacks/cardiac_rhythm/fep_hierarchy_demo.py` runs pacemaker/atrial
+    and ventricular/recovery child axes into a parent cardiac supervisor.
+  - Remaining scope: deeper predictive-coding world-model integration.
 - STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, audit satisfaction traces, and controller-synthesis linkage. The builtin monitoring automata foundation is implemented; controller synthesis remains open.
   - Foundation is in place: built-in STL robustness monitoring exists.
   - Policy DSL integration is in place: policy YAML can declare

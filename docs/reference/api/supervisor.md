@@ -635,7 +635,10 @@ the current phase vector, updates the variational predictor, and emits bounded
 proxy thresholds indicate a pre-emptive correction is needed.
 
 ```python
-from scpn_phase_orchestrator.supervisor import FEPPredictiveSupervisor
+from scpn_phase_orchestrator.supervisor import (
+    FEPPredictiveSupervisor,
+    assess_fep_hierarchy,
+)
 
 fep = FEPPredictiveSupervisor(
     n_oscillators=len(phases),
@@ -658,11 +661,31 @@ This slice is intentionally conservative: it is a FEP-Kuramoto correspondence
 controller over the existing variational predictor, not a claim of a complete
 biological active-inference agent.
 
-`domainpacks/power_grid/fep_hierarchy_demo.py` demonstrates the current
-hierarchy proof. It runs two child `FEPPredictiveSupervisor` instances for
-generation and demand/renewable regions, reduces their observed coherence into
-a parent phase vector, and records the parent-level free-energy assessment plus
-bounded corrective actions.
+`assess_fep_hierarchy()` is the reusable hierarchy primitive. It runs one child
+`FEPPredictiveSupervisor` per named child observation, reduces each child's
+observed coherence into a parent phase vector, then runs a parent
+`FEPPredictiveSupervisor` over the reduced child state. The returned
+`FEPHierarchyAssessment` records child assessments, child actions, parent
+assessment, parent actions, child `R` values, and parent phase encoding.
+
+```python
+hierarchy = assess_fep_hierarchy(
+    {
+        "generation_area": (generation_phases, generation_omegas),
+        "demand_area": (demand_phases, demand_omegas),
+    },
+    dt=0.01,
+    parent_dt=0.1,
+)
+audit_hierarchy = hierarchy.to_audit_record()
+```
+
+Domainpack hierarchy proofs:
+
+- `domainpacks/power_grid/fep_hierarchy_demo.py` runs generation and
+  demand/renewable child regions into a parent grid supervisor.
+- `domainpacks/cardiac_rhythm/fep_hierarchy_demo.py` runs pacemaker/atrial and
+  ventricular/recovery child axes into a parent cardiac supervisor.
 
 ---
 

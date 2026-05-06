@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TypeAlias
 
@@ -17,16 +18,19 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
-from scpn_phase_orchestrator.upde.metrics import UPDEState
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.prediction import VariationalPredictor
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 
 __all__ = [
+    "FEPHierarchyAssessment",
+    "FEPHierarchyChildAssessment",
     "FEPPredictionAssessment",
     "FEPPredictiveSupervisor",
     "PredictiveSupervisor",
     "Prediction",
+    "assess_fep_hierarchy",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -79,6 +83,48 @@ class FEPPredictionAssessment:
             "predicted_R": self.predicted_R,
             "target_R": self.target_R,
             "surprise": self.surprise,
+        }
+
+
+@dataclass(frozen=True)
+class FEPHierarchyChildAssessment:
+    """Assessment for one child node in a hierarchical FEP supervisor."""
+
+    name: str
+    assessment: FEPPredictionAssessment
+    actions: tuple[ControlAction, ...]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe child hierarchy audit record."""
+        return {
+            "name": self.name,
+            "assessment": self.assessment.to_audit_record(),
+            "actions": [_action_record(action) for action in self.actions],
+        }
+
+
+@dataclass(frozen=True)
+class FEPHierarchyAssessment:
+    """Audit-ready child-to-parent FEP hierarchy assessment."""
+
+    hierarchy: str
+    children: tuple[FEPHierarchyChildAssessment, ...]
+    parent_assessment: FEPPredictionAssessment
+    parent_actions: tuple[ControlAction, ...]
+    child_R_values: tuple[float, ...]
+    parent_phase_encoding: tuple[float, ...]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe hierarchy assessment payload."""
+        return {
+            "hierarchy": self.hierarchy,
+            "children": [child.to_audit_record() for child in self.children],
+            "parent": {
+                "assessment": self.parent_assessment.to_audit_record(),
+                "actions": [_action_record(action) for action in self.parent_actions],
+            },
+            "child_R_values": list(self.child_R_values),
+            "parent_phase_encoding": list(self.parent_phase_encoding),
         }
 
 
@@ -346,6 +392,92 @@ class FEPPredictiveSupervisor:
         return upde_state.stability_proxy < self._target_R and assessment.surprise > 0.0
 
 
+def assess_fep_hierarchy(
+    children: Mapping[str, tuple[FloatArray, FloatArray]],
+    *,
+    dt: float,
+    child_target_R: float = 0.8,
+    parent_target_R: float = 0.8,
+    parent_dt: float | None = None,
+    free_energy_threshold: float = 0.0,
+    child_drive_gain: float = 0.08,
+    parent_drive_gain: float = 0.05,
+    hierarchy: str = "child_regions_to_parent_fep_supervisor",
+) -> FEPHierarchyAssessment:
+    """Assess child FEP supervisors and a parent over reduced child coherence.
+
+    Each child receives its own ``FEPPredictiveSupervisor``. The parent encodes
+    child coherence as phases via ``arccos(2R - 1)`` so the same FEP machinery
+    can reason over cross-child coherence without accessing raw child signals.
+    """
+    _validate_hierarchy_inputs(
+        children=children,
+        dt=dt,
+        parent_dt=parent_dt,
+        child_target_R=child_target_R,
+        parent_target_R=parent_target_R,
+        free_energy_threshold=free_energy_threshold,
+        child_drive_gain=child_drive_gain,
+        parent_drive_gain=parent_drive_gain,
+    )
+    child_records: list[FEPHierarchyChildAssessment] = []
+    child_rs: list[float] = []
+    for name, (phases, omegas) in children.items():
+        phases_arr, omegas_arr = _validate_child_observation(name, phases, omegas)
+        supervisor = FEPPredictiveSupervisor(
+            n_oscillators=phases_arr.size,
+            dt=dt,
+            target_R=child_target_R,
+            free_energy_threshold=free_energy_threshold,
+            drive_gain=child_drive_gain,
+        )
+        assessment = supervisor.assess(phases_arr, omegas_arr)
+        actions = tuple(
+            supervisor.decide(
+                phases_arr,
+                omegas_arr,
+                _state_from_r(assessment.observed_R),
+                BoundaryState(),
+            )
+        )
+        child_records.append(
+            FEPHierarchyChildAssessment(
+                name=name,
+                assessment=assessment,
+                actions=actions,
+            )
+        )
+        child_rs.append(assessment.observed_R)
+
+    child_r_arr = np.asarray(child_rs, dtype=np.float64)
+    parent_phases = _coherence_to_parent_phases(child_r_arr)
+    parent_omegas = np.full(parent_phases.shape, 1.0, dtype=np.float64)
+    parent = FEPPredictiveSupervisor(
+        n_oscillators=parent_phases.size,
+        dt=dt if parent_dt is None else parent_dt,
+        target_R=parent_target_R,
+        free_energy_threshold=free_energy_threshold,
+        drive_gain=parent_drive_gain,
+    )
+    parent_assessment = parent.assess(parent_phases, parent_omegas)
+    parent_actions = tuple(
+        parent.decide(
+            parent_phases,
+            parent_omegas,
+            _state_from_r(parent_assessment.observed_R),
+            BoundaryState(),
+        )
+    )
+    return FEPHierarchyAssessment(
+        hierarchy=hierarchy,
+        children=tuple(child_records),
+        parent_assessment=parent_assessment,
+        parent_actions=parent_actions,
+        child_R_values=tuple(float(value) for value in child_r_arr),
+        parent_phase_encoding=tuple(float(value) for value in parent_phases),
+    )
+
+
 def _validate_phase_inputs(
     phases: FloatArray,
     omegas: FloatArray,
@@ -372,3 +504,70 @@ def _require_unit_interval(value: float, name: str) -> None:
 def _require_non_negative(value: float, name: str) -> None:
     if not np.isfinite(value) or value < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
+
+
+def _validate_hierarchy_inputs(
+    *,
+    children: Mapping[str, tuple[FloatArray, FloatArray]],
+    dt: float,
+    parent_dt: float | None,
+    child_target_R: float,
+    parent_target_R: float,
+    free_energy_threshold: float,
+    child_drive_gain: float,
+    parent_drive_gain: float,
+) -> None:
+    if not children:
+        raise ValueError("children must contain at least one child observation")
+    if not np.isfinite(dt) or dt <= 0.0:
+        raise ValueError("dt must be finite and positive")
+    if parent_dt is not None and (not np.isfinite(parent_dt) or parent_dt <= 0.0):
+        raise ValueError("parent_dt must be finite and positive")
+    _require_unit_interval(child_target_R, "child_target_R")
+    _require_unit_interval(parent_target_R, "parent_target_R")
+    _require_non_negative(free_energy_threshold, "free_energy_threshold")
+    _require_non_negative(child_drive_gain, "child_drive_gain")
+    _require_non_negative(parent_drive_gain, "parent_drive_gain")
+
+
+def _validate_child_observation(
+    name: str,
+    phases: FloatArray,
+    omegas: FloatArray,
+) -> tuple[FloatArray, FloatArray]:
+    if not isinstance(name, str) or not name:
+        raise ValueError("child names must be non-empty strings")
+    phase_arr = np.asarray(phases, dtype=np.float64)
+    omega_arr = np.asarray(omegas, dtype=np.float64)
+    if phase_arr.ndim != 1 or phase_arr.size < 1:
+        raise ValueError(f"child {name!r} phases must be a non-empty vector")
+    if omega_arr.shape != phase_arr.shape:
+        raise ValueError(f"child {name!r} omegas must match phases shape")
+    if not np.all(np.isfinite(phase_arr)):
+        raise ValueError(f"child {name!r} phases must be finite")
+    if not np.all(np.isfinite(omega_arr)):
+        raise ValueError(f"child {name!r} omegas must be finite")
+    return phase_arr, omega_arr
+
+
+def _coherence_to_parent_phases(child_rs: FloatArray) -> FloatArray:
+    return np.arccos(np.clip(2.0 * child_rs - 1.0, -1.0, 1.0))
+
+
+def _state_from_r(r_value: float) -> UPDEState:
+    return UPDEState(
+        layers=[LayerState(R=float(r_value), psi=0.0)],
+        cross_layer_alignment=np.eye(1),
+        stability_proxy=float(r_value),
+        regime_id="hierarchical_fep",
+    )
+
+
+def _action_record(action: ControlAction) -> dict[str, object]:
+    return {
+        "knob": action.knob,
+        "scope": action.scope,
+        "value": action.value,
+        "ttl_s": action.ttl_s,
+        "justification": action.justification,
+    }

@@ -13,8 +13,11 @@ import pytest
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor import (
+    FEPHierarchyAssessment,
+    FEPHierarchyChildAssessment,
     FEPPredictionAssessment,
     FEPPredictiveSupervisor,
+    assess_fep_hierarchy,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -156,3 +159,64 @@ class TestFEPPipelineWiring:
         assert isinstance(supervisor.last_assessment, FEPPredictionAssessment)
         assert len(actions) == 2
         assert {action.knob for action in actions} == {"zeta", "Psi"}
+
+
+class TestFEPHierarchyAssessment:
+    def test_assess_fep_hierarchy_emits_child_and_parent_audit_records(self) -> None:
+        children = {
+            "coherent_child": (
+                np.array([0.0, 0.02, 0.04], dtype=np.float64),
+                np.array([1.0, 1.0, 1.0], dtype=np.float64),
+            ),
+            "dispersed_child": (
+                np.array([0.0, 2.1, 4.2], dtype=np.float64),
+                np.array([0.8, 1.1, 1.4], dtype=np.float64),
+            ),
+        }
+
+        hierarchy = assess_fep_hierarchy(
+            children,
+            dt=0.01,
+            parent_dt=0.05,
+            child_target_R=0.75,
+            parent_target_R=0.7,
+            free_energy_threshold=0.0,
+            hierarchy="unit_test_hierarchy",
+        )
+        record = hierarchy.to_audit_record()
+
+        assert isinstance(hierarchy, FEPHierarchyAssessment)
+        assert all(
+            isinstance(child, FEPHierarchyChildAssessment)
+            for child in hierarchy.children
+        )
+        assert record["hierarchy"] == "unit_test_hierarchy"
+        assert [child["name"] for child in record["children"]] == [
+            "coherent_child",
+            "dispersed_child",
+        ]
+        assert len(record["child_R_values"]) == 2
+        assert len(record["parent_phase_encoding"]) == 2
+        assert record["parent"]["actions"]
+        assert 0.0 <= record["parent"]["assessment"]["observed_R"] <= 1.0
+
+    def test_assess_fep_hierarchy_rejects_invalid_child_inputs(self) -> None:
+        with pytest.raises(ValueError, match="at least one child"):
+            assess_fep_hierarchy({}, dt=0.01)
+
+        with pytest.raises(ValueError, match="non-empty strings"):
+            assess_fep_hierarchy(
+                {"": (np.zeros(2), np.ones(2))},
+                dt=0.01,
+            )
+
+        with pytest.raises(ValueError, match="omegas must match"):
+            assess_fep_hierarchy(
+                {"bad_shape": (np.zeros(3), np.ones(2))},
+                dt=0.01,
+            )
+
+    def test_assess_fep_hierarchy_is_exported_from_supervisor(self) -> None:
+        import scpn_phase_orchestrator.supervisor as supervisor
+
+        assert supervisor.assess_fep_hierarchy is assess_fep_hierarchy
