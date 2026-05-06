@@ -189,8 +189,11 @@
   - Benchmark metadata/snapshot slice is in place: `benchmarks/reference_suite.py`
     emits command, backend, Python/NumPy versions, platform, executable, and
     snapshot date with `benchmarks/results/reference_suite.json`.
+  - Public snapshot page is in place:
+    `docs/galleries/reference_benchmark_snapshot.md` publishes the dated JSON
+    values with reproduction metadata and use-policy warnings.
   - Remaining before claiming complete: expand published comparison coverage
-    beyond the current Kuramoto/Stuart-Landau/Petri reference suite as needed.
+    beyond the current host/backend as needed.
 - Windows Rust FFI fully stable; remove the experimental label only after installation, CI, and parity evidence support it.
 - One end-to-end hardware example with real FPGA or neuromorphic output, including command, generated artefact, and verification result.
 

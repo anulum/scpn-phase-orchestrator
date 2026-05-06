@@ -187,6 +187,7 @@ nav:
       - Notebook Execution Matrix: galleries/notebook_execution_matrix.md
       - Cardiac Rhythm Benchmark: galleries/cardiac_rhythm_benchmark.md
       - Power Grid Benchmark: galleries/power_grid_benchmark.md
+      - Reference Benchmark Snapshot: galleries/reference_benchmark_snapshot.md
       - Capabilities & Use Cases: galleries/capabilities.md
   - Reference:
       - Public Roadmap: roadmap.md
