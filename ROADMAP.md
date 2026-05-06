@@ -216,7 +216,8 @@ Speculative research watchlist:
 - Morphogenetic field topology: reaction-diffusion-style field over coupling topology with grow/shrink primitives and field snapshot audit records.
   - Foundation is in place: morphogenetic topology field support exists; remaining scope is field snapshot visualisation and domainpack demos.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
-  - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations and reporting integration.
+  - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.
+  - Reporting integration is in place: `build_audit_report_summary()` and `spo report` summarise passive `integrated_information` audit records while preserving the engineering-proxy claim boundary.
 - Topos-theoretic semantic binding: categorical validation prototype for binding and policy composition with explicit proof obligations.
 - Multiverse counterfactual simulator: vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation.
 - Entanglement-aware hybrid order parameters: quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi`.

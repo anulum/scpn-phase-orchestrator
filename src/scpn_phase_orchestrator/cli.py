@@ -839,6 +839,23 @@ def report(log_path: str, json_out: bool) -> None:
         )
         if missing:
             click.echo(f"  Missing required channels: {', '.join(missing)}")
+    integrated_information = summary.get("integrated_information")
+    if isinstance(integrated_information, dict):
+        records = _int_value(integrated_information.get("records", 0))
+        latest_phi = _float_value(integrated_information.get("latest_phi", 0.0))
+        latest_normalised = _float_value(
+            integrated_information.get("latest_normalised_phi", 0.0)
+        )
+        total_integration = _float_value(
+            integrated_information.get("latest_total_integration", 0.0)
+        )
+        click.echo()
+        click.echo(
+            "Integrated information: "
+            f"records={records} phi={latest_phi:.4f} "
+            f"normalised_phi={latest_normalised:.4f} "
+            f"total_integration={total_integration:.4f}"
+        )
     click.echo()
     click.echo("Regime distribution:")
     for regime, count in sorted(regime_counts.items()):

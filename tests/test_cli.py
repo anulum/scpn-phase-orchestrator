@@ -187,6 +187,56 @@ def test_report_json(runner, audit_log_path):
     assert data["hash_chain_ok"] is True
 
 
+def test_report_exposes_integrated_information_summary(runner, tmp_path):
+    audit_path = tmp_path / "audit_phi.jsonl"
+    entries = [
+        {
+            "step": 0,
+            "regime": "nominal",
+            "stability": 0.8,
+            "layers": [{"R": 0.8, "psi": 1.0}],
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": 0.125,
+            "normalised_phi": 0.25,
+            "total_integration": 0.5,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+        {
+            "step": 1,
+            "regime": "nominal",
+            "stability": 0.9,
+            "layers": [{"R": 0.9, "psi": 1.1}],
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": 0.25,
+            "normalised_phi": 0.5,
+            "total_integration": 0.75,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+    ]
+    audit_path.write_text(
+        "\n".join(json.dumps(entry) for entry in entries) + "\n",
+        encoding="utf-8",
+    )
+
+    json_result = runner.invoke(main, ["report", str(audit_path), "--json-out"])
+    text_result = runner.invoke(main, ["report", str(audit_path)])
+
+    assert json_result.exit_code == 0
+    data = json.loads(json_result.output)
+    assert data["integrated_information"]["records"] == 2
+    assert data["integrated_information"]["latest_phi"] == 0.25
+    assert data["integrated_information"]["latest_normalised_phi"] == 0.5
+    assert text_result.exit_code == 0
+    assert (
+        "Integrated information: records=2 phi=0.2500 "
+        "normalised_phi=0.5000 total_integration=0.7500"
+    ) in text_result.output
+
+
 def test_report_json_exposes_binding_channel_algebra(
     runner,
     valid_spec_path,

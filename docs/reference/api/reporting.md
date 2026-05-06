@@ -74,6 +74,13 @@ The text report also prints a compact channel-algebra line when the audit
 header contains one, including required/optional/derived/delayed/uncertain
 counts and any missing required channel evidence.
 
+If the audit stream includes passive integrated-information monitor records
+with `monitor: integrated_information`, the JSON summary includes an
+`integrated_information` block with latest Phi proxy values, normalised Phi
+values, series data, record count, and the claim boundary. The text report
+prints a compact line with the latest Phi proxy, normalised Phi, total
+integration, and number of monitor records.
+
 Programmatic tools can use `build_audit_report_summary()` directly to get the
 same JSON-ready report payload as `spo report --json-out`.
 

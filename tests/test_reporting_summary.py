@@ -88,6 +88,42 @@ def test_audit_report_summary_preserves_binding_channel_algebra() -> None:
     assert summary["channel_algebra"] == channel_algebra
 
 
+def test_audit_report_summary_includes_integrated_information_records() -> None:
+    entries: list[dict[str, object]] = [
+        {"step": 0, "layers": [{"R": 0.8}], "regime": "nominal"},
+        {
+            "monitor": "integrated_information",
+            "phi": 0.12,
+            "normalised_phi": 0.24,
+            "total_integration": 0.5,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": 0.18,
+            "normalised_phi": 0.36,
+            "total_integration": 0.7,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+    ]
+
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=True,
+        hash_chain_verified=3,
+    )
+    phi_summary = cast("dict[str, object]", summary["integrated_information"])
+
+    assert phi_summary["records"] == 2
+    assert phi_summary["latest_phi"] == 0.18
+    assert phi_summary["latest_normalised_phi"] == 0.36
+    assert phi_summary["latest_total_integration"] == 0.7
+    assert phi_summary["phi_mean"] == 0.15
+    assert phi_summary["normalised_phi_mean"] == 0.3
+    assert phi_summary["total_integration_mean"] == 0.6
+    assert phi_summary["phi_series"] == [0.12, 0.18]
+
+
 def test_audit_report_summary_rejects_logs_without_steps() -> None:
     with pytest.raises(ValueError, match="at least one step"):
         build_audit_report_summary(

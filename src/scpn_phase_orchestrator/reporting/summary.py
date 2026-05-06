@@ -60,6 +60,9 @@ def build_audit_report_summary(
         "hash_chain_ok": hash_chain_ok,
         "hash_chain_verified": hash_chain_verified,
     }
+    integrated_information = _integrated_information_summary(entries)
+    if integrated_information is not None:
+        summary["integrated_information"] = integrated_information
     if header is not None:
         binding_summary = header.get("binding_summary") or header.get("binding_config")
         if isinstance(binding_summary, dict):
@@ -96,3 +99,56 @@ def _actions(step: dict[str, object]) -> list[dict[str, object]]:
     if not isinstance(actions, list):
         return []
     return [action for action in actions if isinstance(action, dict)]
+
+
+def _integrated_information_summary(
+    entries: list[dict[str, object]],
+) -> dict[str, object] | None:
+    records = [
+        entry
+        for entry in entries
+        if entry.get("monitor") == "integrated_information"
+        and isinstance(entry.get("phi"), int | float)
+        and isinstance(entry.get("normalised_phi"), int | float)
+    ]
+    if not records:
+        return None
+
+    latest = records[-1]
+    phi_series = [_numeric_value(record, "phi") for record in records]
+    normalised_series = [_numeric_value(record, "normalised_phi") for record in records]
+    total_series = [
+        _numeric_value(record, "total_integration")
+        for record in records
+        if isinstance(record.get("total_integration"), int | float)
+    ]
+    summary: dict[str, object] = {
+        "records": len(records),
+        "latest_phi": _numeric_value(latest, "phi"),
+        "latest_normalised_phi": _numeric_value(latest, "normalised_phi"),
+        "phi_mean": round(sum(phi_series) / len(phi_series), 6),
+        "normalised_phi_mean": round(
+            sum(normalised_series) / len(normalised_series),
+            6,
+        ),
+        "phi_series": phi_series,
+        "normalised_phi_series": normalised_series,
+        "claim_boundary": latest.get(
+            "claim_boundary",
+            "engineering_proxy_not_theoretical_iit",
+        ),
+    }
+    if total_series:
+        summary["latest_total_integration"] = total_series[-1]
+        summary["total_integration_mean"] = round(
+            sum(total_series) / len(total_series),
+            6,
+        )
+    return summary
+
+
+def _numeric_value(record: dict[str, object], key: str) -> float:
+    value = record.get(key, 0.0)
+    if isinstance(value, int | float):
+        return float(value)
+    return 0.0
