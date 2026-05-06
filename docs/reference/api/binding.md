@@ -86,6 +86,10 @@ enforced by the validator at load time.
 produced from the YAML and includes inferred defaults (for example
 `control_interval_steps` and `engine_mode`). The full contract is documented in
 `Resolved Runtime Defaults` and exposed as a CLI summary plus audit metadata.
+The summary now embeds `channel_algebra`, so audit consumers can read required
+channels, optional channels, derived channels, group membership, coupling
+participants, and missing required channel evidence from the same resolved
+configuration record.
 
 ::: scpn_phase_orchestrator.binding.resolved
 

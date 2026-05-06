@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.binding.channel_algebra import (
+    build_channel_algebra_report,
+)
 from scpn_phase_orchestrator.binding.types import BindingSpec, resolve_extractor_type
 
 __all__ = ["format_resolved_binding_config", "resolved_binding_config"]
@@ -122,6 +125,7 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
         "imprint_model": spec.imprint_model is not None,
         "protocol_net": spec.protocol_net is not None,
     }
+    channel_algebra = build_channel_algebra_report(spec).to_audit_record()
 
     return {
         "name": spec.name,
@@ -152,6 +156,7 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
             }
             for coupling in spec.cross_channel_couplings
         ],
+        "channel_algebra": channel_algebra,
         "families": family_summaries,
         "layers": layer_summaries,
         "unassigned_layer_count": sum(
@@ -247,6 +252,23 @@ def format_resolved_binding_config(summary: dict[str, object]) -> list[str]:
     couplings = summary.get("cross_channel_couplings", [])
     if isinstance(couplings, list) and couplings:
         lines.append(f"  cross_channel_couplings: {len(couplings)}")
+
+    algebra = summary.get("channel_algebra", {})
+    if isinstance(algebra, dict):
+        required = _string_list(algebra.get("required_channels"))
+        optional = _string_list(algebra.get("optional_channels"))
+        derived_channels = _string_list(algebra.get("derived_channels"))
+        missing = _string_list(algebra.get("missing_required_channels"))
+        visible = _string_list(algebra.get("supervisor_visible_channels"))
+        participating = _string_list(algebra.get("coupling_participating_channels"))
+        lines.append(
+            "  channel_algebra: "
+            f"required={len(required)} optional={len(optional)} "
+            f"derived={len(derived_channels)} visible={len(visible)} "
+            f"coupling_participants={len(participating)}"
+        )
+        if missing:
+            lines.append(f"    missing_required_channels: {','.join(missing)}")
 
     unassigned = summary.get("unassigned_layer_count", 0)
     if unassigned:
