@@ -30,6 +30,18 @@ def test_torus_engine_rejects_invalid_timestep(dt: Any) -> None:
         TorusEngine(n_oscillators=4, dt=dt)
 
 
+@pytest.mark.parametrize("n_steps", [False, -1, 1.5, "10"])
+def test_torus_engine_run_rejects_invalid_step_count(n_steps: Any) -> None:
+    engine = TorusEngine(n_oscillators=4, dt=0.01)
+    phases = np.zeros(4, dtype=np.float64)
+    omegas = np.ones(4, dtype=np.float64)
+    knm = np.zeros((4, 4), dtype=np.float64)
+    alpha = np.zeros((4, 4), dtype=np.float64)
+
+    with pytest.raises(ValueError, match="n_steps must be >= 0"):
+        engine.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=n_steps)
+
+
 def test_torus_engine_normalises_accepted_numpy_scalars() -> None:
     engine = TorusEngine(n_oscillators=np.int64(4), dt=np.float64(0.01))
 
