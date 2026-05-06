@@ -20,6 +20,9 @@ Two Phase-7 invariants from the SPO backlog are covered here:
   arithmetic. The existing point-sample test is strengthened here to
   a Hypothesis property over random phases, frequencies, and
   sparsity masks.
+* Integration reversibility — ``SplittingEngine`` must return to the
+  original torus point after a forward trajectory followed by the same
+  number of negative-``dt`` steps.
 """
 
 from __future__ import annotations
@@ -30,6 +33,7 @@ from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.sparse_engine import SparseUPDEEngine
+from scpn_phase_orchestrator.upde.splitting import SplittingEngine
 
 TWO_PI = 2.0 * np.pi
 
@@ -131,6 +135,46 @@ def test_upde_identity_permutation_is_fixed(n: int, seed: int) -> None:
         alpha[np.ix_(identity, identity)],
     )
     np.testing.assert_array_equal(out, out_perm)
+
+
+# ---------------------------------------------------------------------
+# Integration reversibility
+# ---------------------------------------------------------------------
+
+
+@given(
+    n=st.integers(min_value=3, max_value=8),
+    steps=st.integers(min_value=4, max_value=24),
+    seed=st.integers(min_value=0, max_value=2**31 - 1),
+)
+@settings(
+    max_examples=24,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+def test_splitting_forward_backward_reversibility(
+    n: int, steps: int, seed: int
+) -> None:
+    """Strang splitting is reversible under the negative-dt reference path."""
+    rng = np.random.default_rng(seed)
+    dt = 8e-4
+    phases0 = rng.uniform(0.0, TWO_PI, size=n).astype(np.float64)
+    omegas = rng.normal(loc=1.0, scale=0.2, size=n).astype(np.float64)
+    raw_knm = rng.uniform(0.0, 0.25, size=(n, n)).astype(np.float64)
+    knm = 0.5 * (raw_knm + raw_knm.T)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n), dtype=np.float64)
+
+    forward = SplittingEngine(n_oscillators=n, dt=dt)
+    backward = SplittingEngine(n_oscillators=n, dt=-dt)
+    phases = phases0.copy()
+    for _ in range(steps):
+        phases = forward.step(phases, omegas, knm, 0.0, 0.0, alpha)
+    for _ in range(steps):
+        phases = backward.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+    diff = ((phases - phases0 + np.pi) % TWO_PI) - np.pi
+    np.testing.assert_allclose(diff, np.zeros_like(diff), atol=1e-12)
 
 
 # ---------------------------------------------------------------------
