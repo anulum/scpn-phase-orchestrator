@@ -13,6 +13,8 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.autotune.policy_search as policy_search_module
+import scpn_phase_orchestrator.autotune.reward as reward_module
 from scpn_phase_orchestrator.autotune import (
     AutotunePolicyProposal,
     AutotuneRewardReport,
@@ -32,6 +34,7 @@ class TestAutotuneRewardContract:
     def test_public_contracts_are_typed(self) -> None:
         hints = get_type_hints(evaluate_knob_policy)
 
+        assert reward_module.evaluate_knob_policy is evaluate_knob_policy
         assert hints["candidate"] is KnobPolicyCandidate
         assert hints["observation"] is RewardObservation
         assert hints["return"] is AutotuneRewardReport
@@ -52,6 +55,7 @@ class TestAutotuneRewardContract:
     def test_policy_proposal_contract_is_typed(self) -> None:
         hints = get_type_hints(propose_replay_policy)
 
+        assert policy_search_module.propose_replay_policy is propose_replay_policy
         assert "Sequence" in str(hints["replay_candidates"])
         assert "PolicyProposalConfig" in str(hints["proposal_config"])
         assert hints["return"] is AutotunePolicyProposal

@@ -12,12 +12,14 @@ from typing import cast, get_type_hints
 
 import pytest
 
+import scpn_phase_orchestrator.reporting.summary as summary_module
 from scpn_phase_orchestrator.reporting import build_audit_report_summary
 
 
 def test_audit_report_summary_contract_is_typed() -> None:
     hints = get_type_hints(build_audit_report_summary)
 
+    assert summary_module.build_audit_report_summary is build_audit_report_summary
     assert "list" in str(hints["entries"])
     assert hints["hash_chain_ok"] is bool
     assert hints["hash_chain_verified"] is int

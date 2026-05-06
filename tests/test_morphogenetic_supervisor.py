@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.supervisor.morphogenetic as morphogenetic_module
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldPolicy,
     MorphogeneticFieldResult,
@@ -27,6 +28,7 @@ def _zero_knm(n: int) -> np.ndarray:
 
 class TestMorphogeneticPolicyValidation:
     def test_rejects_invalid_policy_values(self) -> None:
+        assert morphogenetic_module.MorphogeneticFieldPolicy is MorphogeneticFieldPolicy
         with pytest.raises(ValueError, match="growth_rate"):
             MorphogeneticFieldPolicy(growth_rate=1.2)
         with pytest.raises(ValueError, match="coherence_target"):

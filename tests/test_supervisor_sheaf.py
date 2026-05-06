@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.supervisor.sheaf as sheaf_module
 from scpn_phase_orchestrator.supervisor import (
     SheafCoherenceResult,
     SheafCoherenceSupervisor,
@@ -36,6 +37,7 @@ class TestSheafCoherenceContracts:
     def test_public_array_contracts_are_parameterised(self) -> None:
         hints = get_type_hints(sheaf_coherence)
 
+        assert sheaf_module.sheaf_coherence is sheaf_coherence
         assert "numpy.ndarray" in str(hints["node_states"])
         assert "float64" in str(hints["node_states"])
         assert "numpy.ndarray" in str(hints["restriction_maps"])

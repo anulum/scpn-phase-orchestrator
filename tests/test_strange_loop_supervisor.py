@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.supervisor.strange_loop as strange_loop_direct_module
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor import (
@@ -66,6 +67,7 @@ class TestStrangeLoopAssessment:
         drift_hints = get_type_hints(strange_loop_module._drift_score)
         oscillation_hints = get_type_hints(strange_loop_module._oscillation_score)
 
+        assert strange_loop_direct_module.StrangeLoopSupervisor is StrangeLoopSupervisor
         assert "numpy.ndarray" in str(vector_hints["return"])
         assert "float64" in str(vector_hints["return"])
         for hints in (coherence_hints, drift_hints, oscillation_hints):
