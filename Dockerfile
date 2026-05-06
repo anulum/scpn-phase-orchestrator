@@ -8,7 +8,7 @@
 # ── Stage 1: Build Rust FFI extension ────────────────────────────
 # Pin base images by digest for reproducible builds. Build the FFI wheel with
 # the same CPython minor as the runtime image so the extracted extension imports.
-FROM python:3.12-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS rust-builder
+FROM python:3.13-slim@sha256:a0779d7c12fc20be6ec6b4ddc901a4fd7657b8a6bc9def9d3fde89ed5efe0a3d AS rust-builder
 
 ENV CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
@@ -32,7 +32,7 @@ RUN cd spo-kernel && \
     maturin build --release -m crates/spo-ffi/Cargo.toml --out /wheels
 
 # ── Stage 2: Build Python package ────────────────────────────────
-FROM python:3.12-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS python-builder
+FROM python:3.13-slim@sha256:a0779d7c12fc20be6ec6b4ddc901a4fd7657b8a6bc9def9d3fde89ed5efe0a3d AS python-builder
 
 WORKDIR /build
 
@@ -44,7 +44,7 @@ RUN python -m pip install --no-cache-dir --prefix=/install \
     python -c "import glob, pathlib, sysconfig, zipfile; target = pathlib.Path(sysconfig.get_paths(vars={'base': '/install', 'platbase': '/install'})['platlib']); target.mkdir(parents=True, exist_ok=True); wheels = glob.glob('/wheels/*.whl'); assert len(wheels) == 1, wheels; zipfile.ZipFile(wheels[0]).extractall(target)"
 
 # ── Stage 3: Production image ────────────────────────────────────
-FROM python:3.12-slim@sha256:46cb7cc2877e60fbd5e21a9ae6115c30ace7a077b9f8772da879e4590c18c2e3 AS production
+FROM python:3.13-slim@sha256:a0779d7c12fc20be6ec6b4ddc901a4fd7657b8a6bc9def9d3fde89ed5efe0a3d AS production
 
 LABEL maintainer="Miroslav Sotek <protoscience@anulum.li>"
 LABEL org.opencontainers.image.source="https://github.com/anulum/scpn-phase-orchestrator"

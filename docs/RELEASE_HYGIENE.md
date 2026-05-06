@@ -27,14 +27,21 @@ patch version and a new tag.
 For Rust wheel builds in `publish.yml`, Linux manylinux jobs must pass an
 explicit CPython interpreter path such as
 `/opt/python/cp312-cp312/bin/python` to maturin. The manylinux container PATH
-does not guarantee a usable `python3` selector for every target.
+does not guarantee a usable `python3` selector for every target. Cross-running
+that ARM interpreter from an x86 runner fails with `Exec format error`, so the
+Linux ARM wheel job must run on a native `ubuntu-24.04-arm` runner.
 
 For the container job, refresh pinned base-image digests before tagging. A stale
 `tag@sha256` pair fails before security scanning because Docker cannot resolve
-the source metadata. The container FFI builder should use the same CPython minor
-as the runtime image and install the stable Rust toolchain used by CI, not the
-workspace MSRV, because locked transitive crates may require newer Cargo
-manifest support and a mismatched CPython wheel will not import at runtime.
+the source metadata. The runtime stays on a pinned Python image whose CPython
+minor has no fixable HIGH or CRITICAL scanner findings at release time. The
+Trivy and Grype gates still scan the image, but they fail the release only on
+fixable HIGH or CRITICAL findings; unfixed distribution advisories are recorded
+by the scanner output and must be revisited when fixed package versions exist.
+The container FFI builder should use the same CPython minor as the runtime image
+and install the stable Rust toolchain used by CI, not the workspace MSRV,
+because locked transitive crates may require newer Cargo manifest support and a
+mismatched CPython wheel will not import at runtime.
 
 ## Fuzzing Findings
 

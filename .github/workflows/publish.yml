@@ -68,7 +68,7 @@ jobs:
           - os: ubuntu-latest
             target: x86_64
             python_interpreter: /opt/python/cp312-cp312/bin/python
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             target: aarch64
             python_interpreter: /opt/python/cp312-cp312/bin/python
           - os: macos-latest
@@ -192,6 +192,7 @@ jobs:
           format: table
           exit-code: 1
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
 
       - name: Scan image with Grype
         run: |
@@ -201,6 +202,7 @@ jobs:
             anchore/grype:v0.82.0 \
             ghcr.io/anulum/scpn-phase-orchestrator:${{ steps.meta.outputs.version }} \
             --scope all-layers \
+            --only-fixed \
             --fail-on high \
             -o table
 

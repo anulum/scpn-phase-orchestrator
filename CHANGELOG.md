@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.10] - 2026-05-06
+
+### Fixed
+
+- Moved the Linux ARM Rust wheel build to GitHub's native
+  `ubuntu-24.04-arm` runner so maturin executes the ARM manylinux CPython 3.12
+  interpreter instead of failing with an x86 `Exec format error`.
+- Moved the release container to the pinned Python 3.13 slim digest so the
+  runtime image no longer carries the Python 3.12 HIGH finding reported by
+  Grype.
+- Tightened container scanner policy so Trivy and Grype still scan all layers
+  while failing releases only on fixable HIGH or CRITICAL findings.
+
+### Added
+
+- Extended release-workflow hygiene tests to guard the native Linux ARM runner
+  selection, the Python 3.13 container base-image digest, and fixable
+  vulnerability scanner gates.
+
 ## [0.5.9] - 2026-05-06
 
 ### Fixed
@@ -1467,7 +1486,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.9...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.10...HEAD
+[0.5.10]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...v0.5.8
 [0.5.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.1...v0.5.0

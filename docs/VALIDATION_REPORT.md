@@ -8,7 +8,7 @@ Contact: www.anulum.li | protoscience@anulum.li
 
 # Software Verification & Validation Report
 
-**Version:** 0.5.9
+**Version:** 0.5.10
 **Date:** 2026-03-28
 **Author:** Miroslav Šotek / Arcane Sapience
 
