@@ -248,11 +248,19 @@ actuator mappings, and a review transition in `protocol_net`. The generated
 binding is passed through `validate_binding_spec()` and a short
 `UPDEEngine` dry run before artefacts are returned.
 
-Local retrieval scans existing `domainpacks/*/binding_spec.yaml` and README
-content, records the highest-scoring matches in `audit.json`, and includes the
-top score in the generated confidence factors. Retrieval can be disabled by
-passing `retrieval_root=None` to `compile_artifacts()` or
-`compile_symbolic_binding()`.
+Local retrieval scans existing `domainpacks/*/binding_spec.yaml`, domainpack
+README content, and long-form public docs under `docs/`. Each evidence record
+is tagged with `source: domainpack` or `source: docs`, records matched terms,
+and contributes the top score to generated confidence factors. Domainpack
+retrieval can be disabled with `retrieval_root=None`; docs retrieval can be
+disabled with `docs_root=None`.
+
+The generated review notebook also carries compiler-side execution evidence.
+Before returning artefacts, the compiler writes the generated binding and
+policy to a temporary review directory and runs the same binding-schema and
+policy-loader checks that the notebook asks the reviewer to execute. The
+result is recorded in `audit.json` and notebook metadata under
+`notebook_execution`.
 
 CLI usage:
 

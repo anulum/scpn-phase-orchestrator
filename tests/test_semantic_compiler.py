@@ -146,10 +146,16 @@ def test_compile_artifacts_returns_reviewable_valid_outputs(tmp_path):
     assert artefacts.audit_record["domain_family"] == "biological"
     assert "cardiac" in artefacts.audit_record["matched_keywords"]
     assert artefacts.audit_record["confidence_factors"]["retrieval_score"] >= 0.0
+    assert artefacts.audit_record["notebook_execution"]["status"] == "passed"
+    assert artefacts.audit_record["notebook_execution"]["passed_checks"] == 4
     assert 0.0 <= artefacts.dry_run_order_parameter <= 1.0
     notebook = json.loads(artefacts.notebook_json)
     assert notebook["nbformat"] == 4
     assert notebook["metadata"]["scpn_phase_orchestrator"]["schema_version"] == 1
+    assert (
+        notebook["metadata"]["scpn_phase_orchestrator"]["notebook_execution"]["status"]
+        == "passed"
+    )
 
     spec_path = tmp_path / "binding_spec.yaml"
     policy_path = tmp_path / "policy.yaml"
@@ -198,10 +204,52 @@ def test_compile_artifacts_records_local_domainpack_retrieval_evidence():
 
     assert artefacts.retrieval_evidence
     assert isinstance(artefacts.retrieval_evidence[0], RetrievalEvidence)
-    assert artefacts.retrieval_evidence[0].domainpack == "power_grid"
-    assert artefacts.audit_record["retrieval_evidence"][0]["domainpack"] == "power_grid"
+    assert any(
+        evidence.source == "domainpack" for evidence in artefacts.retrieval_evidence
+    )
+    assert any(
+        evidence.domainpack == "power_grid" for evidence in artefacts.retrieval_evidence
+    )
+    assert any(
+        record["domainpack"] == "power_grid"
+        for record in artefacts.audit_record["retrieval_evidence"]
+    )
     assert artefacts.audit_record["confidence_factors"]["retrieval_score"] > 0.0
     assert artefacts.audit_record["confidence"] >= 0.8
+
+
+def test_compile_artifacts_records_long_form_docs_retrieval_evidence(tmp_path):
+    docs_root = tmp_path / "docs"
+    docs_root.mkdir()
+    (docs_root / "plasma_control.md").write_text(
+        "plasma tokamak fusion instability control coherence actuators",
+        encoding="utf-8",
+    )
+
+    artefacts = compile_symbolic_binding(
+        "A 2-layer plasma fusion coherence controller",
+        name="plasma_docs_review",
+        retrieval_root=None,
+        docs_root=docs_root,
+    )
+
+    assert artefacts.audit_record["retrieval_evidence"][0]["source"] == "docs"
+    assert artefacts.retrieval_evidence[0].path.endswith("plasma_control.md")
+    assert "plasma" in artefacts.retrieval_evidence[0].matched_terms
+    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] > 0.0
+
+
+def test_compile_artifacts_can_disable_all_retrieval():
+    artefacts = compile_symbolic_binding(
+        "A 2-layer power grid stability controller",
+        name="grid_no_local_retrieval_review",
+        retrieval_root=None,
+        docs_root=None,
+    )
+
+    assert artefacts.retrieval_evidence == []
+    assert artefacts.audit_record["retrieval_evidence"] == []
+    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] == 0.0
 
 
 def test_compile_artifacts_can_disable_retrieval():
@@ -211,9 +259,8 @@ def test_compile_artifacts_can_disable_retrieval():
         retrieval_root=None,
     )
 
-    assert artefacts.retrieval_evidence == []
-    assert artefacts.audit_record["retrieval_evidence"] == []
-    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] == 0.0
+    assert all(evidence.source == "docs" for evidence in artefacts.retrieval_evidence)
+    assert artefacts.audit_record["confidence_factors"]["retrieval_score"] >= 0.0
 
 
 def test_write_domainpack_and_cli_generate(tmp_path, monkeypatch):
@@ -242,6 +289,7 @@ def test_write_domainpack_and_cli_generate(tmp_path, monkeypatch):
     audit = json.loads((output_dir / "audit.json").read_text(encoding="utf-8"))
     assert audit["schema_valid"] is True
     assert audit["domain_family"] == "network"
+    assert audit["notebook_execution"]["status"] == "passed"
     assert "retrieval_matches=" in result.output
     notebook = json.loads(
         (output_dir / "review_notebook.ipynb").read_text(encoding="utf-8")

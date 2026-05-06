@@ -69,7 +69,7 @@ control engineers who do not already live in phase dynamics.
 | Hierarchical orchestration | nested supervisors plus edge/cloud synchronisation protocol for distributed coherence control |
 | Formal supervisor verification | export Petri-net and policy surfaces to PRISM, TLA+, or equivalent model-checking workflows for safety properties |
 | STL runtime verification | robustness monitor foundation, policy YAML `stl_monitors` integration, PRISM export linkage, and builtin monitoring automata synthesis are implemented; full controller synthesis remains open |
-| Symbolic-to-binding compiler | compiler foundation plus local retrieval evidence, confidence factors, and generated review notebook are implemented; richer long-form retrieval and notebook execution evidence remain open |
+| Symbolic-to-binding compiler | compiler foundation, domainpack/docs retrieval evidence, confidence factors, generated review notebook, and notebook preflight execution evidence are implemented; deeper retrieval ranking remains open |
 | Cross-domain meta-transfer | replay-backed proposals, multi-audit fitting, training summaries, and deterministic JSON package export are implemented; larger real audit-history corpora and optional `scpn-meta` packaging remain open |
 | Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, audit records, marketplace catalogue packaging, a runnable catalogue example, and CLI catalogue export; Rust-side integration remains open |
 

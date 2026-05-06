@@ -267,10 +267,12 @@ Near-term candidate tracks:
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - Retrieval, confidence, and notebook polish are in place: generation now
-    records local domainpack retrieval evidence, confidence factors, and a
-    `review_notebook.ipynb` validation notebook.
-  - Remaining scope: richer retrieval over long-form docs and generated
-    notebook execution evidence.
+    records local domainpack plus long-form public-doc retrieval evidence,
+    confidence factors, and a `review_notebook.ipynb` validation notebook.
+  - Notebook preflight execution evidence is in place: generated audit records
+    include compiler-side binding-schema and policy-loader checks matching the
+    review notebook.
+  - Remaining scope: deeper retrieval ranking and optional corpus expansion.
 - Cross-domain meta-transfer: learn a latent policy/binding space from audit histories and propose zero-shot or few-shot initial policies for new domains.
   - Foundation is in place: replay-backed meta-transfer proposals exist.
   - Multi-audit fitting and package export are in place:

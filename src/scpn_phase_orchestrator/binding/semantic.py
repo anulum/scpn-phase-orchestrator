@@ -47,6 +47,7 @@ class RetrievalEvidence:
     score: float
     matched_terms: list[str]
     summary: str
+    source: str = "domainpack"
 
     def to_audit_record(self) -> dict[str, Any]:
         """Return a JSON-safe retrieval evidence record."""
@@ -56,6 +57,7 @@ class RetrievalEvidence:
             "score": self.score,
             "matched_terms": self.matched_terms,
             "summary": self.summary,
+            "source": self.source,
         }
 
 
@@ -133,6 +135,7 @@ class SemanticDomainCompiler:
         oscillators_per_layer: int = 8,
         dry_run_steps: int = 8,
         retrieval_root: str | Path | None = "domainpacks",
+        docs_root: str | Path | None = "docs",
     ) -> GeneratedBindingArtifacts:
         """Compile domain intent into binding, policy, audit, and dry-run artefacts."""
         if not name or not re.match(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$", name):
@@ -263,11 +266,24 @@ class SemanticDomainCompiler:
         dry_run_r = _dry_run_order_parameter(spec, dry_run_steps)
         binding_yaml = _binding_spec_to_yaml(spec)
         policy_yaml = _policy_yaml_for(spec)
-        retrieval_evidence = _retrieve_domainpack_evidence(prompt, retrieval_root)
+        retrieval_evidence = _retrieve_local_evidence(
+            prompt,
+            domainpack_root=retrieval_root,
+            docs_root=docs_root,
+        )
         retrieval_records = [
             evidence.to_audit_record() for evidence in retrieval_evidence
         ]
-        retrieval_score = retrieval_evidence[0].score if retrieval_evidence else 0.0
+        retrieval_score = (
+            max(evidence.score for evidence in retrieval_evidence)
+            if retrieval_evidence
+            else 0.0
+        )
+        notebook_execution = _review_notebook_execution_evidence(
+            binding_yaml=binding_yaml,
+            policy_yaml=policy_yaml,
+            expected_name=spec.name,
+        )
         confidence = _confidence(
             matched_keywords=matched_keywords,
             has_layer_count=layer_match is not None,
@@ -278,6 +294,7 @@ class SemanticDomainCompiler:
             spec,
             confidence=confidence,
             retrieval_records=retrieval_records,
+            notebook_execution=notebook_execution,
         )
         audit_record = {
             "compiler": "symbolic_binding_v0",
@@ -293,6 +310,7 @@ class SemanticDomainCompiler:
             "domain_family": domain_family,
             "matched_keywords": matched_keywords,
             "retrieval_evidence": retrieval_records,
+            "notebook_execution": notebook_execution,
             "layers": num_layers,
             "oscillators_per_layer": oscillators_per_layer,
             "dry_run_steps": dry_run_steps,
@@ -322,6 +340,7 @@ def compile_symbolic_binding(
     oscillators_per_layer: int = 8,
     dry_run_steps: int = 8,
     retrieval_root: str | Path | None = "domainpacks",
+    docs_root: str | Path | None = "docs",
 ) -> GeneratedBindingArtifacts:
     """Compile domain intent into a reviewable generated domainpack."""
     return SemanticDomainCompiler().compile_artifacts(
@@ -330,6 +349,7 @@ def compile_symbolic_binding(
         oscillators_per_layer=oscillators_per_layer,
         dry_run_steps=dry_run_steps,
         retrieval_root=retrieval_root,
+        docs_root=docs_root,
     )
 
 
@@ -348,6 +368,29 @@ def _confidence(
     if retrieval_score > 0.0:
         score += min(0.15, 0.05 + 0.1 * retrieval_score)
     return round(min(score, 0.95), 3)
+
+
+def _retrieve_local_evidence(
+    prompt: str,
+    *,
+    domainpack_root: str | Path | None,
+    docs_root: str | Path | None,
+    limit_per_source: int = 3,
+) -> list[RetrievalEvidence]:
+    domainpack_evidence = _retrieve_domainpack_evidence(
+        prompt,
+        domainpack_root,
+        limit=limit_per_source,
+    )
+    docs_evidence = _retrieve_docs_evidence(
+        prompt,
+        docs_root,
+        limit=limit_per_source,
+    )
+    return sorted(
+        [*domainpack_evidence, *docs_evidence],
+        key=lambda item: (-item.score, item.source, item.domainpack),
+    )
 
 
 def _retrieve_domainpack_evidence(
@@ -379,12 +422,13 @@ def _retrieve_domainpack_evidence(
         matched = sorted(prompt_terms & corpus_terms)
         if not matched:
             continue
-        name_bonus = sum(
-            1
-            for term in prompt_terms
-            if term in domain_dir.name.lower().replace("_", " ")
+        domain_phrase = domain_dir.name.lower().replace("_", " ")
+        name_bonus = sum(1 for term in prompt_terms if term in domain_phrase)
+        phrase_bonus = 2 if domain_phrase in prompt.lower() else 0
+        score = (len(matched) + name_bonus + phrase_bonus) / max(
+            len(prompt_terms),
+            1,
         )
-        score = (len(matched) + name_bonus) / max(len(prompt_terms), 1)
         scored.append(
             RetrievalEvidence(
                 domainpack=domain_dir.name,
@@ -392,10 +436,51 @@ def _retrieve_domainpack_evidence(
                 score=round(min(score, 1.0), 3),
                 matched_terms=matched[:12],
                 summary=_evidence_summary(domain_dir.name, matched),
+                source="domainpack",
             )
         )
 
     return sorted(scored, key=lambda item: (-item.score, item.domainpack))[:limit]
+
+
+def _retrieve_docs_evidence(
+    prompt: str,
+    root: str | Path | None,
+    *,
+    limit: int = 3,
+) -> list[RetrievalEvidence]:
+    if root is None:
+        return []
+    base = Path(root)
+    if not base.exists() or not base.is_dir():
+        return []
+
+    prompt_terms = _terms(prompt)
+    if not prompt_terms:
+        return []
+
+    scored: list[RetrievalEvidence] = []
+    for doc_path in sorted(base.rglob("*.md")):
+        if "internal" in doc_path.parts:
+            continue
+        text = _safe_read(doc_path, max_chars=20000)
+        corpus_terms = set(_terms(text))
+        matched = sorted(prompt_terms & corpus_terms)
+        if not matched:
+            continue
+        title_bonus = sum(1 for term in prompt_terms if term in doc_path.stem.lower())
+        score = (len(matched) + title_bonus) / max(len(prompt_terms), 1)
+        scored.append(
+            RetrievalEvidence(
+                domainpack=doc_path.stem,
+                path=str(doc_path),
+                score=round(min(score, 1.0), 3),
+                matched_terms=matched[:12],
+                summary=_evidence_summary(doc_path.stem, matched),
+                source="docs",
+            )
+        )
+    return sorted(scored, key=lambda item: (-item.score, item.path))[:limit]
 
 
 def _safe_read(path: Path, *, max_chars: int) -> str:
@@ -436,6 +521,7 @@ def _review_notebook_for(
     *,
     confidence: float,
     retrieval_records: list[dict[str, Any]],
+    notebook_execution: dict[str, Any],
 ) -> str:
     notebook = {
         "cells": [
@@ -457,6 +543,10 @@ def _review_notebook_for(
                     "\n",
                     f"- Confidence: `{confidence:.3f}`\n",
                     f"- Retrieval matches: `{len(retrieval_records)}`\n",
+                    "- Notebook preflight: "
+                    f"`{notebook_execution['status']}` "
+                    f"({notebook_execution['passed_checks']}/"
+                    f"{notebook_execution['total_checks']} checks)\n",
                 ],
             },
             {
@@ -491,6 +581,20 @@ def _review_notebook_for(
                 "cell_type": "markdown",
                 "metadata": {},
                 "source": [
+                    "## Preflight evidence\n",
+                    "\n",
+                    "The compiler executed the same schema and policy checks "
+                    "that this review notebook asks you to run locally.\n",
+                    "\n",
+                    f"- Status: `{notebook_execution['status']}`\n",
+                    f"- Checks: `{notebook_execution['passed_checks']}/"
+                    f"{notebook_execution['total_checks']}`\n",
+                ],
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
                     "## Review checklist\n",
                     "\n",
                     "- Confirm layer names and oscillator counts match the plant.\n",
@@ -508,6 +612,7 @@ def _review_notebook_for(
             "language_info": {"name": "python", "pygments_lexer": "ipython3"},
             "scpn_phase_orchestrator": {
                 "artifact": "symbolic_binding_review",
+                "notebook_execution": notebook_execution,
                 "schema_version": 1,
             },
         },
@@ -515,6 +620,82 @@ def _review_notebook_for(
         "nbformat_minor": 5,
     }
     return json.dumps(notebook, indent=2, sort_keys=True) + "\n"
+
+
+def _review_notebook_execution_evidence(
+    *,
+    binding_yaml: str,
+    policy_yaml: str,
+    expected_name: str,
+) -> dict[str, Any]:
+    import tempfile
+
+    from scpn_phase_orchestrator.binding.loader import load_binding_spec
+    from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
+
+    checks: list[dict[str, Any]] = []
+    with tempfile.TemporaryDirectory(prefix="spo_generated_review_") as tmp:
+        path = Path(tmp)
+        binding_path = path / "binding_spec.yaml"
+        policy_path = path / "policy.yaml"
+        binding_path.write_text(binding_yaml, encoding="utf-8")
+        policy_path.write_text(policy_yaml, encoding="utf-8")
+
+        try:
+            spec = load_binding_spec(binding_path)
+            checks.append({"name": "load_binding_spec", "passed": True})
+        except Exception as exc:  # pragma: no cover - defensive audit payload
+            checks.append(
+                {
+                    "name": "load_binding_spec",
+                    "passed": False,
+                    "error": type(exc).__name__,
+                }
+            )
+            spec = None
+
+        if spec is not None:
+            errors = validate_binding_spec(spec)
+            checks.append(
+                {
+                    "name": "validate_binding_spec",
+                    "passed": errors == [],
+                    "errors": errors,
+                }
+            )
+            checks.append(
+                {
+                    "name": "spec_name_matches",
+                    "passed": spec.name == expected_name,
+                    "observed": spec.name,
+                }
+            )
+
+        try:
+            rules = load_policy_rules(policy_path)
+            checks.append(
+                {
+                    "name": "load_policy_rules",
+                    "passed": len(rules) > 0,
+                    "rule_count": len(rules),
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive audit payload
+            checks.append(
+                {
+                    "name": "load_policy_rules",
+                    "passed": False,
+                    "error": type(exc).__name__,
+                }
+            )
+
+    passed = sum(1 for check in checks if check["passed"])
+    return {
+        "status": "passed" if passed == len(checks) else "failed",
+        "passed_checks": passed,
+        "total_checks": len(checks),
+        "checks": checks,
+    }
 
 
 def _dry_run_order_parameter(spec: BindingSpec, steps: int) -> float:
