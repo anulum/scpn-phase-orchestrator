@@ -13,8 +13,11 @@ on:
     paths:
       - ".clusterfuzzlite/**"
       - ".github/workflows/clusterfuzzlite.yml"
+      - ".github/workflows/publish.yml"
       - ".github/workflows/release.yml"
       - "fuzzers/**"
+      - "requirements/publish-tools.in"
+      - "requirements/publish-tools.txt"
       - "requirements/release-tools.txt"
       - "requirements/runtime-lock.txt"
       - "src/**"
