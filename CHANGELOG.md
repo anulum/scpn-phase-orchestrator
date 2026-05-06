@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed (2026-05-06 — PyPI publish release guards)
+## [0.5.5] - 2026-05-06
+
+### Fixed
 - Added `tools/check_release_tag_version.py` and focused tests so tag-triggered
   release workflows fail early when `GITHUB_REF_NAME` does not match the Python
   package version in `pyproject.toml`.
@@ -1430,7 +1432,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...v0.5.5
 [0.5.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.3.0...v0.4.0
