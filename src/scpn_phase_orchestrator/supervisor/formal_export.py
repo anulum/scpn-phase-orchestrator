@@ -255,9 +255,7 @@ def _stl_mapping(specs: list[PolicySTLSpec]) -> dict[str, str]:
 def _stl_predicates(spec: PolicySTLSpec) -> tuple[str, list[tuple[str, str, float]]]:
     match = _SIMPLE_STL_RE.match(spec.spec.strip())
     if match is None:
-        raise PolicyError(
-            f"STL monitor {spec.name!r} uses unsupported export syntax"
-        )
+        raise PolicyError(f"STL monitor {spec.name!r} uses unsupported export syntax")
     temporal_op = match.group(1)
     predicates: list[tuple[str, str, float]] = []
     for raw_predicate in re.split(r"\s+(?:and|&&)\s+", match.group(2)):
@@ -510,11 +508,10 @@ def export_stl_specs_prism(
         temporal_op, predicates = parsed[spec.name]
         expr = _stl_expr(predicates, signal_names)
         lines.append(
-            f"// STL {spec.name!r}: {temporal_op} monitor, "
-            f"severity={spec.severity}"
+            f"// STL {spec.name!r}: {temporal_op} monitor, severity={spec.severity}"
         )
-        lines.append(f'label \"stl_{stl_id}_satisfied\" = {expr};')
-        lines.append(f'label \"stl_{stl_id}_violated\" = !({expr});')
+        lines.append(f'label "stl_{stl_id}_satisfied" = {expr};')
+        lines.append(f'label "stl_{stl_id}_violated" = !({expr});')
 
     return PrismExport(
         model="\n".join(lines) + "\n",

@@ -27,9 +27,7 @@ def test_plasma_topology_demo_adds_auditable_guarded_simplices() -> None:
     assert audit["pairwise_delta_norm"] > 0.0
     assert audit["global_coherence"] < payload["policy"]["coherence_floor"]
     assert audit["added_simplices"]
-    assert all(
-        edge["strength"] <= 0.25 for edge in audit["added_simplices"]
-    )
+    assert all(edge["strength"] <= 0.25 for edge in audit["added_simplices"])
 
 
 def test_simplex_pairwise_support_floor_blocks_unsupported_triads() -> None:

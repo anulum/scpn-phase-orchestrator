@@ -47,10 +47,7 @@ def test_all_api_reference_pages_are_in_mkdocs_nav() -> None:
         config_text = config_text.replace(tag, "")
     config = yaml.safe_load(config_text)
     nav_paths = set(_nav_paths(config["nav"]))
-    api_pages = {
-        str(path.relative_to(DOCS_ROOT))
-        for path in API_ROOT.glob("*.md")
-    }
+    api_pages = {str(path.relative_to(DOCS_ROOT)) for path in API_ROOT.glob("*.md")}
 
     assert api_pages <= nav_paths
 

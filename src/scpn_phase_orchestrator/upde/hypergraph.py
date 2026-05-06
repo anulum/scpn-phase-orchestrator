@@ -205,9 +205,7 @@ def _validate_hyperedge(edge: Hyperedge, *, n_oscillators: int) -> Hyperedge:
         if isinstance(node, bool) or not isinstance(node, Integral):
             raise ValueError(f"hyperedge node must be an integer, got {node!r}")
         if int(node) < 0 or int(node) >= n_oscillators:
-            raise ValueError(
-                f"hyperedge node {node!r} outside [0, {n_oscillators})"
-            )
+            raise ValueError(f"hyperedge node {node!r} outside [0, {n_oscillators})")
     if isinstance(edge.strength, bool) or not isinstance(edge.strength, Real):
         raise ValueError(
             f"hyperedge strength must be finite real, got {edge.strength!r}"
