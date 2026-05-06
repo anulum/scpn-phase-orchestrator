@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
+from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
@@ -107,6 +108,62 @@ class TestStuartLandauEngineValidation:
         )
 
         assert engine._n == 4
+        assert pytest.approx(0.01) == engine._dt
+        assert pytest.approx(1e-6) == engine._atol
+        assert pytest.approx(1e-3) == engine._rtol
+
+
+class TestSheafUPDEEngineValidation:
+    @pytest.mark.parametrize("n_oscillators", [False, 0, -1, 1.5, "4"])
+    def test_rejects_invalid_oscillator_count(self, n_oscillators: Any) -> None:
+        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+            SheafUPDEEngine(n_oscillators=n_oscillators, d_dimensions=2, dt=0.01)
+
+    @pytest.mark.parametrize("d_dimensions", [False, 0, -1, 1.5, "2"])
+    def test_rejects_invalid_dimension_count(self, d_dimensions: Any) -> None:
+        with pytest.raises(ValueError, match="d_dimensions must be >= 1"):
+            SheafUPDEEngine(n_oscillators=4, d_dimensions=d_dimensions, dt=0.01)
+
+    @pytest.mark.parametrize(
+        "dt",
+        [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"],
+    )
+    def test_rejects_invalid_dt(self, dt: Any) -> None:
+        with pytest.raises(ValueError, match="dt must be positive"):
+            SheafUPDEEngine(n_oscillators=4, d_dimensions=2, dt=dt)
+
+    @pytest.mark.parametrize("atol", [False, 0.0, -1e-6, float("nan"), "1e-6"])
+    def test_rejects_invalid_atol(self, atol: Any) -> None:
+        with pytest.raises(ValueError, match="atol must be positive"):
+            SheafUPDEEngine(n_oscillators=4, d_dimensions=2, dt=0.01, atol=atol)
+
+    @pytest.mark.parametrize("rtol", [False, 0.0, -1e-3, float("inf"), "1e-3"])
+    def test_rejects_invalid_rtol(self, rtol: Any) -> None:
+        with pytest.raises(ValueError, match="rtol must be positive"):
+            SheafUPDEEngine(n_oscillators=4, d_dimensions=2, dt=0.01, rtol=rtol)
+
+    @pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "10"])
+    def test_run_rejects_invalid_step_count(self, n_steps: Any) -> None:
+        engine = SheafUPDEEngine(n_oscillators=4, d_dimensions=2, dt=0.01)
+        phases = np.zeros((4, 2), dtype=np.float64)
+        omegas = np.ones((4, 2), dtype=np.float64)
+        restriction_maps = np.zeros((4, 4, 2, 2), dtype=np.float64)
+        psi = np.zeros(2, dtype=np.float64)
+
+        with pytest.raises(ValueError, match="n_steps must be >= 1"):
+            engine.run(phases, omegas, restriction_maps, 0.0, psi, n_steps=n_steps)
+
+    def test_normalises_accepted_numpy_scalars(self) -> None:
+        engine = SheafUPDEEngine(
+            n_oscillators=np.int64(4),
+            d_dimensions=np.int64(2),
+            dt=np.float64(0.01),
+            atol=np.float64(1e-6),
+            rtol=np.float64(1e-3),
+        )
+
+        assert engine._n == 4
+        assert engine._d == 2
         assert pytest.approx(0.01) == engine._dt
         assert pytest.approx(1e-6) == engine._atol
         assert pytest.approx(1e-3) == engine._rtol

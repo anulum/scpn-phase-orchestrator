@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -19,6 +20,21 @@ from scpn_phase_orchestrator._compat import TWO_PI
 __all__ = ["SheafUPDEEngine"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    return coerced
 
 
 class SheafUPDEEngine:
@@ -46,6 +62,17 @@ class SheafUPDEEngine:
         atol: float = 1e-6,
         rtol: float = 1e-3,
     ):
+        n_oscillators = _validate_positive_int(
+            n_oscillators,
+            name="n_oscillators",
+        )
+        d_dimensions = _validate_positive_int(
+            d_dimensions,
+            name="d_dimensions",
+        )
+        dt = _validate_positive_float(dt, name="dt")
+        atol = _validate_positive_float(atol, name="atol")
+        rtol = _validate_positive_float(rtol, name="rtol")
         self._n = n_oscillators
         self._d = d_dimensions
         self._dt = dt
@@ -123,6 +150,7 @@ class SheafUPDEEngine:
         n_steps: int,
     ) -> FloatArray:
         """Run multiple steps in a batch, return final phases."""
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
         if self._rust is not None:
             res = self._rust.run(
                 np.ascontiguousarray(phases.ravel(), dtype=np.float64),
