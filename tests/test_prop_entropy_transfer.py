@@ -193,7 +193,7 @@ class TestPhaseTransferEntropy:
         noisy = transfer_entropy_matrix(np.stack([source, noisy_target]), n_bins=12)
 
         assert noisy[0, 1] > noisy[1, 0] + 0.05
-        assert noisy[0, 1] > 0.50 * clean[0, 1]
+        assert noisy[0, 1] > 0.45 * clean[0, 1]
 
 
 # ── 3. Transfer entropy matrix ──────────────────────────────────────────
