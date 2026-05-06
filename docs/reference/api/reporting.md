@@ -74,6 +74,9 @@ The text report also prints a compact channel-algebra line when the audit
 header contains one, including required/optional/derived counts and any missing
 required channel evidence.
 
+Programmatic tools can use `build_audit_report_summary()` directly to get the
+same JSON-ready report payload as `spo report --json-out`.
+
 ## Usage
 
 ```python
@@ -104,3 +107,7 @@ plotter.plot_pac_heatmap("output/pac.png")
 | `_extract_pac_matrix` | `(n, matrix)` | PAC from last log record |
 
 ::: scpn_phase_orchestrator.reporting.plots
+
+## Summary Builder
+
+::: scpn_phase_orchestrator.reporting.summary

@@ -41,6 +41,7 @@ from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
@@ -242,6 +243,34 @@ def _string_list(value: object) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value]
     return []
+
+
+def _float_list(value: object) -> list[float]:
+    if isinstance(value, list):
+        return [float(item) for item in value if isinstance(item, int | float)]
+    return []
+
+
+def _float_value(value: object) -> float:
+    if isinstance(value, int | float):
+        return float(value)
+    return 0.0
+
+
+def _int_value(value: object) -> int:
+    if isinstance(value, int):
+        return value
+    return 0
+
+
+def _count_dict(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    counts: dict[str, int] = {}
+    for key, raw_count in value.items():
+        if isinstance(raw_count, int):
+            counts[str(key)] = raw_count
+    return counts
 
 
 @main.command("policy-dry-run")
@@ -759,69 +788,39 @@ def report(log_path: str, json_out: bool) -> None:
     replay_engine = ReplayEngine(log_path)
     entries = replay_engine.load()
     steps = [e for e in entries if "step" in e and "layers" in e]
-    events = [e for e in entries if "event" in e]
-    header = replay_engine.load_header(entries)
 
     if not steps:
         click.echo("ERROR: no step records in log", err=True)
         raise SystemExit(1)
 
-    n_steps = len(steps)
-    n_layers = max(len(s.get("layers", [])) for s in steps)
-    r_series = [
-        [s["layers"][i]["R"] for s in steps if i < len(s["layers"])]
-        for i in range(n_layers)
-    ]
-
-    regime_counts: dict[str, int] = {}
-    for s in steps:
-        regime = s.get("regime", "NOMINAL")
-        regime_counts[regime] = regime_counts.get(regime, 0) + 1
-
-    action_counts: dict[str, int] = {}
-    for s in steps:
-        for a in s.get("actions", []):
-            knob = a.get("knob", "?")
-            action_counts[knob] = action_counts.get(knob, 0) + 1
-
     integrity_ok, n_verified = ReplayEngine.verify_integrity(entries)
-
-    summary = {
-        "steps": n_steps,
-        "layers": n_layers,
-        "amplitude_mode": bool(header and header.get("amplitude_mode")),
-        "final_regime": steps[-1].get("regime", "unknown"),
-        "final_stability": steps[-1].get("stability", 0.0),
-        "layer_r_mean": [round(sum(rs) / len(rs), 4) if rs else 0.0 for rs in r_series],
-        "layer_r_final": [round(rs[-1], 4) if rs else 0.0 for rs in r_series],
-        "regime_counts": regime_counts,
-        "action_counts": action_counts,
-        "events": len(events),
-        "hash_chain_ok": integrity_ok,
-        "hash_chain_verified": n_verified,
-    }
-    if header is not None:
-        binding_summary = header.get("binding_summary") or header.get("binding_config")
-        if isinstance(binding_summary, dict):
-            summary["binding_summary"] = binding_summary
-            channel_algebra = binding_summary.get("channel_algebra")
-            if isinstance(channel_algebra, dict):
-                summary["channel_algebra"] = channel_algebra
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=integrity_ok,
+        hash_chain_verified=n_verified,
+    )
 
     if json_out:
         click.echo(_json.dumps(summary, indent=2))
         return
 
+    n_steps = _int_value(summary["steps"])
+    n_layers = _int_value(summary["layers"])
+    layer_r_mean = _float_list(summary.get("layer_r_mean"))
+    layer_r_final = _float_list(summary.get("layer_r_final"))
+    regime_counts = _count_dict(summary.get("regime_counts"))
+    action_counts = _count_dict(summary.get("action_counts"))
+
     click.echo(f"Steps: {n_steps}  Layers: {n_layers}")
     mode = "Stuart-Landau" if summary["amplitude_mode"] else "Kuramoto"
     click.echo(f"Mode: {mode}")
     click.echo(f"Final regime: {summary['final_regime']}")
-    click.echo(f"Final stability: {summary['final_stability']:.4f}")
+    final_stability = _float_value(summary["final_stability"])
+    click.echo(f"Final stability: {final_stability:.4f}")
     click.echo()
     for i in range(n_layers):
         click.echo(
-            f"  L{i}: R_mean={summary['layer_r_mean'][i]:.4f}  "
-            f"R_final={summary['layer_r_final'][i]:.4f}"
+            f"  L{i}: R_mean={layer_r_mean[i]:.4f}  R_final={layer_r_final[i]:.4f}"
         )
     channel_algebra = summary.get("channel_algebra")
     if isinstance(channel_algebra, dict):
