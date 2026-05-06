@@ -74,6 +74,17 @@ def _nchannel_spec() -> dict:
                 "required": False,
                 "supervisor_visibility": False,
             },
+            "Forecast": {
+                "role": "delayed_forecast",
+                "required": False,
+                "replay_semantics": "external",
+                "metric_semantics": "delayed confidence interval",
+            },
+            "Estimate": {
+                "role": "state_estimate",
+                "required": False,
+                "metric_semantics": "uncertain probabilistic state",
+            },
         },
         "channel_groups": {
             "supervised": {
@@ -111,11 +122,29 @@ def test_channel_algebra_report_classifies_nchannel_relationships(tmp_path) -> N
 
     report = build_channel_algebra_report(spec)
 
-    assert report.channels == ("H", "Hidden", "I", "P", "Risk", "S")
-    assert report.declared_channels == ("H", "Hidden", "P", "Risk")
+    assert report.channels == (
+        "Estimate",
+        "Forecast",
+        "H",
+        "Hidden",
+        "I",
+        "P",
+        "Risk",
+        "S",
+    )
+    assert report.declared_channels == (
+        "Estimate",
+        "Forecast",
+        "H",
+        "Hidden",
+        "P",
+        "Risk",
+    )
     assert report.required_channels == ("H", "P")
-    assert report.optional_channels == ("Hidden", "Risk")
+    assert report.optional_channels == ("Estimate", "Forecast", "Hidden", "Risk")
     assert report.derived_channels == ("Risk",)
+    assert report.delayed_channels == ("Forecast",)
+    assert report.uncertain_channels == ("Estimate", "Forecast")
     assert report.missing_required_channels == ()
     assert report.runtime_evidence_channels == ("H", "P", "Risk")
     assert "Hidden" not in report.supervisor_visible_channels
@@ -154,5 +183,7 @@ def test_channel_algebra_report_serialises_for_audit(tmp_path) -> None:
     first_edge = cast("dict[str, object]", edges[0])
 
     assert record["derived_channels"] == ["Risk"]
+    assert record["delayed_channels"] == ["Forecast"]
+    assert record["uncertain_channels"] == ["Estimate", "Forecast"]
     assert membership["P"] == ["plant_view", "supervised"]
     assert first_edge["mode"] == "directed"

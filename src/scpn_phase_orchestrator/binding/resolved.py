@@ -259,13 +259,16 @@ def format_resolved_binding_config(summary: dict[str, object]) -> list[str]:
         optional = _string_list(algebra.get("optional_channels"))
         derived_channels = _string_list(algebra.get("derived_channels"))
         missing = _string_list(algebra.get("missing_required_channels"))
+        delayed = _string_list(algebra.get("delayed_channels"))
+        uncertain = _string_list(algebra.get("uncertain_channels"))
         visible = _string_list(algebra.get("supervisor_visible_channels"))
         participating = _string_list(algebra.get("coupling_participating_channels"))
         lines.append(
             "  channel_algebra: "
             f"required={len(required)} optional={len(optional)} "
             f"derived={len(derived_channels)} visible={len(visible)} "
-            f"coupling_participants={len(participating)}"
+            f"coupling_participants={len(participating)} "
+            f"delayed={len(delayed)} uncertain={len(uncertain)}"
         )
         if missing:
             lines.append(f"    missing_required_channels: {','.join(missing)}")

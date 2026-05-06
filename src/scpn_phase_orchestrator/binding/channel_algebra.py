@@ -51,6 +51,8 @@ class ChannelAlgebraReport:
     required_channels: tuple[str, ...]
     optional_channels: tuple[str, ...]
     derived_channels: tuple[str, ...]
+    delayed_channels: tuple[str, ...]
+    uncertain_channels: tuple[str, ...]
     runtime_evidence_channels: tuple[str, ...]
     missing_required_channels: tuple[str, ...]
     supervisor_visible_channels: tuple[str, ...]
@@ -68,6 +70,8 @@ class ChannelAlgebraReport:
             "required_channels": list(self.required_channels),
             "optional_channels": list(self.optional_channels),
             "derived_channels": list(self.derived_channels),
+            "delayed_channels": list(self.delayed_channels),
+            "uncertain_channels": list(self.uncertain_channels),
             "runtime_evidence_channels": list(self.runtime_evidence_channels),
             "missing_required_channels": list(self.missing_required_channels),
             "supervisor_visible_channels": list(self.supervisor_visible_channels),
@@ -119,6 +123,34 @@ def build_channel_algebra_report(spec: BindingSpec) -> ChannelAlgebraReport:
             or channel_spec.derive_rule is not None
         )
     )
+    delayed_channels = tuple(
+        sorted(
+            channel
+            for channel, channel_spec in spec.channels.items()
+            if _mentions_policy_marker(
+                (
+                    channel_spec.role,
+                    channel_spec.metric_semantics,
+                    channel_spec.replay_semantics,
+                ),
+                ("delayed", "delay", "lagged", "external"),
+            )
+        )
+    )
+    uncertain_channels = tuple(
+        sorted(
+            channel
+            for channel, channel_spec in spec.channels.items()
+            if _mentions_policy_marker(
+                (
+                    channel_spec.role,
+                    channel_spec.metric_semantics,
+                    channel_spec.replay_semantics,
+                ),
+                ("uncertain", "uncertainty", "probabilistic", "confidence"),
+            )
+        )
+    )
     missing_required_channels = tuple(
         sorted(
             channel
@@ -168,6 +200,8 @@ def build_channel_algebra_report(spec: BindingSpec) -> ChannelAlgebraReport:
         required_channels=required_channels,
         optional_channels=optional_channels,
         derived_channels=derived_channels,
+        delayed_channels=delayed_channels,
+        uncertain_channels=uncertain_channels,
         runtime_evidence_channels=runtime_evidence_channels,
         missing_required_channels=missing_required_channels,
         supervisor_visible_channels=supervisor_visible_channels,
@@ -187,6 +221,14 @@ def _runtime_evidence_channels(spec: BindingSpec) -> tuple[str, ...]:
         if bool(config)
     }
     return tuple(sorted(family_channels | configured_driver_channels))
+
+
+def _mentions_policy_marker(
+    values: tuple[str | None, ...],
+    markers: tuple[str, ...],
+) -> bool:
+    text = " ".join(value.lower() for value in values if value)
+    return any(marker in text for marker in markers)
 
 
 def _channel_membership(

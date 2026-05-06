@@ -71,8 +71,8 @@ derived channels, runtime evidence, and missing required channel evidence
 without re-parsing the binding spec.
 
 The text report also prints a compact channel-algebra line when the audit
-header contains one, including required/optional/derived counts and any missing
-required channel evidence.
+header contains one, including required/optional/derived/delayed/uncertain
+counts and any missing required channel evidence.
 
 Programmatic tools can use `build_audit_report_summary()` directly to get the
 same JSON-ready report payload as `spo report --json-out`.

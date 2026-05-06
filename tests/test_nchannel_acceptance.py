@@ -126,6 +126,8 @@ def test_cli_report_json_preserves_header_channel_algebra(tmp_path: Path) -> Non
             "required_channels": ["P", "I", "S"],
             "optional_channels": ["H", "Risk"],
             "derived_channels": ["Risk"],
+            "delayed_channels": ["H"],
+            "uncertain_channels": ["Risk"],
             "runtime_evidence_channels": ["P", "I", "S", "H"],
             "missing_required_channels": [],
         },
@@ -154,6 +156,8 @@ def test_cli_report_text_summarises_header_channel_algebra(tmp_path: Path) -> No
             "required_channels": ["P", "I", "S"],
             "optional_channels": ["H"],
             "derived_channels": ["Risk"],
+            "delayed_channels": ["H"],
+            "uncertain_channels": ["Risk"],
             "missing_required_channels": ["S"],
         },
     }
@@ -168,7 +172,10 @@ def test_cli_report_text_summarises_header_channel_algebra(tmp_path: Path) -> No
     result = CliRunner().invoke(main, ["report", str(log_path)])
 
     assert result.exit_code == 0
-    assert "Channel algebra: required=3 optional=1 derived=1" in result.output
+    assert (
+        "Channel algebra: required=3 optional=1 derived=1 delayed=1 uncertain=1"
+        in result.output
+    )
     assert "Missing required channels: S" in result.output
 
 

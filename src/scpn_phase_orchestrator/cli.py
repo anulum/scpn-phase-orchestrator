@@ -827,12 +827,15 @@ def report(log_path: str, json_out: bool) -> None:
         required = _string_list(channel_algebra.get("required_channels"))
         optional = _string_list(channel_algebra.get("optional_channels"))
         derived = _string_list(channel_algebra.get("derived_channels"))
+        delayed = _string_list(channel_algebra.get("delayed_channels"))
+        uncertain = _string_list(channel_algebra.get("uncertain_channels"))
         missing = _string_list(channel_algebra.get("missing_required_channels"))
         click.echo()
         click.echo(
             "Channel algebra: "
             f"required={len(required)} optional={len(optional)} "
-            f"derived={len(derived)}"
+            f"derived={len(derived)} delayed={len(delayed)} "
+            f"uncertain={len(uncertain)}"
         )
         if missing:
             click.echo(f"  Missing required channels: {', '.join(missing)}")

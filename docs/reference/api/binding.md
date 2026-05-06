@@ -101,6 +101,11 @@ membership, supervisor visibility, coupling participation, and cross-channel
 edges. It is intended for audit, replay, and reporting surfaces that need a
 channel-count-agnostic view without re-parsing YAML.
 
+The same report classifies delayed and uncertain channels from existing
+`role`, `metric_semantics`, and `replay_semantics` metadata. This lets audit and
+reporting surfaces expose delayed/uncertain policy evidence without changing
+the binding schema.
+
 ```python
 from scpn_phase_orchestrator.binding import (
     build_channel_algebra_report,

@@ -199,6 +199,8 @@ def test_resolved_binding_config_includes_channel_algebra(tmp_path):
     assert channel_algebra["required_channels"] == ["H", "P"]
     assert channel_algebra["optional_channels"] == ["Risk"]
     assert channel_algebra["derived_channels"] == ["Risk"]
+    assert channel_algebra["delayed_channels"] == []
+    assert channel_algebra["uncertain_channels"] == []
     assert channel_algebra["missing_required_channels"] == []
     assert any("metadata: role=derived_risk" in line for line in lines)
     assert any("channel_groups: supervised" in line for line in lines)
