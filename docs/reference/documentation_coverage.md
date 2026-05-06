@@ -23,7 +23,7 @@ searching the source tree.
 | Tutorials | Six task-oriented tutorials | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) |
 | Guides | Runtime, production, testing, adapters, backend, notebooks | [Guides](../guide/production.md) |
 | Contributor onboarding | setup, repository map, checks, documentation duties | [Contributor Onboarding](../guide/contributor_onboarding.md) |
-| API reference | 58 MkDocs API pages | [API Reference](api/index.md) |
+| API reference | 58 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |
 | Domainpacks | 36 domainpacks documented in the gallery | [Domainpack Gallery](../galleries/domainpack_gallery.md) |
 | Notebooks | 19 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Notebook CI matrix | per-notebook extras and execution expectations | [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) |
@@ -35,6 +35,8 @@ searching the source tree.
 Counts above are derived from the repository tree at the time this page
 was updated: `36` domainpack directories, `27` `examples/*.py` scripts,
 `19` notebooks, and `58` files under `docs/reference/api/`.
+`tests/test_api_docs_navigation.py` guards that every API reference page is
+listed in `mkdocs.yml`.
 
 ## API Documentation Policy
 

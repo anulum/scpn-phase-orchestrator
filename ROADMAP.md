@@ -78,6 +78,9 @@
 - ~~Benchmark suite slice: unified Kuramoto/Stuart-Landau/Petri reference harness~~ (done — `benchmarks/reference_suite.py`, `tests/test_reference_benchmark_suite.py`)
 - ~~RK45 exhausted-retry fallback test coverage~~ (done)
 - Complete API documentation with mkdocstrings autodoc for all public modules
+- ~~API docs navigation coverage slice: every `docs/reference/api/*.md` page is
+  now wired into `mkdocs.yml` and protected by a regression test~~ (done —
+  `tests/test_api_docs_navigation.py`)
 - ~~API docs slice: wire missing mkdocstrings API pages into nav/index (autotune, ssgf, visualization)~~ (done — `mkdocs.yml`, `docs/reference/api/index.md`)
 - ~~API docs hardening slice: remove broken mkdocstrings import target for non-public ActiveInferenceAgent~~ (done — `docs/reference/api/supervisor.md`)
 - ~~API docs slice: add mkdocstrings coverage for core modules (`upde.metrics`, `upde.splitting`, `monitor.npe`, `oscillators.init_phases`)~~ (done — `docs/reference/api/upde.md`, `docs/reference/api/monitor.md`, `docs/reference/api/oscillators.md`)
