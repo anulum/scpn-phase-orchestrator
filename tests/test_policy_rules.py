@@ -17,7 +17,11 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyCondition,
     PolicyEngine,
     PolicyRule,
+    PolicySTLResult,
+    PolicySTLSpec,
+    evaluate_policy_stl_specs,
     load_policy_rules,
+    load_policy_stl_specs,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -123,6 +127,79 @@ def test_load_empty_policy_yaml(tmp_path):
     p = tmp_path / "policy.yaml"
     p.write_text("rules: []\n", encoding="utf-8")
     assert load_policy_rules(p) == []
+
+
+def test_load_policy_stl_specs_yaml(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text(
+        "rules: []\n"
+        "stl_monitors:\n"
+        "  - name: keep_sync\n"
+        "    spec: always (R >= 0.3)\n"
+        "    severity: hard\n"
+        "  - name: eventual_recovery\n"
+        "    spec: eventually (R >= 0.8)\n",
+        encoding="utf-8",
+    )
+
+    specs = load_policy_stl_specs(p)
+
+    assert specs == [
+        PolicySTLSpec(
+            name="keep_sync",
+            spec="always (R >= 0.3)",
+            severity="hard",
+        ),
+        PolicySTLSpec(
+            name="eventual_recovery",
+            spec="eventually (R >= 0.8)",
+            severity="soft",
+        ),
+    ]
+
+
+def test_load_policy_stl_specs_missing_section_returns_empty(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text("rules: []\n", encoding="utf-8")
+
+    assert load_policy_stl_specs(p) == []
+
+
+def test_load_policy_stl_specs_rejects_bad_severity(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text(
+        "stl_monitors:\n"
+        "  - name: bad\n"
+        "    spec: always (R >= 0.3)\n"
+        "    severity: emergency\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="severity"):
+        load_policy_stl_specs(p)
+
+
+def test_evaluate_policy_stl_specs_returns_audit_records():
+    specs = [
+        PolicySTLSpec(
+            name="keep_sync",
+            spec="always (R >= 0.3)",
+            severity="hard",
+        ),
+        PolicySTLSpec(
+            name="recover",
+            spec="eventually (R >= 0.8)",
+        ),
+    ]
+
+    results = evaluate_policy_stl_specs(specs, {"R": [0.2, 0.4, 0.9]})
+    audit_records = [result.to_audit_record() for result in results]
+
+    assert all(isinstance(result, PolicySTLResult) for result in results)
+    assert audit_records[0]["name"] == "keep_sync"
+    assert audit_records[0]["severity"] == "hard"
+    assert audit_records[0]["satisfied"] is False
+    assert audit_records[1]["satisfied"] is True
 
 
 def test_load_policy_rules_recursion_error_is_parse_error(tmp_path, monkeypatch):

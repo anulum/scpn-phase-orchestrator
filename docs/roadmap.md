@@ -68,7 +68,7 @@ control engineers who do not already live in phase dynamics.
 | Full N-channel algebra | channel algebra summary, resolved-config integration, audit-header coverage, report JSON/text exposure, reusable report summary payloads, delayed/uncertain classification, and runtime policy records are implemented; deeper supervisor execution remains open |
 | Hierarchical orchestration | nested supervisors plus edge/cloud synchronisation protocol for distributed coherence control |
 | Formal supervisor verification | export Petri-net and policy surfaces to PRISM, TLA+, or equivalent model-checking workflows for safety properties |
-| STL runtime verification | robustness monitor foundation is implemented; policy DSL integration and model-checker export linkage remain open |
+| STL runtime verification | robustness monitor foundation and policy YAML `stl_monitors` integration are implemented; model-checker export linkage remains open |
 | Symbolic-to-binding compiler | compiler foundation plus local retrieval evidence, confidence factors, and generated review notebook are implemented; richer long-form retrieval and notebook execution evidence remain open |
 | Cross-domain meta-transfer | replay-backed proposals, multi-audit fitting, training summaries, and deterministic JSON package export are implemented; larger real audit-history corpora and optional `scpn-meta` packaging remain open |
 | Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, audit records, marketplace catalogue packaging, a runnable catalogue example, and CLI catalogue export; Rust-side integration remains open |

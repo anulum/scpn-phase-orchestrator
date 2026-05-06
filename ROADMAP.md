@@ -229,7 +229,12 @@ Near-term candidate tracks:
   - Remaining scope: broader hierarchy/domainpack proof work and deeper
     predictive-coding world-model integration.
 - STL runtime verification: augment the policy DSL with Signal Temporal Logic formulas, robustness metrics, monitoring automata, and audit satisfaction traces.
-  - Foundation is in place: built-in STL robustness monitoring exists; remaining scope is policy DSL integration and model-checker export linkage.
+  - Foundation is in place: built-in STL robustness monitoring exists.
+  - Policy DSL integration is in place: policy YAML can declare
+    `stl_monitors`, load them with `load_policy_stl_specs()`, evaluate traces
+    with `evaluate_policy_stl_specs()`, and emit audit-ready satisfaction
+    records.
+  - Remaining scope: model-checker export linkage for STL monitor surfaces.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - Retrieval, confidence, and notebook polish are in place: generation now

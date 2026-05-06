@@ -53,6 +53,12 @@ result = monitor.evaluate_result({"R": [0.9, 0.8, 0.6]})
 assert result.satisfied
 ```
 
+Policy YAML integration is available through
+`load_policy_stl_specs()` and `evaluate_policy_stl_specs()` in
+`scpn_phase_orchestrator.supervisor.policy_rules`. This keeps STL
+specification loading in the policy DSL while preserving `STLMonitor` as the
+runtime evaluator.
+
 ::: scpn_phase_orchestrator.monitor.stl
 
 ## Chimera State Detection

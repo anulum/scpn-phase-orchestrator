@@ -390,6 +390,34 @@ PolicyRule(
 )
 ```
 
+### STL Monitors In Policy YAML
+
+Policy files may also declare reviewable Signal Temporal Logic monitors under
+top-level `stl_monitors`. These monitors do not emit control actions directly;
+they evaluate scalar traces and return audit records that can be used by the
+runtime gate or safety review job.
+
+```yaml
+rules: []
+stl_monitors:
+  - name: keep_sync
+    spec: always (R >= 0.3)
+    severity: hard
+  - name: eventual_recovery
+    spec: eventually (R >= 0.8)
+```
+
+```python
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    evaluate_policy_stl_specs,
+    load_policy_stl_specs,
+)
+
+specs = load_policy_stl_specs("policy.yaml")
+results = evaluate_policy_stl_specs(specs, {"R": [0.2, 0.4, 0.9]})
+audit_payloads = [result.to_audit_record() for result in results]
+```
+
 ### PolicyEngine
 
 ```python
