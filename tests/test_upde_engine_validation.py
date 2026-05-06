@@ -19,6 +19,7 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
+from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
 _HAS_JAX = importlib.util.find_spec("jax") is not None
@@ -61,6 +62,44 @@ class TestUPDEEngineValidation:
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
         engine = UPDEEngine(
+            n_oscillators=np.int64(4),
+            dt=np.float64(0.01),
+            atol=np.float64(1e-6),
+            rtol=np.float64(1e-3),
+        )
+
+        assert engine._n == 4
+        assert pytest.approx(0.01) == engine._dt
+        assert pytest.approx(1e-6) == engine._atol
+        assert pytest.approx(1e-3) == engine._rtol
+
+
+class TestStuartLandauEngineValidation:
+    @pytest.mark.parametrize("n_oscillators", [False, 0, -1, 1.5, "4"])
+    def test_rejects_invalid_oscillator_count(self, n_oscillators: Any) -> None:
+        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+            StuartLandauEngine(n_oscillators=n_oscillators, dt=0.01)
+
+    @pytest.mark.parametrize(
+        "dt",
+        [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"],
+    )
+    def test_rejects_invalid_dt(self, dt: Any) -> None:
+        with pytest.raises(ValueError, match="dt must be positive"):
+            StuartLandauEngine(n_oscillators=4, dt=dt)
+
+    @pytest.mark.parametrize("atol", [False, 0.0, -1e-6, float("nan"), "1e-6"])
+    def test_rejects_invalid_atol(self, atol: Any) -> None:
+        with pytest.raises(ValueError, match="atol must be positive"):
+            StuartLandauEngine(n_oscillators=4, dt=0.01, atol=atol)
+
+    @pytest.mark.parametrize("rtol", [False, 0.0, -1e-3, float("inf"), "1e-3"])
+    def test_rejects_invalid_rtol(self, rtol: Any) -> None:
+        with pytest.raises(ValueError, match="rtol must be positive"):
+            StuartLandauEngine(n_oscillators=4, dt=0.01, rtol=rtol)
+
+    def test_normalises_accepted_numpy_scalars(self) -> None:
+        engine = StuartLandauEngine(
             n_oscillators=np.int64(4),
             dt=np.float64(0.01),
             atol=np.float64(1e-6),
