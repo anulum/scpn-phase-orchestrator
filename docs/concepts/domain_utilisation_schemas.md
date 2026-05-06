@@ -1,6 +1,6 @@
 # Domain Utilisation Schemas
 
-Cross-domain comparison of all 33 SPO domainpacks, showing how Kuramoto/UPDE
+Cross-domain comparison of the current SPO domainpack catalogue, showing how Kuramoto/UPDE
 phase dynamics map to diverse physical, biological, and engineered systems.
 
 ## Master Domainpack Table
@@ -31,6 +31,7 @@ phase dynamics map to diverse physical, biological, and engineered systems.
 | plasma_control | 8 | 16 | research | adapter | Full tokamak layer hierarchy (PlasmaControlBridge) |
 | pll_clock | 3 | 8 | production | full | PLL network clock sync (ITU-T G.811) |
 | power_grid | 5 | 12 | production | full | Swing equation = Kuramoto (exact) |
+| power_safety_nchannel | 3 | 6 | production | full | Six-channel grid safety profile |
 | quantum_simulation | 3 | 8 | research | adapter | Quantum gate phase tracking (QuantumControlBridge) |
 | queuewaves | 3 | 6 | consumer | full | Service queue oscillations |
 | robotic_cpg | 4 | 8 | consumer | full | Quadruped CPG locomotion gait patterns |
@@ -40,6 +41,8 @@ phase dynamics map to diverse physical, biological, and engineered systems.
 | swarm_robotics | 3 | 8 | consumer | full | Vicsek collective motion/formation |
 | traffic_flow | 4 | 10 | consumer | full | Signal coordination = phase sync |
 | vortex_shedding | 3 | 9 | research | full | Wake dynamics (Stuart-Landau amplitude) |
+| digital_twin_nchannel | 3 | 6 | production | full | Six-channel plant/twin residual profile |
+| edge_consensus_nchannel | 3 | 6 | production | full | Six-channel gossip consensus with load/trust coupling |
 
 **Pipeline types**: *full* = BoundaryObserver + RegimeManager + SupervisorPolicy + PolicyEngine + ImprintModel (where applicable).  *adapter* = uses a specialised bridge class (FusionCoreBridge, PlasmaControlBridge, QuantumControlBridge) as an alternative architecture.
 

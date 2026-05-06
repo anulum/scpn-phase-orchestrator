@@ -17,11 +17,13 @@ from scpn_phase_orchestrator.reporting.explainability import (
     write_pdf,
 )
 from scpn_phase_orchestrator.reporting.plots import CoherencePlot
+from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
 
 __all__ = [
     "ActionExplanation",
     "CoherencePlot",
     "ExplainabilityReport",
+    "build_audit_report_summary",
     "build_explainability_report",
     "render_markdown",
     "write_markdown",

@@ -8,9 +8,13 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
+import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.monitor.stl import HAS_RTAMT, STLMonitor
+from scpn_phase_orchestrator.monitor import stl as stl_module
+from scpn_phase_orchestrator.monitor.stl import HAS_RTAMT, STLMonitor, STLTraceResult
 
 needs_rtamt = pytest.mark.skipif(not HAS_RTAMT, reason="rtamt not installed")
 
@@ -23,11 +27,53 @@ class TestSTLMonitorConstants:
         assert "K" in STLMonitor.COUPLING_BOUND
 
 
-class TestSTLImportGuard:
-    @pytest.mark.skipif(HAS_RTAMT, reason="rtamt is installed")
-    def test_import_error_without_rtamt(self):
+class TestSTLBuiltinFallback:
+    def test_builtin_predicate_robustness_has_parameterised_array_return(self):
+        hints = get_type_hints(stl_module._predicate_robustness)
+
+        assert "numpy.ndarray" in str(hints["return"])
+        assert "float64" in str(hints["return"])
+
+    def test_simple_spec_uses_builtin_backend(self):
+        monitor = STLMonitor("always (x <= 1.0)")
+        assert monitor.evaluate({"x": [0.2, 0.5, 0.9]}) > 0
+
+    def test_predicate_robustness_returns_float64_array(self):
+        values = stl_module._predicate_robustness(
+            "R",
+            ">=",
+            0.5,
+            {"R": [0.4, 0.6, 0.9]},
+        )
+
+        assert values.dtype == np.float64
+        assert values.tolist() == pytest.approx([-0.1, 0.1, 0.4])
+
+    def test_eventually_spec(self):
+        monitor = STLMonitor("eventually (R >= 0.8)")
+        assert monitor.evaluate({"R": [0.2, 0.4, 0.85]}) > 0
+        assert monitor.evaluate({"R": [0.2, 0.4, 0.7]}) < 0
+
+    def test_conjunction_spec_uses_worst_predicate(self):
+        monitor = STLMonitor("always (R >= 0.8 and amplitude_spread < 0.2)")
+        assert monitor.evaluate({"R": [0.9, 0.85], "amplitude_spread": [0.1, 0.15]}) > 0
+        assert monitor.evaluate({"R": [0.9, 0.85], "amplitude_spread": [0.1, 0.25]}) < 0
+
+    def test_result_audit_record(self):
+        result = STLMonitor("always (R >= 0.3)").evaluate_result({"R": [0.5, 0.4]})
+        assert isinstance(result, STLTraceResult)
+        assert result.to_audit_record() == {
+            "spec": "always (R >= 0.3)",
+            "robustness": result.robustness,
+            "satisfied": True,
+            "backend": "builtin",
+        }
+
+    def test_unsupported_spec_requires_rtamt_when_missing(self, monkeypatch):
+        monkeypatch.setattr(stl_module, "rtamt", None)
+        monitor = STLMonitor("x until y")
         with pytest.raises(ImportError, match="rtamt"):
-            STLMonitor("always (x <= 1.0)")
+            monitor.evaluate({"x": [1.0], "y": [0.0]})
 
 
 @needs_rtamt
@@ -109,3 +155,30 @@ class TestSTLPipelineWiring:
         rob = mon.evaluate({"R": r_trace})
         assert isinstance(rob, float)
         assert np.isfinite(rob)
+
+    def test_builtin_engine_r_trajectory_to_stl_monitor(self):
+        """Engine R trace → builtin STL robustness without optional rtamt."""
+        import numpy as np
+
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+        from scpn_phase_orchestrator.upde.order_params import (
+            compute_order_parameter,
+        )
+
+        n = 6
+        eng = UPDEEngine(n, dt=0.01)
+        phases = np.zeros(n)
+        omegas = np.ones(n)
+        knm = 0.2 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+
+        r_trace = []
+        for _ in range(8):
+            phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+            r, _ = compute_order_parameter(phases)
+            r_trace.append(r)
+
+        result = STLMonitor("always (R >= 0.3)").evaluate_result({"R": r_trace})
+        assert result.satisfied
+        assert result.backend == "builtin"

@@ -29,6 +29,12 @@ def _validate_positive_int(value: object, *, name: str) -> int:
     return int(value)
 
 
+def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
 def _validate_positive_float(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real, got {value!r}")
@@ -201,6 +207,7 @@ class SparseUPDEEngine:
         Returns:
             Final phase vector after n_steps.
         """
+        n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         if self._rust is not None:
             return np.asarray(
                 self._rust.run(

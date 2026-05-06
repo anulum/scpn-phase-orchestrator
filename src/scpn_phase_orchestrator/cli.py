@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding import (
+    compile_symbolic_binding,
     format_resolved_binding_config,
     load_binding_spec,
     resolved_binding_config,
@@ -40,10 +41,16 @@ from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+from scpn_phase_orchestrator.plugins import (
+    build_plugin_marketplace_catalog,
+    discover_plugin_manifests,
+)
+from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
     export_policy_rules_prism,
+    export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -62,6 +69,7 @@ from scpn_phase_orchestrator.supervisor.policy_diagnostics import (
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyEngine,
     load_policy_rules,
+    load_policy_stl_specs,
 )
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -134,6 +142,27 @@ def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marki
     return PetriNet(places, transitions), Marking(tokens=dict(protocol.initial))
 
 
+@main.group("plugins")
+def plugins_group() -> None:
+    """Inspect extension plugin manifests."""
+
+
+@plugins_group.command("catalog")
+@click.option(
+    "--include-incompatible",
+    is_flag=True,
+    help="Include incompatible manifests and rejection reasons in the output",
+)
+def plugins_catalog(include_incompatible: bool) -> None:
+    """Print the discovered plugin marketplace catalogue as JSON."""
+    manifests = discover_plugin_manifests()
+    catalog = build_plugin_marketplace_catalog(
+        manifests,
+        include_incompatible=include_incompatible,
+    )
+    click.echo(json.dumps(catalog, indent=2, sort_keys=True))
+
+
 @main.command("formal-export")
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.option(
@@ -148,7 +177,7 @@ def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marki
 @click.option(
     "--export",
     "export_target",
-    type=click.Choice(["protocol", "policy"]),
+    type=click.Choice(["protocol", "policy", "stl"]),
     default="protocol",
     show_default=True,
     help="Supervisor artefact to export",
@@ -158,7 +187,7 @@ def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marki
     "policy_path",
     default=None,
     type=click.Path(exists=True),
-    help="Policy YAML path for --export policy; defaults to sibling policy.yaml",
+    help="Policy YAML path for --export policy/stl; defaults to sibling policy.yaml",
 )
 def formal_export(
     binding_spec: str,
@@ -177,7 +206,7 @@ def formal_export(
             click.echo(f"ERROR: {e}", err=True)
         raise SystemExit(1)
 
-    if export_target == "policy":
+    if export_target in {"policy", "stl"}:
         policy_file = (
             Path(policy_path)
             if policy_path is not None
@@ -186,6 +215,18 @@ def formal_export(
         if not policy_file.exists():
             click.echo(f"ERROR: policy file not found: {policy_file}", err=True)
             raise SystemExit(1)
+        if export_target == "stl":
+            stl_specs = load_policy_stl_specs(policy_file)
+            if not stl_specs:
+                click.echo("ERROR: policy file contains no stl_monitors", err=True)
+                raise SystemExit(1)
+            export = export_stl_specs_prism(stl_specs, module_name=module_name)
+            if output is None:
+                click.echo(export.model, nl=False)
+                return
+            Path(output).write_text(export.model, encoding="utf-8")
+            click.echo(f"PRISM model written: {output}")
+            return
         rules = load_policy_rules(policy_file)
         if not rules:
             click.echo("ERROR: policy file contains no rules", err=True)
@@ -235,6 +276,40 @@ def _policy_report_dict(report: PolicyDryRunReport) -> dict[str, object]:
             for step in report.step_reports
         ],
     }
+
+
+def _string_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
+
+
+def _float_list(value: object) -> list[float]:
+    if isinstance(value, list):
+        return [float(item) for item in value if isinstance(item, int | float)]
+    return []
+
+
+def _float_value(value: object) -> float:
+    if isinstance(value, int | float):
+        return float(value)
+    return 0.0
+
+
+def _int_value(value: object) -> int:
+    if isinstance(value, int):
+        return value
+    return 0
+
+
+def _count_dict(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    counts: dict[str, int] = {}
+    for key, raw_count in value.items():
+        if isinstance(raw_count, int):
+            counts[str(key)] = raw_count
+    return counts
 
 
 @main.command("policy-dry-run")
@@ -752,62 +827,73 @@ def report(log_path: str, json_out: bool) -> None:
     replay_engine = ReplayEngine(log_path)
     entries = replay_engine.load()
     steps = [e for e in entries if "step" in e and "layers" in e]
-    events = [e for e in entries if "event" in e]
-    header = replay_engine.load_header(entries)
 
     if not steps:
         click.echo("ERROR: no step records in log", err=True)
         raise SystemExit(1)
 
-    n_steps = len(steps)
-    n_layers = max(len(s.get("layers", [])) for s in steps)
-    r_series = [
-        [s["layers"][i]["R"] for s in steps if i < len(s["layers"])]
-        for i in range(n_layers)
-    ]
-
-    regime_counts: dict[str, int] = {}
-    for s in steps:
-        regime = s.get("regime", "NOMINAL")
-        regime_counts[regime] = regime_counts.get(regime, 0) + 1
-
-    action_counts: dict[str, int] = {}
-    for s in steps:
-        for a in s.get("actions", []):
-            knob = a.get("knob", "?")
-            action_counts[knob] = action_counts.get(knob, 0) + 1
-
     integrity_ok, n_verified = ReplayEngine.verify_integrity(entries)
-
-    summary = {
-        "steps": n_steps,
-        "layers": n_layers,
-        "amplitude_mode": bool(header and header.get("amplitude_mode")),
-        "final_regime": steps[-1].get("regime", "unknown"),
-        "final_stability": steps[-1].get("stability", 0.0),
-        "layer_r_mean": [round(sum(rs) / len(rs), 4) if rs else 0.0 for rs in r_series],
-        "layer_r_final": [round(rs[-1], 4) if rs else 0.0 for rs in r_series],
-        "regime_counts": regime_counts,
-        "action_counts": action_counts,
-        "events": len(events),
-        "hash_chain_ok": integrity_ok,
-        "hash_chain_verified": n_verified,
-    }
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=integrity_ok,
+        hash_chain_verified=n_verified,
+    )
 
     if json_out:
         click.echo(_json.dumps(summary, indent=2))
         return
 
+    n_steps = _int_value(summary["steps"])
+    n_layers = _int_value(summary["layers"])
+    layer_r_mean = _float_list(summary.get("layer_r_mean"))
+    layer_r_final = _float_list(summary.get("layer_r_final"))
+    regime_counts = _count_dict(summary.get("regime_counts"))
+    action_counts = _count_dict(summary.get("action_counts"))
+
     click.echo(f"Steps: {n_steps}  Layers: {n_layers}")
     mode = "Stuart-Landau" if summary["amplitude_mode"] else "Kuramoto"
     click.echo(f"Mode: {mode}")
     click.echo(f"Final regime: {summary['final_regime']}")
-    click.echo(f"Final stability: {summary['final_stability']:.4f}")
+    final_stability = _float_value(summary["final_stability"])
+    click.echo(f"Final stability: {final_stability:.4f}")
     click.echo()
     for i in range(n_layers):
         click.echo(
-            f"  L{i}: R_mean={summary['layer_r_mean'][i]:.4f}  "
-            f"R_final={summary['layer_r_final'][i]:.4f}"
+            f"  L{i}: R_mean={layer_r_mean[i]:.4f}  R_final={layer_r_final[i]:.4f}"
+        )
+    channel_algebra = summary.get("channel_algebra")
+    if isinstance(channel_algebra, dict):
+        required = _string_list(channel_algebra.get("required_channels"))
+        optional = _string_list(channel_algebra.get("optional_channels"))
+        derived = _string_list(channel_algebra.get("derived_channels"))
+        delayed = _string_list(channel_algebra.get("delayed_channels"))
+        uncertain = _string_list(channel_algebra.get("uncertain_channels"))
+        missing = _string_list(channel_algebra.get("missing_required_channels"))
+        click.echo()
+        click.echo(
+            "Channel algebra: "
+            f"required={len(required)} optional={len(optional)} "
+            f"derived={len(derived)} delayed={len(delayed)} "
+            f"uncertain={len(uncertain)}"
+        )
+        if missing:
+            click.echo(f"  Missing required channels: {', '.join(missing)}")
+    integrated_information = summary.get("integrated_information")
+    if isinstance(integrated_information, dict):
+        records = _int_value(integrated_information.get("records", 0))
+        latest_phi = _float_value(integrated_information.get("latest_phi", 0.0))
+        latest_normalised = _float_value(
+            integrated_information.get("latest_normalised_phi", 0.0)
+        )
+        total_integration = _float_value(
+            integrated_information.get("latest_total_integration", 0.0)
+        )
+        click.echo()
+        click.echo(
+            "Integrated information: "
+            f"records={records} phi={latest_phi:.4f} "
+            f"normalised_phi={latest_normalised:.4f} "
+            f"total_integration={total_integration:.4f}"
         )
     click.echo()
     click.echo("Regime distribution:")
@@ -963,6 +1049,57 @@ def scaffold(domain_name: str) -> None:
     if not readme.exists():
         readme.write_text(f"# {domain_name} domainpack\n", encoding="utf-8")
     click.echo(f"Scaffolded domainpack at {base}")
+
+
+@main.command("generate")
+@click.argument("intent")
+@click.option(
+    "--name",
+    default="generated_domain",
+    help="Generated domainpack name.",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False, dir_okay=True),
+    default=None,
+    help=(
+        "Directory for binding_spec.yaml, policy.yaml, README.md, "
+        "review_notebook.ipynb, and audit.json."
+    ),
+)
+@click.option(
+    "--oscillators-per-layer",
+    default=8,
+    show_default=True,
+    help="Oscillators assigned to each inferred layer.",
+)
+@click.option(
+    "--dry-run-steps",
+    default=8,
+    show_default=True,
+    help="Validation simulation steps before artefacts are emitted.",
+)
+def generate(
+    intent: str,
+    name: str,
+    output_dir: str | None,
+    oscillators_per_layer: int,
+    dry_run_steps: int,
+) -> None:
+    """Generate reviewable binding artefacts from symbolic domain intent."""
+    artefacts = compile_symbolic_binding(
+        intent,
+        name=name,
+        oscillators_per_layer=oscillators_per_layer,
+        dry_run_steps=dry_run_steps,
+    )
+    output_path = Path("domainpacks") / name if output_dir is None else Path(output_dir)
+    artefacts.write_domainpack(output_path)
+    click.echo(f"Generated domainpack at {output_path}")
+    click.echo(f"schema_valid={artefacts.schema_valid}")
+    click.echo(f"confidence={artefacts.audit_record['confidence']:.3f}")
+    click.echo(f"retrieval_matches={len(artefacts.retrieval_evidence)}")
+    click.echo(f"dry_run_R={artefacts.dry_run_order_parameter:.6f}")
 
 
 @main.command()

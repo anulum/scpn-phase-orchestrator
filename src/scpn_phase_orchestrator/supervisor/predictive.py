@@ -14,13 +14,20 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+from scpn_phase_orchestrator.upde.prediction import VariationalPredictor
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 
-__all__ = ["PredictiveSupervisor", "Prediction"]
+__all__ = [
+    "FEPPredictionAssessment",
+    "FEPPredictiveSupervisor",
+    "PredictiveSupervisor",
+    "Prediction",
+]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -37,6 +44,42 @@ class Prediction:
     will_degrade: bool
     will_critical: bool
     steps_to_degradation: int
+
+
+@dataclass(frozen=True)
+class FEPPredictionAssessment:
+    """One-step variational free-energy assessment for supervisor control."""
+
+    free_energy: float
+    complexity: float
+    mean_abs_error: float
+    precision_mean: float
+    precision_spread: float
+    observed_R: float
+    observed_psi: float
+    predicted_R: float
+    target_R: float
+    surprise: float
+
+    @property
+    def above_target(self) -> bool:
+        """Return True when observed coherence exceeds the target."""
+        return self.observed_R > self.target_R
+
+    def to_audit_record(self) -> dict[str, float]:
+        """Return a serialisable audit payload."""
+        return {
+            "free_energy": self.free_energy,
+            "complexity": self.complexity,
+            "mean_abs_error": self.mean_abs_error,
+            "precision_mean": self.precision_mean,
+            "precision_spread": self.precision_spread,
+            "observed_R": self.observed_R,
+            "observed_psi": self.observed_psi,
+            "predicted_R": self.predicted_R,
+            "target_R": self.target_R,
+            "surprise": self.surprise,
+        }
 
 
 class PredictiveSupervisor:
@@ -155,3 +198,177 @@ class PredictiveSupervisor:
             ]
 
         return []
+
+
+class FEPPredictiveSupervisor:
+    """Free-energy predictive supervisor built on ``VariationalPredictor``.
+
+    The class turns the existing FEP-Kuramoto variational predictor into a
+    bounded supervisor mode. It does not claim a complete biological FEP
+    model; it exposes an auditable one-step free-energy signal and maps high
+    surprise into conservative ``zeta`` / ``Psi`` control actions.
+    """
+
+    def __init__(
+        self,
+        n_oscillators: int,
+        dt: float,
+        target_R: float = 0.8,
+        free_energy_threshold: float = 1.0,
+        error_threshold: float = 0.25,
+        drive_gain: float = 0.1,
+        learning_rate: float = 0.01,
+        prior_precision: float = 1.0,
+    ) -> None:
+        if n_oscillators < 1:
+            raise ValueError("n_oscillators must be >= 1")
+        if not np.isfinite(dt) or dt <= 0.0:
+            raise ValueError("dt must be finite and positive")
+        _require_unit_interval(target_R, "target_R")
+        _require_non_negative(free_energy_threshold, "free_energy_threshold")
+        _require_non_negative(error_threshold, "error_threshold")
+        _require_non_negative(drive_gain, "drive_gain")
+        _require_non_negative(learning_rate, "learning_rate")
+        _require_non_negative(prior_precision, "prior_precision")
+
+        self._n = n_oscillators
+        self._dt = dt
+        self._target_R = target_R
+        self._free_energy_threshold = free_energy_threshold
+        self._error_threshold = error_threshold
+        self._drive_gain = drive_gain
+        self._predictor = VariationalPredictor(
+            n_oscillators,
+            prior_precision=prior_precision,
+            learning_rate=learning_rate,
+        )
+        self._last_assessment: FEPPredictionAssessment | None = None
+
+    @property
+    def target_R(self) -> float:
+        """Target order parameter used by the free-energy controller."""
+        return self._target_R
+
+    @property
+    def last_assessment(self) -> FEPPredictionAssessment | None:
+        """Most recent free-energy assessment, if ``assess`` has run."""
+        return self._last_assessment
+
+    def assess(self, phases: FloatArray, omegas: FloatArray) -> FEPPredictionAssessment:
+        """Update the variational predictor and return audit-ready metrics."""
+        phases_arr, omegas_arr = _validate_phase_inputs(phases, omegas, self._n)
+        variational = self._predictor.update(phases_arr, omegas_arr, self._dt)
+        observed_R, observed_psi = compute_order_parameter(phases_arr)
+        predicted_R, _ = compute_order_parameter(variational.predicted_phases)
+        mean_abs_error = float(np.mean(np.abs(variational.error)))
+        precision_mean = float(np.mean(variational.precision))
+        precision_spread = float(
+            np.max(variational.precision) - np.min(variational.precision)
+        )
+        surprise = float(abs(observed_R - self._target_R) + mean_abs_error)
+        assessment = FEPPredictionAssessment(
+            free_energy=float(variational.free_energy),
+            complexity=float(variational.complexity),
+            mean_abs_error=mean_abs_error,
+            precision_mean=precision_mean,
+            precision_spread=precision_spread,
+            observed_R=observed_R,
+            observed_psi=observed_psi,
+            predicted_R=predicted_R,
+            target_R=self._target_R,
+            surprise=surprise,
+        )
+        self._last_assessment = assessment
+        return assessment
+
+    def decide(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+        upde_state: UPDEState,
+        boundary_state: BoundaryState,
+    ) -> list[ControlAction]:
+        """Return FEP-MPC control actions for the current observation."""
+        if boundary_state.hard_violations:
+            return [
+                ControlAction(
+                    knob="zeta",
+                    scope="global",
+                    value=self._drive_gain,
+                    ttl_s=5.0,
+                    justification="FEP-MPC: hard boundary violation",
+                )
+            ]
+
+        assessment = self.assess(phases, omegas)
+        if not self._should_act(assessment, upde_state):
+            return []
+
+        psi_target = assessment.observed_psi
+        if assessment.above_target:
+            psi_target = (psi_target + np.pi) % TWO_PI
+
+        return [
+            ControlAction(
+                knob="zeta",
+                scope="global",
+                value=self._drive_gain,
+                ttl_s=5.0,
+                justification=(
+                    "FEP-MPC: free energy "
+                    f"{assessment.free_energy:.4g}, surprise "
+                    f"{assessment.surprise:.4g}"
+                ),
+            ),
+            ControlAction(
+                knob="Psi",
+                scope="global",
+                value=float(psi_target),
+                ttl_s=5.0,
+                justification="FEP-MPC: precision-weighted phase target",
+            ),
+        ]
+
+    def reset(self) -> None:
+        """Reset the underlying variational predictor and cached assessment."""
+        self._predictor.reset()
+        self._last_assessment = None
+
+    def _should_act(
+        self,
+        assessment: FEPPredictionAssessment,
+        upde_state: UPDEState,
+    ) -> bool:
+        if assessment.free_energy >= self._free_energy_threshold:
+            return True
+        if assessment.mean_abs_error >= self._error_threshold:
+            return True
+        return upde_state.stability_proxy < self._target_R and assessment.surprise > 0.0
+
+
+def _validate_phase_inputs(
+    phases: FloatArray,
+    omegas: FloatArray,
+    n_oscillators: int,
+) -> tuple[FloatArray, FloatArray]:
+    phase_arr = np.asarray(phases, dtype=np.float64)
+    omega_arr = np.asarray(omegas, dtype=np.float64)
+    if phase_arr.shape != (n_oscillators,):
+        raise ValueError(f"phases must have shape ({n_oscillators},)")
+    if omega_arr.shape != (n_oscillators,):
+        raise ValueError(f"omegas must have shape ({n_oscillators},)")
+    if not np.all(np.isfinite(phase_arr)):
+        raise ValueError("phases must be finite")
+    if not np.all(np.isfinite(omega_arr)):
+        raise ValueError("omegas must be finite")
+    return phase_arr, omega_arr
+
+
+def _require_unit_interval(value: float, name: str) -> None:
+    if not np.isfinite(value) or value < 0.0 or value > 1.0:
+        raise ValueError(f"{name} must be finite and in [0, 1]")
+
+
+def _require_non_negative(value: float, name: str) -> None:
+    if not np.isfinite(value) or value < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")

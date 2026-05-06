@@ -138,7 +138,10 @@ print(f"Amplitudes: {amplitudes.round(3)}")
 ## Next Steps
 
 - [Minimal Domainpack in 5 Minutes](minimal_domainpack_5min.md) -- start from raw P/I/S source data
+- [Troubleshooting](troubleshooting.md) -- install, notebooks, docs, FFI, validation, and audit replay fixes
 - [Tutorial: Hello World](hello_world.md) -- build a custom 4-oscillator domain from scratch
 - [Concepts: System Overview](../concepts/system_overview.md) -- full pipeline architecture
 - [API Reference](../reference/api/index.md) -- complete Python API
-- [Domainpack Gallery](../galleries/domainpack_gallery.md) -- all 33 domainpacks
+- [Domainpack Gallery](../galleries/domainpack_gallery.md) -- all 36 domainpacks
+- [Notebooks & Demos](../galleries/notebooks_and_demos.md) -- notebooks, examples, and interactive demos
+- [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) -- notebook extras, CI status, and runtime expectations

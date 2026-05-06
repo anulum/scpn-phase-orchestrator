@@ -138,6 +138,45 @@ class TestFindOptimalNoise:
         assert 0.0 <= result.R_achieved <= 1.0
         assert 0.0 <= result.R_deterministic <= 1.0
 
+    @pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "10"])
+    def test_rejects_invalid_n_steps(self, n_steps: object) -> None:
+        engine, phases, omegas, knm, alpha = _minimal_noise_sweep_inputs()
+
+        with pytest.raises(ValueError, match="n_steps"):
+            find_optimal_noise(
+                engine,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                D_range=np.array([0.0, 0.1]),
+                n_steps=n_steps,
+            )
+
+    @pytest.mark.parametrize(
+        "D_range",
+        [
+            np.array([]),
+            np.array([[0.0, 0.1]]),
+            np.array([-0.1, 0.2]),
+            np.array([0.0, np.nan]),
+            np.array([0.0, np.inf]),
+        ],
+    )
+    def test_rejects_invalid_D_range(self, D_range: object) -> None:
+        engine, phases, omegas, knm, alpha = _minimal_noise_sweep_inputs()
+
+        with pytest.raises(ValueError, match="D_range"):
+            find_optimal_noise(
+                engine,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                D_range=D_range,
+                n_steps=2,
+            )
+
     def test_find_optimal_noise_annotations_use_float64_ndarray(self) -> None:
         hints = get_type_hints(find_optimal_noise, localns={"UPDEEngine": UPDEEngine})
         for name in ("phases_init", "omegas", "knm", "alpha", "D_range"):
@@ -186,6 +225,17 @@ class TestNoiseScaling:
             r = _self_consistency_R(K, D)
             assert r >= prev_r - 1e-12
             prev_r = r
+
+
+def _minimal_noise_sweep_inputs():
+    n = 4
+    engine = UPDEEngine(n, dt=0.01)
+    phases = np.linspace(0.0, np.pi, n)
+    omegas = np.ones(n)
+    knm = np.full((n, n), 0.2)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+    return engine, phases, omegas, knm, alpha
 
 
 class TestStochasticPipelineEndToEnd:

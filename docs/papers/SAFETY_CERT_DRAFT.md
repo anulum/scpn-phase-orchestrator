@@ -174,7 +174,7 @@ SPO has 1305+ tests covering:
 - SSGF cost function correctness
 - STL monitor activation
 - Lyapunov guard basin detection
-- All 33 domainpack compilation
+- Current domainpack compilation
 
 Tests are executed in CI on Python 3.10-3.13 with full coverage.
 

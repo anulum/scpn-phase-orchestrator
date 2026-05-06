@@ -46,6 +46,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Integral, Real
 
 import numpy as np
 from numpy.typing import NDArray
@@ -179,6 +180,44 @@ def _dispatch() -> Callable[..., NDArray[np.float64]] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    return coerced
+
+
+def _validate_hyperedge(edge: Hyperedge, *, n_oscillators: int) -> Hyperedge:
+    nodes = tuple(edge.nodes)
+    if len(nodes) < 2:
+        raise ValueError("hyperedge nodes must contain at least two oscillators")
+    if len(set(nodes)) != len(nodes):
+        raise ValueError("hyperedge nodes must be unique")
+    for node in nodes:
+        if isinstance(node, bool) or not isinstance(node, Integral):
+            raise ValueError(f"hyperedge node must be an integer, got {node!r}")
+        if int(node) < 0 or int(node) >= n_oscillators:
+            raise ValueError(f"hyperedge node {node!r} outside [0, {n_oscillators})")
+    if isinstance(edge.strength, bool) or not isinstance(edge.strength, Real):
+        raise ValueError(
+            f"hyperedge strength must be finite real, got {edge.strength!r}"
+        )
+    strength = float(edge.strength)
+    if not np.isfinite(strength):
+        raise ValueError(
+            f"hyperedge strength must be finite real, got {edge.strength!r}"
+        )
+    return Hyperedge(nodes=tuple(int(node) for node in nodes), strength=strength)
+
+
 def _python_run(
     phases: NDArray[np.float64],
     omegas: NDArray[np.float64],
@@ -258,19 +297,35 @@ class HypergraphEngine:
         dt: float,
         hyperedges: list[Hyperedge] | None = None,
     ):
-        self._n = n_oscillators
-        self._dt = dt
-        self._hyperedges: list[Hyperedge] = hyperedges or []
+        self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
+        self._dt = _validate_positive_float(dt, name="dt")
+        self._hyperedges = [
+            _validate_hyperedge(edge, n_oscillators=self._n)
+            for edge in (hyperedges or [])
+        ]
 
     def add_edge(self, nodes: tuple[int, ...], strength: float = 1.0) -> None:
-        self._hyperedges.append(Hyperedge(nodes=nodes, strength=strength))
+        edge = _validate_hyperedge(
+            Hyperedge(nodes=nodes, strength=strength),
+            n_oscillators=self._n,
+        )
+        self._hyperedges.append(edge)
 
     def add_all_to_all(self, order: int, strength: float = 1.0) -> None:
         """Add all C(N, order) hyperedges of given order."""
         from itertools import combinations
 
+        order = _validate_positive_int(order, name="order")
+        if order > self._n:
+            raise ValueError(f"order must be <= n_oscillators, got {order!r}")
+        validated_edge = _validate_hyperedge(
+            Hyperedge(nodes=tuple(range(order)), strength=strength),
+            n_oscillators=self._n,
+        )
         for combo in combinations(range(self._n), order):
-            self._hyperedges.append(Hyperedge(nodes=combo, strength=strength))
+            self._hyperedges.append(
+                Hyperedge(nodes=combo, strength=validated_edge.strength)
+            )
 
     @property
     def n_edges(self) -> int:
@@ -324,6 +379,7 @@ class HypergraphEngine:
     ) -> NDArray[np.float64]:
         """Integrate ``n_steps`` Euler steps through the fastest
         available backend; return final phases."""
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
         en, eo, es = self._encode_edges()
         knm_flat = (
             np.ascontiguousarray(pairwise_knm, dtype=np.float64).ravel()

@@ -18,15 +18,53 @@ from scpn_phase_orchestrator.autotune.pipeline import (
     AutoTuneResult,
     identify_binding_spec,
 )
+from scpn_phase_orchestrator.autotune.policy_search import (
+    AdaptiveReplayPolicySearchConfig,
+    AdaptiveReplayPolicySearchResult,
+    ReplayPolicyEvaluator,
+    ReplayPolicySearchResult,
+    search_adaptive_replay_policy,
+    search_replay_policy,
+)
+from scpn_phase_orchestrator.autotune.reward import (
+    AutotunePolicyProposal,
+    AutotuneRewardReport,
+    KnobPolicyCandidate,
+    OfflinePolicySearchConfig,
+    PolicyProposalConfig,
+    RewardConfig,
+    RewardObservation,
+    evaluate_knob_policy,
+    generate_offline_policy_candidates,
+    propose_replay_policy,
+    rank_replay_candidates,
+)
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 
 __all__ = [
     "AutoTuneResult",
+    "AdaptiveReplayPolicySearchConfig",
+    "AdaptiveReplayPolicySearchResult",
+    "AutotunePolicyProposal",
+    "AutotuneRewardReport",
     "FrequencyResult",
+    "KnobPolicyCandidate",
+    "OfflinePolicySearchConfig",
+    "PolicyProposalConfig",
     "PhaseResult",
     "PhaseSINDy",
+    "RewardConfig",
+    "RewardObservation",
+    "ReplayPolicyEvaluator",
+    "ReplayPolicySearchResult",
+    "evaluate_knob_policy",
     "estimate_coupling",
     "extract_phases",
+    "generate_offline_policy_candidates",
     "identify_binding_spec",
     "identify_frequencies",
+    "propose_replay_policy",
+    "rank_replay_candidates",
+    "search_adaptive_replay_policy",
+    "search_replay_policy",
 ]

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, NoReturn
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.monitor.stl import STLMonitor, STLTraceResult
 from scpn_phase_orchestrator.supervisor.regimes import Regime
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
@@ -23,8 +24,12 @@ __all__ = [
     "CompoundCondition",
     "PolicyAction",
     "PolicyRule",
+    "PolicySTLResult",
+    "PolicySTLSpec",
     "PolicyEngine",
+    "evaluate_policy_stl_specs",
     "load_policy_rules",
+    "load_policy_stl_specs",
 ]
 
 _OPS = {
@@ -80,6 +85,31 @@ class PolicyRule:
     actions: list[PolicyAction]
     cooldown_s: float = 0.0
     max_fires: int = 0  # 0 = unlimited
+
+
+@dataclass(frozen=True)
+class PolicySTLSpec:
+    """Named STL monitor declared by the policy DSL."""
+
+    name: str
+    spec: str
+    severity: str = "soft"
+
+
+@dataclass(frozen=True)
+class PolicySTLResult:
+    """Policy-level STL result with monitor name and severity."""
+
+    name: str
+    severity: str
+    result: STLTraceResult
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe policy STL audit record."""
+        payload = self.result.to_audit_record()
+        payload["name"] = self.name
+        payload["severity"] = self.severity
+        return payload
 
 
 class PolicyEngine:
@@ -306,6 +336,55 @@ def _parse_action(raw: Any) -> PolicyAction:
             _require_field(data, "ttl_s", "action"), "action.ttl_s"
         ),
     )
+
+
+def _parse_stl_spec(raw: Any) -> PolicySTLSpec:
+    data = _require_mapping(raw, "stl_monitor")
+    severity = data.get("severity", "soft")
+    if not isinstance(severity, str) or severity not in {"soft", "hard"}:
+        _policy_error("stl_monitor.severity must be soft or hard")
+    return PolicySTLSpec(
+        name=_require_text(data, "name", "stl_monitor"),
+        spec=_require_text(data, "spec", "stl_monitor"),
+        severity=severity,
+    )
+
+
+def load_policy_stl_specs(path: str | Path) -> list[PolicySTLSpec]:
+    """Load top-level ``stl_monitors`` declarations from a policy YAML file."""
+    import yaml
+
+    path = Path(path)
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        reason = exc.strerror or type(exc).__name__
+        raise ValueError(f"cannot read policy rules: {reason}") from None
+    try:
+        data = yaml.safe_load(raw)
+    except (RecursionError, yaml.YAMLError):
+        raise ValueError("policy rules YAML parse error") from None
+    if not isinstance(data, dict) or "stl_monitors" not in data:
+        return []
+    monitors = _require_sequence(data["stl_monitors"], "stl_monitors")
+    if len(monitors) > _MAX_POLICY_RULES:
+        _policy_error("too many stl monitors")
+    return [_parse_stl_spec(item) for item in monitors]
+
+
+def evaluate_policy_stl_specs(
+    specs: list[PolicySTLSpec] | tuple[PolicySTLSpec, ...],
+    trace: dict[str, list[float]],
+) -> list[PolicySTLResult]:
+    """Evaluate policy-declared STL monitors over a scalar trace."""
+    return [
+        PolicySTLResult(
+            name=spec.name,
+            severity=spec.severity,
+            result=STLMonitor(spec.spec).evaluate_result(trace),
+        )
+        for spec in specs
+    ]
 
 
 def load_policy_rules(path: str | Path) -> list[PolicyRule]:

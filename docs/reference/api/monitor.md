@@ -31,6 +31,36 @@ from acting on transient startup dynamics.
 
 ::: scpn_phase_orchestrator.monitor.session_start
 
+## Signal Temporal Logic Runtime Verification
+
+`STLMonitor` evaluates runtime safety formulas over scalar monitor traces.
+It uses `rtamt` when available for full STL syntax and includes a builtin
+robustness evaluator for common safety forms:
+
+- `always (R >= 0.3)`
+- `eventually (R >= 0.8)`
+- `always (R >= 0.85 and amplitude_spread < 0.2)`
+
+Positive robustness means the formula is satisfied; negative robustness
+means violated. `evaluate_result()` returns an audit-ready result with
+the formula, robustness, satisfaction boolean, and backend name.
+
+```python
+from scpn_phase_orchestrator.monitor.stl import STLMonitor
+
+monitor = STLMonitor("always (R >= 0.3)")
+result = monitor.evaluate_result({"R": [0.9, 0.8, 0.6]})
+assert result.satisfied
+```
+
+Policy YAML integration is available through
+`load_policy_stl_specs()` and `evaluate_policy_stl_specs()` in
+`scpn_phase_orchestrator.supervisor.policy_rules`. This keeps STL
+specification loading in the policy DSL while preserving `STLMonitor` as the
+runtime evaluator.
+
+::: scpn_phase_orchestrator.monitor.stl
+
 ## Chimera State Detection
 
 Detects chimera states: the coexistence of coherent (phase-locked) and
@@ -131,6 +161,31 @@ alone predicts the target, but together they do. This detects
 higher-order functional relationships invisible to pairwise PLV.
 
 ::: scpn_phase_orchestrator.monitor.pid
+
+## Integrated-Information Monitor
+
+Estimates an approximate Phi-style global integration metric from
+phase trajectories. The monitor builds a pairwise circular
+mutual-information matrix, evaluates unique bipartitions, and reports
+the minimum cross-partition information as `phi`.
+
+This is an engineering proxy for comparing regime traces and writing
+audit records. It is not an exact IIT quantity and is not a
+consciousness claim.
+
+**Usage:**
+
+```python
+from scpn_phase_orchestrator.monitor import (
+    integrated_information,
+)
+
+# phase_series: (n_oscillators, n_samples)
+result = integrated_information(phase_series, n_bins=16)
+record = result.to_audit_record()
+```
+
+::: scpn_phase_orchestrator.monitor.information_integration
 
 ## Lyapunov Exponent
 
@@ -291,6 +346,10 @@ embedded = delay_embed(signal, delay=tau, dimension=m)
 **References:** Takens 1981, Lecture Notes in Mathematics 898:366-381.
 
 ::: scpn_phase_orchestrator.monitor.embedding
+
+## Psychedelic State Metrics
+
+::: scpn_phase_orchestrator.monitor.psychedelic
 
 ## Fractal Dimension
 

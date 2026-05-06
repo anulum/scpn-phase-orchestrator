@@ -22,6 +22,9 @@ UPDEEngine.step() ──→ phases ──→ compute_order_parameter()
                                   ↓                         ↓
                           SupervisorPolicy.decide()  ←──────┘
                                   │
+                                  ├──→ CausalInterventionEngine
+                                  │        (baseline vs intervention rollout)
+                                  │
                                   ↓
                         list[ControlAction]
                                   │
@@ -107,6 +110,180 @@ last 100 transitions as (step_number, old_regime, new_regime).
 
 ---
 
+## Higher-Order Topology Adaptation
+
+`HigherOrderTopologySupervisor` is the first supervisor-side topology editor.
+It consumes live phases plus the current pairwise `K_nm` matrix and returns a
+next-step topology:
+
+- bounded pairwise coupling updates from local phase alignment
+- optional triadic `Hyperedge` proposals when global coherence is below target
+- pruning of stale or incoherent higher-order edges
+- serialisable audit metadata for added/pruned simplices and pairwise delta norm
+
+The core control knob is `TopologyMutationPolicy.mutation_rate`. A value of
+`0.0` freezes topology; larger values increase the maximum per-step pairwise
+and triadic changes while preserving non-negative couplings and a zero
+diagonal. `TopologyMutationPolicy.simplex_pairwise_support_floor` is the
+policy-hardening gate for deployment reviews: a candidate 2-simplex is only
+created when every pairwise edge inside that triad is already at or above the
+configured support floor.
+
+```python
+import numpy as np
+
+from scpn_phase_orchestrator.supervisor import (
+    HigherOrderTopologySupervisor,
+    TopologyMutationPolicy,
+)
+from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
+
+policy = TopologyMutationPolicy(mutation_rate=0.2, coherence_floor=0.8)
+topology = HigherOrderTopologySupervisor(policy)
+result = topology.mutate(phases, knm)
+
+engine = HypergraphEngine(len(phases), dt=0.01, hyperedges=list(result.hyperedges))
+next_phases = engine.step(phases, omegas, pairwise_knm=result.knm)
+audit_payload = result.to_audit_record()
+```
+
+This slice does not claim autonomous online structural control. It provides the
+auditable mutation primitive that existing policy, causal, STL, simplicial, and
+hypergraph paths can gate before applying a topology change.
+
+Domainpack demos:
+
+- `domainpacks/plasma_control/topology_adaptation_demo.py` runs one guarded
+  mutation against the plasma-control binding and prints the audit payload as
+  JSON.
+- `domainpacks/traffic_flow/topology_adaptation_demo.py` builds pairwise
+  support from transfer-entropy evidence before proposing traffic-corridor
+  simplices, then records Lyapunov before/after energy and basin evidence for
+  the proposed mutation.
+
+::: scpn_phase_orchestrator.supervisor.topology
+
+---
+
+## Strange-Loop Supervisor Monitor
+
+`StrangeLoopSupervisor` is the first self-referential supervisor slice. It
+treats the supervisor's own action stream as a four-dimensional control
+channel over `K`, `alpha`, `zeta`, and `Psi`. The monitor records recent
+action bundles, computes a control phase, control coherence, drift score,
+oscillation score, and over-control score, then returns conservative damping
+recommendations for a normal policy or safety gate to approve.
+
+```python
+from scpn_phase_orchestrator.supervisor import StrangeLoopSupervisor
+
+loop = StrangeLoopSupervisor(overcontrol_threshold=0.2)
+assessment = loop.observe(actions_from_supervisor_policy)
+
+if assessment.recommended_actions:
+    audit_payload = assessment.to_audit_record()
+```
+
+This slice does not hot-patch the supervisor or claim autonomous
+self-awareness. It provides an auditable meta-control signal that can detect
+policy drift, control-loop oscillation, and excessive actuation before those
+dynamics are fed back into the plant.
+
+::: scpn_phase_orchestrator.supervisor.strange_loop
+
+---
+
+## Morphogenetic Topology Field
+
+`MorphogeneticTopologySupervisor` evolves a persistent field over the pairwise
+coupling topology. Each step combines:
+
+- pairwise phase-alignment reaction terms
+- incident-edge diffusion over the current topology field
+- bounded growth and shrink rates
+- a hard maximum per-step coupling delta
+
+The result is a next-step `K_nm`, a carried `MorphogeneticFieldState`, grown and
+shrunk edge lists, and compact field statistics for audit logs.
+
+```python
+from scpn_phase_orchestrator.supervisor import MorphogeneticTopologySupervisor
+
+supervisor = MorphogeneticTopologySupervisor()
+result = supervisor.step(phases, knm)
+
+next_knm = result.knm
+field_state = result.field_state
+audit_payload = result.to_audit_record()
+```
+
+This slice provides a reviewable grow/shrink primitive for topology shaping. It
+does not bypass the existing policy, causal, STL, or action-projection gates.
+
+::: scpn_phase_orchestrator.supervisor.morphogenetic
+
+---
+
+## Sheaf Coherence Supervisor
+
+`SheafCoherenceSupervisor` evaluates N-channel node states against directed
+restriction maps. It builds the block sheaf Laplacian, computes edge residuals,
+and reports obstruction metrics for audit logs.
+
+This is the first supervisor-facing sheaf-cohomology slice: it exposes
+obstruction score, consistency energy, approximate kernel dimension, and
+obstruction dimension. It does not claim a complete formal proof system or
+autonomous sheaf-control loop.
+
+```python
+from scpn_phase_orchestrator.supervisor import SheafCoherenceSupervisor
+
+supervisor = SheafCoherenceSupervisor(tolerance=1e-8)
+result = supervisor.assess(node_states, restriction_maps)
+
+if result.obstruction_score > 0.1:
+    audit_payload = result.to_audit_record()
+```
+
+::: scpn_phase_orchestrator.supervisor.sheaf
+
+---
+
+## Value-Alignment Guard
+
+`ValueAlignmentGuard` is a hard safety wrapper around proposed
+`ControlAction` lists. It evaluates explicit objective constraints, blocks
+violating actions, and returns a forced fallback action set when the proposal
+does not satisfy the configured score threshold.
+
+The guard is intentionally simple and auditable: no hidden reward model is
+loaded at runtime. Domainpacks can translate their safety or objective priors
+into `ValueConstraint` entries and attach the resulting decision record to the
+normal audit trace.
+
+```python
+from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.supervisor import (
+    ValueAlignmentGuard,
+    ValueAlignmentPolicy,
+    ValueConstraint,
+)
+
+policy = ValueAlignmentPolicy(
+    constraints=(ValueConstraint("limit-coupling", knob="K", max_abs_value=0.1),),
+    fallback_actions=(
+        ControlAction("zeta", "global", 0.0, 1.0, "alignment fallback: hold"),
+    ),
+)
+decision = ValueAlignmentGuard(policy).evaluate(proposed_actions)
+actions_to_apply = decision.actions_to_apply
+audit_payload = decision.to_audit_record()
+```
+
+::: scpn_phase_orchestrator.supervisor.alignment
+
+---
+
 ## Policy Engine
 
 Rule-based evaluation of supervisor actions.
@@ -160,6 +337,50 @@ CRITICAL regardless of R values.
 
 ---
 
+## Causal Counterfactual Rollouts
+
+`CausalInterventionEngine` evaluates proposed supervisor actions by running
+paired UPDE trajectories from the same state:
+
+- baseline: no action
+- intervention: action-adjusted `K`, `alpha`, `zeta`, or `Psi`
+
+The result is a `CounterfactualRollout` with `R` and `Psi` trajectories,
+final and mean `R` deltas, signed final phase delta, and a serialisable audit
+payload.
+
+```python
+from scpn_phase_orchestrator.supervisor import CausalInterventionEngine
+
+engine = CausalInterventionEngine(n_oscillators=8, dt=0.01, horizon=20)
+rollout = engine.evaluate_actions(phases, omegas, knm, alpha, 0.0, 0.0, actions)
+record = rollout.to_audit_record()
+attribution = rollout.attribute(threshold=1e-3).to_audit_record()
+```
+
+This is the first causal-supervision slice: it does not claim formal
+do-calculus yet, but it makes every proposed actuation comparable against a
+no-action counterfactual under the same UPDE dynamics.
+
+`CounterfactualRollout.attribute()` compresses the final and mean `R` deltas
+into an audit-ready effect label: `stabilising`, `neutral`, or `destabilising`.
+
+Domainpack demos:
+
+- `domainpacks/cardiac_rhythm/causal_attribution_demo.py` evaluates a
+  pacing-drive candidate against a ventricular-disturbance baseline.
+- `domainpacks/power_grid/causal_attribution_demo.py` evaluates a governor
+  droop coupling candidate against a no-action load-step baseline.
+
+**Backend and cost:** each evaluation performs two UPDE rollouts over the
+configured horizon, so work scales with `2 * horizon` engine steps. It uses
+the existing `UPDEEngine` backend dispatcher; Rust acceleration is used when
+available, otherwise the NumPy path is used.
+
+::: scpn_phase_orchestrator.supervisor.causal
+
+---
+
 ## Policy Rules (Declarative)
 
 Declarative rules loaded from YAML/JSON configuration.
@@ -180,6 +401,34 @@ PolicyRule(
 )
 ```
 
+### STL Monitors In Policy YAML
+
+Policy files may also declare reviewable Signal Temporal Logic monitors under
+top-level `stl_monitors`. These monitors do not emit control actions directly;
+they evaluate scalar traces and return audit records that can be used by the
+runtime gate or safety review job.
+
+```yaml
+rules: []
+stl_monitors:
+  - name: keep_sync
+    spec: always (R >= 0.3)
+    severity: hard
+  - name: eventual_recovery
+    spec: eventually (R >= 0.8)
+```
+
+```python
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    evaluate_policy_stl_specs,
+    load_policy_stl_specs,
+)
+
+specs = load_policy_stl_specs("policy.yaml")
+results = evaluate_policy_stl_specs(specs, {"R": [0.2, 0.4, 0.9]})
+audit_payloads = [result.to_audit_record() for result in results]
+```
+
 ### PolicyEngine
 
 ```python
@@ -197,6 +446,33 @@ Rules are evaluated in list order. Each rule fires if:
 `load_policy_rules(path)` loads rules from YAML/JSON file.
 
 ::: scpn_phase_orchestrator.supervisor.policy_rules
+
+## Policy Diagnostics
+
+Dry-run helpers for validating policy reachability, overlap, cooldown, and
+action output before a rule set is allowed into a live supervisor path.
+
+::: scpn_phase_orchestrator.supervisor.policy_diagnostics
+
+## Formal Export
+
+Export helpers translate Petri-net, policy-rule, and policy-declared STL
+surfaces into PRISM models for independent safety analysis.
+
+The CLI supports:
+
+```bash
+spo formal-export domainpacks/my_domain/binding_spec.yaml --export protocol
+spo formal-export domainpacks/my_domain/binding_spec.yaml --export policy
+spo formal-export domainpacks/my_domain/binding_spec.yaml --export stl
+```
+
+`--export stl` reads `stl_monitors` from the sibling `policy.yaml` by default
+and emits signal constants plus satisfied/violated labels for the builtin STL
+subset. This is a model-checker linkage surface; full temporal automata
+synthesis remains future work.
+
+::: scpn_phase_orchestrator.supervisor.formal_export
 
 ---
 
@@ -329,6 +605,46 @@ for the full Kuramoto model. For N=1000 oscillators with horizon=10,
 MPC prediction costs ~10 ODE steps versus 10000 Euler steps.
 
 ::: scpn_phase_orchestrator.supervisor.predictive
+
+---
+
+## FEP Predictive Supervisor
+
+`FEPPredictiveSupervisor` is the first Python supervisor mode that uses the
+existing `VariationalPredictor` as an auditable free-energy signal. It observes
+the current phase vector, updates the variational predictor, and emits bounded
+`zeta` / `Psi` actions only when free energy, prediction error, or stability
+proxy thresholds indicate a pre-emptive correction is needed.
+
+```python
+from scpn_phase_orchestrator.supervisor import FEPPredictiveSupervisor
+
+fep = FEPPredictiveSupervisor(
+    n_oscillators=len(phases),
+    dt=0.01,
+    target_R=0.8,
+    free_energy_threshold=1.0,
+)
+assessment = fep.assess(phases, omegas)
+actions = fep.decide(phases, omegas, upde_state, boundary_state)
+audit_payload = assessment.to_audit_record()
+```
+
+`FEPPredictionAssessment` records free energy, complexity, mean absolute
+prediction error, precision statistics, observed and predicted order
+parameters, target `R`, and a scalar surprise proxy. This keeps the FEP path
+reviewable in the same audit trail as policy, causal, STL, and topology
+decisions.
+
+This slice is intentionally conservative: it is a FEP-Kuramoto correspondence
+controller over the existing variational predictor, not a claim of a complete
+biological active-inference agent.
+
+`domainpacks/power_grid/fep_hierarchy_demo.py` demonstrates the current
+hierarchy proof. It runs two child `FEPPredictiveSupervisor` instances for
+generation and demand/renewable regions, reduces their observed coherence into
+a parent phase vector, and records the parent-level free-energy assessment plus
+bounded corrective actions.
 
 ---
 

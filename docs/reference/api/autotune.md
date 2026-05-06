@@ -46,3 +46,11 @@ Identifies natural frequencies $\omega_i$ from phase time-series.
 Estimates the coupling matrix $K_{nm}$ assuming a fixed interaction model.
 
 ::: scpn_phase_orchestrator.autotune.coupling_est
+
+## End-to-End Pipeline
+
+The pipeline module composes phase extraction, frequency identification,
+SINDy-style discovery, and coupling estimation into reviewable auto-binding
+candidate records.
+
+::: scpn_phase_orchestrator.autotune.pipeline

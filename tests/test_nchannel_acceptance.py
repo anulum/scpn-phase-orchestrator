@@ -117,6 +117,68 @@ def test_cli_report_counts_late_appearing_fifth_channel(tmp_path: Path) -> None:
     assert summary["layer_r_final"] == [0.81, 0.71, 0.61, 0.51, 0.41]
 
 
+def test_cli_report_json_preserves_header_channel_algebra(tmp_path: Path) -> None:
+    log_path = tmp_path / "nchannel_header.jsonl"
+    binding_config = {
+        "channels": {name: {} for name in CHANNEL_NAMES},
+        "channel_algebra": {
+            "channels": CHANNEL_NAMES,
+            "required_channels": ["P", "I", "S"],
+            "optional_channels": ["H", "Risk"],
+            "derived_channels": ["Risk"],
+            "delayed_channels": ["H"],
+            "uncertain_channels": ["Risk"],
+            "runtime_evidence_channels": ["P", "I", "S", "H"],
+            "missing_required_channels": [],
+        },
+    }
+    with AuditLogger(log_path) as logger:
+        logger.log_header(
+            n_oscillators=8,
+            dt=0.01,
+            binding_config=binding_config,
+        )
+        logger.log_step(0, _state([0.91, 0.82, 0.73, 0.64, 0.55]), [])
+
+    result = CliRunner().invoke(main, ["report", str(log_path), "--json-out"])
+
+    assert result.exit_code == 0
+    summary = json.loads(result.output)
+    assert summary["binding_summary"]["channel_algebra"]["channels"] == CHANNEL_NAMES
+    assert summary["channel_algebra"]["derived_channels"] == ["Risk"]
+
+
+def test_cli_report_text_summarises_header_channel_algebra(tmp_path: Path) -> None:
+    log_path = tmp_path / "nchannel_header_text.jsonl"
+    binding_config = {
+        "channels": {name: {} for name in CHANNEL_NAMES},
+        "channel_algebra": {
+            "required_channels": ["P", "I", "S"],
+            "optional_channels": ["H"],
+            "derived_channels": ["Risk"],
+            "delayed_channels": ["H"],
+            "uncertain_channels": ["Risk"],
+            "missing_required_channels": ["S"],
+        },
+    }
+    with AuditLogger(log_path) as logger:
+        logger.log_header(
+            n_oscillators=8,
+            dt=0.01,
+            binding_config=binding_config,
+        )
+        logger.log_step(0, _state([0.91, 0.82, 0.73, 0.64, 0.55]), [])
+
+    result = CliRunner().invoke(main, ["report", str(log_path)])
+
+    assert result.exit_code == 0
+    assert (
+        "Channel algebra: required=3 optional=1 derived=1 delayed=1 uncertain=1"
+        in result.output
+    )
+    assert "Missing required channels: S" in result.output
+
+
 def test_reporting_extractors_keep_all_five_channels() -> None:
     steps = [
         _step(0, [0.8, 0.7, 0.6, 0.5]),

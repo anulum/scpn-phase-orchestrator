@@ -171,6 +171,30 @@ class TestPhaseTransferEntropy:
         te = phase_transfer_entropy(source, target, n_bins=n_bins)
         assert te >= -1e-15
 
+    @given(
+        seed=st.integers(min_value=0, max_value=200),
+        noise_scale=st.floats(min_value=0.02, max_value=0.10),
+    )
+    @settings(max_examples=24, deadline=None)
+    def test_lagged_driver_survives_moderate_noise(
+        self, seed: int, noise_scale: float
+    ) -> None:
+        """Directional TE survives moderate target noise for a lagged driver."""
+        rng = np.random.default_rng(seed)
+        n = 2500
+        source_walk = np.cumsum(0.035 + 0.01 * rng.standard_normal(n))
+        source = source_walk % TWO_PI
+        clean_target = np.roll(source_walk, 1) % TWO_PI
+        noisy_target = (
+            np.roll(source_walk, 1) + noise_scale * rng.standard_normal(n)
+        ) % TWO_PI
+
+        clean = transfer_entropy_matrix(np.stack([source, clean_target]), n_bins=12)
+        noisy = transfer_entropy_matrix(np.stack([source, noisy_target]), n_bins=12)
+
+        assert noisy[0, 1] > noisy[1, 0] + 0.05
+        assert noisy[0, 1] > 0.50 * clean[0, 1]
+
 
 # ── 3. Transfer entropy matrix ──────────────────────────────────────────
 

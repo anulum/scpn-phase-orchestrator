@@ -103,6 +103,27 @@ python bench/run_benchmarks.py --python-only  # force numpy path
 Output includes per-N step times, total wall time, and backend identification
 (numpy vs spo_kernel).
 
+## Reference Benchmark Suite
+
+Run the v1 reference suite when publishing benchmark snapshots against the
+Kuramoto/Strogatz, Stuart-Landau/Pikovsky, and Petri-net reference surfaces:
+
+```bash
+PYTHONPATH=src python benchmarks/reference_suite.py
+```
+
+The JSON output is written to `benchmarks/results/reference_suite.json` and
+contains two top-level fields:
+
+| Field | Purpose |
+|-------|---------|
+| `metadata` | Snapshot date, exact command, backend label, Python version, NumPy version, executable, and platform string |
+| `benchmarks` | Kuramoto, Stuart-Landau, and Petri reachability timings plus physical summary values |
+
+Treat the emitted `snapshot_date` as a historical measurement label. Do not
+copy the timings into current documentation unless the command was rerun in the
+same environment and the new JSON artefact is available for review.
+
 ## Baseline Regression
 
 CI compares benchmark results against `bench/baseline.json`. A step-time

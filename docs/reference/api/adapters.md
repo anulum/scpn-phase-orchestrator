@@ -121,6 +121,20 @@ PrometheusAdapter(endpoint: str, timeout: float = 5.0)
 
 ::: scpn_phase_orchestrator.adapters.prometheus
 
+### Metrics Exporter
+
+Lightweight metrics export helpers used by services that do not need the full
+OpenTelemetry adapter.
+
+::: scpn_phase_orchestrator.adapters.metrics_exporter
+
+### Redis Store
+
+Optional Redis-backed state exchange for deployments that need shared runtime
+state outside the local process.
+
+::: scpn_phase_orchestrator.adapters.redis_store
+
 ## Hardware Adapters
 
 ### Modbus/TLS
@@ -169,3 +183,16 @@ predictive entrainment.
   coherence via adaptive auditory or visual stimulation targets.
 
 ::: scpn_phase_orchestrator.adapters.lsl_bci_bridge
+
+## Remanentia Bridge
+
+::: scpn_phase_orchestrator.adapters.remanentia_bridge
+
+## Synapse Bridges
+
+The synapse bridges translate phase-channel and coupling data into sibling
+service contracts while keeping the normal audit path unchanged.
+
+::: scpn_phase_orchestrator.adapters.synapse_channel_bridge
+
+::: scpn_phase_orchestrator.adapters.synapse_coupling_bridge

@@ -86,8 +86,48 @@ enforced by the validator at load time.
 produced from the YAML and includes inferred defaults (for example
 `control_interval_steps` and `engine_mode`). The full contract is documented in
 `Resolved Runtime Defaults` and exposed as a CLI summary plus audit metadata.
+The summary now embeds `channel_algebra`, so audit consumers can read required
+channels, optional channels, derived channels, group membership, coupling
+participants, and missing required channel evidence from the same resolved
+configuration record.
 
 ::: scpn_phase_orchestrator.binding.resolved
+
+## N-Channel Algebra Summary
+
+`build_channel_algebra_report()` produces a deterministic, JSON-safe view of
+declared channels, required/optional status, derived channels, group
+membership, supervisor visibility, coupling participation, and cross-channel
+edges. It is intended for audit, replay, and reporting surfaces that need a
+channel-count-agnostic view without re-parsing YAML.
+
+The same report classifies delayed and uncertain channels from existing
+`role`, `metric_semantics`, and `replay_semantics` metadata. This lets audit and
+reporting surfaces expose delayed/uncertain policy evidence without changing
+the binding schema.
+
+The report also emits runtime policy records for every declared channel.
+Delayed channels use `hold_last_runtime_evidence`, uncertain channels use
+`confidence_weight_runtime_contribution`, missing required channels use
+`block_required_channel`, and missing optional channels use
+`drop_optional_channel`. This gives supervisor/runtime callers deterministic
+handling semantics without adding new binding-schema fields.
+
+```python
+from scpn_phase_orchestrator.binding import (
+    build_channel_algebra_report,
+    load_binding_spec,
+)
+
+spec = load_binding_spec("domainpacks/power_safety_nchannel/binding_spec.yaml")
+report = build_channel_algebra_report(spec)
+audit_record = report.to_audit_record()
+```
+
+This report is read-only. It complements `validate_binding_spec()` rather than
+replacing validation gates.
+
+::: scpn_phase_orchestrator.binding.channel_algebra
 
 ## Types
 
@@ -130,7 +170,7 @@ Loads binding specifications from YAML files. Supports:
 
 - Single-file specs (most domainpacks)
 - Multi-file specs with `$ref` template references
-- Environment variable interpolation for secrets (API keys, endpoints)
+- Environment variable interpolation for credentials and endpoints
 - Default value injection for optional fields
 
 The loader does *not* validate — that is the validator's job. This
@@ -188,29 +228,39 @@ domainpacks produce detailed error messages listing all violations.
 
 **Performance:** `load_binding_spec()` < 10 ms.
 
-## Semantic Domain Compiler
+## Symbolic Binding Compiler
 
-The `SemanticDomainCompiler` provides a **natural language interface** for
-generating system configurations. It allows domain experts to describe
-complex oscillatory systems in plain English and automatically translates
-them into formal `BindingSpec` objects.
+The `SemanticDomainCompiler` is the first review-gated symbolic-to-binding
+path. It translates a domain intent string into a `BindingSpec` and can also
+emit a complete artefact bundle:
 
-### Heuristic & LLM Reasoning
+- `binding_spec.yaml` for the domain interface
+- `policy.yaml` with a conservative low-coherence recovery rule
+- `review_notebook.ipynb` with validation and policy-review cells
+- `audit.json` with confidence factors, matched keywords, local retrieval
+  evidence, validation status, dry-run coherence, and Petri-net review
+  reachability metadata
+- `README.md` for the generated domainpack directory
 
-The compiler uses a hybrid approach to translate semantic descriptions:
-1. **Structural Extraction:** Identifies the number of hierarchical layers
-   and oscillator counts.
-2. **Domain Mapping:** Detects the discipline (Biology, Physics, Finance)
-   to set realistic baseline frequency ranges ($\omega$).
-3. **Coupling Synthesis:** Heuristically determines coupling strengths
-   and decay constants based on the described connectivity.
+The compiler remains deterministic and local. It extracts layer counts,
+domain-family keywords, oscillator counts, channel declarations, safe default
+actuator mappings, and a review transition in `protocol_net`. The generated
+binding is passed through `validate_binding_spec()` and a short
+`UPDEEngine` dry run before artefacts are returned.
 
-### Future: LLM Integration
+Local retrieval scans existing `domainpacks/*/binding_spec.yaml` and README
+content, records the highest-scoring matches in `audit.json`, and includes the
+top score in the generated confidence factors. Retrieval can be disabled by
+passing `retrieval_root=None` to `compile_artifacts()` or
+`compile_symbolic_binding()`.
 
-While the current implementation uses heuristic parsing, the
-architecture is designed to plug directly into Large Language Models (LLMs).
-In an LLM-enabled mode, the compiler can synthesize deep ontological
-mappings, such as assigning specific phase lags ($\alpha$) based on
-published biological transport delays or chemical reaction rates.
+CLI usage:
+
+```bash
+spo generate "A 3-layer cardiac rhythm suppression system" \
+  --name cardiac_review \
+  --output-dir domainpacks/cardiac_review
+spo validate domainpacks/cardiac_review/binding_spec.yaml
+```
 
 ::: scpn_phase_orchestrator.binding.semantic

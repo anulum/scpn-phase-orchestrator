@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "suite_version": "reference_suite_v1",
+    "snapshot_date": "2026-05-06",
+    "command": "PYTHONPATH=src python benchmarks/reference_suite.py",
+    "backend": "python_numpy",
+    "python_version": "3.12.3",
+    "python_implementation": "CPython",
+    "numpy_version": "2.4.4",
+    "platform": "Linux-6.17.0-22-generic-x86_64-with-glibc2.39",
+    "executable": "/home/anulum/.local/bin/python"
+  },
+  "benchmarks": {
+    "kuramoto": {
+      "suite": "kuramoto_reference_strogatz_2000",
+      "n_oscillators": 64,
+      "n_steps": 1000,
+      "wall_time_s": 0.1880298419855535,
+      "steps_per_second": 5318.304740567887,
+      "final_order_parameter": 1.0000000000000007
+    },
+    "stuart_landau": {
+      "suite": "stuart_landau_reference_pikovsky_2001",
+      "n_oscillators": 64,
+      "n_steps": 1000,
+      "wall_time_s": 0.3452609858941287,
+      "steps_per_second": 2896.3596839946504,
+      "final_mean_amplitude": 3.6193922141707704
+    },
+    "petri_reachability": {
+      "suite": "petri_net_reachability",
+      "n_steps": 5000,
+      "wall_time_s": 0.009341930970549583,
+      "steps_per_second": 535221.2530538375,
+      "reachable_markings": 4
+    }
+  }
+}

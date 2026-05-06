@@ -21,7 +21,7 @@ hide:
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
 [![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
 
-**3 945 Python tests | 567 Rust tests | 99%+ coverage | 53 Rust engine modules | 24 domainpacks | 27 examples**
+**3 945 Python tests | 567 Rust tests | 99%+ coverage | 53 Rust engine modules | 36 domainpacks | 27 examples**
 
 </div>
 
@@ -45,11 +45,11 @@ binding_spec.yaml   3-channel          Kuramoto, Stuart-Landau,     Policy DSL  
 
 <div class="grid cards" markdown>
 
--   **33 Domainpacks**
+-   **36 Domainpacks**
 
     ---
 
-    Plug-and-play domain bindings: plasma control, power grids, traffic flow, cardiac rhythm, neuroscience EEG, swarm robotics, queuewaves, brain connectome, sleep architecture, and 22 more.
+    Plug-and-play domain bindings: plasma control, power grids, traffic flow, cardiac rhythm, neuroscience EEG, swarm robotics, queuewaves, brain connectome, sleep architecture, and 27 more.
 
     [:octicons-arrow-right-24: Gallery](galleries/domainpack_gallery.md)
 
@@ -156,18 +156,19 @@ print("OK")
 
 [:octicons-arrow-right-24: Installation](getting-started/installation.md){ .md-button }
 [:octicons-arrow-right-24: Quickstart](getting-started/quickstart.md){ .md-button .md-button--primary }
+[:octicons-arrow-right-24: Onboarding](getting-started/onboarding.md){ .md-button }
 
 ## Navigation
 
 | Section | Description |
 |---------|-------------|
-| [Getting Started](getting-started/installation.md) | Install, quickstart, hello world tutorial |
+| [Getting Started](getting-started/onboarding.md) | Onboarding, install, quickstart, hello world tutorial |
 | [Concepts](concepts/system_overview.md) | System overview, oscillators, control knobs, imprint model |
 | [Guides](guide/stuart_landau.md) | Stuart-Landau, QueueWaves, Rust FFI, adapters, production |
 | [Specifications](specs/binding_spec.schema.json) | Binding schema, UPDE numerics, policy DSL, all contracts |
 | [Tutorials](tutorials/01_new_domain_checklist.md) | New domain checklist, oscillator hunt sheet, Knm templates |
 | [API Reference](reference/api/index.md) | Full Python API docs (mkdocstrings) |
-| [Gallery](galleries/domainpack_gallery.md) | All 33 domainpacks with descriptions |
+| [Gallery](galleries/domainpack_gallery.md) | All 36 domainpacks, notebooks, examples, and demos |
 
 ---
 
