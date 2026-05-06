@@ -163,6 +163,10 @@ resonance is structure-dependent:
 The `find_optimal_noise` function works for any topology — it numerically
 sweeps $D$ regardless of the coupling structure.
 
+Runtime validation rejects an empty, multi-dimensional, negative, or non-finite
+`D_range`, and rejects non-positive or non-integral `n_steps`. This keeps bad
+configuration values from entering long stochastic sweeps.
+
 ### 2.5 Noise and Chimera States
 
 Adding noise to a system exhibiting chimera states (coexisting coherent
