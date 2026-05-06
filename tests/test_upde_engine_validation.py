@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import importlib.util
+from typing import Any
 
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
@@ -44,13 +46,60 @@ class TestSimplicialEngineValidation:
         with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
             SimplicialEngine(n_oscillators=0, dt=0.01)
 
+    @pytest.mark.parametrize("n_oscillators", [False, -1, 1.5, "4"])
+    def test_rejects_invalid_oscillator_count(self, n_oscillators: Any) -> None:
+        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+            SimplicialEngine(n_oscillators=n_oscillators, dt=0.01)
+
     def test_rejects_zero_dt(self) -> None:
         with pytest.raises(ValueError, match="dt must be positive"):
             SimplicialEngine(n_oscillators=4, dt=0.0)
 
+    @pytest.mark.parametrize("dt", [False, -0.01, float("nan"), float("inf"), "0.01"])
+    def test_rejects_invalid_dt(self, dt: Any) -> None:
+        with pytest.raises(ValueError, match="dt must be positive"):
+            SimplicialEngine(n_oscillators=4, dt=dt)
+
     def test_rejects_negative_sigma2(self) -> None:
-        with pytest.raises(ValueError, match="sigma2 must be non-negative"):
+        with pytest.raises(ValueError, match="sigma2 must be non-negative finite real"):
             SimplicialEngine(n_oscillators=4, dt=0.01, sigma2=-0.1)
+
+    @pytest.mark.parametrize(
+        "sigma2",
+        [False, float("nan"), float("inf"), "0.1"],
+    )
+    def test_rejects_invalid_sigma2(self, sigma2: Any) -> None:
+        with pytest.raises(ValueError, match="sigma2 must be non-negative"):
+            SimplicialEngine(n_oscillators=4, dt=0.01, sigma2=sigma2)
+
+    @pytest.mark.parametrize("sigma2", [False, -0.1, float("nan"), "0.1"])
+    def test_sigma2_setter_rejects_invalid_values(self, sigma2: Any) -> None:
+        engine = SimplicialEngine(n_oscillators=4, dt=0.01)
+
+        with pytest.raises(ValueError, match="sigma2 must be non-negative"):
+            engine.sigma2 = sigma2
+
+    @pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "10"])
+    def test_run_rejects_invalid_step_count(self, n_steps: Any) -> None:
+        engine = SimplicialEngine(n_oscillators=4, dt=0.01)
+        phases = np.zeros(4, dtype=np.float64)
+        omegas = np.ones(4, dtype=np.float64)
+        knm = np.zeros((4, 4), dtype=np.float64)
+        alpha = np.zeros((4, 4), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="n_steps must be >= 1"):
+            engine.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=n_steps)
+
+    def test_normalises_accepted_numpy_scalars(self) -> None:
+        engine = SimplicialEngine(
+            n_oscillators=np.int64(4),
+            dt=np.float64(0.01),
+            sigma2=np.float64(0.1),
+        )
+
+        assert engine._n == 4
+        assert pytest.approx(0.01) == engine._dt
+        assert pytest.approx(0.1) == engine.sigma2
 
 
 class TestDelayBufferValidation:
