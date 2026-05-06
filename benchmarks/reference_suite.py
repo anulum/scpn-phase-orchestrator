@@ -44,9 +44,7 @@ class ReferenceSuiteResult(TypedDict):
     benchmarks: dict[str, BenchmarkRecord]
 
 
-def build_benchmark_metadata(
-    *, snapshot_date: str | None = None
-) -> dict[str, str]:
+def build_benchmark_metadata(*, snapshot_date: str | None = None) -> dict[str, str]:
     return {
         "suite_version": REFERENCE_SUITE_VERSION,
         "snapshot_date": snapshot_date or date.today().isoformat(),
@@ -155,9 +153,7 @@ def benchmark_petri_reachability(n_steps: int = 5000) -> dict[str, float | int |
     }
 
 
-def run_reference_suite(
-    *, snapshot_date: str | None = None
-) -> ReferenceSuiteResult:
+def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteResult:
     return {
         "metadata": build_benchmark_metadata(snapshot_date=snapshot_date),
         "benchmarks": {
