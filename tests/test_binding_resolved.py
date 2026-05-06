@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import yaml
 
 from scpn_phase_orchestrator.binding import (
@@ -193,5 +195,61 @@ def test_resolved_binding_config_includes_channel_algebra(tmp_path):
     assert summary["channels"]["Risk"]["replay_semantics"] == "derived"
     assert summary["channel_groups"]["supervised"]["channels"] == ["P", "H", "Risk"]
     assert summary["cross_channel_couplings"][0]["source"] == "H"
+    channel_algebra = cast("dict[str, object]", summary["channel_algebra"])
+    assert channel_algebra["required_channels"] == ["H", "P"]
+    assert channel_algebra["optional_channels"] == ["Risk"]
+    assert channel_algebra["derived_channels"] == ["Risk"]
+    assert channel_algebra["delayed_channels"] == []
+    assert channel_algebra["uncertain_channels"] == []
+    assert channel_algebra["missing_required_channels"] == []
     assert any("metadata: role=derived_risk" in line for line in lines)
     assert any("channel_groups: supervised" in line for line in lines)
+    assert any("channel_algebra:" in line for line in lines)
+
+
+def test_resolved_binding_config_surfaces_missing_required_channel(tmp_path):
+    path = _write_spec(
+        tmp_path,
+        {
+            "name": "resolved-missing-channel-test",
+            "version": "1.0.0",
+            "safety_tier": "research",
+            "sample_period_s": 0.02,
+            "control_period_s": 0.1,
+            "layers": [
+                {
+                    "name": "plant",
+                    "index": 0,
+                    "oscillator_ids": ["p0"],
+                    "family": "plant",
+                },
+            ],
+            "oscillator_families": {
+                "plant": {"channel": "P", "extractor_type": "physical", "config": {}},
+            },
+            "channels": {
+                "P": {"role": "plant"},
+                "Telemetry": {
+                    "role": "external",
+                    "required": True,
+                    "replay_semantics": "external",
+                },
+            },
+            "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+            "drivers": {
+                "physical": {},
+                "informational": {},
+                "symbolic": {},
+            },
+            "objectives": {"good_layers": [0], "bad_layers": []},
+            "boundaries": [],
+            "actuators": [],
+        },
+    )
+
+    summary = resolved_binding_config(load_binding_spec(path))
+    lines = format_resolved_binding_config(summary)
+    channel_algebra = cast("dict[str, object]", summary["channel_algebra"])
+
+    assert channel_algebra["missing_required_channels"] == ["Telemetry"]
+    assert any("missing_required_channels: Telemetry" in line for line in lines)

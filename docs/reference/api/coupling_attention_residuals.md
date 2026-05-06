@@ -150,6 +150,8 @@ Raises ``ValueError`` for non-square ``knm``, ``theta`` shape
 mismatch, non-divisible ``n_heads``, zero / negative ``temperature``,
 negative ``lambda_``, or ``block_size < 1``.
 
+::: scpn_phase_orchestrator.coupling.attention_residuals
+
 ---
 
 ## 3. Multi-backend Fallback Chain

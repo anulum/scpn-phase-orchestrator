@@ -1,0 +1,430 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Tests for autotune reward evaluation
+
+from __future__ import annotations
+
+from typing import get_type_hints
+
+import numpy as np
+import pytest
+
+import scpn_phase_orchestrator.autotune.policy_search as policy_search_module
+import scpn_phase_orchestrator.autotune.reward as reward_module
+from scpn_phase_orchestrator.autotune import (
+    AutotunePolicyProposal,
+    AutotuneRewardReport,
+    KnobPolicyCandidate,
+    OfflinePolicySearchConfig,
+    PolicyProposalConfig,
+    RewardConfig,
+    RewardObservation,
+    evaluate_knob_policy,
+    generate_offline_policy_candidates,
+    propose_replay_policy,
+    rank_replay_candidates,
+)
+
+
+class TestAutotuneRewardContract:
+    def test_public_contracts_are_typed(self) -> None:
+        hints = get_type_hints(evaluate_knob_policy)
+
+        assert reward_module.evaluate_knob_policy is evaluate_knob_policy
+        assert hints["candidate"] is KnobPolicyCandidate
+        assert hints["observation"] is RewardObservation
+        assert hints["return"] is AutotuneRewardReport
+
+    def test_replay_ranking_contract_is_typed(self) -> None:
+        hints = get_type_hints(rank_replay_candidates)
+
+        assert "Sequence" in str(hints["replay_candidates"])
+        assert "AutotuneRewardReport" in str(hints["return"])
+
+    def test_offline_generator_contract_is_typed(self) -> None:
+        hints = get_type_hints(generate_offline_policy_candidates)
+
+        assert hints["seed"] is KnobPolicyCandidate
+        assert "OfflinePolicySearchConfig" in str(hints["config"])
+        assert "KnobPolicyCandidate" in str(hints["return"])
+
+    def test_policy_proposal_contract_is_typed(self) -> None:
+        hints = get_type_hints(propose_replay_policy)
+
+        assert policy_search_module.propose_replay_policy is propose_replay_policy
+        assert "Sequence" in str(hints["replay_candidates"])
+        assert "PolicyProposalConfig" in str(hints["proposal_config"])
+        assert hints["return"] is AutotunePolicyProposal
+
+    def test_report_serialises_arrays_for_audit(self) -> None:
+        candidate = KnobPolicyCandidate(
+            K=np.array([[0.0, 0.2], [0.2, 0.0]], dtype=np.float64),
+            alpha=np.zeros((2, 2), dtype=np.float64),
+            zeta=0.05,
+            Psi=0.1,
+            channel_weights=(1.0, 0.5),
+        )
+
+        report = evaluate_knob_policy(
+            candidate,
+            RewardObservation(coherence=0.8, previous_coherence=0.7),
+        )
+        record = report.to_audit_record()
+
+        assert record["candidate"]["K"] == [[0.0, 0.2], [0.2, 0.0]]
+        assert record["candidate"]["channel_weights"] == [1.0, 0.5]
+        assert record["observation"]["coherence"] == 0.8
+
+
+class TestAutotuneRewardScoring:
+    def test_better_coherence_scores_higher_under_same_actuation(self) -> None:
+        candidate = KnobPolicyCandidate(K=0.1, alpha=0.0, zeta=0.0, Psi=0.0)
+
+        low = evaluate_knob_policy(
+            candidate,
+            RewardObservation(coherence=0.4, previous_coherence=0.35),
+        )
+        high = evaluate_knob_policy(
+            candidate,
+            RewardObservation(coherence=0.8, previous_coherence=0.35),
+        )
+
+        assert high.reward > low.reward
+        assert high.components["coherence_gain"] > low.components["coherence_gain"]
+
+    def test_bad_coherence_and_unsafe_rollouts_are_penalised(self) -> None:
+        candidate = KnobPolicyCandidate(K=0.1)
+        safe = evaluate_knob_policy(candidate, RewardObservation(coherence=0.7))
+        unsafe = evaluate_knob_policy(
+            candidate,
+            RewardObservation(coherence=0.2, unsafe=True, regime_changed=True),
+        )
+
+        assert unsafe.reward < safe.reward
+        assert unsafe.components["bad_coherence"] < 0.0
+        assert unsafe.components["unsafe"] < 0.0
+        assert unsafe.components["regime_churn"] < 0.0
+
+    def test_larger_actuation_energy_scores_lower(self) -> None:
+        observation = RewardObservation(coherence=0.75, previous_coherence=0.7)
+
+        small = evaluate_knob_policy(KnobPolicyCandidate(K=0.1), observation)
+        large = evaluate_knob_policy(
+            KnobPolicyCandidate(
+                K=np.full((3, 3), 2.0, dtype=np.float64),
+                alpha=0.5,
+                zeta=0.3,
+                Psi=0.2,
+            ),
+            observation,
+        )
+
+        assert large.components["actuation"] < small.components["actuation"]
+        assert large.reward < small.reward
+
+    def test_custom_penalty_weights_are_applied(self) -> None:
+        candidate = KnobPolicyCandidate(K=1.0)
+        observation = RewardObservation(coherence=0.2)
+
+        mild = evaluate_knob_policy(
+            candidate,
+            observation,
+            RewardConfig(bad_coherence_penalty=1.0, unsafe_penalty=1.0),
+        )
+        strict = evaluate_knob_policy(
+            candidate,
+            observation,
+            RewardConfig(bad_coherence_penalty=5.0, unsafe_penalty=1.0),
+        )
+
+        assert strict.components["bad_coherence"] < mild.components["bad_coherence"]
+        assert strict.reward < mild.reward
+
+
+class TestAutotuneReplayRanking:
+    def test_ranks_replay_candidates_by_reward(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.2),
+                RewardObservation(coherence=0.55, previous_coherence=0.4),
+            ),
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.82, previous_coherence=0.4),
+            ),
+            (
+                KnobPolicyCandidate(K=0.5),
+                RewardObservation(coherence=0.2, previous_coherence=0.4),
+            ),
+        )
+
+        ranked = rank_replay_candidates(replay)
+
+        assert len(ranked) == 3
+        assert ranked[0].observation.coherence == 0.82
+        assert ranked[-1].observation.coherence == 0.2
+        assert ranked[0].reward >= ranked[1].reward >= ranked[2].reward
+
+    def test_replay_ranking_top_k_limits_reports(self) -> None:
+        replay = (
+            (KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.8)),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.7)),
+        )
+
+        ranked = rank_replay_candidates(replay, top_k=1)
+
+        assert len(ranked) == 1
+        assert ranked[0].observation.coherence == 0.8
+
+    def test_replay_ranking_filters_unsafe_by_default(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.9, unsafe=True),
+            ),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.6)),
+        )
+
+        ranked = rank_replay_candidates(replay)
+
+        assert len(ranked) == 1
+        assert not ranked[0].observation.unsafe
+
+    def test_replay_ranking_can_include_unsafe_rollouts_for_audit(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.9, unsafe=True),
+            ),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.6)),
+        )
+
+        ranked = rank_replay_candidates(replay, require_safe=False)
+
+        assert len(ranked) == 2
+        assert any(report.observation.unsafe for report in ranked)
+
+
+class TestAutotuneOfflinePolicySearch:
+    def test_generates_coordinate_candidates_around_scalar_seed(self) -> None:
+        seed = KnobPolicyCandidate(
+            K=0.4,
+            alpha=0.2,
+            zeta=0.1,
+            Psi=0.3,
+            channel_weights=(1.0, 0.5),
+        )
+
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                K_step=0.1,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.2,
+            ),
+        )
+
+        assert candidates[0] == seed
+        assert any(pytest.approx(0.3) == candidate.K for candidate in candidates)
+        assert any(pytest.approx(0.5) == candidate.K for candidate in candidates)
+        assert any(candidate.channel_weights == (0.8, 0.5) for candidate in candidates)
+        assert any(candidate.channel_weights == (1.0, 0.7) for candidate in candidates)
+
+    def test_generator_can_exclude_baseline_and_deduplicates_zero_steps(self) -> None:
+        seed = KnobPolicyCandidate(K=0.4)
+
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                include_baseline=False,
+                K_step=0.0,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.0,
+            ),
+        )
+
+        assert candidates == ()
+
+    def test_generator_clips_knobs_and_channel_weights(self) -> None:
+        seed = KnobPolicyCandidate(
+            K=np.array([[0.45, -0.45]], dtype=np.float64),
+            channel_weights=(0.05, 0.48),
+        )
+
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                K_step=0.1,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.1,
+                max_abs_knob=0.5,
+            ),
+        )
+
+        generated_arrays = [candidate.K for candidate in candidates]
+        assert any(
+            isinstance(value, np.ndarray) and np.max(value) == 0.5
+            for value in generated_arrays
+        )
+        assert any(candidate.channel_weights == (0.0, 0.48) for candidate in candidates)
+        assert any(candidate.channel_weights == (0.05, 0.5) for candidate in candidates)
+
+    def test_generated_candidates_feed_replay_ranking(self) -> None:
+        seed = KnobPolicyCandidate(K=0.2)
+        candidates = generate_offline_policy_candidates(
+            seed,
+            OfflinePolicySearchConfig(
+                K_step=0.1,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.0,
+            ),
+        )
+        replay = tuple(
+            (
+                candidate,
+                RewardObservation(
+                    coherence=0.5 + 0.1 * index,
+                    previous_coherence=0.4,
+                ),
+            )
+            for index, candidate in enumerate(candidates)
+        )
+
+        ranked = rank_replay_candidates(replay)
+
+        assert ranked[0].candidate == candidates[-1]
+        assert ranked[0].reward >= ranked[-1].reward
+
+
+class TestAutotunePolicyProposal:
+    def test_accepts_best_safe_candidate_when_gates_pass(self) -> None:
+        replay = (
+            (KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.65)),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.85)),
+            (KnobPolicyCandidate(K=0.3), RewardObservation(coherence=0.75)),
+        )
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(
+                min_reward=-1.0,
+                min_coherence=0.7,
+                max_alternatives=1,
+            ),
+        )
+
+        assert proposal.accepted
+        assert proposal.selected is not None
+        assert proposal.selected.observation.coherence == 0.85
+        assert len(proposal.alternatives) == 1
+        assert proposal.reasons == ()
+
+    def test_rejects_candidate_below_reward_gate(self) -> None:
+        replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.8)),)
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(min_reward=1.0),
+        )
+
+        assert not proposal.accepted
+        assert proposal.selected is None
+        assert "reward" in proposal.reasons[0]
+
+    def test_rejects_candidate_below_coherence_gate(self) -> None:
+        replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.5)),)
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(min_coherence=0.8),
+        )
+
+        assert not proposal.accepted
+        assert proposal.selected is None
+        assert "coherence" in proposal.reasons[0]
+
+    def test_proposal_serialises_for_audit(self) -> None:
+        replay = (
+            (KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.8)),
+            (KnobPolicyCandidate(K=0.2), RewardObservation(coherence=0.7)),
+        )
+
+        record = propose_replay_policy(replay).to_audit_record()
+
+        assert record["accepted"] is True
+        assert record["selected"]["observation"]["coherence"] == 0.8
+        assert record["alternatives"][0]["observation"]["coherence"] == 0.7
+        assert record["config"]["require_safe"] is True
+
+
+class TestAutotuneRewardValidation:
+    def test_rejects_non_probability_observations(self) -> None:
+        with pytest.raises(ValueError, match="coherence"):
+            RewardObservation(coherence=1.2)
+
+    def test_rejects_negative_channel_weights(self) -> None:
+        with pytest.raises(ValueError, match="channel weight"):
+            evaluate_knob_policy(
+                KnobPolicyCandidate(channel_weights=(1.0, -0.1)),
+                RewardObservation(coherence=0.8),
+            )
+
+    def test_rejects_non_finite_knobs(self) -> None:
+        with pytest.raises(ValueError, match="finite"):
+            evaluate_knob_policy(
+                KnobPolicyCandidate(K=np.array([np.nan], dtype=np.float64)),
+                RewardObservation(coherence=0.8),
+            )
+
+    def test_rejects_negative_config_weights(self) -> None:
+        with pytest.raises(ValueError, match="non-negative"):
+            RewardConfig(actuation_penalty=-0.1)
+
+    def test_replay_ranking_rejects_empty_replays(self) -> None:
+        with pytest.raises(ValueError, match="at least one"):
+            rank_replay_candidates(())
+
+    def test_replay_ranking_rejects_empty_safe_filter_result(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.9, unsafe=True),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="no safe"):
+            rank_replay_candidates(replay)
+
+    def test_replay_ranking_rejects_non_positive_top_k(self) -> None:
+        replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.9)),)
+
+        with pytest.raises(ValueError, match="top_k"):
+            rank_replay_candidates(replay, top_k=0)
+
+    def test_offline_generator_rejects_negative_steps(self) -> None:
+        with pytest.raises(ValueError, match="K_step"):
+            OfflinePolicySearchConfig(K_step=-0.1)
+
+    def test_offline_generator_rejects_zero_clip_bound(self) -> None:
+        with pytest.raises(ValueError, match="max_abs_knob"):
+            OfflinePolicySearchConfig(max_abs_knob=0.0)
+
+    def test_policy_proposal_rejects_invalid_coherence_gate(self) -> None:
+        with pytest.raises(ValueError, match="min_coherence"):
+            PolicyProposalConfig(min_coherence=1.1)
+
+    def test_policy_proposal_rejects_negative_alternative_limit(self) -> None:
+        with pytest.raises(ValueError, match="max_alternatives"):
+            PolicyProposalConfig(max_alternatives=-1)

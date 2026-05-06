@@ -190,7 +190,7 @@ def simulate_psychedelic_trajectory(
 
     Returns:
         List of dicts, one per level, with keys:
-          reduction_factor, R, entropy, chimera_index, phases.
+            reduction_factor, R, entropy, chimera_index, phases.
     """
     p: FloatArray = np.asarray(phases, dtype=np.float64).copy()
     results: list[dict] = []

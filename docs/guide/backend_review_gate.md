@@ -64,4 +64,4 @@ The default outcome is conservative:
 ## Related
 
 - [Backend Fallback Chain](backend_fallbacks.md)
-- [Governance](../../GOVERNANCE.md)
+- Governance: `GOVERNANCE.md` in the repository root

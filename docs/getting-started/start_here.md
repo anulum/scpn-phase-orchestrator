@@ -223,7 +223,7 @@ After your entry point:
 - **Deployment:** [Backend Strategy](../guide/backend_strategy.md) —
   Rust and JAX primary paths, Python fallback, experimental backends.
 - **Domains:** [Domainpack Gallery](../galleries/domainpack_gallery.md)
-  — 24 domains.
+  — 36 domains.
 - **API:** [Full API Reference](../reference/api/index.md)
 
 ---

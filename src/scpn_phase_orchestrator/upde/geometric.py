@@ -144,6 +144,12 @@ def _validate_positive_int(value: object, *, name: str) -> int:
     return int(value)
 
 
+def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
 def _validate_positive_float(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
@@ -244,6 +250,7 @@ class TorusEngine:
         alpha: NDArray[np.float64],
         n_steps: int,
     ) -> NDArray[np.float64]:
+        n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
         alpha_flat = np.ascontiguousarray(alpha, dtype=np.float64).ravel()
         backend_fn = _dispatch()
@@ -257,7 +264,7 @@ class TorusEngine:
                 float(zeta),
                 float(psi),
                 float(self._dt),
-                int(n_steps),
+                n_steps,
             )
         return _python_torus_run(
             np.ascontiguousarray(phases, dtype=np.float64),
@@ -268,7 +275,7 @@ class TorusEngine:
             float(zeta),
             float(psi),
             float(self._dt),
-            int(n_steps),
+            n_steps,
         )
 
     def order_parameter(self, phases: NDArray[np.float64]) -> float:

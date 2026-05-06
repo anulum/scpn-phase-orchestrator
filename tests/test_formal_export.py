@@ -21,8 +21,10 @@ from scpn_phase_orchestrator.supervisor import (
     PolicyAction,
     PolicyCondition,
     PolicyRule,
+    PolicySTLSpec,
     export_petri_net_prism,
     export_policy_rules_prism,
+    export_stl_specs_prism,
 )
 from scpn_phase_orchestrator.supervisor.formal_export import PrismExport
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -189,6 +191,44 @@ def test_policy_rules_prism_export_rejects_bad_rules() -> None:
         export_policy_rules_prism([bad])
 
 
+def test_stl_specs_prism_export_serialises_satisfaction_labels() -> None:
+    export = export_stl_specs_prism(
+        [
+            PolicySTLSpec(
+                name="keep sync",
+                spec="always (R >= 0.3 and amplitude_spread < 0.2)",
+                severity="hard",
+            ),
+            PolicySTLSpec(
+                name="recover",
+                spec="eventually (R >= 0.8)",
+            ),
+        ],
+        module_name="stl model",
+    )
+
+    assert export.stl_names == {"keep sync": "keep_sync", "recover": "recover"}
+    assert export.metric_names == {
+        "R": "R",
+        "amplitude_spread": "amplitude_spread",
+    }
+    assert "module stl_model" in export.model
+    assert "const double R;" in export.model
+    assert "const double amplitude_spread;" in export.model
+    assert (
+        'label "stl_keep_sync_satisfied" = '
+        "R >= 0.29999999999999999 & amplitude_spread < 0.20000000000000001;"
+    ) in export.model
+    assert 'label "stl_recover_violated" = !(R >= 0.80000000000000004);' in (
+        export.model
+    )
+
+
+def test_stl_specs_prism_export_rejects_unsupported_syntax() -> None:
+    with pytest.raises(PolicyError, match="unsupported export syntax"):
+        export_stl_specs_prism([PolicySTLSpec("until", "x until y")])
+
+
 def test_formal_export_cli_writes_prism_model(tmp_path: Path) -> None:
     spec = {
         "name": "formal-test",
@@ -303,6 +343,62 @@ def test_formal_export_cli_writes_policy_prism_model(tmp_path: Path) -> None:
     model = out_path.read_text(encoding="utf-8")
     assert "module policy_test" in model
     assert "[boost] (regime = 0) & R_good_0 < 0.69999999999999996" in model
+
+
+def test_formal_export_cli_writes_stl_prism_model(tmp_path: Path) -> None:
+    spec = {
+        "name": "formal-stl-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.01,
+        "layers": [
+            {"name": "L1", "index": 0, "oscillator_ids": ["o0", "o1"]},
+        ],
+        "oscillator_families": {
+            "p": {"channel": "P", "extractor_type": "hilbert"},
+        },
+        "coupling": {"base_strength": 0.45, "decay_alpha": 0.3},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+    policy = {
+        "rules": [],
+        "stl_monitors": [
+            {
+                "name": "keep_sync",
+                "spec": "always (R >= 0.3)",
+                "severity": "hard",
+            }
+        ],
+    }
+    spec_path = tmp_path / "binding_spec.yaml"
+    policy_path = tmp_path / "policy.yaml"
+    out_path = tmp_path / "stl.prism"
+    spec_path.write_text(yaml.safe_dump(spec), encoding="utf-8")
+    policy_path.write_text(yaml.safe_dump(policy), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "stl",
+            "--output",
+            str(out_path),
+            "--module-name",
+            "stl_test",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "PRISM model written:" in result.output
+    model = out_path.read_text(encoding="utf-8")
+    assert "module stl_test" in model
+    assert 'label "stl_keep_sync_satisfied" = R >= 0.29999999999999999;' in model
 
 
 def test_formal_export_cli_requires_protocol_net(tmp_path: Path) -> None:

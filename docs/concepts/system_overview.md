@@ -135,7 +135,7 @@ The engine has no domain knowledge. All domain semantics live in the
 - What regime thresholds apply.
 
 A new domain requires writing a binding spec and (optionally) custom
-extractors. No engine code changes. The system ships with 24
+extractors. No engine code changes. The system ships with 36
 domainpacks covering neuroscience, power grids, finance, robotics,
 traffic, industrial control, and more.
 

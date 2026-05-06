@@ -14,7 +14,9 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+import scpn_phase_orchestrator.cli as cli_module
 from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.plugins import PluginCapability, PluginManifest
 
 
 @pytest.fixture
@@ -145,6 +147,11 @@ def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_p
     assert header["binding_summary"]["name"] == "cli-test"
     assert header["binding_summary"]["engine_mode"] == "kuramoto"
     assert "P" in header["binding_config"]["channels"]
+    assert "channel_algebra" in header["binding_config"]
+    assert header["binding_config"]["channel_algebra"]["runtime_evidence_channels"] == [
+        "P"
+    ]
+    assert header["binding_summary"]["channel_algebra"]["required_channels"] == []
 
 
 def test_run_invalid_spec(runner, invalid_spec_path):
@@ -180,6 +187,163 @@ def test_report_json(runner, audit_log_path):
     assert data["final_regime"] == "nominal"
     assert len(data["layer_r_mean"]) == 1
     assert data["hash_chain_ok"] is True
+
+
+def test_report_exposes_integrated_information_summary(runner, tmp_path):
+    audit_path = tmp_path / "audit_phi.jsonl"
+    entries = [
+        {
+            "step": 0,
+            "regime": "nominal",
+            "stability": 0.8,
+            "layers": [{"R": 0.8, "psi": 1.0}],
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": 0.125,
+            "normalised_phi": 0.25,
+            "total_integration": 0.5,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+        {
+            "step": 1,
+            "regime": "nominal",
+            "stability": 0.9,
+            "layers": [{"R": 0.9, "psi": 1.1}],
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": 0.25,
+            "normalised_phi": 0.5,
+            "total_integration": 0.75,
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        },
+    ]
+    audit_path.write_text(
+        "\n".join(json.dumps(entry) for entry in entries) + "\n",
+        encoding="utf-8",
+    )
+
+    json_result = runner.invoke(main, ["report", str(audit_path), "--json-out"])
+    text_result = runner.invoke(main, ["report", str(audit_path)])
+
+    assert json_result.exit_code == 0
+    data = json.loads(json_result.output)
+    assert data["integrated_information"]["records"] == 2
+    assert data["integrated_information"]["latest_phi"] == 0.25
+    assert data["integrated_information"]["latest_normalised_phi"] == 0.5
+    assert text_result.exit_code == 0
+    assert (
+        "Integrated information: records=2 phi=0.2500 "
+        "normalised_phi=0.5000 total_integration=0.7500"
+    ) in text_result.output
+
+
+def test_report_json_exposes_binding_channel_algebra(
+    runner,
+    valid_spec_path,
+    tmp_path,
+):
+    audit_path = tmp_path / "audit.jsonl"
+    run_result = runner.invoke(
+        main,
+        ["run", valid_spec_path, "--steps", "2", "--audit", str(audit_path)],
+    )
+    assert run_result.exit_code == 0
+
+    result = runner.invoke(main, ["report", str(audit_path), "--json-out"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["binding_summary"]["name"] == "cli-test"
+    assert data["channel_algebra"]["runtime_evidence_channels"] == ["P"]
+    assert data["channel_algebra"]["required_channels"] == []
+
+
+def test_report_text_exposes_binding_channel_algebra(
+    runner,
+    valid_spec_path,
+    tmp_path,
+):
+    audit_path = tmp_path / "audit.jsonl"
+    run_result = runner.invoke(
+        main,
+        ["run", valid_spec_path, "--steps", "2", "--audit", str(audit_path)],
+    )
+    assert run_result.exit_code == 0
+
+    result = runner.invoke(main, ["report", str(audit_path)])
+
+    assert result.exit_code == 0
+    assert (
+        "Channel algebra: required=0 optional=0 derived=0 delayed=0 uncertain=0"
+        in result.output
+    )
+
+
+def test_plugins_catalog_outputs_discovered_marketplace_catalog(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="extractor",
+                name="phase",
+                target="cli_plugin.extractors:PhaseExtractor",
+                channels=("P",),
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (manifest,))
+
+    result = runner.invoke(main, ["plugins", "catalog"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["plugin_count"] == 1
+    assert data["compatible_count"] == 1
+    assert data["incompatible_count"] == 0
+    assert data["plugins"][0]["manifest"]["name"] == "cli_plugin"
+    assert data["capability_counts"]["extractor"] == 1
+
+
+def test_plugins_catalog_can_include_incompatible_manifests(
+    runner,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    invalid = PluginManifest(
+        name="bad_cli_plugin",
+        version="0.1.0",
+        package="bad_cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="extractor",
+                name="empty",
+                target="bad_cli_plugin.extractors:Empty",
+            ),
+        ),
+    )
+    monkeypatch.setattr(cli_module, "discover_plugin_manifests", lambda: (invalid,))
+
+    default_result = runner.invoke(main, ["plugins", "catalog"])
+    full_result = runner.invoke(
+        main,
+        ["plugins", "catalog", "--include-incompatible"],
+    )
+
+    assert default_result.exit_code == 0
+    default_data = json.loads(default_result.output)
+    assert default_data["plugin_count"] == 0
+    assert default_data["incompatible_count"] == 1
+    assert full_result.exit_code == 0
+    full_data = json.loads(full_result.output)
+    assert full_data["plugin_count"] == 1
+    assert full_data["plugins"][0]["compatible"] is False
+    assert "must declare channels" in full_data["plugins"][0]["reasons"][0]
 
 
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):

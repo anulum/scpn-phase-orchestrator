@@ -53,6 +53,25 @@ def _validate_finite_positive(value: object, *, name: str) -> float:
     return value
 
 
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    if value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return value
+
+
+def _validate_noise_range(value: FloatArray | None) -> FloatArray | None:
+    if value is None:
+        return None
+    d_range = np.asarray(value, dtype=np.float64)
+    if d_range.ndim != 1 or d_range.size == 0:
+        raise ValueError("D_range must be a non-empty 1-D array")
+    if not np.all(np.isfinite(d_range)) or np.any(d_range < 0.0):
+        raise ValueError("D_range must contain only finite non-negative values")
+    return d_range
+
+
 class StochasticInjector:
     """Add calibrated noise to phase dynamics.
 
@@ -126,6 +145,8 @@ def find_optimal_noise(
 
     Uses the engine to simulate n_steps at each D value.
     """
+    n_steps = _validate_positive_int(n_steps, name="n_steps")
+    D_range = _validate_noise_range(D_range)
     if D_range is None:
         K_mean = float(np.mean(knm[knm > 0])) if np.any(knm > 0) else 1.0
         D_range = np.linspace(0.0, K_mean, 11)

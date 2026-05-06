@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import threading
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -30,6 +31,21 @@ _Params = tuple[
     FloatArray,
     float,
 ]
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be positive finite real, got {value!r}")
+    return coerced
 
 
 class StuartLandauEngine:
@@ -70,6 +86,13 @@ class StuartLandauEngine:
         atol: float = 1e-6,
         rtol: float = 1e-3,
     ):
+        n_oscillators = _validate_positive_int(
+            n_oscillators,
+            name="n_oscillators",
+        )
+        dt = _validate_positive_float(dt, name="dt")
+        atol = _validate_positive_float(atol, name="atol")
+        rtol = _validate_positive_float(rtol, name="rtol")
         if method not in ("euler", "rk4", "rk45"):
             msg = f"Unknown method {method!r}, expected 'euler', 'rk4', or 'rk45'"
             raise ValueError(msg)

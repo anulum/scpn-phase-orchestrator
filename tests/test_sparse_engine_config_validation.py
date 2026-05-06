@@ -44,6 +44,55 @@ def test_sparse_engine_rejects_invalid_tolerances(
         SparseUPDEEngine(**kwargs)
 
 
+@pytest.mark.parametrize("n_steps", [False, -1, 1.5, "10"])
+def test_sparse_engine_run_rejects_invalid_step_count(n_steps: Any) -> None:
+    engine = SparseUPDEEngine(n_oscillators=4, dt=0.01)
+    phases = np.zeros(4, dtype=np.float64)
+    omegas = np.ones(4, dtype=np.float64)
+    row_ptr = np.zeros(5, dtype=np.uint64)
+    col_indices = np.zeros(0, dtype=np.uint64)
+    knm_values = np.zeros(0, dtype=np.float64)
+    alpha_values = np.zeros(0, dtype=np.float64)
+
+    with pytest.raises(ValueError, match="n_steps must be >= 0"):
+        engine.run(
+            phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            0.0,
+            0.0,
+            alpha_values,
+            n_steps=n_steps,
+        )
+
+
+def test_sparse_engine_run_zero_steps_returns_copy() -> None:
+    engine = SparseUPDEEngine(n_oscillators=4, dt=0.01)
+    phases = np.array([0.0, 0.5, 1.0, 1.5], dtype=np.float64)
+    omegas = np.ones(4, dtype=np.float64)
+    row_ptr = np.zeros(5, dtype=np.uint64)
+    col_indices = np.zeros(0, dtype=np.uint64)
+    knm_values = np.zeros(0, dtype=np.float64)
+    alpha_values = np.zeros(0, dtype=np.float64)
+
+    result = engine.run(
+        phases,
+        omegas,
+        row_ptr,
+        col_indices,
+        knm_values,
+        0.0,
+        0.0,
+        alpha_values,
+        n_steps=0,
+    )
+
+    np.testing.assert_array_equal(result, phases)
+    assert result is not phases
+
+
 def test_sparse_engine_normalises_accepted_numpy_scalars() -> None:
     engine = SparseUPDEEngine(
         n_oscillators=np.int64(4),

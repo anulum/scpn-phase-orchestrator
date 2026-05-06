@@ -9,11 +9,30 @@
 from __future__ import annotations
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.supervisor.alignment import (
+    ValueAlignmentDecision,
+    ValueAlignmentGuard,
+    ValueAlignmentPolicy,
+    ValueConstraint,
+    ValueViolation,
+)
+from scpn_phase_orchestrator.supervisor.causal import (
+    CausalInterventionEngine,
+    CounterfactualRollout,
+    InterventionParameters,
+)
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.formal_export import (
     PrismExport,
     export_petri_net_prism,
     export_policy_rules_prism,
+    export_stl_specs_prism,
+)
+from scpn_phase_orchestrator.supervisor.morphogenetic import (
+    MorphogeneticFieldPolicy,
+    MorphogeneticFieldResult,
+    MorphogeneticFieldState,
+    MorphogeneticTopologySupervisor,
 )
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -35,20 +54,48 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyCondition,
     PolicyEngine,
     PolicyRule,
+    PolicySTLSpec,
     load_policy_rules,
 )
 from scpn_phase_orchestrator.supervisor.predictive import (
+    FEPPredictionAssessment,
+    FEPPredictiveSupervisor,
     Prediction,
     PredictiveSupervisor,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
+from scpn_phase_orchestrator.supervisor.sheaf import (
+    SheafCoherenceResult,
+    SheafCoherenceSupervisor,
+    sheaf_coherence,
+    sheaf_laplacian,
+)
+from scpn_phase_orchestrator.supervisor.strange_loop import (
+    StrangeLoopAssessment,
+    StrangeLoopSupervisor,
+)
+from scpn_phase_orchestrator.supervisor.topology import (
+    HigherOrderTopologySupervisor,
+    TopologyMutationPolicy,
+    TopologyMutationResult,
+)
 
 __all__ = [
     "Arc",
+    "CausalInterventionEngine",
     "CompoundCondition",
     "ControlAction",
+    "CounterfactualRollout",
     "EventBus",
+    "FEPPredictionAssessment",
+    "FEPPredictiveSupervisor",
+    "HigherOrderTopologySupervisor",
+    "InterventionParameters",
     "Marking",
+    "MorphogeneticFieldPolicy",
+    "MorphogeneticFieldResult",
+    "MorphogeneticFieldState",
+    "MorphogeneticTopologySupervisor",
     "PetriNet",
     "PetriNetAdapter",
     "Place",
@@ -58,16 +105,31 @@ __all__ = [
     "PolicyCondition",
     "PolicyEngine",
     "PolicyRule",
+    "PolicySTLSpec",
     "PrismExport",
     "Prediction",
     "PredictiveSupervisor",
     "Regime",
     "RegimeEvent",
     "RegimeManager",
+    "SheafCoherenceResult",
+    "SheafCoherenceSupervisor",
+    "StrangeLoopAssessment",
+    "StrangeLoopSupervisor",
     "SupervisorPolicy",
     "Transition",
+    "TopologyMutationPolicy",
+    "TopologyMutationResult",
+    "ValueAlignmentDecision",
+    "ValueAlignmentGuard",
+    "ValueAlignmentPolicy",
+    "ValueConstraint",
+    "ValueViolation",
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_policy_rules_prism",
+    "export_stl_specs_prism",
     "load_policy_rules",
+    "sheaf_coherence",
+    "sheaf_laplacian",
 ]

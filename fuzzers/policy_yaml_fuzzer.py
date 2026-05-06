@@ -30,6 +30,7 @@ def _install_policy_rule_stubs() -> None:
 
     for name in (
         "scpn_phase_orchestrator.actuation",
+        "scpn_phase_orchestrator.monitor",
         "scpn_phase_orchestrator.supervisor",
         "scpn_phase_orchestrator.upde",
     ):
@@ -61,6 +62,23 @@ def _install_policy_rule_stubs() -> None:
 
     metrics.UPDEState = UPDEState
     sys.modules.setdefault("scpn_phase_orchestrator.upde.metrics", metrics)
+
+    stl = types.ModuleType("scpn_phase_orchestrator.monitor.stl")
+
+    class STLTraceResult:
+        def to_audit_record(self) -> dict[str, object]:
+            return {}
+
+    class STLMonitor:
+        def __init__(self, spec: str) -> None:
+            self.spec = spec
+
+        def evaluate_result(self, trace: object) -> STLTraceResult:
+            return STLTraceResult()
+
+    stl.STLMonitor = STLMonitor
+    stl.STLTraceResult = STLTraceResult
+    sys.modules.setdefault("scpn_phase_orchestrator.monitor.stl", stl)
 
 
 def _policy_rules_path() -> Path:
