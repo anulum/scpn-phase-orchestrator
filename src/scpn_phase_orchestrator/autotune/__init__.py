@@ -19,8 +19,11 @@ from scpn_phase_orchestrator.autotune.pipeline import (
     identify_binding_spec,
 )
 from scpn_phase_orchestrator.autotune.policy_search import (
+    AdaptiveReplayPolicySearchConfig,
+    AdaptiveReplayPolicySearchResult,
     ReplayPolicyEvaluator,
     ReplayPolicySearchResult,
+    search_adaptive_replay_policy,
     search_replay_policy,
 )
 from scpn_phase_orchestrator.autotune.reward import (
@@ -40,6 +43,8 @@ from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 
 __all__ = [
     "AutoTuneResult",
+    "AdaptiveReplayPolicySearchConfig",
+    "AdaptiveReplayPolicySearchResult",
     "AutotunePolicyProposal",
     "AutotuneRewardReport",
     "FrequencyResult",
@@ -60,5 +65,6 @@ __all__ = [
     "identify_frequencies",
     "propose_replay_policy",
     "rank_replay_candidates",
+    "search_adaptive_replay_policy",
     "search_replay_policy",
 ]

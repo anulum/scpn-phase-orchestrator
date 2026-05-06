@@ -19,6 +19,7 @@ shadow evaluation before a proposal is considered for deployment.
 
 ```python
 from scpn_phase_orchestrator.autotune import (
+    AdaptiveReplayPolicySearchConfig,
     KnobPolicyCandidate,
     OfflinePolicySearchConfig,
     PolicyProposalConfig,
@@ -41,6 +42,32 @@ result = search_replay_policy(
 )
 
 audit_record = result.to_audit_record()
+```
+
+For bounded learner-style refinement without enabling live actuation, use the
+adaptive search wrapper. It repeatedly evaluates replay candidates around the
+best replay-scored candidate, decays the coordinate step sizes, and then applies
+the same final proposal gates across all replay observations:
+
+```python
+from scpn_phase_orchestrator.autotune import search_adaptive_replay_policy
+
+adaptive_result = search_adaptive_replay_policy(
+    seed,
+    replay,
+    adaptive_config=AdaptiveReplayPolicySearchConfig(
+        base_search_config=OfflinePolicySearchConfig(
+            K_step=0.05,
+            zeta_step=0.02,
+            max_abs_knob=1.0,
+        ),
+        iterations=3,
+        step_decay=0.5,
+    ),
+    proposal_config=PolicyProposalConfig(min_coherence=0.75),
+)
+
+adaptive_audit_record = adaptive_result.to_audit_record()
 ```
 
 The result keeps the seed, generated candidates, and proposal together so audit

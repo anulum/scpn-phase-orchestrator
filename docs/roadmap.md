@@ -63,7 +63,7 @@ control engineers who do not already live in phase dynamics.
 |------|----------------|
 | Dynamic higher-order topology adaptation | foundation is implemented; domainpack demonstrations and policy hardening remain open |
 | Causal intervention engine | counterfactual rollout foundation is implemented; attribution demos and deeper causal-model learning remain open |
-| RL/autotune layer on JAX `nn` backend | reward evaluation, replay ranking, offline candidate generation, proposal records, and replay-only policy search are implemented; next step is learner-backed PPO/SAC or hybrid search behind the same gates |
+| RL/autotune layer on JAX `nn` backend | reward evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, and adaptive replay refinement are implemented; next step is optional PPO/SAC or hybrid physics learners behind the same non-actuating gates |
 | FEP / predictive-coding supervisor backend | predictive supervisor foundation is implemented; hierarchy/domainpack proof work remains open |
 | Full N-channel algebra | formalise channel groups, required/optional channels, derived channels, cross-channel coupling, replay, and reporting |
 | Hierarchical orchestration | nested supervisors plus edge/cloud synchronisation protocol for distributed coherence control |
