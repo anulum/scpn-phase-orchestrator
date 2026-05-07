@@ -125,6 +125,24 @@ authentication posture, JSON envelope shape, contract hash, declared capability,
 direction, and non-empty payload before a FastAPI, Flask, or gateway endpoint
 hands data to SPO runtime code.
 
+For gRPC integrations, use the same boundary pattern after decoding protobuf
+fields inside a servicer:
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncGrpcAdapter
+
+adapter = DigitalTwinSyncGrpcAdapter.for_contract(contract)
+response = adapter.handle_unary(
+    envelope.to_audit_record(),
+    metadata={"authorization": "Bearer ..."},
+)
+accepted_batch = adapter.drain()
+```
+
+The gRPC helper returns status names such as `OK`, `UNAUTHENTICATED`,
+`INVALID_ARGUMENT`, and `FAILED_PRECONDITION` so a real servicer can map the
+result to framework-native status handling without duplicating contract logic.
+
 Before enabling a concrete adapter, publish a reviewable manifest:
 
 ```python

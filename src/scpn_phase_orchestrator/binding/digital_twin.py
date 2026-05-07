@@ -27,6 +27,8 @@ __all__ = [
     "DigitalTwinLayerContract",
     "DigitalTwinSyncCapability",
     "DigitalTwinSyncEnvelope",
+    "DigitalTwinSyncGrpcAdapter",
+    "DigitalTwinSyncGrpcResponse",
     "DigitalTwinSyncJsonlReport",
     "DigitalTwinSyncMemoryAdapter",
     "DigitalTwinSyncRestAdapter",
@@ -292,6 +294,136 @@ class DigitalTwinSyncMemoryAdapter:
         """Return adapter state without exposing any network surface."""
         return {
             "contract_hash": self.contract.contract_hash,
+            "queued_count": len(self._queue),
+            "queued_sequences": [envelope.sequence for envelope in self._queue],
+        }
+
+
+@dataclass(frozen=True)
+class DigitalTwinSyncGrpcResponse:
+    """gRPC-style response for a digital-twin sync boundary."""
+
+    status_code: str
+    accepted: bool
+    reason: str
+    message: dict[str, object]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe gRPC adapter response."""
+        return {
+            "status_code": self.status_code,
+            "accepted": self.accepted,
+            "reason": self.reason,
+            "message": dict(self.message),
+        }
+
+
+@dataclass
+class DigitalTwinSyncGrpcAdapter:
+    """Dependency-free gRPC boundary for digital-twin sync payloads.
+
+    The adapter does not start a gRPC server or import generated protobuf
+    classes. A real servicer can pass decoded protobuf fields into
+    :meth:`handle_unary`; this boundary then applies the same contract checks
+    as other transports before queuing accepted envelopes.
+    """
+
+    contract: DigitalTwinBindingContract
+    compatibility: DigitalTwinAdapterCompatibility
+    _queue: list[DigitalTwinSyncEnvelope]
+
+    @classmethod
+    def for_contract(
+        cls,
+        contract: DigitalTwinBindingContract,
+        *,
+        name: str = "grpc-sync",
+        sync_capabilities: Sequence[str] = _DEFAULT_SYNC_CAPABILITIES,
+        requires_auth: bool = True,
+        supports_replay: bool = False,
+    ) -> DigitalTwinSyncGrpcAdapter:
+        """Create a gRPC adapter boundary for a digital-twin contract."""
+        compatibility = build_digital_twin_adapter_manifest(
+            contract,
+            name=name,
+            transport="grpc",
+            sync_capabilities=sync_capabilities,
+            supports_replay=supports_replay,
+            requires_auth=requires_auth,
+            notes="dependency-free gRPC boundary",
+        )
+        return cls(contract=contract, compatibility=compatibility, _queue=[])
+
+    def handle_unary(
+        self,
+        request: Mapping[str, object],
+        *,
+        metadata: Mapping[str, str] | None = None,
+    ) -> DigitalTwinSyncGrpcResponse:
+        """Validate one unary gRPC request and queue accepted envelopes."""
+        if not self.compatibility.compatible:
+            return _grpc_response(
+                "FAILED_PRECONDITION",
+                False,
+                "adapter_incompatible",
+                {
+                    "reasons": list(self.compatibility.reasons),
+                    "contract_hash": self.contract.contract_hash,
+                },
+            )
+        if self.compatibility.manifest.requires_auth and not _has_authorization(
+            metadata,
+        ):
+            return _grpc_response(
+                "UNAUTHENTICATED",
+                False,
+                "auth_required",
+                {"contract_hash": self.contract.contract_hash},
+            )
+        envelope = _envelope_from_record(dict(request))
+        if envelope is None:
+            return _grpc_response(
+                "INVALID_ARGUMENT",
+                False,
+                "invalid_envelope",
+                {"contract_hash": self.contract.contract_hash},
+            )
+        validation = validate_digital_twin_sync_envelope(self.contract, envelope)
+        if not validation.accepted:
+            return _grpc_response(
+                "FAILED_PRECONDITION",
+                False,
+                validation.reason,
+                {
+                    "capability": envelope.capability,
+                    "sequence": envelope.sequence,
+                    "contract_hash": self.contract.contract_hash,
+                },
+            )
+        self._queue.append(envelope)
+        return _grpc_response(
+            "OK",
+            True,
+            "accepted",
+            {
+                "capability": envelope.capability,
+                "sequence": envelope.sequence,
+                "contract_hash": self.contract.contract_hash,
+            },
+        )
+
+    def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
+        """Return accepted gRPC envelopes in arrival order and clear the queue."""
+        drained = tuple(self._queue)
+        self._queue.clear()
+        return drained
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return gRPC adapter state without exposing payload contents."""
+        return {
+            "contract_hash": self.contract.contract_hash,
+            "manifest": self.compatibility.manifest.to_audit_record(),
+            "compatible": self.compatibility.compatible,
             "queued_count": len(self._queue),
             "queued_sequences": [envelope.sequence for envelope in self._queue],
         }
@@ -720,6 +852,20 @@ def _rest_response(
         accepted=accepted,
         reason=reason,
         body=body,
+    )
+
+
+def _grpc_response(
+    status_code: str,
+    accepted: bool,
+    reason: str,
+    message: dict[str, object],
+) -> DigitalTwinSyncGrpcResponse:
+    return DigitalTwinSyncGrpcResponse(
+        status_code=status_code,
+        accepted=accepted,
+        reason=reason,
+        message=message,
     )
 
 

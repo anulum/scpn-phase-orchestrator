@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.binding import (
     DigitalTwinAdapterManifest,
     DigitalTwinBindingContract,
     DigitalTwinSyncEnvelope,
+    DigitalTwinSyncGrpcAdapter,
     DigitalTwinSyncMemoryAdapter,
     DigitalTwinSyncRestAdapter,
     build_digital_twin_adapter_manifest,
@@ -554,4 +555,137 @@ def test_digital_twin_rest_adapter_refuses_incompatible_manifest() -> None:
     assert response.status_code == 503
     assert response.reason == "adapter_incompatible"
     assert response.body["reasons"] == ["capability_not_declared:unknown"]
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_grpc_adapter_accepts_authorised_contract_requests() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncGrpcAdapter.for_contract(
+        contract,
+        sync_capabilities=("state_snapshot", "audit_replay"),
+    )
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="audit_replay",
+        direction="spo_to_twin",
+        sequence=13,
+        payload={"event": "accepted", "source": "audit"},
+    )
+
+    response = adapter.handle_unary(
+        envelope.to_audit_record(),
+        metadata={"authorization": "Bearer grpc-token"},
+    )
+
+    assert response.status_code == "OK"
+    assert response.accepted is True
+    assert response.reason == "accepted"
+    assert response.message == {
+        "capability": "audit_replay",
+        "sequence": 13,
+        "contract_hash": contract.contract_hash,
+    }
+    assert adapter.to_audit_record()["queued_sequences"] == [13]
+    assert adapter.drain() == (envelope,)
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_grpc_adapter_blocks_unauthenticated_metadata() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncGrpcAdapter.for_contract(contract)
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=14,
+        payload={"R": 0.86},
+    )
+
+    response = adapter.handle_unary(envelope.to_audit_record(), metadata={})
+
+    assert response.status_code == "UNAUTHENTICATED"
+    assert response.accepted is False
+    assert response.reason == "auth_required"
+    assert response.message == {"contract_hash": contract.contract_hash}
+    assert adapter.drain() == ()
+
+
+@pytest.mark.parametrize(
+    ("request_body", "status_code", "reason"),
+    [
+        (
+            {"contract_hash": "wrong", "capability": "state_snapshot"},
+            "INVALID_ARGUMENT",
+            "invalid_envelope",
+        ),
+        (
+            {
+                "contract_hash": "wrong",
+                "capability": "state_snapshot",
+                "direction": "twin_to_spo",
+                "sequence": 15,
+                "payload": {"R": 0.82},
+            },
+            "FAILED_PRECONDITION",
+            "contract_hash_mismatch",
+        ),
+        (
+            {
+                "capability": "control_action_proposal",
+                "direction": "twin_to_spo",
+                "sequence": 16,
+                "payload": {"knob": "K"},
+            },
+            "FAILED_PRECONDITION",
+            "direction_not_allowed",
+        ),
+    ],
+)
+def test_digital_twin_grpc_adapter_maps_request_failures_to_status_codes(
+    request_body: dict[str, object],
+    status_code: str,
+    reason: str,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    if "contract_hash" not in request_body:
+        request_body = {"contract_hash": contract.contract_hash, **request_body}
+    adapter = DigitalTwinSyncGrpcAdapter.for_contract(contract)
+
+    response = adapter.handle_unary(
+        request_body,
+        metadata={"authorization": "Bearer grpc-token"},
+    )
+
+    assert response.status_code == status_code
+    assert response.accepted is False
+    assert response.reason == reason
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_grpc_adapter_refuses_incompatible_manifest() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncGrpcAdapter.for_contract(
+        contract,
+        requires_auth=False,
+    )
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=17,
+        payload={"R": 0.95},
+    )
+
+    response = adapter.handle_unary(
+        envelope.to_audit_record(),
+        metadata={"authorization": "Bearer grpc-token"},
+    )
+
+    assert response.status_code == "FAILED_PRECONDITION"
+    assert response.reason == "adapter_incompatible"
+    assert response.message["reasons"] == ["live_transport_requires_auth"]
     assert adapter.drain() == ()

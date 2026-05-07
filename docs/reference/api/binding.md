@@ -256,6 +256,22 @@ response = adapter.handle_post(
 accepted = adapter.drain()
 ```
 
+`DigitalTwinSyncGrpcAdapter` follows the same pattern for decoded unary gRPC
+requests. It avoids generated protobuf imports in the binding layer; a servicer
+passes decoded fields and metadata into `handle_unary()` and maps the returned
+gRPC-style status name to framework-native status handling.
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncGrpcAdapter
+
+adapter = DigitalTwinSyncGrpcAdapter.for_contract(contract)
+response = adapter.handle_unary(
+    envelope.to_audit_record(),
+    metadata={"authorization": "Bearer ..."},
+)
+accepted = adapter.drain()
+```
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types
