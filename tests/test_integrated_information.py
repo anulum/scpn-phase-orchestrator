@@ -15,7 +15,9 @@ import pytest
 
 import scpn_phase_orchestrator.monitor as monitor
 from scpn_phase_orchestrator.monitor.information_integration import (
+    IntegratedInformationBenchmarkReport,
     IntegratedInformationResult,
+    benchmark_integrated_information_approximations,
     integrated_information,
 )
 
@@ -30,8 +32,10 @@ class TestIntegratedInformationContracts:
         assert "float64" in str(hints["phase_series"])
         assert hints["return"] is IntegratedInformationResult
         assert callable(monitor.integrated_information)
+        assert callable(monitor.benchmark_integrated_information_approximations)
         assert "integrated_information" in dir(monitor)
         assert "IntegratedInformationResult" in dir(monitor)
+        assert "IntegratedInformationBenchmarkReport" in dir(monitor)
 
     def test_invalid_shape_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="shape"):
@@ -152,3 +156,45 @@ class TestIntegratedInformationPipelineWiring:
         assert result.pairwise_mi.shape == (n, n)
         assert np.isfinite(result.phi)
         assert np.isfinite(result.total_integration)
+
+
+class TestIntegratedInformationApproximationBenchmarks:
+    def test_benchmark_report_documents_expected_synthetic_ordering(self) -> None:
+        report = benchmark_integrated_information_approximations(
+            n_samples=256,
+            n_bins=8,
+        )
+
+        assert isinstance(report, IntegratedInformationBenchmarkReport)
+        assert report.expected_ordering_passed is True
+        assert report.locked_phi_margin > 0.0
+        assert report.modular_total_margin > 0.0
+        assert [case.name for case in report.cases] == [
+            "independent",
+            "modular",
+            "locked",
+        ]
+
+        by_name = {case.name: case.result for case in report.cases}
+        assert by_name["locked"].phi > by_name["independent"].phi
+        assert by_name["locked"].phi > by_name["modular"].phi
+        assert by_name["modular"].total_integration > (
+            by_name["independent"].total_integration
+        )
+
+    def test_benchmark_report_is_json_ready_and_keeps_claim_boundary(self) -> None:
+        record = benchmark_integrated_information_approximations(
+            n_samples=128,
+            n_bins=8,
+        ).to_audit_record()
+
+        assert record["monitor"] == "integrated_information"
+        assert record["benchmark"] == "deterministic_synthetic_approximation_cases"
+        assert record["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
+        assert record["expected_ordering_passed"] is True
+        assert len(record["cases"]) == 3
+        assert record["cases"][0]["result"]["monitor"] == "integrated_information"
+
+    def test_benchmark_rejects_too_short_series(self) -> None:
+        with pytest.raises(ValueError, match="n_samples"):
+            benchmark_integrated_information_approximations(n_samples=31)

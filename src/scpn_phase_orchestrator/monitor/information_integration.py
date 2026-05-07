@@ -22,7 +22,13 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["IntegratedInformationResult", "integrated_information"]
+__all__ = [
+    "IntegratedInformationBenchmarkCase",
+    "IntegratedInformationBenchmarkReport",
+    "IntegratedInformationResult",
+    "benchmark_integrated_information_approximations",
+    "integrated_information",
+]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 Partition: TypeAlias = tuple[tuple[int, ...], tuple[int, ...]]
@@ -71,6 +77,49 @@ class IntegratedInformationResult:
         }
 
 
+@dataclass(frozen=True)
+class IntegratedInformationBenchmarkCase:
+    """Deterministic approximation benchmark case for the Phi proxy."""
+
+    name: str
+    description: str
+    result: IntegratedInformationResult
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable benchmark case record."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "result": self.result.to_audit_record(),
+        }
+
+
+@dataclass(frozen=True)
+class IntegratedInformationBenchmarkReport:
+    """Audit report for deterministic integrated-information approximations."""
+
+    cases: tuple[IntegratedInformationBenchmarkCase, ...]
+    expected_ordering_passed: bool
+    locked_phi_margin: float
+    modular_total_margin: float
+    n_samples: int
+    n_bins: int
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable benchmark report."""
+        return {
+            "monitor": "integrated_information",
+            "benchmark": "deterministic_synthetic_approximation_cases",
+            "n_samples": self.n_samples,
+            "n_bins": self.n_bins,
+            "expected_ordering_passed": self.expected_ordering_passed,
+            "locked_phi_margin": self.locked_phi_margin,
+            "modular_total_margin": self.modular_total_margin,
+            "cases": [case.to_audit_record() for case in self.cases],
+            "claim_boundary": "engineering_proxy_not_theoretical_iit",
+        }
+
+
 def integrated_information(
     phase_series: FloatArray,
     n_bins: int = _DEFAULT_BINS,
@@ -106,6 +155,63 @@ def integrated_information(
         total_integration=total_integration,
         minimum_partition=minimum_partition,
         pairwise_mi=pairwise_mi,
+        n_bins=bins,
+    )
+
+
+def benchmark_integrated_information_approximations(
+    *,
+    n_samples: int = 256,
+    n_bins: int = 8,
+) -> IntegratedInformationBenchmarkReport:
+    """Run deterministic approximation checks for the Phi proxy.
+
+    This is a numerical calibration, not a hardware performance benchmark. It
+    checks three synthetic regimes: independent streams, modular streams with
+    high within-module information but weak cross-module Phi, and globally
+    locked streams with high cross-partition Phi.
+    """
+    if n_samples < 32:
+        raise ValueError("n_samples must be at least 32")
+    bins = _validate_bins(n_bins)
+    cases = (
+        IntegratedInformationBenchmarkCase(
+            name="independent",
+            description="seeded independent circular phase streams",
+            result=integrated_information(
+                _independent_benchmark_series(n_samples), bins
+            ),
+        ),
+        IntegratedInformationBenchmarkCase(
+            name="modular",
+            description=(
+                "two internally locked modules with weak cross-module "
+                "minimum-partition Phi"
+            ),
+            result=integrated_information(_modular_benchmark_series(n_samples), bins),
+        ),
+        IntegratedInformationBenchmarkCase(
+            name="locked",
+            description="globally phase-locked streams with high cross-partition Phi",
+            result=integrated_information(_locked_benchmark_series(n_samples), bins),
+        ),
+    )
+    by_name = {case.name: case.result for case in cases}
+    locked_phi_margin = by_name["locked"].phi - by_name["independent"].phi
+    modular_total_margin = (
+        by_name["modular"].total_integration - by_name["independent"].total_integration
+    )
+    expected_ordering_passed = (
+        locked_phi_margin > 0.0
+        and modular_total_margin > 0.0
+        and by_name["locked"].phi > by_name["modular"].phi
+    )
+    return IntegratedInformationBenchmarkReport(
+        cases=cases,
+        expected_ordering_passed=expected_ordering_passed,
+        locked_phi_margin=float(locked_phi_margin),
+        modular_total_margin=float(modular_total_margin),
+        n_samples=n_samples,
         n_bins=bins,
     )
 
@@ -225,3 +331,38 @@ def _normalise_phi(phi: float, n_bins: int) -> float:
     if scale <= 0.0:
         return 0.0
     return float(np.clip(phi / scale, 0.0, 1.0))
+
+
+def _independent_benchmark_series(n_samples: int) -> FloatArray:
+    rng = np.random.default_rng(137)
+    series: FloatArray = rng.uniform(0.0, _TWO_PI, size=(4, n_samples)).astype(
+        np.float64
+    )
+    return series
+
+
+def _modular_benchmark_series(n_samples: int) -> FloatArray:
+    base_a = np.linspace(0.0, 5.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
+    base_b = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
+    series: FloatArray = np.vstack(
+        [
+            base_a,
+            (base_a + 0.03) % _TWO_PI,
+            (base_b + np.pi) % _TWO_PI,
+            (base_b + np.pi + 0.03) % _TWO_PI,
+        ]
+    ).astype(np.float64)
+    return series
+
+
+def _locked_benchmark_series(n_samples: int) -> FloatArray:
+    base = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
+    series: FloatArray = np.vstack(
+        [
+            base,
+            (base + 0.02) % _TWO_PI,
+            (base + 0.04) % _TWO_PI,
+            (base + 0.06) % _TWO_PI,
+        ]
+    ).astype(np.float64)
+    return series

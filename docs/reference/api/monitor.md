@@ -247,13 +247,23 @@ consciousness claim.
 
 ```python
 from scpn_phase_orchestrator.monitor import (
+    benchmark_integrated_information_approximations,
     integrated_information,
 )
 
 # phase_series: (n_oscillators, n_samples)
 result = integrated_information(phase_series, n_bins=16)
 record = result.to_audit_record()
+
+benchmark = benchmark_integrated_information_approximations()
+benchmark_record = benchmark.to_audit_record()
 ```
+
+`benchmark_integrated_information_approximations()` runs deterministic
+synthetic calibration cases for independent, modular, and globally locked phase
+regimes. It is a numerical approximation benchmark, not a hardware performance
+benchmark; the audit record documents ordering margins and preserves the same
+engineering-proxy claim boundary.
 
 ::: scpn_phase_orchestrator.monitor.information_integration
 

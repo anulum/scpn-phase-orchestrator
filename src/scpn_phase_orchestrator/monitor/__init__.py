@@ -20,6 +20,8 @@ __all__ = [
     "EVSResult",
     "EmbeddingResult",
     "HAS_RTAMT",
+    "IntegratedInformationBenchmarkCase",
+    "IntegratedInformationBenchmarkReport",
     "IntegratedInformationResult",
     "LyapunovGuard",
     "LyapunovState",
@@ -49,6 +51,7 @@ __all__ = [
     "entropy_from_phases",
     "entropy_production_rate",
     "itpc_persistence",
+    "benchmark_integrated_information_approximations",
     "integrated_information",
     "kaplan_yorke_dimension",
     "lyapunov_spectrum",
@@ -98,6 +101,18 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "IntegratedInformationResult": (
         ".information_integration",
         "IntegratedInformationResult",
+    ),
+    "IntegratedInformationBenchmarkCase": (
+        ".information_integration",
+        "IntegratedInformationBenchmarkCase",
+    ),
+    "IntegratedInformationBenchmarkReport": (
+        ".information_integration",
+        "IntegratedInformationBenchmarkReport",
+    ),
+    "benchmark_integrated_information_approximations": (
+        ".information_integration",
+        "benchmark_integrated_information_approximations",
     ),
     "integrated_information": (
         ".information_integration",
