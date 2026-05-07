@@ -51,3 +51,22 @@ None. Stateless heading dynamics with no memory effects.
 
 200 steps: random headings -> alignment emergence -> obstacle breaks formation ->
 re-form after obstacle -> leader failure -> swarm self-recovery.
+
+## Morphogenetic Field Demo
+
+`morphogenetic_field_demo.py` demonstrates reaction-diffusion-style topology
+field shaping for this domainpack without live actuation. It builds the swarm
+coupling matrix from `binding_spec.yaml`, evaluates a deterministic split-flock
+phase state, and emits:
+
+- the next reviewable `K_nm` field audit payload,
+- grown and shrunk edge deltas,
+- dependency-free field snapshot statistics,
+- ASCII heatmap rows for report/UI previews,
+- strongest field-edge records.
+
+Run:
+
+```bash
+PYTHONPATH=src python domainpacks/swarm_robotics/morphogenetic_field_demo.py
+```

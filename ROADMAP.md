@@ -386,7 +386,11 @@ Speculative research watchlist:
     `build_morphogenetic_field_snapshot()` emits dependency-free field
     statistics, ASCII heatmap rows, and strongest-edge records for audits,
     reports, or later UI rendering.
-  - Remaining scope: domainpack demos and richer UI rendering.
+  - Swarm-robotics domainpack demo is in place:
+    `domainpacks/swarm_robotics/morphogenetic_field_demo.py` emits a
+    deterministic split-flock field audit payload plus snapshot rows without
+    live actuation.
+  - Remaining scope: additional domainpack demos and richer UI rendering.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
   - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.
   - Reporting integration is in place: `build_audit_report_summary()` and `spo report` summarise passive `integrated_information` audit records while preserving the engineering-proxy claim boundary.

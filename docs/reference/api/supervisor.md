@@ -314,6 +314,10 @@ The field snapshot helper is dependency-free and emits JSON-safe statistics,
 ASCII heatmap rows, and strongest-edge records for reports or later UI
 rendering.
 
+`domainpacks/swarm_robotics/morphogenetic_field_demo.py` provides a deterministic
+domainpack proof: it evaluates a split-flock phase state and emits the
+morphogenetic field audit payload plus snapshot rows without live actuation.
+
 ::: scpn_phase_orchestrator.supervisor.morphogenetic
 
 ---
