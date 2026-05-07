@@ -76,6 +76,22 @@ if not validation.accepted:
 This gives REST, gRPC, Kafka, file, and hardware adapters the same compatibility
 gate without coupling the binding layer to any specific transport.
 
+For deterministic file replay, use the JSONL adapter:
+
+```python
+from scpn_phase_orchestrator.binding import (
+    read_digital_twin_sync_jsonl,
+    write_digital_twin_sync_jsonl,
+)
+
+write_digital_twin_sync_jsonl("sync.jsonl", [envelope])
+replay_report = read_digital_twin_sync_jsonl(contract, "sync.jsonl")
+```
+
+The replay report separates accepted validations from malformed JSON, invalid
+envelope shapes, and contract-validation rejections. This is useful for adapter
+smoke tests and audit replay before introducing a live network transport.
+
 ## Implementation
 
 ```python

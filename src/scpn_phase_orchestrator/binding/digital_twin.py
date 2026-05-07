@@ -12,6 +12,7 @@ import hashlib
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 from scpn_phase_orchestrator.binding.channel_algebra import (
     ChannelAlgebraReport,
@@ -24,10 +25,13 @@ __all__ = [
     "DigitalTwinLayerContract",
     "DigitalTwinSyncCapability",
     "DigitalTwinSyncEnvelope",
+    "DigitalTwinSyncJsonlReport",
     "DigitalTwinTransportValidation",
     "build_digital_twin_binding_contract",
     "build_digital_twin_sync_envelope",
+    "read_digital_twin_sync_jsonl",
     "validate_digital_twin_sync_envelope",
+    "write_digital_twin_sync_jsonl",
 ]
 
 _DEFAULT_CONTRACT_VERSION = "spo-digital-twin-binding/v1"
@@ -169,6 +173,27 @@ class DigitalTwinTransportValidation:
         }
 
 
+@dataclass(frozen=True)
+class DigitalTwinSyncJsonlReport:
+    """JSONL file-adapter replay report for digital-twin sync envelopes."""
+
+    path: str
+    written: int
+    accepted: tuple[DigitalTwinTransportValidation, ...]
+    rejected: tuple[dict[str, object], ...]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe file-adapter report."""
+        return {
+            "path": self.path,
+            "written": self.written,
+            "accepted_count": len(self.accepted),
+            "rejected_count": len(self.rejected),
+            "accepted": [validation.to_audit_record() for validation in self.accepted],
+            "rejected": list(self.rejected),
+        }
+
+
 def build_digital_twin_binding_contract(
     spec: BindingSpec,
     *,
@@ -265,6 +290,58 @@ def build_digital_twin_sync_envelope(
     )
 
 
+def write_digital_twin_sync_jsonl(
+    path: str | Path,
+    envelopes: Sequence[DigitalTwinSyncEnvelope],
+) -> DigitalTwinSyncJsonlReport:
+    """Write sync envelopes to deterministic JSONL for offline replay."""
+    target = Path(path)
+    lines = [envelope.to_json() for envelope in envelopes]
+    target.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    return DigitalTwinSyncJsonlReport(
+        path=str(target),
+        written=len(lines),
+        accepted=(),
+        rejected=(),
+    )
+
+
+def read_digital_twin_sync_jsonl(
+    contract: DigitalTwinBindingContract,
+    path: str | Path,
+) -> DigitalTwinSyncJsonlReport:
+    """Read JSONL sync envelopes and validate them against a contract."""
+    source = Path(path)
+    accepted: list[DigitalTwinTransportValidation] = []
+    rejected: list[dict[str, object]] = []
+    for line_number, raw_line in enumerate(
+        source.read_text(encoding="utf-8").splitlines(),
+        start=1,
+    ):
+        if not raw_line.strip():
+            continue
+        try:
+            raw_record = json.loads(raw_line)
+        except json.JSONDecodeError:
+            rejected.append(_jsonl_rejection(line_number, "malformed_json"))
+            continue
+        envelope = _envelope_from_record(raw_record)
+        if envelope is None:
+            rejected.append(_jsonl_rejection(line_number, "invalid_envelope"))
+            continue
+        validation = validate_digital_twin_sync_envelope(contract, envelope)
+        if validation.accepted:
+            accepted.append(validation)
+        else:
+            rejected.append(_jsonl_rejection(line_number, validation.reason))
+    return DigitalTwinSyncJsonlReport(
+        path=str(source),
+        written=0,
+        accepted=tuple(accepted),
+        rejected=tuple(rejected),
+    )
+
+
 def validate_digital_twin_sync_envelope(
     contract: DigitalTwinBindingContract,
     envelope: DigitalTwinSyncEnvelope,
@@ -305,6 +382,43 @@ def _find_capability(
         if capability.name == name:
             return capability
     return None
+
+
+def _envelope_from_record(record: object) -> DigitalTwinSyncEnvelope | None:
+    if not isinstance(record, dict):
+        return None
+    contract_hash = record.get("contract_hash")
+    capability = record.get("capability")
+    direction = record.get("direction")
+    sequence = record.get("sequence")
+    payload = record.get("payload")
+    if not isinstance(contract_hash, str):
+        return None
+    if not isinstance(capability, str):
+        return None
+    if not isinstance(direction, str):
+        return None
+    if not isinstance(sequence, int) or isinstance(sequence, bool):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    try:
+        return DigitalTwinSyncEnvelope(
+            contract_hash=contract_hash,
+            capability=capability,
+            direction=direction,
+            sequence=sequence,
+            payload=dict(payload),
+        )
+    except ValueError:
+        return None
+
+
+def _jsonl_rejection(line_number: int, reason: str) -> dict[str, object]:
+    return {
+        "line_number": line_number,
+        "reason": reason,
+    }
 
 
 def _direction_allowed(*, declared: str, observed: str) -> bool:

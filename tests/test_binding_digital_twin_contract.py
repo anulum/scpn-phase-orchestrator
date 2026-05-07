@@ -19,7 +19,9 @@ from scpn_phase_orchestrator.binding import (
     build_digital_twin_binding_contract,
     build_digital_twin_sync_envelope,
     load_binding_spec,
+    read_digital_twin_sync_jsonl,
     validate_digital_twin_sync_envelope,
+    write_digital_twin_sync_jsonl,
 )
 from scpn_phase_orchestrator.binding.types import BindingSpec
 
@@ -216,3 +218,81 @@ def test_digital_twin_sync_envelope_rejects_negative_sequence() -> None:
             sequence=-1,
             payload={"R": 0.9},
         )
+
+
+def test_digital_twin_jsonl_adapter_round_trips_valid_envelopes(tmp_path) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    path = tmp_path / "sync.jsonl"
+    first = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=1,
+        payload={"R": 0.91},
+    )
+    second = build_digital_twin_sync_envelope(
+        contract,
+        capability="audit_replay",
+        direction="spo_to_twin",
+        sequence=2,
+        payload={"event": "accepted"},
+    )
+
+    write_report = write_digital_twin_sync_jsonl(path, (first, second))
+    read_report = read_digital_twin_sync_jsonl(contract, path)
+
+    assert write_report.written == 2
+    assert path.read_text(encoding="utf-8").splitlines() == [
+        first.to_json(),
+        second.to_json(),
+    ]
+    assert [validation.envelope.sequence for validation in read_report.accepted] == [
+        1,
+        2,
+    ]
+    assert read_report.rejected == ()
+    audit = read_report.to_audit_record()
+    assert audit["accepted_count"] == 2
+    assert audit["rejected_count"] == 0
+
+
+def test_digital_twin_jsonl_adapter_reports_rejected_lines(tmp_path) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    path = tmp_path / "sync.jsonl"
+    valid = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=1,
+        payload={"R": 0.91},
+    )
+    wrong_direction = build_digital_twin_sync_envelope(
+        contract,
+        capability="control_action_proposal",
+        direction="twin_to_spo",
+        sequence=2,
+        payload={"knob": "K"},
+    )
+    path.write_text(
+        "\n".join(
+            [
+                valid.to_json(),
+                "{not-json}",
+                '{"capability":"state_snapshot","sequence":"bad"}',
+                wrong_direction.to_json(),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = read_digital_twin_sync_jsonl(contract, path)
+
+    assert [validation.envelope.sequence for validation in report.accepted] == [1]
+    assert report.rejected == (
+        {"line_number": 2, "reason": "malformed_json"},
+        {"line_number": 3, "reason": "invalid_envelope"},
+        {"line_number": 4, "reason": "direction_not_allowed"},
+    )

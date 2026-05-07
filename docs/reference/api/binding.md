@@ -190,6 +190,25 @@ envelope = build_digital_twin_sync_envelope(
 validation = validate_digital_twin_sync_envelope(contract, envelope)
 ```
 
+For file-based replay or adapter smoke tests, the JSONL adapter writes one
+validated envelope shape per line and reads it back through the same contract
+gate:
+
+```python
+from scpn_phase_orchestrator.binding import (
+    read_digital_twin_sync_jsonl,
+    write_digital_twin_sync_jsonl,
+)
+
+write_report = write_digital_twin_sync_jsonl("sync.jsonl", [envelope])
+read_report = read_digital_twin_sync_jsonl(contract, "sync.jsonl")
+```
+
+The read report separates accepted envelope validations from malformed JSON,
+invalid envelope shapes, and contract-validation rejections. This is the
+reference behaviour concrete REST, gRPC, Kafka, file, and hardware adapters can
+mirror.
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types
