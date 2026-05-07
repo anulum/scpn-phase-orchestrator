@@ -100,6 +100,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-npi-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.70
+      weight: 3.0
+    - name: limit-vaccination-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.10
+      weight: 2.0
+    - name: limit-mobility-restriction-step
+      knob: alpha
+      scope: layer_2
+      min_value: 0.0
+      max_value: 0.80
+      weight: 2.5
+    - name: limit-lockdown-phase-target-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.75
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: epidemic value guard npi hold
+
 # Waning immunity: Antia et al. (2018) antibody decay kinetics.
 imprint_model:
   decay_rate: 0.008

@@ -444,10 +444,10 @@ action from a fallback forced by the policy's minimum alignment score.
 
 Domainpack templates now include review-time examples for cardiac rhythm,
 power grid, network security, fusion equilibrium, neuroscience EEG, brain
-connectome, sleep architecture, circadian biology, and other simulation/replay
-domainpacks. These templates are guard priors for reviewable candidate actions;
-they are not live medical, grid, vehicle, financial, or security operating
-policies.
+connectome, sleep architecture, circadian biology, epidemic SIR, and other
+simulation/replay domainpacks. These templates are guard priors for reviewable
+candidate actions; they are not live medical, grid, vehicle, financial,
+public-health, or security operating policies.
 
 ```python
 from scpn_phase_orchestrator.actuation.mapper import ControlAction

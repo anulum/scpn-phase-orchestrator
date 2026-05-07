@@ -34,6 +34,16 @@ epidemics across cities.
 | mobility_restriction | alpha | Travel restriction phase lag |
 | lockdown | Psi | Lockdown target phase |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time epidemic
+policy checks. It bounds NPI drive, vaccination-campaign coupling, mobility
+restriction lag, and lockdown phase-target proposals, then falls back to a
+zero-drive NPI hold if a candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+public-health intervention protocol or medical operating policy.
+
 ## Imprint
 
 Waning immunity: antibody titres decay over months post-infection or
