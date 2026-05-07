@@ -18,7 +18,9 @@ from numpy.typing import NDArray
 
 __all__ = [
     "SheafCoherenceResult",
+    "SheafObstructionSummary",
     "SheafCoherenceSupervisor",
+    "build_sheaf_obstruction_summary",
     "sheaf_coherence",
     "sheaf_laplacian",
 ]
@@ -54,6 +56,35 @@ class SheafCoherenceResult:
         }
 
 
+@dataclass(frozen=True)
+class SheafObstructionSummary:
+    """Review summary for obstruction hardening and audit triage."""
+
+    severity: str
+    top_residual_edges: tuple[tuple[int, int, float, tuple[float, ...]], ...]
+    obstruction_score: float
+    warning_threshold: float
+    critical_threshold: float
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable obstruction summary."""
+        return {
+            "severity": self.severity,
+            "obstruction_score": self.obstruction_score,
+            "warning_threshold": self.warning_threshold,
+            "critical_threshold": self.critical_threshold,
+            "top_residual_edges": [
+                {
+                    "target": target,
+                    "source": source,
+                    "norm": norm,
+                    "residual": list(residual),
+                }
+                for target, source, norm, residual in self.top_residual_edges
+            ],
+        }
+
+
 class SheafCoherenceSupervisor:
     """Assess whether N-channel states agree across restriction maps."""
 
@@ -71,6 +102,30 @@ class SheafCoherenceSupervisor:
             restriction_maps,
             tolerance=self.tolerance,
         )
+
+
+def build_sheaf_obstruction_summary(
+    result: SheafCoherenceResult,
+    *,
+    warning_threshold: float = 0.05,
+    critical_threshold: float = 0.25,
+    top_k: int = 5,
+) -> SheafObstructionSummary:
+    """Build a passive triage summary from a sheaf-coherence result."""
+    warn = _validate_tolerance(warning_threshold)
+    critical = _validate_tolerance(critical_threshold)
+    if critical < warn:
+        raise ValueError("critical_threshold must be >= warning_threshold")
+    if top_k < 0:
+        raise ValueError("top_k must be non-negative")
+    severity = _obstruction_severity(result.obstruction_score, warn, critical)
+    return SheafObstructionSummary(
+        severity=severity,
+        top_residual_edges=_top_residual_edges(result.residuals, top_k),
+        obstruction_score=result.obstruction_score,
+        warning_threshold=warn,
+        critical_threshold=critical,
+    )
 
 
 def sheaf_coherence(
@@ -225,3 +280,35 @@ def _has_edge(restriction: FloatArray, tolerance: float) -> bool:
 def _block_slice(node_index: int, n_channels: int) -> slice:
     start = node_index * n_channels
     return slice(start, start + n_channels)
+
+
+def _obstruction_severity(
+    score: float,
+    warning_threshold: float,
+    critical_threshold: float,
+) -> str:
+    if score >= critical_threshold:
+        return "critical"
+    if score >= warning_threshold:
+        return "warning"
+    return "nominal"
+
+
+def _top_residual_edges(
+    residuals: FloatArray,
+    top_k: int,
+) -> tuple[tuple[int, int, float, tuple[float, ...]], ...]:
+    edges: list[tuple[int, int, float, tuple[float, ...]]] = []
+    for target, source in np.argwhere(np.linalg.norm(residuals, axis=2) > 0.0):
+        vector = residuals[int(target), int(source)]
+        norm = float(np.linalg.norm(vector))
+        edges.append(
+            (
+                int(target),
+                int(source),
+                norm,
+                tuple(float(value) for value in vector),
+            )
+        )
+    edges.sort(key=lambda item: (-item[2], item[0], item[1]))
+    return tuple(edges[:top_k])

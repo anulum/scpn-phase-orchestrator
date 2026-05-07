@@ -357,13 +357,17 @@ obstruction dimension. It does not claim a complete formal proof system or
 autonomous sheaf-control loop.
 
 ```python
-from scpn_phase_orchestrator.supervisor import SheafCoherenceSupervisor
+from scpn_phase_orchestrator.supervisor import (
+    SheafCoherenceSupervisor,
+    build_sheaf_obstruction_summary,
+)
 
 supervisor = SheafCoherenceSupervisor(tolerance=1e-8)
 result = supervisor.assess(node_states, restriction_maps)
+summary = build_sheaf_obstruction_summary(result)
 
 if result.obstruction_score > 0.1:
-    audit_payload = result.to_audit_record()
+    audit_payload = summary.to_audit_record()
 ```
 
 `domainpacks/edge_consensus_nchannel/sheaf_obstruction_demo.py` provides a
@@ -371,6 +375,11 @@ heterogeneous-domain replay: `P`, `I`, `S`, `Load`, `Trust`, and
 `ConsensusHealth` node states are evaluated across edge, gateway, and parent
 restriction maps, producing nominal and stressed obstruction audit records
 without live actuation.
+
+`build_sheaf_obstruction_summary()` hardens the raw obstruction metric into a
+reviewable triage record. It classifies `nominal`, `warning`, and `critical`
+states from explicit thresholds and reports the strongest residual edges so
+operators can see which directed restrictions are failing.
 
 ::: scpn_phase_orchestrator.supervisor.sheaf
 

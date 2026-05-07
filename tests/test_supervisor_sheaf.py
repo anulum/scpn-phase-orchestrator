@@ -17,6 +17,8 @@ import scpn_phase_orchestrator.supervisor.sheaf as sheaf_module
 from scpn_phase_orchestrator.supervisor import (
     SheafCoherenceResult,
     SheafCoherenceSupervisor,
+    SheafObstructionSummary,
+    build_sheaf_obstruction_summary,
     sheaf_coherence,
     sheaf_laplacian,
 )
@@ -135,6 +137,76 @@ class TestSheafCoherenceBehaviour:
         assert record["laplacian_shape"] == [4, 4]
         assert record["residual_shape"] == [2, 2, 2]
         assert record["edge_count"] == 2
+
+    def test_obstruction_summary_reports_severity_and_top_residuals(self) -> None:
+        states = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [0.0, -1.0],
+            ],
+            dtype=np.float64,
+        )
+        result = sheaf_coherence(states, _identity_maps(n_nodes=3, n_channels=2))
+
+        summary = build_sheaf_obstruction_summary(
+            result,
+            warning_threshold=0.1,
+            critical_threshold=0.5,
+            top_k=2,
+        )
+
+        assert isinstance(summary, SheafObstructionSummary)
+        assert summary.severity == "critical"
+        assert len(summary.top_residual_edges) == 2
+        assert summary.top_residual_edges[0][2] >= summary.top_residual_edges[1][2]
+        record = summary.to_audit_record()
+        assert record["severity"] == "critical"
+        assert (
+            record["top_residual_edges"][0]["norm"]
+            >= (record["top_residual_edges"][1]["norm"])
+        )
+
+    def test_obstruction_summary_classifies_nominal_and_warning_states(self) -> None:
+        nominal = sheaf_coherence(
+            np.zeros((2, 2), dtype=np.float64),
+            _identity_maps(n_nodes=2, n_channels=2),
+        )
+        warning = sheaf_coherence(
+            np.array([[0.0, 0.0], [0.1, 0.0]], dtype=np.float64),
+            _identity_maps(n_nodes=2, n_channels=2),
+        )
+
+        assert build_sheaf_obstruction_summary(nominal).severity == "nominal"
+        assert (
+            build_sheaf_obstruction_summary(
+                warning,
+                warning_threshold=0.05,
+                critical_threshold=0.5,
+            ).severity
+            == "warning"
+        )
+
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"warning_threshold": -0.1}, "tolerance"),
+            ({"warning_threshold": 0.5, "critical_threshold": 0.1}, "critical"),
+            ({"top_k": -1}, "top_k"),
+        ],
+    )
+    def test_obstruction_summary_rejects_invalid_inputs(
+        self,
+        kwargs: dict[str, object],
+        message: str,
+    ) -> None:
+        result = sheaf_coherence(
+            np.zeros((2, 2), dtype=np.float64),
+            _identity_maps(n_nodes=2, n_channels=2),
+        )
+
+        with pytest.raises(ValueError, match=message):
+            build_sheaf_obstruction_summary(result, **kwargs)
 
 
 class TestSheafCoherencePipelineWiring:

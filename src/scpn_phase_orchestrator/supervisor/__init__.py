@@ -102,6 +102,8 @@ from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.supervisor.sheaf import (
     SheafCoherenceResult,
     SheafCoherenceSupervisor,
+    SheafObstructionSummary,
+    build_sheaf_obstruction_summary,
     sheaf_coherence,
     sheaf_laplacian,
 )
@@ -164,6 +166,7 @@ __all__ = [
     "RegimeManager",
     "SheafCoherenceResult",
     "SheafCoherenceSupervisor",
+    "SheafObstructionSummary",
     "StrangeLoopAssessment",
     "StrangeLoopSupervisor",
     "SupervisorPolicy",
@@ -181,6 +184,7 @@ __all__ = [
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
     "build_morphogenetic_field_snapshot",
+    "build_sheaf_obstruction_summary",
     "render_morphogenetic_field_svg",
     "dry_run_policy_rules",
     "export_petri_net_prism",
