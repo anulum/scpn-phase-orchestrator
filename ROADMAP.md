@@ -184,7 +184,8 @@
   - Transport-neutral hierarchy sync envelopes are in place: `build_hierarchy_sync_envelope()` and `ingest_hierarchy_sync_envelopes()` provide deterministic JSON-safe edge/cloud summary exchange with protocol-version and sequence checks.
   - Power-grid and cardiac hierarchy sync demos are in place; remaining scope is a live gossip/transport runtime and broader multi-domain demos.
 - Distributed edge orchestration: multi-node phase consensus with gossip or local Kuramoto coupling, plus WASM/FPGA deployment paths for decentralised operation.
-  - Offline hierarchy sync-envelope ingestion and two domainpack replay demos are in place for reduced summaries; live gossip/local-consensus transport remains open.
+  - Offline hierarchy sync-envelope ingestion and two domainpack replay demos are in place for reduced summaries.
+  - Deterministic offline gossip/local-consensus replay is in place via `simulate_hierarchy_gossip_consensus()`, using accepted sync envelopes and caller-supplied neighbour maps without sockets or live actuation. Live transport remains open.
 - Digital-twin binding standard: version `binding_spec.yaml` as an open bidirectional live-sync contract for simulators, services, and hardware twins.
 - Formal verification hooks: export Petri-net regimes and policy rules to PRISM, TLA+, SPIN, or equivalent model-checking workflows, with CI artefacts for safety-critical policies.
 - Neuromorphic and quantum-native backends: extend existing SNN and quantum-control bridges so the orchestrator can emit Lava/BrainScaleS-style neuromorphic schedules and QPU control schedules directly from validated phase-control plans.
@@ -198,7 +199,7 @@
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
   - Reward-evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, and adaptive replay refinement are in place; next scope is optional PPO/SAC or hybrid physics learners behind the same non-actuating gates.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
-  - N-channel runtime execution and replay-only optimisation surfaces are in place. Hierarchical reduced-summary parent orchestration, offline edge/cloud sync envelopes, and power-grid/cardiac replay demos are in place; live transport and broader multi-domain demos remain open.
+  - N-channel runtime execution and replay-only optimisation surfaces are in place. Hierarchical reduced-summary parent orchestration, offline edge/cloud sync envelopes, power-grid/cardiac replay demos, and deterministic offline gossip replay are in place; live transport and broader multi-domain demos remain open.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
 - Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
   - Plugin manifest registry foundation is in place; deeper Rust runtime loading remains open.

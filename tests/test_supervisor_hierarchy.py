@@ -9,6 +9,7 @@ from scpn_phase_orchestrator.supervisor import (
     build_hierarchical_orchestration_plan,
     build_hierarchy_sync_envelope,
     ingest_hierarchy_sync_envelopes,
+    simulate_hierarchy_gossip_consensus,
 )
 
 
@@ -235,4 +236,95 @@ def test_hierarchy_sync_ingestion_requires_one_accepted_envelope() -> None:
         ingest_hierarchy_sync_envelopes(
             (stale,),
             previous_sequences={"node-a": 1},
+        )
+
+
+def test_hierarchy_gossip_consensus_moves_neighbours_towards_shared_state() -> None:
+    node_a = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "grid", R=0.9, psi=0.0, confidence=1.0),
+        source_node="node-a",
+        sequence=1,
+    )
+    node_b = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary(
+            "edge-b",
+            "grid",
+            R=0.3,
+            psi=math.pi,
+            confidence=1.0,
+        ),
+        source_node="node-b",
+        sequence=1,
+    )
+
+    rounds = simulate_hierarchy_gossip_consensus(
+        (node_a, node_b),
+        neighbour_map={"node-a": ("node-b",), "node-b": ("node-a",)},
+        rounds=2,
+        self_weight=0.5,
+    )
+
+    assert [round_record.round_index for round_record in rounds] == [1, 2]
+    first_round = rounds[0]
+    assert [state.source_node for state in first_round.states] == ["node-a", "node-b"]
+    assert [state.summary.R for state in first_round.states] == pytest.approx(
+        [0.6, 0.6]
+    )
+    assert first_round.plan.parent_state.regime_id == "hierarchical_degraded"
+    assert first_round.to_audit_record()["states"][0]["summary"]["metadata"] == {
+        "consensus": "offline_gossip",
+        "source_node": "node-a",
+        "neighbour_count": 1,
+    }
+    assert rounds[1].plan.parent_R == pytest.approx(first_round.plan.parent_R)
+
+
+def test_hierarchy_gossip_consensus_carries_ingestion_rejections_once() -> None:
+    stale = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("stale", "grid", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=1,
+    )
+    accepted = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("accepted", "grid", R=0.7, psi=0.0),
+        source_node="node-b",
+        sequence=2,
+    )
+
+    rounds = simulate_hierarchy_gossip_consensus(
+        (stale, accepted),
+        neighbour_map={"node-b": ("node-a",)},
+        previous_sequences={"node-a": 1},
+        rounds=2,
+    )
+
+    assert [record["reason"] for record in rounds[0].rejected] == [
+        "stale_or_duplicate_sequence"
+    ]
+    assert rounds[1].rejected == ()
+    assert [state.source_node for state in rounds[0].states] == ["node-b"]
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"rounds": 0}, "rounds must be >= 1"),
+        ({"self_weight": 1.5}, "self_weight must be finite and in \\[0, 1\\]"),
+    ],
+)
+def test_hierarchy_gossip_consensus_rejects_invalid_inputs(
+    kwargs: dict[str, object],
+    message: str,
+) -> None:
+    envelope = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "grid", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=1,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        simulate_hierarchy_gossip_consensus(
+            (envelope,),
+            neighbour_map={},
+            **kwargs,  # type: ignore[arg-type]
         )

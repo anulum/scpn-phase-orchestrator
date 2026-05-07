@@ -40,12 +40,15 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
 from scpn_phase_orchestrator.supervisor.hierarchy import (
     ChildSupervisorSummary,
     HierarchicalOrchestrationPlan,
+    HierarchyConsensusRound,
+    HierarchyConsensusState,
     HierarchyEscalation,
     HierarchySyncEnvelope,
     HierarchySyncLedger,
     build_hierarchical_orchestration_plan,
     build_hierarchy_sync_envelope,
     ingest_hierarchy_sync_envelopes,
+    simulate_hierarchy_gossip_consensus,
 )
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,
@@ -123,6 +126,8 @@ __all__ = [
     "FEPPredictionAssessment",
     "FEPPredictiveSupervisor",
     "HierarchicalOrchestrationPlan",
+    "HierarchyConsensusRound",
+    "HierarchyConsensusState",
     "HierarchyEscalation",
     "HierarchySyncEnvelope",
     "HierarchySyncLedger",
@@ -182,6 +187,7 @@ __all__ = [
     "learn_causal_graph",
     "sheaf_coherence",
     "sheaf_laplacian",
+    "simulate_hierarchy_gossip_consensus",
     "synthesise_policy_stl_automata",
     "synthesize_policy_stl_automata",
     "value_alignment_policy_from_binding_spec",

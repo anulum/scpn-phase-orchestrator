@@ -217,6 +217,23 @@ ledger = ingest_hierarchy_sync_envelopes(
 sync_audit = ledger.to_audit_record()
 ```
 
+For offline distributed-edge testing, `simulate_hierarchy_gossip_consensus()`
+replays local consensus over accepted sync envelopes and a caller-supplied
+neighbour map. Each node updates only its reduced coherence, phase, confidence,
+and audit metadata; no sockets are opened and no raw observations enter the
+consensus state.
+
+```python
+from scpn_phase_orchestrator.supervisor import simulate_hierarchy_gossip_consensus
+
+rounds = simulate_hierarchy_gossip_consensus(
+    [envelope],
+    neighbour_map={"edge-node-a": ()},
+    rounds=1,
+)
+consensus_audit = [round_record.to_audit_record() for round_record in rounds]
+```
+
 This slice does not open sockets, run a gossip protocol, or perform direct
 actuation. It gives existing regime, policy, FEP, causal, STL, and audit paths a
 common parent-level state built from reduced child evidence without moving raw
