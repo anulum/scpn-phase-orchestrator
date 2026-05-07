@@ -107,3 +107,20 @@ PYTHONPATH=src python domainpacks/power_grid/causal_attribution_demo.py
 The demo is intentionally replay-only: it proves that a proposed `K` actuation
 can be audited against an unchanged baseline before any live grid adapter is
 allowed to apply it.
+
+## Morphogenetic Field Demo
+
+`morphogenetic_field_demo.py` demonstrates reaction-diffusion-style topology
+field shaping for a stressed grid replay. It keeps generator rotor and area
+frequency phases near each other while tie-line, load-demand, and renewable
+layers drift, then emits the next reviewable `K_nm` field audit payload.
+
+Run the replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/power_grid/morphogenetic_field_demo.py
+```
+
+The replay is non-actuating. It validates the domain binding spec, builds the
+configured layer coupling, reports grown and shrunk topology-field edges, and
+exports dependency-free field snapshot rows for audit or later UI rendering.

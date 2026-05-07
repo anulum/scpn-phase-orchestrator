@@ -390,6 +390,10 @@ Speculative research watchlist:
     `domainpacks/swarm_robotics/morphogenetic_field_demo.py` emits a
     deterministic split-flock field audit payload plus snapshot rows without
     live actuation.
+  - Power-grid domainpack demo is in place:
+    `domainpacks/power_grid/morphogenetic_field_demo.py` emits a deterministic
+    stressed-grid replay with grown/shrunk topology-field edges and snapshot
+    rows without live actuation.
   - Remaining scope: additional domainpack demos and richer UI rendering.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
   - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.

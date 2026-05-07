@@ -318,6 +318,11 @@ rendering.
 domainpack proof: it evaluates a split-flock phase state and emits the
 morphogenetic field audit payload plus snapshot rows without live actuation.
 
+`domainpacks/power_grid/morphogenetic_field_demo.py` provides the same
+non-actuating proof for a stressed grid replay: generator rotor and area
+frequency layers remain near-synchronised while tie-line, load-demand, and
+renewable layers drift, producing reviewable grown/shrunk field-edge records.
+
 ::: scpn_phase_orchestrator.supervisor.morphogenetic
 
 ---
