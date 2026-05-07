@@ -248,6 +248,11 @@ Near-term candidate tracks:
     support from transfer-entropy histories before proposing corridor
     simplices and records Lyapunov before/after energy evidence for the
     proposed mutation.
+  - Network-security Lyapunov validation proof is in place:
+    `domainpacks/network_security/topology_adaptation_demo.py` derives
+    pairwise support from transfer-entropy histories before proposing
+    traffic/attack/defence simplices and records Lyapunov before/after energy
+    evidence for the proposed mutation.
   - Remaining scope: broader multi-domain Lyapunov policy validation.
 - Causal intervention engine: attach counterfactual UPDE/JAX rollouts to material regime transitions and knob changes, maintain a live N-channel causal model, and audit observed plus counterfactual trajectories.
   - Foundation is in place: causal counterfactual rollout support exists.

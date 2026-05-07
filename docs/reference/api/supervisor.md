@@ -160,6 +160,10 @@ Domainpack demos:
   support from transfer-entropy evidence before proposing traffic-corridor
   simplices, then records Lyapunov before/after energy and basin evidence for
   the proposed mutation.
+- `domainpacks/network_security/topology_adaptation_demo.py` builds pairwise
+  support from transfer-entropy evidence before proposing traffic/attack/defence
+  simplices, then records Lyapunov before/after energy evidence for the
+  proposed mutation.
 
 ::: scpn_phase_orchestrator.supervisor.topology
 

@@ -61,3 +61,20 @@ PYTHONPATH=src python domainpacks/network_security/causal_attribution_demo.py
 
 The demo is replay-only and non-actuating. It is not a live firewall,
 rate-limiter, or network security appliance policy.
+
+## Topology Adaptation Demo
+
+`topology_adaptation_demo.py` derives pairwise support from deterministic
+transfer-entropy traces, proposes higher-order topology mutations for
+traffic/attack/defence cohorts, and records Lyapunov before/after energy
+evidence for the candidate mutation.
+
+Run it with:
+
+```bash
+PYTHONPATH=src python domainpacks/network_security/topology_adaptation_demo.py
+```
+
+The demo is replay-only and non-actuating. It emits an audit payload for
+reviewing topology mutation evidence before any live security adapter is
+allowed to apply a policy.
