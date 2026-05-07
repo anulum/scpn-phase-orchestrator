@@ -612,6 +612,12 @@ module with Petri places as variables, transition guards as constants, `Init`,
 rule-fire counters plus reachability predicates for fired rules and emitted
 actions.
 
+For builtin STL automata, `synthesise_stl_controller_candidates()` provides a
+non-actuating controller-synthesis bridge. It proposes signal-level candidate
+actions from the weakest violated predicate and records `actuating=False`; the
+proposal is an audit artefact, not a live controller or bypass around policy and
+actuation safety gates.
+
 ::: scpn_phase_orchestrator.supervisor.formal_export
 
 ---

@@ -13,8 +13,12 @@ import pytest
 from scpn_phase_orchestrator.monitor.stl import (
     STLAutomatonState,
     STLAutomatonTransition,
+    STLControllerCandidate,
+    STLControllerSynthesis,
     STLMonitoringAutomaton,
+    synthesise_stl_controller_candidates,
     synthesise_stl_monitoring_automaton,
+    synthesize_stl_controller_candidates,
     synthesize_stl_monitoring_automaton,
 )
 from scpn_phase_orchestrator.supervisor.policy_rules import (
@@ -133,6 +137,110 @@ def test_policy_stl_automata_preserve_policy_identity_and_audit_severity():
     assert audit_records[1]["severity"] == "soft"
     assert audit_records[1]["satisfied"] is True
     assert audit_records[1]["states"][1]["first_hit_index"] == 2
+
+
+def test_stl_controller_synthesis_proposes_non_actuating_violation_actions():
+    trace = {"R": [0.8, 0.2, 0.5], "amplitude_spread": [0.1, 0.1, 0.35]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "always (R >= 0.3 and amplitude_spread < 0.2)",
+        trace,
+    )
+
+    synthesis = synthesise_stl_controller_candidates(
+        automaton,
+        trace,
+        action_map={"R": "raise_coupling", "amplitude_spread": "dampen_amplitude"},
+    )
+
+    assert isinstance(synthesis, STLControllerSynthesis)
+    assert synthesis.satisfied is False
+    assert synthesis.actuating is False
+    assert synthesis.source_backend == "builtin"
+    assert synthesis.candidates == (
+        STLControllerCandidate(
+            signal="amplitude_spread",
+            action="dampen_amplitude",
+            direction="decrease",
+            time_index=2,
+            robustness=pytest.approx(-0.15),
+            rationale="amplitude_spread < 0.2 violated at t=2 with robustness -0.15",
+        ),
+    )
+    assert synthesis.to_audit_record() == {
+        "spec": "always (R >= 0.3 and amplitude_spread < 0.2)",
+        "satisfied": False,
+        "actuating": False,
+        "source_backend": "builtin",
+        "candidates": [
+            {
+                "signal": "amplitude_spread",
+                "action": "dampen_amplitude",
+                "direction": "decrease",
+                "time_index": 2,
+                "robustness": pytest.approx(-0.15),
+                "rationale": (
+                    "amplitude_spread < 0.2 violated at t=2 with robustness -0.15"
+                ),
+            }
+        ],
+    }
+
+
+def test_stl_controller_synthesis_handles_unsatisfied_eventually_specs():
+    trace = {"R": [0.1, 0.2, 0.75]}
+    automaton = synthesize_stl_monitoring_automaton(
+        "eventually (R >= 0.8)",
+        trace,
+    )
+
+    synthesis = synthesize_stl_controller_candidates(automaton, trace)
+
+    assert synthesis.satisfied is False
+    assert synthesis.actuating is False
+    assert synthesis.candidates == (
+        STLControllerCandidate(
+            signal="R",
+            action="increase_R",
+            direction="increase",
+            time_index=2,
+            robustness=pytest.approx(-0.05),
+            rationale="R >= 0.8 violated at t=2 with robustness -0.05",
+        ),
+    )
+
+
+def test_stl_controller_synthesis_returns_no_actions_for_satisfied_specs():
+    trace = {"K": [1.0, 2.0, 3.0]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "always (K <= 10.0)",
+        trace,
+    )
+
+    synthesis = synthesise_stl_controller_candidates(automaton, trace)
+
+    assert synthesis.satisfied is True
+    assert synthesis.actuating is False
+    assert synthesis.candidates == ()
+
+
+def test_stl_controller_synthesis_rejects_mismatched_automata():
+    trace = {"R": [0.1, 0.2, 0.4]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "always (R >= 0.3)",
+        trace,
+    )
+    mismatched = STLMonitoringAutomaton(
+        spec=automaton.spec,
+        temporal_op="eventually",
+        signals=automaton.signals,
+        states=automaton.states,
+        transitions=automaton.transitions,
+        robustness=automaton.robustness,
+        satisfied=automaton.satisfied,
+    )
+
+    with pytest.raises(ValueError, match="temporal operator"):
+        synthesise_stl_controller_candidates(mismatched, trace)
 
 
 def _state_by_name(

@@ -25,11 +25,15 @@ __all__ = [
     "HAS_RTAMT",
     "STLAutomatonState",
     "STLAutomatonTransition",
+    "STLControllerCandidate",
+    "STLControllerSynthesis",
     "STLMonitor",
     "STLMonitoringAutomaton",
     "STLTraceResult",
     "synthesise_stl_monitoring_automaton",
+    "synthesise_stl_controller_candidates",
     "synthesize_stl_monitoring_automaton",
+    "synthesize_stl_controller_candidates",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -136,6 +140,52 @@ class STLMonitoringAutomaton:
             "robustness": self.robustness,
             "satisfied": self.satisfied,
             "backend": self.backend,
+        }
+
+
+@dataclass(frozen=True)
+class STLControllerCandidate:
+    """Non-actuating controller candidate derived from an STL automaton."""
+
+    signal: str
+    action: str
+    direction: str
+    time_index: int
+    robustness: float
+    rationale: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable controller-candidate payload."""
+        return {
+            "signal": self.signal,
+            "action": self.action,
+            "direction": self.direction,
+            "time_index": self.time_index,
+            "robustness": self.robustness,
+            "rationale": self.rationale,
+        }
+
+
+@dataclass(frozen=True)
+class STLControllerSynthesis:
+    """Audit-ready, non-actuating controller synthesis proposal."""
+
+    spec: str
+    satisfied: bool
+    actuating: bool
+    source_backend: str
+    candidates: tuple[STLControllerCandidate, ...]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-serialisable controller-synthesis payload."""
+        return {
+            "spec": self.spec,
+            "satisfied": self.satisfied,
+            "actuating": self.actuating,
+            "source_backend": self.source_backend,
+            "candidates": [
+                candidate.to_audit_record() for candidate in self.candidates
+            ],
         }
 
 
@@ -264,6 +314,54 @@ def synthesise_stl_monitoring_automaton(
 synthesize_stl_monitoring_automaton = synthesise_stl_monitoring_automaton
 
 
+def synthesise_stl_controller_candidates(
+    automaton: STLMonitoringAutomaton,
+    trace: dict[str, list[float]],
+    *,
+    action_map: dict[str, str] | None = None,
+) -> STLControllerSynthesis:
+    """Synthesize non-actuating controller candidates from an STL automaton.
+
+    The result is a review artefact, not a controller. It identifies the
+    weakest predicate margin and proposes signal-level adjustment directions for
+    supported builtin ``always`` and ``eventually`` monitors. Callers must still
+    map candidates through policy, projection, safety, and actuation gates.
+    """
+    _validate_trace(trace)
+    parsed = _parse_simple_spec(automaton.spec)
+    if parsed is None:
+        raise ValueError("controller synthesis supports builtin simple STL syntax only")
+    temporal_op, predicates = parsed
+    if temporal_op != automaton.temporal_op:
+        raise ValueError("automaton temporal operator does not match its STL spec")
+    index = _controller_focus_index(automaton, predicates, trace)
+    candidates = tuple(
+        candidate
+        for predicate in predicates
+        if (
+            candidate := _candidate_for_predicate(
+                predicate,
+                trace,
+                time_index=index,
+                action_map=action_map or {},
+            )
+        )
+        is not None
+    )
+    if automaton.satisfied:
+        candidates = ()
+    return STLControllerSynthesis(
+        spec=automaton.spec,
+        satisfied=automaton.satisfied,
+        actuating=False,
+        source_backend=automaton.backend,
+        candidates=candidates,
+    )
+
+
+synthesize_stl_controller_candidates = synthesise_stl_controller_candidates
+
+
 def _parse_simple_spec(spec: str) -> tuple[str, list[tuple[str, str, float]]] | None:
     match = _SIMPLE_SPEC_RE.match(spec.strip())
     if match is None:
@@ -349,6 +447,56 @@ def _format_threshold(threshold: float) -> str:
     if threshold.is_integer():
         return str(int(threshold))
     return f"{threshold:g}"
+
+
+def _controller_focus_index(
+    automaton: STLMonitoringAutomaton,
+    predicates: list[tuple[str, str, float]],
+    trace: dict[str, list[float]],
+) -> int:
+    pointwise = _pointwise_robustness(predicates, trace)
+    if automaton.temporal_op == "always":
+        return int(np.argmin(pointwise))
+    if automaton.temporal_op == "eventually":
+        return int(np.argmax(pointwise))
+    raise ValueError(f"unsupported STL temporal operator {automaton.temporal_op!r}")
+
+
+def _candidate_for_predicate(
+    predicate: tuple[str, str, float],
+    trace: dict[str, list[float]],
+    *,
+    time_index: int,
+    action_map: dict[str, str],
+) -> STLControllerCandidate | None:
+    signal, op, threshold = predicate
+    robustness = float(_predicate_robustness(signal, op, threshold, trace)[time_index])
+    if robustness >= 0.0:
+        return None
+    direction = _controller_direction(op)
+    action = action_map.get(signal, f"{direction}_{signal}")
+    rationale = (
+        f"{signal} {op} {_format_threshold(threshold)} violated at "
+        f"t={time_index} with robustness {robustness:g}"
+    )
+    return STLControllerCandidate(
+        signal=signal,
+        action=action,
+        direction=direction,
+        time_index=time_index,
+        robustness=robustness,
+        rationale=rationale,
+    )
+
+
+def _controller_direction(op: str) -> str:
+    if op in {">=", ">"}:
+        return "increase"
+    if op in {"<=", "<"}:
+        return "decrease"
+    if op == "==":
+        return "restore"
+    raise ValueError(f"unsupported STL comparison operator {op!r}")
 
 
 def _synthesise_always_automaton(

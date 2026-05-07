@@ -293,7 +293,11 @@ Near-term candidate tracks:
   - Monitoring automata synthesis foundation is in place:
     `synthesise_stl_monitoring_automaton()` emits audit-ready state and
     transition traces for builtin simple STL monitors.
-  - Remaining scope: controller synthesis from STL monitor automata.
+  - Controller-synthesis linkage foundation is in place:
+    `synthesise_stl_controller_candidates()` emits non-actuating,
+    audit-ready signal-level candidates from builtin STL monitor automata.
+  - Remaining scope: closed-loop controller synthesis and policy-gated
+    projection from candidates to safe actuation plans.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - Retrieval, confidence, and notebook polish are in place: generation now

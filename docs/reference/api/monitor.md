@@ -77,6 +77,27 @@ Policy YAML integration is available through `load_policy_stl_specs()`,
 specification loading in the policy DSL while preserving `STLMonitor` and the
 automata synthesizer as runtime evaluators.
 
+`synthesise_stl_controller_candidates()` adds the first controller-synthesis
+linkage. It consumes a builtin STL automaton plus the same trace and emits
+non-actuating signal-level candidates for the weakest violated predicate.
+The result is an audit/review artefact only: `actuating` is always `False`, and
+callers must still pass any candidate through policy, projection, safety, and
+actuation gates.
+
+```python
+from scpn_phase_orchestrator.monitor.stl import (
+    synthesise_stl_controller_candidates,
+)
+
+synthesis = synthesise_stl_controller_candidates(
+    automaton,
+    {"R": [0.9, 0.2, 0.6]},
+    action_map={"R": "raise_coupling"},
+)
+audit_payload = synthesis.to_audit_record()
+assert audit_payload["actuating"] is False
+```
+
 ::: scpn_phase_orchestrator.monitor.stl
 
 ## Chimera State Detection
