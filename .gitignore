@@ -58,6 +58,7 @@ experiments/.eeg_cache/
 # Local assistant config — never commit
 CLAUDE.md
 .claude/
+.superpowers/
 
 # Local temporary files
 .audit_tools/
