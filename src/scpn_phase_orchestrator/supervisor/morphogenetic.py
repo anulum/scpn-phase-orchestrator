@@ -19,8 +19,10 @@ FloatArray: TypeAlias = NDArray[np.float64]
 __all__ = [
     "MorphogeneticFieldPolicy",
     "MorphogeneticFieldResult",
+    "MorphogeneticFieldSnapshot",
     "MorphogeneticFieldState",
     "MorphogeneticTopologySupervisor",
+    "build_morphogenetic_field_snapshot",
 ]
 
 
@@ -89,6 +91,34 @@ class MorphogeneticFieldResult:
         }
 
 
+@dataclass(frozen=True)
+class MorphogeneticFieldSnapshot:
+    """Compact visual snapshot of a morphogenetic topology field."""
+
+    shape: tuple[int, int]
+    mean: float
+    minimum: float
+    maximum: float
+    l2_norm: float
+    heatmap_rows: tuple[str, ...]
+    top_edges: tuple[tuple[int, int, float], ...]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe field snapshot for docs, reports, and audits."""
+        return {
+            "shape": list(self.shape),
+            "mean": self.mean,
+            "minimum": self.minimum,
+            "maximum": self.maximum,
+            "l2_norm": self.l2_norm,
+            "heatmap_rows": list(self.heatmap_rows),
+            "top_edges": [
+                {"source": src, "target": dst, "weight": weight}
+                for src, dst, weight in self.top_edges
+            ],
+        }
+
+
 class MorphogeneticTopologySupervisor:
     """Grow or shrink pairwise topology from a persistent coherence field."""
 
@@ -142,6 +172,37 @@ class MorphogeneticTopologySupervisor:
         self.last_result = None
 
 
+def build_morphogenetic_field_snapshot(
+    field_state: MorphogeneticFieldState | MorphogeneticFieldResult,
+    *,
+    top_k: int = 5,
+    palette: str = " .:-=+*#%@",
+) -> MorphogeneticFieldSnapshot:
+    """Build a compact visual snapshot for a topology field.
+
+    The snapshot is dependency-free and audit-oriented: it exposes summary
+    statistics, ASCII heatmap rows, and the strongest non-diagonal field edges.
+    """
+    if top_k < 0:
+        raise ValueError("top_k must be non-negative")
+    _require_non_empty(palette, "palette")
+    source_state = (
+        field_state.field_state
+        if isinstance(field_state, MorphogeneticFieldResult)
+        else field_state
+    )
+    field = _validate_square_field(source_state.field)
+    return MorphogeneticFieldSnapshot(
+        shape=(int(field.shape[0]), int(field.shape[1])),
+        mean=float(np.mean(field)),
+        minimum=float(np.min(field)),
+        maximum=float(np.max(field)),
+        l2_norm=float(np.linalg.norm(field)),
+        heatmap_rows=_field_heatmap_rows(field, palette),
+        top_edges=_top_field_edges(field, top_k),
+    )
+
+
 def _validate_phases(phases: FloatArray) -> FloatArray:
     arr = np.asarray(phases, dtype=np.float64)
     if arr.ndim != 1:
@@ -168,6 +229,17 @@ def _validate_field(field: FloatArray, n: int) -> FloatArray:
     arr = np.asarray(field, dtype=np.float64)
     if arr.shape != (n, n):
         raise ValueError(f"field must have shape ({n}, {n})")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("field must be finite")
+    if np.any((arr < 0.0) | (arr > 1.0)):
+        raise ValueError("field values must be in [0, 1]")
+    return arr
+
+
+def _validate_square_field(field: FloatArray) -> FloatArray:
+    arr = np.asarray(field, dtype=np.float64)
+    if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
+        raise ValueError("field must be a square matrix")
     if not np.all(np.isfinite(arr)):
         raise ValueError("field must be finite")
     if np.any((arr < 0.0) | (arr > 1.0)):
@@ -226,6 +298,29 @@ def _order_parameter(phases: FloatArray) -> float:
     return float(np.abs(np.mean(np.exp(1j * phases))))
 
 
+def _field_heatmap_rows(field: FloatArray, palette: str) -> tuple[str, ...]:
+    if len(palette) == 1:
+        return tuple(palette * field.shape[1] for _ in range(field.shape[0]))
+    scale = len(palette) - 1
+    rows = []
+    for row in field:
+        rows.append("".join(palette[int(round(float(value) * scale))] for value in row))
+    return tuple(rows)
+
+
+def _top_field_edges(
+    field: FloatArray,
+    top_k: int,
+) -> tuple[tuple[int, int, float], ...]:
+    edges: list[tuple[int, int, float]] = []
+    for src, dst in np.argwhere(field > 0.0):
+        if src == dst:
+            continue
+        edges.append((int(src), int(dst), float(field[src, dst])))
+    edges.sort(key=lambda item: (-item[2], item[0], item[1]))
+    return tuple(edges[:top_k])
+
+
 def _require_unit_interval(value: float, name: str) -> None:
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be finite and in [0, 1]")
@@ -234,3 +329,8 @@ def _require_unit_interval(value: float, name: str) -> None:
 def _require_non_negative(value: float, name: str) -> None:
     if not np.isfinite(value) or value < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
+
+
+def _require_non_empty(value: str, name: str) -> None:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} must be a non-empty string")

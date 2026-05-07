@@ -53,8 +53,10 @@ from scpn_phase_orchestrator.supervisor.hierarchy import (
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,
     MorphogeneticFieldResult,
+    MorphogeneticFieldSnapshot,
     MorphogeneticFieldState,
     MorphogeneticTopologySupervisor,
+    build_morphogenetic_field_snapshot,
 )
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -136,6 +138,7 @@ __all__ = [
     "Marking",
     "MorphogeneticFieldPolicy",
     "MorphogeneticFieldResult",
+    "MorphogeneticFieldSnapshot",
     "MorphogeneticFieldState",
     "MorphogeneticTopologySupervisor",
     "PetriNet",
@@ -174,6 +177,7 @@ __all__ = [
     "assess_fep_hierarchy",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
+    "build_morphogenetic_field_snapshot",
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_petri_net_tla",

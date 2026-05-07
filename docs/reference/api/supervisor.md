@@ -293,7 +293,10 @@ The result is a next-step `K_nm`, a carried `MorphogeneticFieldState`, grown and
 shrunk edge lists, and compact field statistics for audit logs.
 
 ```python
-from scpn_phase_orchestrator.supervisor import MorphogeneticTopologySupervisor
+from scpn_phase_orchestrator.supervisor import (
+    MorphogeneticTopologySupervisor,
+    build_morphogenetic_field_snapshot,
+)
 
 supervisor = MorphogeneticTopologySupervisor()
 result = supervisor.step(phases, knm)
@@ -301,10 +304,15 @@ result = supervisor.step(phases, knm)
 next_knm = result.knm
 field_state = result.field_state
 audit_payload = result.to_audit_record()
+snapshot = build_morphogenetic_field_snapshot(result, top_k=5)
+heatmap_rows = snapshot.heatmap_rows
 ```
 
 This slice provides a reviewable grow/shrink primitive for topology shaping. It
 does not bypass the existing policy, causal, STL, or action-projection gates.
+The field snapshot helper is dependency-free and emits JSON-safe statistics,
+ASCII heatmap rows, and strongest-edge records for reports or later UI
+rendering.
 
 ::: scpn_phase_orchestrator.supervisor.morphogenetic
 

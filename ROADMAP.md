@@ -381,7 +381,12 @@ Speculative research watchlist:
 - Strange-loop meta-orchestrator: self-referential supervisor channel that monitors and damps policy drift, over-control, or control-loop oscillation.
   - Foundation is in place: strange-loop supervisor monitor exists; remaining scope is long-run drift scenarios and studio surfacing.
 - Morphogenetic field topology: reaction-diffusion-style field over coupling topology with grow/shrink primitives and field snapshot audit records.
-  - Foundation is in place: morphogenetic topology field support exists; remaining scope is field snapshot visualisation and domainpack demos.
+  - Foundation is in place: morphogenetic topology field support exists.
+  - Field snapshot visualisation foundation is in place:
+    `build_morphogenetic_field_snapshot()` emits dependency-free field
+    statistics, ASCII heatmap rows, and strongest-edge records for audits,
+    reports, or later UI rendering.
+  - Remaining scope: domainpack demos and richer UI rendering.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
   - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.
   - Reporting integration is in place: `build_audit_report_summary()` and `spo report` summarise passive `integrated_information` audit records while preserving the engineering-proxy claim boundary.

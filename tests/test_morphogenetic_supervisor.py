@@ -15,8 +15,10 @@ import scpn_phase_orchestrator.supervisor.morphogenetic as morphogenetic_module
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldPolicy,
     MorphogeneticFieldResult,
+    MorphogeneticFieldSnapshot,
     MorphogeneticFieldState,
     MorphogeneticTopologySupervisor,
+    build_morphogenetic_field_snapshot,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -124,6 +126,70 @@ class TestMorphogeneticTopologySupervisor:
         }
         assert record["field"]["shape"] == [3, 3]
         assert record["grown_edges"]
+
+    def test_field_snapshot_builds_heatmap_and_top_edges(self) -> None:
+        field = np.array(
+            [
+                [0.0, 1.0, 0.25],
+                [0.5, 0.0, 0.75],
+                [0.125, 0.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+
+        snapshot = build_morphogenetic_field_snapshot(
+            MorphogeneticFieldState(field),
+            top_k=3,
+            palette=" .#",
+        )
+
+        assert isinstance(snapshot, MorphogeneticFieldSnapshot)
+        assert snapshot.shape == (3, 3)
+        assert snapshot.mean == pytest.approx(float(np.mean(field)))
+        assert snapshot.minimum == pytest.approx(0.0)
+        assert snapshot.maximum == pytest.approx(1.0)
+        assert snapshot.l2_norm == pytest.approx(float(np.linalg.norm(field)))
+        assert snapshot.heatmap_rows == (" # ", ". #", "   ")
+        assert snapshot.top_edges == (
+            (0, 1, pytest.approx(1.0)),
+            (1, 2, pytest.approx(0.75)),
+            (1, 0, pytest.approx(0.5)),
+        )
+        assert snapshot.to_audit_record()["top_edges"] == [
+            {"source": 0, "target": 1, "weight": pytest.approx(1.0)},
+            {"source": 1, "target": 2, "weight": pytest.approx(0.75)},
+            {"source": 1, "target": 0, "weight": pytest.approx(0.5)},
+        ]
+
+    def test_field_snapshot_accepts_step_results(self) -> None:
+        result = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(growth_rate=0.5, max_delta=0.1),
+        ).step(np.array([0.0, 0.01, np.pi]), _zero_knm(3))
+
+        snapshot = build_morphogenetic_field_snapshot(result, top_k=1)
+
+        assert snapshot.shape == (3, 3)
+        assert len(snapshot.heatmap_rows) == 3
+        assert len(snapshot.top_edges) == 1
+        assert snapshot.to_audit_record()["shape"] == [3, 3]
+
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"top_k": -1}, "top_k must be non-negative"),
+            ({"palette": ""}, "palette must be a non-empty string"),
+        ],
+    )
+    def test_field_snapshot_rejects_invalid_snapshot_inputs(
+        self,
+        kwargs: dict[str, object],
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            build_morphogenetic_field_snapshot(
+                MorphogeneticFieldState(np.zeros((2, 2), dtype=np.float64)),
+                **kwargs,
+            )
 
     def test_rejects_invalid_inputs(self) -> None:
         supervisor = MorphogeneticTopologySupervisor()
