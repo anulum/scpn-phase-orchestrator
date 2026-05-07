@@ -328,6 +328,11 @@ a corridor spillback replay: corridor, network, and equity-pressure layers
 remain locally aligned while intersection, demand, and weather phases stress
 the field, again without live actuation.
 
+`domainpacks/plasma_control/morphogenetic_field_demo.py` adds a research plasma
+replay: transport-barrier, current-profile, and global-equilibrium layers remain
+locally aligned while turbulence, tearing, ELM, and wall-interaction phases
+stress the field, again without live actuation.
+
 ::: scpn_phase_orchestrator.supervisor.morphogenetic
 
 ---

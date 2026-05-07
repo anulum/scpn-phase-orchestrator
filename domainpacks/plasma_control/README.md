@@ -78,6 +78,23 @@ Run:
 PYTHONPATH=src python domainpacks/plasma_control/topology_adaptation_demo.py
 ```
 
+## Morphogenetic Field Demo
+
+`morphogenetic_field_demo.py` demonstrates reaction-diffusion-style topology
+field shaping for an edge-localised stress replay. Transport-barrier,
+current-profile, and global-equilibrium layers remain locally aligned while
+micro-turbulence, tearing, ELM, and wall-interaction phases stress the field.
+
+Run:
+
+```bash
+PYTHONPATH=src python domainpacks/plasma_control/morphogenetic_field_demo.py
+```
+
+The replay is non-actuating. It validates the binding spec, builds the
+configured layer coupling, reports grown and shrunk topology-field edges, and
+exports dependency-free field snapshot rows for audit or later UI rendering.
+
 ## Optional Dependency
 
 Install `scpn-control` for direct KnmSpec import and Lyapunov verdict parsing.

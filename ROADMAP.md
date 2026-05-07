@@ -398,6 +398,10 @@ Speculative research watchlist:
     `domainpacks/traffic_flow/morphogenetic_field_demo.py` emits a deterministic
     corridor-spillback replay with grown/shrunk topology-field edges and
     snapshot rows without live actuation.
+  - Plasma-control domainpack demo is in place:
+    `domainpacks/plasma_control/morphogenetic_field_demo.py` emits a
+    deterministic edge-localised stress replay with grown/shrunk topology-field
+    edges and snapshot rows without live actuation.
   - Remaining scope: additional domainpack demos and richer UI rendering.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
   - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.
