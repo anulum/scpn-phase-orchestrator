@@ -8,6 +8,11 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.autotune.binding_proposal import (
+    propose_binding_from_event_log,
+    propose_binding_from_graph,
+    propose_binding_from_time_series_csv,
+)
 from scpn_phase_orchestrator.autotune.coupling_est import estimate_coupling
 from scpn_phase_orchestrator.autotune.freq_id import (
     FrequencyResult,
@@ -63,6 +68,9 @@ __all__ = [
     "generate_offline_policy_candidates",
     "identify_binding_spec",
     "identify_frequencies",
+    "propose_binding_from_event_log",
+    "propose_binding_from_graph",
+    "propose_binding_from_time_series_csv",
     "propose_replay_policy",
     "rank_replay_candidates",
     "search_adaptive_replay_policy",
