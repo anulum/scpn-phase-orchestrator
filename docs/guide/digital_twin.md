@@ -92,6 +92,20 @@ The replay report separates accepted validations from malformed JSON, invalid
 envelope shapes, and contract-validation rejections. This is useful for adapter
 smoke tests and audit replay before introducing a live network transport.
 
+For runtime-facing tests that should not touch disk, use the in-memory adapter:
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncMemoryAdapter
+
+adapter = DigitalTwinSyncMemoryAdapter.for_contract(contract)
+validation = adapter.submit(envelope)
+accepted_batch = adapter.drain()
+```
+
+The adapter queues accepted envelopes in order and returns rejection reasons
+for invalid submissions. Concrete REST, gRPC, Kafka, and hardware adapters can
+mirror this behaviour at their transport boundary.
+
 ## Implementation
 
 ```python

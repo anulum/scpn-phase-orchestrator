@@ -26,6 +26,7 @@ __all__ = [
     "DigitalTwinSyncCapability",
     "DigitalTwinSyncEnvelope",
     "DigitalTwinSyncJsonlReport",
+    "DigitalTwinSyncMemoryAdapter",
     "DigitalTwinTransportValidation",
     "build_digital_twin_binding_contract",
     "build_digital_twin_sync_envelope",
@@ -191,6 +192,46 @@ class DigitalTwinSyncJsonlReport:
             "rejected_count": len(self.rejected),
             "accepted": [validation.to_audit_record() for validation in self.accepted],
             "rejected": list(self.rejected),
+        }
+
+
+@dataclass
+class DigitalTwinSyncMemoryAdapter:
+    """In-memory reference adapter for validated digital-twin sync payloads."""
+
+    contract: DigitalTwinBindingContract
+    _queue: list[DigitalTwinSyncEnvelope]
+
+    @classmethod
+    def for_contract(
+        cls,
+        contract: DigitalTwinBindingContract,
+    ) -> DigitalTwinSyncMemoryAdapter:
+        """Create an empty adapter for a digital-twin binding contract."""
+        return cls(contract=contract, _queue=[])
+
+    def submit(
+        self,
+        envelope: DigitalTwinSyncEnvelope,
+    ) -> DigitalTwinTransportValidation:
+        """Validate and queue one envelope when accepted."""
+        validation = validate_digital_twin_sync_envelope(self.contract, envelope)
+        if validation.accepted:
+            self._queue.append(envelope)
+        return validation
+
+    def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
+        """Return queued envelopes in submission order and clear the queue."""
+        drained = tuple(self._queue)
+        self._queue.clear()
+        return drained
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return adapter state without exposing any network surface."""
+        return {
+            "contract_hash": self.contract.contract_hash,
+            "queued_count": len(self._queue),
+            "queued_sequences": [envelope.sequence for envelope in self._queue],
         }
 
 

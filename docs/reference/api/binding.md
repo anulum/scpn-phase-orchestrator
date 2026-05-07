@@ -209,6 +209,19 @@ invalid envelope shapes, and contract-validation rejections. This is the
 reference behaviour concrete REST, gRPC, Kafka, file, and hardware adapters can
 mirror.
 
+For runtime-facing tests that should not touch disk, use
+`DigitalTwinSyncMemoryAdapter`. It validates submissions against the same
+contract, queues accepted envelopes in order, and drops rejected envelopes while
+returning the validation reason to the caller.
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncMemoryAdapter
+
+adapter = DigitalTwinSyncMemoryAdapter.for_contract(contract)
+validation = adapter.submit(envelope)
+accepted_batch = adapter.drain()
+```
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types

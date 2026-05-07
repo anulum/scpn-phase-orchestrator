@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.binding import (
     DigitalTwinBindingContract,
     DigitalTwinSyncEnvelope,
+    DigitalTwinSyncMemoryAdapter,
     build_digital_twin_binding_contract,
     build_digital_twin_sync_envelope,
     load_binding_spec,
@@ -296,3 +297,37 @@ def test_digital_twin_jsonl_adapter_reports_rejected_lines(tmp_path) -> None:
         {"line_number": 3, "reason": "invalid_envelope"},
         {"line_number": 4, "reason": "direction_not_allowed"},
     )
+
+
+def test_digital_twin_memory_adapter_queues_only_accepted_payloads() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncMemoryAdapter.for_contract(contract)
+    accepted = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=3,
+        payload={"R": 0.88},
+    )
+    rejected = build_digital_twin_sync_envelope(
+        contract,
+        capability="control_action_proposal",
+        direction="twin_to_spo",
+        sequence=4,
+        payload={"knob": "K"},
+    )
+
+    accepted_validation = adapter.submit(accepted)
+    rejected_validation = adapter.submit(rejected)
+
+    assert accepted_validation.accepted is True
+    assert rejected_validation.accepted is False
+    assert rejected_validation.reason == "direction_not_allowed"
+    assert adapter.to_audit_record() == {
+        "contract_hash": contract.contract_hash,
+        "queued_count": 1,
+        "queued_sequences": [3],
+    }
+    assert adapter.drain() == (accepted,)
+    assert adapter.drain() == ()
