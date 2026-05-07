@@ -59,6 +59,7 @@ experiments/.eeg_cache/
 CLAUDE.md
 .claude/
 .superpowers/
+.worktrees/
 
 # Local temporary files
 .audit_tools/
