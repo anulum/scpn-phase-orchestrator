@@ -335,7 +335,13 @@ Speculative research watchlist:
 - Evolutionary supervisor policy search over policy DSL, Petri nets, and topology mutations, initially offline over `audit.jsonl` with STL and counterfactual safety filters.
 - Information-geometry control layer using Fisher-Rao or Wasserstein metrics as supervisor control primitives.
 - Sheaf-cohomology control over N-channel states, with sheaf Laplacian and obstruction metrics.
-  - Foundation is in place: sheaf coherence supervisor support exists; remaining scope is heterogeneous-domain demos and obstruction hardening.
+  - Foundation is in place: sheaf coherence supervisor support exists.
+  - Heterogeneous edge-consensus demo is in place:
+    `domainpacks/edge_consensus_nchannel/sheaf_obstruction_demo.py` compares
+    nominal and gateway-stressed six-channel sections across directed
+    restriction maps.
+  - Remaining scope: additional heterogeneous-domain demos and obstruction
+    hardening.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
 - Byzantine-fault-tolerant meta-orchestrator fabric over signed policy/topology proposals and hash-linked audit evidence.
 - Hybrid neuromorphic-quantum co-compiler with shared N-channel audit semantics.

@@ -22,3 +22,20 @@ cluster loses coherence: `Load` separates congestion pressure from raw
 phase drift, `Trust` separates peer-quality evidence from event cadence,
 and `ConsensusHealth` gives replay/report tooling one derived safety
 signal to track across the run.
+
+## Sheaf Obstruction Demo
+
+`sheaf_obstruction_demo.py` demonstrates the sheaf-coherence supervisor on this
+heterogeneous six-channel binding. It compares a nominal edge/gateway/parent
+section against a gateway-stressed section where `Load`, `Trust`, and derived
+`ConsensusHealth` no longer agree across restriction maps.
+
+Run the replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/edge_consensus_nchannel/sheaf_obstruction_demo.py
+```
+
+The replay is non-actuating. It validates the binding spec, evaluates the
+directed sheaf Laplacian, reports nominal and stressed obstruction metrics, and
+emits the obstruction delta as audit evidence.

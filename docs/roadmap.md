@@ -110,7 +110,7 @@ into the active roadmap.
 | Self-modelling embodied digital twin | `self_model_error` monitor plus one hardware-in-the-loop or replay-backed reconfiguration demo |
 | Evolutionary supervisor policy search | offline evolution over `audit.jsonl` histories with STL/counterfactual safety filter before any live hot-patch path |
 | Information-geometry control layer | JAX-native Fisher-Rao or Wasserstein control primitive with audit-visible curvature or geodesic metrics |
-| Sheaf-cohomology control | supervisor foundation is implemented; heterogeneous-domain demos and obstruction hardening remain open |
+| Sheaf-cohomology control | supervisor foundation and edge-consensus heterogeneous-domain demo are implemented; additional heterogeneous demos and obstruction hardening remain open |
 | Federated meta-orchestrator | privacy-preserving policy-gradient aggregation across nodes without raw time-series exchange |
 | Byzantine-fault-tolerant meta-orchestrator | three-node consensus demo over signed policy/topology proposals and hash-linked audit evidence |
 | Quantum-native compiler target | Qiskit/PennyLane or OpenPulse/QASM output backend for `quantum_simulation` with co-simulation validation |

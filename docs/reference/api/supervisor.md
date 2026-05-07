@@ -366,6 +366,12 @@ if result.obstruction_score > 0.1:
     audit_payload = result.to_audit_record()
 ```
 
+`domainpacks/edge_consensus_nchannel/sheaf_obstruction_demo.py` provides a
+heterogeneous-domain replay: `P`, `I`, `S`, `Load`, `Trust`, and
+`ConsensusHealth` node states are evaluated across edge, gateway, and parent
+restriction maps, producing nominal and stressed obstruction audit records
+without live actuation.
+
 ::: scpn_phase_orchestrator.supervisor.sheaf
 
 ---
