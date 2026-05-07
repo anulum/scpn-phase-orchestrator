@@ -262,6 +262,10 @@ Near-term candidate tracks:
   - Power-grid attribution demo is in place:
     `domainpacks/power_grid/causal_attribution_demo.py` compares a governor
     droop coupling candidate against a no-action load-step baseline.
+  - Traffic-flow attribution demo is in place:
+    `domainpacks/traffic_flow/causal_attribution_demo.py` compares a
+    signal-cycle coupling candidate against a no-action corridor-spillback
+    baseline.
   - Remaining scope: larger causal-model learners and additional attribution
     demonstrations for other domain families.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.

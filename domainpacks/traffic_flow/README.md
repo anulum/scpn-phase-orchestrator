@@ -73,6 +73,22 @@ PYTHONPATH=src python domainpacks/traffic_flow/topology_adaptation_demo.py
 The output includes transfer-entropy support counts, the mutation policy,
 Lyapunov validation evidence, and the supervisor topology audit record.
 
+## Causal Attribution Demo
+
+`causal_attribution_demo.py` compares a no-action corridor spillback rollout
+against a bounded signal-cycle coupling candidate. The output includes both
+counterfactual trajectories and a compact causal attribution record.
+
+Run it with:
+
+```bash
+PYTHONPATH=src python domainpacks/traffic_flow/causal_attribution_demo.py
+```
+
+The demo is intentionally replay-only: it proves that a proposed `K` actuation
+can be audited against an unchanged baseline before any live traffic-controller
+adapter is allowed to apply it.
+
 ## Morphogenetic Field Demo
 
 `morphogenetic_field_demo.py` demonstrates reaction-diffusion-style topology
