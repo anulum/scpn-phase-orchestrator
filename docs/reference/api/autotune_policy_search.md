@@ -27,7 +27,14 @@ from scpn_phase_orchestrator.autotune import (
     search_replay_policy,
 )
 
-seed = KnobPolicyCandidate(K=0.2, alpha=0.0, zeta=0.05, Psi=0.1)
+seed = KnobPolicyCandidate(
+    K=0.2,
+    alpha=0.0,
+    zeta=0.05,
+    Psi=0.1,
+    channel_weights=(1.0, 0.8),
+    cross_channel_gains=(0.3, 0.5),
+)
 
 
 def replay(candidate: KnobPolicyCandidate) -> RewardObservation:
@@ -37,7 +44,12 @@ def replay(candidate: KnobPolicyCandidate) -> RewardObservation:
 result = search_replay_policy(
     seed,
     replay,
-    search_config=OfflinePolicySearchConfig(K_step=0.05, max_abs_knob=1.0),
+    search_config=OfflinePolicySearchConfig(
+        K_step=0.05,
+        channel_weight_step=0.1,
+        cross_channel_gain_step=0.1,
+        max_abs_knob=1.0,
+    ),
     proposal_config=PolicyProposalConfig(min_coherence=0.75),
 )
 

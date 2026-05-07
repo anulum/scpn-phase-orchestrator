@@ -64,6 +64,7 @@ class TestReplayPolicySearch:
                 zeta_step=0.0,
                 Psi_step=0.0,
                 channel_weight_step=0.0,
+                cross_channel_gain_step=0.0,
             ),
             proposal_config=PolicyProposalConfig(min_coherence=0.8),
         )
@@ -102,6 +103,7 @@ class TestReplayPolicySearch:
                     zeta_step=0.0,
                     Psi_step=0.0,
                     channel_weight_step=0.0,
+                    cross_channel_gain_step=0.0,
                 ),
             )
 
@@ -110,7 +112,11 @@ class TestReplayPolicySearch:
             return RewardObservation(coherence=0.82, previous_coherence=0.7)
 
         result = search_replay_policy(
-            KnobPolicyCandidate(K=0.2, channel_weights=(1.0, 0.5)),
+            KnobPolicyCandidate(
+                K=0.2,
+                channel_weights=(1.0, 0.5),
+                cross_channel_gains=(0.3, 0.4),
+            ),
             evaluator,
             search_config=OfflinePolicySearchConfig(
                 K_step=0.0,
@@ -118,6 +124,7 @@ class TestReplayPolicySearch:
                 zeta_step=0.0,
                 Psi_step=0.0,
                 channel_weight_step=0.0,
+                cross_channel_gain_step=0.0,
             ),
         )
 
@@ -127,6 +134,7 @@ class TestReplayPolicySearch:
 
         assert seed_record["K"] == 0.2
         assert seed_record["channel_weights"] == [1.0, 0.5]
+        assert seed_record["cross_channel_gains"] == [0.3, 0.4]
         assert proposal_record["accepted"] is True
 
     def test_evaluator_alias_accepts_candidate_to_observation_callable(self) -> None:
@@ -158,6 +166,7 @@ class TestAdaptiveReplayPolicySearch:
                     zeta_step=0.0,
                     Psi_step=0.0,
                     channel_weight_step=0.0,
+                    cross_channel_gain_step=0.0,
                     max_abs_knob=1.0,
                 ),
                 iterations=2,
@@ -204,6 +213,7 @@ class TestAdaptiveReplayPolicySearch:
                         zeta_step=0.0,
                         Psi_step=0.0,
                         channel_weight_step=0.0,
+                        cross_channel_gain_step=0.0,
                     ),
                 ),
             )
@@ -220,9 +230,11 @@ class TestAdaptiveReplayPolicySearch:
 
         record = result.to_audit_record()
         config_record = cast("dict[str, object]", record["config"])
+        base_config = cast("dict[str, object]", config_record["base_search_config"])
         rounds_record = cast("list[object]", record["rounds"])
 
         assert config_record["iterations"] == 1
+        assert "cross_channel_gain_step" in base_config
         assert len(rounds_record) == 1
         assert cast("dict[str, object]", record["proposal"])["accepted"] is True
 

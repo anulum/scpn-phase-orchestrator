@@ -43,6 +43,7 @@ class KnobPolicyCandidate:
     zeta: float | FloatArray = 0.0
     Psi: float | FloatArray = 0.0
     channel_weights: tuple[float, ...] = ()
+    cross_channel_gains: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,7 @@ class OfflinePolicySearchConfig:
     zeta_step: float = 0.05
     Psi_step: float = 0.05
     channel_weight_step: float = 0.05
+    cross_channel_gain_step: float = 0.05
     include_baseline: bool = True
     max_abs_knob: float | None = None
 
@@ -79,6 +81,7 @@ class OfflinePolicySearchConfig:
             ("zeta_step", self.zeta_step),
             ("Psi_step", self.Psi_step),
             ("channel_weight_step", self.channel_weight_step),
+            ("cross_channel_gain_step", self.cross_channel_gain_step),
         ]:
             _require_non_negative_finite(value, label)
         if self.max_abs_knob is not None:
@@ -160,6 +163,7 @@ class AutotuneRewardReport:
                 "zeta": _serialise_array(self.candidate.zeta),
                 "Psi": _serialise_array(self.candidate.Psi),
                 "channel_weights": list(self.candidate.channel_weights),
+                "cross_channel_gains": list(self.candidate.cross_channel_gains),
             },
             "observation": {
                 "coherence": self.observation.coherence,
@@ -346,10 +350,10 @@ def generate_offline_policy_candidates(
 ) -> tuple[KnobPolicyCandidate, ...]:
     """Generate deterministic replay-search candidates around a seed policy.
 
-    The generator performs a bounded coordinate search over the universal knobs
-    and channel weights. It does not inspect plant state and it does not apply
-    actions; callers must evaluate the returned candidates through replay or
-    simulation before ranking them.
+    The generator performs a bounded coordinate search over the universal knobs,
+    channel weights, and cross-channel coupling gains. It does not inspect plant
+    state and it does not apply actions; callers must evaluate the returned
+    candidates through replay or simulation before ranking them.
     """
     active_config = config or OfflinePolicySearchConfig()
     _validate_candidate(seed)
@@ -385,6 +389,21 @@ def generate_offline_policy_candidates(
                     )
                 )
 
+    if active_config.cross_channel_gain_step > 0.0:
+        for index in range(len(seed.cross_channel_gains)):
+            for delta in (
+                -active_config.cross_channel_gain_step,
+                active_config.cross_channel_gain_step,
+            ):
+                candidates.append(
+                    _mutate_cross_channel_gain(
+                        seed,
+                        index,
+                        delta,
+                        active_config.max_abs_knob,
+                    )
+                )
+
     return _deduplicate_candidates(candidates)
 
 
@@ -398,6 +417,10 @@ def _actuation_energy(candidate: KnobPolicyCandidate) -> float:
     if candidate.channel_weights:
         parts.append(
             _mean_square(np.asarray(candidate.channel_weights, dtype=np.float64))
+        )
+    if candidate.cross_channel_gains:
+        parts.append(
+            _mean_square(np.asarray(candidate.cross_channel_gains, dtype=np.float64))
         )
     return float(sum(parts))
 
@@ -414,6 +437,8 @@ def _mean_square(value: float | FloatArray) -> float:
 def _validate_candidate(candidate: KnobPolicyCandidate) -> None:
     for weight in candidate.channel_weights:
         _require_non_negative_finite(weight, "channel weight")
+    for gain in candidate.cross_channel_gains:
+        _require_non_negative_finite(gain, "cross-channel gain")
 
 
 def _mutate_knob(
@@ -435,6 +460,7 @@ def _mutate_knob(
         zeta=values["zeta"],
         Psi=values["Psi"],
         channel_weights=seed.channel_weights,
+        cross_channel_gains=seed.cross_channel_gains,
     )
 
 
@@ -468,6 +494,28 @@ def _mutate_channel_weight(
         zeta=seed.zeta,
         Psi=seed.Psi,
         channel_weights=tuple(weights),
+        cross_channel_gains=seed.cross_channel_gains,
+    )
+
+
+def _mutate_cross_channel_gain(
+    seed: KnobPolicyCandidate,
+    index: int,
+    delta: float,
+    max_abs_knob: float | None,
+) -> KnobPolicyCandidate:
+    gains = list(seed.cross_channel_gains)
+    value = max(0.0, gains[index] + delta)
+    if max_abs_knob is not None:
+        value = min(max_abs_knob, value)
+    gains[index] = value
+    return KnobPolicyCandidate(
+        K=seed.K,
+        alpha=seed.alpha,
+        zeta=seed.zeta,
+        Psi=seed.Psi,
+        channel_weights=seed.channel_weights,
+        cross_channel_gains=tuple(gains),
     )
 
 
@@ -483,6 +531,7 @@ def _deduplicate_candidates(
             repr(_serialise_array(candidate.zeta)),
             repr(_serialise_array(candidate.Psi)),
             candidate.channel_weights,
+            candidate.cross_channel_gains,
         )
         if key not in seen:
             seen.add(key)

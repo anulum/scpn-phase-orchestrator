@@ -67,6 +67,7 @@ class TestAutotuneRewardContract:
             zeta=0.05,
             Psi=0.1,
             channel_weights=(1.0, 0.5),
+            cross_channel_gains=(0.25, 0.4),
         )
 
         report = evaluate_knob_policy(
@@ -77,6 +78,7 @@ class TestAutotuneRewardContract:
 
         assert record["candidate"]["K"] == [[0.0, 0.2], [0.2, 0.0]]
         assert record["candidate"]["channel_weights"] == [1.0, 0.5]
+        assert record["candidate"]["cross_channel_gains"] == [0.25, 0.4]
         assert record["observation"]["coherence"] == 0.8
 
 
@@ -217,6 +219,7 @@ class TestAutotuneOfflinePolicySearch:
             zeta=0.1,
             Psi=0.3,
             channel_weights=(1.0, 0.5),
+            cross_channel_gains=(0.3, 0.6),
         )
 
         candidates = generate_offline_policy_candidates(
@@ -227,6 +230,7 @@ class TestAutotuneOfflinePolicySearch:
                 zeta_step=0.0,
                 Psi_step=0.0,
                 channel_weight_step=0.2,
+                cross_channel_gain_step=0.1,
             ),
         )
 
@@ -235,6 +239,14 @@ class TestAutotuneOfflinePolicySearch:
         assert any(pytest.approx(0.5) == candidate.K for candidate in candidates)
         assert any(candidate.channel_weights == (0.8, 0.5) for candidate in candidates)
         assert any(candidate.channel_weights == (1.0, 0.7) for candidate in candidates)
+        assert any(
+            candidate.cross_channel_gains == pytest.approx((0.2, 0.6))
+            for candidate in candidates
+        )
+        assert any(
+            candidate.cross_channel_gains == pytest.approx((0.3, 0.7))
+            for candidate in candidates
+        )
 
     def test_generator_can_exclude_baseline_and_deduplicates_zero_steps(self) -> None:
         seed = KnobPolicyCandidate(K=0.4)
@@ -248,6 +260,7 @@ class TestAutotuneOfflinePolicySearch:
                 zeta_step=0.0,
                 Psi_step=0.0,
                 channel_weight_step=0.0,
+                cross_channel_gain_step=0.0,
             ),
         )
 
@@ -257,6 +270,7 @@ class TestAutotuneOfflinePolicySearch:
         seed = KnobPolicyCandidate(
             K=np.array([[0.45, -0.45]], dtype=np.float64),
             channel_weights=(0.05, 0.48),
+            cross_channel_gains=(0.04, 0.49),
         )
 
         candidates = generate_offline_policy_candidates(
@@ -267,6 +281,7 @@ class TestAutotuneOfflinePolicySearch:
                 zeta_step=0.0,
                 Psi_step=0.0,
                 channel_weight_step=0.1,
+                cross_channel_gain_step=0.1,
                 max_abs_knob=0.5,
             ),
         )
@@ -278,6 +293,12 @@ class TestAutotuneOfflinePolicySearch:
         )
         assert any(candidate.channel_weights == (0.0, 0.48) for candidate in candidates)
         assert any(candidate.channel_weights == (0.05, 0.5) for candidate in candidates)
+        assert any(
+            candidate.cross_channel_gains == (0.0, 0.49) for candidate in candidates
+        )
+        assert any(
+            candidate.cross_channel_gains == (0.04, 0.5) for candidate in candidates
+        )
 
     def test_generated_candidates_feed_replay_ranking(self) -> None:
         seed = KnobPolicyCandidate(K=0.2)
@@ -378,6 +399,13 @@ class TestAutotuneRewardValidation:
         with pytest.raises(ValueError, match="channel weight"):
             evaluate_knob_policy(
                 KnobPolicyCandidate(channel_weights=(1.0, -0.1)),
+                RewardObservation(coherence=0.8),
+            )
+
+    def test_rejects_negative_cross_channel_gains(self) -> None:
+        with pytest.raises(ValueError, match="cross-channel gain"):
+            evaluate_knob_policy(
+                KnobPolicyCandidate(cross_channel_gains=(1.0, -0.1)),
                 RewardObservation(coherence=0.8),
             )
 

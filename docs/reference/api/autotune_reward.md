@@ -49,7 +49,9 @@ best_report = ranked[0].to_audit_record()
 ```
 
 Offline search can generate deterministic coordinate candidates around a seed
-policy before replay scoring:
+policy before replay scoring. The candidate surface includes the universal
+knobs, per-channel weights, and cross-channel coupling gains; the generator is
+still side-effect free and only emits replay candidates.
 
 ```python
 from scpn_phase_orchestrator.autotune import (
@@ -58,8 +60,19 @@ from scpn_phase_orchestrator.autotune import (
 )
 
 candidates = generate_offline_policy_candidates(
-    candidate,
-    OfflinePolicySearchConfig(K_step=0.05, zeta_step=0.02, max_abs_knob=1.0),
+    KnobPolicyCandidate(
+        K=0.2,
+        zeta=0.05,
+        channel_weights=(1.0, 0.8),
+        cross_channel_gains=(0.3, 0.5),
+    ),
+    OfflinePolicySearchConfig(
+        K_step=0.05,
+        zeta_step=0.02,
+        channel_weight_step=0.1,
+        cross_channel_gain_step=0.1,
+        max_abs_knob=1.0,
+    ),
 )
 ```
 

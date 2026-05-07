@@ -221,6 +221,7 @@ def _candidate_to_record(candidate: KnobPolicyCandidate) -> dict[str, object]:
         "zeta": _serialise_knob(candidate.zeta),
         "Psi": _serialise_knob(candidate.Psi),
         "channel_weights": list(candidate.channel_weights),
+        "cross_channel_gains": list(candidate.cross_channel_gains),
     }
 
 
@@ -242,6 +243,10 @@ def _decay_search_config(
         Psi_step=_decay_step(search_config.Psi_step, adaptive_config),
         channel_weight_step=_decay_step(
             search_config.channel_weight_step,
+            adaptive_config,
+        ),
+        cross_channel_gain_step=_decay_step(
+            search_config.cross_channel_gain_step,
             adaptive_config,
         ),
         include_baseline=search_config.include_baseline,
@@ -266,6 +271,7 @@ def _search_config_to_record(config: OfflinePolicySearchConfig) -> dict[str, obj
         "zeta_step": config.zeta_step,
         "Psi_step": config.Psi_step,
         "channel_weight_step": config.channel_weight_step,
+        "cross_channel_gain_step": config.cross_channel_gain_step,
         "include_baseline": config.include_baseline,
         "max_abs_knob": config.max_abs_knob,
     }

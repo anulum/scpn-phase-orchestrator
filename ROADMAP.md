@@ -172,6 +172,10 @@
   - Replay-trained proposal records are in place: `propose_replay_policy()` applies review gates and serialises accept/reject rationale before any live learner or actuation loop.
   - Replay-only policy search is in place: `search_replay_policy()` binds deterministic candidate generation to a caller-supplied replay/simulation evaluator and returns an audit-ready proposal. Next scope is learner-backed PPO/SAC or hybrid search algorithms behind the same gates.
   - Adaptive replay-only refinement is in place: `search_adaptive_replay_policy()` performs bounded multi-round replay search with decayed coordinate steps and the same proposal gates. Next scope is optional PPO/SAC or hybrid physics learners behind this non-actuating interface.
+  - N-channel optimisation surface is in place for replay-only searches:
+    candidate generation, reward scoring, proposal records, and adaptive
+    search now include channel weights plus cross-channel coupling gains before
+    any learner-backed actuation is allowed.
 - Trainable supervisor policies: extend rule-based policy evaluation with reinforcement learning or active-inference loops that optimise long-horizon `R_good` / `R_bad` trade-offs under replayable safety constraints.
 - Uncertainty-aware phase estimation: Bayesian or ensemble phase estimates propagated through MPC/OA reduction and supervisor decisions.
 - SPO Studio GUI: web-based binding and policy builder that scaffolds, visualises, validates, and replays binding specs, with WASM-backed previews where useful.
