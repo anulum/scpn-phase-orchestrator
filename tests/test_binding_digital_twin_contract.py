@@ -15,8 +15,11 @@ import pytest
 
 from scpn_phase_orchestrator.binding import (
     DigitalTwinBindingContract,
+    DigitalTwinSyncEnvelope,
     build_digital_twin_binding_contract,
+    build_digital_twin_sync_envelope,
     load_binding_spec,
+    validate_digital_twin_sync_envelope,
 )
 from scpn_phase_orchestrator.binding.types import BindingSpec
 
@@ -111,3 +114,105 @@ def test_digital_twin_contract_rejects_invalid_contract_inputs(
 
     with pytest.raises(ValueError, match=message):
         build_digital_twin_binding_contract(spec, **kwargs)  # type: ignore[arg-type]
+
+
+def test_digital_twin_sync_envelope_accepts_declared_capability() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=7,
+        payload={"layer": "machine_cells", "R": 0.91},
+    )
+
+    validation = validate_digital_twin_sync_envelope(contract, envelope)
+
+    assert validation.accepted is True
+    assert validation.reason == "accepted"
+    assert envelope.to_audit_record()["contract_hash"] == contract.contract_hash
+    assert envelope.to_json() == (
+        '{"capability":"state_snapshot",'
+        f'"contract_hash":"{contract.contract_hash}",'
+        '"direction":"twin_to_spo",'
+        '"payload":{"R":0.91,"layer":"machine_cells"},'
+        '"sequence":7}'
+    )
+
+
+@pytest.mark.parametrize(
+    ("envelope_kwargs", "reason"),
+    [
+        (
+            {
+                "contract_hash": "wrong",
+                "capability": "state_snapshot",
+                "direction": "twin_to_spo",
+                "sequence": 1,
+                "payload": {"R": 0.9},
+            },
+            "contract_hash_mismatch",
+        ),
+        (
+            {
+                "capability": "unknown_capability",
+                "direction": "twin_to_spo",
+                "sequence": 1,
+                "payload": {"R": 0.9},
+            },
+            "capability_not_declared",
+        ),
+        (
+            {
+                "capability": "control_action_proposal",
+                "direction": "twin_to_spo",
+                "sequence": 1,
+                "payload": {"knob": "K"},
+            },
+            "direction_not_allowed",
+        ),
+        (
+            {
+                "capability": "audit_replay",
+                "direction": "spo_to_twin",
+                "sequence": 1,
+                "payload": {},
+            },
+            "payload_empty",
+        ),
+    ],
+)
+def test_digital_twin_sync_envelope_rejects_invalid_transport_payloads(
+    envelope_kwargs: dict[str, object],
+    reason: str,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    envelope = DigitalTwinSyncEnvelope(
+        contract_hash=str(envelope_kwargs.get("contract_hash", contract.contract_hash)),
+        capability=str(envelope_kwargs["capability"]),
+        direction=str(envelope_kwargs["direction"]),
+        sequence=int(envelope_kwargs["sequence"]),
+        payload=envelope_kwargs["payload"],  # type: ignore[arg-type]
+    )
+
+    validation = validate_digital_twin_sync_envelope(contract, envelope)
+
+    assert validation.accepted is False
+    assert validation.reason == reason
+    assert validation.to_audit_record()["envelope"]["capability"] == envelope.capability
+
+
+def test_digital_twin_sync_envelope_rejects_negative_sequence() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    with pytest.raises(ValueError, match="sequence must be >= 0"):
+        build_digital_twin_sync_envelope(
+            contract,
+            capability="state_snapshot",
+            direction="twin_to_spo",
+            sequence=-1,
+            payload={"R": 0.9},
+        )

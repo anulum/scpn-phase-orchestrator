@@ -52,6 +52,30 @@ actuator limits, N-channel algebra, default sync capabilities, and a stable
 and capability names before accepting telemetry or proposed actions. It does
 not open a network connection or apply control.
 
+Adapters should validate every transport payload against that contract before
+runtime use:
+
+```python
+from scpn_phase_orchestrator.binding import (
+    build_digital_twin_sync_envelope,
+    validate_digital_twin_sync_envelope,
+)
+
+envelope = build_digital_twin_sync_envelope(
+    contract,
+    capability="state_snapshot",
+    direction="twin_to_spo",
+    sequence=1,
+    payload={"layer": "machine_cells", "R": 0.91},
+)
+validation = validate_digital_twin_sync_envelope(contract, envelope)
+if not validation.accepted:
+    raise ValueError(validation.reason)
+```
+
+This gives REST, gRPC, Kafka, file, and hardware adapters the same compatibility
+gate without coupling the binding layer to any specific transport.
+
 ## Implementation
 
 ```python

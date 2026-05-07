@@ -166,6 +166,30 @@ hash field is added, so replay systems can compare contract compatibility
 without re-parsing YAML. Default sync capabilities cover state snapshots,
 phase observations, proposed control actions, and audit replay.
 
+Transport adapters should wrap payloads in `DigitalTwinSyncEnvelope` and run
+`validate_digital_twin_sync_envelope()` before handing data to a runtime or
+external twin. The validator checks contract-hash compatibility, declared
+capability names, allowed directions, non-negative sequence numbers, and
+non-empty payloads. It remains transport-neutral: REST, gRPC, Kafka, file, and
+hardware adapters can all use the same validation record without this module
+opening sockets.
+
+```python
+from scpn_phase_orchestrator.binding import (
+    build_digital_twin_sync_envelope,
+    validate_digital_twin_sync_envelope,
+)
+
+envelope = build_digital_twin_sync_envelope(
+    contract,
+    capability="state_snapshot",
+    direction="twin_to_spo",
+    sequence=1,
+    payload={"layer": "machine_cells", "R": 0.91},
+)
+validation = validate_digital_twin_sync_envelope(contract, envelope)
+```
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types

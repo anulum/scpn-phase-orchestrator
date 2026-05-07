@@ -23,7 +23,11 @@ from scpn_phase_orchestrator.binding.digital_twin import (
     DigitalTwinBindingContract,
     DigitalTwinLayerContract,
     DigitalTwinSyncCapability,
+    DigitalTwinSyncEnvelope,
+    DigitalTwinTransportValidation,
     build_digital_twin_binding_contract,
+    build_digital_twin_sync_envelope,
+    validate_digital_twin_sync_envelope,
 )
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.resolved import (
@@ -51,14 +55,18 @@ __all__ = [
     "DigitalTwinBindingContract",
     "DigitalTwinLayerContract",
     "DigitalTwinSyncCapability",
+    "DigitalTwinSyncEnvelope",
+    "DigitalTwinTransportValidation",
     "GeneratedBindingArtifacts",
     "RetrievalEvidence",
     "SemanticDomainCompiler",
     "build_channel_algebra_report",
     "build_digital_twin_binding_contract",
+    "build_digital_twin_sync_envelope",
     "compile_symbolic_binding",
     "format_resolved_binding_config",
     "load_binding_spec",
     "resolved_binding_config",
     "validate_binding_spec",
+    "validate_digital_twin_sync_envelope",
 ]

@@ -23,7 +23,11 @@ __all__ = [
     "DigitalTwinBindingContract",
     "DigitalTwinLayerContract",
     "DigitalTwinSyncCapability",
+    "DigitalTwinSyncEnvelope",
+    "DigitalTwinTransportValidation",
     "build_digital_twin_binding_contract",
+    "build_digital_twin_sync_envelope",
+    "validate_digital_twin_sync_envelope",
 ]
 
 _DEFAULT_CONTRACT_VERSION = "spo-digital-twin-binding/v1"
@@ -116,6 +120,55 @@ class DigitalTwinBindingContract:
         return json.dumps(self.to_audit_record(), sort_keys=True, separators=(",", ":"))
 
 
+@dataclass(frozen=True)
+class DigitalTwinSyncEnvelope:
+    """Transport-neutral live-sync payload envelope for digital twins."""
+
+    contract_hash: str
+    capability: str
+    direction: str
+    sequence: int
+    payload: dict[str, object]
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.contract_hash, "contract_hash")
+        _require_non_empty(self.capability, "capability")
+        _require_non_empty(self.direction, "direction")
+        if self.sequence < 0:
+            raise ValueError("sequence must be >= 0")
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe sync envelope."""
+        return {
+            "contract_hash": self.contract_hash,
+            "capability": self.capability,
+            "direction": self.direction,
+            "sequence": self.sequence,
+            "payload": dict(self.payload),
+        }
+
+    def to_json(self) -> str:
+        """Serialise the envelope with deterministic key ordering."""
+        return json.dumps(self.to_audit_record(), sort_keys=True, separators=(",", ":"))
+
+
+@dataclass(frozen=True)
+class DigitalTwinTransportValidation:
+    """Validation result for one digital-twin sync envelope."""
+
+    accepted: bool
+    reason: str
+    envelope: DigitalTwinSyncEnvelope
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe validation record."""
+        return {
+            "accepted": self.accepted,
+            "reason": self.reason,
+            "envelope": self.envelope.to_audit_record(),
+        }
+
+
 def build_digital_twin_binding_contract(
     spec: BindingSpec,
     *,
@@ -189,6 +242,49 @@ def build_digital_twin_binding_contract(
     )
 
 
+def build_digital_twin_sync_envelope(
+    contract: DigitalTwinBindingContract,
+    *,
+    capability: str,
+    direction: str,
+    sequence: int,
+    payload: dict[str, object],
+) -> DigitalTwinSyncEnvelope:
+    """Build a transport-neutral sync payload envelope for a contract.
+
+    This helper does not send data. It creates the deterministic envelope that
+    REST, gRPC, Kafka, file, or hardware adapters can validate before handing a
+    payload to the runtime.
+    """
+    return DigitalTwinSyncEnvelope(
+        contract_hash=contract.contract_hash,
+        capability=capability,
+        direction=direction,
+        sequence=sequence,
+        payload=payload,
+    )
+
+
+def validate_digital_twin_sync_envelope(
+    contract: DigitalTwinBindingContract,
+    envelope: DigitalTwinSyncEnvelope,
+) -> DigitalTwinTransportValidation:
+    """Validate a digital-twin sync envelope against a binding contract."""
+    if envelope.contract_hash != contract.contract_hash:
+        return _transport_validation(False, "contract_hash_mismatch", envelope)
+    capability = _find_capability(contract, envelope.capability)
+    if capability is None:
+        return _transport_validation(False, "capability_not_declared", envelope)
+    if not _direction_allowed(
+        declared=capability.direction,
+        observed=envelope.direction,
+    ):
+        return _transport_validation(False, "direction_not_allowed", envelope)
+    if not envelope.payload:
+        return _transport_validation(False, "payload_empty", envelope)
+    return _transport_validation(True, "accepted", envelope)
+
+
 def _capability_from_name(name: str) -> DigitalTwinSyncCapability:
     _require_non_empty(name, "sync capability")
     payloads = {
@@ -199,6 +295,32 @@ def _capability_from_name(name: str) -> DigitalTwinSyncCapability:
     }
     direction, payload = payloads.get(name, ("bidirectional", "json_object"))
     return DigitalTwinSyncCapability(name=name, direction=direction, payload=payload)
+
+
+def _find_capability(
+    contract: DigitalTwinBindingContract,
+    name: str,
+) -> DigitalTwinSyncCapability | None:
+    for capability in contract.sync_capabilities:
+        if capability.name == name:
+            return capability
+    return None
+
+
+def _direction_allowed(*, declared: str, observed: str) -> bool:
+    return declared == "bidirectional" or declared == observed
+
+
+def _transport_validation(
+    accepted: bool,
+    reason: str,
+    envelope: DigitalTwinSyncEnvelope,
+) -> DigitalTwinTransportValidation:
+    return DigitalTwinTransportValidation(
+        accepted=accepted,
+        reason=reason,
+        envelope=envelope,
+    )
 
 
 def _record_hash(record: dict[str, object]) -> str:
