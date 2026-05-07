@@ -37,6 +37,12 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     export_policy_rules_tla,
     export_stl_specs_prism,
 )
+from scpn_phase_orchestrator.supervisor.hierarchy import (
+    ChildSupervisorSummary,
+    HierarchicalOrchestrationPlan,
+    HierarchyEscalation,
+    build_hierarchical_orchestration_plan,
+)
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,
     MorphogeneticFieldResult,
@@ -103,6 +109,7 @@ __all__ = [
     "CausalInterventionEngine",
     "CausalGraphEstimate",
     "CausalInfluenceEdge",
+    "ChildSupervisorSummary",
     "CompoundCondition",
     "ControlAction",
     "CounterfactualRollout",
@@ -111,6 +118,8 @@ __all__ = [
     "FEPHierarchyChildAssessment",
     "FEPPredictionAssessment",
     "FEPPredictiveSupervisor",
+    "HierarchicalOrchestrationPlan",
+    "HierarchyEscalation",
     "HigherOrderTopologySupervisor",
     "InterventionParameters",
     "Marking",
@@ -152,6 +161,7 @@ __all__ = [
     "ValueConstraint",
     "ValueViolation",
     "assess_fep_hierarchy",
+    "build_hierarchical_orchestration_plan",
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_petri_net_tla",

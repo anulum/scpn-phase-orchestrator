@@ -165,6 +165,43 @@ Domainpack demos:
 
 ---
 
+## Hierarchical Orchestration Summaries
+
+`build_hierarchical_orchestration_plan()` is the generic nested-supervisor
+foundation. Child supervisors exchange bounded summaries only: child name,
+channel, `R`, `psi`, regime, confidence, and optional metadata. The parent
+planner converts those summaries into a reduced `UPDEState`, computes
+cross-child phase alignment, and emits escalation records for low confidence,
+degraded coherence, critical coherence, or explicit child-regime escalation.
+
+```python
+from scpn_phase_orchestrator.supervisor import (
+    ChildSupervisorSummary,
+    build_hierarchical_orchestration_plan,
+)
+
+plan = build_hierarchical_orchestration_plan(
+    [
+        ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0),
+        ChildSupervisorSummary("edge-b", "thermal", R=0.5, psi=1.2),
+    ],
+    degraded_threshold=0.65,
+    critical_threshold=0.35,
+)
+
+parent_state = plan.parent_state
+audit_payload = plan.to_audit_record()
+```
+
+This slice does not provide edge/cloud transport or direct actuation. It gives
+existing regime, policy, FEP, causal, STL, and audit paths a common parent-level
+state built from reduced child evidence without moving raw time series, local
+coupling matrices, or actuator targets across hierarchy boundaries.
+
+::: scpn_phase_orchestrator.supervisor.hierarchy
+
+---
+
 ## Strange-Loop Supervisor Monitor
 
 `StrangeLoopSupervisor` is the first self-referential supervisor slice. It

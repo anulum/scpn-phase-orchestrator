@@ -180,6 +180,7 @@
 - Uncertainty-aware phase estimation: Bayesian or ensemble phase estimates propagated through MPC/OA reduction and supervisor decisions.
 - SPO Studio GUI: web-based binding and policy builder that scaffolds, visualises, validates, and replays binding specs, with WASM-backed previews where useful.
 - Hierarchical multi-scale orchestration: support nested orchestrators where local/edge supervisors maintain local coherence, exchange reduced phase/coherence summaries, and escalate only bounded regime evidence to a parent supervisor. Reuse Hodge decomposition and transfer-entropy monitors to decide what crosses hierarchy boundaries.
+  - Reduced-summary hierarchy foundation is in place: `build_hierarchical_orchestration_plan()` turns child supervisor summaries into a parent `UPDEState` and bounded escalation audit records without exchanging raw child signals. Remaining scope is edge/cloud synchronisation transport and domainpack demos.
 - Distributed edge orchestration: multi-node phase consensus with gossip or local Kuramoto coupling, plus WASM/FPGA deployment paths for decentralised operation.
 - Digital-twin binding standard: version `binding_spec.yaml` as an open bidirectional live-sync contract for simulators, services, and hardware twins.
 - Formal verification hooks: export Petri-net regimes and policy rules to PRISM, TLA+, SPIN, or equivalent model-checking workflows, with CI artefacts for safety-critical policies.
@@ -194,6 +195,7 @@
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
   - Reward-evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, and adaptive replay refinement are in place; next scope is optional PPO/SAC or hybrid physics learners behind the same non-actuating gates.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
+  - N-channel runtime execution and replay-only optimisation surfaces are in place. Hierarchical reduced-summary parent orchestration is in place; edge/cloud synchronisation transport and multi-domain demos remain open.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
 - Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
   - Plugin manifest registry foundation is in place; deeper Rust runtime loading remains open.
