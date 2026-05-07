@@ -34,6 +34,16 @@ relate to plasma transport coefficients.  ITER Physics Basis (2007).
 | coupling_global | K | Inter-layer transport coupling |
 | entrainment | zeta | NBI/ECCD drive strength |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time fusion
+equilibrium checks. It bounds inter-layer equilibrium coupling and auxiliary
+NBI/ECCD entrainment drive, then falls back to a drive hold when a candidate
+action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+tokamak protection system.
+
 ## Imprint
 
 Plasma-facing component erosion: first-wall sputtering accumulates over

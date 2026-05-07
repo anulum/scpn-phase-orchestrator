@@ -93,6 +93,28 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
+value_alignment:
+  minimum_score: 0.30
+  constraints:
+    - name: limit-equilibrium-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.0
+      weight: 2.5
+    - name: limit-auxiliary-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.65
+      weight: 2.0
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 0.5
+      justification: fusion equilibrium value guard drive hold
+
 imprint_model:
   decay_rate: 0.005
   saturation: 2.0
