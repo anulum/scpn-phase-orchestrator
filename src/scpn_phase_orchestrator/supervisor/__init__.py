@@ -55,8 +55,10 @@ from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldResult,
     MorphogeneticFieldSnapshot,
     MorphogeneticFieldState,
+    MorphogeneticFieldSVG,
     MorphogeneticTopologySupervisor,
     build_morphogenetic_field_snapshot,
+    render_morphogenetic_field_svg,
 )
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.petri_net import (
@@ -139,6 +141,7 @@ __all__ = [
     "MorphogeneticFieldPolicy",
     "MorphogeneticFieldResult",
     "MorphogeneticFieldSnapshot",
+    "MorphogeneticFieldSVG",
     "MorphogeneticFieldState",
     "MorphogeneticTopologySupervisor",
     "PetriNet",
@@ -178,6 +181,7 @@ __all__ = [
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
     "build_morphogenetic_field_snapshot",
+    "render_morphogenetic_field_svg",
     "dry_run_policy_rules",
     "export_petri_net_prism",
     "export_petri_net_tla",

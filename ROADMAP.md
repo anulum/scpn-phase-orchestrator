@@ -386,6 +386,10 @@ Speculative research watchlist:
     `build_morphogenetic_field_snapshot()` emits dependency-free field
     statistics, ASCII heatmap rows, and strongest-edge records for audits,
     reports, or later UI rendering.
+  - Passive SVG rendering foundation is in place:
+    `render_morphogenetic_field_svg()` emits a dependency-free SVG heatmap and
+    labelled top-edge review artefact without mutating policy, coupling, or
+    actuation state.
   - Swarm-robotics domainpack demo is in place:
     `domainpacks/swarm_robotics/morphogenetic_field_demo.py` emits a
     deterministic split-flock field audit payload plus snapshot rows without
@@ -402,7 +406,7 @@ Speculative research watchlist:
     `domainpacks/plasma_control/morphogenetic_field_demo.py` emits a
     deterministic edge-localised stress replay with grown/shrunk topology-field
     edges and snapshot rows without live actuation.
-  - Remaining scope: additional domainpack demos and richer UI rendering.
+  - Remaining scope: additional domainpack demos and richer Studio UI rendering.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
   - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.
   - Reporting integration is in place: `build_audit_report_summary()` and `spo report` summarise passive `integrated_information` audit records while preserving the engineering-proxy claim boundary.

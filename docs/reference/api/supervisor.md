@@ -296,6 +296,7 @@ shrunk edge lists, and compact field statistics for audit logs.
 from scpn_phase_orchestrator.supervisor import (
     MorphogeneticTopologySupervisor,
     build_morphogenetic_field_snapshot,
+    render_morphogenetic_field_svg,
 )
 
 supervisor = MorphogeneticTopologySupervisor()
@@ -306,6 +307,7 @@ field_state = result.field_state
 audit_payload = result.to_audit_record()
 snapshot = build_morphogenetic_field_snapshot(result, top_k=5)
 heatmap_rows = snapshot.heatmap_rows
+svg_artifact = render_morphogenetic_field_svg(result, top_k=5)
 ```
 
 This slice provides a reviewable grow/shrink primitive for topology shaping. It
@@ -313,6 +315,12 @@ does not bypass the existing policy, causal, STL, or action-projection gates.
 The field snapshot helper is dependency-free and emits JSON-safe statistics,
 ASCII heatmap rows, and strongest-edge records for reports or later UI
 rendering.
+
+`render_morphogenetic_field_svg()` is the first richer UI rendering surface for
+the same field state. It produces a deterministic, dependency-free SVG heatmap
+plus top-edge labels and snapshot metadata. The renderer is passive: it turns an
+already computed field into a review artefact and does not mutate policy,
+coupling, or actuation state.
 
 `domainpacks/swarm_robotics/morphogenetic_field_demo.py` provides a deterministic
 domainpack proof: it evaluates a split-flock phase state and emits the

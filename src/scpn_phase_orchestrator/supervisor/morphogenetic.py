@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from html import escape
 from typing import TypeAlias
 
 import numpy as np
@@ -20,9 +21,11 @@ __all__ = [
     "MorphogeneticFieldPolicy",
     "MorphogeneticFieldResult",
     "MorphogeneticFieldSnapshot",
+    "MorphogeneticFieldSVG",
     "MorphogeneticFieldState",
     "MorphogeneticTopologySupervisor",
     "build_morphogenetic_field_snapshot",
+    "render_morphogenetic_field_svg",
 ]
 
 
@@ -119,6 +122,26 @@ class MorphogeneticFieldSnapshot:
         }
 
 
+@dataclass(frozen=True)
+class MorphogeneticFieldSVG:
+    """Dependency-free SVG rendering of a morphogenetic topology field."""
+
+    svg: str
+    width: int
+    height: int
+    snapshot: MorphogeneticFieldSnapshot
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe SVG artefact record for review tooling."""
+        return {
+            "format": "svg",
+            "width": self.width,
+            "height": self.height,
+            "snapshot": self.snapshot.to_audit_record(),
+            "svg": self.svg,
+        }
+
+
 class MorphogeneticTopologySupervisor:
     """Grow or shrink pairwise topology from a persistent coherence field."""
 
@@ -200,6 +223,84 @@ def build_morphogenetic_field_snapshot(
         l2_norm=float(np.linalg.norm(field)),
         heatmap_rows=_field_heatmap_rows(field, palette),
         top_edges=_top_field_edges(field, top_k),
+    )
+
+
+def render_morphogenetic_field_svg(
+    field_state: MorphogeneticFieldState | MorphogeneticFieldResult,
+    *,
+    top_k: int = 5,
+    cell_size: int = 28,
+    title: str = "Morphogenetic topology field",
+) -> MorphogeneticFieldSVG:
+    """Render a dependency-free SVG heatmap for a topology field.
+
+    The renderer is passive: it produces a review artefact from an already
+    computed field and does not mutate policy, coupling, or actuation state.
+    """
+    if cell_size < 8:
+        raise ValueError("cell_size must be at least 8")
+    _require_non_empty(title, "title")
+    source_state = (
+        field_state.field_state
+        if isinstance(field_state, MorphogeneticFieldResult)
+        else field_state
+    )
+    field = _validate_square_field(source_state.field)
+    snapshot = build_morphogenetic_field_snapshot(source_state, top_k=top_k)
+    n = int(field.shape[0])
+    label_band = 84
+    legend_band = 24
+    width = cell_size * n
+    height = label_band + cell_size * n + legend_band
+    escaped_title = escape(title, quote=True)
+    parts = [
+        (
+            f'<svg xmlns="http://www.w3.org/2000/svg" role="img" '
+            f'viewBox="0 0 {width} {height}" width="{width}" height="{height}">'
+        ),
+        f"<title>{escaped_title}</title>",
+        f'<rect width="{width}" height="{height}" fill="#fbf7ef"/>',
+        (
+            f'<text x="0" y="18" font-family="monospace" font-size="13" '
+            f'fill="#24302f">{escaped_title}</text>'
+        ),
+        (
+            f'<text x="0" y="38" font-family="monospace" font-size="11" '
+            f'fill="#5f6b64">mean={snapshot.mean:.4f} '
+            f"max={snapshot.maximum:.4f} l2={snapshot.l2_norm:.4f}</text>"
+        ),
+    ]
+    y0 = label_band
+    for row_idx, row in enumerate(field):
+        for col_idx, value in enumerate(row):
+            opacity = 0.10 + 0.85 * float(value)
+            x = col_idx * cell_size
+            y = y0 + row_idx * cell_size
+            parts.append(
+                f'<rect x="{x}" y="{y}" width="{cell_size}" height="{cell_size}" '
+                f'fill="#0e7c66" fill-opacity="{opacity:.4f}" '
+                f'stroke="#f3eadc" stroke-width="1"/>'
+            )
+    for src, dst, weight in snapshot.top_edges:
+        label_x = dst * cell_size + cell_size / 2.0
+        label_y = y0 + src * cell_size + cell_size / 2.0
+        parts.append(
+            f'<text x="{label_x:.1f}" y="{label_y + 3.5:.1f}" text-anchor="middle" '
+            f'font-family="monospace" font-size="{max(8, cell_size // 3)}" '
+            f'fill="#10221f">{src}->{dst}:{weight:.2f}</text>'
+        )
+    parts.append(
+        f'<text x="0" y="{height - 7}" font-family="monospace" font-size="10" '
+        f'fill="#5f6b64">top_edges={len(snapshot.top_edges)} '
+        f"shape={snapshot.shape[0]}x{snapshot.shape[1]}</text>"
+    )
+    parts.append("</svg>")
+    return MorphogeneticFieldSVG(
+        svg="".join(parts),
+        width=width,
+        height=height,
+        snapshot=snapshot,
     )
 
 

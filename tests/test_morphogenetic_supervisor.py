@@ -17,8 +17,10 @@ from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldResult,
     MorphogeneticFieldSnapshot,
     MorphogeneticFieldState,
+    MorphogeneticFieldSVG,
     MorphogeneticTopologySupervisor,
     build_morphogenetic_field_snapshot,
+    render_morphogenetic_field_svg,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -173,6 +175,36 @@ class TestMorphogeneticTopologySupervisor:
         assert len(snapshot.top_edges) == 1
         assert snapshot.to_audit_record()["shape"] == [3, 3]
 
+    def test_field_svg_renderer_emits_reviewable_svg_artifact(self) -> None:
+        field = np.array(
+            [
+                [0.0, 0.9, 0.2],
+                [0.4, 0.0, 0.7],
+                [0.1, 0.3, 0.0],
+            ],
+            dtype=np.float64,
+        )
+
+        svg = render_morphogenetic_field_svg(
+            MorphogeneticFieldState(field),
+            top_k=2,
+            cell_size=16,
+            title="field <review>",
+        )
+
+        assert isinstance(svg, MorphogeneticFieldSVG)
+        assert svg.width == 48
+        assert svg.height == 156
+        assert svg.snapshot.top_edges == (
+            (0, 1, pytest.approx(0.9)),
+            (1, 2, pytest.approx(0.7)),
+        )
+        assert "<svg " in svg.svg
+        assert "field &lt;review&gt;" in svg.svg
+        assert "0->1:0.90" in svg.svg
+        assert "1->2:0.70" in svg.svg
+        assert svg.to_audit_record()["snapshot"]["shape"] == [3, 3]
+
     @pytest.mark.parametrize(
         ("kwargs", "message"),
         [
@@ -187,6 +219,25 @@ class TestMorphogeneticTopologySupervisor:
     ) -> None:
         with pytest.raises(ValueError, match=message):
             build_morphogenetic_field_snapshot(
+                MorphogeneticFieldState(np.zeros((2, 2), dtype=np.float64)),
+                **kwargs,
+            )
+
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"cell_size": 7}, "cell_size must be at least 8"),
+            ({"title": ""}, "title must be a non-empty string"),
+            ({"top_k": -1}, "top_k must be non-negative"),
+        ],
+    )
+    def test_field_svg_renderer_rejects_invalid_inputs(
+        self,
+        kwargs: dict[str, object],
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            render_morphogenetic_field_svg(
                 MorphogeneticFieldState(np.zeros((2, 2), dtype=np.float64)),
                 **kwargs,
             )
@@ -241,3 +292,7 @@ class TestMorphogeneticTopologySupervisor:
             MorphogeneticTopologySupervisor
         )
         assert supervisor.MorphogeneticFieldPolicy is MorphogeneticFieldPolicy
+        assert supervisor.MorphogeneticFieldSVG is MorphogeneticFieldSVG
+        assert supervisor.render_morphogenetic_field_svg is (
+            render_morphogenetic_field_svg
+        )
