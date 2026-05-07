@@ -98,6 +98,37 @@ audit_payload = synthesis.to_audit_record()
 assert audit_payload["actuating"] is False
 ```
 
+`project_stl_controller_candidates()` then maps those candidates through
+explicit policy-approved projection templates and the standard
+`ActionProjector`. It still returns a review plan only: `actuating` remains
+`False`, unmapped candidates are rejected with reasons, and the approved
+entries are bounded `ControlAction` proposals rather than applied commands.
+
+```python
+from scpn_phase_orchestrator.monitor.stl import (
+    STLActionProjectionTemplate,
+    project_stl_controller_candidates,
+)
+
+plan = project_stl_controller_candidates(
+    synthesis,
+    (
+        STLActionProjectionTemplate(
+            action="raise_coupling",
+            knob="K",
+            scope="global",
+            base_value=0.9,
+            step=10.0,
+            ttl_s=0.5,
+            previous_value=0.9,
+            value_bounds=(0.0, 1.0),
+            rate_limit=0.05,
+        ),
+    ),
+)
+assert plan.to_audit_record()["actuating"] is False
+```
+
 ::: scpn_phase_orchestrator.monitor.stl
 
 ## Chimera State Detection

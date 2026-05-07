@@ -11,11 +11,14 @@ from __future__ import annotations
 import pytest
 
 from scpn_phase_orchestrator.monitor.stl import (
+    STLActionProjectionTemplate,
     STLAutomatonState,
     STLAutomatonTransition,
     STLControllerCandidate,
     STLControllerSynthesis,
     STLMonitoringAutomaton,
+    STLProjectedActionPlan,
+    project_stl_controller_candidates,
     synthesise_stl_controller_candidates,
     synthesise_stl_monitoring_automaton,
     synthesize_stl_controller_candidates,
@@ -241,6 +244,91 @@ def test_stl_controller_synthesis_rejects_mismatched_automata():
 
     with pytest.raises(ValueError, match="temporal operator"):
         synthesise_stl_controller_candidates(mismatched, trace)
+
+
+def test_stl_candidate_projection_uses_policy_templates_and_projector():
+    trace = {"R": [0.1, 0.2, 0.75]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "eventually (R >= 0.8)",
+        trace,
+    )
+    synthesis = synthesise_stl_controller_candidates(
+        automaton,
+        trace,
+        action_map={"R": "raise_coupling"},
+    )
+
+    plan = project_stl_controller_candidates(
+        synthesis,
+        (
+            STLActionProjectionTemplate(
+                action="raise_coupling",
+                knob="K",
+                scope="global",
+                base_value=0.9,
+                step=10.0,
+                ttl_s=0.5,
+                previous_value=0.9,
+                value_bounds=(0.0, 1.0),
+                rate_limit=0.05,
+            ),
+        ),
+    )
+
+    assert isinstance(plan, STLProjectedActionPlan)
+    assert plan.actuating is False
+    assert plan.rejected_candidates == ()
+    assert len(plan.approved_actions) == 1
+    action = plan.approved_actions[0]
+    assert action.knob == "K"
+    assert action.scope == "global"
+    assert action.value == pytest.approx(0.95)
+    assert action.ttl_s == pytest.approx(0.5)
+    assert "STL candidate raise_coupling" in action.justification
+    assert plan.to_audit_record()["approved_actions"] == [
+        {
+            "knob": "K",
+            "scope": "global",
+            "value": pytest.approx(0.95),
+            "ttl_s": 0.5,
+            "justification": action.justification,
+        }
+    ]
+
+
+def test_stl_candidate_projection_rejects_unmapped_candidates_without_actuation():
+    trace = {"R": [0.1, 0.2, 0.75]}
+    automaton = synthesise_stl_monitoring_automaton(
+        "eventually (R >= 0.8)",
+        trace,
+    )
+    synthesis = synthesise_stl_controller_candidates(automaton, trace)
+
+    plan = project_stl_controller_candidates(synthesis, ())
+
+    assert plan.actuating is False
+    assert plan.approved_actions == ()
+    assert plan.rejected_candidates == (
+        {
+            "action": "increase_R",
+            "signal": "R",
+            "reason": "projection_template_missing",
+        },
+    )
+
+
+def test_stl_projection_template_validation_raises_for_invalid_inputs():
+    with pytest.raises(ValueError, match="projection value_bounds must be ordered"):
+        STLActionProjectionTemplate(
+            action="a",
+            knob="K",
+            scope="global",
+            base_value=0.0,
+            step=1.0,
+            ttl_s=0.0,
+            previous_value=0.0,
+            value_bounds=(1.0, 0.0),
+        )
 
 
 def _state_by_name(

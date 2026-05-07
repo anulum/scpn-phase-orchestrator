@@ -296,8 +296,12 @@ Near-term candidate tracks:
   - Controller-synthesis linkage foundation is in place:
     `synthesise_stl_controller_candidates()` emits non-actuating,
     audit-ready signal-level candidates from builtin STL monitor automata.
-  - Remaining scope: closed-loop controller synthesis and policy-gated
-    projection from candidates to safe actuation plans.
+  - Policy-gated projection foundation is in place:
+    `project_stl_controller_candidates()` maps candidates through explicit
+    projection templates and `ActionProjector` into bounded, non-actuating
+    `ControlAction` proposals with rejected-candidate reasons.
+  - Remaining scope: closed-loop controller synthesis and runtime integration
+    that passes projected plans through the full safety/actuation stack.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
   - Retrieval, confidence, and notebook polish are in place: generation now

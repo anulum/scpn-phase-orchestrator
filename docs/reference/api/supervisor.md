@@ -616,7 +616,10 @@ For builtin STL automata, `synthesise_stl_controller_candidates()` provides a
 non-actuating controller-synthesis bridge. It proposes signal-level candidate
 actions from the weakest violated predicate and records `actuating=False`; the
 proposal is an audit artefact, not a live controller or bypass around policy and
-actuation safety gates.
+actuation safety gates. `project_stl_controller_candidates()` can then map
+those candidates through explicit policy-approved projection templates and the
+standard `ActionProjector`, yielding bounded `ControlAction` proposals while
+still recording `actuating=False`.
 
 ::: scpn_phase_orchestrator.supervisor.formal_export
 
