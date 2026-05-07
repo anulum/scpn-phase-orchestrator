@@ -260,10 +260,10 @@ benchmark_record = benchmark.to_audit_record()
 ```
 
 `benchmark_integrated_information_approximations()` runs deterministic
-synthetic calibration cases for independent, modular, and globally locked phase
-regimes. It is a numerical approximation benchmark, not a hardware performance
-benchmark; the audit record documents ordering margins and preserves the same
-engineering-proxy claim boundary.
+synthetic calibration cases for independent, modular, phase-lagged chain, noisy
+locked, and globally locked phase regimes. It is a numerical approximation
+benchmark, not a hardware performance benchmark; the audit record documents
+ordering margins and preserves the same engineering-proxy claim boundary.
 
 ::: scpn_phase_orchestrator.monitor.information_integration
 

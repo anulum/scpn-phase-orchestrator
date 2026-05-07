@@ -169,16 +169,25 @@ class TestIntegratedInformationApproximationBenchmarks:
         assert report.expected_ordering_passed is True
         assert report.locked_phi_margin > 0.0
         assert report.modular_total_margin > 0.0
+        assert report.noisy_lock_phi_margin > 0.0
+        assert report.phase_lag_total_margin > 0.0
         assert [case.name for case in report.cases] == [
             "independent",
             "modular",
+            "phase_lag_chain",
+            "noisy_locked",
             "locked",
         ]
 
         by_name = {case.name: case.result for case in report.cases}
         assert by_name["locked"].phi > by_name["independent"].phi
         assert by_name["locked"].phi > by_name["modular"].phi
+        assert by_name["locked"].phi > by_name["noisy_locked"].phi
+        assert by_name["noisy_locked"].phi > by_name["independent"].phi
         assert by_name["modular"].total_integration > (
+            by_name["independent"].total_integration
+        )
+        assert by_name["phase_lag_chain"].total_integration > (
             by_name["independent"].total_integration
         )
 
@@ -192,7 +201,9 @@ class TestIntegratedInformationApproximationBenchmarks:
         assert record["benchmark"] == "deterministic_synthetic_approximation_cases"
         assert record["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
         assert record["expected_ordering_passed"] is True
-        assert len(record["cases"]) == 3
+        assert record["noisy_lock_phi_margin"] > 0.0
+        assert record["phase_lag_total_margin"] > 0.0
+        assert len(record["cases"]) == 5
         assert record["cases"][0]["result"]["monitor"] == "integrated_information"
 
     def test_benchmark_rejects_too_short_series(self) -> None:

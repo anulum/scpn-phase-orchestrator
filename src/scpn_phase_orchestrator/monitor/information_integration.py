@@ -102,6 +102,8 @@ class IntegratedInformationBenchmarkReport:
     expected_ordering_passed: bool
     locked_phi_margin: float
     modular_total_margin: float
+    noisy_lock_phi_margin: float
+    phase_lag_total_margin: float
     n_samples: int
     n_bins: int
 
@@ -115,6 +117,8 @@ class IntegratedInformationBenchmarkReport:
             "expected_ordering_passed": self.expected_ordering_passed,
             "locked_phi_margin": self.locked_phi_margin,
             "modular_total_margin": self.modular_total_margin,
+            "noisy_lock_phi_margin": self.noisy_lock_phi_margin,
+            "phase_lag_total_margin": self.phase_lag_total_margin,
             "cases": [case.to_audit_record() for case in self.cases],
             "claim_boundary": "engineering_proxy_not_theoretical_iit",
         }
@@ -167,9 +171,10 @@ def benchmark_integrated_information_approximations(
     """Run deterministic approximation checks for the Phi proxy.
 
     This is a numerical calibration, not a hardware performance benchmark. It
-    checks three synthetic regimes: independent streams, modular streams with
-    high within-module information but weak cross-module Phi, and globally
-    locked streams with high cross-partition Phi.
+    checks five synthetic regimes: independent streams, modular streams with
+    high within-module information but weak cross-module Phi, phase-lagged
+    chains, noisy globally locked streams, and globally locked streams with high
+    cross-partition Phi.
     """
     if n_samples < 32:
         raise ValueError("n_samples must be at least 32")
@@ -191,6 +196,20 @@ def benchmark_integrated_information_approximations(
             result=integrated_information(_modular_benchmark_series(n_samples), bins),
         ),
         IntegratedInformationBenchmarkCase(
+            name="phase_lag_chain",
+            description="deterministic phase-lagged chain with coherent offsets",
+            result=integrated_information(
+                _phase_lag_chain_benchmark_series(n_samples), bins
+            ),
+        ),
+        IntegratedInformationBenchmarkCase(
+            name="noisy_locked",
+            description="globally locked streams with deterministic phase noise",
+            result=integrated_information(
+                _noisy_locked_benchmark_series(n_samples), bins
+            ),
+        ),
+        IntegratedInformationBenchmarkCase(
             name="locked",
             description="globally phase-locked streams with high cross-partition Phi",
             result=integrated_information(_locked_benchmark_series(n_samples), bins),
@@ -201,16 +220,26 @@ def benchmark_integrated_information_approximations(
     modular_total_margin = (
         by_name["modular"].total_integration - by_name["independent"].total_integration
     )
+    noisy_lock_phi_margin = by_name["noisy_locked"].phi - by_name["independent"].phi
+    phase_lag_total_margin = (
+        by_name["phase_lag_chain"].total_integration
+        - by_name["independent"].total_integration
+    )
     expected_ordering_passed = (
         locked_phi_margin > 0.0
         and modular_total_margin > 0.0
+        and noisy_lock_phi_margin > 0.0
+        and phase_lag_total_margin > 0.0
         and by_name["locked"].phi > by_name["modular"].phi
+        and by_name["locked"].phi > by_name["noisy_locked"].phi
     )
     return IntegratedInformationBenchmarkReport(
         cases=cases,
         expected_ordering_passed=expected_ordering_passed,
         locked_phi_margin=float(locked_phi_margin),
         modular_total_margin=float(modular_total_margin),
+        noisy_lock_phi_margin=float(noisy_lock_phi_margin),
+        phase_lag_total_margin=float(phase_lag_total_margin),
         n_samples=n_samples,
         n_bins=bins,
     )
@@ -353,6 +382,33 @@ def _modular_benchmark_series(n_samples: int) -> FloatArray:
         ]
     ).astype(np.float64)
     return series
+
+
+def _phase_lag_chain_benchmark_series(n_samples: int) -> FloatArray:
+    base = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64) % _TWO_PI
+    series: FloatArray = np.vstack(
+        [
+            base,
+            (base + 0.35) % _TWO_PI,
+            (base + 0.70) % _TWO_PI,
+            (base + 1.05) % _TWO_PI,
+        ]
+    ).astype(np.float64)
+    return series
+
+
+def _noisy_locked_benchmark_series(n_samples: int) -> FloatArray:
+    rng = np.random.default_rng(211)
+    base = np.linspace(0.0, 6.0 * _TWO_PI, n_samples, dtype=np.float64)
+    series: FloatArray = np.vstack(
+        [
+            base,
+            base + rng.normal(0.0, 0.08, size=n_samples),
+            base + rng.normal(0.0, 0.16, size=n_samples),
+            base + rng.normal(0.0, 0.24, size=n_samples),
+        ]
+    ).astype(np.float64)
+    return series % _TWO_PI
 
 
 def _locked_benchmark_series(n_samples: int) -> FloatArray:

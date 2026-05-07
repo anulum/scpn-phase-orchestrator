@@ -429,8 +429,10 @@ Speculative research watchlist:
   - Reporting integration is in place: `build_audit_report_summary()` and `spo report` summarise passive `integrated_information` audit records while preserving the engineering-proxy claim boundary.
   - Approximation benchmark foundation is in place:
     `benchmark_integrated_information_approximations()` emits deterministic
-    independent/modular/locked synthetic calibration cases with ordering
-    margins, explicitly without hardware performance claims.
+    independent/modular/phase-lag/noisy-lock/locked synthetic calibration
+    cases with ordering margins, explicitly without hardware performance
+    claims.
+  - Remaining scope: broader empirical replay benchmark corpus.
 - Topos-theoretic semantic binding: categorical validation prototype for binding and policy composition with explicit proof obligations.
 - Multiverse counterfactual simulator: vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation.
 - Entanglement-aware hybrid order parameters: quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi`.

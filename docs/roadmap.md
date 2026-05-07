@@ -124,7 +124,7 @@ into the active roadmap.
 | Constitutional value-alignment guard | Pareto objective constraints in binding specs, counterfactual violation logs, and forced safe fallback path |
 | Strange-loop meta-orchestrator | monitor foundation is implemented; long-run drift scenarios and studio surfacing remain open |
 | Morphogenetic field topology | field foundation, dependency-free snapshot visualisation, passive SVG rendering, plus swarm-robotics split-flock, power-grid stressed-replay, traffic-flow corridor-spillback, and plasma-control edge-localised demos are implemented; additional domainpack demos and richer Studio UI rendering remain open |
-| Integrated-information monitor | monitor foundation, audit-report summary integration, and deterministic approximation benchmark cases are implemented; broader benchmark corpus remains open |
+| Integrated-information monitor | monitor foundation, audit-report summary integration, and expanded deterministic approximation benchmark cases are implemented; broader empirical replay benchmark corpus remains open |
 | Topos-theoretic semantic binding | categorical validation prototype for binding and policy composition with explicit proof obligations |
 | Multiverse counterfactual simulator | vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation |
 | Entanglement-aware hybrid order parameters | quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi` |
