@@ -272,6 +272,21 @@ response = adapter.handle_unary(
 accepted = adapter.drain()
 ```
 
+`DigitalTwinSyncKafkaAdapter` accepts decoded broker message records. It checks
+the configured topic, auth header, decoded `value` envelope, contract hash, and
+capability direction without importing Kafka clients or committing offsets.
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncKafkaAdapter
+
+adapter = DigitalTwinSyncKafkaAdapter.for_contract(contract)
+response = adapter.handle_message(
+    {"topic": "spo.digital_twin.sync", "value": envelope.to_audit_record()},
+    headers={"authorization": "Bearer ..."},
+)
+accepted = adapter.drain()
+```
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types

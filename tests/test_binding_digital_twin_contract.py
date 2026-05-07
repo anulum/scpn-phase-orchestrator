@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.binding import (
     DigitalTwinBindingContract,
     DigitalTwinSyncEnvelope,
     DigitalTwinSyncGrpcAdapter,
+    DigitalTwinSyncKafkaAdapter,
     DigitalTwinSyncMemoryAdapter,
     DigitalTwinSyncRestAdapter,
     build_digital_twin_adapter_manifest,
@@ -689,3 +690,166 @@ def test_digital_twin_grpc_adapter_refuses_incompatible_manifest() -> None:
     assert response.reason == "adapter_incompatible"
     assert response.message["reasons"] == ["live_transport_requires_auth"]
     assert adapter.drain() == ()
+
+
+def test_digital_twin_kafka_adapter_accepts_authorised_message_values() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncKafkaAdapter.for_contract(
+        contract,
+        topic="spo.digital_twin.test",
+        sync_capabilities=("phase_observation", "audit_replay"),
+    )
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="phase_observation",
+        direction="twin_to_spo",
+        sequence=18,
+        payload={"layer": "process_line", "R": 0.84},
+    )
+
+    response = adapter.handle_message(
+        {
+            "topic": "spo.digital_twin.test",
+            "key": "process_line",
+            "value": envelope.to_audit_record(),
+            "partition": 0,
+            "offset": 101,
+        },
+        headers={"authorization": "Bearer kafka-token"},
+    )
+
+    assert response.accepted is True
+    assert response.retryable is False
+    assert response.reason == "accepted"
+    assert response.message == {
+        "topic": "spo.digital_twin.test",
+        "capability": "phase_observation",
+        "sequence": 18,
+        "contract_hash": contract.contract_hash,
+    }
+    assert adapter.to_audit_record()["queued_sequences"] == [18]
+    assert adapter.drain() == (envelope,)
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_kafka_adapter_rejects_wrong_topic_without_queueing() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncKafkaAdapter.for_contract(
+        contract,
+        topic="spo.digital_twin.expected",
+    )
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=19,
+        payload={"R": 0.81},
+    )
+
+    response = adapter.handle_message(
+        {
+            "topic": "spo.digital_twin.other",
+            "value": envelope.to_audit_record(),
+        },
+        headers={"authorization": "Bearer kafka-token"},
+    )
+
+    assert response.accepted is False
+    assert response.retryable is False
+    assert response.reason == "topic_mismatch"
+    assert response.message == {
+        "expected_topic": "spo.digital_twin.expected",
+        "observed_topic": "spo.digital_twin.other",
+    }
+    assert adapter.drain() == ()
+
+
+@pytest.mark.parametrize(
+    ("message", "reason", "retryable"),
+    [
+        (
+            {"topic": "spo.digital_twin.sync", "value": "not-a-record"},
+            "invalid_message_value",
+            False,
+        ),
+        (
+            {
+                "topic": "spo.digital_twin.sync",
+                "value": {"contract_hash": "wrong", "capability": "state_snapshot"},
+            },
+            "invalid_envelope",
+            False,
+        ),
+        (
+            {
+                "topic": "spo.digital_twin.sync",
+                "value": {
+                    "contract_hash": "wrong",
+                    "capability": "state_snapshot",
+                    "direction": "twin_to_spo",
+                    "sequence": 20,
+                    "payload": {"R": 0.8},
+                },
+            },
+            "contract_hash_mismatch",
+            False,
+        ),
+    ],
+)
+def test_digital_twin_kafka_adapter_reports_message_failures(
+    message: dict[str, object],
+    reason: str,
+    retryable: bool,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncKafkaAdapter.for_contract(contract)
+
+    response = adapter.handle_message(
+        message,
+        headers={"authorization": "Bearer kafka-token"},
+    )
+
+    assert response.accepted is False
+    assert response.reason == reason
+    assert response.retryable is retryable
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_kafka_adapter_auth_and_manifest_failures_are_retryable() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=21,
+        payload={"R": 0.91},
+    )
+    message = {
+        "topic": "spo.digital_twin.sync",
+        "value": envelope.to_audit_record(),
+    }
+    auth_adapter = DigitalTwinSyncKafkaAdapter.for_contract(contract)
+    incompatible_adapter = DigitalTwinSyncKafkaAdapter.for_contract(
+        contract,
+        requires_auth=False,
+    )
+
+    auth_response = auth_adapter.handle_message(message, headers={})
+    incompatible_response = incompatible_adapter.handle_message(
+        message,
+        headers={"authorization": "Bearer kafka-token"},
+    )
+
+    assert auth_response.accepted is False
+    assert auth_response.reason == "auth_required"
+    assert auth_response.retryable is True
+    assert incompatible_response.accepted is False
+    assert incompatible_response.reason == "adapter_incompatible"
+    assert incompatible_response.retryable is True
+    assert incompatible_response.message["reasons"] == ["live_transport_requires_auth"]
+    assert auth_adapter.drain() == ()
+    assert incompatible_adapter.drain() == ()

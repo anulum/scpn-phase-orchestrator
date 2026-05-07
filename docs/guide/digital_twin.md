@@ -143,6 +143,27 @@ The gRPC helper returns status names such as `OK`, `UNAUTHENTICATED`,
 `INVALID_ARGUMENT`, and `FAILED_PRECONDITION` so a real servicer can map the
 result to framework-native status handling without duplicating contract logic.
 
+For Kafka or compatible message buses, pass decoded message records through the
+broker-neutral boundary:
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncKafkaAdapter
+
+adapter = DigitalTwinSyncKafkaAdapter.for_contract(
+    contract,
+    topic="spo.digital_twin.sync",
+)
+response = adapter.handle_message(
+    {"topic": "spo.digital_twin.sync", "value": envelope.to_audit_record()},
+    headers={"authorization": "Bearer ..."},
+)
+accepted_batch = adapter.drain()
+```
+
+The Kafka helper does not import a broker client, commit offsets, or open
+network connections. It checks the topic, auth header, decoded value shape,
+contract, direction, and payload before caller-controlled offset handling.
+
 Before enabling a concrete adapter, publish a reviewable manifest:
 
 ```python

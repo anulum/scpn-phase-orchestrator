@@ -30,6 +30,8 @@ __all__ = [
     "DigitalTwinSyncGrpcAdapter",
     "DigitalTwinSyncGrpcResponse",
     "DigitalTwinSyncJsonlReport",
+    "DigitalTwinSyncKafkaAdapter",
+    "DigitalTwinSyncKafkaResponse",
     "DigitalTwinSyncMemoryAdapter",
     "DigitalTwinSyncRestAdapter",
     "DigitalTwinSyncRestResponse",
@@ -424,6 +426,161 @@ class DigitalTwinSyncGrpcAdapter:
             "contract_hash": self.contract.contract_hash,
             "manifest": self.compatibility.manifest.to_audit_record(),
             "compatible": self.compatibility.compatible,
+            "queued_count": len(self._queue),
+            "queued_sequences": [envelope.sequence for envelope in self._queue],
+        }
+
+
+@dataclass(frozen=True)
+class DigitalTwinSyncKafkaResponse:
+    """Broker-style response for a Kafka digital-twin sync boundary."""
+
+    accepted: bool
+    reason: str
+    retryable: bool
+    message: dict[str, object]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe Kafka adapter response."""
+        return {
+            "accepted": self.accepted,
+            "reason": self.reason,
+            "retryable": self.retryable,
+            "message": dict(self.message),
+        }
+
+
+@dataclass
+class DigitalTwinSyncKafkaAdapter:
+    """Dependency-free Kafka boundary for digital-twin sync payloads.
+
+    The adapter expects a broker consumer to pass a decoded message dictionary.
+    It does not import Kafka clients, open sockets, or commit offsets. Accepted
+    envelopes are queued for caller-controlled runtime handoff.
+    """
+
+    contract: DigitalTwinBindingContract
+    compatibility: DigitalTwinAdapterCompatibility
+    topic: str
+    _queue: list[DigitalTwinSyncEnvelope]
+
+    @classmethod
+    def for_contract(
+        cls,
+        contract: DigitalTwinBindingContract,
+        *,
+        topic: str = "spo.digital_twin.sync",
+        name: str = "kafka-sync",
+        sync_capabilities: Sequence[str] = _DEFAULT_SYNC_CAPABILITIES,
+        requires_auth: bool = True,
+        supports_replay: bool = True,
+    ) -> DigitalTwinSyncKafkaAdapter:
+        """Create a Kafka message-boundary adapter for a digital-twin contract."""
+        _require_non_empty(topic, "kafka topic")
+        compatibility = build_digital_twin_adapter_manifest(
+            contract,
+            name=name,
+            transport="kafka",
+            sync_capabilities=sync_capabilities,
+            supports_replay=supports_replay,
+            requires_auth=requires_auth,
+            notes="dependency-free Kafka boundary",
+        )
+        return cls(
+            contract=contract,
+            compatibility=compatibility,
+            topic=topic,
+            _queue=[],
+        )
+
+    def handle_message(
+        self,
+        message: Mapping[str, object],
+        *,
+        headers: Mapping[str, str] | None = None,
+    ) -> DigitalTwinSyncKafkaResponse:
+        """Validate one decoded Kafka message and queue accepted envelopes."""
+        message_topic = message.get("topic", self.topic)
+        if not isinstance(message_topic, str) or message_topic != self.topic:
+            return _kafka_response(
+                False,
+                "topic_mismatch",
+                False,
+                {"expected_topic": self.topic, "observed_topic": message_topic},
+            )
+        if not self.compatibility.compatible:
+            return _kafka_response(
+                False,
+                "adapter_incompatible",
+                True,
+                {
+                    "reasons": list(self.compatibility.reasons),
+                    "contract_hash": self.contract.contract_hash,
+                },
+            )
+        if self.compatibility.manifest.requires_auth and not _has_authorization(
+            headers,
+        ):
+            return _kafka_response(
+                False,
+                "auth_required",
+                True,
+                {"contract_hash": self.contract.contract_hash},
+            )
+        value = message.get("value")
+        if not isinstance(value, Mapping):
+            return _kafka_response(
+                False,
+                "invalid_message_value",
+                False,
+                {"contract_hash": self.contract.contract_hash},
+            )
+        envelope = _envelope_from_record(dict(value))
+        if envelope is None:
+            return _kafka_response(
+                False,
+                "invalid_envelope",
+                False,
+                {"contract_hash": self.contract.contract_hash},
+            )
+        validation = validate_digital_twin_sync_envelope(self.contract, envelope)
+        if not validation.accepted:
+            return _kafka_response(
+                False,
+                validation.reason,
+                False,
+                {
+                    "capability": envelope.capability,
+                    "sequence": envelope.sequence,
+                    "contract_hash": self.contract.contract_hash,
+                },
+            )
+        self._queue.append(envelope)
+        return _kafka_response(
+            True,
+            "accepted",
+            False,
+            {
+                "topic": self.topic,
+                "capability": envelope.capability,
+                "sequence": envelope.sequence,
+                "contract_hash": self.contract.contract_hash,
+            },
+        )
+
+    def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
+        """Return accepted Kafka envelopes in arrival order and clear the queue."""
+        drained = tuple(self._queue)
+        self._queue.clear()
+        return drained
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return Kafka adapter state without exposing payload contents."""
+        return {
+            "contract_hash": self.contract.contract_hash,
+            "manifest": self.compatibility.manifest.to_audit_record(),
+            "compatible": self.compatibility.compatible,
+            "topic": self.topic,
             "queued_count": len(self._queue),
             "queued_sequences": [envelope.sequence for envelope in self._queue],
         }
@@ -865,6 +1022,20 @@ def _grpc_response(
         status_code=status_code,
         accepted=accepted,
         reason=reason,
+        message=message,
+    )
+
+
+def _kafka_response(
+    accepted: bool,
+    reason: str,
+    retryable: bool,
+    message: dict[str, object],
+) -> DigitalTwinSyncKafkaResponse:
+    return DigitalTwinSyncKafkaResponse(
+        accepted=accepted,
+        reason=reason,
+        retryable=retryable,
         message=message,
     )
 
