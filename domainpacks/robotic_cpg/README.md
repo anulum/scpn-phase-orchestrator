@@ -26,6 +26,16 @@ gait coordination under supervisor constraints.
 - `joint_limit`: hard joint-angle range.
 - `torque_ceiling`: hard torque ceiling.
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+locomotion-control checks. It bounds gait coupling, stride-frequency drive,
+and phase-bias steps, then falls back to a zero-stride safe hold when a
+candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+robot safety controller.
+
 ## Run
 
 ```bash

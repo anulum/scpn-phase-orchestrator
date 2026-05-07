@@ -329,6 +329,8 @@ Speculative research watchlist:
     coolant-flow, feed-rate, agitator, and jacket-setpoint actuation guards.
   - Manufacturing SPC domainpack prior template is in place for review-time
     station-coupling, sensor-lag, and damping-drive actuation guards.
+  - Robotic CPG domainpack prior template is in place for review-time
+    gait-coupling, stride-frequency, and phase-bias actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
