@@ -125,6 +125,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-eeg-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.9
+      weight: 2.0
+    - name: limit-delta-lag-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.45
+      weight: 2.5
+    - name: limit-entrainment-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.55
+      weight: 3.0
+    - name: limit-target-phase-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: neuroscience EEG value guard stimulus hold
+
 # Meditation training history — Lutz et al. (2004)
 imprint_model:
   decay_rate: 0.02

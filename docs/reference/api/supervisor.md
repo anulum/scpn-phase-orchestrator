@@ -442,6 +442,12 @@ into a `ValueAlignmentPolicy`. Audit records include hard bound violations and
 score-threshold counterfactuals so reviewers can distinguish a blocked unsafe
 action from a fallback forced by the policy's minimum alignment score.
 
+Domainpack templates now include review-time examples for cardiac rhythm,
+power grid, network security, fusion equilibrium, neuroscience EEG, and other
+simulation/replay domainpacks. These templates are guard priors for reviewable
+candidate actions; they are not live medical, grid, vehicle, financial, or
+security operating policies.
+
 ```python
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor import (

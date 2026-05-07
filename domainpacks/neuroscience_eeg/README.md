@@ -36,6 +36,16 @@ Coherence").
 | entrainment | zeta | External stimulus strength |
 | target_phase | Psi | Entrainment target |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time EEG
+control checks. It bounds global coupling, delta-band lag, entrainment drive,
+and target-phase proposals, then falls back to a zero-stimulus safe hold when a
+candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+neurostimulation protocol or medical-device control policy.
+
 ## Imprint
 
 Meditation training history (Lutz et al. 2004): repeated sessions accumulate
