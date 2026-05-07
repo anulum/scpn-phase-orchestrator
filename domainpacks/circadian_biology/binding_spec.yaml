@@ -103,6 +103,40 @@ actuators:
     scope: layer_3
     limits: [0.0, 1.57]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-zeitgeber-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.55
+      weight: 3.0
+    - name: limit-meal-phase-target-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.75
+    - name: limit-interclock-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.85
+      weight: 2.0
+    - name: limit-behavioral-lag-step
+      knob: alpha
+      scope: layer_3
+      min_value: 0.0
+      max_value: 0.70
+      weight: 2.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: circadian value guard zeitgeber hold
+
 # Chronic jet lag / shift work accumulation; Czeisler et al. (1999)
 imprint_model:
   decay_rate: 0.005

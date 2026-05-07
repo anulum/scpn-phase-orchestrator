@@ -34,6 +34,16 @@ oscillators; Strogatz (2003) "Sync" Ch. 5 formalises SCN synchronisation.
 | coupling_strength | K | Inter-clock coupling |
 | sleep_schedule | alpha | Behavioral phase lag |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+circadian-control checks. It bounds zeitgeber drive, meal-phase targeting,
+inter-clock coupling, and behavioral lag proposals, then falls back to a
+zero-drive zeitgeber hold if a candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+circadian intervention protocol or medical-device control policy.
+
 ## Imprint
 
 Chronic jet lag / shift work debt: repeated circadian disruption accumulates

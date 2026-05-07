@@ -897,5 +897,53 @@ def test_sleep_architecture_value_alignment_allows_bounded_coupling():
     assert not decision.violations
 
 
+def test_circadian_biology_value_alignment_blocks_excessive_zeitgeber_drive():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "circadian_biology" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="zeta",
+        scope="global",
+        value=0.90,
+        ttl_s=0.5,
+        justification="review candidate exceeds zeitgeber-drive prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-zeitgeber-drive-step"
+    assert decision.actions_to_apply[0].justification == (
+        "circadian value guard zeitgeber hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_circadian_biology_value_alignment_allows_bounded_behavioral_lag():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "circadian_biology" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    action = ControlAction(
+        knob="alpha",
+        scope="layer_3",
+        value=0.45,
+        ttl_s=0.5,
+        justification="bounded behavioral lag review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.
