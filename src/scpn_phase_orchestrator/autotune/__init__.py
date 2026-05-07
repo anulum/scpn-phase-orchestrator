@@ -18,6 +18,12 @@ from scpn_phase_orchestrator.autotune.freq_id import (
     FrequencyResult,
     identify_frequencies,
 )
+from scpn_phase_orchestrator.autotune.learners import (
+    LearnerPolicyProposal,
+    generate_hybrid_physics_proposal,
+    generate_ppo_like_proposal,
+    generate_sac_like_proposal,
+)
 from scpn_phase_orchestrator.autotune.phase_extract import PhaseResult, extract_phases
 from scpn_phase_orchestrator.autotune.pipeline import (
     AutoTuneResult,
@@ -54,6 +60,7 @@ __all__ = [
     "AutotuneRewardReport",
     "FrequencyResult",
     "KnobPolicyCandidate",
+    "LearnerPolicyProposal",
     "OfflinePolicySearchConfig",
     "PolicyProposalConfig",
     "PhaseResult",
@@ -66,6 +73,9 @@ __all__ = [
     "estimate_coupling",
     "extract_phases",
     "generate_offline_policy_candidates",
+    "generate_hybrid_physics_proposal",
+    "generate_ppo_like_proposal",
+    "generate_sac_like_proposal",
     "identify_binding_spec",
     "identify_frequencies",
     "propose_binding_from_event_log",
