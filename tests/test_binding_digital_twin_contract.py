@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.binding import (
     DigitalTwinBindingContract,
     DigitalTwinSyncEnvelope,
     DigitalTwinSyncGrpcAdapter,
+    DigitalTwinSyncHardwareAdapter,
     DigitalTwinSyncKafkaAdapter,
     DigitalTwinSyncMemoryAdapter,
     DigitalTwinSyncRestAdapter,
@@ -853,3 +854,171 @@ def test_digital_twin_kafka_adapter_auth_and_manifest_failures_are_retryable() -
     assert incompatible_response.message["reasons"] == ["live_transport_requires_auth"]
     assert auth_adapter.drain() == ()
     assert incompatible_adapter.drain() == ()
+
+
+def test_digital_twin_hardware_adapter_accepts_interlocked_authorised_frame() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncHardwareAdapter.for_contract(
+        contract,
+        device_ids=("pynq-loopback-0",),
+        sync_capabilities=("state_snapshot", "audit_replay"),
+    )
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=22,
+        payload={"R": 0.87, "source": "loopback"},
+    )
+
+    response = adapter.handle_frame(
+        {
+            "device_id": "pynq-loopback-0",
+            "safety_interlock": True,
+            "value": envelope.to_audit_record(),
+        },
+        headers={"authorization": "Bearer hardware-token"},
+    )
+
+    assert response.accepted is True
+    assert response.reason == "accepted"
+    assert response.hardware_write_permitted is False
+    assert response.frame == {
+        "device_id": "pynq-loopback-0",
+        "capability": "state_snapshot",
+        "sequence": 22,
+        "contract_hash": contract.contract_hash,
+    }
+    audit = adapter.to_audit_record()
+    assert audit["device_ids"] == ["pynq-loopback-0"]
+    assert audit["queued_sequences"] == [22]
+    assert audit["hardware_write_permitted"] is False
+    assert adapter.drain() == (envelope,)
+    assert adapter.drain() == ()
+
+
+@pytest.mark.parametrize(
+    ("frame", "reason"),
+    [
+        (
+            {
+                "device_id": "unknown-device",
+                "safety_interlock": True,
+                "value": {},
+            },
+            "device_not_registered",
+        ),
+        (
+            {
+                "device_id": "pynq-loopback-0",
+                "safety_interlock": False,
+                "value": {},
+            },
+            "safety_interlock_required",
+        ),
+        (
+            {
+                "device_id": "pynq-loopback-0",
+                "safety_interlock": True,
+                "value": "not-a-record",
+            },
+            "invalid_frame_value",
+        ),
+        (
+            {
+                "device_id": "pynq-loopback-0",
+                "safety_interlock": True,
+                "value": {"contract_hash": "wrong", "capability": "state_snapshot"},
+            },
+            "invalid_envelope",
+        ),
+    ],
+)
+def test_digital_twin_hardware_adapter_rejects_unsafe_or_malformed_frames(
+    frame: dict[str, object],
+    reason: str,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncHardwareAdapter.for_contract(
+        contract,
+        device_ids=("pynq-loopback-0",),
+    )
+
+    response = adapter.handle_frame(
+        frame,
+        headers={"authorization": "Bearer hardware-token"},
+    )
+
+    assert response.accepted is False
+    assert response.reason == reason
+    assert response.hardware_write_permitted is False
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_hardware_adapter_blocks_auth_and_contract_failures() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="control_action_proposal",
+        direction="twin_to_spo",
+        sequence=23,
+        payload={"knob": "K"},
+    )
+    frame = {
+        "device_id": "pynq-loopback-0",
+        "safety_interlock": True,
+        "value": envelope.to_audit_record(),
+    }
+    auth_adapter = DigitalTwinSyncHardwareAdapter.for_contract(
+        contract,
+        device_ids=("pynq-loopback-0",),
+    )
+    incompatible_adapter = DigitalTwinSyncHardwareAdapter.for_contract(
+        contract,
+        device_ids=("pynq-loopback-0",),
+        requires_auth=False,
+    )
+
+    auth_response = auth_adapter.handle_frame(frame, headers={})
+    incompatible_response = incompatible_adapter.handle_frame(
+        frame,
+        headers={"authorization": "Bearer hardware-token"},
+    )
+    contract_response = auth_adapter.handle_frame(
+        frame,
+        headers={"authorization": "Bearer hardware-token"},
+    )
+
+    assert auth_response.reason == "auth_required"
+    assert incompatible_response.reason == "adapter_incompatible"
+    assert incompatible_response.frame["reasons"] == ["live_transport_requires_auth"]
+    assert contract_response.reason == "direction_not_allowed"
+    assert auth_response.hardware_write_permitted is False
+    assert incompatible_response.hardware_write_permitted is False
+    assert contract_response.hardware_write_permitted is False
+    assert auth_adapter.drain() == ()
+    assert incompatible_adapter.drain() == ()
+
+
+@pytest.mark.parametrize(
+    ("device_ids", "message"),
+    [
+        ((), "hardware device_ids must not be empty"),
+        (("",), "hardware device_id must be a non-empty string"),
+    ],
+)
+def test_digital_twin_hardware_adapter_rejects_invalid_device_registry(
+    device_ids: tuple[str, ...],
+    message: str,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    with pytest.raises(ValueError, match=message):
+        DigitalTwinSyncHardwareAdapter.for_contract(
+            contract,
+            device_ids=device_ids,
+        )

@@ -287,6 +287,30 @@ response = adapter.handle_message(
 accepted = adapter.drain()
 ```
 
+`DigitalTwinSyncHardwareAdapter` accepts decoded device frames from a separate
+hardware integration layer. It requires a registered device ID and explicit
+safety interlock, and it always reports `hardware_write_permitted=False`; the
+binding layer validates and queues envelopes but never writes to physical
+devices.
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncHardwareAdapter
+
+adapter = DigitalTwinSyncHardwareAdapter.for_contract(
+    contract,
+    device_ids=("pynq-loopback-0",),
+)
+response = adapter.handle_frame(
+    {
+        "device_id": "pynq-loopback-0",
+        "safety_interlock": True,
+        "value": envelope.to_audit_record(),
+    },
+    headers={"authorization": "Bearer ..."},
+)
+accepted = adapter.drain()
+```
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types

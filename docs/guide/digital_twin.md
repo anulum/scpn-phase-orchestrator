@@ -164,6 +164,32 @@ The Kafka helper does not import a broker client, commit offsets, or open
 network connections. It checks the topic, auth header, decoded value shape,
 contract, direction, and payload before caller-controlled offset handling.
 
+For hardware integrations, validate decoded device frames before any driver or
+actuator layer can see them:
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncHardwareAdapter
+
+adapter = DigitalTwinSyncHardwareAdapter.for_contract(
+    contract,
+    device_ids=("pynq-loopback-0",),
+)
+response = adapter.handle_frame(
+    {
+        "device_id": "pynq-loopback-0",
+        "safety_interlock": True,
+        "value": envelope.to_audit_record(),
+    },
+    headers={"authorization": "Bearer ..."},
+)
+accepted_batch = adapter.drain()
+```
+
+The hardware helper never opens device files, writes registers, toggles GPIO, or
+applies actuation. It checks the registered device ID, explicit safety
+interlock, auth header, decoded frame value, contract, direction, and payload;
+`hardware_write_permitted` is always `False` in its response and audit record.
+
 Before enabling a concrete adapter, publish a reviewable manifest:
 
 ```python
