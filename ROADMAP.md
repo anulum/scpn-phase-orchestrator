@@ -311,7 +311,9 @@ Speculative research watchlist:
     `value_alignment_policy_from_binding_spec()`.
   - Counterfactual reporting is in place: audit records distinguish hard bound
     violations from score-threshold fallbacks.
-  - Remaining scope: domainpack-specific ethical prior templates.
+  - Cardiac rhythm domainpack prior template is in place for review-time
+    pacing, coupling, and target-phase actuation guards.
+  - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
 - Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.

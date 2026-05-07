@@ -12,8 +12,13 @@ from pathlib import Path
 
 import pytest
 
+from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.binding.types import VALID_SAFETY_TIERS
+from scpn_phase_orchestrator.supervisor import (
+    ValueAlignmentGuard,
+    value_alignment_policy_from_binding_spec,
+)
 
 DOMAINPACKS_DIR = Path(__file__).resolve().parent.parent / "domainpacks"
 
@@ -112,6 +117,54 @@ def test_nchannel_examples_are_declared_and_wired(pack_name):
     assert spec.cross_channel_couplings
     assert any(channel.derived_from for channel in spec.channels.values())
     assert validate_binding_spec(spec) == []
+
+
+def test_cardiac_value_alignment_template_blocks_excessive_coupling():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "cardiac_rhythm" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    guard = ValueAlignmentGuard(policy)
+    unsafe = ControlAction(
+        knob="K",
+        scope="global",
+        value=1.2,
+        ttl_s=5.0,
+        justification="review candidate exceeds cardiac coupling prior",
+    )
+
+    decision = guard.evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-drug-coupling"
+    assert decision.actions_to_apply[0].knob == "zeta"
+    assert decision.actions_to_apply[0].value == 0.0
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_cardiac_value_alignment_template_allows_bounded_review_action():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "cardiac_rhythm" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    decision = ValueAlignmentGuard(policy).evaluate(
+        [
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=0.2,
+                ttl_s=5.0,
+                justification="bounded review candidate",
+            )
+        ]
+    )
+
+    assert decision.satisfied
+    assert not decision.violations
+    assert decision.actions_to_apply == decision.approved_actions
 
 
 # Pipeline wiring: domainpack validation tested via real domainpack loading and

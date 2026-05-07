@@ -35,6 +35,17 @@ exactly as a high-frequency Kuramoto oscillator entrains slower ones
 | vagal_stimulation | alpha | Vagal nerve SA lag modulation |
 | target_rhythm | Psi | Target pacing phase |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+supervisor actuation checks. It limits global pacing drive, drug-coupling
+strength, and target phase steps, then forces a safe-hold fallback
+(`zeta = 0`) when a proposed action violates those priors or fails the
+minimum score.
+
+This is an auditable guard template for simulation and policy review. It is
+not a medical-device controller.
+
 ## Imprint
 
 Drug accumulation (digoxin t½=36h, amiodarone t½=58d): repeated dosing
