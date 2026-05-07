@@ -38,6 +38,16 @@ Fogler (2020) "Elements of Chemical Reaction Engineering" Ch. 12.
 | agitator_speed | alpha | Mixing intensity |
 | jacket_setpoint | Psi | Jacket temperature SP |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+process-control checks. It bounds coolant-flow, feed-rate, agitator, and
+jacket-setpoint steps, then falls back to a zero-feed safe hold when a
+candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+process safety instrumented system.
+
 ## Imprint
 
 Catalyst deactivation / fouling: very slow decay (months timescale)

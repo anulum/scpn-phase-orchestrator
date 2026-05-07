@@ -111,6 +111,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-coolant-flow-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.2
+      weight: 2.0
+    - name: limit-feed-rate-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.6
+      weight: 2.5
+    - name: limit-agitator-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.5
+      weight: 1.5
+    - name: limit-jacket-phase-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: chemical reactor value guard safe hold
+
 # Catalyst deactivation / fouling: very slow decay
 imprint_model:
   decay_rate: 0.001
