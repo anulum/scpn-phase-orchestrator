@@ -85,6 +85,7 @@ class AuditLogger:
         mu: NDArray[np.floating] | None = None,
         knm_r: NDArray[np.floating] | None = None,
         epsilon: float | None = None,
+        channel_runtime: dict[str, object] | None = None,
     ) -> None:
         """Write one simulation step to the audit log with optional full state."""
         record = {
@@ -122,6 +123,8 @@ class AuditLogger:
             record["knm_r"] = knm_r.tolist()
         if epsilon is not None:
             record["epsilon"] = epsilon
+        if channel_runtime is not None:
+            record["channel_runtime"] = channel_runtime
         self._write_record(record)
 
     def log_event(self, event_type: str, data: dict) -> None:

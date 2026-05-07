@@ -14,6 +14,11 @@ from scpn_phase_orchestrator.binding.channel_algebra import (
     ChannelRuntimePolicy,
     build_channel_algebra_report,
 )
+from scpn_phase_orchestrator.binding.channel_runtime import (
+    ChannelLayerRuntimeEvidence,
+    ChannelRuntimeExecution,
+    ChannelRuntimeExecutor,
+)
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.resolved import (
     format_resolved_binding_config,
@@ -33,6 +38,9 @@ __all__ = [
     "BindingSpec",
     "ChannelAlgebraReport",
     "ChannelCouplingEdge",
+    "ChannelLayerRuntimeEvidence",
+    "ChannelRuntimeExecution",
+    "ChannelRuntimeExecutor",
     "ChannelRuntimePolicy",
     "GeneratedBindingArtifacts",
     "RetrievalEvidence",

@@ -154,6 +154,77 @@ def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_p
     assert header["binding_summary"]["channel_algebra"]["required_channels"] == []
 
 
+def test_run_audit_records_channel_runtime_execution(runner, tmp_path):
+    spec = {
+        "name": "cli-nchannel-runtime-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.01,
+        "layers": [
+            {
+                "name": "plant",
+                "index": 0,
+                "oscillator_ids": ["p0", "p1"],
+                "family": "plant",
+            },
+            {
+                "name": "forecast",
+                "index": 1,
+                "oscillator_ids": ["f0", "f1"],
+                "family": "forecast",
+            },
+        ],
+        "oscillator_families": {
+            "plant": {"channel": "P", "extractor_type": "physical", "config": {}},
+            "forecast": {
+                "channel": "Forecast",
+                "extractor_type": "event",
+                "config": {},
+            },
+        },
+        "channels": {
+            "P": {"role": "plant", "units": "rad"},
+            "Forecast": {
+                "role": "delayed_forecast",
+                "required": False,
+                "replay_semantics": "external",
+                "metric_semantics": "delayed confidence interval",
+            },
+        },
+        "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+        "drivers": {
+            "physical": {},
+            "informational": {},
+            "symbolic": {},
+            "Forecast": {"confidence_weight": 0.5},
+        },
+        "objectives": {"good_layers": [0], "bad_layers": [1]},
+        "boundaries": [],
+        "actuators": [],
+    }
+    spec_path = tmp_path / "spec.yaml"
+    audit_path = tmp_path / "audit.jsonl"
+    spec_path.write_text(yaml.dump(spec), encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        ["run", str(spec_path), "--steps", "2", "--audit", str(audit_path)],
+    )
+
+    assert result.exit_code == 0
+    records = [
+        json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()
+    ]
+    step_records = [record for record in records if "step" in record]
+    first_forecast = step_records[0]["channel_runtime"]["layers"][1]
+    second_forecast = step_records[1]["channel_runtime"]["layers"][1]
+    assert first_forecast["evidence_source"] == "current_tick_prime"
+    assert second_forecast["evidence_source"] == "held_previous_tick"
+    assert second_forecast["confidence_weight"] == 0.5
+    assert second_forecast["executed_R"] == first_forecast["executed_R"]
+
+
 def test_run_invalid_spec(runner, invalid_spec_path):
     result = runner.invoke(main, ["run", invalid_spec_path])
     assert result.exit_code != 0

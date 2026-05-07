@@ -139,7 +139,7 @@
 
 - Generalise the current three-channel P/I/S model into a typed N-channel binding architecture. P/I/S remains the default profile, not the ceiling; domainpacks must be able to declare additional named channels with extractor type, units, metric semantics, coupling participation, audit serialisation, replay semantics, and supervisor visibility.
 - Add channel algebra for N-channel runs: channel groups, required/optional channels, derived channels, cross-channel coupling policies, and validation rules for missing, delayed, or uncertain channels.
-  - Channel algebra summary foundation is in place: `build_channel_algebra_report()` exposes required/optional channels, derived channels, group membership, supervisor visibility, coupling participation, and cross-channel edges for audit/reporting. Remaining scope is runtime execution of delayed/uncertain channel policies.
+  - Channel algebra summary foundation is in place: `build_channel_algebra_report()` exposes required/optional channels, derived channels, group membership, supervisor visibility, coupling participation, and cross-channel edges for audit/reporting.
   - Runtime policy records are in place: delayed channels emit
     `hold_last_runtime_evidence`, uncertain channels emit
     `confidence_weight_runtime_contribution`, and missing required/optional
@@ -151,6 +151,10 @@
   - Report text integration is in place: `spo report` summarises channel-algebra counts and missing required channel evidence when the audit header contains it.
   - Reusable report summary foundation is in place: `reporting.summary.build_audit_report_summary()` exposes the same channel-algebra-aware report payload to notebooks and tools without invoking the CLI.
   - Delayed/uncertain channel classification is in place: `build_channel_algebra_report()` derives delayed and uncertain channel sets from existing channel metadata for audit and reporting.
+  - Runtime execution is in place for delayed/uncertain channels:
+    `ChannelRuntimeExecutor` applies held-previous-tick evidence and
+    confidence-weighted layer contributions before supervisor decisions, with
+    raw-versus-executed evidence written to audit logs.
 - Extend optimisation surfaces to include channel weights and cross-channel coupling parameters, not only `K`, `alpha`, `zeta`, and `Psi`.
 - Treat Rust and JAX as primary execution paths. Keep Julia, Go, Mojo, and other auxiliary backends experimental unless a maintained production workload shows a 5-10x gain or a capability Rust/JAX cannot provide.
 - ~~Document the backend fallback chain in one place, including feature flags, runtime detection, numerical tolerance, benchmark evidence, and deprecation criteria.~~ (done — `docs/guide/backend_fallbacks.md`)

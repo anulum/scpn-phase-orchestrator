@@ -113,6 +113,15 @@ Delayed channels use `hold_last_runtime_evidence`, uncertain channels use
 `drop_optional_channel`. This gives supervisor/runtime callers deterministic
 handling semantics without adding new binding-schema fields.
 
+`ChannelRuntimeExecutor` applies those delayed and uncertain policies during
+`spo run`. Delayed channels contribute the previous tick's layer evidence once
+available, with the first tick explicitly marked as `current_tick_prime`.
+Uncertain channels scale their layer `R` contribution by a named-channel driver
+`confidence_weight` or `confidence` value clamped to `[0, 1]`. The executed
+layer states are the states consumed by supervisor decisions and boundary
+observation, while the audit log records raw versus executed `R` and `psi`
+values under `channel_runtime`.
+
 ```python
 from scpn_phase_orchestrator.binding import (
     build_channel_algebra_report,
@@ -128,6 +137,8 @@ This report is read-only. It complements `validate_binding_spec()` rather than
 replacing validation gates.
 
 ::: scpn_phase_orchestrator.binding.channel_algebra
+
+::: scpn_phase_orchestrator.binding.channel_runtime
 
 ## Types
 

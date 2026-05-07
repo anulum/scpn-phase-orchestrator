@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding import (
+    ChannelRuntimeExecutor,
     compile_symbolic_binding,
     format_resolved_binding_config,
     load_binding_spec,
@@ -474,6 +475,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
     boundary_observer = BoundaryObserver(spec.boundaries)
     boundary_observer.set_event_bus(event_bus)
     regime_manager = RegimeManager(event_bus=event_bus)
+    channel_runtime = ChannelRuntimeExecutor.from_spec(spec)
 
     petri_adapter: PetriNetAdapter | None = None
     if spec.protocol_net is not None:
@@ -662,11 +664,16 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                         cla[li, lj] = plv
                         cla[lj, li] = plv
 
+            runtime_execution = channel_runtime.execute(layer_states)
+            executed_layer_states = list(runtime_execution.layers)
+
             mean_r_val = (
-                float(np.mean([ls.R for ls in layer_states])) if layer_states else 0.0
+                float(np.mean([ls.R for ls in executed_layer_states]))
+                if executed_layer_states
+                else 0.0
             )
             state_kwargs: dict = {
-                "layers": layer_states,
+                "layers": executed_layer_states,
                 "cross_layer_alignment": cla,
                 "stability_proxy": mean_r_val,
                 "regime_id": regime_manager.current_regime.value,
@@ -696,7 +703,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                 obs_values["subcritical_fraction"] = state_kwargs.get(
                     "subcritical_fraction", 0.0
                 )
-            for i, ls in enumerate(layer_states):
+            for i, ls in enumerate(executed_layer_states):
                 obs_values[f"R_{i}"] = ls.R
             boundary_state = boundary_observer.observe(obs_values, step=step_idx)
             state_kwargs["boundary_violation_count"] = len(boundary_state.violations)
@@ -769,6 +776,7 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
                     "alpha": eff_alpha,
                     "zeta": logged_zeta,
                     "psi_drive": logged_psi,
+                    "channel_runtime": runtime_execution.to_audit_record(),
                 }
                 if amplitude_mode:
                     log_kwargs["amplitudes"] = amplitudes
