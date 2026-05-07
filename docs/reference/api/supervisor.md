@@ -376,6 +376,12 @@ heterogeneous-domain replay: `P`, `I`, `S`, `Load`, `Trust`, and
 restriction maps, producing nominal and stressed obstruction audit records
 without live actuation.
 
+`domainpacks/power_grid/sheaf_obstruction_demo.py` adds a second
+heterogeneous-domain replay. It evaluates generation, tie-line, load, and
+renewable regions over rotor-angle, frequency-deviation, tie-flow, demand, and
+renewable-ramp channels, then reports nominal versus line-fault obstruction
+summaries.
+
 `build_sheaf_obstruction_summary()` hardens the raw obstruction metric into a
 reviewable triage record. It classifies `nominal`, `warning`, and `critical`
 states from explicit thresholds and reports the strongest residual edges so

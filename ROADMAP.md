@@ -340,11 +340,15 @@ Speculative research watchlist:
     `domainpacks/edge_consensus_nchannel/sheaf_obstruction_demo.py` compares
     nominal and gateway-stressed six-channel sections across directed
     restriction maps.
+  - Power-grid heterogeneous replay is in place:
+    `domainpacks/power_grid/sheaf_obstruction_demo.py` compares nominal and
+    line-fault grid sections across rotor-angle, frequency, tie-flow, demand,
+    and renewable-ramp channels.
   - Obstruction hardening foundation is in place:
     `build_sheaf_obstruction_summary()` classifies nominal/warning/critical
     obstruction severity and reports strongest residual edges for audit triage.
-  - Remaining scope: additional heterogeneous-domain demos and obstruction
-    hardening.
+  - Remaining scope: additional heterogeneous-domain demos and deeper
+    obstruction hardening.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
 - Byzantine-fault-tolerant meta-orchestrator fabric over signed policy/topology proposals and hash-linked audit evidence.
 - Hybrid neuromorphic-quantum co-compiler with shared N-channel audit semantics.

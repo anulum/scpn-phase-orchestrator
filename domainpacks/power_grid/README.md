@@ -124,3 +124,20 @@ PYTHONPATH=src python domainpacks/power_grid/morphogenetic_field_demo.py
 The replay is non-actuating. It validates the domain binding spec, builds the
 configured layer coupling, reports grown and shrunk topology-field edges, and
 exports dependency-free field snapshot rows for audit or later UI rendering.
+
+## Sheaf Obstruction Demo
+
+`sheaf_obstruction_demo.py` evaluates a four-region grid as a directed cellular
+sheaf over rotor angle, frequency deviation, tie-line flow, load demand, and
+renewable ramp channels. It compares a nominal section against a replayed
+line-fault section and emits both raw sheaf audit records and obstruction
+severity summaries.
+
+Run the replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/power_grid/sheaf_obstruction_demo.py
+```
+
+The replay is non-actuating. It is intended for audit triage and supervisor
+validation, not live grid control.
