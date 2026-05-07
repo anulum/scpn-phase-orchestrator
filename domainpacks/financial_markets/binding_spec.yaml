@@ -90,6 +90,28 @@ actuators:
     scope: layer_0
     limits: [0.0, 1.57]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-cross-asset-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.9
+      weight: 2.0
+    - name: limit-equity-rebalance-lag-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.35
+      weight: 2.0
+  fallback_actions:
+    - knob: alpha
+      scope: layer_0
+      value: 0.0
+      ttl_s: 10.0
+      justification: financial value guard safe hold
+
 amplitude:
   mu: 1.0
   epsilon: 0.3

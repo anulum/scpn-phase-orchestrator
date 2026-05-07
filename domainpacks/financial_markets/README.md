@@ -26,6 +26,16 @@ coherence that can be used for regime analysis and contagion-risk studies.
 - `correlation_ceiling`: high cross-asset synchronisation guard.
 - `volatility_floor`: low implied-volatility sanity boundary.
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+contagion-control checks. It bounds cross-asset coupling and equity rebalance
+lag steps, then falls back to a zero-lag safe hold when a candidate action
+exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a
+trading or investment system.
+
 ## Run
 
 ```bash

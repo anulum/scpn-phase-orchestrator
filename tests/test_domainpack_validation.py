@@ -397,5 +397,53 @@ def test_network_security_value_alignment_allows_bounded_firewall_coupling():
     assert not decision.violations
 
 
+def test_financial_value_alignment_blocks_excessive_rebalance_lag():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "financial_markets" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="alpha",
+        scope="layer_0",
+        value=0.6,
+        ttl_s=10.0,
+        justification="review candidate exceeds rebalance lag prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-equity-rebalance-lag-step"
+    assert (
+        decision.actions_to_apply[0].justification == "financial value guard safe hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_financial_value_alignment_allows_bounded_cross_asset_coupling():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "financial_markets" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    action = ControlAction(
+        knob="K",
+        scope="global",
+        value=0.3,
+        ttl_s=10.0,
+        justification="bounded cross-asset coupling review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.
