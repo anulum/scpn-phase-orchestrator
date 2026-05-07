@@ -391,6 +391,11 @@ renewable regions over rotor-angle, frequency-deviation, tie-flow, demand, and
 renewable-ramp channels, then reports nominal versus line-fault obstruction
 summaries.
 
+`domainpacks/network_security/sheaf_obstruction_demo.py` adds a security replay.
+It evaluates normal-traffic, attack-vector, and defence-response cohorts over
+traffic-rate, threat-level, defence-phase, and trust-score channels, then
+reports nominal versus lateral-movement obstruction summaries.
+
 `build_sheaf_obstruction_summary()` hardens the raw obstruction metric into a
 reviewable triage record. It classifies `nominal`, `warning`, and `critical`
 states from explicit thresholds and reports the strongest residual edges so

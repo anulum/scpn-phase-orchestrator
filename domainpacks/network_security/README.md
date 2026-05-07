@@ -94,3 +94,20 @@ PYTHONPATH=src python domainpacks/network_security/morphogenetic_field_demo.py
 
 The demo is replay-only and non-actuating. It is intended for topology-field
 review, not live network enforcement.
+
+## Sheaf Obstruction Demo
+
+`sheaf_obstruction_demo.py` evaluates normal-traffic, attack-vector, and
+defence-response cohorts as a directed cellular sheaf over traffic-rate,
+threat-level, defence-phase, and trust-score channels. It compares a nominal
+section against a replayed lateral-movement section and emits raw sheaf audit
+records plus obstruction severity summaries.
+
+Run the replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/network_security/sheaf_obstruction_demo.py
+```
+
+The replay is non-actuating. It is intended for obstruction triage and
+supervisor validation, not live network enforcement.

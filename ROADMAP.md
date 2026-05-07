@@ -352,6 +352,10 @@ Speculative research watchlist:
     `domainpacks/power_grid/sheaf_obstruction_demo.py` compares nominal and
     line-fault grid sections across rotor-angle, frequency, tie-flow, demand,
     and renewable-ramp channels.
+  - Network-security heterogeneous replay is in place:
+    `domainpacks/network_security/sheaf_obstruction_demo.py` compares nominal
+    and lateral-movement sections across traffic-rate, threat-level,
+    defence-phase, and trust-score channels.
   - Obstruction hardening foundation is in place:
     `build_sheaf_obstruction_summary()` classifies nominal/warning/critical
     obstruction severity and reports strongest residual edges for audit triage.
