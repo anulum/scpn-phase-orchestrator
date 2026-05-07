@@ -406,6 +406,8 @@ Speculative research watchlist:
   - Brain-connectome domainpack prior template is in place for review-time
     coupling, neuromodulation-drive, stimulation-phase, and frontoparietal
     target-lag actuation guards.
+  - Sleep-architecture domainpack prior template is in place for review-time
+    coupling, circadian-drive, and phase-advance actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

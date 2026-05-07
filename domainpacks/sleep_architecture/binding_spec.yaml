@@ -101,6 +101,34 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-sleep-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.75
+      weight: 2.0
+    - name: limit-circadian-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.45
+      weight: 3.0
+    - name: limit-phase-advance-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: sleep architecture value guard circadian hold
+
 amplitude:
   mu: 1.0
   epsilon: 0.4

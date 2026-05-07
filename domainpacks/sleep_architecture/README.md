@@ -26,6 +26,16 @@ checks for arousal and band-power conditions.
 - `delta_power_ceiling`: soft delta-power ratio ceiling.
 - `arousal_index`: hard arousals-per-hour ceiling.
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+sleep-architecture control checks. It bounds global coupling, circadian-drive,
+and phase-advance proposals, then falls back to a zero-drive safe hold when a
+candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+sleep intervention protocol or medical-device control policy.
+
 ## Run
 
 ```bash
