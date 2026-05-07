@@ -72,3 +72,20 @@ PYTHONPATH=src python domainpacks/traffic_flow/topology_adaptation_demo.py
 
 The output includes transfer-entropy support counts, the mutation policy,
 Lyapunov validation evidence, and the supervisor topology audit record.
+
+## Morphogenetic Field Demo
+
+`morphogenetic_field_demo.py` demonstrates reaction-diffusion-style topology
+field shaping for a corridor spillback replay. Corridor, network, and
+equity-pressure layers remain locally aligned while intersection, demand, and
+weather phases stress the coordination surface.
+
+Run the replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/traffic_flow/morphogenetic_field_demo.py
+```
+
+The replay is non-actuating. It validates the binding spec, builds the
+configured layer coupling, reports grown and shrunk topology-field edges, and
+exports dependency-free field snapshot rows for audit or later UI rendering.

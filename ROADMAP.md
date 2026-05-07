@@ -394,6 +394,10 @@ Speculative research watchlist:
     `domainpacks/power_grid/morphogenetic_field_demo.py` emits a deterministic
     stressed-grid replay with grown/shrunk topology-field edges and snapshot
     rows without live actuation.
+  - Traffic-flow domainpack demo is in place:
+    `domainpacks/traffic_flow/morphogenetic_field_demo.py` emits a deterministic
+    corridor-spillback replay with grown/shrunk topology-field edges and
+    snapshot rows without live actuation.
   - Remaining scope: additional domainpack demos and richer UI rendering.
 - Integrated-information monitor: approximate Phi-style global integration metric exposed as a monitor, not as a consciousness claim.
   - Foundation is in place: integrated-information monitor exists; remaining scope is benchmarked approximations.

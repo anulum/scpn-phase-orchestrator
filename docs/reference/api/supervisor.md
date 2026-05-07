@@ -323,6 +323,11 @@ non-actuating proof for a stressed grid replay: generator rotor and area
 frequency layers remain near-synchronised while tie-line, load-demand, and
 renewable layers drift, producing reviewable grown/shrunk field-edge records.
 
+`domainpacks/traffic_flow/morphogenetic_field_demo.py` extends the demo set with
+a corridor spillback replay: corridor, network, and equity-pressure layers
+remain locally aligned while intersection, demand, and weather phases stress
+the field, again without live actuation.
+
 ::: scpn_phase_orchestrator.supervisor.morphogenetic
 
 ---
