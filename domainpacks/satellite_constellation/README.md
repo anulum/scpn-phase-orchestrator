@@ -31,6 +31,16 @@ steering across the constellation.
 | global_coupling | K | Phase-lock loop gain |
 | beam_steering | zeta | Beam steering drive strength |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+constellation-control checks. It bounds global PLL-coupling and beam-steering
+steps, then falls back to a zero-drive safe hold if a candidate action violates
+those priors.
+
+This template is for simulation, replay, and policy review. It is not a
+spacecraft flight-control system.
+
 ## Scenario
 
 200 steps: orbital lock-up -> beam synchronisation -> orbital slot drift

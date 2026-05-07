@@ -86,6 +86,28 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-pll-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.0
+      weight: 2.0
+    - name: limit-beam-steering-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.5
+      weight: 2.0
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: satellite value guard safe hold
+
 amplitude:
   mu: 0.5
   epsilon: 0.2
