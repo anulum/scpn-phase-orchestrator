@@ -36,7 +36,18 @@ turbulence and zonal flows (Diamond et al., Plasma Phys Control Fusion
 | Actuator | Knob | Physical Meaning |
 |----------|------|-----------------|
 | coupling_global | K | Inter-layer transport coupling |
-| damping | zeta | Feedback stabilisation drive |
+| lag_turbulence | alpha | Turbulence phase-lag shaping |
+| damping_global | zeta | Feedback stabilisation drive |
+
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time plasma
+control checks. It bounds inter-layer transport coupling, turbulence phase-lag
+changes, and global damping-drive changes, then falls back to a damping hold
+when a candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+tokamak protection system.
 
 ## Imprint
 

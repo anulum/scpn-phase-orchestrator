@@ -111,6 +111,34 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
+value_alignment:
+  minimum_score: 0.30
+  constraints:
+    - name: limit-transport-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.1
+      weight: 2.5
+    - name: limit-turbulence-lag-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.8
+      weight: 2.0
+    - name: limit-feedback-damping-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.7
+      weight: 2.0
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 0.5
+      justification: plasma value guard damping hold
+
 amplitude:
   mu: 1.5
   epsilon: 0.4

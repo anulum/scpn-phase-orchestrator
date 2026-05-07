@@ -337,6 +337,8 @@ Speculative research watchlist:
   - Traffic-flow domainpack prior template is in place for review-time
     cycle-coupling, offset-drive, signal-split, and metering-target actuation
     guards.
+  - Plasma-control domainpack prior template is in place for review-time
+    transport-coupling, turbulence-lag, and feedback-damping actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
