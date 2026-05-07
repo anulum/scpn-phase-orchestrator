@@ -45,3 +45,19 @@ network security appliance policy.
 
 200 steps: normal traffic flow -> DDoS burst at step 80 (attack layer
 phases randomised) -> defense desynchronisation and recovery.
+
+## Causal Attribution Demo
+
+`causal_attribution_demo.py` compares a no-action lateral-movement replay
+against a bounded firewall-coupling candidate. The output includes paired
+baseline/intervention trajectories and an attribution record explaining whether
+the candidate improved final and mean coherence.
+
+Run it with:
+
+```bash
+PYTHONPATH=src python domainpacks/network_security/causal_attribution_demo.py
+```
+
+The demo is replay-only and non-actuating. It is not a live firewall,
+rate-limiter, or network security appliance policy.

@@ -561,6 +561,8 @@ Domainpack demos:
   droop coupling candidate against a no-action load-step baseline.
 - `domainpacks/traffic_flow/causal_attribution_demo.py` evaluates a signal-cycle
   coupling candidate against a no-action corridor-spillback baseline.
+- `domainpacks/network_security/causal_attribution_demo.py` evaluates a
+  firewall-coupling candidate against a no-action lateral-movement baseline.
 
 **Backend and cost:** each evaluation performs two UPDE rollouts over the
 configured horizon, so work scales with `2 * horizon` engine steps. It uses

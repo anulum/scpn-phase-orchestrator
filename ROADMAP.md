@@ -266,6 +266,9 @@ Near-term candidate tracks:
     `domainpacks/traffic_flow/causal_attribution_demo.py` compares a
     signal-cycle coupling candidate against a no-action corridor-spillback
     baseline.
+  - Network-security attribution demo is in place:
+    `domainpacks/network_security/causal_attribution_demo.py` compares a
+    firewall-coupling candidate against a no-action lateral-movement baseline.
   - Remaining scope: larger causal-model learners and additional attribution
     demonstrations for other domain families.
 - FEP / predictive-coding supervisor backend: promote ActiveInferenceAgent into a supervisor mode that treats UPDE as the generative process and minimises variational free energy across N-channel hierarchy.
