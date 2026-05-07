@@ -87,6 +87,28 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-platoon-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.0
+      weight: 2.0
+    - name: limit-throttle-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.6
+      weight: 2.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 0.5
+      justification: autonomous vehicle value guard safe hold
+
 amplitude:
   mu: 1.0
   epsilon: 0.3

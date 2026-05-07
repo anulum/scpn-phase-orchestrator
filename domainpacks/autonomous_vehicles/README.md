@@ -31,6 +31,16 @@ braking and acceleration signals through the platoon.
 | platoon_coupling | K | V2V communication coupling strength |
 | throttle_drive | zeta | Throttle response drive |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+platoon-control checks. It bounds global V2V coupling and throttle-drive steps,
+then falls back to a zero-throttle safe hold if a candidate action violates
+those priors.
+
+This template is for simulation, replay, and policy review. It is not an
+automotive safety controller.
+
 ## Scenario
 
 200 steps: platoon formation -> cruise -> leader emergency brake at step 120
