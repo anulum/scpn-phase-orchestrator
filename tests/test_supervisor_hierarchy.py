@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import math
 
 import pytest
 
 from scpn_phase_orchestrator.supervisor import (
     ChildSupervisorSummary,
+    HierarchySyncEnvelope,
     HierarchyTransportRuntime,
     build_hierarchical_orchestration_plan,
     build_hierarchy_sync_envelope,
@@ -58,6 +60,16 @@ def test_hierarchical_plan_composes_reduced_child_summaries_only() -> None:
     assert "raw_phases" not in child_record
     assert "time_series" not in child_record
     assert "knm" not in child_record
+
+
+def test_hierarchical_plan_accepts_single_pass_child_iterable() -> None:
+    child = ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0)
+
+    plan = build_hierarchical_orchestration_plan(iter((child,)))  # type: ignore[arg-type]
+
+    assert [item.name for item in plan.children] == ["edge-a"]
+    assert len(plan.parent_state.layers) == 1
+    assert plan.parent_R == pytest.approx(0.9)
 
 
 def test_hierarchical_plan_escalates_degraded_critical_and_low_confidence() -> None:
@@ -153,6 +165,119 @@ def test_child_summary_rejects_invalid_reduced_evidence(
         ChildSupervisorSummary(**kwargs)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    "raw_key",
+    [
+        "raw_phases",
+        "graph",
+        "event",
+        "events",
+        "raw_signal",
+        "raw_signals",
+        "actuator",
+        "actuators",
+        "raw_actuator",
+        "raw_actuators",
+        "raw_actuator_target",
+        "raw_actuator_targets",
+        "raw_evidence",
+        "child_evidence",
+        "raw_observation",
+        "raw_observations",
+        "raw_event",
+        "raw_events",
+        "raw_coupling_matrix",
+        "raw_time_series",
+        "raw_phase",
+        "raw_phase_history",
+        "raw_timeseries",
+        "raw_graph",
+        "raw_coupling",
+        "coupling",
+        "couplings",
+        "evidence",
+        "local_coupling_matrix",
+        "signal",
+        "signals",
+    ],
+)
+def test_child_summary_rejects_raw_metadata(raw_key: str) -> None:
+    with pytest.raises(ValueError, match=raw_key):
+        ChildSupervisorSummary(
+            "edge-a",
+            "power",
+            R=0.8,
+            psi=0.0,
+            metadata={raw_key: [0.1, 0.2]},
+        )
+
+
+@pytest.mark.parametrize(
+    "raw_key",
+    ["raw_phase_history", "raw_phase", "raw_timeseries"],
+)
+def test_child_summary_rejects_generic_raw_metadata_aliases(raw_key: str) -> None:
+    with pytest.raises(ValueError, match=raw_key):
+        ChildSupervisorSummary(
+            "edge-a",
+            "power",
+            R=0.8,
+            psi=0.0,
+            metadata={raw_key: [0.1, 0.2]},
+        )
+
+    with pytest.raises(ValueError, match=raw_key):
+        ChildSupervisorSummary(
+            "edge-a",
+            "power",
+            R=0.8,
+            psi=0.0,
+            metadata={"nested": {raw_key: [0.1, 0.2]}},
+        )
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"site": object()},
+        {"too_large": 2**60},
+        {"too_negative": -(2**60)},
+        {"huge": 10**100},
+        {"first_unsafe": 9007199254740992},
+    ],
+)
+def test_child_summary_rejects_non_json_safe_metadata(
+    metadata: dict[str, object],
+) -> None:
+    with pytest.raises(ValueError):
+        ChildSupervisorSummary(
+            "edge-a",
+            "power",
+            R=0.8,
+            psi=0.0,
+            metadata=metadata,
+        )
+
+
+def test_child_summary_metadata_is_defensively_normalised() -> None:
+    metadata = {"site": "north", "nested": {"role": "edge"}}
+    summary = ChildSupervisorSummary(
+        "edge-a",
+        "power",
+        R=0.8,
+        psi=0.0,
+        metadata=metadata,
+    )
+
+    metadata["raw_phases"] = [0.1, 0.2]
+    metadata["nested"]["time_series"] = [0.1, 0.2]  # type: ignore[index]
+
+    audit = summary.to_audit_record()
+
+    assert audit["metadata"] == {"site": "north", "nested": {"role": "edge"}}
+    json.dumps(audit, allow_nan=False)
+
+
 def test_hierarchy_sync_envelopes_ingest_deterministically() -> None:
     edge_b = build_hierarchy_sync_envelope(
         ChildSupervisorSummary("edge-b", "thermal", R=0.8, psi=0.0),
@@ -241,108 +366,926 @@ def test_hierarchy_sync_ingestion_requires_one_accepted_envelope() -> None:
         )
 
 
-def test_hierarchy_transport_runtime_ingests_json_batches_and_tracks_sequences() -> (
-    None
-):
-    runtime = HierarchyTransportRuntime(hierarchy="edge_cloud_transport_runtime")
-    first = build_hierarchy_sync_envelope(
-        ChildSupervisorSummary(
-            "edge-a",
-            "grid",
-            R=0.92,
-            psi=0.0,
-            metadata={"site": "north"},
-        ),
+def test_hierarchy_sync_ingestion_accepts_latest_same_source() -> None:
+    sequence_2 = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-seq-2", "power", R=0.2, psi=0.0),
         source_node="node-a",
-        sequence=7,
-        monotonic_time_s=2.5,
+        sequence=2,
     )
-    second = {
+    sequence_3 = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-seq-3", "power", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=3,
+    )
+
+    forward = ingest_hierarchy_sync_envelopes((sequence_2, sequence_3))
+    reverse = ingest_hierarchy_sync_envelopes((sequence_3, sequence_2))
+
+    assert [envelope.sequence for envelope in forward.accepted] == [3]
+    assert [envelope.sequence for envelope in reverse.accepted] == [3]
+    assert forward.rejected == reverse.rejected == (
+        {
+            "source_node": "node-a",
+            "sequence": 2,
+            "reason": "stale_or_duplicate_sequence",
+            "protocol_version": "spo-hierarchy-sync/v1",
+        },
+    )
+    assert forward.plan.to_audit_record() == reverse.plan.to_audit_record()
+
+
+def test_hierarchy_sync_ingestion_rejects_equal_sequence_conflicts() -> None:
+    conflict_low = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-conflict-low", "power", R=0.2, psi=0.0),
+        source_node="node-a",
+        sequence=5,
+    )
+    conflict_high = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-conflict-high", "power", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=5,
+    )
+    stable = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-stable", "grid", R=0.7, psi=0.0),
+        source_node="node-b",
+        sequence=1,
+    )
+
+    forward = ingest_hierarchy_sync_envelopes((conflict_low, conflict_high, stable))
+    reverse = ingest_hierarchy_sync_envelopes((conflict_high, conflict_low, stable))
+
+    assert [envelope.source_node for envelope in forward.accepted] == ["node-b"]
+    assert [envelope.source_node for envelope in reverse.accepted] == ["node-b"]
+    assert [record["reason"] for record in forward.rejected] == [
+        "duplicate_sequence_conflict",
+        "duplicate_sequence_conflict",
+    ]
+    assert forward.rejected == reverse.rejected
+    assert forward.plan.to_audit_record() == reverse.plan.to_audit_record()
+
+
+def test_hierarchy_transport_runtime_ingests_json_and_mapping_batch() -> None:
+    runtime = HierarchyTransportRuntime()
+    json_record = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-b", "thermal", R=0.8, psi=0.0),
+        source_node="node-b",
+        sequence=3,
+        monotonic_time_s=12.5,
+    ).to_json()
+    mapping_record = {
         "protocol_version": "spo-hierarchy-sync/v1",
-        "source_node": "node-b",
-        "sequence": 3,
+        "source_node": "node-a",
+        "sequence": 2,
         "summary": {
-            "name": "edge-b",
-            "channel": "thermal",
-            "R": 0.55,
-            "psi": 0.4,
-            "regime": "degraded",
-            "confidence": 0.8,
-            "metadata": {"site": "south"},
+            "name": "edge-a",
+            "channel": "power",
+            "R": 0.2,
+            "psi": math.pi,
+            "regime": "critical",
+            "confidence": 1.0,
+            "metadata": {"region": "north"},
         },
     }
 
-    ledger = runtime.ingest_batch((first.to_json(), second))
+    ledger = runtime.ingest((json_record, mapping_record))
 
     assert [envelope.source_node for envelope in ledger.accepted] == [
         "node-a",
         "node-b",
     ]
-    assert runtime.previous_sequences == {"node-a": 7, "node-b": 3}
-    assert ledger.plan.hierarchy == "edge_cloud_transport_runtime"
-    assert ledger.plan.escalations[0].reason == "child_coherence_below_degraded"
+    assert ledger.plan.hierarchy == "edge_cloud_summary_sync"
+    assert ledger.plan.escalations[0].child == "edge-a"
+    assert ledger.plan.escalations[0].reason == "child_coherence_below_critical"
+    assert runtime.previous_sequences == {"node-a": 2, "node-b": 3}
     assert runtime.to_audit_record() == {
-        "hierarchy": "edge_cloud_transport_runtime",
+        "hierarchy": "edge_cloud_summary_sync",
         "protocol_version": "spo-hierarchy-sync/v1",
-        "previous_sequences": {"node-a": 7, "node-b": 3},
-        "audit_scope": "transport_runtime_watermarks_only",
+        "previous_sequences": {"node-a": 2, "node-b": 3},
+        "audit_scope": "reduced_child_summaries_only",
     }
 
 
-def test_hierarchy_transport_runtime_rejects_stale_followup_batch() -> None:
+def test_hierarchy_transport_runtime_rejects_stale_followup_only() -> None:
     runtime = HierarchyTransportRuntime()
-    accepted = build_hierarchy_sync_envelope(
-        ChildSupervisorSummary("edge-a", "grid", R=0.9, psi=0.0),
-        source_node="node-a",
-        sequence=4,
-    )
-    stale = build_hierarchy_sync_envelope(
-        ChildSupervisorSummary("edge-b", "grid", R=0.4, psi=0.2),
-        source_node="node-a",
-        sequence=4,
-    )
-    fresh = build_hierarchy_sync_envelope(
-        ChildSupervisorSummary("edge-c", "grid", R=0.8, psi=0.1),
-        source_node="node-c",
-        sequence=1,
+    runtime.ingest(
+        (
+            build_hierarchy_sync_envelope(
+                ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0),
+                source_node="node-a",
+                sequence=2,
+            ),
+        )
     )
 
-    first = runtime.ingest_batch((accepted,))
-    second = runtime.ingest_batch((stale, fresh))
+    ledger = runtime.ingest(
+        (
+            build_hierarchy_sync_envelope(
+                ChildSupervisorSummary("edge-a", "power", R=0.1, psi=0.0),
+                source_node="node-a",
+                sequence=2,
+            ),
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-b",
+                "sequence": 1,
+                "summary": {
+                    "name": "edge-b",
+                    "channel": "grid",
+                    "R": 0.7,
+                    "psi": 0.2,
+                    "regime": "nominal",
+                    "confidence": 0.9,
+                    "metadata": {},
+                },
+            },
+        )
+    )
 
-    assert [envelope.source_node for envelope in first.accepted] == ["node-a"]
-    assert [record["reason"] for record in second.rejected] == [
+    assert [record["reason"] for record in ledger.rejected] == [
         "stale_or_duplicate_sequence"
     ]
-    assert [envelope.source_node for envelope in second.accepted] == ["node-c"]
-    assert runtime.previous_sequences == {"node-a": 4, "node-c": 1}
+    assert [envelope.source_node for envelope in ledger.accepted] == ["node-b"]
+    assert runtime.previous_sequences == {"node-a": 2, "node-b": 1}
 
 
-def test_load_hierarchy_sync_envelope_rejects_raw_or_malformed_payloads() -> None:
-    with pytest.raises(ValueError, match="summary must be a mapping"):
-        load_hierarchy_sync_envelope(
-            {
-                "protocol_version": "spo-hierarchy-sync/v1",
-                "source_node": "node-a",
-                "sequence": 1,
-                "raw_phases": [0.1, 0.2],
-            }
+@pytest.mark.parametrize(
+    "record",
+    [
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "raw_child_observations": [0.1, 0.2],
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1.0,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": True,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": True,
+                "psi": 0.0,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+                "metadata": ["not", "a", "mapping"],
+            },
+        },
+    ],
+)
+def test_load_hierarchy_sync_envelope_rejects_malformed_payloads(
+    record: dict[str, object],
+) -> None:
+    with pytest.raises(ValueError):
+        load_hierarchy_sync_envelope(record)
+
+    with pytest.raises(ValueError):
+        load_hierarchy_sync_envelope(json.dumps(record))
+
+
+@pytest.mark.parametrize(
+    "raw_key",
+    [
+        "phase",
+        "phases",
+        "observation",
+        "observations",
+        "raw_child_observations",
+        "raw_phases",
+        "time_series",
+        "actuator_target",
+        "actuator_targets",
+        "coupling_matrix",
+        "coupling_matrices",
+        "graph",
+        "event",
+        "events",
+        "raw_signal",
+        "raw_signals",
+        "raw_observation",
+        "raw_observations",
+        "raw_event",
+        "raw_events",
+        "raw_coupling_matrix",
+        "raw_time_series",
+        "raw_phase",
+        "raw_phase_history",
+        "raw_timeseries",
+        "raw_graph",
+        "raw_coupling",
+        "coupling",
+        "couplings",
+        "evidence",
+        "local_coupling_matrix",
+        "signal",
+        "signals",
+    ],
+)
+def test_load_hierarchy_sync_envelope_rejects_raw_metadata_keys(
+    raw_key: str,
+) -> None:
+    record = {
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "source_node": "node-a",
+        "sequence": 1,
+        "summary": {
+            "name": "edge-a",
+            "channel": "power",
+            "R": 0.8,
+            "psi": 0.0,
+            "metadata": {
+                "site": "north",
+                "role": "edge",
+                "nested": {raw_key: [0.1, 0.2]},
+            },
+        },
+    }
+
+    with pytest.raises(ValueError, match=raw_key):
+        load_hierarchy_sync_envelope(record)
+
+    with pytest.raises(ValueError, match=raw_key):
+        load_hierarchy_sync_envelope(json.dumps(record))
+
+
+@pytest.mark.parametrize(
+    "raw_key",
+    ["raw_phase_history", "raw_phase", "raw_timeseries"],
+)
+def test_load_hierarchy_sync_envelope_rejects_generic_raw_metadata_aliases(
+    raw_key: str,
+) -> None:
+    record = {
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "source_node": "node-a",
+        "sequence": 1,
+        "summary": {
+            "name": "edge-a",
+            "channel": "power",
+            "R": 0.8,
+            "psi": 0.0,
+            "metadata": {
+                "site": "north",
+                "nested": {raw_key: [0.1, 0.2]},
+            },
+        },
+    }
+
+    with pytest.raises(ValueError, match=raw_key):
+        load_hierarchy_sync_envelope(record)
+
+    with pytest.raises(ValueError, match=raw_key):
+        load_hierarchy_sync_envelope(json.dumps(record))
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "raw_phase_history": [0.1, 0.2],
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "unknown": "ignored-before",
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+                "phase_history": [0.1, 0.2],
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+                "unknown": "ignored-before",
+            },
+        },
+    ],
+)
+def test_load_hierarchy_sync_envelope_rejects_unknown_decoded_fields(
+    record: dict[str, object],
+) -> None:
+    with pytest.raises(ValueError):
+        load_hierarchy_sync_envelope(record)
+
+    with pytest.raises(ValueError):
+        load_hierarchy_sync_envelope(json.dumps(record))
+
+
+@pytest.mark.parametrize(
+    "raw_key",
+    [
+        "graph",
+        "event",
+        "events",
+        "raw_signal",
+        "raw_signals",
+        "raw_time_series",
+        "raw_phase",
+        "raw_phase_history",
+        "raw_timeseries",
+        "raw_graph",
+        "raw_coupling",
+        "coupling",
+        "couplings",
+        "evidence",
+    ],
+)
+def test_hierarchy_sync_envelope_construction_rejects_raw_metadata_variants(
+    raw_key: str,
+) -> None:
+    summary = _unchecked_child_summary({raw_key: {"sample": 1}})
+
+    with pytest.raises(ValueError, match=raw_key):
+        build_hierarchy_sync_envelope(
+            summary,
+            source_node="node-a",
+            sequence=1,
         )
 
-    with pytest.raises(ValueError, match="sequence must be an integer"):
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {1: "non-string-key"},
+        {"nested": {1: "non-string-key"}},
+        {"site": object()},
+        {"too_large": 2**60},
+        {"too_negative": -(2**60)},
+        {"huge": 10**100},
+        {"first_unsafe": 9007199254740992},
+        {"huge": 10**400},
+    ],
+)
+def test_load_hierarchy_sync_envelope_rejects_non_json_safe_metadata(
+    metadata: dict[object, object],
+) -> None:
+    record = {
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "source_node": "node-a",
+        "sequence": 1,
+        "summary": {
+            "name": "edge-a",
+            "channel": "power",
+            "R": 0.8,
+            "psi": 0.0,
+            "metadata": metadata,
+        },
+    }
+
+    with pytest.raises(ValueError):
+        load_hierarchy_sync_envelope(record)
+
+
+def test_hierarchical_plan_rejects_raw_metadata() -> None:
+    summary = _unchecked_child_summary({"raw_phases": [0.1, 0.2]})
+
+    with pytest.raises(ValueError, match="raw_phases"):
+        build_hierarchical_orchestration_plan((summary,))
+
+
+def test_hierarchical_plan_rejects_non_json_safe_metadata() -> None:
+    with pytest.raises(ValueError, match="JSON-safe"):
+        build_hierarchical_orchestration_plan(
+            (_unchecked_child_summary({"site": object()}),)
+        )
+
+    with pytest.raises(ValueError, match="JSON-safe"):
+        build_hierarchical_orchestration_plan(
+            (_unchecked_child_summary({"too_large": 2**60}),)
+        )
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    [
+        "raw_phases",
+        "raw_phase",
+        "raw_phase_history",
+        "raw_timeseries",
+        "time_series",
+        "raw_signal",
+        "actuator",
+        "raw_evidence",
+        "child_evidence",
+    ],
+)
+def test_forged_child_summary_rejects_raw_evidence_attributes(
+    attribute: str,
+) -> None:
+    summary = _unchecked_child_summary({}, extra_attrs={attribute: [0.1, 0.2]})
+    envelope = _unchecked_hierarchy_sync_envelope(summary=summary)
+
+    with pytest.raises(ValueError, match=attribute):
+        build_hierarchical_orchestration_plan((summary,))
+
+    with pytest.raises(ValueError, match=attribute):
+        load_hierarchy_sync_envelope(envelope)
+
+    with pytest.raises(ValueError, match=attribute):
+        ingest_hierarchy_sync_envelopes((envelope,))
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 10**400,
+                "psi": 0.0,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 10**400,
+            },
+        },
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "monotonic_time_s": 10**400,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+            },
+        },
+    ],
+)
+def test_load_hierarchy_sync_envelope_rejects_oversized_numeric_fields(
+    record: dict[str, object],
+) -> None:
+    with pytest.raises(ValueError):
+        load_hierarchy_sync_envelope(record)
+
+
+def test_hierarchy_sync_envelope_rejects_oversized_sequence() -> None:
+    summary = ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0)
+
+    with pytest.raises(ValueError, match="sequence"):
+        HierarchySyncEnvelope(
+            protocol_version="spo-hierarchy-sync/v1",
+            source_node="node-a",
+            sequence=10**10000,
+            summary=summary,
+        )
+
+    with pytest.raises(ValueError, match="sequence"):
+        HierarchySyncEnvelope(
+            protocol_version="spo-hierarchy-sync/v1",
+            source_node="node-a",
+            sequence=-(2**60),
+            summary=summary,
+        )
+
+    with pytest.raises(ValueError, match="sequence"):
         load_hierarchy_sync_envelope(
             {
                 "protocol_version": "spo-hierarchy-sync/v1",
                 "source_node": "node-a",
-                "sequence": "1",
+                "sequence": 10**10000,
                 "summary": {
                     "name": "edge-a",
-                    "channel": "grid",
-                    "R": 0.9,
+                    "channel": "power",
+                    "R": 0.8,
                     "psi": 0.0,
                 },
             }
         )
+
+    with pytest.raises(ValueError, match="sequence"):
+        load_hierarchy_sync_envelope(
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-a",
+                "sequence": -(2**60),
+                "summary": {
+                    "name": "edge-a",
+                    "channel": "power",
+                    "R": 0.8,
+                    "psi": 0.0,
+                },
+            }
+        )
+
+
+def test_hierarchical_plan_rejects_oversized_threshold() -> None:
+    with pytest.raises(ValueError):
+        build_hierarchical_orchestration_plan(
+            (ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0),),
+            degraded_threshold=10**400,
+        )
+
+
+def test_load_hierarchy_sync_envelope_accepts_reduced_metadata() -> None:
+    envelope = load_hierarchy_sync_envelope(
+        {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+                "metadata": {
+                    "site": "north",
+                    "role": "edge",
+                    "enabled": True,
+                    "threshold": 0.875,
+                    "optional": None,
+                    "tags": ["primary", "calibrated", 2],
+                    "nested": {"site_id": "north-1", "weight": 1.0},
+                },
+            },
+        }
+    )
+
+    assert envelope.summary.to_audit_record()["metadata"] == {
+        "site": "north",
+        "role": "edge",
+        "enabled": True,
+        "threshold": 0.875,
+        "optional": None,
+        "tags": ["primary", "calibrated", 2],
+        "nested": {"site_id": "north-1", "weight": 1.0},
+    }
+    json.dumps(envelope.to_audit_record(), allow_nan=False)
+
+
+def test_hierarchy_transport_runtime_ingest_batch_rejects_direct_raw_metadata() -> None:
+    runtime = HierarchyTransportRuntime()
+    envelope = _unchecked_hierarchy_sync_envelope(
+        {"raw_child_observations": [0.1, 0.2]}
+    )
+
+    with pytest.raises(ValueError, match="raw_child_observations"):
+        runtime.ingest_batch((envelope,))
+
+    assert runtime.previous_sequences == {}
+
+
+def test_load_hierarchy_sync_envelope_rejects_direct_raw_metadata() -> None:
+    envelope = _unchecked_hierarchy_sync_envelope(
+        {"nested": {"raw_child_observations": [0.1, 0.2]}}
+    )
+
+    with pytest.raises(ValueError, match="raw_child_observations"):
+        load_hierarchy_sync_envelope(envelope)
+
+
+def test_load_hierarchy_sync_envelope_canonicalises_direct_envelope_metadata() -> None:
+    metadata = {"site": "north", "nested": {"role": "edge"}}
+    envelope = _unchecked_hierarchy_sync_envelope(metadata)
+
+    accepted = load_hierarchy_sync_envelope(envelope)
+    metadata["raw_phases"] = [0.1, 0.2]
+    metadata["nested"]["time_series"] = [0.1, 0.2]  # type: ignore[index]
+
+    assert accepted is not envelope
+    assert accepted.summary.to_audit_record()["metadata"] == {
+        "site": "north",
+        "nested": {"role": "edge"},
+    }
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["raw_phases", "raw_phase", "raw_phase_history", "raw_timeseries"],
+)
+def test_load_hierarchy_sync_envelope_rejects_raw_envelope_attribute(
+    attribute: str,
+) -> None:
+    envelope = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0),
+        source_node="node-a",
+        sequence=1,
+    )
+    object.__setattr__(envelope, attribute, [0.1, 0.2])
+
+    with pytest.raises(ValueError, match=attribute):
+        load_hierarchy_sync_envelope(envelope)
+
+
+@pytest.mark.parametrize(
+    ("envelope_kwargs", "summary_kwargs", "message"),
+    [
+        (
+            {"sequence": True},
+            {},
+            "sequence must be an integer",
+        ),
+        (
+            {"sequence": -1},
+            {},
+            "sequence must be >= 0",
+        ),
+        (
+            {"sequence": 10**10000},
+            {},
+            "sequence",
+        ),
+        (
+            {"protocol_version": ""},
+            {},
+            "protocol_version must be a non-empty string",
+        ),
+        (
+            {"source_node": ""},
+            {},
+            "source_node must be a non-empty string",
+        ),
+        (
+            {},
+            {"R": math.nan},
+            "R must be finite",
+        ),
+        (
+            {},
+            {"confidence": 2.0},
+            "confidence must be finite and in \\[0, 1\\]",
+        ),
+    ],
+)
+def test_direct_hierarchy_sync_envelope_revalidates_all_fields(
+    envelope_kwargs: dict[str, object],
+    summary_kwargs: dict[str, object],
+    message: str,
+) -> None:
+    summary = _unchecked_child_summary({}, **summary_kwargs)
+    envelope = _unchecked_hierarchy_sync_envelope(
+        summary=summary,
+        **envelope_kwargs,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        load_hierarchy_sync_envelope(envelope)
+
+    with pytest.raises(ValueError, match=message):
+        ingest_hierarchy_sync_envelopes((envelope,))
+
+
+def test_hierarchy_sync_envelope_construction_rejects_raw_metadata() -> None:
+    summary = _unchecked_child_summary({"raw_phases": [0.1, 0.2]})
+
+    with pytest.raises(ValueError, match="raw_phases"):
+        build_hierarchy_sync_envelope(
+            summary,
+            source_node="node-a",
+            sequence=1,
+        )
+
+    with pytest.raises(ValueError, match="raw_phases"):
+        HierarchySyncEnvelope(
+            protocol_version="spo-hierarchy-sync/v1",
+            source_node="node-a",
+            sequence=1,
+            summary=summary,
+        )
+
+
+def test_hierarchy_sync_envelope_construction_rejects_non_json_safe_metadata() -> None:
+    summary = _unchecked_child_summary({"site": object()})
+
+    with pytest.raises(ValueError, match="JSON-safe"):
+        build_hierarchy_sync_envelope(
+            summary,
+            source_node="node-a",
+            sequence=1,
+        )
+
+    with pytest.raises(ValueError, match="JSON-safe"):
+        HierarchySyncEnvelope(
+            protocol_version="spo-hierarchy-sync/v1",
+            source_node="node-a",
+            sequence=1,
+            summary=summary,
+        )
+
+
+def test_hierarchy_sync_ingestion_rejects_direct_raw_metadata() -> None:
+    envelope = _unchecked_hierarchy_sync_envelope({"raw_phases": [0.1, 0.2]})
+
+    with pytest.raises(ValueError, match="raw_phases"):
+        ingest_hierarchy_sync_envelopes((envelope,))
+
+
+def test_hierarchy_sync_ingestion_canonicalises_direct_envelope_metadata() -> None:
+    metadata = {"site": "north", "nested": {"role": "edge"}}
+    envelope = _unchecked_hierarchy_sync_envelope(metadata)
+
+    ledger = ingest_hierarchy_sync_envelopes((envelope,))
+    metadata["raw_phases"] = [0.1, 0.2]
+    metadata["nested"]["time_series"] = [0.1, 0.2]  # type: ignore[index]
+
+    assert ledger.accepted[0] is not envelope
+    assert ledger.to_audit_record()["accepted"][0]["summary"]["metadata"] == {
+        "site": "north",
+        "nested": {"role": "edge"},
+    }
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["raw_phases", "raw_phase", "raw_phase_history", "raw_timeseries"],
+)
+def test_hierarchy_sync_ingestion_rejects_raw_envelope_attribute(
+    attribute: str,
+) -> None:
+    envelope = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0),
+        source_node="node-a",
+        sequence=1,
+    )
+    object.__setattr__(envelope, attribute, [0.1, 0.2])
+
+    with pytest.raises(ValueError, match=attribute):
+        ingest_hierarchy_sync_envelopes((envelope,))
+
+
+@pytest.mark.parametrize(
+    "previous_sequence",
+    [
+        True,
+        "1",
+        pytest.param(10**10000, id="oversized"),
+        pytest.param(-(2**60), id="negative-oversized"),
+    ],
+)
+def test_hierarchy_sync_ingestion_rejects_invalid_previous_sequences(
+    previous_sequence: object,
+) -> None:
+    envelope = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0),
+        source_node="node-a",
+        sequence=2,
+    )
+
+    with pytest.raises(ValueError, match="sequence"):
+        ingest_hierarchy_sync_envelopes(
+            (envelope,),
+            previous_sequences={"node-a": previous_sequence},  # type: ignore[dict-item]
+        )
+
+
+def test_hierarchy_sync_ingestion_rejects_non_mapping_previous_sequences() -> None:
+    envelope = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0),
+        source_node="node-a",
+        sequence=2,
+    )
+
+    with pytest.raises(ValueError, match="previous_sequences must be a mapping"):
+        ingest_hierarchy_sync_envelopes(
+            (envelope,),
+            previous_sequences=object(),  # type: ignore[arg-type]
+        )
+
+
+def test_hierarchy_transport_runtime_rejects_non_mapping_previous_sequences() -> None:
+    with pytest.raises(ValueError, match="previous_sequences must be a mapping"):
+        HierarchyTransportRuntime(previous_sequences=object())  # type: ignore[arg-type]
+
+
+def test_hierarchy_gossip_consensus_rejects_direct_raw_metadata() -> None:
+    envelope = _unchecked_hierarchy_sync_envelope(
+        {"nested": {"time_series": [0.1, 0.2]}}
+    )
+
+    with pytest.raises(ValueError, match="time_series"):
+        simulate_hierarchy_gossip_consensus(
+            (envelope,),
+            neighbour_map={},
+        )
+
+
+def _unchecked_hierarchy_sync_envelope(
+    metadata: dict[str, object] | None = None,
+    *,
+    protocol_version: object = "spo-hierarchy-sync/v1",
+    source_node: object = "node-a",
+    sequence: object = 1,
+    summary: ChildSupervisorSummary | None = None,
+) -> HierarchySyncEnvelope:
+    envelope = object.__new__(HierarchySyncEnvelope)
+    object.__setattr__(envelope, "protocol_version", protocol_version)
+    object.__setattr__(envelope, "source_node", source_node)
+    object.__setattr__(envelope, "sequence", sequence)
+    object.__setattr__(
+        envelope,
+        "summary",
+        summary or _unchecked_child_summary(metadata or {}),
+    )
+    object.__setattr__(envelope, "monotonic_time_s", None)
+    return envelope
+
+
+def _unchecked_child_summary(
+    metadata: dict[str, object],
+    *,
+    name: object = "edge-a",
+    channel: object = "power",
+    R: object = 0.8,
+    psi: object = 0.0,
+    regime: object = "nominal",
+    confidence: object = 1.0,
+    extra_attrs: dict[str, object] | None = None,
+) -> ChildSupervisorSummary:
+    summary = object.__new__(ChildSupervisorSummary)
+    object.__setattr__(summary, "name", name)
+    object.__setattr__(summary, "channel", channel)
+    object.__setattr__(summary, "R", R)
+    object.__setattr__(summary, "psi", psi)
+    object.__setattr__(summary, "regime", regime)
+    object.__setattr__(summary, "confidence", confidence)
+    object.__setattr__(summary, "metadata", metadata)
+    for key, value in (extra_attrs or {}).items():
+        object.__setattr__(summary, key, value)
+    return summary
 
 
 def test_hierarchy_gossip_consensus_moves_neighbours_towards_shared_state() -> None:
@@ -412,10 +1355,39 @@ def test_hierarchy_gossip_consensus_carries_ingestion_rejections_once() -> None:
 
 
 @pytest.mark.parametrize(
+    ("neighbour_map", "message"),
+    [
+        (None, "neighbour_map must be a mapping"),
+        ({1: ("node-b",)}, "neighbour_map node keys must be strings"),
+        ({"node-a": "node-b"}, "neighbour_map neighbours must be a sequence"),
+        ({"node-a": 42}, "neighbour_map neighbours must be a sequence"),
+        ({"node-a": (1,)}, "neighbour_map neighbour names must be strings"),
+    ],
+)
+def test_hierarchy_gossip_consensus_rejects_invalid_neighbour_map(
+    neighbour_map: object,
+    message: str,
+) -> None:
+    envelope = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "grid", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=1,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        simulate_hierarchy_gossip_consensus(
+            (envelope,),
+            neighbour_map=neighbour_map,  # type: ignore[arg-type]
+        )
+
+
+@pytest.mark.parametrize(
     ("kwargs", "message"),
     [
         ({"rounds": 0}, "rounds must be >= 1"),
+        ({"rounds": "1"}, "rounds must be an integer"),
         ({"self_weight": 1.5}, "self_weight must be finite and in \\[0, 1\\]"),
+        ({"self_weight": "0.5"}, "self_weight must be a finite number"),
     ],
 )
 def test_hierarchy_gossip_consensus_rejects_invalid_inputs(

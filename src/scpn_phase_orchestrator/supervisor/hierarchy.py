@@ -9,8 +9,10 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+import math
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import TypeAlias
 
 import numpy as np
@@ -39,6 +41,107 @@ FloatArray: TypeAlias = NDArray[np.float64]
 _REGIME_CRITICAL = "critical"
 _REGIME_DEGRADED = "degraded"
 _REGIME_NOMINAL = "nominal"
+_AUDIT_SCOPE_REDUCED_SUMMARIES = "reduced_child_summaries_only"
+_DEFAULT_HIERARCHY_SYNC_PROTOCOL = "spo-hierarchy-sync/v1"
+_MAX_JSON_SAFE_INTEGER = (1 << 53) - 1
+_HIERARCHY_RAW_MARKER_TERMS = frozenset(
+    {
+        "evidence",
+        "history",
+        "payload",
+        "raw",
+    }
+)
+_HIERARCHY_RAW_DATA_TERMS = frozenset(
+    {
+        "actuator",
+        "actuators",
+        "coupling",
+        "couplings",
+        "event",
+        "events",
+        "graph",
+        "graphs",
+        "observation",
+        "observations",
+        "phase",
+        "phases",
+        "series",
+        "signal",
+        "signals",
+        "time",
+        "timeseries",
+    }
+)
+_HIERARCHY_SYNC_ENVELOPE_KEYS = frozenset(
+    {
+        "monotonic_time_s",
+        "protocol_version",
+        "sequence",
+        "source_node",
+        "summary",
+    }
+)
+_HIERARCHY_SYNC_SUMMARY_KEYS = frozenset(
+    {
+        "R",
+        "channel",
+        "confidence",
+        "metadata",
+        "name",
+        "psi",
+        "regime",
+        "weighted_R",
+    }
+)
+_FORBIDDEN_RAW_HIERARCHY_KEYS = frozenset(
+    {
+        "actuator",
+        "actuators",
+        "actuator_handle",
+        "actuator_handles",
+        "actuator_target",
+        "actuator_targets",
+        "child_evidence",
+        "child_observations",
+        "coupling",
+        "coupling_matrix",
+        "coupling_matrices",
+        "couplings",
+        "event",
+        "events",
+        "evidence",
+        "graph",
+        "knm",
+        "local_coupling_matrix",
+        "local_coupling_matrices",
+        "observation",
+        "observations",
+        "phase",
+        "phases",
+        "raw",
+        "raw_coupling",
+        "raw_coupling_matrix",
+        "raw_event",
+        "raw_events",
+        "raw_graph",
+        "raw_observation",
+        "raw_observations",
+        "raw_time_series",
+        "raw_actuator",
+        "raw_actuator_target",
+        "raw_actuator_targets",
+        "raw_actuators",
+        "raw_child_observations",
+        "raw_evidence",
+        "raw_phases",
+        "raw_signal",
+        "raw_signals",
+        "signal",
+        "signals",
+        "time_series",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -59,12 +162,12 @@ class ChildSupervisorSummary:
     metadata: Mapping[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        _require_non_empty(self.name, "name")
-        _require_non_empty(self.channel, "channel")
-        _require_unit_interval(self.R, "R")
-        _require_finite(self.psi, "psi")
-        _require_unit_interval(self.confidence, "confidence")
-        _require_non_empty(self.regime, "regime")
+        _validate_child_summary_reduced_only(self)
+        object.__setattr__(
+            self,
+            "metadata",
+            _normalise_metadata_value(self.metadata, "summary.metadata"),
+        )
 
     @property
     def weighted_R(self) -> float:
@@ -81,7 +184,7 @@ class ChildSupervisorSummary:
             "regime": self.regime,
             "confidence": float(self.confidence),
             "weighted_R": self.weighted_R,
-            "metadata": dict(self.metadata),
+            "metadata": _metadata_to_audit_record(self.metadata),
         }
 
 
@@ -120,7 +223,7 @@ class HierarchicalOrchestrationPlan:
     escalations: tuple[HierarchyEscalation, ...]
     parent_R: float
     parent_psi: float
-    audit_scope: str = "reduced_child_summaries_only"
+    audit_scope: str = _AUDIT_SCOPE_REDUCED_SUMMARIES
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a serialisable plan record for hierarchy audit logs."""
@@ -152,14 +255,7 @@ class HierarchySyncEnvelope:
     monotonic_time_s: float | None = None
 
     def __post_init__(self) -> None:
-        _require_non_empty(self.protocol_version, "protocol_version")
-        _require_non_empty(self.source_node, "source_node")
-        if self.sequence < 0:
-            raise ValueError("sequence must be >= 0")
-        if self.monotonic_time_s is not None and (
-            not np.isfinite(self.monotonic_time_s) or self.monotonic_time_s < 0.0
-        ):
-            raise ValueError("monotonic_time_s must be finite and non-negative")
+        _validate_envelope_reduced_only(self)
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe transport envelope audit record."""
@@ -192,62 +288,6 @@ class HierarchySyncLedger:
             "accepted": [envelope.to_audit_record() for envelope in self.accepted],
             "rejected": list(self.rejected),
             "plan": self.plan.to_audit_record(),
-        }
-
-
-@dataclass
-class HierarchyTransportRuntime:
-    """Stateful non-socket runtime boundary for hierarchy sync batches.
-
-    The runtime accepts decoded JSON/dict payloads from a caller-owned
-    transport adapter, enforces monotonically increasing sequence numbers across
-    batches, and delegates accepted envelopes to the parent hierarchy planner.
-    It intentionally owns no sockets, threads, clients, or broker handles.
-    """
-
-    hierarchy: str = "edge_cloud_summary_sync_runtime"
-    degraded_threshold: float = 0.65
-    critical_threshold: float = 0.35
-    min_confidence: float = 0.5
-    protocol_version: str = "spo-hierarchy-sync/v1"
-    previous_sequences: dict[str, int] = field(default_factory=dict)
-
-    def ingest_batch(
-        self,
-        records: Sequence[Mapping[str, object] | str | HierarchySyncEnvelope],
-    ) -> HierarchySyncLedger:
-        """Parse and ingest a caller-supplied transport batch.
-
-        Rejected envelopes are reported in the returned ledger. Successful
-        ingestion advances the runtime's per-source sequence watermarks so the
-        next batch rejects duplicate or stale transport messages.
-        """
-        envelopes = tuple(
-            record
-            if isinstance(record, HierarchySyncEnvelope)
-            else load_hierarchy_sync_envelope(record)
-            for record in records
-        )
-        ledger = ingest_hierarchy_sync_envelopes(
-            envelopes,
-            previous_sequences=self.previous_sequences,
-            hierarchy=self.hierarchy,
-            degraded_threshold=self.degraded_threshold,
-            critical_threshold=self.critical_threshold,
-            min_confidence=self.min_confidence,
-            protocol_version=self.protocol_version,
-        )
-        for envelope in ledger.accepted:
-            self.previous_sequences[envelope.source_node] = envelope.sequence
-        return ledger
-
-    def to_audit_record(self) -> dict[str, object]:
-        """Return runtime watermarks without exposing transport internals."""
-        return {
-            "hierarchy": self.hierarchy,
-            "protocol_version": self.protocol_version,
-            "previous_sequences": dict(sorted(self.previous_sequences.items())),
-            "audit_scope": "transport_runtime_watermarks_only",
         }
 
 
@@ -287,8 +327,82 @@ class HierarchyConsensusRound:
         }
 
 
+class HierarchyTransportRuntime:
+    """Socket-free runtime state for hierarchy transport adapters."""
+
+    def __init__(
+        self,
+        *,
+        previous_sequences: Mapping[str, int] | None = None,
+        hierarchy: str = "edge_cloud_summary_sync",
+        degraded_threshold: float = 0.65,
+        critical_threshold: float = 0.35,
+        min_confidence: float = 0.5,
+        protocol_version: str = _DEFAULT_HIERARCHY_SYNC_PROTOCOL,
+    ) -> None:
+        _require_non_empty(hierarchy, "hierarchy")
+        _require_non_empty(protocol_version, "protocol_version")
+        _require_unit_interval(degraded_threshold, "degraded_threshold")
+        _require_unit_interval(critical_threshold, "critical_threshold")
+        _require_unit_interval(min_confidence, "min_confidence")
+        if critical_threshold > degraded_threshold:
+            raise ValueError("critical_threshold must be <= degraded_threshold")
+        self._previous_sequences = _normalise_previous_sequences(previous_sequences)
+        self._hierarchy = hierarchy
+        self._degraded_threshold = degraded_threshold
+        self._critical_threshold = critical_threshold
+        self._min_confidence = min_confidence
+        self._protocol_version = protocol_version
+
+    @property
+    def previous_sequences(self) -> dict[str, int]:
+        """Return the accepted per-source sequence watermarks."""
+        return dict(self._previous_sequences)
+
+    def ingest(
+        self,
+        records: Sequence[HierarchySyncEnvelope | Mapping[str, object] | str],
+    ) -> HierarchySyncLedger:
+        """Parse a transport batch, ingest it, and advance accepted watermarks."""
+        envelopes = tuple(
+            load_hierarchy_sync_envelope(record)
+            for record in records
+        )
+        ledger = ingest_hierarchy_sync_envelopes(
+            envelopes,
+            previous_sequences=self._previous_sequences,
+            hierarchy=self._hierarchy,
+            degraded_threshold=self._degraded_threshold,
+            critical_threshold=self._critical_threshold,
+            min_confidence=self._min_confidence,
+            protocol_version=self._protocol_version,
+        )
+        for envelope in ledger.accepted:
+            self._previous_sequences[envelope.source_node] = envelope.sequence
+        return ledger
+
+    def ingest_batch(
+        self,
+        records: Sequence[HierarchySyncEnvelope | Mapping[str, object] | str],
+    ) -> HierarchySyncLedger:
+        """Alias for adapter batch ingestion."""
+        return self.ingest(records)
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return socket-free runtime state for audit logging."""
+        return {
+            "hierarchy": self._hierarchy,
+            "protocol_version": self._protocol_version,
+            "previous_sequences": {
+                source: self._previous_sequences[source]
+                for source in sorted(self._previous_sequences)
+            },
+            "audit_scope": _AUDIT_SCOPE_REDUCED_SUMMARIES,
+        }
+
+
 def build_hierarchical_orchestration_plan(
-    children: Sequence[ChildSupervisorSummary],
+    children: Iterable[ChildSupervisorSummary],
     *,
     hierarchy: str = "child_supervisors_to_parent",
     degraded_threshold: float = 0.65,
@@ -302,15 +416,15 @@ def build_hierarchical_orchestration_plan(
     causal, and audit paths can reason over nested supervisors without reading
     raw child observations.
     """
+    child_tuple = tuple(children)
     _validate_plan_inputs(
-        children=children,
+        children=child_tuple,
         hierarchy=hierarchy,
         degraded_threshold=degraded_threshold,
         critical_threshold=critical_threshold,
         min_confidence=min_confidence,
     )
 
-    child_tuple = tuple(children)
     weighted_r = np.asarray(
         [child.weighted_R for child in child_tuple],
         dtype=np.float64,
@@ -356,7 +470,7 @@ def build_hierarchy_sync_envelope(
     *,
     source_node: str,
     sequence: int,
-    protocol_version: str = "spo-hierarchy-sync/v1",
+    protocol_version: str = _DEFAULT_HIERARCHY_SYNC_PROTOCOL,
     monotonic_time_s: float | None = None,
 ) -> HierarchySyncEnvelope:
     """Build a deterministic edge/cloud hierarchy sync envelope.
@@ -375,46 +489,45 @@ def build_hierarchy_sync_envelope(
 
 
 def load_hierarchy_sync_envelope(
-    record: Mapping[str, object] | str,
+    record: HierarchySyncEnvelope | Mapping[str, object] | str,
 ) -> HierarchySyncEnvelope:
-    """Load a hierarchy sync envelope from a JSON string or decoded mapping.
-
-    This parser is the transport-runtime boundary for REST, gRPC, Kafka, JSONL,
-    or test harnesses that already decoded bytes. It validates only the reduced
-    sync shape and never opens a transport or admits raw child observations.
-    """
-    payload = json.loads(record) if isinstance(record, str) else dict(record)
-    summary_payload = _require_mapping(payload.get("summary"), "summary")
-    return HierarchySyncEnvelope(
-        protocol_version=_require_string(
-            payload.get("protocol_version"),
-            "protocol_version",
-        ),
-        source_node=_require_string(payload.get("source_node"), "source_node"),
-        sequence=_require_int(payload.get("sequence"), "sequence"),
-        monotonic_time_s=_optional_float(
-            payload.get("monotonic_time_s"),
-            "monotonic_time_s",
-        ),
-        summary=ChildSupervisorSummary(
-            name=_require_string(summary_payload.get("name"), "summary.name"),
-            channel=_require_string(
-                summary_payload.get("channel"),
-                "summary.channel",
-            ),
-            R=_require_float(summary_payload.get("R"), "summary.R"),
-            psi=_require_float(summary_payload.get("psi"), "summary.psi"),
-            regime=_require_string(
-                summary_payload.get("regime", _REGIME_NOMINAL),
-                "summary.regime",
-            ),
-            confidence=_require_float(
-                summary_payload.get("confidence", 1.0),
-                "summary.confidence",
-            ),
-            metadata=_require_metadata(summary_payload.get("metadata", {})),
-        ),
+    """Parse a JSON string or decoded mapping into a strict sync envelope."""
+    if isinstance(record, HierarchySyncEnvelope):
+        _validate_envelope_reduced_only(record)
+        return _canonical_hierarchy_sync_envelope(record)
+    payload = _load_mapping_record(record)
+    _reject_unknown_keys(
+        payload,
+        allowed=_HIERARCHY_SYNC_ENVELOPE_KEYS,
+        location="hierarchy sync envelope",
     )
+    _reject_raw_hierarchy_keys(payload, "hierarchy sync envelope")
+    summary_record = payload.get("summary")
+    if not isinstance(summary_record, Mapping):
+        raise ValueError("summary must be a decoded mapping")
+    _reject_unknown_keys(
+        summary_record,
+        allowed=_HIERARCHY_SYNC_SUMMARY_KEYS,
+        location="hierarchy sync summary",
+    )
+    _reject_raw_hierarchy_keys(summary_record, "hierarchy sync summary")
+
+    sequence = _require_integer(payload.get("sequence"), "sequence")
+    monotonic_time_s = payload.get("monotonic_time_s")
+    if monotonic_time_s is not None:
+        monotonic_time_s = _require_float(monotonic_time_s, "monotonic_time_s")
+        if monotonic_time_s < 0.0:
+            raise ValueError("monotonic_time_s must be finite and non-negative")
+
+    envelope = HierarchySyncEnvelope(
+        protocol_version=_require_text_field(payload, "protocol_version"),
+        source_node=_require_text_field(payload, "source_node"),
+        sequence=sequence,
+        summary=_load_child_summary(summary_record),
+        monotonic_time_s=monotonic_time_s,
+    )
+    _validate_envelope_reduced_only(envelope)
+    return envelope
 
 
 def ingest_hierarchy_sync_envelopes(
@@ -425,7 +538,7 @@ def ingest_hierarchy_sync_envelopes(
     degraded_threshold: float = 0.65,
     critical_threshold: float = 0.35,
     min_confidence: float = 0.5,
-    protocol_version: str = "spo-hierarchy-sync/v1",
+    protocol_version: str = _DEFAULT_HIERARCHY_SYNC_PROTOCOL,
 ) -> HierarchySyncLedger:
     """Validate envelopes and build a parent plan from accepted summaries.
 
@@ -434,22 +547,51 @@ def ingest_hierarchy_sync_envelopes(
     node and sequence before parent-state composition, making JSONL replay and
     cloud ingestion deterministic.
     """
+    canonical_envelopes = tuple(
+        _canonical_hierarchy_sync_envelope(envelope)
+        for envelope in envelopes
+    )
+    for envelope in canonical_envelopes:
+        _validate_envelope_reduced_only(envelope)
     _validate_plan_inputs(
-        children=[envelope.summary for envelope in envelopes] or [_dummy_summary()],
+        children=[envelope.summary for envelope in canonical_envelopes]
+        or [_dummy_summary()],
         hierarchy=hierarchy,
         degraded_threshold=degraded_threshold,
         critical_threshold=critical_threshold,
         min_confidence=min_confidence,
     )
-    expected_sequences = dict(previous_sequences or {})
+    expected_sequences = _normalise_previous_sequences(previous_sequences)
     accepted: list[HierarchySyncEnvelope] = []
     rejected: list[dict[str, object]] = []
-    for envelope in envelopes:
+    valid_protocol: list[HierarchySyncEnvelope] = []
+    for envelope in sorted(
+        canonical_envelopes,
+        key=lambda item: (item.source_node, item.sequence),
+    ):
         if envelope.protocol_version != protocol_version:
             rejected.append(_rejection(envelope, "protocol_version_mismatch"))
             continue
+        valid_protocol.append(envelope)
+
+    duplicate_sequence_conflict_sources = _duplicate_sequence_conflict_sources(
+        valid_protocol
+    )
+    latest_by_source: dict[str, HierarchySyncEnvelope] = {}
+    for envelope in valid_protocol:
+        if envelope.source_node in duplicate_sequence_conflict_sources:
+            continue
+        latest = latest_by_source.get(envelope.source_node)
+        if latest is None or envelope.sequence > latest.sequence:
+            latest_by_source[envelope.source_node] = envelope
+
+    for envelope in valid_protocol:
+        if envelope.source_node in duplicate_sequence_conflict_sources:
+            rejected.append(_rejection(envelope, "duplicate_sequence_conflict"))
+            continue
+        latest = latest_by_source[envelope.source_node]
         previous_sequence = expected_sequences.get(envelope.source_node, -1)
-        if envelope.sequence <= previous_sequence:
+        if envelope.sequence <= previous_sequence or envelope is not latest:
             rejected.append(_rejection(envelope, "stale_or_duplicate_sequence"))
             continue
         expected_sequences[envelope.source_node] = envelope.sequence
@@ -469,7 +611,12 @@ def ingest_hierarchy_sync_envelopes(
     )
     return HierarchySyncLedger(
         accepted=accepted_tuple,
-        rejected=tuple(rejected),
+        rejected=tuple(
+            sorted(
+                rejected,
+                key=_rejection_sort_key,
+            )
+        ),
         plan=plan,
     )
 
@@ -485,7 +632,7 @@ def simulate_hierarchy_gossip_consensus(
     degraded_threshold: float = 0.65,
     critical_threshold: float = 0.35,
     min_confidence: float = 0.5,
-    protocol_version: str = "spo-hierarchy-sync/v1",
+    protocol_version: str = _DEFAULT_HIERARCHY_SYNC_PROTOCOL,
 ) -> tuple[HierarchyConsensusRound, ...]:
     """Replay local consensus over hierarchy sync envelopes without networking.
 
@@ -496,6 +643,7 @@ def simulate_hierarchy_gossip_consensus(
     distributed orchestration policies before any live gossip transport exists.
     """
     _validate_gossip_inputs(rounds=rounds, self_weight=self_weight)
+    _validate_neighbour_map(neighbour_map)
     ledger = ingest_hierarchy_sync_envelopes(
         envelopes,
         previous_sequences=previous_sequences,
@@ -654,6 +802,281 @@ def _dummy_summary() -> ChildSupervisorSummary:
     return ChildSupervisorSummary("validation", "validation", 1.0, 0.0)
 
 
+def _load_mapping_record(
+    record: Mapping[str, object] | str,
+) -> Mapping[str, object]:
+    if isinstance(record, str):
+        try:
+            decoded = json.loads(record)
+        except json.JSONDecodeError as exc:
+            raise ValueError("hierarchy sync envelope must be valid JSON") from exc
+        if not isinstance(decoded, Mapping):
+            raise ValueError("hierarchy sync envelope JSON must decode to a mapping")
+        return decoded
+    if not isinstance(record, Mapping):
+        raise ValueError("hierarchy sync envelope must be a mapping or JSON string")
+    return record
+
+
+def _load_child_summary(record: Mapping[str, object]) -> ChildSupervisorSummary:
+    _reject_unknown_keys(
+        record,
+        allowed=_HIERARCHY_SYNC_SUMMARY_KEYS,
+        location="hierarchy sync summary",
+    )
+    metadata = record.get("metadata", {})
+    if not isinstance(metadata, Mapping):
+        raise ValueError("metadata must be a decoded mapping")
+    _validate_metadata_value(metadata, "summary.metadata")
+    return ChildSupervisorSummary(
+        name=_require_text_field(record, "name"),
+        channel=_require_text_field(record, "channel"),
+        R=_require_float(record.get("R"), "R"),
+        psi=_require_float(record.get("psi"), "psi"),
+        regime=_require_text_field(record, "regime", default=_REGIME_NOMINAL),
+        confidence=_require_float(record.get("confidence", 1.0), "confidence"),
+        metadata=dict(metadata),
+    )
+
+
+def _validate_envelope_reduced_only(envelope: HierarchySyncEnvelope) -> None:
+    if not isinstance(envelope, HierarchySyncEnvelope):
+        raise ValueError("envelope must be a HierarchySyncEnvelope")
+    _reject_raw_instance_attributes(envelope, "envelope")
+    _require_non_empty(envelope.protocol_version, "protocol_version")
+    _require_non_empty(envelope.source_node, "source_node")
+    _validate_child_summary_reduced_only(envelope.summary)
+    sequence = _require_integer(envelope.sequence, "sequence")
+    if sequence < 0:
+        raise ValueError("sequence must be >= 0")
+    if envelope.monotonic_time_s is not None:
+        monotonic_time_s = _require_float(
+            envelope.monotonic_time_s,
+            "monotonic_time_s",
+        )
+        if monotonic_time_s < 0.0:
+            raise ValueError("monotonic_time_s must be finite and non-negative")
+
+
+def _canonical_hierarchy_sync_envelope(
+    envelope: HierarchySyncEnvelope,
+) -> HierarchySyncEnvelope:
+    _validate_envelope_reduced_only(envelope)
+    return HierarchySyncEnvelope(
+        protocol_version=envelope.protocol_version,
+        source_node=envelope.source_node,
+        sequence=envelope.sequence,
+        summary=_canonical_child_summary(envelope.summary),
+        monotonic_time_s=envelope.monotonic_time_s,
+    )
+
+
+def _canonical_child_summary(summary: ChildSupervisorSummary) -> ChildSupervisorSummary:
+    _validate_child_summary_reduced_only(summary)
+    return ChildSupervisorSummary(
+        name=summary.name,
+        channel=summary.channel,
+        R=summary.R,
+        psi=summary.psi,
+        regime=summary.regime,
+        confidence=summary.confidence,
+        metadata=summary.metadata,
+    )
+
+
+def _validate_reduced_summary_metadata(summary: ChildSupervisorSummary) -> None:
+    _validate_child_summary_reduced_only(summary)
+
+
+def _validate_child_summary_reduced_only(summary: ChildSupervisorSummary) -> None:
+    if not isinstance(summary, ChildSupervisorSummary):
+        raise ValueError("summary must be a ChildSupervisorSummary")
+    _reject_raw_instance_attributes(summary, "summary")
+    _require_non_empty(summary.name, "name")
+    _require_non_empty(summary.channel, "channel")
+    _require_unit_interval(summary.R, "R")
+    _require_finite(summary.psi, "psi")
+    _require_unit_interval(summary.confidence, "confidence")
+    _require_non_empty(summary.regime, "regime")
+    metadata = summary.metadata
+    if not isinstance(metadata, Mapping):
+        raise ValueError("metadata must be a decoded mapping")
+    _validate_metadata_value(metadata, "summary.metadata")
+
+
+def _require_text_field(
+    record: Mapping[str, object],
+    key: str,
+    *,
+    default: str | None = None,
+) -> str:
+    value = record.get(key, default)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{key} must be a non-empty string")
+    return value
+
+
+def _require_integer(value: object, name: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"{name} must be an integer")
+    if abs(value) > _MAX_JSON_SAFE_INTEGER:
+        raise ValueError(
+            f"{name} must be between -{_MAX_JSON_SAFE_INTEGER} "
+            f"and {_MAX_JSON_SAFE_INTEGER}"
+        )
+    return value
+
+
+def _require_float(value: object, name: str) -> float:
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite number")
+    _require_finite_number(value, name)
+    return float(value)
+
+
+def _reject_raw_hierarchy_keys(
+    record: Mapping[str, object],
+    location: str,
+) -> None:
+    forbidden = {
+        key
+        for key in record
+        if isinstance(key, str) and _is_forbidden_hierarchy_key(key)
+    }
+    if forbidden:
+        keys = ", ".join(sorted(forbidden))
+        raise ValueError(f"{location} contains raw child evidence: {keys}")
+
+
+def _reject_unknown_keys(
+    record: Mapping[str, object],
+    *,
+    allowed: frozenset[str],
+    location: str,
+) -> None:
+    unknown: list[str] = []
+    for key in record:
+        if not isinstance(key, str):
+            raise ValueError(f"{location} keys must be strings")
+        if key not in allowed:
+            unknown.append(key)
+    if unknown:
+        keys = ", ".join(sorted(unknown))
+        raise ValueError(f"{location} contains unknown fields: {keys}")
+
+
+def _validate_metadata_value(value: object, path: str) -> None:
+    _normalise_metadata_value(value, path)
+
+
+def _normalise_metadata_value(value: object, path: str) -> object:
+    if isinstance(value, Mapping):
+        normalised: dict[str, object] = {}
+        for key, nested in value.items():
+            if not isinstance(key, str):
+                raise ValueError("metadata keys must be strings")
+            child_path = f"{path}.{key}"
+            if _is_forbidden_hierarchy_key(key):
+                raise ValueError(f"{child_path} contains raw child evidence: {key}")
+            normalised[key] = _normalise_metadata_value(nested, child_path)
+        return MappingProxyType(normalised)
+    if isinstance(value, list | tuple):
+        return tuple(
+            _normalise_metadata_value(nested, f"{path}[{index}]")
+            for index, nested in enumerate(value)
+        )
+    if value is None or isinstance(value, str | bool):
+        return value
+    if isinstance(value, int):
+        try:
+            _require_integer(value, path)
+        except ValueError as exc:
+            raise ValueError(f"{path} must be JSON-safe metadata") from exc
+        return value
+    if isinstance(value, float):
+        try:
+            _require_finite_number(value, path)
+        except ValueError as exc:
+            raise ValueError(f"{path} must be finite JSON-safe metadata") from exc
+        return value
+    raise ValueError(f"{path} must be JSON-safe metadata")
+
+
+def _metadata_to_audit_record(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {key: _metadata_to_audit_record(nested) for key, nested in value.items()}
+    if isinstance(value, tuple | list):
+        return [_metadata_to_audit_record(nested) for nested in value]
+    return value
+
+
+def _reject_raw_instance_attributes(instance: object, location: str) -> None:
+    try:
+        names = vars(instance)
+    except TypeError:
+        return
+    forbidden = {name for name in names if _is_forbidden_hierarchy_key(name)}
+    if forbidden:
+        keys = ", ".join(sorted(forbidden))
+        raise ValueError(f"{location} contains raw child evidence attributes: {keys}")
+
+
+def _is_forbidden_hierarchy_key(key: str) -> bool:
+    lowered = key.lower().replace("-", "_")
+    if lowered in _FORBIDDEN_RAW_HIERARCHY_KEYS:
+        return True
+    if lowered.startswith("raw_"):
+        return True
+    if lowered.startswith("raw") and any(
+        term in lowered for term in _HIERARCHY_RAW_DATA_TERMS
+    ):
+        return True
+    tokens = {token for token in lowered.split("_") if token}
+    return bool(
+        tokens.intersection(_HIERARCHY_RAW_MARKER_TERMS)
+        and tokens.intersection(_HIERARCHY_RAW_DATA_TERMS)
+    )
+
+
+def _normalise_previous_sequences(
+    previous_sequences: Mapping[str, int] | None,
+) -> dict[str, int]:
+    if previous_sequences is not None and not isinstance(previous_sequences, Mapping):
+        raise ValueError("previous_sequences must be a mapping")
+    normalised: dict[str, int] = {}
+    for source_node, sequence in (previous_sequences or {}).items():
+        _require_non_empty(source_node, "source_node")
+        normalised[source_node] = _require_integer(sequence, "sequence")
+        if normalised[source_node] < 0:
+            raise ValueError("sequence must be >= 0")
+    return normalised
+
+
+def _duplicate_sequence_conflict_sources(
+    envelopes: Sequence[HierarchySyncEnvelope],
+) -> set[str]:
+    grouped: dict[tuple[str, int], list[HierarchySyncEnvelope]] = {}
+    for envelope in envelopes:
+        grouped.setdefault((envelope.source_node, envelope.sequence), []).append(
+            envelope
+        )
+    conflict_sources: set[str] = set()
+    for (source_node, _sequence), records in grouped.items():
+        if len(records) < 2:
+            continue
+        fingerprints = {
+            json.dumps(
+                record.to_audit_record(),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            for record in records
+        }
+        if len(fingerprints) > 1:
+            conflict_sources.add(source_node)
+    return conflict_sources
+
+
 def _rejection(
     envelope: HierarchySyncEnvelope,
     reason: str,
@@ -664,6 +1087,14 @@ def _rejection(
         "reason": reason,
         "protocol_version": envelope.protocol_version,
     }
+
+
+def _rejection_sort_key(record: Mapping[str, object]) -> tuple[str, int, str]:
+    return (
+        str(record["source_node"]),
+        _require_integer(record["sequence"], "sequence"),
+        str(record["reason"]),
+    )
 
 
 def _escalation(
@@ -720,6 +1151,8 @@ def _validate_plan_inputs(
 ) -> None:
     if not children:
         raise ValueError("children must contain at least one child summary")
+    for child in children:
+        _validate_reduced_summary_metadata(child)
     _require_non_empty(hierarchy, "hierarchy")
     _require_unit_interval(degraded_threshold, "degraded_threshold")
     _require_unit_interval(critical_threshold, "critical_threshold")
@@ -729,10 +1162,26 @@ def _validate_plan_inputs(
 
 
 def _validate_gossip_inputs(*, rounds: int, self_weight: float) -> None:
+    rounds = _require_integer(rounds, "rounds")
     if rounds < 1:
         raise ValueError("rounds must be >= 1")
-    if not np.isfinite(self_weight) or self_weight < 0.0 or self_weight > 1.0:
-        raise ValueError("self_weight must be finite and in [0, 1]")
+    _require_unit_interval(self_weight, "self_weight")
+
+
+def _validate_neighbour_map(neighbour_map: Mapping[str, Sequence[str]]) -> None:
+    if not isinstance(neighbour_map, Mapping):
+        raise ValueError("neighbour_map must be a mapping")
+    for node, neighbours in neighbour_map.items():
+        if not isinstance(node, str):
+            raise ValueError("neighbour_map node keys must be strings")
+        if not isinstance(neighbours, Sequence) or isinstance(
+            neighbours,
+            str | bytes | bytearray,
+        ):
+            raise ValueError("neighbour_map neighbours must be a sequence")
+        for neighbour in neighbours:
+            if not isinstance(neighbour, str):
+                raise ValueError("neighbour_map neighbour names must be strings")
 
 
 def _require_non_empty(value: str, name: str) -> None:
@@ -740,53 +1189,22 @@ def _require_non_empty(value: str, name: str) -> None:
         raise ValueError(f"{name} must be a non-empty string")
 
 
-def _require_finite(value: float, name: str) -> None:
-    if not np.isfinite(value):
+def _require_finite_number(value: float, name: str) -> None:
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite number")
+    try:
+        number = float(value)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be finite") from exc
+    if not math.isfinite(number):
         raise ValueError(f"{name} must be finite")
+
+
+def _require_finite(value: float, name: str) -> None:
+    _require_finite_number(value, name)
 
 
 def _require_unit_interval(value: float, name: str) -> None:
+    _require_finite_number(value, name)
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be finite and in [0, 1]")
-
-
-def _require_mapping(value: object, name: str) -> Mapping[str, object]:
-    if not isinstance(value, Mapping):
-        raise ValueError(f"{name} must be a mapping")
-    return value
-
-
-def _require_metadata(value: object) -> Mapping[str, object]:
-    if not isinstance(value, Mapping):
-        raise ValueError("summary.metadata must be a mapping")
-    return dict(value)
-
-
-def _require_string(value: object, name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{name} must be a non-empty string")
-    return value
-
-
-def _require_float(value: object, name: str) -> float:
-    if not isinstance(value, int | float):
-        raise ValueError(f"{name} must be numeric")
-    result = float(value)
-    if not np.isfinite(result):
-        raise ValueError(f"{name} must be finite")
-    return result
-
-
-def _optional_float(value: object, name: str) -> float | None:
-    if value is None:
-        return None
-    result = _require_float(value, name)
-    if result < 0.0:
-        raise ValueError(f"{name} must be non-negative")
-    return result
-
-
-def _require_int(value: object, name: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"{name} must be an integer")
-    return value
