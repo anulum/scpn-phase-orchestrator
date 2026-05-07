@@ -18,3 +18,13 @@ Compared with a P/I/S-only binding, the extra channels keep forecast
 forcing, reserve headroom, and derived safety pressure separate. That
 lets policy rules distinguish a phase-lock loss caused by exogenous
 weather from one caused by insufficient reserve.
+
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+N-channel grid-safety checks. It bounds global grid-coupling and layer-specific
+substation-lag steps, then falls back to a zero-lag safe hold if a candidate
+action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+grid protection relay.
