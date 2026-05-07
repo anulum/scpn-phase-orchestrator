@@ -33,6 +33,16 @@ drift from a common root cause.
 | lag_sensor | alpha | Sensor-to-controller delay |
 | damping_global | zeta | PID damping injection |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+process-control checks. It bounds inter-station coupling, sensor lag, and
+damping-drive steps, then falls back to a zero-damping safe hold when a
+candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+machine-safety controller.
+
 ## Imprint
 
 Tool wear history: progressive degradation accumulates and modulates

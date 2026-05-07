@@ -88,6 +88,34 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-station-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.9
+      weight: 2.0
+    - name: limit-sensor-lag-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.4
+      weight: 2.0
+    - name: limit-damping-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.6
+      weight: 1.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: manufacturing value guard safe hold
+
 imprint_model:
   decay_rate: 0.005
   saturation: 3.0
