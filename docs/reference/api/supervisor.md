@@ -193,10 +193,35 @@ parent_state = plan.parent_state
 audit_payload = plan.to_audit_record()
 ```
 
-This slice does not provide edge/cloud transport or direct actuation. It gives
-existing regime, policy, FEP, causal, STL, and audit paths a common parent-level
-state built from reduced child evidence without moving raw time series, local
-coupling matrices, or actuator targets across hierarchy boundaries.
+The same reduced summaries can be wrapped in deterministic sync envelopes for
+JSONL replay, message-bus transport, or parent-side cloud ingestion. The parent
+ingestion helper rejects stale or duplicate sequence numbers per source node
+and protocol-version mismatches before building the parent orchestration plan.
+
+```python
+from scpn_phase_orchestrator.supervisor import (
+    build_hierarchy_sync_envelope,
+    ingest_hierarchy_sync_envelopes,
+)
+
+envelope = build_hierarchy_sync_envelope(
+    ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0),
+    source_node="edge-node-a",
+    sequence=42,
+)
+
+ledger = ingest_hierarchy_sync_envelopes(
+    [envelope],
+    previous_sequences={"edge-node-a": 41},
+)
+sync_audit = ledger.to_audit_record()
+```
+
+This slice does not open sockets, run a gossip protocol, or perform direct
+actuation. It gives existing regime, policy, FEP, causal, STL, and audit paths a
+common parent-level state built from reduced child evidence without moving raw
+time series, local coupling matrices, or actuator targets across hierarchy
+boundaries.
 
 ::: scpn_phase_orchestrator.supervisor.hierarchy
 

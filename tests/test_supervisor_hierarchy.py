@@ -7,6 +7,8 @@ import pytest
 from scpn_phase_orchestrator.supervisor import (
     ChildSupervisorSummary,
     build_hierarchical_orchestration_plan,
+    build_hierarchy_sync_envelope,
+    ingest_hierarchy_sync_envelopes,
 )
 
 
@@ -146,3 +148,91 @@ def test_child_summary_rejects_invalid_reduced_evidence(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         ChildSupervisorSummary(**kwargs)  # type: ignore[arg-type]
+
+
+def test_hierarchy_sync_envelopes_ingest_deterministically() -> None:
+    edge_b = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-b", "thermal", R=0.8, psi=0.0),
+        source_node="node-b",
+        sequence=3,
+        monotonic_time_s=12.5,
+    )
+    edge_a = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=2,
+    )
+
+    ledger = ingest_hierarchy_sync_envelopes((edge_b, edge_a))
+
+    assert [envelope.source_node for envelope in ledger.accepted] == [
+        "node-a",
+        "node-b",
+    ]
+    assert ledger.rejected == ()
+    assert ledger.plan.parent_state.regime_id == "hierarchical_nominal"
+    assert ledger.plan.to_audit_record()["audit_scope"] == (
+        "reduced_child_summaries_only"
+    )
+    assert edge_b.to_json() == (
+        '{"monotonic_time_s":12.5,'
+        '"protocol_version":"spo-hierarchy-sync/v1",'
+        '"sequence":3,'
+        '"source_node":"node-b",'
+        '"summary":{"R":0.8,'
+        '"channel":"thermal",'
+        '"confidence":1.0,'
+        '"metadata":{},'
+        '"name":"edge-b",'
+        '"psi":0.0,'
+        '"regime":"nominal",'
+        '"weighted_R":0.8}}'
+    )
+
+
+def test_hierarchy_sync_ingestion_rejects_stale_and_wrong_protocol() -> None:
+    stale = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=1,
+    )
+    wrong_protocol = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-b", "traffic", R=0.4, psi=1.0),
+        source_node="node-b",
+        sequence=5,
+        protocol_version="spo-hierarchy-sync/v0",
+    )
+    accepted = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-c", "grid", R=0.2, psi=math.pi),
+        source_node="node-c",
+        sequence=6,
+    )
+
+    ledger = ingest_hierarchy_sync_envelopes(
+        (stale, wrong_protocol, accepted),
+        previous_sequences={"node-a": 1},
+    )
+
+    assert [record["reason"] for record in ledger.rejected] == [
+        "stale_or_duplicate_sequence",
+        "protocol_version_mismatch",
+    ]
+    assert [envelope.source_node for envelope in ledger.accepted] == ["node-c"]
+    assert ledger.plan.escalations[0].reason == "child_coherence_below_critical"
+
+
+def test_hierarchy_sync_ingestion_requires_one_accepted_envelope() -> None:
+    stale = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=1,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="at least one hierarchy sync envelope must be accepted",
+    ):
+        ingest_hierarchy_sync_envelopes(
+            (stale,),
+            previous_sequences={"node-a": 1},
+        )

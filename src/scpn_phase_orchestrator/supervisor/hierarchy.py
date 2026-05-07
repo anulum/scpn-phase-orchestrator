@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TypeAlias
@@ -20,8 +21,12 @@ from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 __all__ = [
     "ChildSupervisorSummary",
     "HierarchicalOrchestrationPlan",
+    "HierarchySyncEnvelope",
+    "HierarchySyncLedger",
     "HierarchyEscalation",
     "build_hierarchical_orchestration_plan",
+    "build_hierarchy_sync_envelope",
+    "ingest_hierarchy_sync_envelopes",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -131,6 +136,60 @@ class HierarchicalOrchestrationPlan:
         }
 
 
+@dataclass(frozen=True)
+class HierarchySyncEnvelope:
+    """Transport-neutral hierarchy summary exchanged by edge/cloud nodes."""
+
+    protocol_version: str
+    source_node: str
+    sequence: int
+    summary: ChildSupervisorSummary
+    monotonic_time_s: float | None = None
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.protocol_version, "protocol_version")
+        _require_non_empty(self.source_node, "source_node")
+        if self.sequence < 0:
+            raise ValueError("sequence must be >= 0")
+        if self.monotonic_time_s is not None and (
+            not np.isfinite(self.monotonic_time_s) or self.monotonic_time_s < 0.0
+        ):
+            raise ValueError("monotonic_time_s must be finite and non-negative")
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe transport envelope audit record."""
+        record: dict[str, object] = {
+            "protocol_version": self.protocol_version,
+            "source_node": self.source_node,
+            "sequence": self.sequence,
+            "summary": self.summary.to_audit_record(),
+        }
+        if self.monotonic_time_s is not None:
+            record["monotonic_time_s"] = float(self.monotonic_time_s)
+        return record
+
+    def to_json(self) -> str:
+        """Serialise the envelope with deterministic key ordering."""
+        return json.dumps(self.to_audit_record(), sort_keys=True, separators=(",", ":"))
+
+
+@dataclass(frozen=True)
+class HierarchySyncLedger:
+    """Parent-side ingestion result for sync envelopes."""
+
+    accepted: tuple[HierarchySyncEnvelope, ...]
+    rejected: tuple[dict[str, object], ...]
+    plan: HierarchicalOrchestrationPlan
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a serialisable sync-ingestion audit payload."""
+        return {
+            "accepted": [envelope.to_audit_record() for envelope in self.accepted],
+            "rejected": list(self.rejected),
+            "plan": self.plan.to_audit_record(),
+        }
+
+
 def build_hierarchical_orchestration_plan(
     children: Sequence[ChildSupervisorSummary],
     *,
@@ -195,6 +254,86 @@ def build_hierarchical_orchestration_plan(
     )
 
 
+def build_hierarchy_sync_envelope(
+    summary: ChildSupervisorSummary,
+    *,
+    source_node: str,
+    sequence: int,
+    protocol_version: str = "spo-hierarchy-sync/v1",
+    monotonic_time_s: float | None = None,
+) -> HierarchySyncEnvelope:
+    """Build a deterministic edge/cloud hierarchy sync envelope.
+
+    The envelope is transport-neutral: callers may write it to JSONL, send it
+    over a message bus, or hand it to tests without this module opening sockets
+    or performing live deployment work.
+    """
+    return HierarchySyncEnvelope(
+        protocol_version=protocol_version,
+        source_node=source_node,
+        sequence=sequence,
+        summary=summary,
+        monotonic_time_s=monotonic_time_s,
+    )
+
+
+def ingest_hierarchy_sync_envelopes(
+    envelopes: Sequence[HierarchySyncEnvelope],
+    *,
+    previous_sequences: Mapping[str, int] | None = None,
+    hierarchy: str = "edge_cloud_summary_sync",
+    degraded_threshold: float = 0.65,
+    critical_threshold: float = 0.35,
+    min_confidence: float = 0.5,
+    protocol_version: str = "spo-hierarchy-sync/v1",
+) -> HierarchySyncLedger:
+    """Validate envelopes and build a parent plan from accepted summaries.
+
+    Parent nodes reject stale or duplicate sequence numbers per source node and
+    reject protocol-version mismatches. Accepted envelopes are sorted by source
+    node and sequence before parent-state composition, making JSONL replay and
+    cloud ingestion deterministic.
+    """
+    _validate_plan_inputs(
+        children=[envelope.summary for envelope in envelopes] or [_dummy_summary()],
+        hierarchy=hierarchy,
+        degraded_threshold=degraded_threshold,
+        critical_threshold=critical_threshold,
+        min_confidence=min_confidence,
+    )
+    expected_sequences = dict(previous_sequences or {})
+    accepted: list[HierarchySyncEnvelope] = []
+    rejected: list[dict[str, object]] = []
+    for envelope in envelopes:
+        if envelope.protocol_version != protocol_version:
+            rejected.append(_rejection(envelope, "protocol_version_mismatch"))
+            continue
+        previous_sequence = expected_sequences.get(envelope.source_node, -1)
+        if envelope.sequence <= previous_sequence:
+            rejected.append(_rejection(envelope, "stale_or_duplicate_sequence"))
+            continue
+        expected_sequences[envelope.source_node] = envelope.sequence
+        accepted.append(envelope)
+
+    accepted_tuple = tuple(
+        sorted(accepted, key=lambda item: (item.source_node, item.sequence))
+    )
+    if not accepted_tuple:
+        raise ValueError("at least one hierarchy sync envelope must be accepted")
+    plan = build_hierarchical_orchestration_plan(
+        [envelope.summary for envelope in accepted_tuple],
+        hierarchy=hierarchy,
+        degraded_threshold=degraded_threshold,
+        critical_threshold=critical_threshold,
+        min_confidence=min_confidence,
+    )
+    return HierarchySyncLedger(
+        accepted=accepted_tuple,
+        rejected=tuple(rejected),
+        plan=plan,
+    )
+
+
 def _child_escalations(
     child: ChildSupervisorSummary,
     *,
@@ -217,6 +356,22 @@ def _child_escalations(
     elif "degraded" in regime and degraded_threshold <= child.R:
         records.append(_escalation(child, "degraded", "child_regime_escalation"))
     return tuple(records)
+
+
+def _dummy_summary() -> ChildSupervisorSummary:
+    return ChildSupervisorSummary("validation", "validation", 1.0, 0.0)
+
+
+def _rejection(
+    envelope: HierarchySyncEnvelope,
+    reason: str,
+) -> dict[str, object]:
+    return {
+        "source_node": envelope.source_node,
+        "sequence": envelope.sequence,
+        "reason": reason,
+        "protocol_version": envelope.protocol_version,
+    }
 
 
 def _escalation(
