@@ -334,6 +334,9 @@ Speculative research watchlist:
   - Swarm-robotics domainpack prior template is in place for review-time
     alignment-coupling, formation-drive, obstacle-avoidance, and target-heading
     actuation guards.
+  - Traffic-flow domainpack prior template is in place for review-time
+    cycle-coupling, offset-drive, signal-split, and metering-target actuation
+    guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

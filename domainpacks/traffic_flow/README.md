@@ -34,6 +34,16 @@ converge via coupled-oscillator dynamics.
 | split | alpha | Phase split at intersections |
 | metering | Psi | Ramp metering target |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time traffic
+signal actuation checks. It bounds cycle-coupling, green-wave offset drive,
+intersection split changes, and metering target changes, then falls back to an
+offset hold when a candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+traffic-controller safety system.
+
 ## Imprint
 
 Signal controller timing drift and road surface degradation accumulate

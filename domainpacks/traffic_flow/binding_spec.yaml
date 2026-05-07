@@ -175,6 +175,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.25
+  constraints:
+    - name: limit-cycle-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.4
+      weight: 2.0
+    - name: limit-offset-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.9
+      weight: 1.5
+    - name: limit-signal-split-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 1.0
+      weight: 2.5
+    - name: limit-metering-target-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: traffic flow value guard offset hold
+
 # Signal controller timing drift + road surface degradation.
 imprint_model:
   decay_rate: 0.003
