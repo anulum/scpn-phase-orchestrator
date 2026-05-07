@@ -240,6 +240,22 @@ compatibility = build_digital_twin_adapter_manifest(
 )
 ```
 
+`DigitalTwinSyncRestAdapter` is the first concrete live boundary. It stays
+dependency-free and does not open a socket; web frameworks call `handle_post()`
+with parsed JSON and request headers, then map the returned HTTP-style status
+and body to the framework response.
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncRestAdapter
+
+adapter = DigitalTwinSyncRestAdapter.for_contract(contract)
+response = adapter.handle_post(
+    envelope.to_audit_record(),
+    headers={"authorization": "Bearer ..."},
+)
+accepted = adapter.drain()
+```
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types

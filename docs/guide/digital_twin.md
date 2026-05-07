@@ -103,8 +103,27 @@ accepted_batch = adapter.drain()
 ```
 
 The adapter queues accepted envelopes in order and returns rejection reasons
-for invalid submissions. Concrete REST, gRPC, Kafka, and hardware adapters can
-mirror this behaviour at their transport boundary.
+for invalid submissions. For HTTP integrations, use the dependency-free REST
+boundary adapter inside a framework route:
+
+```python
+from scpn_phase_orchestrator.binding import DigitalTwinSyncRestAdapter
+
+adapter = DigitalTwinSyncRestAdapter.for_contract(
+    contract,
+    sync_capabilities=("state_snapshot", "audit_replay"),
+)
+response = adapter.handle_post(
+    envelope.to_audit_record(),
+    headers={"authorization": "Bearer ..."},
+)
+accepted_batch = adapter.drain()
+```
+
+This helper does not start a web server. It enforces the adapter manifest,
+authentication posture, JSON envelope shape, contract hash, declared capability,
+direction, and non-empty payload before a FastAPI, Flask, or gateway endpoint
+hands data to SPO runtime code.
 
 Before enabling a concrete adapter, publish a reviewable manifest:
 

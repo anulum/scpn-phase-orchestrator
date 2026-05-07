@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +29,8 @@ __all__ = [
     "DigitalTwinSyncEnvelope",
     "DigitalTwinSyncJsonlReport",
     "DigitalTwinSyncMemoryAdapter",
+    "DigitalTwinSyncRestAdapter",
+    "DigitalTwinSyncRestResponse",
     "DigitalTwinTransportValidation",
     "build_digital_twin_adapter_manifest",
     "build_digital_twin_binding_contract",
@@ -290,6 +292,136 @@ class DigitalTwinSyncMemoryAdapter:
         """Return adapter state without exposing any network surface."""
         return {
             "contract_hash": self.contract.contract_hash,
+            "queued_count": len(self._queue),
+            "queued_sequences": [envelope.sequence for envelope in self._queue],
+        }
+
+
+@dataclass(frozen=True)
+class DigitalTwinSyncRestResponse:
+    """HTTP-style response for a REST digital-twin sync boundary."""
+
+    status_code: int
+    accepted: bool
+    reason: str
+    body: dict[str, object]
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe REST adapter response."""
+        return {
+            "status_code": self.status_code,
+            "accepted": self.accepted,
+            "reason": self.reason,
+            "body": dict(self.body),
+        }
+
+
+@dataclass
+class DigitalTwinSyncRestAdapter:
+    """Dependency-free REST boundary for digital-twin sync payloads.
+
+    The adapter deliberately does not open sockets. Web frameworks can call
+    :meth:`handle_post` from a route handler after parsing request JSON and
+    headers; the adapter then enforces manifest compatibility, authentication
+    posture, envelope shape, and contract validation before queuing payloads.
+    """
+
+    contract: DigitalTwinBindingContract
+    compatibility: DigitalTwinAdapterCompatibility
+    _queue: list[DigitalTwinSyncEnvelope]
+
+    @classmethod
+    def for_contract(
+        cls,
+        contract: DigitalTwinBindingContract,
+        *,
+        name: str = "rest-sync",
+        sync_capabilities: Sequence[str] = _DEFAULT_SYNC_CAPABILITIES,
+        requires_auth: bool = True,
+        supports_replay: bool = False,
+    ) -> DigitalTwinSyncRestAdapter:
+        """Create a REST adapter boundary for a digital-twin contract."""
+        compatibility = build_digital_twin_adapter_manifest(
+            contract,
+            name=name,
+            transport="rest",
+            sync_capabilities=sync_capabilities,
+            supports_replay=supports_replay,
+            requires_auth=requires_auth,
+            notes="dependency-free REST boundary",
+        )
+        return cls(contract=contract, compatibility=compatibility, _queue=[])
+
+    def handle_post(
+        self,
+        body: Mapping[str, object],
+        *,
+        headers: Mapping[str, str] | None = None,
+    ) -> DigitalTwinSyncRestResponse:
+        """Validate one HTTP POST body and queue accepted sync envelopes."""
+        if not self.compatibility.compatible:
+            return _rest_response(
+                503,
+                False,
+                "adapter_incompatible",
+                {
+                    "reasons": list(self.compatibility.reasons),
+                    "contract_hash": self.contract.contract_hash,
+                },
+            )
+        if self.compatibility.manifest.requires_auth and not _has_authorization(
+            headers,
+        ):
+            return _rest_response(
+                401,
+                False,
+                "auth_required",
+                {"contract_hash": self.contract.contract_hash},
+            )
+        envelope = _envelope_from_record(dict(body))
+        if envelope is None:
+            return _rest_response(
+                400,
+                False,
+                "invalid_envelope",
+                {"contract_hash": self.contract.contract_hash},
+            )
+        validation = validate_digital_twin_sync_envelope(self.contract, envelope)
+        if not validation.accepted:
+            return _rest_response(
+                422,
+                False,
+                validation.reason,
+                {
+                    "capability": envelope.capability,
+                    "sequence": envelope.sequence,
+                    "contract_hash": self.contract.contract_hash,
+                },
+            )
+        self._queue.append(envelope)
+        return _rest_response(
+            202,
+            True,
+            "accepted",
+            {
+                "capability": envelope.capability,
+                "sequence": envelope.sequence,
+                "contract_hash": self.contract.contract_hash,
+            },
+        )
+
+    def drain(self) -> tuple[DigitalTwinSyncEnvelope, ...]:
+        """Return accepted REST envelopes in arrival order and clear the queue."""
+        drained = tuple(self._queue)
+        self._queue.clear()
+        return drained
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return REST adapter state without exposing payload contents."""
+        return {
+            "contract_hash": self.contract.contract_hash,
+            "manifest": self.compatibility.manifest.to_audit_record(),
+            "compatible": self.compatibility.compatible,
             "queued_count": len(self._queue),
             "queued_sequences": [envelope.sequence for envelope in self._queue],
         }
@@ -575,6 +707,28 @@ def _transport_validation(
         reason=reason,
         envelope=envelope,
     )
+
+
+def _rest_response(
+    status_code: int,
+    accepted: bool,
+    reason: str,
+    body: dict[str, object],
+) -> DigitalTwinSyncRestResponse:
+    return DigitalTwinSyncRestResponse(
+        status_code=status_code,
+        accepted=accepted,
+        reason=reason,
+        body=body,
+    )
+
+
+def _has_authorization(headers: Mapping[str, str] | None) -> bool:
+    if headers is None:
+        return False
+    normalised = {key.lower(): value for key, value in headers.items()}
+    token = normalised.get("authorization")
+    return isinstance(token, str) and bool(token.strip())
 
 
 def _record_hash(record: dict[str, object]) -> str:

@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.binding import (
     DigitalTwinBindingContract,
     DigitalTwinSyncEnvelope,
     DigitalTwinSyncMemoryAdapter,
+    DigitalTwinSyncRestAdapter,
     build_digital_twin_adapter_manifest,
     build_digital_twin_binding_contract,
     build_digital_twin_sync_envelope,
@@ -422,3 +423,135 @@ def test_digital_twin_adapter_manifest_rejects_invalid_manifest_inputs(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         DigitalTwinAdapterManifest(**kwargs)  # type: ignore[arg-type]
+
+
+def test_digital_twin_rest_adapter_accepts_authorised_contract_payloads() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncRestAdapter.for_contract(
+        contract,
+        sync_capabilities=("state_snapshot", "audit_replay"),
+    )
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=8,
+        payload={"layer": "machine_cells", "R": 0.93},
+    )
+
+    response = adapter.handle_post(
+        envelope.to_audit_record(),
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 202
+    assert response.accepted is True
+    assert response.reason == "accepted"
+    assert response.body == {
+        "capability": "state_snapshot",
+        "sequence": 8,
+        "contract_hash": contract.contract_hash,
+    }
+    assert adapter.to_audit_record()["queued_sequences"] == [8]
+    assert adapter.drain() == (envelope,)
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_rest_adapter_blocks_unauthorised_live_posts() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncRestAdapter.for_contract(contract)
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=9,
+        payload={"R": 0.89},
+    )
+
+    response = adapter.handle_post(envelope.to_audit_record(), headers={})
+
+    assert response.status_code == 401
+    assert response.accepted is False
+    assert response.reason == "auth_required"
+    assert adapter.drain() == ()
+
+
+@pytest.mark.parametrize(
+    ("body", "status_code", "reason"),
+    [
+        (
+            {"capability": "state_snapshot", "sequence": "bad"},
+            400,
+            "invalid_envelope",
+        ),
+        (
+            {
+                "contract_hash": "wrong",
+                "capability": "state_snapshot",
+                "direction": "twin_to_spo",
+                "sequence": 10,
+                "payload": {"R": 0.9},
+            },
+            422,
+            "contract_hash_mismatch",
+        ),
+        (
+            {
+                "capability": "control_action_proposal",
+                "direction": "twin_to_spo",
+                "sequence": 11,
+                "payload": {"knob": "K"},
+            },
+            422,
+            "direction_not_allowed",
+        ),
+    ],
+)
+def test_digital_twin_rest_adapter_reports_shape_and_contract_rejections(
+    body: dict[str, object],
+    status_code: int,
+    reason: str,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    if "contract_hash" not in body:
+        body = {"contract_hash": contract.contract_hash, **body}
+    adapter = DigitalTwinSyncRestAdapter.for_contract(contract)
+
+    response = adapter.handle_post(
+        body,
+        headers={"authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == status_code
+    assert response.accepted is False
+    assert response.reason == reason
+    assert adapter.drain() == ()
+
+
+def test_digital_twin_rest_adapter_refuses_incompatible_manifest() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    adapter = DigitalTwinSyncRestAdapter.for_contract(
+        contract,
+        sync_capabilities=("state_snapshot", "unknown"),
+    )
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=12,
+        payload={"R": 0.92},
+    )
+
+    response = adapter.handle_post(
+        envelope.to_audit_record(),
+        headers={"authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 503
+    assert response.reason == "adapter_incompatible"
+    assert response.body["reasons"] == ["capability_not_declared:unknown"]
+    assert adapter.drain() == ()
