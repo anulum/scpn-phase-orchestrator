@@ -321,6 +321,8 @@ Speculative research watchlist:
     review-time PLL-coupling and beam-steering actuation guards.
   - Power-safety N-channel domainpack prior template is in place for
     review-time grid-coupling and substation-lag actuation guards.
+  - Network-security domainpack prior template is in place for review-time
+    firewall-coupling and defence-drive actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

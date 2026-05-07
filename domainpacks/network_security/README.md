@@ -31,6 +31,16 @@ the firewall's adaptive rate-limiting as counter-coupling.
 | firewall_coupling | K | Defense coordination strength |
 | defense_drive | zeta | Active traffic shaping drive |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+defence-control checks. It bounds firewall-coupling and active
+traffic-shaping drive steps, then falls back to a zero-drive safe hold when a
+candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+network security appliance policy.
+
 ## Scenario
 
 200 steps: normal traffic flow -> DDoS burst at step 80 (attack layer

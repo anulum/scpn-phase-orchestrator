@@ -115,7 +115,7 @@ into the active roadmap.
 | Quantum-native compiler target | Qiskit/PennyLane or OpenPulse/QASM output backend for `quantum_simulation` with co-simulation validation |
 | Neuromorphic compiler target | Lava/PyNN or HDL output from a binding spec plus supervisor policy with simulator parity evidence |
 | Hybrid neuromorphic-quantum co-compiler | co-simulation hook that keeps quantum and spiking targets under the same N-channel audit semantics |
-| Value-alignment supervisor guard | guard foundation, binding-spec templates, counterfactual violation/score reporting, and cardiac rhythm/power-grid/autonomous-vehicle/satellite/power-safety N-channel domainpack templates are implemented; broader domainpack-specific prior templates remain open |
+| Value-alignment supervisor guard | guard foundation, binding-spec templates, counterfactual violation/score reporting, and cardiac rhythm/power-grid/autonomous-vehicle/satellite/power-safety N-channel/network-security domainpack templates are implemented; broader domainpack-specific prior templates remain open |
 | Autopoietic lineage sandbox | resource-bounded offline child-policy lineage over audit replays, with merge only through reviewable policy diffs |
 | Temporal-causal hypergraph experiments | explicitly experimental time-symmetric rollout research; no production claim without a conventional causal baseline |
 | Intergenerational policy inheritance | signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches |
