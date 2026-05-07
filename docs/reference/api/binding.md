@@ -140,6 +140,34 @@ replacing validation gates.
 
 ::: scpn_phase_orchestrator.binding.channel_runtime
 
+## Digital-Twin Binding Contract
+
+`build_digital_twin_binding_contract()` turns a validated `BindingSpec` into a
+versioned, bidirectional contract for simulators, services, and hardware twins.
+The contract is deterministic and transport-neutral: it describes timing,
+layers, actuators, N-channel algebra, and allowed sync payload classes without
+opening sockets or applying actuation.
+
+```python
+from scpn_phase_orchestrator.binding import (
+    build_digital_twin_binding_contract,
+    load_binding_spec,
+)
+
+spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+contract = build_digital_twin_binding_contract(spec)
+
+payload = contract.to_audit_record()
+stable_json = contract.to_json()
+```
+
+The emitted `contract_hash` is computed over the contract payload before the
+hash field is added, so replay systems can compare contract compatibility
+without re-parsing YAML. Default sync capabilities cover state snapshots,
+phase observations, proposed control actions, and audit replay.
+
+::: scpn_phase_orchestrator.binding.digital_twin
+
 ## Types
 
 Core type definitions shared across the binding subsystem.

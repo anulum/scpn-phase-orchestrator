@@ -19,6 +19,12 @@ from scpn_phase_orchestrator.binding.channel_runtime import (
     ChannelRuntimeExecution,
     ChannelRuntimeExecutor,
 )
+from scpn_phase_orchestrator.binding.digital_twin import (
+    DigitalTwinBindingContract,
+    DigitalTwinLayerContract,
+    DigitalTwinSyncCapability,
+    build_digital_twin_binding_contract,
+)
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.resolved import (
     format_resolved_binding_config,
@@ -42,10 +48,14 @@ __all__ = [
     "ChannelRuntimeExecution",
     "ChannelRuntimeExecutor",
     "ChannelRuntimePolicy",
+    "DigitalTwinBindingContract",
+    "DigitalTwinLayerContract",
+    "DigitalTwinSyncCapability",
     "GeneratedBindingArtifacts",
     "RetrievalEvidence",
     "SemanticDomainCompiler",
     "build_channel_algebra_report",
+    "build_digital_twin_binding_contract",
     "compile_symbolic_binding",
     "format_resolved_binding_config",
     "load_binding_spec",

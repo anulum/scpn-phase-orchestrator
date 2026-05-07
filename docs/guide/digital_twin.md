@@ -30,6 +30,28 @@ The digital twin runs SPO in parallel with the physical system.
 Sensor data feeds the oscillator extractors; control commands flow
 back through the actuation mapper.
 
+## Binding Contract
+
+Before a simulator, service twin, or hardware twin exchanges data with SPO,
+export the binding as a versioned contract:
+
+```python
+from scpn_phase_orchestrator.binding import (
+    build_digital_twin_binding_contract,
+    load_binding_spec,
+)
+
+spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+contract = build_digital_twin_binding_contract(spec)
+contract_payload = contract.to_audit_record()
+```
+
+The contract records binding name/version, timing, layer oscillator IDs,
+actuator limits, N-channel algebra, default sync capabilities, and a stable
+`contract_hash`. It is a compatibility artefact: consumers can compare hashes
+and capability names before accepting telemetry or proposed actions. It does
+not open a network connection or apply control.
+
 ## Implementation
 
 ```python
