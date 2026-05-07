@@ -78,3 +78,19 @@ PYTHONPATH=src python domainpacks/network_security/topology_adaptation_demo.py
 The demo is replay-only and non-actuating. It emits an audit payload for
 reviewing topology mutation evidence before any live security adapter is
 allowed to apply a policy.
+
+## Morphogenetic Field Demo
+
+`morphogenetic_field_demo.py` demonstrates reaction-diffusion-style topology
+field shaping for a lateral-movement replay. It grows normal-traffic and
+defence-response coupling while shrinking attack-vector coupling, then emits a
+field snapshot for audit review.
+
+Run it with:
+
+```bash
+PYTHONPATH=src python domainpacks/network_security/morphogenetic_field_demo.py
+```
+
+The demo is replay-only and non-actuating. It is intended for topology-field
+review, not live network enforcement.

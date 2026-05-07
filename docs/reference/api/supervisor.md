@@ -345,6 +345,11 @@ replay: transport-barrier, current-profile, and global-equilibrium layers remain
 locally aligned while turbulence, tearing, ELM, and wall-interaction phases
 stress the field, again without live actuation.
 
+`domainpacks/network_security/morphogenetic_field_demo.py` adds a
+lateral-movement replay: normal-traffic and defence-response layers remain
+locally aligned while the attack-vector layer stresses the field, again without
+live actuation.
+
 ::: scpn_phase_orchestrator.supervisor.morphogenetic
 
 ---
