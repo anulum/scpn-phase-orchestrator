@@ -36,6 +36,16 @@ networks and smart grids" proved this equivalence rigorously.
 | load_shedding | alpha | Under-frequency load shed |
 | renewable_curtailment | Psi | Curtailment anti-phase signal |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time grid
+actuation checks. It bounds governor-droop, AGC-bias, load-shedding, and
+curtailment phase steps, then falls back to a zero-bias safe hold when a
+candidate control action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+grid protection relay.
+
 ## Imprint
 
 Transformer insulation aging: IEEE C57.91 thermal degradation model
