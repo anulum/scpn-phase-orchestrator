@@ -27,6 +27,16 @@ and functional synchronisation surfaces for research simulations.
 - `dmn_suppression_floor`: low default-mode activation guard.
 - `functional_connectivity`: minimum functional-connectivity magnitude.
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time
+connectome-control checks. It bounds global coupling, neuromodulation drive,
+stimulation phase, and frontoparietal target-lag proposals, then falls back to
+a zero-drive safe hold when a candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+neurostimulation protocol or medical-device control policy.
+
 ## Run
 
 ```bash

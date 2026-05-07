@@ -112,6 +112,40 @@ actuators:
     scope: layer_3
     limits: [0.0, 1.57]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-connectome-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.85
+      weight: 2.0
+    - name: limit-neuromodulation-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.50
+      weight: 3.0
+    - name: limit-stimulation-phase-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+    - name: limit-frontoparietal-target-lag
+      knob: alpha
+      scope: layer_3
+      min_value: 0.0
+      max_value: 0.40
+      weight: 2.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: brain connectome value guard neuromodulation hold
+
 amplitude:
   mu: 1.0
   epsilon: 0.4

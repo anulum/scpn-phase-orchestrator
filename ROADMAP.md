@@ -403,6 +403,9 @@ Speculative research watchlist:
     equilibrium-coupling and auxiliary-drive actuation guards.
   - Neuroscience EEG domainpack prior template is in place for review-time
     coupling, delta-lag, entrainment-drive, and target-phase actuation guards.
+  - Brain-connectome domainpack prior template is in place for review-time
+    coupling, neuromodulation-drive, stimulation-phase, and frontoparietal
+    target-lag actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
