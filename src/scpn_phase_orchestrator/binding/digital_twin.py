@@ -22,12 +22,15 @@ from scpn_phase_orchestrator.binding.types import BindingSpec
 
 __all__ = [
     "DigitalTwinBindingContract",
+    "DigitalTwinAdapterManifest",
+    "DigitalTwinAdapterCompatibility",
     "DigitalTwinLayerContract",
     "DigitalTwinSyncCapability",
     "DigitalTwinSyncEnvelope",
     "DigitalTwinSyncJsonlReport",
     "DigitalTwinSyncMemoryAdapter",
     "DigitalTwinTransportValidation",
+    "build_digital_twin_adapter_manifest",
     "build_digital_twin_binding_contract",
     "build_digital_twin_sync_envelope",
     "read_digital_twin_sync_jsonl",
@@ -42,6 +45,63 @@ _DEFAULT_SYNC_CAPABILITIES = (
     "control_action_proposal",
     "audit_replay",
 )
+_VALID_ADAPTER_TRANSPORTS = frozenset(
+    {"memory", "jsonl", "rest", "grpc", "kafka", "hardware"}
+)
+
+
+@dataclass(frozen=True)
+class DigitalTwinAdapterManifest:
+    """Reviewable manifest for a concrete digital-twin transport adapter."""
+
+    name: str
+    transport: str
+    sync_capabilities: tuple[str, ...]
+    supports_replay: bool
+    requires_auth: bool
+    notes: str = ""
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.name, "adapter name")
+        _require_non_empty(self.transport, "adapter transport")
+        if self.transport not in _VALID_ADAPTER_TRANSPORTS:
+            raise ValueError(
+                f"adapter transport must be one of {sorted(_VALID_ADAPTER_TRANSPORTS)}"
+            )
+        if not self.sync_capabilities:
+            raise ValueError("adapter sync_capabilities must not be empty")
+        for capability in self.sync_capabilities:
+            _require_non_empty(capability, "adapter sync capability")
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe adapter manifest."""
+        return {
+            "name": self.name,
+            "transport": self.transport,
+            "sync_capabilities": list(self.sync_capabilities),
+            "supports_replay": self.supports_replay,
+            "requires_auth": self.requires_auth,
+            "notes": self.notes,
+        }
+
+
+@dataclass(frozen=True)
+class DigitalTwinAdapterCompatibility:
+    """Compatibility result for an adapter manifest and binding contract."""
+
+    compatible: bool
+    reasons: tuple[str, ...]
+    manifest: DigitalTwinAdapterManifest
+    contract_hash: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe adapter compatibility report."""
+        return {
+            "compatible": self.compatible,
+            "reasons": list(self.reasons),
+            "manifest": self.manifest.to_audit_record(),
+            "contract_hash": self.contract_hash,
+        }
 
 
 @dataclass(frozen=True)
@@ -305,6 +365,45 @@ def build_digital_twin_binding_contract(
         channel_algebra=channel_algebra,
         sync_capabilities=capabilities,
         contract_hash=contract_hash,
+    )
+
+
+def build_digital_twin_adapter_manifest(
+    contract: DigitalTwinBindingContract,
+    *,
+    name: str,
+    transport: str,
+    sync_capabilities: Sequence[str],
+    supports_replay: bool,
+    requires_auth: bool,
+    notes: str = "",
+) -> DigitalTwinAdapterCompatibility:
+    """Build and validate a transport-adapter manifest against a contract."""
+    manifest = DigitalTwinAdapterManifest(
+        name=name,
+        transport=transport,
+        sync_capabilities=tuple(sync_capabilities),
+        supports_replay=supports_replay,
+        requires_auth=requires_auth,
+        notes=notes,
+    )
+    declared = {capability.name for capability in contract.sync_capabilities}
+    reasons: list[str] = []
+    missing = sorted(set(manifest.sync_capabilities) - declared)
+    if missing:
+        reasons.append(f"capability_not_declared:{','.join(missing)}")
+    if (
+        manifest.transport in {"rest", "grpc", "kafka", "hardware"}
+        and not requires_auth
+    ):
+        reasons.append("live_transport_requires_auth")
+    if manifest.transport in {"jsonl", "memory"} and not supports_replay:
+        reasons.append("offline_transport_requires_replay")
+    return DigitalTwinAdapterCompatibility(
+        compatible=not reasons,
+        reasons=tuple(reasons),
+        manifest=manifest,
+        contract_hash=contract.contract_hash,
     )
 
 

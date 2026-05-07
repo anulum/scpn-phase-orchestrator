@@ -14,9 +14,11 @@ from typing import get_type_hints
 import pytest
 
 from scpn_phase_orchestrator.binding import (
+    DigitalTwinAdapterManifest,
     DigitalTwinBindingContract,
     DigitalTwinSyncEnvelope,
     DigitalTwinSyncMemoryAdapter,
+    build_digital_twin_adapter_manifest,
     build_digital_twin_binding_contract,
     build_digital_twin_sync_envelope,
     load_binding_spec,
@@ -331,3 +333,92 @@ def test_digital_twin_memory_adapter_queues_only_accepted_payloads() -> None:
     }
     assert adapter.drain() == (accepted,)
     assert adapter.drain() == ()
+
+
+def test_digital_twin_adapter_manifest_reports_compatible_offline_adapter() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    compatibility = build_digital_twin_adapter_manifest(
+        contract,
+        name="jsonl-review",
+        transport="jsonl",
+        sync_capabilities=("state_snapshot", "audit_replay"),
+        supports_replay=True,
+        requires_auth=False,
+        notes="offline replay adapter",
+    )
+
+    assert compatibility.compatible is True
+    assert compatibility.reasons == ()
+    assert compatibility.to_audit_record()["manifest"] == {
+        "name": "jsonl-review",
+        "transport": "jsonl",
+        "sync_capabilities": ["state_snapshot", "audit_replay"],
+        "supports_replay": True,
+        "requires_auth": False,
+        "notes": "offline replay adapter",
+    }
+
+
+def test_digital_twin_adapter_manifest_flags_live_transport_gates() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    compatibility = build_digital_twin_adapter_manifest(
+        contract,
+        name="grpc-live",
+        transport="grpc",
+        sync_capabilities=("state_snapshot", "not_declared"),
+        supports_replay=True,
+        requires_auth=False,
+    )
+
+    assert compatibility.compatible is False
+    assert compatibility.reasons == (
+        "capability_not_declared:not_declared",
+        "live_transport_requires_auth",
+    )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        (
+            {
+                "name": "",
+                "transport": "memory",
+                "sync_capabilities": ("state_snapshot",),
+                "supports_replay": True,
+                "requires_auth": False,
+            },
+            "adapter name must be a non-empty string",
+        ),
+        (
+            {
+                "name": "bad",
+                "transport": "smtp",
+                "sync_capabilities": ("state_snapshot",),
+                "supports_replay": True,
+                "requires_auth": False,
+            },
+            "adapter transport must be one of",
+        ),
+        (
+            {
+                "name": "bad",
+                "transport": "memory",
+                "sync_capabilities": (),
+                "supports_replay": True,
+                "requires_auth": False,
+            },
+            "adapter sync_capabilities must not be empty",
+        ),
+    ],
+)
+def test_digital_twin_adapter_manifest_rejects_invalid_manifest_inputs(
+    kwargs: dict[str, object],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        DigitalTwinAdapterManifest(**kwargs)  # type: ignore[arg-type]

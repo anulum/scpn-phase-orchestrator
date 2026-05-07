@@ -106,6 +106,24 @@ The adapter queues accepted envelopes in order and returns rejection reasons
 for invalid submissions. Concrete REST, gRPC, Kafka, and hardware adapters can
 mirror this behaviour at their transport boundary.
 
+Before enabling a concrete adapter, publish a reviewable manifest:
+
+```python
+from scpn_phase_orchestrator.binding import build_digital_twin_adapter_manifest
+
+compatibility = build_digital_twin_adapter_manifest(
+    contract,
+    name="grpc-live",
+    transport="grpc",
+    sync_capabilities=("state_snapshot", "audit_replay"),
+    supports_replay=True,
+    requires_auth=True,
+)
+```
+
+The manifest check rejects undeclared capabilities, live transports without
+authentication, and offline transports that cannot replay payloads.
+
 ## Implementation
 
 ```python

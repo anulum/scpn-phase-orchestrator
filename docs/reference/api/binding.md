@@ -222,6 +222,24 @@ validation = adapter.submit(envelope)
 accepted_batch = adapter.drain()
 ```
 
+Adapter implementations can also publish a `DigitalTwinAdapterManifest` before
+any runtime code is enabled. `build_digital_twin_adapter_manifest()` checks that
+the adapter only claims contract-declared capabilities, that live transports
+declare authentication, and that offline transports support replay.
+
+```python
+from scpn_phase_orchestrator.binding import build_digital_twin_adapter_manifest
+
+compatibility = build_digital_twin_adapter_manifest(
+    contract,
+    name="grpc-live",
+    transport="grpc",
+    sync_capabilities=("state_snapshot", "audit_replay"),
+    supports_replay=True,
+    requires_auth=True,
+)
+```
+
 ::: scpn_phase_orchestrator.binding.digital_twin
 
 ## Types

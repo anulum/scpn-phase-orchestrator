@@ -20,6 +20,8 @@ from scpn_phase_orchestrator.binding.channel_runtime import (
     ChannelRuntimeExecutor,
 )
 from scpn_phase_orchestrator.binding.digital_twin import (
+    DigitalTwinAdapterCompatibility,
+    DigitalTwinAdapterManifest,
     DigitalTwinBindingContract,
     DigitalTwinLayerContract,
     DigitalTwinSyncCapability,
@@ -27,6 +29,7 @@ from scpn_phase_orchestrator.binding.digital_twin import (
     DigitalTwinSyncJsonlReport,
     DigitalTwinSyncMemoryAdapter,
     DigitalTwinTransportValidation,
+    build_digital_twin_adapter_manifest,
     build_digital_twin_binding_contract,
     build_digital_twin_sync_envelope,
     read_digital_twin_sync_jsonl,
@@ -56,6 +59,8 @@ __all__ = [
     "ChannelRuntimeExecution",
     "ChannelRuntimeExecutor",
     "ChannelRuntimePolicy",
+    "DigitalTwinAdapterCompatibility",
+    "DigitalTwinAdapterManifest",
     "DigitalTwinBindingContract",
     "DigitalTwinLayerContract",
     "DigitalTwinSyncCapability",
@@ -66,6 +71,7 @@ __all__ = [
     "GeneratedBindingArtifacts",
     "RetrievalEvidence",
     "SemanticDomainCompiler",
+    "build_digital_twin_adapter_manifest",
     "build_channel_algebra_report",
     "build_digital_twin_binding_contract",
     "build_digital_twin_sync_envelope",
