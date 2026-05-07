@@ -223,6 +223,13 @@ common parent-level state built from reduced child evidence without moving raw
 time series, local coupling matrices, or actuator targets across hierarchy
 boundaries.
 
+Domainpack demos:
+
+- `domainpacks/power_grid/hierarchy_sync_demo.py` replays generation and
+  demand/renewable edge summaries through the sync-envelope ingestion path.
+- `domainpacks/cardiac_rhythm/hierarchy_sync_demo.py` replays pacemaker/atrial
+  and ventricular/recovery summaries through the same parent planner.
+
 ::: scpn_phase_orchestrator.supervisor.hierarchy
 
 ---

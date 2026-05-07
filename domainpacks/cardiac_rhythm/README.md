@@ -56,6 +56,24 @@ builds imprint that modulates coupling, representing pharmacokinetics.
 250 steps: normal sinus → PVCs → sustained VT → drug intervention →
 overdrive pacing → sinus recovery.
 
+## Hierarchy Sync Demo
+
+`hierarchy_sync_demo.py` demonstrates the transport-neutral edge/cloud summary
+path for this domainpack. It wraps pacemaker/atrial and ventricular/recovery
+coherence summaries in deterministic sync envelopes, ingests them at a parent
+node, and emits the resulting reduced parent plan.
+
+Run the replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/cardiac_rhythm/hierarchy_sync_demo.py
+```
+
+The emitted JSON is intentionally reduced: envelopes include source node,
+sequence, protocol version, `R`, `Psi`, regime, confidence, and metadata, but no
+raw conduction phase series, coupling matrices, or actuator targets. It is a
+simulation/replay artefact, not a medical-device control path.
+
 ## Causal Attribution Demo
 
 `causal_attribution_demo.py` runs a paired counterfactual for a deterministic

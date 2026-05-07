@@ -75,6 +75,23 @@ The emitted JSON is audit-ready: each child record includes free energy,
 surprise, observed/predicted `R`, and bounded `zeta` / `Psi` proposals, while
 the parent record documents the aggregate N-channel hierarchy response.
 
+## Hierarchy Sync Demo
+
+`hierarchy_sync_demo.py` demonstrates the transport-neutral edge/cloud summary
+path for this domainpack. It wraps generation-area and demand/renewable-area
+coherence summaries in deterministic sync envelopes, ingests them at a parent
+node, and emits the resulting reduced parent plan.
+
+Run the replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/power_grid/hierarchy_sync_demo.py
+```
+
+The emitted JSON is intentionally reduced: envelopes include source node,
+sequence, protocol version, `R`, `Psi`, regime, confidence, and metadata, but no
+raw PMU phase series, coupling matrices, or actuator targets.
+
 ## Causal Attribution Demo
 
 `causal_attribution_demo.py` compares a no-action load-step rollout against a
