@@ -33,6 +33,16 @@ kernels, directly analogous to distance-decayed Kuramoto coupling.
 | obstacle_avoidance | alpha | Repulsive heading offset near obstacles |
 | target_heading | Psi | Global waypoint heading |
 
+## Value-Alignment Guard
+
+The binding spec includes a `value_alignment` template for review-time swarm
+actuation checks. It bounds alignment coupling, formation drive, obstacle
+avoidance, and target-heading changes, then falls back to a zero-formation-drive
+hold when a candidate action exceeds those priors.
+
+This template is for simulation, replay, and policy review. It is not a live
+multi-robot safety controller.
+
 ## Imprint
 
 None. Stateless heading dynamics with no memory effects.

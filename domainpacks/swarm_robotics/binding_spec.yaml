@@ -171,6 +171,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.25
+  constraints:
+    - name: limit-alignment-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.2
+      weight: 2.0
+    - name: limit-formation-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.9
+      weight: 1.5
+    - name: limit-obstacle-avoidance-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 1.2
+      weight: 2.5
+    - name: limit-target-heading-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: swarm robotics value guard formation hold
+
 amplitude:
   mu: 1.0
   epsilon: 0.4
