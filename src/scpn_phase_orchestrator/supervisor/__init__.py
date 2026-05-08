@@ -52,6 +52,12 @@ from scpn_phase_orchestrator.supervisor.hierarchy import (
     load_hierarchy_sync_envelope,
     simulate_hierarchy_gossip_consensus,
 )
+from scpn_phase_orchestrator.supervisor.hierarchy_adapters import (
+    HierarchyAdapterResult,
+    handle_hierarchy_frame,
+    handle_hierarchy_rest_payload,
+    replay_hierarchy_jsonl,
+)
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
     MorphogeneticFieldPolicy,
     MorphogeneticFieldResult,
@@ -134,6 +140,7 @@ __all__ = [
     "FEPPredictionAssessment",
     "FEPPredictiveSupervisor",
     "HierarchicalOrchestrationPlan",
+    "HierarchyAdapterResult",
     "HierarchyConsensusRound",
     "HierarchyConsensusState",
     "HierarchyEscalation",
@@ -196,6 +203,8 @@ __all__ = [
     "export_policy_rules_tla",
     "export_stl_specs_prism",
     "evaluate_policy_stl_specs",
+    "handle_hierarchy_frame",
+    "handle_hierarchy_rest_payload",
     "load_policy_rules",
     "load_policy_stl_specs",
     "ingest_hierarchy_sync_envelopes",
@@ -203,6 +212,7 @@ __all__ = [
     "learn_causal_graph",
     "sheaf_coherence",
     "sheaf_laplacian",
+    "replay_hierarchy_jsonl",
     "simulate_hierarchy_gossip_consensus",
     "synthesise_policy_stl_automata",
     "synthesize_policy_stl_automata",
