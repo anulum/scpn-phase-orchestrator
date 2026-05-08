@@ -27,6 +27,7 @@ from scpn_phase_orchestrator.studio.workflow import (
     BindingProposal,
     ExportManifest,
     ImportedSourceSummary,
+    JsonValue,
     RuntimeSnapshot,
     StudioProjectState,
 )
@@ -237,6 +238,11 @@ def binding_spec_project_state(
         channel_count=max(1, len(spec.used_channels())),
         sample_count=sum(len(layer.oscillator_ids) for layer in spec.layers),
     )
+    provenance: dict[str, JsonValue] = {
+        "source_path": str(spec_path),
+        "knobs": dict(knobs.to_audit_record()),
+        "validator": "validate_binding_spec",
+    }
     binding = BindingProposal(
         yaml_text=yaml_text,
         validation_errors=validation_errors,
@@ -245,11 +251,7 @@ def binding_spec_project_state(
             "validator_acceptance": 1.0 if not validation_errors else 0.0,
             "layer_coverage": 1.0 if spec.layers else 0.0,
         },
-        provenance={
-            "source_path": str(spec_path),
-            "knobs": knobs.to_audit_record(),
-            "validator": "validate_binding_spec",
-        },
+        provenance=provenance,
     )
     exports = build_export_manifests(
         project_name=project_name,

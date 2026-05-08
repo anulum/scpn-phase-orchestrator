@@ -19,3 +19,5 @@ plv = "plv"        # Phase-Locking Value
 isi = "isi"        # Inter-Spike Interval
 rng = "rng"        # Random Number Generator
 psd = "psd"        # Positive Semi-Definite / Power Spectral Density
+ND = "ND"          # NDArray identifier fragment
+Strang = "Strang"  # Strang splitting

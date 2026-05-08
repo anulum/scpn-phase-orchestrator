@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.exceptions import BindingError
 from scpn_phase_orchestrator.studio.workflow import (
     BindingProposal,
     ImportedSourceSummary,
+    JsonValue,
     RuntimeSnapshot,
     StudioProjectState,
 )
@@ -76,10 +77,18 @@ def propose_binding_from_time_series_csv(
         family_specs=_families_for_channels(inferred_channels),
     )
     validation_errors = _validation_errors(yaml_text)
-    confidence = {
+    confidence: dict[str, float] = {
         "phase_quality": _bounded_confidence(min(1.0, len(rows) / 3.0)),
         "channel_coverage": _bounded_confidence(min(1.0, len(channels) / 2.0)),
         "validator_acceptance": 1.0 if not validation_errors else 0.0,
+    }
+    source_columns: list[JsonValue] = []
+    source_columns.extend(channels)
+    provenance: dict[str, JsonValue] = {
+        "input_family": "time_series",
+        "sample_rate_hz": float(sample_rate_hz),
+        "source_columns": source_columns,
+        "validator": "load_binding_spec+validate_binding_spec",
     }
     source = ImportedSourceSummary.from_payload(
         source_kind="time_series_csv",
@@ -95,12 +104,7 @@ def propose_binding_from_time_series_csv(
             validation_errors=validation_errors,
             inferred_channels=inferred_channels,
             confidence_factors=confidence,
-            provenance={
-                "input_family": "time_series",
-                "sample_rate_hz": float(sample_rate_hz),
-                "source_columns": list(channels),
-                "validator": "load_binding_spec+validate_binding_spec",
-            },
+            provenance=provenance,
         ),
     )
 
@@ -134,6 +138,15 @@ def propose_binding_from_event_log(
     )
     validation_errors = _validation_errors(yaml_text)
     event_density = _bounded_confidence(min(1.0, len(events) / 10.0))
+    source_name_values: list[JsonValue] = []
+    source_name_values.extend(source_names)
+    provenance: dict[str, JsonValue] = {
+        "input_family": "event_log",
+        "event_count": len(events),
+        "source_names": source_name_values,
+        "time_span_s": span_s,
+        "validator": "load_binding_spec+validate_binding_spec",
+    }
     source = _EventLogSourceSummary.from_payload(
         source_kind="event_log_json",
         payload=payload,
@@ -154,13 +167,7 @@ def propose_binding_from_event_log(
                 ),
                 "validator_acceptance": 1.0 if not validation_errors else 0.0,
             },
-            provenance={
-                "input_family": "event_log",
-                "event_count": len(events),
-                "source_names": source_names,
-                "time_span_s": span_s,
-                "validator": "load_binding_spec+validate_binding_spec",
-            },
+            provenance=provenance,
         ),
     )
 
@@ -180,9 +187,9 @@ def propose_binding_from_graph(
         raise ValueError("graph must contain at least one node")
     for edge in edges:
         edge_map = _mapping(edge, "graph.edges[]")
-        source = str(edge_map.get("source", ""))
+        edge_source = str(edge_map.get("source", ""))
         target = str(edge_map.get("target", ""))
-        missing = sorted({source, target} - node_ids)
+        missing = sorted({edge_source, target} - node_ids)
         if missing:
             raise ValueError(f"unknown graph node in edge: {missing[0]}")
 

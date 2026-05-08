@@ -117,6 +117,7 @@ def handle_hierarchy_frame(
     payload = frame.get("payload")
     if payload is None:
         raise ValueError("payload must be provided")
+    records: tuple[Mapping[str, object] | HierarchySyncEnvelope, ...]
     if frame_kind == _SINGLE_FRAME_KIND:
         records = (_require_record(payload, "frame payload"),)
     elif frame_kind == _BATCH_FRAME_KIND:
