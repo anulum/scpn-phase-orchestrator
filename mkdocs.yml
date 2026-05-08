@@ -85,6 +85,10 @@ nav:
       - Digital Twin Pattern: guide/digital_twin.md
       - "Notebook → Production": guide/notebook_to_production.md
       - Interactive Tools: guide/interactive_tools.md
+      - SPO Studio Operator Guide: guide/spo_studio_operator.md
+      - Auto-Binding Proposals: guide/auto_binding.md
+      - Replay-Only Autotune Learners: guide/autotune_learners.md
+      - Hierarchy Adapter Boundaries: guide/hierarchy_live_adapters.md
       - Testing: guide/testing.md
       - Release Hygiene: RELEASE_HYGIENE.md
       - Contributor Onboarding: guide/contributor_onboarding.md
@@ -142,6 +146,7 @@ nav:
       - "Coupling — Universal Prior": reference/api/coupling_prior.md
       - "Coupling — HCP Connectome": reference/api/coupling_connectome.md
       - Supervisor: reference/api/supervisor.md
+      - Studio: reference/api/studio.md
       - Monitor: reference/api/monitor.md
       - "Monitor — Chimera": reference/api/monitor_chimera.md
       - "Monitor — Dimension": reference/api/monitor_dimension.md

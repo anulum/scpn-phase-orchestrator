@@ -54,3 +54,20 @@ SINDy-style discovery, and coupling estimation into reviewable auto-binding
 candidate records.
 
 ::: scpn_phase_orchestrator.autotune.pipeline
+
+## Reviewable Binding Proposals
+
+The binding-proposal module converts time-series CSV, event-log JSON, and graph
+JSON payloads into `StudioProjectState` records containing reviewable
+`binding_spec.yaml` text, confidence factors, provenance, and binding-validator
+diagnostics.
+
+::: scpn_phase_orchestrator.autotune.binding_proposal
+
+## Replay-Only Learners
+
+The learner module exposes PPO-like, SAC-like, and hybrid-physics proposal
+generators behind the existing replay gates. These helpers emit audit records
+and keep `actuation_permitted` false.
+
+::: scpn_phase_orchestrator.autotune.learners

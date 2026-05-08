@@ -267,6 +267,17 @@ Domainpack demos:
 
 ::: scpn_phase_orchestrator.supervisor.hierarchy
 
+## Hierarchy Adapter Boundaries
+
+`hierarchy_adapters` adds decoded JSONL, REST-payload, and WebSocket-frame
+helpers over `HierarchyTransportRuntime`. These helpers are transport
+boundaries only: they do not open sockets, own HTTP servers, start event loops,
+or apply actuation. They return `HierarchyAdapterResult` records containing
+accepted/rejected counts, sequence watermarks, parent-plan summaries, and the
+underlying sync ledger.
+
+::: scpn_phase_orchestrator.supervisor.hierarchy_adapters
+
 ---
 
 ## Strange-Loop Supervisor Monitor

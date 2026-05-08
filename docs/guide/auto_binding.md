@@ -1,0 +1,49 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+<!-- SCPN Phase Orchestrator — Auto-binding guide -->
+
+# Auto-Binding Proposals
+
+The auto-binding prototype converts raw source families into reviewable
+`binding_spec.yaml` proposals. It never overwrites a domainpack and never marks
+the proposal as trusted without validation.
+
+Supported inputs:
+
+- Time-series CSV with a header, one optional time column, and one or more
+  numeric signal columns.
+- Event-log JSON arrays containing event records.
+- Graph JSON containing `nodes` and optional `edges`.
+
+Each proposal returns a `StudioProjectState` with:
+
+- deterministic source hash and counts,
+- proposed binding YAML,
+- inferred channels,
+- confidence factors,
+- provenance,
+- binding-validator diagnostics.
+
+Example:
+
+```python
+from scpn_phase_orchestrator.autotune.binding_proposal import (
+    propose_binding_from_time_series_csv,
+)
+
+state = propose_binding_from_time_series_csv(
+    "t,a,b\n0,0.1,0.4\n1,0.2,0.5\n",
+    sample_rate_hz=1.0,
+    project_name="sensor_review",
+)
+
+print(state.binding.yaml_text)
+print(state.binding.validation_errors)
+```
+
+The output is suitable for human review in SPO Studio or for tests that need a
+deterministic proposal package.

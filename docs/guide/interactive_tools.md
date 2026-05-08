@@ -19,12 +19,16 @@ Opens at `http://localhost:8501`.
 ### Features
 
 - **Domainpack browser** — select any bundled domainpack from a dropdown
-- **Universal knobs** — slide K (coupling strength), ζ (drive strength),
-  Ψ frequency to see immediate effects on synchronisation
-- **Live R(t) chart** — order parameter plotted over simulation steps
+- **Raw-source import** — generate reviewable binding proposals from CSV,
+  event-log JSON, or graph JSON
+- **Universal knobs** — slide K, alpha, zeta, and Psi for local replay tuning
+- **Live R(t) chart** — order parameter plotted over replay steps
 - **Regime timeline** — visual trace of nominal / degraded / critical transitions
-- **Per-layer breakdown** — R value for each oscillator layer
-- **Metrics dashboard** — final R, regime, oscillator count, layer count
+- **Oscillator table** — edit oscillator rows and export an
+  `oscillator_edit_review.json` artefact for binding review
+- **Hierarchy monitor** — inspect reduced layer metrics and watermarks
+- **Export review** — download binding, audit, Docker, WASM, and project-state
+  artefacts; deploy-like manifests are disabled when validation fails
 
 ### Use Cases
 
@@ -32,6 +36,9 @@ Opens at `http://localhost:8501`.
 - **Domain exploration**: browse domainpacks before writing binding specs
 - **Parameter tuning**: find good K/ζ values for a new domain
 - **Demos**: live presentations without terminal commands
+
+For the operator workflow, see
+[SPO Studio Operator Guide](spo_studio_operator.md).
 
 ## Binding Spec Studio (Streamlit)
 
