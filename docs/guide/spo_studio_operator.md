@@ -14,6 +14,13 @@ and review artefact export. It is intentionally a thin UI over
 `scpn_phase_orchestrator.studio.ui_helpers`, so the behaviour can be tested
 without Streamlit.
 
+The current implementation is a validated operator prototype, not a finished
+product-grade Studio. It is useful for auditable replay, binding proposal,
+metric inspection, and export review workflows. It still needs true drag/drop
+graph editing, guided beginner explanations, live connector ownership,
+deployment packaging, polished error recovery, and hardware-target packaging
+before it should be described as a good standalone product.
+
 Run it with:
 
 ```bash
