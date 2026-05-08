@@ -8,6 +8,22 @@
 
 from __future__ import annotations
 
+from scpn_phase_orchestrator.studio.ui_helpers import (
+    StudioKnobState,
+    StudioReplayResult,
+    apply_knob_update,
+    binding_spec_project_state,
+    build_export_manifests,
+    build_layer_table,
+    build_oscillator_edit_artifact,
+    build_oscillator_table,
+    build_regime_chart_payload,
+    build_runtime_snapshot,
+    build_series_chart_payload,
+    disabled_export_reasons,
+    discover_domainpacks,
+    run_binding_spec_replay,
+)
 from scpn_phase_orchestrator.studio.workflow import (
     BindingProposal,
     ExportManifest,
@@ -21,5 +37,19 @@ __all__ = [
     "ExportManifest",
     "ImportedSourceSummary",
     "RuntimeSnapshot",
+    "StudioKnobState",
     "StudioProjectState",
+    "StudioReplayResult",
+    "apply_knob_update",
+    "binding_spec_project_state",
+    "build_export_manifests",
+    "build_layer_table",
+    "build_oscillator_edit_artifact",
+    "build_oscillator_table",
+    "build_regime_chart_payload",
+    "build_runtime_snapshot",
+    "build_series_chart_payload",
+    "disabled_export_reasons",
+    "discover_domainpacks",
+    "run_binding_spec_replay",
 ]
