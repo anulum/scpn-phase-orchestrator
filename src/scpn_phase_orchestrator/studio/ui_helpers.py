@@ -61,6 +61,7 @@ __all__ = [
     "build_package_materialisation_plan",
     "build_runtime_snapshot",
     "build_series_chart_payload",
+    "build_verified_hardware_target_package",
     "disabled_export_reasons",
     "discover_domainpacks",
     "run_binding_spec_replay",
@@ -489,6 +490,52 @@ def build_hardware_target_package(result: StudioReplayResult) -> dict[str, objec
         "export_artifacts": [
             manifest.to_audit_record() for manifest in result.export_manifests
         ],
+    }
+
+
+def build_verified_hardware_target_package(
+    result: StudioReplayResult,
+    *,
+    evidence: Mapping[str, object],
+) -> dict[str, object]:
+    """Return a verified hardware package only when evidence is complete."""
+    if not isinstance(result, StudioReplayResult):
+        raise ValueError("replay result must be a StudioReplayResult")
+    if not isinstance(evidence, Mapping):
+        raise ValueError("hardware evidence must be a mapping")
+
+    base_package = build_hardware_target_package(result)
+    normalised, invalid_evidence = _normalise_hardware_evidence(evidence)
+    verified = not invalid_evidence
+    return {
+        "package_kind": "studio_verified_hardware_target_package",
+        "project_name": result.project_state.project_name,
+        "overall_status": "review_ready" if verified else "evidence_required",
+        "evidence_status": "verified" if verified else "blocked",
+        "contract_hash": base_package["contract_hash"],
+        "hardware_write_permitted": False,
+        "network_opened": False,
+        "targets": list(base_package["targets"]),
+        "required_evidence": list(base_package["required_evidence"]),
+        "invalid_evidence": invalid_evidence,
+        "evidence": normalised,
+        "connector": base_package["connector"],
+        "commands": (
+            [
+                "review verified_hardware_target_package.json",
+                "compare generated artefact hash before handoff",
+                "archive simulator parity report with package",
+            ]
+            if verified
+            else []
+        ),
+        "safety_gates": [
+            "local replay completed",
+            "binding validation passed",
+            "hardware evidence verified" if verified else "hardware evidence blocked",
+            "hardware output remains operator-controlled",
+        ],
+        "export_artifacts": list(base_package["export_artifacts"]),
     }
 
 
@@ -1220,6 +1267,51 @@ def _materialisation_command_writes_artifact(command: object) -> bool:
             "wasm-pack build",
         )
     )
+
+
+def _normalise_hardware_evidence(
+    evidence: Mapping[str, object],
+) -> tuple[dict[str, object], list[str]]:
+    invalid: list[str] = []
+    normalised: dict[str, object] = {}
+    for field in (
+        "generated_artifact_path",
+        "simulator_parity_report",
+        "target_toolchain",
+        "target_toolchain_version",
+    ):
+        value = evidence.get(field)
+        if isinstance(value, str) and value.strip():
+            normalised[field] = value.strip()
+        else:
+            invalid.append(f"{field} is required")
+
+    for field in ("generated_artifact_sha256", "simulator_parity_sha256"):
+        value = evidence.get(field)
+        if _is_sha256_digest(value):
+            normalised[field] = str(value).lower()
+        elif value is None:
+            invalid.append(f"{field} is required")
+        else:
+            invalid.append(f"{field} must be a SHA-256 digest")
+
+    parity_status = evidence.get("simulator_parity_status")
+    if isinstance(parity_status, str) and parity_status.strip().lower() == "passed":
+        normalised["simulator_parity_status"] = "passed"
+    else:
+        invalid.append("simulator_parity_status must be passed")
+
+    if evidence.get("operator_signoff") is True:
+        normalised["operator_signoff"] = True
+    else:
+        invalid.append("operator_signoff must be true")
+    return normalised, invalid
+
+
+def _is_sha256_digest(value: object) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(character in "0123456789abcdefABCDEF" for character in value)
 
 
 def _layer_metrics(value: object) -> tuple[tuple[str, float], ...]:

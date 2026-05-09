@@ -38,6 +38,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_package_materialisation_plan,
     build_regime_chart_payload,
     build_series_chart_payload,
+    build_verified_hardware_target_package,
     disabled_export_reasons,
     discover_domainpacks,
     run_binding_spec_replay,
@@ -494,6 +495,34 @@ with tabs[9]:
         mime="application/json",
         use_container_width=True,
     )
+    evidence_text = st.text_area(
+        "Verified hardware evidence JSON",
+        value="",
+        height=120,
+    )
+    if evidence_text.strip():
+        try:
+            evidence_payload = json.loads(evidence_text)
+            verified_hardware_package = build_verified_hardware_target_package(
+                result,
+                evidence=evidence_payload,
+            )
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            _render_error_report(
+                build_error_report(
+                    operation="verify_hardware_evidence",
+                    error=exc,
+                    project_name=project.project_name,
+                )
+            )
+        else:
+            st.download_button(
+                label="verified_hardware_target_package.json",
+                data=json.dumps(verified_hardware_package, sort_keys=True, indent=2),
+                file_name="verified_hardware_target_package.json",
+                mime="application/json",
+                use_container_width=True,
+            )
     _render_exports(result)
     st.download_button(
         label="project_state.json",

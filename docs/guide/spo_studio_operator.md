@@ -18,7 +18,7 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs live drag/drop
-binding rewrite polish, live connector execution, and hardware-target packaging
+binding rewrite polish, live connector execution, and real hardware evidence
 before it should be
 described as a good standalone product.
 
@@ -57,7 +57,7 @@ streamlit run tools/spo_studio.py
    - **Exports**: deployment-readiness checklist, deployment package manifest,
      package materialisation plan, hardware target package, plus review
      artefacts for binding YAML, audit JSON, Docker manifest, WASM manifest,
-     and project state.
+     verified hardware evidence, and project state.
 
 ## Guided Deployment Path
 
@@ -101,6 +101,13 @@ neuromorphic schedule as target classes, but it remains `evidence_required`
 until a generated artefact path, simulator parity report, target toolchain
 version, and operator sign-off are attached. It keeps `hardware_write_permitted`
 false and points operators back to the connector plan before any handoff.
+
+When an operator pastes hardware evidence JSON into the **Exports** tab, Studio
+validates `generated_artifact_sha256`, `simulator_parity_sha256`,
+`simulator_parity_status`, target toolchain metadata, and explicit sign-off. A
+complete evidence bundle emits `verified_hardware_target_package.json` with
+`overall_status: review_ready`; incomplete or failed evidence stays blocked and
+still keeps hardware writes disabled.
 
 ## Canvas Review
 

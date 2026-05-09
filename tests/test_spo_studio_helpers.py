@@ -39,6 +39,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_regime_chart_payload,
     build_runtime_snapshot,
     build_series_chart_payload,
+    build_verified_hardware_target_package,
     disabled_export_reasons,
     run_binding_spec_replay,
 )
@@ -404,6 +405,73 @@ def test_hardware_target_package_requires_evidence_before_readiness() -> None:
     assert package["connector"]["transport"] == "hardware"
     assert package["connector"]["status"] == "owner_required"
     assert len(package["contract_hash"]) == 64
+
+
+def test_verified_hardware_target_package_accepts_complete_evidence() -> None:
+    result = run_binding_spec_replay(
+        _minimal_spec_path(),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+    evidence = {
+        "generated_artifact_path": "build/hardware/minimal_domain/fpga_top.v",
+        "generated_artifact_sha256": "a" * 64,
+        "simulator_parity_report": "reports/minimal_domain_parity.json",
+        "simulator_parity_sha256": "b" * 64,
+        "simulator_parity_status": "passed",
+        "target_toolchain": "yosys-nextpnr",
+        "target_toolchain_version": "yosys 0.40 / nextpnr 0.7",
+        "operator_signoff": True,
+    }
+
+    package = build_verified_hardware_target_package(result, evidence=evidence)
+
+    assert package["package_kind"] == "studio_verified_hardware_target_package"
+    assert package["project_name"] == "minimal_domain"
+    assert package["overall_status"] == "review_ready"
+    assert package["evidence_status"] == "verified"
+    assert package["hardware_write_permitted"] is False
+    assert package["network_opened"] is False
+    assert package["invalid_evidence"] == []
+    assert package["evidence"]["generated_artifact_path"] == (
+        "build/hardware/minimal_domain/fpga_top.v"
+    )
+    assert package["evidence"]["simulator_parity_status"] == "passed"
+    assert package["commands"] == [
+        "review verified_hardware_target_package.json",
+        "compare generated artefact hash before handoff",
+        "archive simulator parity report with package",
+    ]
+
+
+def test_verified_hardware_target_package_blocks_incomplete_evidence() -> None:
+    result = run_binding_spec_replay(
+        _minimal_spec_path(),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+
+    package = build_verified_hardware_target_package(
+        result,
+        evidence={
+            "generated_artifact_path": "build/hardware/minimal_domain/fpga_top.v",
+            "generated_artifact_sha256": "not-a-sha",
+            "simulator_parity_status": "failed",
+            "operator_signoff": False,
+        },
+    )
+
+    assert package["overall_status"] == "evidence_required"
+    assert package["evidence_status"] == "blocked"
+    assert package["hardware_write_permitted"] is False
+    assert package["commands"] == []
+    assert (
+        "generated_artifact_sha256 must be a SHA-256 digest"
+        in package["invalid_evidence"]
+    )
+    assert "simulator_parity_report is required" in package["invalid_evidence"]
+    assert "simulator_parity_status must be passed" in package["invalid_evidence"]
+    assert "operator_signoff must be true" in package["invalid_evidence"]
 
 
 def test_beginner_guidance_explains_runtime_in_domain_terms() -> None:

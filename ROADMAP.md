@@ -188,11 +188,12 @@
     replay-only knob tuning, hierarchy monitor, layer/channel canvas review
     artefacts, canvas layout manifests,
     canvas topology patch artefacts, connector ownership plans, deployment readiness, deployment package
-    manifests, package materialisation plans, hardware target package manifests, recovery reports, and
+    manifests, package materialisation plans, hardware target package manifests,
+    verified hardware evidence packages, recovery reports, and
     review/deploy export manifests. This is a validated operator prototype, not
     a finished product-grade Studio: live drag/drop binding rewrite,
-    live connector execution, browser polish, and verified
-    FPGA packaging remain future product work.
+    live connector execution, browser polish, and real FPGA/neuromorphic
+    evidence remain future product work.
 - Hierarchical multi-scale orchestration: support nested orchestrators where local/edge supervisors maintain local coherence, exchange reduced phase/coherence summaries, and escalate only bounded regime evidence to a parent supervisor. Reuse Hodge decomposition and transfer-entropy monitors to decide what crosses hierarchy boundaries.
   - Reduced-summary hierarchy foundation is in place: `build_hierarchical_orchestration_plan()` turns child supervisor summaries into a parent `UPDEState` and bounded escalation audit records without exchanging raw child signals.
   - Transport-neutral hierarchy sync envelopes are in place: `build_hierarchy_sync_envelope()` and `ingest_hierarchy_sync_envelopes()` provide deterministic JSON-safe edge/cloud summary exchange with protocol-version and sequence checks.
@@ -227,12 +228,12 @@
     artefacts, live `R`/`Psi`/`K` visualisation, replay-only knob tuning,
     hierarchy monitor, connector ownership plans, deployment
     readiness/package manifests, hardware target package manifests, recovery
-    reports, package materialisation plans, and Docker/WASM/project export
-    manifests are in place.
+    reports, package materialisation plans, verified hardware evidence packages,
+    and Docker/WASM/project export manifests are in place.
     This remains far from a good standalone product: current value is an
     auditable operator workflow and smoke-tested web surface, while true
     one-click product quality still needs live drag/drop binding rewrite,
-    live connector execution, and verified hardware-target packaging.
+    live connector execution, and real hardware evidence.
 - Auto-binding prototype:
   - Deterministic proposal builders from time-series CSV, event-log JSON, and
     graph JSON to reviewable `binding_spec.yaml` records are in place with
@@ -265,6 +266,10 @@
     beyond the current host/backend as needed.
 - Windows Rust FFI fully stable; remove the experimental label only after installation, CI, and parity evidence support it.
 - One end-to-end hardware example with real FPGA or neuromorphic output, including command, generated artefact, and verification result.
+  - Studio now validates pasted hardware evidence bundles for generated
+    artefact hash, simulator parity hash/status, toolchain metadata, and
+    operator sign-off before emitting a review-ready verified hardware package.
+    The actual real-target artefact and parity report remain open.
 
 ### Long-horizon differentiator backlog
 
