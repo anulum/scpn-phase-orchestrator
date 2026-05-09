@@ -11,6 +11,7 @@ from __future__ import annotations
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
+    apply_canvas_binding_rewrite_candidate,
     apply_knob_update,
     binding_spec_project_state,
     build_beginner_guidance,
@@ -56,6 +57,7 @@ __all__ = [
     "StudioKnobState",
     "StudioProjectState",
     "StudioReplayResult",
+    "apply_canvas_binding_rewrite_candidate",
     "apply_knob_update",
     "binding_spec_project_state",
     "build_beginner_guidance",

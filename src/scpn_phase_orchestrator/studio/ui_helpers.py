@@ -41,6 +41,7 @@ from scpn_phase_orchestrator.studio.workflow import (
 __all__ = [
     "StudioKnobState",
     "StudioReplayResult",
+    "apply_canvas_binding_rewrite_candidate",
     "apply_knob_update",
     "binding_spec_project_state",
     "build_beginner_guidance",
@@ -457,6 +458,65 @@ def build_canvas_binding_rewrite_candidate(
         "validation_errors": validation_errors,
         "candidate_yaml": candidate_yaml,
     }
+
+
+def apply_canvas_binding_rewrite_candidate(
+    candidate: Mapping[str, object],
+    *,
+    binding_spec_path: str | Path,
+    operator_signoff: bool,
+    create_backup: bool = True,
+) -> dict[str, object]:
+    """Apply a reviewed canvas binding candidate with hash and validation gates."""
+    path = Path(binding_spec_path)
+    candidate_yaml = _require_non_empty_payload(
+        candidate.get("candidate_yaml"),
+        "candidate_yaml",
+    )
+    before_digest = _require_sha256_digest(
+        candidate.get("before_yaml_sha256"),
+        "before_yaml_sha256",
+    )
+    candidate_digest = _require_sha256_digest(
+        candidate.get("candidate_yaml_sha256"),
+        "candidate_yaml_sha256",
+    )
+    blocked_reasons = _binding_apply_blocked_reasons(
+        candidate,
+        path,
+        candidate_yaml,
+        before_digest,
+        candidate_digest,
+        operator_signoff=operator_signoff,
+    )
+    if blocked_reasons:
+        return _binding_apply_record(
+            candidate,
+            path,
+            status="blocked",
+            before_digest=before_digest,
+            after_digest="",
+            backup_path="",
+            blocked_reasons=blocked_reasons,
+        )
+
+    current_yaml = path.read_text(encoding="utf-8")
+    backup_path = ""
+    if create_backup:
+        backup = _next_binding_backup_path(path, before_digest)
+        backup.write_text(current_yaml, encoding="utf-8")
+        backup_path = str(backup)
+    _atomic_write_text(path, candidate_yaml)
+    after_digest = sha256(path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+    return _binding_apply_record(
+        candidate,
+        path,
+        status="applied",
+        before_digest=before_digest,
+        after_digest=after_digest,
+        backup_path=backup_path,
+        blocked_reasons=[],
+    )
 
 
 def build_live_connector_plan(spec: BindingSpec) -> dict[str, object]:
@@ -1465,6 +1525,100 @@ def _blocked_binding_rewrite_candidate(
     }
 
 
+def _binding_apply_blocked_reasons(
+    candidate: Mapping[str, object],
+    path: Path,
+    candidate_yaml: str,
+    before_digest: str,
+    candidate_digest: str,
+    *,
+    operator_signoff: bool,
+) -> list[str]:
+    blocked: list[str] = []
+    if candidate.get("candidate_kind") != "canvas_binding_rewrite_candidate":
+        blocked.append("candidate_kind must be canvas_binding_rewrite_candidate")
+    if candidate.get("status") != "review_ready":
+        blocked.append("candidate status must be review_ready")
+    if operator_signoff is not True:
+        blocked.append("operator_signoff must be true")
+    if not path.exists() or not path.is_file():
+        blocked.append("binding_spec_path must point to an existing file")
+    if sha256(candidate_yaml.encode("utf-8")).hexdigest() != candidate_digest:
+        blocked.append("candidate YAML SHA-256 does not match candidate metadata")
+
+    validation_errors = _validate_candidate_binding_yaml(candidate_yaml)
+    blocked.extend(validation_errors)
+
+    if path.exists() and path.is_file():
+        current_yaml = path.read_text(encoding="utf-8")
+        current_digest = sha256(current_yaml.encode("utf-8")).hexdigest()
+        if current_digest != before_digest:
+            blocked.append(
+                "current binding_spec.yaml SHA-256 does not match candidate source"
+            )
+    return blocked
+
+
+def _binding_apply_record(
+    candidate: Mapping[str, object],
+    path: Path,
+    *,
+    status: str,
+    before_digest: str,
+    after_digest: str,
+    backup_path: str,
+    blocked_reasons: Sequence[str],
+) -> dict[str, object]:
+    return {
+        "apply_kind": "canvas_binding_rewrite_apply",
+        "candidate_kind": candidate.get("candidate_kind", ""),
+        "project_name": candidate.get("project_name", ""),
+        "status": status,
+        "binding_spec_path": str(path),
+        "backup_path": backup_path,
+        "binding_spec_rewritten": status == "applied",
+        "actuation_permitted": False,
+        "network_opened": False,
+        "before_yaml_sha256": before_digest,
+        "after_yaml_sha256": after_digest,
+        "candidate_yaml_sha256": candidate.get("candidate_yaml_sha256", ""),
+        "blocked_reasons": list(blocked_reasons),
+    }
+
+
+def _next_binding_backup_path(path: Path, before_digest: str) -> Path:
+    stem = f"{path.name}.studio-backup-{before_digest[:12]}.bak"
+    backup = path.with_name(stem)
+    if not backup.exists():
+        return backup
+    for index in range(1, 1000):
+        candidate = path.with_name(f"{stem}.{index}")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError("could not allocate binding backup path")
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    tmp_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            tmp_path = handle.name
+            handle.write(text)
+            handle.flush()
+        Path(tmp_path).replace(path)
+    except OSError:
+        if tmp_path:
+            Path(tmp_path).unlink(missing_ok=True)
+        raise
+
+
 def _rewrite_binding_cross_channel_couplings(
     yaml_text: str,
     edges: Sequence[Mapping[str, object]],
@@ -1530,6 +1684,18 @@ def _is_sha256_digest(value: object) -> bool:
     if not isinstance(value, str) or len(value) != 64:
         return False
     return all(character in "0123456789abcdefABCDEF" for character in value)
+
+
+def _require_sha256_digest(value: object, field_name: str) -> str:
+    if not _is_sha256_digest(value):
+        raise ValueError(f"{field_name} must be a SHA-256 digest")
+    return str(value)
+
+
+def _require_non_empty_payload(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+    return value
 
 
 def _layer_metrics(value: object) -> tuple[tuple[str, float], ...]:

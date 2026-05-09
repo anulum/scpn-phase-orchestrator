@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.studio import BindingProposal
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
+    apply_canvas_binding_rewrite_candidate,
     apply_knob_update,
     binding_spec_project_state,
     build_beginner_guidance,
@@ -416,6 +417,101 @@ def test_canvas_binding_rewrite_candidate_blocks_layer_edges() -> None:
         "only cross_channel_coupling edges can rewrite binding YAML"
     ]
     assert candidate["binding_spec_rewritten"] is False
+
+
+def test_apply_canvas_binding_rewrite_candidate_requires_signoff_and_backup(
+    tmp_path: Path,
+) -> None:
+    result = run_binding_spec_replay(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml"),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+    edited_edges = [
+        {
+            "id": "cross_channel_reviewed",
+            "source": "channel_P",
+            "target": "channel_Quality",
+            "kind": "cross_channel_coupling",
+            "source_channel": "P",
+            "target_channel": "Quality",
+            "strength": 0.07,
+            "mode": "excitatory",
+            "template": "operator_reviewed_quality_probe",
+        },
+    ]
+    candidate = build_canvas_binding_rewrite_candidate(
+        result,
+        after_graph={"nodes": result.canvas_graph["nodes"], "edges": edited_edges},
+    )
+    target = tmp_path / "binding_spec.yaml"
+    target.write_text(result.project_state.binding.yaml_text, encoding="utf-8")
+
+    unsigned = apply_canvas_binding_rewrite_candidate(
+        candidate,
+        binding_spec_path=target,
+        operator_signoff=False,
+    )
+    assert unsigned["status"] == "blocked"
+    assert unsigned["binding_spec_rewritten"] is False
+    assert unsigned["blocked_reasons"] == ["operator_signoff must be true"]
+    assert target.read_text(encoding="utf-8") == result.project_state.binding.yaml_text
+
+    applied = apply_canvas_binding_rewrite_candidate(
+        candidate,
+        binding_spec_path=target,
+        operator_signoff=True,
+    )
+
+    assert applied["status"] == "applied"
+    assert applied["binding_spec_rewritten"] is True
+    assert applied["actuation_permitted"] is False
+    assert applied["network_opened"] is False
+    assert applied["blocked_reasons"] == []
+    assert applied["before_yaml_sha256"] == candidate["before_yaml_sha256"]
+    assert applied["after_yaml_sha256"] == candidate["candidate_yaml_sha256"]
+    assert "operator_reviewed_quality_probe" in target.read_text(encoding="utf-8")
+    backup_path = Path(str(applied["backup_path"]))
+    assert backup_path.exists()
+    assert (
+        backup_path.read_text(encoding="utf-8")
+        == result.project_state.binding.yaml_text
+    )
+
+
+def test_apply_canvas_binding_rewrite_candidate_blocks_stale_source(
+    tmp_path: Path,
+) -> None:
+    result = run_binding_spec_replay(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml"),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+    candidate = build_canvas_binding_rewrite_candidate(
+        result,
+        after_graph={
+            "nodes": result.canvas_graph["nodes"],
+            "edges": result.canvas_graph["edges"],
+        },
+    )
+    target = tmp_path / "binding_spec.yaml"
+    target.write_text(
+        result.project_state.binding.yaml_text + "\n# local edit\n", encoding="utf-8"
+    )
+
+    blocked = apply_canvas_binding_rewrite_candidate(
+        candidate,
+        binding_spec_path=target,
+        operator_signoff=True,
+    )
+
+    assert blocked["status"] == "blocked"
+    assert blocked["binding_spec_rewritten"] is False
+    assert blocked["blocked_reasons"] == [
+        "current binding_spec.yaml SHA-256 does not match candidate source"
+    ]
+    assert "# local edit" in target.read_text(encoding="utf-8")
+    assert blocked["backup_path"] == ""
 
 
 def test_canvas_edit_artifact_rejects_invalid_canvas_shape() -> None:

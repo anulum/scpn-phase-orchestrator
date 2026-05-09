@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
+    apply_canvas_binding_rewrite_candidate,
     build_beginner_guidance,
     build_canvas_binding_rewrite_candidate,
     build_canvas_edit_artifact,
@@ -362,6 +363,26 @@ with tabs[4]:
         result,
         after_graph={"nodes": canvas_nodes, "edges": canvas_edges},
     )
+    apply_signoff = st.checkbox(
+        "Apply reviewed binding rewrite candidate to binding_spec.yaml",
+        value=False,
+        help="Requires a review-ready candidate and an unchanged source SHA-256.",
+    )
+    if st.button(
+        "Apply binding rewrite",
+        disabled=canvas_rewrite["status"] != "review_ready" or not apply_signoff,
+        use_container_width=True,
+    ):
+        apply_record = apply_canvas_binding_rewrite_candidate(
+            canvas_rewrite,
+            binding_spec_path=domainpack_dir / domain / "binding_spec.yaml",
+            operator_signoff=apply_signoff,
+        )
+        if apply_record["status"] == "applied":
+            st.success("binding_spec.yaml updated with a reviewed candidate.")
+        else:
+            st.error("Binding rewrite was blocked.")
+        st.json(apply_record, expanded=False)
     canvas_record = json.loads(canvas_artifact.payload)
     if canvas_record["changed"]:
         st.warning("Canvas edits are staged as a review artefact.")

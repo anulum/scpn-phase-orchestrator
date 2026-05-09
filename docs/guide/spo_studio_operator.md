@@ -17,9 +17,9 @@ without Streamlit.
 
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
-metric inspection, and export review workflows. It still needs live drag/drop
-save/apply polish, owned live connector runtimes, and real hardware evidence
-before it should be
+metric inspection, binding apply review, and export review workflows. It still
+needs browser interaction polish, owned live connector runtimes, and real
+hardware evidence before it should be
 described as a good standalone product.
 
 Run it with:
@@ -114,14 +114,14 @@ still keeps hardware writes disabled.
 
 The **Canvas** tab exposes the binding as a deterministic graph with layer
 nodes, declared channel nodes, and cross-channel coupling edges. It is designed
-for product-grade review workflows before direct binding save/apply persistence:
+for product-grade review workflows before owned live connector runtimes:
 operators can inspect the topology, edit node or edge rows, and download a
 `canvas_edit_review.json` artefact that records before/after nodes, before/after
 edges, and changed counts.
 
-Canvas edits remain review-only. They do not rewrite `binding_spec.yaml`, open a
-live connector, or enable actuation. This keeps topology edits auditable until
-the binding update path has an explicit validation and review step.
+Canvas edits remain review-gated. They do not open a live connector or enable
+actuation. This keeps topology edits auditable until a binding candidate has an
+explicit validation, hash check, backup, and operator sign-off.
 
 `canvas_layout_manifest.json` persists only node positions, labels, and counts.
 It is intended for handoff and future layout restore; it does not alter topology
@@ -135,9 +135,10 @@ review-required before any binding rewrite.
 `binding_rewrite_candidate.yaml` is stricter: it rewrites only
 `cross_channel_couplings` from reviewed channel-to-channel canvas edges, runs the
 candidate through the real binding loader and validator, and exposes before/after
-YAML hashes. Unsupported layer-edge rewrites stay blocked. Studio still does not
-overwrite the source `binding_spec.yaml`; an operator must review and apply the
-candidate explicitly.
+YAML hashes. Unsupported layer-edge rewrites stay blocked. Applying the candidate
+requires explicit operator sign-off, a matching source SHA-256, successful
+candidate validation, backup creation, and an atomic replacement of
+`binding_spec.yaml`.
 
 ## Beginner Mode
 
