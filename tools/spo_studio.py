@@ -38,6 +38,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_live_connector_run_record,
     build_operator_checklist,
     build_oscillator_edit_artifact,
+    build_owned_live_connector_runtime_record,
     build_package_materialisation_plan,
     build_regime_chart_payload,
     build_series_chart_payload,
@@ -520,6 +521,38 @@ with tabs[8]:
                 label="connector_run_record.json",
                 data=json.dumps(connector_run, sort_keys=True, indent=2),
                 file_name="connector_run_record.json",
+                mime="application/json",
+                use_container_width=True,
+            )
+    st.subheader("Owned Runtime Boundary")
+    runtime_owner = st.text_input("Connector owner", value="")
+    runtime_auth_label = st.text_input("Credential label", value="")
+    if st.button("Validate Owned Runtime Boundary", use_container_width=True):
+        try:
+            runtime_record = build_owned_live_connector_runtime_record(
+                result,
+                transport=connector_transport,
+                owner=runtime_owner,
+                auth_policy={
+                    "scheme": "bearer",
+                    "credential_label": runtime_auth_label,
+                },
+                payload=json.loads(connector_payload),
+            )
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            _render_error_report(
+                build_error_report(
+                    operation="connector_owned_runtime",
+                    error=exc,
+                    project_name=project.project_name,
+                )
+            )
+        else:
+            st.json(runtime_record, expanded=False)
+            st.download_button(
+                label="owned_connector_runtime.json",
+                data=json.dumps(runtime_record, sort_keys=True, indent=2),
+                file_name="owned_connector_runtime.json",
                 mime="application/json",
                 use_container_width=True,
             )

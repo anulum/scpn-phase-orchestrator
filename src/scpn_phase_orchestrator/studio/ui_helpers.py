@@ -22,8 +22,14 @@ import numpy as np
 
 from scpn_phase_orchestrator.binding import validate_binding_spec
 from scpn_phase_orchestrator.binding.digital_twin import (
+    DigitalTwinBindingContract,
+    DigitalTwinSyncGrpcAdapter,
+    DigitalTwinSyncHardwareAdapter,
+    DigitalTwinSyncKafkaAdapter,
+    DigitalTwinSyncRestAdapter,
     build_digital_twin_adapter_manifest,
     build_digital_twin_binding_contract,
+    build_digital_twin_sync_envelope,
 )
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
@@ -59,6 +65,7 @@ __all__ = [
     "build_hardware_target_package",
     "build_live_connector_plan",
     "build_live_connector_run_record",
+    "build_owned_live_connector_runtime_record",
     "build_oscillator_edit_artifact",
     "build_oscillator_table",
     "build_operator_checklist",
@@ -614,6 +621,75 @@ def build_live_connector_run_record(
         "network_opened": False,
         "actuation_permitted": False,
         "hardware_write_permitted": False,
+    }
+
+
+def build_owned_live_connector_runtime_record(
+    result: StudioReplayResult,
+    *,
+    transport: str,
+    owner: str,
+    auth_policy: Mapping[str, object],
+    payload: Mapping[str, object],
+    sequence: int = 1,
+    capability: str = "audit_replay",
+    direction: str = "twin_to_spo",
+) -> dict[str, object]:
+    """Validate an owned live connector boundary without opening transport."""
+    if not isinstance(result, StudioReplayResult):
+        raise ValueError("replay result must be a StudioReplayResult")
+    checked_transport = _require_non_empty_text(transport, "transport")
+    checked_payload = _normalise_json_mapping(payload, "payload")
+    payload_json = _stable_json_payload(checked_payload, "payload")
+    blocked_reasons = _owned_runtime_blocked_reasons(
+        result.connector_plan,
+        checked_transport,
+        owner,
+        auth_policy,
+    )
+    base = _owned_runtime_base_record(
+        result,
+        transport=checked_transport,
+        owner=owner,
+        payload_sha256=sha256(payload_json.encode("utf-8")).hexdigest(),
+        sequence=sequence,
+        capability=capability,
+        direction=direction,
+    )
+    if blocked_reasons:
+        return {
+            **base,
+            "status": "blocked",
+            "blocked_reasons": blocked_reasons,
+            "response": {},
+            "adapter": {},
+            "queued_count": 0,
+        }
+
+    spec_path = _result_binding_spec_path(result)
+    spec = load_binding_spec(spec_path)
+    contract = build_digital_twin_binding_contract(spec)
+    envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability=_require_non_empty_text(capability, "capability"),
+        direction=_require_non_empty_text(direction, "direction"),
+        sequence=_non_negative_int(sequence, "sequence"),
+        payload=checked_payload,
+    )
+    response, adapter_record = _run_owned_live_adapter(
+        contract,
+        transport=checked_transport,
+        envelope_record=envelope.to_audit_record(),
+    )
+    return {
+        **base,
+        "status": "accepted" if response.get("accepted") is True else "blocked",
+        "blocked_reasons": (
+            [] if response.get("accepted") is True else [str(response["reason"])]
+        ),
+        "response": response,
+        "adapter": adapter_record,
+        "queued_count": int(adapter_record.get("queued_count", 0)),
     }
 
 
@@ -1414,6 +1490,111 @@ def _connector_by_transport(
         if connector.get("transport") == transport:
             return dict(connector)
     raise ValueError(f"connector transport {transport!r} not found")
+
+
+def _owned_runtime_blocked_reasons(
+    connector_plan: Mapping[str, object],
+    transport: str,
+    owner: str,
+    auth_policy: Mapping[str, object],
+) -> list[str]:
+    blocked: list[str] = []
+    connector = _connector_by_transport(connector_plan, transport)
+    if transport not in {"rest", "grpc", "kafka", "hardware"}:
+        blocked.append("owned runtime requires a live connector transport")
+    if connector.get("compatible") is not True:
+        blocked.append("connector manifest is incompatible")
+    if not isinstance(owner, str) or not owner.strip():
+        blocked.append("owner must be assigned")
+    if not isinstance(auth_policy, Mapping):
+        blocked.append("auth_policy must be a mapping")
+        return blocked
+    scheme = auth_policy.get("scheme")
+    credential_label = auth_policy.get("credential_label")
+    if not isinstance(scheme, str) or not scheme.strip():
+        blocked.append("auth_policy.scheme must be assigned")
+    if not isinstance(credential_label, str) or not credential_label.strip():
+        blocked.append("auth_policy.credential_label must be assigned")
+    return blocked
+
+
+def _owned_runtime_base_record(
+    result: StudioReplayResult,
+    *,
+    transport: str,
+    owner: str,
+    payload_sha256: str,
+    sequence: int,
+    capability: str,
+    direction: str,
+) -> dict[str, object]:
+    return {
+        "record_kind": "studio_owned_live_connector_runtime",
+        "project_name": result.project_state.project_name,
+        "transport": transport,
+        "owner": owner.strip() if isinstance(owner, str) else "",
+        "contract_hash": result.connector_plan.get("contract_hash", ""),
+        "capability": capability,
+        "direction": direction,
+        "sequence": sequence,
+        "payload_sha256": payload_sha256,
+        "network_opened": False,
+        "actuation_permitted": False,
+        "hardware_write_permitted": False,
+    }
+
+
+def _result_binding_spec_path(result: StudioReplayResult) -> Path:
+    source_path = result.project_state.binding.provenance.get("source_path")
+    if not isinstance(source_path, str) or not source_path.strip():
+        raise ValueError("project binding provenance must include source_path")
+    return Path(source_path)
+
+
+def _run_owned_live_adapter(
+    contract: DigitalTwinBindingContract,
+    *,
+    transport: str,
+    envelope_record: dict[str, object],
+) -> tuple[dict[str, object], dict[str, object]]:
+    headers = {"authorization": "Bearer studio-owned-runtime"}
+    if transport == "rest":
+        rest = DigitalTwinSyncRestAdapter.for_contract(contract, name="studio-rest")
+        response = rest.handle_post(envelope_record, headers=headers)
+        return response.to_audit_record(), rest.to_audit_record()
+    if transport == "grpc":
+        grpc = DigitalTwinSyncGrpcAdapter.for_contract(contract, name="studio-grpc")
+        response = grpc.handle_unary(envelope_record, metadata=headers)
+        return response.to_audit_record(), grpc.to_audit_record()
+    if transport == "kafka":
+        kafka = DigitalTwinSyncKafkaAdapter.for_contract(contract, name="studio-kafka")
+        response = kafka.handle_message(
+            {"topic": kafka.topic, "value": envelope_record},
+            headers=headers,
+        )
+        return response.to_audit_record(), kafka.to_audit_record()
+    if transport == "hardware":
+        hardware = DigitalTwinSyncHardwareAdapter.for_contract(
+            contract,
+            name="studio-hardware",
+            device_ids=("studio-review-device",),
+        )
+        response = hardware.handle_frame(
+            {
+                "device_id": "studio-review-device",
+                "safety_interlock": True,
+                "value": envelope_record,
+            },
+            headers=headers,
+        )
+        return response.to_audit_record(), hardware.to_audit_record()
+    raise ValueError(f"connector transport {transport!r} is not a live runtime")
+
+
+def _non_negative_int(value: object, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} must be a non-negative int")
+    return value
 
 
 def _materialisation_command_writes_artifact(command: object) -> bool:

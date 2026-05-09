@@ -169,10 +169,15 @@ broker clients, start a gRPC server, or write to hardware.
 
 The connector dry-run builder emits `connector_run_record.json` for an operator
 supplied JSON payload. Offline connectors such as memory and JSONL can be
-accepted as dry-run review records; REST, gRPC, Kafka, and hardware stay blocked
-until owner and authentication policy are assigned. Run records include a
-payload SHA-256 and keep `network_opened`, `actuation_permitted`, and
-`hardware_write_permitted` false.
+accepted as dry-run review records.
+
+For REST, gRPC, Kafka, and hardware, Studio can emit
+`owned_connector_runtime.json` once an owner and authentication policy are
+assigned. That record routes a transport-neutral sync envelope through the
+existing dependency-free adapter boundary, records the adapter response and
+queued count, and still keeps `network_opened`, `actuation_permitted`, and
+`hardware_write_permitted` false. It validates the runtime handoff surface; it
+does not start service processes or write to hardware.
 
 ## Error Recovery
 

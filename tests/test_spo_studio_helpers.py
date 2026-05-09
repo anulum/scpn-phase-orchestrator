@@ -38,6 +38,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_operator_checklist,
     build_oscillator_edit_artifact,
     build_oscillator_table,
+    build_owned_live_connector_runtime_record,
     build_package_materialisation_plan,
     build_regime_chart_payload,
     build_runtime_snapshot,
@@ -598,6 +599,63 @@ def test_live_connector_run_record_blocks_network_transport_without_owner() -> N
         "Studio live execution uses dry-run records only",
     ]
     assert record["operator_action"] == "assign connector owner and auth policy"
+
+
+def test_owned_live_connector_runtime_accepts_rest_boundary() -> None:
+    result = run_binding_spec_replay(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml"),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+
+    record = build_owned_live_connector_runtime_record(
+        result,
+        transport="rest",
+        owner="plant-ops",
+        auth_policy={"scheme": "bearer", "credential_label": "studio-local-key"},
+        payload={"kind": "owned_runtime_probe", "R": 0.82},
+        sequence=7,
+    )
+
+    assert record["record_kind"] == "studio_owned_live_connector_runtime"
+    assert record["project_name"] == "digital_twin_nchannel"
+    assert record["transport"] == "rest"
+    assert record["status"] == "accepted"
+    assert record["owner"] == "plant-ops"
+    assert record["response"]["accepted"] is True
+    assert record["response"]["reason"] == "accepted"
+    assert record["queued_count"] == 1
+    assert len(record["payload_sha256"]) == 64
+    assert record["network_opened"] is False
+    assert record["actuation_permitted"] is False
+    assert record["hardware_write_permitted"] is False
+    assert "Bearer" not in json.dumps(record)
+
+
+def test_owned_live_connector_runtime_blocks_missing_ownership() -> None:
+    result = run_binding_spec_replay(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml"),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+
+    record = build_owned_live_connector_runtime_record(
+        result,
+        transport="grpc",
+        owner="",
+        auth_policy={"scheme": "bearer"},
+        payload={"kind": "owned_runtime_probe"},
+    )
+
+    assert record["status"] == "blocked"
+    assert record["response"] == {}
+    assert record["queued_count"] == 0
+    assert record["blocked_reasons"] == [
+        "owner must be assigned",
+        "auth_policy.credential_label must be assigned",
+    ]
+    assert record["network_opened"] is False
+    assert record["actuation_permitted"] is False
 
 
 def test_hardware_target_package_requires_evidence_before_readiness() -> None:
