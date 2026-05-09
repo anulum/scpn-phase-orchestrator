@@ -27,6 +27,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_error_report,
     build_export_manifests,
     build_layer_table,
+    build_live_connector_plan,
     build_operator_checklist,
     build_oscillator_edit_artifact,
     build_oscillator_table,
@@ -188,6 +189,37 @@ def test_canvas_edit_artifact_rejects_invalid_canvas_shape() -> None:
             {"nodes": "bad", "edges": ()},
             {"nodes": (), "edges": ()},
         )
+
+
+def test_live_connector_plan_declares_owned_non_opened_transports() -> None:
+    spec = load_binding_spec(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    )
+
+    plan = build_live_connector_plan(spec)
+
+    assert plan["plan_kind"] == "studio_live_connector_plan"
+    assert plan["project_name"] == "digital_twin_nchannel"
+    assert len(plan["contract_hash"]) == 64
+    assert plan["network_opened"] is False
+    assert plan["actuation_permitted"] is False
+    assert [connector["transport"] for connector in plan["connectors"]] == [
+        "memory",
+        "jsonl",
+        "rest",
+        "grpc",
+        "kafka",
+        "hardware",
+    ]
+    memory, jsonl, rest, grpc, kafka, hardware = plan["connectors"]
+    assert memory["status"] == "review_ready"
+    assert jsonl["supports_replay"] is True
+    for connector in (rest, grpc, kafka, hardware):
+        assert connector["status"] == "owner_required"
+        assert connector["requires_auth"] is True
+        assert connector["operator_action"] == "assign connector owner and auth policy"
+    assert hardware["hardware_write_permitted"] is False
+    assert "live_transport_requires_auth" not in json.dumps(plan)
 
 
 def test_beginner_guidance_explains_runtime_in_domain_terms() -> None:

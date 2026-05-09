@@ -19,6 +19,10 @@ from pathlib import Path
 import numpy as np
 
 from scpn_phase_orchestrator.binding import validate_binding_spec
+from scpn_phase_orchestrator.binding.digital_twin import (
+    build_digital_twin_adapter_manifest,
+    build_digital_twin_binding_contract,
+)
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingState
@@ -46,6 +50,7 @@ __all__ = [
     "build_deployment_readiness",
     "build_error_report",
     "build_layer_table",
+    "build_live_connector_plan",
     "build_oscillator_edit_artifact",
     "build_oscillator_table",
     "build_operator_checklist",
@@ -93,6 +98,7 @@ class StudioReplayResult:
     layer_table: tuple[dict[str, object], ...]
     oscillator_table: tuple[dict[str, object], ...]
     canvas_graph: Mapping[str, object]
+    connector_plan: Mapping[str, object]
     export_manifests: tuple[ExportManifest, ...]
 
     def to_audit_record(self) -> dict[str, object]:
@@ -104,6 +110,7 @@ class StudioReplayResult:
             "layer_table": list(self.layer_table),
             "oscillator_table": list(self.oscillator_table),
             "canvas_graph": dict(self.canvas_graph),
+            "connector_plan": dict(self.connector_plan),
             "exports": [
                 manifest.to_audit_record() for manifest in self.export_manifests
             ],
@@ -306,6 +313,57 @@ def build_canvas_edit_artifact(
         payload=payload,
         command="review canvas_edit_review.json before updating binding_spec.yaml",
     )
+
+
+def build_live_connector_plan(spec: BindingSpec) -> dict[str, object]:
+    """Return non-opening connector ownership guidance for Studio."""
+    contract = build_digital_twin_binding_contract(spec)
+    connector_specs = (
+        ("memory", True, False, "review offline memory connector"),
+        ("jsonl", True, False, "review JSONL replay connector"),
+        ("rest", False, True, "assign connector owner and auth policy"),
+        ("grpc", False, True, "assign connector owner and auth policy"),
+        ("kafka", False, True, "assign connector owner and auth policy"),
+        ("hardware", False, True, "assign connector owner and auth policy"),
+    )
+    connectors: list[dict[str, object]] = []
+    for transport, supports_replay, requires_auth, action in connector_specs:
+        compatibility = build_digital_twin_adapter_manifest(
+            contract,
+            name=f"studio-{transport}",
+            transport=transport,
+            sync_capabilities=[
+                capability.name for capability in contract.sync_capabilities
+            ],
+            supports_replay=supports_replay,
+            requires_auth=requires_auth,
+            notes="SPO Studio connector review",
+        )
+        manifest = compatibility.manifest
+        owner_required = transport in {"rest", "grpc", "kafka", "hardware"}
+        connectors.append(
+            {
+                "name": manifest.name,
+                "transport": manifest.transport,
+                "status": "owner_required" if owner_required else "review_ready",
+                "compatible": compatibility.compatible,
+                "reasons": list(compatibility.reasons),
+                "sync_capabilities": list(manifest.sync_capabilities),
+                "supports_replay": manifest.supports_replay,
+                "requires_auth": manifest.requires_auth,
+                "operator_action": action,
+                "network_opened": False,
+                "hardware_write_permitted": False,
+            }
+        )
+    return {
+        "plan_kind": "studio_live_connector_plan",
+        "project_name": spec.name,
+        "contract_hash": contract.contract_hash,
+        "network_opened": False,
+        "actuation_permitted": False,
+        "connectors": connectors,
+    }
 
 
 def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
@@ -827,6 +885,7 @@ def run_binding_spec_replay(
         layer_table=build_layer_table(spec),
         oscillator_table=build_oscillator_table(spec),
         canvas_graph=build_canvas_graph(spec),
+        connector_plan=build_live_connector_plan(spec),
         export_manifests=project_state.exports,
     )
 

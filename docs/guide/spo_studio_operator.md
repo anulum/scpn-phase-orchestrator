@@ -10,14 +10,15 @@
 
 SPO Studio is the Streamlit operator surface for local replay, binding review,
 auto-binding proposals, oscillator edits, live metrics, hierarchy visibility,
-and review artefact export. It is intentionally a thin UI over
+connector ownership review, and review artefact export. It is intentionally a
+thin UI over
 `scpn_phase_orchestrator.studio.ui_helpers`, so the behaviour can be tested
 without Streamlit.
 
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs true drag/drop
-layout polish, richer guided onboarding, live connector ownership, package
+layout polish, richer guided onboarding, live connector execution, package
 materialisation commands, and hardware-target packaging before it should be
 described as a good standalone product.
 
@@ -50,6 +51,8 @@ streamlit run tools/spo_studio.py
    - **Live**: `R`, regime timeline, and per-layer metrics from local replay.
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
    - **Hierarchy**: current hierarchy watermarks and reduced layer metrics.
+   - **Connectors**: memory, JSONL, REST, gRPC, Kafka, and hardware connector
+     ownership plan, contract hash, auth posture, and `connector_plan.json`.
    - **Exports**: deployment-readiness checklist, deployment package manifest,
      plus review artefacts for binding YAML, audit JSON, Docker manifest, WASM
      manifest, and project state.
@@ -111,6 +114,18 @@ Beginner guidance is still non-actuating. It reads the replay result, canvas
 graph, validation state, and runtime snapshot; it does not change the binding,
 run live connectors, or enable hardware output.
 
+## Connector Ownership
+
+The **Connectors** tab turns the digital-twin binding contract into a review
+plan for memory, JSONL, REST, gRPC, Kafka, and hardware transports. Offline
+connectors are marked review-ready. Live transports are marked owner-required
+with authentication required, and the hardware connector explicitly keeps
+`hardware_write_permitted` false.
+
+`connector_plan.json` includes the contract hash, sync capabilities, compatibility
+result, ownership status, and safety flags. Studio does not open sockets, import
+broker clients, start a gRPC server, or write to hardware.
+
 ## Error Recovery
 
 Replay and source-import failures render `studio_error_report.json` instead of
@@ -121,6 +136,6 @@ does not echo local paths, uploaded content, or raw exception messages.
 ## Safety Posture
 
 Studio does not open hardware handles, run live transport, or actuate a target.
-Knob changes alter only local replay. Validation failures keep review artefacts
-available with warnings, while deploy-like manifests are disabled and carry
-explicit disabled reasons.
+Connector plans are review records only. Knob changes alter only local replay.
+Validation failures keep review artefacts available with warnings, while
+deploy-like manifests are disabled and carry explicit disabled reasons.

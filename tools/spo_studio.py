@@ -179,6 +179,7 @@ tabs = st.tabs(
         "Live",
         "Autotune",
         "Hierarchy",
+        "Connectors",
         "Exports",
     ]
 )
@@ -391,6 +392,29 @@ with tabs[7]:
     )
 
 with tabs[8]:
+    connector_plan = result.connector_plan
+    st.dataframe(
+        list(connector_plan["connectors"]),
+        hide_index=True,
+        use_container_width=True,
+    )
+    st.json(
+        {
+            "contract_hash": connector_plan["contract_hash"],
+            "network_opened": connector_plan["network_opened"],
+            "actuation_permitted": connector_plan["actuation_permitted"],
+        },
+        expanded=False,
+    )
+    st.download_button(
+        label="connector_plan.json",
+        data=json.dumps(connector_plan, sort_keys=True, indent=2),
+        file_name="connector_plan.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+with tabs[9]:
     readiness = build_deployment_readiness(project)
     package = build_deployment_package(project)
     st.subheader("Deployment Readiness")
