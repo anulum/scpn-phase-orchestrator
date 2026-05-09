@@ -34,6 +34,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_operator_checklist,
     build_oscillator_edit_artifact,
     build_oscillator_table,
+    build_package_materialisation_plan,
     build_regime_chart_payload,
     build_runtime_snapshot,
     build_series_chart_payload,
@@ -695,6 +696,80 @@ def test_command_table_exposes_review_commands_only() -> None:
     }
     assert rows[-1]["command"].startswith("cd spo-kernel && wasm-pack build")
     assert all(row["target"] != "hardware" for row in rows)
+
+
+def test_package_materialisation_plan_orders_ready_target_commands() -> None:
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+
+    plan = build_package_materialisation_plan(state)
+
+    assert plan["plan_kind"] == "studio_package_materialisation_plan"
+    assert plan["project_name"] == "minimal_domain"
+    assert plan["overall_status"] == "review_ready"
+    assert plan["execution_mode"] == "operator_invoked"
+    assert plan["network_opened"] is False
+    assert plan["hardware_write_permitted"] is False
+    assert plan["commands"][0] == {
+        "step": 1,
+        "target": "docker",
+        "command": "docker compose config",
+        "status": "ready",
+        "requires_operator": True,
+        "writes_artifact": False,
+    }
+    assert plan["commands"][-1]["target"] == "wasm"
+    assert plan["commands"][-1]["writes_artifact"] is True
+    assert plan["postponed_targets"] == [
+        {
+            "target": "hardware",
+            "reason": "attach verified hardware-target evidence",
+        }
+    ]
+
+
+def test_package_materialisation_plan_blocks_commands_after_validation_failure() -> (
+    None
+):
+    manifests = build_export_manifests(
+        project_name="broken",
+        binding_yaml="version: 1\n",
+        audit_payload={"project_name": "broken"},
+        validation_errors=("layer missing",),
+    )
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+    broken_state = type(state)(
+        project_name=state.project_name,
+        source=state.source,
+        binding=state.binding,
+        runtime=state.runtime,
+        exports=manifests,
+        metadata=state.metadata,
+    )
+
+    plan = build_package_materialisation_plan(broken_state)
+
+    assert plan["overall_status"] == "blocked"
+    assert plan["commands"] == []
+    assert plan["blocked_targets"] == ["docker", "wasm", "hardware"]
+    assert "layer missing" in plan["blocked_reasons"]
 
 
 def test_command_table_is_empty_when_validation_blocks_targets() -> None:

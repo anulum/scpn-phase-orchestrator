@@ -18,8 +18,8 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs live drag/drop
-binding rewrite polish, richer guided onboarding, live connector execution, package
-materialisation commands, and hardware-target packaging before it should be
+binding rewrite polish, richer guided onboarding, live connector execution, and
+hardware-target packaging before it should be
 described as a good standalone product.
 
 Run it with:
@@ -55,8 +55,9 @@ streamlit run tools/spo_studio.py
    - **Connectors**: memory, JSONL, REST, gRPC, Kafka, and hardware connector
      ownership plan, contract hash, auth posture, and `connector_plan.json`.
    - **Exports**: deployment-readiness checklist, deployment package manifest,
-     hardware target package, plus review artefacts for binding YAML, audit
-     JSON, Docker manifest, WASM manifest, and project state.
+     package materialisation plan, hardware target package, plus review
+     artefacts for binding YAML, audit JSON, Docker manifest, WASM manifest,
+     and project state.
 
 ## Guided Deployment Path
 
@@ -89,6 +90,11 @@ The package JSON gathers the same target readiness with export payload hashes,
 required artefacts, review commands, blocked reasons, and safety gates. It is a
 single handover manifest for packaging jobs; it does not build images, run
 `wasm-pack`, open transports, or enable hardware output by itself.
+
+`package_materialisation_plan.json` orders the operator-invoked Docker and WASM
+commands and marks which commands write artefacts. It carries the same blocked
+reasons, required artefacts, and safety gates as the deployment package while
+keeping `network_opened` and `hardware_write_permitted` false.
 
 `hardware_target_package.json` is stricter. It records FPGA Verilog and
 neuromorphic schedule as target classes, but it remains `evidence_required`

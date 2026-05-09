@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_hardware_target_package,
     build_operator_checklist,
     build_oscillator_edit_artifact,
+    build_package_materialisation_plan,
     build_regime_chart_payload,
     build_series_chart_payload,
     disabled_export_reasons,
@@ -443,6 +444,7 @@ with tabs[8]:
 with tabs[9]:
     readiness = build_deployment_readiness(project)
     package = build_deployment_package(project)
+    materialisation_plan = build_package_materialisation_plan(project)
     hardware_package = build_hardware_target_package(result)
     st.subheader("Deployment Readiness")
     st.dataframe(
@@ -470,6 +472,13 @@ with tabs[9]:
         label="deployment_package.json",
         data=json.dumps(package, sort_keys=True, indent=2),
         file_name="deployment_package.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+    st.download_button(
+        label="package_materialisation_plan.json",
+        data=json.dumps(materialisation_plan, sort_keys=True, indent=2),
+        file_name="package_materialisation_plan.json",
         mime="application/json",
         use_container_width=True,
     )

@@ -58,6 +58,7 @@ __all__ = [
     "build_oscillator_table",
     "build_operator_checklist",
     "build_regime_chart_payload",
+    "build_package_materialisation_plan",
     "build_runtime_snapshot",
     "build_series_chart_payload",
     "disabled_export_reasons",
@@ -837,6 +838,53 @@ def build_deployment_package(
     }
 
 
+def build_package_materialisation_plan(
+    project_state: StudioProjectState,
+) -> dict[str, object]:
+    """Return ordered, operator-invoked package materialisation commands."""
+    package = build_deployment_package(project_state)
+    command_rows = build_command_table(project_state)
+    commands = [
+        {
+            "step": index,
+            "target": _require_non_empty_text(row.get("target"), "target"),
+            "command": _require_non_empty_text(row.get("command"), "command"),
+            "status": _require_non_empty_text(row.get("status"), "status"),
+            "requires_operator": True,
+            "writes_artifact": _materialisation_command_writes_artifact(
+                row.get("command")
+            ),
+        }
+        for index, row in enumerate(command_rows, 1)
+    ]
+    readiness = build_deployment_readiness(project_state)
+    targets = _readiness_targets(readiness)
+    return {
+        "plan_kind": "studio_package_materialisation_plan",
+        "project_name": project_state.project_name,
+        "overall_status": package["overall_status"],
+        "execution_mode": "operator_invoked",
+        "network_opened": False,
+        "hardware_write_permitted": False,
+        "commands": commands,
+        "blocked_targets": list(package["blocked_targets"]),
+        "blocked_reasons": list(package["blocked_reasons"]),
+        "postponed_targets": [
+            {
+                "target": target["target"],
+                "reason": _require_non_empty_text(
+                    target.get("operator_action"),
+                    "operator_action",
+                ),
+            }
+            for target in targets
+            if target["status"] == "postponed"
+        ],
+        "required_artifacts": list(package["required_artifacts"]),
+        "safety_gates": list(package["safety_gates"]),
+    }
+
+
 def build_operator_checklist(
     project_state: StudioProjectState,
 ) -> tuple[dict[str, object], ...]:
@@ -1105,6 +1153,18 @@ def _connector_by_transport(
         if connector.get("transport") == transport:
             return dict(connector)
     raise ValueError(f"connector transport {transport!r} not found")
+
+
+def _materialisation_command_writes_artifact(command: object) -> bool:
+    command_text = _require_non_empty_text(command, "command")
+    return any(
+        marker in command_text
+        for marker in (
+            "docker build",
+            "docker run",
+            "wasm-pack build",
+        )
+    )
 
 
 def _layer_metrics(value: object) -> tuple[tuple[str, float], ...]:
