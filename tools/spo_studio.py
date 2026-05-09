@@ -24,6 +24,8 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
+    build_deployment_readiness,
+    build_operator_checklist,
     build_oscillator_edit_artifact,
     build_regime_chart_payload,
     build_series_chart_payload,
@@ -248,6 +250,21 @@ with tabs[5]:
     )
 
 with tabs[6]:
+    readiness = build_deployment_readiness(project)
+    st.subheader("Deployment Readiness")
+    st.dataframe(
+        list(build_operator_checklist(project)),
+        hide_index=True,
+        use_container_width=True,
+    )
+    st.json(readiness, expanded=False)
+    st.download_button(
+        label="deployment_readiness.json",
+        data=json.dumps(readiness, sort_keys=True, indent=2),
+        file_name="deployment_readiness.json",
+        mime="application/json",
+        use_container_width=True,
+    )
     _render_exports(result)
     st.download_button(
         label="project_state.json",

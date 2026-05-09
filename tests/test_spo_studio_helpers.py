@@ -18,8 +18,10 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     apply_knob_update,
     binding_spec_project_state,
+    build_deployment_readiness,
     build_export_manifests,
     build_layer_table,
+    build_operator_checklist,
     build_oscillator_edit_artifact,
     build_oscillator_table,
     build_regime_chart_payload,
@@ -107,6 +109,150 @@ def test_runtime_snapshot_and_exports_are_review_safe() -> None:
     assert all(manifest.safety_posture == "review_artifact" for manifest in exports)
     assert restored["project_name"] == "minimal_domain"
     assert disabled_export_reasons(()) == ()
+
+
+def test_deployment_readiness_records_guided_target_status() -> None:
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={
+                "R_global": 0.72,
+                "regime": "nominal",
+                "layers": [{"name": "layer-a", "R": 0.7}],
+            },
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+
+    readiness = build_deployment_readiness(state)
+
+    assert readiness["project_name"] == "minimal_domain"
+    assert readiness["overall_status"] == "review_ready"
+    assert readiness["operator_next_step"] == "review target-specific packaging"
+    assert [target["target"] for target in readiness["targets"]] == [
+        "docker",
+        "wasm",
+        "hardware",
+    ]
+    docker, wasm, hardware = readiness["targets"]
+    assert docker["status"] == "ready"
+    assert docker["required_artifacts"] == [
+        "binding_spec.yaml",
+        "spo_studio_audit.json",
+        "docker_manifest.json",
+    ]
+    assert docker["commands"] == [
+        "docker compose config",
+        "docker build -t scpn-phase-orchestrator:local .",
+        "docker run --rm -v $PWD:/workspace scpn-phase-orchestrator:local "
+        "spo run binding_spec.yaml --audit audit.jsonl",
+    ]
+    assert wasm["status"] == "ready"
+    assert wasm["commands"] == [
+        "cd spo-kernel && wasm-pack build crates/spo-wasm --target web "
+        "--out-dir ../../../docs/wasm-pkg",
+    ]
+    assert hardware["status"] == "postponed"
+    assert hardware["operator_action"] == "attach verified hardware-target evidence"
+    assert hardware["commands"] == []
+
+
+def test_deployment_readiness_blocks_targets_on_validation_errors() -> None:
+    manifests = build_export_manifests(
+        project_name="broken",
+        binding_yaml="version: 1\n",
+        audit_payload={"project_name": "broken"},
+        validation_errors=("layer missing",),
+    )
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+    broken_state = type(state)(
+        project_name=state.project_name,
+        source=state.source,
+        binding=state.binding,
+        runtime=state.runtime,
+        exports=manifests,
+        metadata=state.metadata,
+    )
+
+    readiness = build_deployment_readiness(broken_state)
+
+    assert readiness["overall_status"] == "blocked"
+    assert readiness["operator_next_step"] == "fix binding validation errors"
+    for target in readiness["targets"]:
+        assert target["status"] == "blocked"
+        assert "layer missing" in target["blocked_reasons"]
+
+
+def test_operator_checklist_guides_ready_and_postponed_targets() -> None:
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+
+    checklist = build_operator_checklist(state)
+
+    assert [step["step"] for step in checklist] == [1, 2, 3, 4, 5]
+    assert checklist[0]["status"] == "complete"
+    assert checklist[0]["title"] == "Run local replay"
+    assert checklist[1]["status"] == "complete"
+    assert checklist[2]["status"] == "ready"
+    assert checklist[2]["target"] == "docker"
+    assert checklist[3]["target"] == "wasm"
+    assert checklist[4]["status"] == "postponed"
+    assert checklist[4]["target"] == "hardware"
+
+
+def test_operator_checklist_blocks_after_validation_failure() -> None:
+    manifests = build_export_manifests(
+        project_name="broken",
+        binding_yaml="version: 1\n",
+        audit_payload={"project_name": "broken"},
+        validation_errors=("layer missing",),
+    )
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+    broken_state = type(state)(
+        project_name=state.project_name,
+        source=state.source,
+        binding=state.binding,
+        runtime=state.runtime,
+        exports=manifests,
+        metadata=state.metadata,
+    )
+
+    checklist = build_operator_checklist(broken_state)
+
+    assert checklist[0]["status"] == "complete"
+    assert checklist[1]["status"] == "blocked"
+    assert checklist[1]["title"] == "Validate binding"
+    assert checklist[2]["status"] == "blocked"
+    assert "layer missing" in checklist[2]["detail"]
 
 
 def test_deploy_exports_are_disabled_when_validation_fails() -> None:

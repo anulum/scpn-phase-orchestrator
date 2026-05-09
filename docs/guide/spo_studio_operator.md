@@ -43,8 +43,32 @@ streamlit run tools/spo_studio.py
    - **Live**: `R`, regime timeline, and per-layer metrics from local replay.
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
    - **Hierarchy**: current hierarchy watermarks and reduced layer metrics.
-   - **Exports**: review artefacts for binding YAML, audit JSON, Docker manifest,
-     WASM manifest, and project state.
+   - **Exports**: deployment-readiness checklist plus review artefacts for
+     binding YAML, audit JSON, Docker manifest, WASM manifest, and project
+     state.
+
+## Guided Deployment Path
+
+The **Exports** tab emits `deployment_readiness.json` before the individual
+artefact downloads. It also shows a beginner checklist in execution order:
+run local replay, validate the binding, review Docker packaging, review WASM
+packaging, then attach hardware evidence when available. The readiness JSON
+gives each target a status and the next operator action:
+
+- `docker`: ready when binding validation passes; review `binding_spec.yaml`,
+  `spo_studio_audit.json`, and `docker_manifest.json` before packaging. The
+  checklist includes the review commands for `docker compose config`, local
+  image build, and local replay inside the image.
+- `wasm`: ready when binding validation passes; review browser-safe replay
+  constraints and the `wasm_manifest.json` artefact. The checklist includes the
+  `wasm-pack` build command for the browser demo artefact.
+- `hardware`: postponed until verified target evidence is attached. Studio does
+  not mark hardware packaging ready from a local replay alone, and it emits no
+  hardware command until that evidence exists.
+
+If binding validation fails, all targets are blocked and the checklist carries
+the validation messages as `blocked_reasons`. This keeps review artefacts
+available while preventing deploy-like manifests from being treated as ready.
 
 ## Safety Posture
 

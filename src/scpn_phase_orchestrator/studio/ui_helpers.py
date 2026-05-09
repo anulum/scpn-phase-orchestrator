@@ -38,9 +38,11 @@ __all__ = [
     "apply_knob_update",
     "binding_spec_project_state",
     "build_export_manifests",
+    "build_deployment_readiness",
     "build_layer_table",
     "build_oscillator_edit_artifact",
     "build_oscillator_table",
+    "build_operator_checklist",
     "build_regime_chart_payload",
     "build_runtime_snapshot",
     "build_series_chart_payload",
@@ -343,6 +345,126 @@ def build_export_manifests(
     )
 
 
+def build_deployment_readiness(
+    project_state: StudioProjectState,
+) -> dict[str, object]:
+    """Return target-specific deployment readiness guidance for Studio."""
+    blocked_reasons = _deployment_blocked_reasons(project_state.exports)
+    if blocked_reasons:
+        return {
+            "project_name": project_state.project_name,
+            "overall_status": "blocked",
+            "operator_next_step": "fix binding validation errors",
+            "targets": [
+                _blocked_target("docker", blocked_reasons),
+                _blocked_target("wasm", blocked_reasons),
+                _blocked_target("hardware", blocked_reasons),
+            ],
+        }
+
+    return {
+        "project_name": project_state.project_name,
+        "overall_status": "review_ready",
+        "operator_next_step": "review target-specific packaging",
+        "targets": [
+            {
+                "target": "docker",
+                "status": "ready",
+                "required_artifacts": [
+                    "binding_spec.yaml",
+                    "spo_studio_audit.json",
+                    "docker_manifest.json",
+                ],
+                "commands": [
+                    "docker compose config",
+                    "docker build -t scpn-phase-orchestrator:local .",
+                    "docker run --rm -v $PWD:/workspace "
+                    "scpn-phase-orchestrator:local "
+                    "spo run binding_spec.yaml --audit audit.jsonl",
+                ],
+                "operator_action": "run docker manifest review before packaging",
+            },
+            {
+                "target": "wasm",
+                "status": "ready",
+                "required_artifacts": [
+                    "binding_spec.yaml",
+                    "spo_studio_audit.json",
+                    "wasm_manifest.json",
+                ],
+                "commands": [
+                    "cd spo-kernel && wasm-pack build crates/spo-wasm "
+                    "--target web --out-dir ../../../docs/wasm-pkg",
+                ],
+                "operator_action": "review browser-safe replay constraints",
+            },
+            {
+                "target": "hardware",
+                "status": "postponed",
+                "required_artifacts": [
+                    "binding_spec.yaml",
+                    "spo_studio_audit.json",
+                    "verified_hardware_target_evidence",
+                ],
+                "commands": [],
+                "operator_action": "attach verified hardware-target evidence",
+            },
+        ],
+    }
+
+
+def build_operator_checklist(
+    project_state: StudioProjectState,
+) -> tuple[dict[str, object], ...]:
+    """Return beginner-friendly ordered deployment steps for Studio."""
+    readiness = build_deployment_readiness(project_state)
+    validation_blocked = readiness["overall_status"] == "blocked"
+    steps: list[dict[str, object]] = [
+        {
+            "step": 1,
+            "title": "Run local replay",
+            "status": (
+                "complete"
+                if project_state.runtime.replay_status == "completed"
+                else "blocked"
+            ),
+            "detail": project_state.runtime.replay_status,
+        },
+        {
+            "step": 2,
+            "title": "Validate binding",
+            "status": "blocked" if validation_blocked else "complete",
+            "detail": (
+                "; ".join(_deployment_blocked_reasons(project_state.exports))
+                if validation_blocked
+                else "binding validation passed"
+            ),
+        },
+    ]
+    for target in readiness["targets"]:
+        if not isinstance(target, Mapping):
+            raise ValueError("readiness targets must be mappings")
+        target_name = _require_non_empty_text(target.get("target"), "target")
+        status = _require_non_empty_text(target.get("status"), "status")
+        operator_action = _require_non_empty_text(
+            target.get("operator_action"),
+            "operator_action",
+        )
+        blocked_detail = "; ".join(
+            str(reason) for reason in target.get("blocked_reasons", ())
+        )
+        steps.append(
+            {
+                "step": len(steps) + 1,
+                "title": f"Review {target_name} packaging",
+                "target": target_name,
+                "status": status,
+                "detail": blocked_detail or operator_action,
+            }
+        )
+    return tuple(steps)
+
+
 def build_oscillator_edit_artifact(
     before_rows: Sequence[Mapping[str, object]],
     after_rows: Sequence[Mapping[str, object]],
@@ -440,6 +562,31 @@ def _apply_replay_knobs(sim: SimulationState, knobs: StudioKnobState) -> None:
     )
     if knobs.zeta or knobs.Psi:
         sim.omegas = np.asarray(sim.omegas, dtype=np.float64) + knobs.zeta * knobs.Psi
+
+
+def _deployment_blocked_reasons(
+    exports: Sequence[ExportManifest],
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    for manifest in exports:
+        for warning in manifest.warnings:
+            if warning not in reasons:
+                reasons.append(warning)
+    return tuple(reasons)
+
+
+def _blocked_target(
+    target: str,
+    blocked_reasons: Sequence[str],
+) -> dict[str, object]:
+    return {
+        "target": target,
+        "status": "blocked",
+        "required_artifacts": (),
+        "commands": (),
+        "operator_action": "resolve blocked reasons before packaging",
+        "blocked_reasons": list(blocked_reasons),
+    }
 
 
 def _layer_metrics(value: object) -> tuple[tuple[str, float], ...]:

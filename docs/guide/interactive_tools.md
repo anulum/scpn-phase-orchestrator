@@ -27,8 +27,9 @@ Opens at `http://localhost:8501`.
 - **Oscillator table** — edit oscillator rows and export an
   `oscillator_edit_review.json` artefact for binding review
 - **Hierarchy monitor** — inspect reduced layer metrics and watermarks
-- **Export review** — download binding, audit, Docker, WASM, and project-state
-  artefacts; deploy-like manifests are disabled when validation fails
+- **Export review** — download deployment-readiness, binding, audit, Docker,
+  WASM, and project-state artefacts; deploy-like manifests are disabled when
+  validation fails
 
 ### Use Cases
 
