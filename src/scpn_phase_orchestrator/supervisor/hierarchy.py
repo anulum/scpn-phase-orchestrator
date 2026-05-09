@@ -364,10 +364,7 @@ class HierarchyTransportRuntime:
         records: Sequence[HierarchySyncEnvelope | Mapping[str, object] | str],
     ) -> HierarchySyncLedger:
         """Parse a transport batch, ingest it, and advance accepted watermarks."""
-        envelopes = tuple(
-            load_hierarchy_sync_envelope(record)
-            for record in records
-        )
+        envelopes = tuple(load_hierarchy_sync_envelope(record) for record in records)
         ledger = ingest_hierarchy_sync_envelopes(
             envelopes,
             previous_sequences=self._previous_sequences,
@@ -548,8 +545,7 @@ def ingest_hierarchy_sync_envelopes(
     cloud ingestion deterministic.
     """
     canonical_envelopes = tuple(
-        _canonical_hierarchy_sync_envelope(envelope)
-        for envelope in envelopes
+        _canonical_hierarchy_sync_envelope(envelope) for envelope in envelopes
     )
     for envelope in canonical_envelopes:
         _validate_envelope_reduced_only(envelope)

@@ -400,9 +400,7 @@ def run_binding_spec_replay(
     for _ in range(steps):
         final_state = sim.step()
         r_history.append(_finite_number(final_state["R_global"], "R_global"))
-        regime_history.append(
-            _require_non_empty_text(final_state["regime"], "regime")
-        )
+        regime_history.append(_require_non_empty_text(final_state["regime"], "regime"))
 
     runtime = build_runtime_snapshot(
         final_state=final_state,

@@ -43,10 +43,7 @@ def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
     tmp_path: Path,
 ) -> None:
     csv_text = (
-        "time,grid,load,breaker\n"
-        "0.00,0.0,1.0,0.0\n"
-        "0.01,0.2,0.9,1.0\n"
-        "0.02,0.4,0.7,0.0\n"
+        "time,grid,load,breaker\n0.00,0.0,1.0,0.0\n0.01,0.2,0.9,1.0\n0.02,0.4,0.7,0.0\n"
     )
 
     proposal = propose_binding_from_time_series_csv(

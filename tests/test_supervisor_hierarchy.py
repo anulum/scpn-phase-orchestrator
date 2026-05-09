@@ -383,13 +383,17 @@ def test_hierarchy_sync_ingestion_accepts_latest_same_source() -> None:
 
     assert [envelope.sequence for envelope in forward.accepted] == [3]
     assert [envelope.sequence for envelope in reverse.accepted] == [3]
-    assert forward.rejected == reverse.rejected == (
-        {
-            "source_node": "node-a",
-            "sequence": 2,
-            "reason": "stale_or_duplicate_sequence",
-            "protocol_version": "spo-hierarchy-sync/v1",
-        },
+    assert (
+        forward.rejected
+        == reverse.rejected
+        == (
+            {
+                "source_node": "node-a",
+                "sequence": 2,
+                "reason": "stale_or_duplicate_sequence",
+                "protocol_version": "spo-hierarchy-sync/v1",
+            },
+        )
     )
     assert forward.plan.to_audit_record() == reverse.plan.to_audit_record()
 

@@ -45,10 +45,7 @@ def _required_string(value: object, *, field_name: str) -> str:
 def _string_tuple(value: object, *, field_name: str) -> tuple[str, ...]:
     if not isinstance(value, list | tuple):
         raise ValueError(f"{field_name} must be a sequence of strings")
-    return tuple(
-        _required_string(item, field_name=field_name)
-        for item in value
-    )
+    return tuple(_required_string(item, field_name=field_name) for item in value)
 
 
 def _non_negative_int(value: object, *, field_name: str) -> int:
@@ -68,8 +65,7 @@ def _stable_sha256(payload: bytes | str) -> str:
 def _sha256_digest(value: object, *, field_name: str) -> str:
     digest = _required_string(value, field_name=field_name)
     if len(digest) != 64 or any(
-        character not in "0123456789abcdefABCDEF"
-        for character in digest
+        character not in "0123456789abcdefABCDEF" for character in digest
     ):
         raise ValueError(
             f"{field_name} must be a 64-character hexadecimal SHA-256 digest"
@@ -87,13 +83,9 @@ def _json_safe_value(value: object, *, field_name: str) -> JsonValue:
     if isinstance(value, Mapping):
         return _json_safe_mapping(value, field_name=field_name)
     if isinstance(value, list | tuple):
-        return [
-            _json_safe_value(item, field_name=field_name)
-            for item in value
-        ]
+        return [_json_safe_value(item, field_name=field_name) for item in value]
     raise ValueError(
-        f"{field_name} contains non-JSON-serialisable value "
-        f"{type(value).__name__}"
+        f"{field_name} contains non-JSON-serialisable value {type(value).__name__}"
     )
 
 
@@ -113,10 +105,9 @@ def _json_safe_mapping(
 
 def _freeze_json_value(value: JsonValue) -> object:
     if isinstance(value, dict):
-        return MappingProxyType({
-            key: _freeze_json_value(item)
-            for key, item in value.items()
-        })
+        return MappingProxyType(
+            {key: _freeze_json_value(item) for key, item in value.items()}
+        )
     if isinstance(value, list):
         return tuple(_freeze_json_value(item) for item in value)
     return value
@@ -128,10 +119,9 @@ def _frozen_json_mapping(
     field_name: str,
 ) -> Mapping[str, object]:
     safe = _json_safe_mapping(value, field_name=field_name)
-    return MappingProxyType({
-        key: _freeze_json_value(item)
-        for key, item in safe.items()
-    })
+    return MappingProxyType(
+        {key: _freeze_json_value(item) for key, item in safe.items()}
+    )
 
 
 def _finite_float(value: object, *, field_name: str) -> int | float:
@@ -187,10 +177,12 @@ def _layer_metrics(
         ):
             raise ValueError("layer_metrics entries must contain layer and value")
         layer, metric = entry
-        metrics.append((
-            _layer_metric_name(layer),
-            _finite_float(metric, field_name="layer_metrics"),
-        ))
+        metrics.append(
+            (
+                _layer_metric_name(layer),
+                _finite_float(metric, field_name="layer_metrics"),
+            )
+        )
     return tuple(metrics)
 
 

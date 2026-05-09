@@ -127,9 +127,7 @@ def test_deploy_exports_are_disabled_when_validation_fails() -> None:
     assert all(manifest.warnings == reasons for manifest in manifests)
     for manifest in manifests:
         payload = (
-            json.loads(manifest.payload)
-            if manifest.file_name.endswith(".json")
-            else {}
+            json.loads(manifest.payload) if manifest.file_name.endswith(".json") else {}
         )
         if payload:
             assert payload["enabled"] is False

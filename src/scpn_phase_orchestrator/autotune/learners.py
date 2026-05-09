@@ -172,10 +172,7 @@ def generate_hybrid_physics_proposal(
     proposal_config: PolicyProposalConfig | None = None,
 ) -> LearnerPolicyProposal:
     """Generate a replay proposal shaped by a critical-coupling prior."""
-    if (
-        not np.isfinite(critical_coupling_estimate)
-        or critical_coupling_estimate <= 0.0
-    ):
+    if not np.isfinite(critical_coupling_estimate) or critical_coupling_estimate <= 0.0:
         raise ValueError("critical_coupling_estimate must be finite and positive")
 
     current_k = float(np.asarray(seed.K, dtype=np.float64).mean())
