@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
+from scpn_phase_orchestrator.studio import BindingProposal
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     apply_knob_update,
@@ -432,7 +433,72 @@ def test_beginner_guidance_explains_runtime_in_domain_terms() -> None:
     assert guidance["concept_cards"][0]["evidence"]["channels"] == ["I", "P", "S"]
     assert guidance["concept_cards"][1]["evidence"]["K"] == 1.3
     assert guidance["next_actions"][0] == "review binding validation"
+    assert [step["title"] for step in guidance["walkthrough_steps"]] == [
+        "Load project",
+        "Run replay",
+        "Review binding",
+        "Inspect canvas",
+        "Prepare exports",
+    ]
+    assert [step["status"] for step in guidance["walkthrough_steps"]] == [
+        "complete",
+        "complete",
+        "complete",
+        "complete",
+        "ready",
+    ]
+    assert guidance["walkthrough_steps"][3]["evidence"] == {
+        "layers": 2,
+        "channels": 3,
+        "couplings": 0,
+    }
     assert all("Kuramoto" not in json.dumps(card) for card in guidance["concept_cards"])
+
+
+def test_beginner_guidance_walkthrough_blocks_on_validation_errors() -> None:
+    manifests = build_export_manifests(
+        project_name="broken",
+        binding_yaml="version: 1\n",
+        audit_payload={"project_name": "broken"},
+        validation_errors=("layer missing",),
+    )
+    result = run_binding_spec_replay(
+        _minimal_spec_path(),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+    broken_state = type(result.project_state)(
+        project_name=result.project_state.project_name,
+        source=result.project_state.source,
+        binding=BindingProposal(
+            yaml_text=result.project_state.binding.yaml_text,
+            validation_errors=("layer missing",),
+            inferred_channels=tuple(result.project_state.binding.inferred_channels),
+            confidence_factors=dict(result.project_state.binding.confidence_factors),
+            provenance=dict(result.project_state.binding.provenance),
+        ),
+        runtime=result.project_state.runtime,
+        exports=manifests,
+        metadata=result.project_state.metadata,
+    )
+    broken_result = type(result)(
+        project_state=broken_state,
+        r_history=result.r_history,
+        regime_history=result.regime_history,
+        layer_table=result.layer_table,
+        oscillator_table=result.oscillator_table,
+        canvas_graph=result.canvas_graph,
+        connector_plan=result.connector_plan,
+        export_manifests=manifests,
+    )
+
+    guidance = build_beginner_guidance(broken_result)
+
+    assert guidance["walkthrough_steps"][2]["status"] == "blocked"
+    assert guidance["walkthrough_steps"][2]["evidence"] == {
+        "validation_errors": ["layer missing"]
+    }
+    assert guidance["walkthrough_steps"][4]["status"] == "blocked"
 
 
 def test_beginner_guidance_blocks_invalid_result_shape() -> None:

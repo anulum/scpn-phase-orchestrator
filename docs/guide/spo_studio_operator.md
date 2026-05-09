@@ -18,8 +18,8 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs live drag/drop
-binding rewrite polish, richer guided onboarding, live connector execution, and
-hardware-target packaging before it should be
+binding rewrite polish, live connector execution, and hardware-target packaging
+before it should be
 described as a good standalone product.
 
 Run it with:
@@ -37,8 +37,8 @@ streamlit run tools/spo_studio.py
 4. Review the tabs:
    - **Load**: current source summary and raw-source import for CSV, event-log
      JSON, or graph JSON binding proposals.
-   - **Guide**: beginner-mode runtime summary, signal/coupling/objective/
-     supervisor explanations in domain terms, next actions, and
+   - **Guide**: beginner-mode runtime summary, ordered walkthrough, signal/
+     coupling/objective/supervisor explanations in domain terms, next actions, and
      `beginner_guidance.json`.
    - **Binding**: generated or loaded YAML plus validation diagnostics.
    - **Oscillators**: editable oscillator table. Edits produce an
@@ -129,8 +129,11 @@ review-required before any binding rewrite.
 The **Guide** tab translates the current replay into operator-facing language:
 which layers and channels are being reviewed, how `K`, `alpha`, `zeta`, and
 `Psi` affect the replay, whether binding validation is blocking packaging, and
-what regime the supervisor currently reports. The downloadable
-`beginner_guidance.json` mirrors the on-screen cards for handover and review.
+what regime the supervisor currently reports. It also emits an ordered
+walkthrough with status and evidence for loading the project, running replay,
+reviewing binding, inspecting canvas topology, and preparing exports. The
+downloadable `beginner_guidance.json` mirrors the on-screen cards and
+walkthrough for handover and review.
 
 Beginner guidance is still non-actuating. It reads the replay result, canvas
 graph, validation state, and runtime snapshot; it does not change the binding,

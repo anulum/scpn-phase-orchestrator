@@ -262,6 +262,11 @@ with tabs[1]:
         hide_index=True,
         use_container_width=True,
     )
+    st.dataframe(
+        guidance["walkthrough_steps"],
+        hide_index=True,
+        use_container_width=True,
+    )
     st.download_button(
         label="beginner_guidance.json",
         data=json.dumps(guidance, sort_keys=True, indent=2),

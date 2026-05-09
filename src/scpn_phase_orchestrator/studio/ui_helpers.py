@@ -509,6 +509,11 @@ def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
         if isinstance(node, Mapping) and node.get("kind") == "channel"
     ]
     validation_errors = list(project.binding.validation_errors)
+    canvas_evidence = {
+        "layers": int(result.canvas_graph["layer_count"]),
+        "channels": int(result.canvas_graph["channel_count"]),
+        "couplings": int(result.canvas_graph["edge_count"]),
+    }
     return {
         "guide_kind": "beginner_mode",
         "project_name": project.project_name,
@@ -576,6 +581,56 @@ def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
             + (["fix validation errors"] if validation_errors else ["review exports"])
             + ["download project_state.json"]
         ),
+        "walkthrough_steps": [
+            {
+                "step": 1,
+                "title": "Load project",
+                "status": "complete",
+                "operator_action": "review source summary",
+                "evidence": {"source_kind": project.source.source_kind},
+            },
+            {
+                "step": 2,
+                "title": "Run replay",
+                "status": (
+                    "complete" if runtime.replay_status == "completed" else "blocked"
+                ),
+                "operator_action": "run local replay",
+                "evidence": {"replay_status": runtime.replay_status},
+            },
+            {
+                "step": 3,
+                "title": "Review binding",
+                "status": "blocked" if validation_errors else "complete",
+                "operator_action": (
+                    "fix validation errors"
+                    if validation_errors
+                    else "review binding and continue"
+                ),
+                "evidence": {"validation_errors": validation_errors},
+            },
+            {
+                "step": 4,
+                "title": "Inspect canvas",
+                "status": "complete",
+                "operator_action": "inspect layer, channel, and coupling graph",
+                "evidence": canvas_evidence,
+            },
+            {
+                "step": 5,
+                "title": "Prepare exports",
+                "status": "blocked" if validation_errors else "ready",
+                "operator_action": (
+                    "fix validation errors"
+                    if validation_errors
+                    else "download review artefacts"
+                ),
+                "evidence": {
+                    "export_count": len(result.export_manifests),
+                    "connector_count": len(result.connector_plan.get("connectors", ())),
+                },
+            },
+        ],
     }
 
 
