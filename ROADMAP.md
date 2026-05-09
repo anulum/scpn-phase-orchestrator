@@ -381,7 +381,10 @@ Near-term candidate tracks:
   - Remaining scope: larger real audit-history training corpora and optional
     `scpn-meta` packaging.
 - Quantum-native compiler target: output Qiskit/PennyLane or OpenPulse/QASM fragments for the `quantum_simulation` path with co-simulation validation.
-- Neuromorphic compiler target: emit Lava/PyNN or hardware-oriented HDL fragments from binding specs and supervisor policies, with simulator parity evidence.
+- Neuromorphic compiler target: deterministic Lava/PyNN schedule manifests
+  from `UPDEState` are in place with population records, projections,
+  control-action review records, simulator parity evidence, SHA-256 coverage,
+  and disabled hardware writes. Real neuromorphic target execution remains open.
 
 Speculative research watchlist:
 

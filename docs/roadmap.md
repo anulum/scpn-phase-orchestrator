@@ -114,7 +114,7 @@ into the active roadmap.
 | Federated meta-orchestrator | privacy-preserving policy-gradient aggregation across nodes without raw time-series exchange |
 | Byzantine-fault-tolerant meta-orchestrator | three-node consensus demo over signed policy/topology proposals and hash-linked audit evidence |
 | Quantum-native compiler target | Qiskit/PennyLane or OpenPulse/QASM output backend for `quantum_simulation` with co-simulation validation |
-| Neuromorphic compiler target | Lava/PyNN or HDL output from a binding spec plus supervisor policy with simulator parity evidence |
+| Neuromorphic compiler target | deterministic Lava/PyNN schedule manifests from `UPDEState` now include population records, projections, control-action review records, simulator parity evidence, SHA-256 coverage, and disabled hardware writes; real neuromorphic target execution remains open |
 | Hybrid neuromorphic-quantum co-compiler | co-simulation hook that keeps quantum and spiking targets under the same N-channel audit semantics |
 | Value-alignment supervisor guard | guard foundation, binding-spec templates, counterfactual violation/score reporting, and cardiac rhythm/power-grid/autonomous-vehicle/satellite/power-safety N-channel/network-security/financial-markets/chemical-reactor/manufacturing SPC/robotic CPG/swarm-robotics/traffic-flow/plasma-control/fusion-equilibrium/neuroscience EEG/brain-connectome/sleep-architecture/circadian-biology/epidemic SIR domainpack templates are implemented; broader domainpack-specific prior templates remain open |
 | Autopoietic lineage sandbox | resource-bounded offline child-policy lineage over audit replays, with merge only through reviewable policy diffs |

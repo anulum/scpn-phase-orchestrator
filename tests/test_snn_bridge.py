@@ -153,6 +153,66 @@ def test_lava_process_with_mock():
     mock_lif_cls.assert_called_once()
 
 
+def test_neuromorphic_schedule_manifest_is_deterministic_and_safe():
+    state = _make_state([0.25, 0.75])
+    state.cross_layer_alignment[0, 1] = 0.4
+    bridge = SNNControllerBridge(n_neurons=32)
+
+    manifest = bridge.build_neuromorphic_schedule_manifest(
+        state,
+        i_scale=2.0,
+        threshold_hz=20.0,
+    )
+    repeated = bridge.build_neuromorphic_schedule_manifest(
+        state,
+        i_scale=2.0,
+        threshold_hz=20.0,
+    )
+
+    assert manifest == repeated
+    assert manifest["manifest_kind"] == "neuromorphic_schedule_manifest"
+    assert manifest["schema_version"] == 1
+    assert manifest["status"] == "simulator_parity_passed"
+    assert manifest["target_backends"] == ["lava", "pynn"]
+    assert manifest["actuation_permitted"] is False
+    assert manifest["hardware_write_permitted"] is False
+    assert len(manifest["schedule_sha256"]) == 64
+    assert manifest["populations"][0]["lava_process"] == "LIF"
+    assert manifest["populations"][0]["pynn_cell"] == "IF_curr_exp"
+    assert manifest["populations"][1]["input_current"] == 1.5
+    assert manifest["projections"] == [
+        {
+            "source": "layer_0",
+            "target": "layer_1",
+            "weight": 0.4,
+            "delay_ms": 1.0,
+            "receptor_type": "excitatory",
+        }
+    ]
+    assert manifest["simulator_parity"]["max_abs_rate_error_hz"] == 0.0
+    assert manifest["operator_commands"] == [
+        "review neuromorphic_schedule_manifest.json",
+        "run Lava or PyNN simulator parity before hardware handoff",
+    ]
+
+
+def test_neuromorphic_schedule_manifest_rejects_invalid_state():
+    bridge = SNNControllerBridge()
+    state = UPDEState(
+        layers=[LayerState(R=0.4, psi=0.0), LayerState(R=0.6, psi=0.0)],
+        cross_layer_alignment=np.ones((1, 2)),
+        stability_proxy=0.5,
+        regime_id="nominal",
+    )
+
+    try:
+        bridge.build_neuromorphic_schedule_manifest(state)
+    except ValueError as exc:
+        assert "cross_layer_alignment shape" in str(exc)
+    else:
+        raise AssertionError("invalid cross-layer shape must be rejected")
+
+
 class TestSNNPipelineWiring:
     """Pipeline: UPDEState → SNN currents → LIF rates → actions."""
 

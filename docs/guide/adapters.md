@@ -82,10 +82,18 @@ currents = bridge.upde_state_to_input_current(state, i_scale=2.0)
 rates = bridge.lif_rate_estimate(currents)
 actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 0, 1, 1])
 network = bridge.build_numpy_network(n_layers=4, seed=0)
+schedule = bridge.build_neuromorphic_schedule_manifest(state, i_scale=2.0)
 ```
 
 LIF rate estimate uses Abbott 1999, Eq. 1:
 `rate = 1 / (tau_ref - tau_rc * ln(1 - 1/J))` for J > 1.
+
+`build_neuromorphic_schedule_manifest()` emits a deterministic review artefact
+for Lava and PyNN handoff. It records one population per UPDE layer, positive
+cross-layer projections, control-action review records, simulator parity
+evidence from the numpy LIF rate path, and a SHA-256 schedule hash. The manifest
+keeps `actuation_permitted` and `hardware_write_permitted` false; it is a
+simulator-parity handoff, not a live neuromorphic target run.
 
 ### NeurocoreBridge
 
