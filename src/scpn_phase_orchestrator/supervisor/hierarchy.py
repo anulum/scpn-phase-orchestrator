@@ -25,10 +25,12 @@ __all__ = [
     "HierarchyConsensusState",
     "HierarchySyncEnvelope",
     "HierarchySyncLedger",
+    "HierarchyTransportRuntime",
     "HierarchyEscalation",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
     "ingest_hierarchy_sync_envelopes",
+    "load_hierarchy_sync_envelope",
     "simulate_hierarchy_gossip_consensus",
 ]
 
@@ -193,6 +195,62 @@ class HierarchySyncLedger:
         }
 
 
+@dataclass
+class HierarchyTransportRuntime:
+    """Stateful non-socket runtime boundary for hierarchy sync batches.
+
+    The runtime accepts decoded JSON/dict payloads from a caller-owned
+    transport adapter, enforces monotonically increasing sequence numbers across
+    batches, and delegates accepted envelopes to the parent hierarchy planner.
+    It intentionally owns no sockets, threads, clients, or broker handles.
+    """
+
+    hierarchy: str = "edge_cloud_summary_sync_runtime"
+    degraded_threshold: float = 0.65
+    critical_threshold: float = 0.35
+    min_confidence: float = 0.5
+    protocol_version: str = "spo-hierarchy-sync/v1"
+    previous_sequences: dict[str, int] = field(default_factory=dict)
+
+    def ingest_batch(
+        self,
+        records: Sequence[Mapping[str, object] | str | HierarchySyncEnvelope],
+    ) -> HierarchySyncLedger:
+        """Parse and ingest a caller-supplied transport batch.
+
+        Rejected envelopes are reported in the returned ledger. Successful
+        ingestion advances the runtime's per-source sequence watermarks so the
+        next batch rejects duplicate or stale transport messages.
+        """
+        envelopes = tuple(
+            record
+            if isinstance(record, HierarchySyncEnvelope)
+            else load_hierarchy_sync_envelope(record)
+            for record in records
+        )
+        ledger = ingest_hierarchy_sync_envelopes(
+            envelopes,
+            previous_sequences=self.previous_sequences,
+            hierarchy=self.hierarchy,
+            degraded_threshold=self.degraded_threshold,
+            critical_threshold=self.critical_threshold,
+            min_confidence=self.min_confidence,
+            protocol_version=self.protocol_version,
+        )
+        for envelope in ledger.accepted:
+            self.previous_sequences[envelope.source_node] = envelope.sequence
+        return ledger
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return runtime watermarks without exposing transport internals."""
+        return {
+            "hierarchy": self.hierarchy,
+            "protocol_version": self.protocol_version,
+            "previous_sequences": dict(sorted(self.previous_sequences.items())),
+            "audit_scope": "transport_runtime_watermarks_only",
+        }
+
+
 @dataclass(frozen=True)
 class HierarchyConsensusState:
     """Reduced node state after an offline hierarchy gossip round."""
@@ -313,6 +371,49 @@ def build_hierarchy_sync_envelope(
         sequence=sequence,
         summary=summary,
         monotonic_time_s=monotonic_time_s,
+    )
+
+
+def load_hierarchy_sync_envelope(
+    record: Mapping[str, object] | str,
+) -> HierarchySyncEnvelope:
+    """Load a hierarchy sync envelope from a JSON string or decoded mapping.
+
+    This parser is the transport-runtime boundary for REST, gRPC, Kafka, JSONL,
+    or test harnesses that already decoded bytes. It validates only the reduced
+    sync shape and never opens a transport or admits raw child observations.
+    """
+    payload = json.loads(record) if isinstance(record, str) else dict(record)
+    summary_payload = _require_mapping(payload.get("summary"), "summary")
+    return HierarchySyncEnvelope(
+        protocol_version=_require_string(
+            payload.get("protocol_version"),
+            "protocol_version",
+        ),
+        source_node=_require_string(payload.get("source_node"), "source_node"),
+        sequence=_require_int(payload.get("sequence"), "sequence"),
+        monotonic_time_s=_optional_float(
+            payload.get("monotonic_time_s"),
+            "monotonic_time_s",
+        ),
+        summary=ChildSupervisorSummary(
+            name=_require_string(summary_payload.get("name"), "summary.name"),
+            channel=_require_string(
+                summary_payload.get("channel"),
+                "summary.channel",
+            ),
+            R=_require_float(summary_payload.get("R"), "summary.R"),
+            psi=_require_float(summary_payload.get("psi"), "summary.psi"),
+            regime=_require_string(
+                summary_payload.get("regime", _REGIME_NOMINAL),
+                "summary.regime",
+            ),
+            confidence=_require_float(
+                summary_payload.get("confidence", 1.0),
+                "summary.confidence",
+            ),
+            metadata=_require_metadata(summary_payload.get("metadata", {})),
+        ),
     )
 
 
@@ -647,3 +748,45 @@ def _require_finite(value: float, name: str) -> None:
 def _require_unit_interval(value: float, name: str) -> None:
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be finite and in [0, 1]")
+
+
+def _require_mapping(value: object, name: str) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{name} must be a mapping")
+    return value
+
+
+def _require_metadata(value: object) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError("summary.metadata must be a mapping")
+    return dict(value)
+
+
+def _require_string(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+    return value
+
+
+def _require_float(value: object, name: str) -> float:
+    if not isinstance(value, int | float):
+        raise ValueError(f"{name} must be numeric")
+    result = float(value)
+    if not np.isfinite(result):
+        raise ValueError(f"{name} must be finite")
+    return result
+
+
+def _optional_float(value: object, name: str) -> float | None:
+    if value is None:
+        return None
+    result = _require_float(value, name)
+    if result < 0.0:
+        raise ValueError(f"{name} must be non-negative")
+    return result
+
+
+def _require_int(value: object, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{name} must be an integer")
+    return value

@@ -6,9 +6,11 @@ import pytest
 
 from scpn_phase_orchestrator.supervisor import (
     ChildSupervisorSummary,
+    HierarchyTransportRuntime,
     build_hierarchical_orchestration_plan,
     build_hierarchy_sync_envelope,
     ingest_hierarchy_sync_envelopes,
+    load_hierarchy_sync_envelope,
     simulate_hierarchy_gossip_consensus,
 )
 
@@ -236,6 +238,110 @@ def test_hierarchy_sync_ingestion_requires_one_accepted_envelope() -> None:
         ingest_hierarchy_sync_envelopes(
             (stale,),
             previous_sequences={"node-a": 1},
+        )
+
+
+def test_hierarchy_transport_runtime_ingests_json_batches_and_tracks_sequences() -> (
+    None
+):
+    runtime = HierarchyTransportRuntime(hierarchy="edge_cloud_transport_runtime")
+    first = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary(
+            "edge-a",
+            "grid",
+            R=0.92,
+            psi=0.0,
+            metadata={"site": "north"},
+        ),
+        source_node="node-a",
+        sequence=7,
+        monotonic_time_s=2.5,
+    )
+    second = {
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "source_node": "node-b",
+        "sequence": 3,
+        "summary": {
+            "name": "edge-b",
+            "channel": "thermal",
+            "R": 0.55,
+            "psi": 0.4,
+            "regime": "degraded",
+            "confidence": 0.8,
+            "metadata": {"site": "south"},
+        },
+    }
+
+    ledger = runtime.ingest_batch((first.to_json(), second))
+
+    assert [envelope.source_node for envelope in ledger.accepted] == [
+        "node-a",
+        "node-b",
+    ]
+    assert runtime.previous_sequences == {"node-a": 7, "node-b": 3}
+    assert ledger.plan.hierarchy == "edge_cloud_transport_runtime"
+    assert ledger.plan.escalations[0].reason == "child_coherence_below_degraded"
+    assert runtime.to_audit_record() == {
+        "hierarchy": "edge_cloud_transport_runtime",
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "previous_sequences": {"node-a": 7, "node-b": 3},
+        "audit_scope": "transport_runtime_watermarks_only",
+    }
+
+
+def test_hierarchy_transport_runtime_rejects_stale_followup_batch() -> None:
+    runtime = HierarchyTransportRuntime()
+    accepted = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "grid", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=4,
+    )
+    stale = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-b", "grid", R=0.4, psi=0.2),
+        source_node="node-a",
+        sequence=4,
+    )
+    fresh = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-c", "grid", R=0.8, psi=0.1),
+        source_node="node-c",
+        sequence=1,
+    )
+
+    first = runtime.ingest_batch((accepted,))
+    second = runtime.ingest_batch((stale, fresh))
+
+    assert [envelope.source_node for envelope in first.accepted] == ["node-a"]
+    assert [record["reason"] for record in second.rejected] == [
+        "stale_or_duplicate_sequence"
+    ]
+    assert [envelope.source_node for envelope in second.accepted] == ["node-c"]
+    assert runtime.previous_sequences == {"node-a": 4, "node-c": 1}
+
+
+def test_load_hierarchy_sync_envelope_rejects_raw_or_malformed_payloads() -> None:
+    with pytest.raises(ValueError, match="summary must be a mapping"):
+        load_hierarchy_sync_envelope(
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-a",
+                "sequence": 1,
+                "raw_phases": [0.1, 0.2],
+            }
+        )
+
+    with pytest.raises(ValueError, match="sequence must be an integer"):
+        load_hierarchy_sync_envelope(
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-a",
+                "sequence": "1",
+                "summary": {
+                    "name": "edge-a",
+                    "channel": "grid",
+                    "R": 0.9,
+                    "psi": 0.0,
+                },
+            }
         )
 
 

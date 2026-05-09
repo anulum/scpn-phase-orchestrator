@@ -221,6 +221,20 @@ ledger = ingest_hierarchy_sync_envelopes(
 sync_audit = ledger.to_audit_record()
 ```
 
+`HierarchyTransportRuntime` is the next live-transport boundary. Caller-owned
+REST, gRPC, Kafka, file, or hardware adapters can pass decoded mappings or JSON
+strings into the runtime; the runtime parses reduced sync records, maintains
+per-source sequence watermarks across batches, and emits the same parent
+ledger. It still owns no socket, thread, broker client, or actuator handle.
+
+```python
+from scpn_phase_orchestrator.supervisor import HierarchyTransportRuntime
+
+runtime = HierarchyTransportRuntime()
+batch_ledger = runtime.ingest_batch([envelope.to_json()])
+runtime_audit = runtime.to_audit_record()
+```
+
 For offline distributed-edge testing, `simulate_hierarchy_gossip_consensus()`
 replays local consensus over accepted sync envelopes and a caller-supplied
 neighbour map. Each node updates only its reduced coherence, phase, confidence,

@@ -45,9 +45,11 @@ from scpn_phase_orchestrator.supervisor.hierarchy import (
     HierarchyEscalation,
     HierarchySyncEnvelope,
     HierarchySyncLedger,
+    HierarchyTransportRuntime,
     build_hierarchical_orchestration_plan,
     build_hierarchy_sync_envelope,
     ingest_hierarchy_sync_envelopes,
+    load_hierarchy_sync_envelope,
     simulate_hierarchy_gossip_consensus,
 )
 from scpn_phase_orchestrator.supervisor.morphogenetic import (
@@ -137,6 +139,7 @@ __all__ = [
     "HierarchyEscalation",
     "HierarchySyncEnvelope",
     "HierarchySyncLedger",
+    "HierarchyTransportRuntime",
     "HigherOrderTopologySupervisor",
     "InterventionParameters",
     "Marking",
@@ -197,6 +200,7 @@ __all__ = [
     "load_policy_stl_specs",
     "ingest_hierarchy_sync_envelopes",
     "learn_causal_graph",
+    "load_hierarchy_sync_envelope",
     "sheaf_coherence",
     "sheaf_laplacian",
     "simulate_hierarchy_gossip_consensus",

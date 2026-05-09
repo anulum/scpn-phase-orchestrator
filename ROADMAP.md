@@ -186,6 +186,7 @@
 - Distributed edge orchestration: multi-node phase consensus with gossip or local Kuramoto coupling, plus WASM/FPGA deployment paths for decentralised operation.
   - Offline hierarchy sync-envelope ingestion and two domainpack replay demos are in place for reduced summaries.
   - Deterministic offline gossip/local-consensus replay is in place via `simulate_hierarchy_gossip_consensus()`, using accepted sync envelopes and caller-supplied neighbour maps without sockets or live actuation. Live transport remains open.
+  - Stateful non-socket transport-runtime boundary is in place via `HierarchyTransportRuntime`: caller-owned adapters can submit decoded JSON/dict sync batches while the runtime enforces per-source sequence watermarks and parent-ledger generation without owning sockets, clients, threads, or actuator handles.
 - Digital-twin binding standard: version `binding_spec.yaml` as an open bidirectional live-sync contract for simulators, services, and hardware twins.
   - Digital-twin binding contract foundation is in place: `build_digital_twin_binding_contract()` emits deterministic timing, layer, actuator, N-channel algebra, sync-capability, and contract-hash payloads without opening transport or applying control.
   - Transport-neutral payload validation is in place: digital-twin sync envelopes validate contract hashes, declared capabilities, directions, sequence numbers, and non-empty payloads before a REST/gRPC/Kafka/file/hardware adapter hands data to runtime code.
@@ -208,7 +209,7 @@
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
   - Reward-evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, and adaptive replay refinement are in place; next scope is optional PPO/SAC or hybrid physics learners behind the same non-actuating gates.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
-  - N-channel runtime execution and replay-only optimisation surfaces are in place. Hierarchical reduced-summary parent orchestration, offline edge/cloud sync envelopes, power-grid/cardiac replay demos, and deterministic offline gossip replay are in place; live transport and broader multi-domain demos remain open.
+  - N-channel runtime execution and replay-only optimisation surfaces are in place. Hierarchical reduced-summary parent orchestration, offline edge/cloud sync envelopes, stateful non-socket sync-batch runtime, power-grid/cardiac replay demos, and deterministic offline gossip replay are in place; live transport adapters and broader multi-domain demos remain open.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
 - Plugin ecosystem and marketplace: standard interfaces for domainpacks, extractors, actuators, and bridges so domain experts can publish extensions without forking the core repository.
   - Plugin manifest registry foundation is in place; deeper Rust runtime loading remains open.
