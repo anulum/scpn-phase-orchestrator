@@ -17,9 +17,9 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs true drag/drop
-layout polish, richer guided onboarding, live connector ownership, deployment
-packaging, and hardware-target packaging before it should be described as a
-good standalone product.
+layout polish, richer guided onboarding, live connector ownership, package
+materialisation commands, and hardware-target packaging before it should be
+described as a good standalone product.
 
 Run it with:
 
@@ -50,19 +50,21 @@ streamlit run tools/spo_studio.py
    - **Live**: `R`, regime timeline, and per-layer metrics from local replay.
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
    - **Hierarchy**: current hierarchy watermarks and reduced layer metrics.
-   - **Exports**: deployment-readiness checklist plus review artefacts for
-     binding YAML, audit JSON, Docker manifest, WASM manifest, and project
-     state.
+   - **Exports**: deployment-readiness checklist, deployment package manifest,
+     plus review artefacts for binding YAML, audit JSON, Docker manifest, WASM
+     manifest, and project state.
 
 ## Guided Deployment Path
 
-The **Exports** tab emits `deployment_readiness.json` before the individual
-artefact downloads. It also shows a beginner checklist in execution order:
-run local replay, validate the binding, review Docker packaging, review WASM
-packaging, then attach hardware evidence when available. A separate command
-table exposes only currently reviewable commands, so blocked targets and
-hardware-without-evidence do not emit command rows. The readiness JSON gives
-each target a status and the next operator action:
+The **Exports** tab emits `deployment_readiness.json` and
+`deployment_package.json` before the individual artefact downloads. It also
+shows a beginner checklist in execution order: run local replay, validate the
+binding, review Docker packaging, review WASM packaging, then attach hardware
+evidence when available. A separate command table exposes only currently
+reviewable commands, so blocked targets and hardware-without-evidence do not
+emit command rows.
+
+The readiness JSON gives each target a status and the next operator action:
 
 - `docker`: ready when binding validation passes; review `binding_spec.yaml`,
   `spo_studio_audit.json`, and `docker_manifest.json` before packaging. The
@@ -78,6 +80,11 @@ each target a status and the next operator action:
 If binding validation fails, all targets are blocked and the checklist carries
 the validation messages as `blocked_reasons`. This keeps review artefacts
 available while preventing deploy-like manifests from being treated as ready.
+
+The package JSON gathers the same target readiness with export payload hashes,
+required artefacts, review commands, blocked reasons, and safety gates. It is a
+single handover manifest for packaging jobs; it does not build images, run
+`wasm-pack`, open transports, or enable hardware output by itself.
 
 ## Canvas Review
 

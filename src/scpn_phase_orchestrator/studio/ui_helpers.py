@@ -42,6 +42,7 @@ __all__ = [
     "build_canvas_graph",
     "build_command_table",
     "build_export_manifests",
+    "build_deployment_package",
     "build_deployment_readiness",
     "build_error_report",
     "build_layer_table",
@@ -606,6 +607,53 @@ def build_deployment_readiness(
     }
 
 
+def build_deployment_package(
+    project_state: StudioProjectState,
+) -> dict[str, object]:
+    """Return a deterministic deployment package manifest for Studio."""
+    readiness = build_deployment_readiness(project_state)
+    targets = _readiness_targets(readiness)
+    blocked_reasons = _deployment_blocked_reasons(project_state.exports)
+    return {
+        "package_kind": "studio_deployment_package",
+        "project_name": project_state.project_name,
+        "overall_status": readiness["overall_status"],
+        "ready_targets": [
+            target["target"] for target in targets if target["status"] == "ready"
+        ],
+        "postponed_targets": [
+            target["target"] for target in targets if target["status"] == "postponed"
+        ],
+        "blocked_targets": [
+            target["target"] for target in targets if target["status"] == "blocked"
+        ],
+        "blocked_reasons": list(blocked_reasons),
+        "required_artifacts": _unique_artifacts(targets),
+        "export_artifacts": [
+            {
+                "target_kind": manifest.target_kind,
+                "file_name": manifest.file_name,
+                "payload_sha256": manifest.payload_sha256,
+                "safety_posture": manifest.safety_posture,
+                "warnings": list(manifest.warnings),
+            }
+            for manifest in project_state.exports
+        ],
+        "commands": list(build_command_table(project_state)),
+        "safety_gates": [
+            "local replay completed",
+            (
+                "binding validation blocked"
+                if blocked_reasons
+                else "binding validation passed"
+            ),
+            "live actuation disabled",
+            "hardware output requires verified evidence",
+        ],
+        "readiness": readiness,
+    }
+
+
 def build_operator_checklist(
     project_state: StudioProjectState,
 ) -> tuple[dict[str, object], ...]:
@@ -825,6 +873,39 @@ def _blocked_target(
         "operator_action": "resolve blocked reasons before packaging",
         "blocked_reasons": list(blocked_reasons),
     }
+
+
+def _readiness_targets(
+    readiness: Mapping[str, object],
+) -> tuple[dict[str, object], ...]:
+    raw_targets = readiness.get("targets", ())
+    if isinstance(raw_targets, str | bytes) or not isinstance(raw_targets, Sequence):
+        raise ValueError("readiness targets must be a sequence")
+    targets: list[dict[str, object]] = []
+    for index, raw_target in enumerate(raw_targets):
+        if not isinstance(raw_target, Mapping):
+            raise ValueError(f"readiness targets[{index}] must be a mapping")
+        targets.append(
+            {
+                **dict(raw_target),
+                "target": _require_non_empty_text(raw_target.get("target"), "target"),
+                "status": _require_non_empty_text(raw_target.get("status"), "status"),
+            }
+        )
+    return tuple(targets)
+
+
+def _unique_artifacts(targets: Sequence[Mapping[str, object]]) -> list[str]:
+    artifacts: list[str] = []
+    for target in targets:
+        required = target.get("required_artifacts", ())
+        if isinstance(required, str | bytes) or not isinstance(required, Sequence):
+            raise ValueError("required_artifacts must be a sequence")
+        for artifact in required:
+            name = _require_non_empty_text(artifact, "required_artifact")
+            if name not in artifacts:
+                artifacts.append(name)
+    return artifacts
 
 
 def _layer_metrics(value: object) -> tuple[tuple[str, float], ...]:

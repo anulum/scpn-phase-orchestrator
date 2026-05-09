@@ -27,6 +27,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_beginner_guidance,
     build_canvas_edit_artifact,
     build_command_table,
+    build_deployment_package,
     build_deployment_readiness,
     build_error_report,
     build_operator_checklist,
@@ -391,6 +392,7 @@ with tabs[7]:
 
 with tabs[8]:
     readiness = build_deployment_readiness(project)
+    package = build_deployment_package(project)
     st.subheader("Deployment Readiness")
     st.dataframe(
         list(build_operator_checklist(project)),
@@ -410,6 +412,13 @@ with tabs[8]:
         label="deployment_readiness.json",
         data=json.dumps(readiness, sort_keys=True, indent=2),
         file_name="deployment_readiness.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+    st.download_button(
+        label="deployment_package.json",
+        data=json.dumps(package, sort_keys=True, indent=2),
+        file_name="deployment_package.json",
         mime="application/json",
         use_container_width=True,
     )

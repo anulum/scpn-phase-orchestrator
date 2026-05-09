@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_canvas_edit_artifact,
     build_canvas_graph,
     build_command_table,
+    build_deployment_package,
     build_deployment_readiness,
     build_error_report,
     build_export_manifests,
@@ -304,6 +305,56 @@ def test_deployment_readiness_records_guided_target_status() -> None:
     assert hardware["commands"] == []
 
 
+def test_deployment_package_collects_ready_artifacts_and_safety_gates() -> None:
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={
+                "R_global": 0.72,
+                "regime": "nominal",
+                "layers": [{"name": "layer-a", "R": 0.7}],
+            },
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+
+    package = build_deployment_package(state)
+
+    assert package["package_kind"] == "studio_deployment_package"
+    assert package["project_name"] == "minimal_domain"
+    assert package["overall_status"] == "review_ready"
+    assert package["ready_targets"] == ["docker", "wasm"]
+    assert package["postponed_targets"] == ["hardware"]
+    assert package["blocked_targets"] == []
+    assert package["required_artifacts"] == [
+        "binding_spec.yaml",
+        "spo_studio_audit.json",
+        "docker_manifest.json",
+        "wasm_manifest.json",
+        "verified_hardware_target_evidence",
+    ]
+    assert package["safety_gates"] == [
+        "local replay completed",
+        "binding validation passed",
+        "live actuation disabled",
+        "hardware output requires verified evidence",
+    ]
+    assert [artifact["file_name"] for artifact in package["export_artifacts"]] == [
+        "binding_spec.yaml",
+        "spo_studio_audit.json",
+        "docker_manifest.json",
+        "wasm_manifest.json",
+    ]
+    assert all(
+        len(artifact["payload_sha256"]) == 64
+        for artifact in package["export_artifacts"]
+    )
+    assert package["commands"][0]["target"] == "docker"
+
+
 def test_deployment_readiness_blocks_targets_on_validation_errors() -> None:
     manifests = build_export_manifests(
         project_name="broken",
@@ -331,12 +382,20 @@ def test_deployment_readiness_blocks_targets_on_validation_errors() -> None:
     )
 
     readiness = build_deployment_readiness(broken_state)
+    package = build_deployment_package(broken_state)
 
     assert readiness["overall_status"] == "blocked"
     assert readiness["operator_next_step"] == "fix binding validation errors"
     for target in readiness["targets"]:
         assert target["status"] == "blocked"
         assert "layer missing" in target["blocked_reasons"]
+    assert package["overall_status"] == "blocked"
+    assert package["ready_targets"] == []
+    assert package["blocked_targets"] == ["docker", "wasm", "hardware"]
+    assert (
+        "binding validation must pass before deploy manifests are enabled"
+        in (package["blocked_reasons"])
+    )
 
 
 def test_operator_checklist_guides_ready_and_postponed_targets() -> None:
