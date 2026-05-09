@@ -40,6 +40,7 @@ They share the Kuramoto/UPDE phase representation but differ in scope:
 | `neurocore_bridge` | sc-neurocore (v3.13.3) | Export: phase states for SNN processing |
 | `plasma_control_bridge` | Plasma control systems | Import: magnetic diagnostics as P-channel |
 | `quantum_control_bridge` | scpn-quantum-control (v0.9.1) | Export: coherence metrics for QPU scheduling |
+| `hybrid_cocompiler` | Quantum + neuromorphic review package | Export: shared audit envelope for simulator handoff |
 | `snn_bridge` | SNN daemon (04_ARCANE_SAPIENCE) | Export: reasoning stimuli from phase dynamics |
 
 ### scpn-control Bridge
@@ -69,6 +70,10 @@ They share the Kuramoto/UPDE phase representation but differ in scope:
 ### Quantum Control Bridge
 
 ::: scpn_phase_orchestrator.adapters.quantum_control_bridge
+
+### Hybrid Co-Compiler
+
+::: scpn_phase_orchestrator.adapters.hybrid_cocompiler
 
 ### SNN Bridge
 

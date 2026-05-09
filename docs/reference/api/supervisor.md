@@ -280,6 +280,21 @@ underlying sync ledger.
 
 ---
 
+## Byzantine Meta-Orchestrator Manifest
+
+`build_bft_meta_orchestrator_manifest()` turns signed child-supervisor policy
+proposals into an offline quorum-review manifest. The manifest records the
+winning payload hash, accepted and rejected node IDs, hash-linked audit parent,
+blocked reasons when quorum is absent, and a canonical manifest hash.
+
+The helper verifies HMAC-SHA256 proposal signatures against a supplied keyring,
+but it does not open network transport or permit direct actuation. Accepted
+manifests still have to pass the normal supervisor review gate before use.
+
+::: scpn_phase_orchestrator.supervisor.byzantine
+
+---
+
 ## Strange-Loop Supervisor Monitor
 
 `StrangeLoopSupervisor` is the first self-referential supervisor slice. It

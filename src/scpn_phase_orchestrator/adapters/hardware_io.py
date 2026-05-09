@@ -17,7 +17,7 @@ SCADA: Modbus TCP via pymodbus. Install: pip install pymodbus
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -52,11 +52,13 @@ except ImportError:
 try:
     # type ignore: pymodbus is optional for hardware adapter deployments.
     from pymodbus.client import (  # type: ignore[import-not-found]
-        ModbusTcpClient,  # pragma: no cover
+        ModbusTcpClient as _PymodbusTcpClient,  # pragma: no cover
     )
 
+    ModbusTcpClient: Any = _PymodbusTcpClient
     HAS_MODBUS = True  # pragma: no cover
 except ImportError:
+    ModbusTcpClient = None
     HAS_MODBUS = False
 
 

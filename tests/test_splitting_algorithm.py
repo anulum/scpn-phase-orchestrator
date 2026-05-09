@@ -182,5 +182,10 @@ class TestDispatcherSurface:
         assert sp_mod.AVAILABLE_BACKENDS
         assert "python" in sp_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
-        assert sp_mod.AVAILABLE_BACKENDS[0] == sp_mod.ACTIVE_BACKEND
+    def test_active_is_available(self):
+        assert sp_mod.ACTIVE_BACKEND in sp_mod.AVAILABLE_BACKENDS
+
+    def test_available_backends_keep_canonical_fallback_order(self):
+        canonical = ["rust", "mojo", "julia", "go", "python"]
+        indices = [canonical.index(backend) for backend in sp_mod.AVAILABLE_BACKENDS]
+        assert indices == sorted(indices)

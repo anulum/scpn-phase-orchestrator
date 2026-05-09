@@ -17,14 +17,16 @@ Follows ``feedback_module_standard_attnres.md``:
 * ``pac_gate`` — pure-Python boolean gate on an MI value (no
   backend dispatch needed — trivial comparison).
 
-All compute kernels available in Rust, Mojo, Julia, Go, Python — the
-dispatcher resolves fastest-first at import time via
-``ACTIVE_BACKEND`` / ``AVAILABLE_BACKENDS``.
+All compute kernels are available in Rust, Mojo, Julia, Go, Python.
+``AVAILABLE_BACKENDS`` reports detected backends in canonical fallback order,
+while ``ACTIVE_BACKEND`` is selected by a small import-time hot-path probe so
+slow external wrappers do not displace the faster local path.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from time import perf_counter
 from typing import cast
 
 import numpy as np
@@ -98,18 +100,79 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
+
+
+def _modulation_index_python(
+    theta_low: NDArray[np.float64],
+    amp_high: NDArray[np.float64],
+    n_bins: int,
+) -> float:
+    n = min(theta_low.size, amp_high.size)
+    theta = theta_low[:n] % (2.0 * np.pi)
+    amp = amp_high[:n]
+    bin_edges = np.linspace(0.0, 2.0 * np.pi, n_bins + 1)
+    bin_indices = np.digitize(theta, bin_edges) - 1
+    bin_indices = np.clip(bin_indices, 0, n_bins - 1)
+    sums = np.bincount(bin_indices, weights=amp, minlength=n_bins)
+    counts = np.bincount(bin_indices, minlength=n_bins)
+    mean_amp = np.divide(
+        sums,
+        counts,
+        out=np.zeros(n_bins, dtype=np.float64),
+        where=counts > 0,
+    )
+    total = mean_amp.sum()
+    if total <= 0.0:
+        return 0.0
+    p = mean_amp / total
+    log_n = np.log(n_bins)
+    if log_n < 1e-15:
+        return 0.0
+    positive = p > 0.0
+    kl = float(np.sum(p[positive] * np.log(p[positive] * n_bins)))
+    mi = kl / log_n
+    return float(np.clip(mi, 0.0, 1.0))
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
     available.append("python")
-    return available[0], available
+    active = min(available, key=_modulation_index_probe_seconds)
+    return active, available
+
+
+def _modulation_index_probe_seconds(name: str) -> float:
+    theta = np.linspace(0.0, 2.0 * np.pi, 1000, dtype=np.float64)
+    amp = np.abs(np.sin(theta)) + 0.1
+    start = perf_counter()
+    try:
+        if name == "python":
+            _modulation_index_python(theta, amp, 18)
+        else:
+            fn = cast(
+                "Callable[[NDArray[np.float64], NDArray[np.float64], int], float]",
+                _load_backend(name)["modulation_index"],
+            )
+            fn(theta, amp, 18)
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return float("inf")
+    return perf_counter() - start
 
 
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
@@ -119,7 +182,7 @@ def _dispatch(fn_name: str) -> object:
     if ACTIVE_BACKEND == "python":
         return None
     try:
-        return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+        return _load_backend(ACTIVE_BACKEND)[fn_name]
     except (ImportError, RuntimeError, OSError):
         return None
 
@@ -152,30 +215,7 @@ def modulation_index(
             )
         )
 
-    n = min(theta_low.size, amp_high.size)
-    theta = theta_low[:n] % (2.0 * np.pi)
-    amp = amp_high[:n]
-    bin_edges = np.linspace(0.0, 2.0 * np.pi, n_bins + 1)
-    bin_indices = np.digitize(theta, bin_edges) - 1
-    bin_indices = np.clip(bin_indices, 0, n_bins - 1)
-    mean_amp = np.zeros(n_bins, dtype=np.float64)
-    for k in range(n_bins):
-        mask = bin_indices == k
-        if np.any(mask):
-            mean_amp[k] = np.mean(amp[mask])
-    total = mean_amp.sum()
-    if total <= 0.0:
-        return 0.0
-    p = mean_amp / total
-    log_n = np.log(n_bins)
-    if log_n < 1e-15:
-        return 0.0
-    kl = 0.0
-    for pk in p:
-        if pk > 0.0:
-            kl += pk * np.log(pk * n_bins)
-    mi = kl / log_n
-    return float(np.clip(mi, 0.0, 1.0))
+    return _modulation_index_python(theta_low, amp_high, n_bins)
 
 
 def pac_matrix(

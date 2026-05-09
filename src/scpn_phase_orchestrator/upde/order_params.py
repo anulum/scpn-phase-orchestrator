@@ -17,13 +17,16 @@ Follows the AttnRes-level module standard
 * ``compute_layer_coherence`` — R restricted to a layer.
 
 Each kernel is available in five languages — Rust, Mojo, Julia, Go,
-Python — resolved fastest-first at import time through
-``ACTIVE_BACKEND`` / ``AVAILABLE_BACKENDS``.
+Python. ``AVAILABLE_BACKENDS`` reports detected backends in canonical
+fallback order, while ``ACTIVE_BACKEND`` is selected by a small import-time
+hot-path probe so slow external wrappers do not displace the faster local
+path.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from time import perf_counter
 from typing import cast
 
 import numpy as np
@@ -115,18 +118,52 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
+
+
+def _python_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
+    with np.errstate(invalid="ignore"):
+        z = np.mean(np.exp(1j * phases))
+    return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
     available.append("python")
-    return available[0], available
+    active = min(available, key=_order_parameter_probe_seconds)
+    return active, available
+
+
+def _order_parameter_probe_seconds(name: str) -> float:
+    phases = np.linspace(0.0, TWO_PI, 256, dtype=np.float64)
+    start = perf_counter()
+    try:
+        if name == "python":
+            _python_order_parameter(phases)
+        else:
+            fn = cast(
+                "Callable[[NDArray[np.float64]], tuple[float, float]]",
+                _load_backend(name)["order_parameter"],
+            )
+            fn(phases)
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return float("inf")
+    return perf_counter() - start
 
 
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
@@ -137,7 +174,7 @@ def _dispatch(fn_name: str) -> object:
     if ACTIVE_BACKEND == "python" or (ACTIVE_BACKEND == "rust" and not _HAS_RUST):
         return None
     try:
-        return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+        return _load_backend(ACTIVE_BACKEND)[fn_name]
     except (ImportError, RuntimeError, OSError):
         return None
 
@@ -162,9 +199,7 @@ def compute_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
         r, psi = fn(p)
         return float(r), float(psi)
 
-    with np.errstate(invalid="ignore"):
-        z = np.mean(np.exp(1j * phases))
-    return float(np.abs(z)), float(np.angle(z) % TWO_PI)
+    return _python_order_parameter(phases)
 
 
 def compute_plv(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:

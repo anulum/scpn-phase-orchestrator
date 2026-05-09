@@ -27,11 +27,7 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
-from scpn_phase_orchestrator.upde._run import (
-    ACTIVE_BACKEND,
-    AVAILABLE_BACKENDS,
-    upde_run,
-)
+from scpn_phase_orchestrator.upde import _run as _run_mod
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -41,6 +37,49 @@ __all__ = [
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+ACTIVE_BACKEND = _run_mod.ACTIVE_BACKEND
+AVAILABLE_BACKENDS = _run_mod.AVAILABLE_BACKENDS
+
+
+def upde_run(
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
+    method: str = "euler",
+    n_substeps: int = 1,
+    atol: float = 1e-6,
+    rtol: float = 1e-3,
+) -> FloatArray:
+    """Run the stateless UPDE integrator through the engine facade.
+
+    ``engine.ACTIVE_BACKEND`` is a public test and diagnostics control, so
+    keep it synchronised with the underlying dispatcher before each call.
+    """
+    previous = _run_mod.ACTIVE_BACKEND
+    _run_mod.ACTIVE_BACKEND = ACTIVE_BACKEND
+    try:
+        return _run_mod.upde_run(
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta,
+            psi,
+            dt,
+            n_steps,
+            method,
+            n_substeps,
+            atol,
+            rtol,
+        )
+    finally:
+        _run_mod.ACTIVE_BACKEND = previous
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:

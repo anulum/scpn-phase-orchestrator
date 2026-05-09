@@ -8,6 +8,9 @@
 
 """Sliding-window RMS envelope + modulation-depth statistic with a
 5-backend fallback chain per ``feedback_module_standard_attnres.md``.
+``AVAILABLE_BACKENDS`` keeps canonical fallback order; ``ACTIVE_BACKEND`` is
+chosen by a small hot-path probe so slow external wrappers do not displace the
+faster local path.
 
 The sliding-window RMS uses the O(T) cumulative-sum form: compute
 ``cs[i] = Σ_{k < i} x_k²``, then
@@ -22,6 +25,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from time import perf_counter
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -112,27 +116,16 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "julia": _load_julia_fns,
     "go": _load_go_fns,
 }
+_BACKEND_CACHE: dict[str, dict[str, object]] = {}
 
 
-def _resolve_backends() -> tuple[str, list[str]]:
-    available: list[str] = []
-    for name in _BACKEND_NAMES[:-1]:
-        try:
-            _LOADERS[name]()
-        except (ImportError, RuntimeError, OSError):
-            continue
-        available.append(name)
-    available.append("python")
-    return available[0], available
-
-
-ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
-
-
-def _dispatch(fn_name: str) -> object | None:
-    if ACTIVE_BACKEND == "python":
-        return None
-    return _LOADERS[ACTIVE_BACKEND]()[fn_name]
+def _load_backend(name: str) -> dict[str, object]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _extract_1d_python(amps: FloatArray, window: int) -> FloatArray:
@@ -148,6 +141,48 @@ def _extract_1d_python(amps: FloatArray, window: int) -> FloatArray:
     rms = np.sqrt((cs[window:] - cs[:-window]) / window)
     pad = np.full(window - 1, rms[0] if rms.size > 0 else 0.0)
     return np.concatenate([pad, rms])
+
+
+def _resolve_backends() -> tuple[str, list[str]]:
+    available: list[str] = []
+    for name in _BACKEND_NAMES[:-1]:
+        try:
+            _load_backend(name)
+        except (ImportError, RuntimeError, OSError):
+            continue
+        available.append(name)
+    available.append("python")
+    active = min(available, key=_extract_probe_seconds)
+    return active, available
+
+
+def _extract_probe_seconds(name: str) -> float:
+    amps = np.linspace(0.01, 1.0, 256, dtype=np.float64)
+    start = perf_counter()
+    try:
+        if name == "python":
+            _extract_1d_python(amps, 10)
+        else:
+            fn = cast(
+                "Callable[[FloatArray, int], FloatArray]",
+                _load_backend(name)["extract"],
+            )
+            fn(amps, 10)
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return float("inf")
+    return perf_counter() - start
+
+
+ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+
+
+def _dispatch(fn_name: str) -> object | None:
+    if ACTIVE_BACKEND == "python":
+        return None
+    try:
+        return _load_backend(ACTIVE_BACKEND)[fn_name]
+    except (ImportError, RuntimeError, OSError):
+        return None
 
 
 def extract_envelope(

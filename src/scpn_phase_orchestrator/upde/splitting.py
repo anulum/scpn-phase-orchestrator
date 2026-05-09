@@ -43,6 +43,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from numbers import Integral, Real
+from time import perf_counter
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -135,27 +136,65 @@ _LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
     "julia": _load_julia_fn,
     "go": _load_go_fn,
 }
+_BACKEND_CACHE: dict[str, Callable[..., FloatArray]] = {}
+
+
+def _load_backend(name: str) -> Callable[..., FloatArray]:
+    cached = _BACKEND_CACHE.get(name)
+    if cached is not None:
+        return cached
+    loaded = _LOADERS[name]()
+    _BACKEND_CACHE[name] = loaded
+    return loaded
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
         try:
-            _LOADERS[name]()
+            _load_backend(name)
         except (ImportError, RuntimeError, OSError):
             continue
         available.append(name)
     available.append("python")
-    return available[0], available
+    active = min(available, key=_splitting_probe_seconds)
+    return active, available
 
 
-ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+def _splitting_probe_seconds(name: str) -> float:
+    n = 64
+    phases = np.linspace(0.0, TWO_PI, n, endpoint=False, dtype=np.float64)
+    omegas = np.ones(n, dtype=np.float64)
+    knm = np.full((n, n), 0.5, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n), dtype=np.float64)
+    knm_flat = knm.ravel()
+    alpha_flat = alpha.ravel()
+    start = perf_counter()
+    try:
+        if name == "python":
+            _python_run(phases, omegas, knm_flat, alpha_flat, n, 0.0, 0.0, 0.01, 1)
+        else:
+            _load_backend(name)(
+                phases,
+                omegas,
+                knm_flat,
+                alpha_flat,
+                n,
+                0.0,
+                0.0,
+                0.01,
+                1,
+            )
+    except (ImportError, RuntimeError, OSError, KeyError):
+        return float("inf")
+    return perf_counter() - start
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
-    return _LOADERS[ACTIVE_BACKEND]()
+    return _load_backend(ACTIVE_BACKEND)
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -263,6 +302,9 @@ def _python_run(
         p = _rk4_coupling(p, knm, alpha, zeta, psi, dt, alpha_zero)
         p = (p + half_dt * om) % TWO_PI
     return p
+
+
+ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 class SplittingEngine:

@@ -17,14 +17,16 @@ Requires: jax>=0.4, equinox>=0.11, optax>=0.2
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-import optax
 
 from .functional import kuramoto_forward, order_parameter
+
+if TYPE_CHECKING:
+    import optax
 
 # ──────────────────────────────────────────────────
 # Loss functions
