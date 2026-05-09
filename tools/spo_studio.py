@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_deployment_readiness,
     build_error_report,
     build_hardware_target_package,
+    build_live_connector_run_record,
     build_operator_checklist,
     build_oscillator_edit_artifact,
     build_package_materialisation_plan,
@@ -446,6 +447,40 @@ with tabs[8]:
         mime="application/json",
         use_container_width=True,
     )
+    connector_transport = st.selectbox(
+        "Connector dry-run transport",
+        [connector["transport"] for connector in connector_plan["connectors"]],
+    )
+    connector_payload = st.text_area(
+        "Connector dry-run payload JSON",
+        value='{"kind":"replay_probe","sequence":1}',
+        height=120,
+    )
+    if st.button("Build Connector Run Record", use_container_width=True):
+        try:
+            connector_run = build_live_connector_run_record(
+                connector_plan,
+                transport=connector_transport,
+                payload=json.loads(connector_payload),
+                dry_run=True,
+            )
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            _render_error_report(
+                build_error_report(
+                    operation="connector_dry_run",
+                    error=exc,
+                    project_name=project.project_name,
+                )
+            )
+        else:
+            st.json(connector_run, expanded=False)
+            st.download_button(
+                label="connector_run_record.json",
+                data=json.dumps(connector_run, sort_keys=True, indent=2),
+                file_name="connector_run_record.json",
+                mime="application/json",
+                use_container_width=True,
+            )
 
 with tabs[9]:
     readiness = build_deployment_readiness(project)

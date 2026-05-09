@@ -188,11 +188,12 @@
     replay-only knob tuning, hierarchy monitor, layer/channel canvas review
     artefacts, canvas layout manifests,
     canvas topology patch artefacts, connector ownership plans, deployment readiness, deployment package
-    manifests, package materialisation plans, hardware target package manifests,
-    verified hardware evidence packages, recovery reports, and
+    manifests, dry-run connector run records, package materialisation plans,
+    hardware target package manifests, verified hardware evidence packages,
+    recovery reports, and
     review/deploy export manifests. This is a validated operator prototype, not
     a finished product-grade Studio: live drag/drop binding rewrite,
-    live connector execution, browser polish, and real FPGA/neuromorphic
+    owned live connector runtimes, browser polish, and real FPGA/neuromorphic
     evidence remain future product work.
 - Hierarchical multi-scale orchestration: support nested orchestrators where local/edge supervisors maintain local coherence, exchange reduced phase/coherence summaries, and escalate only bounded regime evidence to a parent supervisor. Reuse Hodge decomposition and transfer-entropy monitors to decide what crosses hierarchy boundaries.
   - Reduced-summary hierarchy foundation is in place: `build_hierarchical_orchestration_plan()` turns child supervisor summaries into a parent `UPDEState` and bounded escalation audit records without exchanging raw child signals.
@@ -228,12 +229,13 @@
     artefacts, live `R`/`Psi`/`K` visualisation, replay-only knob tuning,
     hierarchy monitor, connector ownership plans, deployment
     readiness/package manifests, hardware target package manifests, recovery
-    reports, package materialisation plans, verified hardware evidence packages,
-    and Docker/WASM/project export manifests are in place.
+    reports, dry-run connector run records, package materialisation plans,
+    verified hardware evidence packages, and Docker/WASM/project export
+    manifests are in place.
     This remains far from a good standalone product: current value is an
     auditable operator workflow and smoke-tested web surface, while true
     one-click product quality still needs live drag/drop binding rewrite,
-    live connector execution, and real hardware evidence.
+    owned live connector runtimes, and real hardware evidence.
 - Auto-binding prototype:
   - Deterministic proposal builders from time-series CSV, event-log JSON, and
     graph JSON to reviewable `binding_spec.yaml` records are in place with

@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_hardware_target_package,
     build_layer_table,
     build_live_connector_plan,
+    build_live_connector_run_record,
     build_operator_checklist,
     build_oscillator_edit_artifact,
     build_oscillator_table,
@@ -374,6 +375,53 @@ def test_live_connector_plan_declares_owned_non_opened_transports() -> None:
         assert connector["operator_action"] == "assign connector owner and auth policy"
     assert hardware["hardware_write_permitted"] is False
     assert "live_transport_requires_auth" not in json.dumps(plan)
+
+
+def test_live_connector_run_record_accepts_offline_dry_run() -> None:
+    spec = load_binding_spec(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    )
+    plan = build_live_connector_plan(spec)
+
+    record = build_live_connector_run_record(
+        plan,
+        transport="jsonl",
+        payload={"sequence": 1, "kind": "replay_probe"},
+        dry_run=True,
+    )
+
+    assert record["record_kind"] == "studio_live_connector_run"
+    assert record["project_name"] == "digital_twin_nchannel"
+    assert record["transport"] == "jsonl"
+    assert record["status"] == "accepted"
+    assert record["dry_run"] is True
+    assert record["network_opened"] is False
+    assert record["actuation_permitted"] is False
+    assert len(record["payload_sha256"]) == 64
+    assert record["operator_action"] == "review dry-run connector payload"
+
+
+def test_live_connector_run_record_blocks_network_transport_without_owner() -> None:
+    spec = load_binding_spec(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    )
+    plan = build_live_connector_plan(spec)
+
+    record = build_live_connector_run_record(
+        plan,
+        transport="rest",
+        payload={"sequence": 1, "kind": "live_probe"},
+        dry_run=False,
+    )
+
+    assert record["status"] == "blocked"
+    assert record["network_opened"] is False
+    assert record["actuation_permitted"] is False
+    assert record["blocked_reasons"] == [
+        "connector owner and auth policy required",
+        "Studio live execution uses dry-run records only",
+    ]
+    assert record["operator_action"] == "assign connector owner and auth policy"
 
 
 def test_hardware_target_package_requires_evidence_before_readiness() -> None:

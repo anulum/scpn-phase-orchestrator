@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from hashlib import sha256
 from math import isfinite
 from pathlib import Path
 
@@ -54,6 +55,7 @@ __all__ = [
     "build_layer_table",
     "build_hardware_target_package",
     "build_live_connector_plan",
+    "build_live_connector_run_record",
     "build_oscillator_edit_artifact",
     "build_oscillator_table",
     "build_operator_checklist",
@@ -455,6 +457,53 @@ def build_live_connector_plan(spec: BindingSpec) -> dict[str, object]:
         "network_opened": False,
         "actuation_permitted": False,
         "connectors": connectors,
+    }
+
+
+def build_live_connector_run_record(
+    connector_plan: Mapping[str, object],
+    *,
+    transport: str,
+    payload: Mapping[str, object],
+    dry_run: bool = True,
+) -> dict[str, object]:
+    """Return a gated live-connector execution record without opening transport."""
+    connector = _connector_by_transport(
+        connector_plan,
+        _require_non_empty_text(transport, "transport"),
+    )
+    payload_json = _stable_json_payload(payload, "payload")
+    connector_status = _require_non_empty_text(connector.get("status"), "status")
+    blocked_reasons: list[str] = []
+    if connector_status != "review_ready":
+        blocked_reasons.append("connector owner and auth policy required")
+    if not dry_run:
+        blocked_reasons.append("Studio live execution uses dry-run records only")
+
+    status = "blocked" if blocked_reasons else "accepted"
+    return {
+        "record_kind": "studio_live_connector_run",
+        "project_name": _require_non_empty_text(
+            connector_plan.get("project_name"),
+            "project_name",
+        ),
+        "transport": connector["transport"],
+        "connector_name": connector["name"],
+        "status": status,
+        "dry_run": bool(dry_run),
+        "payload_sha256": sha256(payload_json.encode("utf-8")).hexdigest(),
+        "blocked_reasons": blocked_reasons,
+        "operator_action": (
+            "review dry-run connector payload"
+            if status == "accepted"
+            else _require_non_empty_text(
+                connector.get("operator_action"),
+                "operator_action",
+            )
+        ),
+        "network_opened": False,
+        "actuation_permitted": False,
+        "hardware_write_permitted": False,
     }
 
 
@@ -1267,6 +1316,42 @@ def _materialisation_command_writes_artifact(command: object) -> bool:
             "wasm-pack build",
         )
     )
+
+
+def _stable_json_payload(value: object, field_name: str) -> str:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field_name} must be a mapping")
+    return json.dumps(
+        _normalise_json_mapping(value, field_name),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _normalise_json_mapping(
+    value: Mapping[object, object],
+    field_name: str,
+) -> dict[str, object]:
+    safe: dict[str, object] = {}
+    for key, item in value.items():
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError(f"{field_name} contains an invalid key")
+        safe[key] = _normalise_json_value(item, field_name)
+    return safe
+
+
+def _normalise_json_value(value: object, field_name: str) -> object:
+    if value is None or isinstance(value, str | int | bool):
+        return value
+    if isinstance(value, float):
+        if not isfinite(value):
+            raise ValueError(f"{field_name} contains a non-finite float")
+        return value
+    if isinstance(value, Mapping):
+        return _normalise_json_mapping(value, field_name)
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        return [_normalise_json_value(item, field_name) for item in value]
+    raise ValueError(f"{field_name} contains a non-JSON-safe value")
 
 
 def _normalise_hardware_evidence(

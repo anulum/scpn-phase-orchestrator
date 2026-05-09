@@ -18,8 +18,8 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs live drag/drop
-binding rewrite polish, live connector execution, and real hardware evidence
-before it should be
+binding rewrite polish, owned live connector runtimes, and real hardware
+evidence before it should be
 described as a good standalone product.
 
 Run it with:
@@ -53,7 +53,8 @@ streamlit run tools/spo_studio.py
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
    - **Hierarchy**: current hierarchy watermarks and reduced layer metrics.
    - **Connectors**: memory, JSONL, REST, gRPC, Kafka, and hardware connector
-     ownership plan, contract hash, auth posture, and `connector_plan.json`.
+     ownership plan, dry-run execution records, contract hash, auth posture,
+     and `connector_plan.json`.
    - **Exports**: deployment-readiness checklist, deployment package manifest,
      package materialisation plan, hardware target package, plus review
      artefacts for binding YAML, audit JSON, Docker manifest, WASM manifest,
@@ -157,6 +158,13 @@ with authentication required, and the hardware connector explicitly keeps
 `connector_plan.json` includes the contract hash, sync capabilities, compatibility
 result, ownership status, and safety flags. Studio does not open sockets, import
 broker clients, start a gRPC server, or write to hardware.
+
+The connector dry-run builder emits `connector_run_record.json` for an operator
+supplied JSON payload. Offline connectors such as memory and JSONL can be
+accepted as dry-run review records; REST, gRPC, Kafka, and hardware stay blocked
+until owner and authentication policy are assigned. Run records include a
+payload SHA-256 and keep `network_opened`, `actuation_permitted`, and
+`hardware_write_permitted` false.
 
 ## Error Recovery
 
