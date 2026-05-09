@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
+    build_beginner_guidance,
     build_canvas_edit_artifact,
     build_command_table,
     build_deployment_readiness,
@@ -170,6 +171,7 @@ _render_metrics(result)
 tabs = st.tabs(
     [
         "Load",
+        "Guide",
         "Binding",
         "Oscillators",
         "Canvas",
@@ -229,6 +231,40 @@ with tabs[0]:
             st.json(proposal.binding.to_audit_record(), expanded=False)
 
 with tabs[1]:
+    guidance = build_beginner_guidance(result)
+    summary = guidance["runtime_summary"]
+    st.dataframe(
+        [
+            {"metric": "Replay", "value": summary["replay_status"]},
+            {"metric": "Regime", "value": summary["regime"]},
+            {"metric": "R", "value": summary["R"]},
+            {"metric": "Actuation", "value": "disabled"},
+        ],
+        hide_index=True,
+        use_container_width=True,
+    )
+    st.info(summary["domain_signal"])
+    for card in guidance["concept_cards"]:
+        with st.expander(card["title"], expanded=True):
+            st.write(card["plain_language"])
+            st.json(card["evidence"], expanded=False)
+    st.dataframe(
+        [
+            {"step": index, "action": action}
+            for index, action in enumerate(guidance["next_actions"], 1)
+        ],
+        hide_index=True,
+        use_container_width=True,
+    )
+    st.download_button(
+        label="beginner_guidance.json",
+        data=json.dumps(guidance, sort_keys=True, indent=2),
+        file_name="beginner_guidance.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+with tabs[2]:
     validation_errors = project.binding.validation_errors
     if validation_errors:
         st.error("\n".join(validation_errors))
@@ -236,7 +272,7 @@ with tabs[1]:
         st.success("Binding validation passed")
     st.code(project.binding.yaml_text, language="yaml")
 
-with tabs[2]:
+with tabs[3]:
     edited = st.data_editor(
         list(result.oscillator_table),
         hide_index=True,
@@ -259,7 +295,7 @@ with tabs[2]:
     )
     st.json(edit_record, expanded=False)
 
-with tabs[3]:
+with tabs[4]:
     canvas_graph = result.canvas_graph
     st.dataframe(
         [
@@ -312,7 +348,7 @@ with tabs[3]:
         use_container_width=True,
     )
 
-with tabs[4]:
+with tabs[5]:
     st.line_chart(
         build_series_chart_payload("R", result.r_history),
         x="step",
@@ -327,7 +363,7 @@ with tabs[4]:
     )
     st.dataframe(result.layer_table, hide_index=True, use_container_width=True)
 
-with tabs[5]:
+with tabs[6]:
     st.json(
         {
             "replay_status": project.runtime.replay_status,
@@ -343,7 +379,7 @@ with tabs[5]:
         expanded=False,
     )
 
-with tabs[6]:
+with tabs[7]:
     st.json(
         {
             "watermarks": project.runtime.hierarchy_watermarks,
@@ -353,7 +389,7 @@ with tabs[6]:
         expanded=False,
     )
 
-with tabs[7]:
+with tabs[8]:
     readiness = build_deployment_readiness(project)
     st.subheader("Deployment Readiness")
     st.dataframe(

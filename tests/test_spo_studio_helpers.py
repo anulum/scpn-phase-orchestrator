@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     apply_knob_update,
     binding_spec_project_state,
+    build_beginner_guidance,
     build_canvas_edit_artifact,
     build_canvas_graph,
     build_command_table,
@@ -186,6 +187,41 @@ def test_canvas_edit_artifact_rejects_invalid_canvas_shape() -> None:
             {"nodes": "bad", "edges": ()},
             {"nodes": (), "edges": ()},
         )
+
+
+def test_beginner_guidance_explains_runtime_in_domain_terms() -> None:
+    result = run_binding_spec_replay(
+        _minimal_spec_path(),
+        steps=3,
+        knobs=StudioKnobState(K=1.3, alpha=0.2, zeta=0.1, Psi=0.5),
+    )
+
+    guidance = build_beginner_guidance(result)
+
+    assert guidance["guide_kind"] == "beginner_mode"
+    assert guidance["project_name"] == "minimal_domain"
+    assert guidance["actuation_permitted"] is False
+    assert guidance["runtime_summary"]["replay_status"] == "completed"
+    assert guidance["runtime_summary"]["regime"] == result.project_state.runtime.regime
+    assert guidance["runtime_summary"]["domain_signal"] == (
+        "R summarises how closely the reviewed domain signals move together."
+    )
+    assert [card["title"] for card in guidance["concept_cards"]] == [
+        "Signals",
+        "Coupling",
+        "Objectives",
+        "Supervisor",
+    ]
+    assert guidance["concept_cards"][0]["evidence"]["layers"] == ["lower", "upper"]
+    assert guidance["concept_cards"][0]["evidence"]["channels"] == ["I", "P", "S"]
+    assert guidance["concept_cards"][1]["evidence"]["K"] == 1.3
+    assert guidance["next_actions"][0] == "review binding validation"
+    assert all("Kuramoto" not in json.dumps(card) for card in guidance["concept_cards"])
+
+
+def test_beginner_guidance_blocks_invalid_result_shape() -> None:
+    with pytest.raises(ValueError, match="replay result"):
+        build_beginner_guidance(object())
 
 
 def test_runtime_snapshot_and_exports_are_review_safe() -> None:

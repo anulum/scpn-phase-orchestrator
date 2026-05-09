@@ -17,9 +17,9 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs true drag/drop
-layout polish, guided beginner explanations, live connector ownership,
-deployment packaging, and hardware-target packaging before it should be
-described as a good standalone product.
+layout polish, richer guided onboarding, live connector ownership, deployment
+packaging, and hardware-target packaging before it should be described as a
+good standalone product.
 
 Run it with:
 
@@ -36,6 +36,9 @@ streamlit run tools/spo_studio.py
 4. Review the tabs:
    - **Load**: current source summary and raw-source import for CSV, event-log
      JSON, or graph JSON binding proposals.
+   - **Guide**: beginner-mode runtime summary, signal/coupling/objective/
+     supervisor explanations in domain terms, next actions, and
+     `beginner_guidance.json`.
    - **Binding**: generated or loaded YAML plus validation diagnostics.
    - **Oscillators**: editable oscillator table. Edits produce an
      `oscillator_edit_review.json` artefact rather than silently changing a
@@ -88,6 +91,18 @@ edges, and changed counts.
 Canvas edits remain review-only. They do not rewrite `binding_spec.yaml`, open a
 live connector, or enable actuation. This keeps topology edits auditable until
 the binding update path has an explicit validation and review step.
+
+## Beginner Mode
+
+The **Guide** tab translates the current replay into operator-facing language:
+which layers and channels are being reviewed, how `K`, `alpha`, `zeta`, and
+`Psi` affect the replay, whether binding validation is blocking packaging, and
+what regime the supervisor currently reports. The downloadable
+`beginner_guidance.json` mirrors the on-screen cards for handover and review.
+
+Beginner guidance is still non-actuating. It reads the replay result, canvas
+graph, validation state, and runtime snapshot; it does not change the binding,
+run live connectors, or enable hardware output.
 
 ## Error Recovery
 

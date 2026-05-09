@@ -37,6 +37,7 @@ __all__ = [
     "StudioReplayResult",
     "apply_knob_update",
     "binding_spec_project_state",
+    "build_beginner_guidance",
     "build_canvas_edit_artifact",
     "build_canvas_graph",
     "build_command_table",
@@ -304,6 +305,93 @@ def build_canvas_edit_artifact(
         payload=payload,
         command="review canvas_edit_review.json before updating binding_spec.yaml",
     )
+
+
+def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
+    """Return domain-term guidance for first-time Studio operators."""
+    if not isinstance(result, StudioReplayResult):
+        raise ValueError("replay result must be a StudioReplayResult")
+    project = result.project_state
+    runtime = project.runtime
+    layers = [
+        _require_non_empty_text(row.get("name"), "layer")
+        for row in result.layer_table
+        if isinstance(row, Mapping)
+    ]
+    channels = [
+        _require_non_empty_text(node.get("channel"), "channel")
+        for node in result.canvas_graph.get("nodes", ())
+        if isinstance(node, Mapping) and node.get("kind") == "channel"
+    ]
+    validation_errors = list(project.binding.validation_errors)
+    return {
+        "guide_kind": "beginner_mode",
+        "project_name": project.project_name,
+        "actuation_permitted": False,
+        "runtime_summary": {
+            "replay_status": runtime.replay_status,
+            "regime": runtime.regime,
+            "R": float(runtime.R),
+            "domain_signal": (
+                "R summarises how closely the reviewed domain signals move together."
+            ),
+        },
+        "concept_cards": [
+            {
+                "title": "Signals",
+                "plain_language": (
+                    "Each layer groups domain measurements that Studio reviews as "
+                    "oscillators."
+                ),
+                "evidence": {
+                    "layers": layers,
+                    "channels": sorted(channels),
+                    "source_kind": project.source.source_kind,
+                },
+            },
+            {
+                "title": "Coupling",
+                "plain_language": (
+                    "K raises or lowers how much the reviewed signals influence "
+                    "one another during replay."
+                ),
+                "evidence": {
+                    "K": float(runtime.K),
+                    "alpha": float(runtime.alpha),
+                    "zeta": float(runtime.zeta),
+                    "Psi": float(runtime.Psi),
+                    "cross_channel_edges": int(result.canvas_graph["edge_count"]),
+                },
+            },
+            {
+                "title": "Objectives",
+                "plain_language": (
+                    "The objective is to keep reviewed good layers coherent while "
+                    "validation errors block packaging."
+                ),
+                "evidence": {
+                    "validation_errors": validation_errors,
+                    "binding_ready": not validation_errors,
+                },
+            },
+            {
+                "title": "Supervisor",
+                "plain_language": (
+                    "The supervisor reads the replay regime and emits review "
+                    "evidence only; live actuation stays disabled."
+                ),
+                "evidence": {
+                    "regime": runtime.regime,
+                    "hierarchy_watermarks": dict(runtime.hierarchy_watermarks),
+                },
+            },
+        ],
+        "next_actions": (
+            ["review binding validation"]
+            + (["fix validation errors"] if validation_errors else ["review exports"])
+            + ["download project_state.json"]
+        ),
+    }
 
 
 def build_runtime_snapshot(

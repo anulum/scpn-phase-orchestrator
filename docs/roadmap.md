@@ -42,10 +42,10 @@ control engineers who do not already live in phase dynamics.
 
 | Item | Target outcome |
 |------|----------------|
-| One-click SPO Studio web UI | Streamlit operator prototype now covers domainpack load, raw-source import, binding review, oscillator edit review artefacts, layer/channel canvas review artefacts, live `R`/`Psi`/`K` metrics, replay tuning, hierarchy monitor, deployment readiness, recovery reports, and Docker/WASM/project export manifests; it is not yet a good standalone product, because direct drag/drop layout persistence, guided beginner mode, live connectors, full deployment packaging, and FPGA packaging remain open |
+| One-click SPO Studio web UI | Streamlit operator prototype now covers domainpack load, raw-source import, binding review, beginner-mode guidance, oscillator edit review artefacts, layer/channel canvas review artefacts, live `R`/`Psi`/`K` metrics, replay tuning, hierarchy monitor, deployment readiness, recovery reports, and Docker/WASM/project export manifests; it is not yet a good standalone product, because direct drag/drop layout persistence, richer guided onboarding, live connectors, full deployment packaging, and FPGA packaging remain open |
 | Auto-binding prototype | deterministic proposal builders now infer reviewable `binding_spec.yaml` records from time-series CSV, event-log JSON, and graph JSON with confidence factors and validation diagnostics; deeper SINDy/graph-learning inference remains experimental |
 | Guided deployment path | take a validated Studio project to Docker, browser WASM, or hardware-targeted output without requiring manual wiring |
-| Beginner control-engineer mode | explain phase, coupling, objectives, and supervisor decisions in terms of the user's domain signals rather than only Kuramoto terminology |
+| Beginner control-engineer mode | beginner-mode guidance now explains reviewed signals, coupling knobs, objectives, supervisor regime, validation state, and next actions from the current replay; richer guided onboarding remains open |
 
 ## v1.0 Focus
 
