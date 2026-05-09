@@ -18,6 +18,8 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     apply_knob_update,
     binding_spec_project_state,
+    build_canvas_edit_artifact,
+    build_canvas_graph,
     build_command_table,
     build_deployment_readiness,
     build_error_report,
@@ -75,11 +77,115 @@ def test_binding_spec_tables_describe_oscillators_and_layers() -> None:
 
     oscillators = build_oscillator_table(spec)
     layers = build_layer_table(spec)
+    canvas = build_canvas_graph(spec)
 
     assert oscillators
     assert layers
     assert {"layer", "oscillator_id", "channel", "family"} <= set(oscillators[0])
     assert {"index", "name", "oscillator_count", "family"} <= set(layers[0])
+    assert canvas["canvas_kind"] == "layer_coupling_graph"
+    assert canvas["layer_count"] == len(spec.layers)
+    assert canvas["channel_count"] == 3
+    assert canvas["nodes"][0] == {
+        "id": "layer_0",
+        "label": "lower",
+        "kind": "layer",
+        "layer_index": 0,
+        "family": "",
+        "channel": "",
+        "oscillator_count": 2,
+        "x": 0.0,
+        "y": 0.0,
+    }
+    assert canvas["nodes"][-1]["kind"] == "channel"
+    assert canvas["edge_count"] == 0
+
+
+def test_canvas_graph_exposes_layer_and_cross_channel_edges() -> None:
+    spec = load_binding_spec(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    )
+
+    canvas = build_canvas_graph(spec)
+
+    assert canvas["layer_count"] == len(spec.layers)
+    assert canvas["channel_count"] == len(spec.used_channels())
+    assert canvas["edge_count"] == len(spec.cross_channel_couplings)
+    assert {f"layer_{layer.index}" for layer in spec.layers} <= {
+        node["id"] for node in canvas["nodes"]
+    }
+    assert {"channel_Thermal", "channel_TwinResidual", "channel_P"} <= {
+        node["id"] for node in canvas["nodes"]
+    }
+    edge = canvas["edges"][0]
+    assert {
+        "id",
+        "source",
+        "target",
+        "kind",
+        "source_channel",
+        "target_channel",
+        "strength",
+        "mode",
+        "template",
+    } <= set(edge)
+    assert edge["kind"] == "cross_channel_coupling"
+    assert edge["source"] == "channel_Thermal"
+    assert edge["target"] == "channel_P"
+
+
+def test_canvas_edit_artifact_records_reviewable_node_and_edge_changes() -> None:
+    before = {
+        "nodes": (
+            {
+                "id": "layer_0",
+                "label": "source",
+                "kind": "layer",
+                "x": 0.0,
+                "y": 0.0,
+            },
+        ),
+        "edges": (),
+    }
+    after = {
+        "nodes": (
+            {
+                "id": "layer_0",
+                "label": "source",
+                "kind": "layer",
+                "x": 12.5,
+                "y": 0.0,
+            },
+        ),
+        "edges": (
+            {
+                "id": "manual_edge_1",
+                "source": "layer_0",
+                "target": "layer_1",
+                "kind": "review_edge",
+            },
+        ),
+    }
+
+    artifact = build_canvas_edit_artifact(before, after)
+    record = json.loads(artifact.payload)
+
+    assert artifact.target_kind == "canvas_edit_review"
+    assert artifact.file_name == "canvas_edit_review.json"
+    assert artifact.safety_posture == "review_artifact"
+    assert record["changed"] is True
+    assert record["node_count_before"] == 1
+    assert record["node_count_after"] == 1
+    assert record["edge_count_after"] == 1
+    assert record["nodes_after"][0]["x"] == 12.5
+
+
+def test_canvas_edit_artifact_rejects_invalid_canvas_shape() -> None:
+    with pytest.raises(ValueError, match="canvas nodes"):
+        build_canvas_edit_artifact(
+            {"nodes": "bad", "edges": ()},
+            {"nodes": (), "edges": ()},
+        )
 
 
 def test_runtime_snapshot_and_exports_are_review_safe() -> None:

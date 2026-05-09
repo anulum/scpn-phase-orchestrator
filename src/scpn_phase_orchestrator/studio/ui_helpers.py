@@ -37,6 +37,8 @@ __all__ = [
     "StudioReplayResult",
     "apply_knob_update",
     "binding_spec_project_state",
+    "build_canvas_edit_artifact",
+    "build_canvas_graph",
     "build_command_table",
     "build_export_manifests",
     "build_deployment_readiness",
@@ -88,6 +90,7 @@ class StudioReplayResult:
     regime_history: tuple[str, ...]
     layer_table: tuple[dict[str, object], ...]
     oscillator_table: tuple[dict[str, object], ...]
+    canvas_graph: Mapping[str, object]
     export_manifests: tuple[ExportManifest, ...]
 
     def to_audit_record(self) -> dict[str, object]:
@@ -98,6 +101,7 @@ class StudioReplayResult:
             "regime_history": list(self.regime_history),
             "layer_table": list(self.layer_table),
             "oscillator_table": list(self.oscillator_table),
+            "canvas_graph": dict(self.canvas_graph),
             "exports": [
                 manifest.to_audit_record() for manifest in self.export_manifests
             ],
@@ -201,6 +205,105 @@ def build_oscillator_table(spec: BindingSpec) -> tuple[dict[str, object], ...]:
                 }
             )
     return tuple(rows)
+
+
+def build_canvas_graph(spec: BindingSpec) -> dict[str, object]:
+    """Return a deterministic layer/coupling graph for Studio canvas review."""
+    family_channels = {
+        family_name: family.channel
+        for family_name, family in spec.oscillator_families.items()
+    }
+    channel_order = {
+        channel: index for index, channel in enumerate(sorted(spec.used_channels()))
+    }
+    channels = tuple(sorted(channel_order))
+    nodes: list[dict[str, object]] = []
+    for layer in sorted(spec.layers, key=lambda item: item.index):
+        family = layer.family or ""
+        channel = family_channels.get(family, "")
+        nodes.append(
+            {
+                "id": f"layer_{layer.index}",
+                "label": layer.name,
+                "kind": "layer",
+                "layer_index": int(layer.index),
+                "family": family,
+                "channel": channel,
+                "oscillator_count": len(layer.oscillator_ids),
+                "x": float(layer.index) * 220.0,
+                "y": float(channel_order.get(channel, 0)) * 140.0,
+            }
+        )
+    for index, channel in enumerate(channels):
+        nodes.append(
+            {
+                "id": _canvas_channel_id(channel),
+                "label": channel,
+                "kind": "channel",
+                "channel": channel,
+                "layer_index": -1,
+                "family": "",
+                "oscillator_count": 0,
+                "x": float(index) * 220.0,
+                "y": 420.0,
+            }
+        )
+
+    edges = [
+        {
+            "id": f"cross_channel_{index}",
+            "source": _canvas_channel_id(coupling.source),
+            "target": _canvas_channel_id(coupling.target),
+            "kind": "cross_channel_coupling",
+            "source_channel": coupling.source,
+            "target_channel": coupling.target,
+            "strength": float(coupling.strength),
+            "mode": coupling.mode,
+            "template": coupling.template or "",
+        }
+        for index, coupling in enumerate(spec.cross_channel_couplings, 1)
+        if coupling.source in channel_order and coupling.target in channel_order
+    ]
+    return {
+        "canvas_kind": "layer_coupling_graph",
+        "node_count": len(nodes),
+        "layer_count": len(spec.layers),
+        "channel_count": len(channels),
+        "edge_count": len(edges),
+        "nodes": nodes,
+        "edges": edges,
+    }
+
+
+def build_canvas_edit_artifact(
+    before_graph: Mapping[str, object],
+    after_graph: Mapping[str, object],
+) -> ExportManifest:
+    """Build a review artefact from edited Studio canvas graph rows."""
+    before_nodes, before_edges = _normalise_canvas_graph(before_graph, "before_graph")
+    after_nodes, after_edges = _normalise_canvas_graph(after_graph, "after_graph")
+    payload = json.dumps(
+        {
+            "artifact": "canvas_edit_review",
+            "changed": (before_nodes, before_edges) != (after_nodes, after_edges),
+            "node_count_before": len(before_nodes),
+            "node_count_after": len(after_nodes),
+            "edge_count_before": len(before_edges),
+            "edge_count_after": len(after_edges),
+            "nodes_before": before_nodes,
+            "nodes_after": after_nodes,
+            "edges_before": before_edges,
+            "edges_after": after_edges,
+        },
+        sort_keys=True,
+        indent=2,
+    )
+    return ExportManifest.review_artifact(
+        target_kind="canvas_edit_review",
+        file_name="canvas_edit_review.json",
+        payload=payload,
+        command="review canvas_edit_review.json before updating binding_spec.yaml",
+    )
 
 
 def build_runtime_snapshot(
@@ -587,6 +690,7 @@ def run_binding_spec_replay(
         regime_history=tuple(regime_history),
         layer_table=build_layer_table(spec),
         oscillator_table=build_oscillator_table(spec),
+        canvas_graph=build_canvas_graph(spec),
         export_manifests=project_state.exports,
     )
 
@@ -669,6 +773,29 @@ def _normalise_table_rows(
                 raise ValueError(f"{field_name}[{index}].{key} must be JSON-safe")
         normalised.append(safe_row)
     return normalised
+
+
+def _normalise_canvas_graph(
+    graph: Mapping[str, object],
+    field_name: str,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    if not isinstance(graph, Mapping):
+        raise ValueError(f"{field_name} must be a mapping")
+    nodes = graph.get("nodes", ())
+    edges = graph.get("edges", ())
+    if isinstance(nodes, str | bytes) or not isinstance(nodes, Sequence):
+        raise ValueError("canvas nodes must be a sequence of mappings")
+    if isinstance(edges, str | bytes) or not isinstance(edges, Sequence):
+        raise ValueError("canvas edges must be a sequence of mappings")
+    return (
+        _normalise_table_rows(nodes, "canvas nodes"),
+        _normalise_table_rows(edges, "canvas edges"),
+    )
+
+
+def _canvas_channel_id(channel: str) -> str:
+    safe = "".join(character if character.isalnum() else "_" for character in channel)
+    return f"channel_{safe}"
 
 
 def _finite_range(value: object, name: str, *, low: float, high: float) -> float:

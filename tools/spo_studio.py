@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
+    build_canvas_edit_artifact,
     build_command_table,
     build_deployment_readiness,
     build_error_report,
@@ -171,6 +172,7 @@ tabs = st.tabs(
         "Load",
         "Binding",
         "Oscillators",
+        "Canvas",
         "Live",
         "Autotune",
         "Hierarchy",
@@ -258,6 +260,59 @@ with tabs[2]:
     st.json(edit_record, expanded=False)
 
 with tabs[3]:
+    canvas_graph = result.canvas_graph
+    st.dataframe(
+        [
+            {
+                "metric": "layers",
+                "value": canvas_graph["layer_count"],
+            },
+            {
+                "metric": "channels",
+                "value": canvas_graph["channel_count"],
+            },
+            {
+                "metric": "couplings",
+                "value": canvas_graph["edge_count"],
+            },
+        ],
+        hide_index=True,
+        use_container_width=True,
+    )
+    canvas_nodes = st.data_editor(
+        list(canvas_graph["nodes"]),
+        hide_index=True,
+        use_container_width=True,
+        num_rows="dynamic",
+        disabled=("id", "kind"),
+        key="canvas_nodes",
+    )
+    canvas_edges = st.data_editor(
+        list(canvas_graph["edges"]),
+        hide_index=True,
+        use_container_width=True,
+        num_rows="dynamic",
+        disabled=("id", "kind"),
+        key="canvas_edges",
+    )
+    canvas_artifact = build_canvas_edit_artifact(
+        canvas_graph,
+        {"nodes": canvas_nodes, "edges": canvas_edges},
+    )
+    canvas_record = json.loads(canvas_artifact.payload)
+    if canvas_record["changed"]:
+        st.warning("Canvas edits are staged as a review artefact.")
+    else:
+        st.success("Canvas graph matches the current binding.")
+    st.download_button(
+        label=canvas_artifact.file_name,
+        data=canvas_artifact.payload,
+        file_name=canvas_artifact.file_name,
+        mime="application/json",
+        use_container_width=True,
+    )
+
+with tabs[4]:
     st.line_chart(
         build_series_chart_payload("R", result.r_history),
         x="step",
@@ -272,7 +327,7 @@ with tabs[3]:
     )
     st.dataframe(result.layer_table, hide_index=True, use_container_width=True)
 
-with tabs[4]:
+with tabs[5]:
     st.json(
         {
             "replay_status": project.runtime.replay_status,
@@ -288,7 +343,7 @@ with tabs[4]:
         expanded=False,
     )
 
-with tabs[5]:
+with tabs[6]:
     st.json(
         {
             "watermarks": project.runtime.hierarchy_watermarks,
@@ -298,7 +353,7 @@ with tabs[5]:
         expanded=False,
     )
 
-with tabs[6]:
+with tabs[7]:
     readiness = build_deployment_readiness(project)
     st.subheader("Deployment Readiness")
     st.dataframe(

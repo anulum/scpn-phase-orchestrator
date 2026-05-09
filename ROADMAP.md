@@ -184,11 +184,13 @@
 - SPO Studio GUI: web-based binding and policy builder that scaffolds, visualises, validates, and replays binding specs, with WASM-backed previews where useful.
   - Streamlit operator surface is in place for domainpack loading, raw-source
     import, binding review, oscillator edit review artefacts, live `R`/`Psi`/`K`
-    metrics, replay-only knob tuning, hierarchy monitor, and review/deploy
+    metrics, replay-only knob tuning, hierarchy monitor, layer/channel canvas
+    review artefacts, deployment readiness, recovery reports, and review/deploy
     export manifests. This is a validated operator prototype, not a finished
-    product-grade Studio: true drag/drop graph editing, guided onboarding,
-    domain-specific explanations, live connector ownership, deployment
-    packaging, browser polish, and FPGA packaging remain future product work.
+    product-grade Studio: direct drag/drop layout persistence, guided
+    onboarding, domain-specific explanations, live connector ownership, full
+    deployment packaging, browser polish, and FPGA packaging remain future
+    product work.
 - Hierarchical multi-scale orchestration: support nested orchestrators where local/edge supervisors maintain local coherence, exchange reduced phase/coherence summaries, and escalate only bounded regime evidence to a parent supervisor. Reuse Hodge decomposition and transfer-entropy monitors to decide what crosses hierarchy boundaries.
   - Reduced-summary hierarchy foundation is in place: `build_hierarchical_orchestration_plan()` turns child supervisor summaries into a parent `UPDEState` and bounded escalation audit records without exchanging raw child signals.
   - Transport-neutral hierarchy sync envelopes are in place: `build_hierarchy_sync_envelope()` and `ingest_hierarchy_sync_envelopes()` provide deterministic JSON-safe edge/cloud summary exchange with protocol-version and sequence checks.
@@ -218,13 +220,15 @@
 
 - One-click SPO Studio web UI for new control engineers:
   - Domainpack load, raw-source import, binding review, oscillator edit review
-    artefacts, live `R`/`Psi`/`K` visualisation, replay-only knob tuning,
-    hierarchy monitor, and Docker/WASM/project export manifests are in place.
+    artefacts, layer/channel canvas review artefacts, live `R`/`Psi`/`K`
+    visualisation, replay-only knob tuning, hierarchy monitor, deployment
+    readiness, recovery reports, and Docker/WASM/project export manifests are
+    in place.
     This remains far from a good standalone product: current value is an
     auditable operator workflow and smoke-tested web surface, while true
-    one-click product quality still needs canvas-grade interaction, guided
-    beginner mode, deployment packaging, live connectors, polished error
-    recovery, and hardware-target packaging.
+    one-click product quality still needs direct drag/drop layout persistence,
+    guided beginner mode, full deployment packaging, live connectors, and
+    hardware-target packaging.
 - Auto-binding prototype:
   - Deterministic proposal builders from time-series CSV, event-log JSON, and
     graph JSON to reviewable `binding_spec.yaml` records are in place with

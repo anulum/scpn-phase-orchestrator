@@ -17,9 +17,9 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs true drag/drop
-graph editing, guided beginner explanations, live connector ownership,
-deployment packaging, polished error recovery, and hardware-target packaging
-before it should be described as a good standalone product.
+layout polish, guided beginner explanations, live connector ownership,
+deployment packaging, and hardware-target packaging before it should be
+described as a good standalone product.
 
 Run it with:
 
@@ -40,6 +40,10 @@ streamlit run tools/spo_studio.py
    - **Oscillators**: editable oscillator table. Edits produce an
      `oscillator_edit_review.json` artefact rather than silently changing a
      live binding.
+   - **Canvas**: editable layer/channel graph rows for the current binding.
+     Nodes and cross-channel coupling edges produce a
+     `canvas_edit_review.json` artefact rather than silently changing a live
+     binding.
    - **Live**: `R`, regime timeline, and per-layer metrics from local replay.
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
    - **Hierarchy**: current hierarchy watermarks and reduced layer metrics.
@@ -71,6 +75,19 @@ each target a status and the next operator action:
 If binding validation fails, all targets are blocked and the checklist carries
 the validation messages as `blocked_reasons`. This keeps review artefacts
 available while preventing deploy-like manifests from being treated as ready.
+
+## Canvas Review
+
+The **Canvas** tab exposes the binding as a deterministic graph with layer
+nodes, declared channel nodes, and cross-channel coupling edges. It is designed
+for product-grade review workflows before direct drag/drop layout persistence:
+operators can inspect the topology, edit node or edge rows, and download a
+`canvas_edit_review.json` artefact that records before/after nodes, before/after
+edges, and changed counts.
+
+Canvas edits remain review-only. They do not rewrite `binding_spec.yaml`, open a
+live connector, or enable actuation. This keeps topology edits auditable until
+the binding update path has an explicit validation and review step.
 
 ## Error Recovery
 
