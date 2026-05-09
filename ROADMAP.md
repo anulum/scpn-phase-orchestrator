@@ -414,7 +414,10 @@ Speculative research watchlist:
   - Remaining scope: additional heterogeneous-domain demos and deeper
     obstruction hardening.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
-- Byzantine-fault-tolerant meta-orchestrator fabric over signed policy/topology proposals and hash-linked audit evidence.
+- Byzantine-fault-tolerant meta-orchestrator:
+  offline three-node BFT consensus manifests verify signed policy proposals,
+  hash-linked audit parents, quorum winners, rejected nodes, and non-actuating
+  review gates. Live distributed transport remains open.
 - Hybrid neuromorphic-quantum co-compiler:
   deterministic hybrid manifests combine quantum compiler and neuromorphic
   schedule artefacts under shared N-channel audit semantics, component hashes,

@@ -42,3 +42,34 @@ print(result.to_audit_record()["watermarks"])
 The runtime accepts reduced child summaries only. Raw time-series, graph
 payloads, actuator handles, raw coupling matrices, and raw evidence aliases are
 rejected before audit serialisation.
+
+## Byzantine Meta-Orchestrator Review
+
+The Byzantine meta-orchestrator helper is also offline and non-networked. It
+builds a deterministic review manifest from signed policy proposals and
+hash-linked audit parents.
+
+```python
+from scpn_phase_orchestrator.supervisor import (
+    build_bft_meta_orchestrator_manifest,
+    sign_policy_proposal,
+)
+
+proposal = sign_policy_proposal(
+    "node-a",
+    {"policy": "hold", "knobs": {"K": 0.3}, "actuation": False},
+    previous_audit_hash,
+    signing_key,
+)
+manifest = build_bft_meta_orchestrator_manifest(
+    [proposal, proposal_b, proposal_c],
+    keyring,
+    quorum=2,
+)
+```
+
+The manifest verifies proposal signatures, payload hashes, parent audit hashes,
+and quorum agreement. It reports the winning policy hash, accepted nodes,
+rejected nodes, blocked reasons, and a hash-linked audit-chain digest.
+`actuation_permitted` and `network_opened` remain false; accepted proposals still
+have to pass the normal supervisor review gate before use.

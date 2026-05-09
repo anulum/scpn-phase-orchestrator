@@ -19,6 +19,10 @@ from scpn_phase_orchestrator.supervisor.alignment import (
     value_alignment_policy_from_binding_spec,
     value_alignment_policy_from_template,
 )
+from scpn_phase_orchestrator.supervisor.byzantine import (
+    build_bft_meta_orchestrator_manifest,
+    sign_policy_proposal,
+)
 from scpn_phase_orchestrator.supervisor.causal import (
     CausalGraphEstimate,
     CausalInfluenceEdge,
@@ -191,6 +195,7 @@ __all__ = [
     "ValueConstraint",
     "ValueViolation",
     "assess_fep_hierarchy",
+    "build_bft_meta_orchestrator_manifest",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
     "build_morphogenetic_field_snapshot",
@@ -214,6 +219,7 @@ __all__ = [
     "sheaf_laplacian",
     "replay_hierarchy_jsonl",
     "simulate_hierarchy_gossip_consensus",
+    "sign_policy_proposal",
     "synthesise_policy_stl_automata",
     "synthesize_policy_stl_automata",
     "value_alignment_policy_from_binding_spec",
