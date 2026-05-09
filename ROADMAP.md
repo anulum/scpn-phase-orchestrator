@@ -186,10 +186,10 @@
     import, binding review, beginner-mode guidance, oscillator edit review
     artefacts, live `R`/`Psi`/`K` metrics, replay-only knob tuning, hierarchy
     monitor, layer/channel canvas review artefacts, canvas layout manifests,
-    connector ownership plans, deployment readiness, deployment package
+    canvas topology patch artefacts, connector ownership plans, deployment readiness, deployment package
     manifests, hardware target package manifests, recovery reports, and
     review/deploy export manifests. This is a validated operator prototype, not
-    a finished product-grade Studio: direct drag/drop topology persistence,
+    a finished product-grade Studio: live drag/drop binding rewrite,
     richer guided onboarding, live connector
     execution, package materialisation commands, browser polish, and verified
     FPGA packaging remain future product work.
@@ -223,13 +223,14 @@
 - One-click SPO Studio web UI for new control engineers:
   - Domainpack load, raw-source import, binding review, oscillator edit review
     artefacts, beginner-mode guidance, layer/channel canvas review artefacts,
-    canvas layout manifests, live `R`/`Psi`/`K` visualisation, replay-only knob
-    tuning, hierarchy monitor, connector ownership plans, deployment
+    canvas layout manifests, canvas topology patch artefacts, live
+    `R`/`Psi`/`K` visualisation, replay-only knob tuning, hierarchy monitor,
+    connector ownership plans, deployment
     readiness/package manifests, hardware target package manifests, recovery
     reports, and Docker/WASM/project export manifests are in place.
     This remains far from a good standalone product: current value is an
     auditable operator workflow and smoke-tested web surface, while true
-    one-click product quality still needs direct drag/drop topology persistence,
+    one-click product quality still needs live drag/drop binding rewrite,
     richer guided onboarding, package materialisation commands, live connector
     execution, and verified hardware-target packaging.
 - Auto-binding prototype:

@@ -45,6 +45,7 @@ __all__ = [
     "build_canvas_edit_artifact",
     "build_canvas_graph",
     "build_canvas_layout_manifest",
+    "build_canvas_topology_patch",
     "build_command_table",
     "build_export_manifests",
     "build_deployment_package",
@@ -351,6 +352,56 @@ def build_canvas_layout_manifest(
         file_name="canvas_layout_manifest.json",
         payload=payload,
         command="review canvas_layout_manifest.json before restoring Studio layout",
+    )
+
+
+def build_canvas_topology_patch(
+    *,
+    project_name: str,
+    before_graph: Mapping[str, object],
+    after_graph: Mapping[str, object],
+) -> ExportManifest:
+    """Build a review patch for persistent Studio topology edits."""
+    before_nodes, before_edges = _normalise_canvas_graph(before_graph, "before_graph")
+    after_nodes, after_edges = _normalise_canvas_graph(after_graph, "after_graph")
+    _validate_canvas_edge_endpoints(after_nodes, after_edges)
+
+    node_changes = _canvas_item_changes(
+        before_nodes,
+        after_nodes,
+        fields=("id", "kind", "label", "x", "y"),
+    )
+    edge_changes = _canvas_item_changes(
+        before_edges,
+        after_edges,
+        fields=("id", "kind", "source", "target"),
+    )
+    changed = any(node_changes[key] or edge_changes[key] for key in node_changes)
+    payload = json.dumps(
+        {
+            "patch_kind": "canvas_topology_patch",
+            "project_name": _require_non_empty_text(project_name, "project_name"),
+            "status": "review_required",
+            "changed": changed,
+            "node_count_before": len(before_nodes),
+            "node_count_after": len(after_nodes),
+            "edge_count_before": len(before_edges),
+            "edge_count_after": len(after_edges),
+            "node_changes": node_changes,
+            "edge_changes": edge_changes,
+            "safety": {
+                "binding_spec_rewritten": False,
+                "actuation_permitted": False,
+            },
+        },
+        sort_keys=True,
+        indent=2,
+    )
+    return ExportManifest.review_artifact(
+        target_kind="canvas_topology_patch",
+        file_name="canvas_topology_patch.json",
+        payload=payload,
+        command="review canvas_topology_patch.json before rewriting binding_spec.yaml",
     )
 
 
@@ -1108,6 +1159,61 @@ def _normalise_canvas_graph(
         _normalise_table_rows(nodes, "canvas nodes"),
         _normalise_table_rows(edges, "canvas edges"),
     )
+
+
+def _validate_canvas_edge_endpoints(
+    nodes: Sequence[Mapping[str, object]],
+    edges: Sequence[Mapping[str, object]],
+) -> None:
+    node_ids = {
+        _require_non_empty_text(node.get("id"), "canvas node id") for node in nodes
+    }
+    for edge in edges:
+        edge_id = _require_non_empty_text(edge.get("id"), "canvas edge id")
+        source = _require_non_empty_text(edge.get("source"), "canvas edge source")
+        target = _require_non_empty_text(edge.get("target"), "canvas edge target")
+        if source not in node_ids or target not in node_ids:
+            raise ValueError(f"canvas edge {edge_id!r} references unknown endpoint")
+
+
+def _canvas_item_changes(
+    before_items: Sequence[Mapping[str, object]],
+    after_items: Sequence[Mapping[str, object]],
+    *,
+    fields: Sequence[str],
+) -> dict[str, list[dict[str, object]]]:
+    before = _canvas_item_index(before_items, fields=fields)
+    after = _canvas_item_index(after_items, fields=fields)
+    before_ids = set(before)
+    after_ids = set(after)
+    common_ids = before_ids & after_ids
+    return {
+        "added": [after[item_id] for item_id in sorted(after_ids - before_ids)],
+        "removed": [before[item_id] for item_id in sorted(before_ids - after_ids)],
+        "modified": [
+            {"id": item_id, "before": before[item_id], "after": after[item_id]}
+            for item_id in sorted(common_ids)
+            if before[item_id] != after[item_id]
+        ],
+    }
+
+
+def _canvas_item_index(
+    items: Sequence[Mapping[str, object]],
+    *,
+    fields: Sequence[str],
+) -> dict[str, dict[str, object]]:
+    indexed: dict[str, dict[str, object]] = {}
+    for item in items:
+        item_id = _require_non_empty_text(item.get("id"), "canvas item id")
+        if item_id in indexed:
+            raise ValueError(f"canvas item id {item_id!r} must be unique")
+        indexed[item_id] = {
+            field: item[field]
+            for field in fields
+            if field in item and item[field] is not None
+        }
+    return indexed
 
 
 def _canvas_channel_id(channel: str) -> str:

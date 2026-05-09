@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_canvas_edit_artifact,
     build_canvas_graph,
     build_canvas_layout_manifest,
+    build_canvas_topology_patch,
     build_command_table,
     build_deployment_package,
     build_deployment_readiness,
@@ -236,6 +237,100 @@ def test_canvas_layout_manifest_rejects_missing_coordinates() -> None:
         build_canvas_layout_manifest(
             project_name="minimal_domain",
             graph={"nodes": ({"id": "layer_0", "kind": "layer"},), "edges": ()},
+        )
+
+
+def test_canvas_topology_patch_records_added_and_removed_edges() -> None:
+    before = {
+        "nodes": (
+            {
+                "id": "layer_0",
+                "label": "source",
+                "kind": "layer",
+                "x": 0.0,
+                "y": 0.0,
+            },
+            {
+                "id": "layer_1",
+                "label": "sink",
+                "kind": "layer",
+                "x": 220.0,
+                "y": 0.0,
+            },
+        ),
+        "edges": (
+            {
+                "id": "edge_old",
+                "source": "layer_0",
+                "target": "layer_1",
+                "kind": "review_edge",
+            },
+        ),
+    }
+    after = {
+        "nodes": before["nodes"],
+        "edges": (
+            {
+                "id": "edge_new",
+                "source": "layer_1",
+                "target": "layer_0",
+                "kind": "review_edge",
+            },
+        ),
+    }
+
+    artifact = build_canvas_topology_patch(
+        project_name="minimal_domain",
+        before_graph=before,
+        after_graph=after,
+    )
+    record = json.loads(artifact.payload)
+
+    assert artifact.target_kind == "canvas_topology_patch"
+    assert artifact.file_name == "canvas_topology_patch.json"
+    assert record["patch_kind"] == "canvas_topology_patch"
+    assert record["project_name"] == "minimal_domain"
+    assert record["changed"] is True
+    assert record["status"] == "review_required"
+    assert record["node_changes"] == {
+        "added": [],
+        "removed": [],
+        "modified": [],
+    }
+    assert record["edge_changes"]["removed"] == [
+        {
+            "id": "edge_old",
+            "kind": "review_edge",
+            "source": "layer_0",
+            "target": "layer_1",
+        }
+    ]
+    assert record["edge_changes"]["added"] == [
+        {
+            "id": "edge_new",
+            "kind": "review_edge",
+            "source": "layer_1",
+            "target": "layer_0",
+        }
+    ]
+
+
+def test_canvas_topology_patch_rejects_edges_with_unknown_endpoints() -> None:
+    with pytest.raises(ValueError, match="unknown endpoint"):
+        build_canvas_topology_patch(
+            project_name="minimal_domain",
+            before_graph={"nodes": ({"id": "layer_0", "kind": "layer"},), "edges": ()},
+            after_graph={
+                "nodes": ({"id": "layer_0", "kind": "layer"},),
+                "edges": (
+                    {
+                        "id": "edge_bad",
+                        "source": "layer_0",
+                        "target": "missing",
+                        "kind": "review_edge",
+                    },
+                ),
+            },
         )
 
 

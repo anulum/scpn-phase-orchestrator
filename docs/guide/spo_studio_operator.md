@@ -17,8 +17,8 @@ without Streamlit.
 
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
-metric inspection, and export review workflows. It still needs true drag/drop
-layout polish, richer guided onboarding, live connector execution, package
+metric inspection, and export review workflows. It still needs live drag/drop
+binding rewrite polish, richer guided onboarding, live connector execution, package
 materialisation commands, and hardware-target packaging before it should be
 described as a good standalone product.
 
@@ -46,7 +46,8 @@ streamlit run tools/spo_studio.py
      live binding.
    - **Canvas**: editable layer/channel graph rows for the current binding.
      Nodes and cross-channel coupling edges produce a
-     `canvas_edit_review.json` artefact and `canvas_layout_manifest.json`
+     `canvas_edit_review.json` artefact, `canvas_layout_manifest.json`, and
+     `canvas_topology_patch.json`
      rather than silently changing a live binding.
    - **Live**: `R`, regime timeline, and per-layer metrics from local replay.
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
@@ -99,7 +100,7 @@ false and points operators back to the connector plan before any handoff.
 
 The **Canvas** tab exposes the binding as a deterministic graph with layer
 nodes, declared channel nodes, and cross-channel coupling edges. It is designed
-for product-grade review workflows before direct drag/drop layout persistence:
+for product-grade review workflows before live drag/drop binding rewrite:
 operators can inspect the topology, edit node or edge rows, and download a
 `canvas_edit_review.json` artefact that records before/after nodes, before/after
 edges, and changed counts.
@@ -111,6 +112,11 @@ the binding update path has an explicit validation and review step.
 `canvas_layout_manifest.json` persists only node positions, labels, and counts.
 It is intended for handoff and future layout restore; it does not alter topology
 or validation state.
+
+`canvas_topology_patch.json` records added, removed, and modified graph nodes or
+edges as a review patch. It validates that every edited edge references an
+existing node, keeps `binding_spec.yaml` untouched, and marks the patch as
+review-required before any binding rewrite.
 
 ## Beginner Mode
 
