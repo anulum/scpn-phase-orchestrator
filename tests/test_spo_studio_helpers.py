@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     apply_knob_update,
     binding_spec_project_state,
+    build_command_table,
     build_deployment_readiness,
     build_export_manifests,
     build_layer_table,
@@ -253,6 +254,60 @@ def test_operator_checklist_blocks_after_validation_failure() -> None:
     assert checklist[1]["title"] == "Validate binding"
     assert checklist[2]["status"] == "blocked"
     assert "layer missing" in checklist[2]["detail"]
+
+
+def test_command_table_exposes_review_commands_only() -> None:
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+
+    rows = build_command_table(state)
+
+    assert [row["target"] for row in rows] == ["docker", "docker", "docker", "wasm"]
+    assert rows[0] == {
+        "target": "docker",
+        "command_index": 1,
+        "command": "docker compose config",
+        "status": "ready",
+    }
+    assert rows[-1]["command"].startswith("cd spo-kernel && wasm-pack build")
+    assert all(row["target"] != "hardware" for row in rows)
+
+
+def test_command_table_is_empty_when_validation_blocks_targets() -> None:
+    manifests = build_export_manifests(
+        project_name="broken",
+        binding_yaml="version: 1\n",
+        audit_payload={"project_name": "broken"},
+        validation_errors=("layer missing",),
+    )
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+    broken_state = type(state)(
+        project_name=state.project_name,
+        source=state.source,
+        binding=state.binding,
+        runtime=state.runtime,
+        exports=manifests,
+        metadata=state.metadata,
+    )
+
+    assert build_command_table(broken_state) == ()
 
 
 def test_deploy_exports_are_disabled_when_validation_fails() -> None:

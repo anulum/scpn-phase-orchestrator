@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
 from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
+    build_command_table,
     build_deployment_readiness,
     build_operator_checklist,
     build_oscillator_edit_artifact,
@@ -257,6 +258,14 @@ with tabs[6]:
         hide_index=True,
         use_container_width=True,
     )
+    command_rows = build_command_table(project)
+    if command_rows:
+        st.subheader("Review Commands")
+        st.dataframe(
+            list(command_rows),
+            hide_index=True,
+            use_container_width=True,
+        )
     st.json(readiness, expanded=False)
     st.download_button(
         label="deployment_readiness.json",

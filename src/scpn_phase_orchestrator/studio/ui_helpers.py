@@ -37,6 +37,7 @@ __all__ = [
     "StudioReplayResult",
     "apply_knob_update",
     "binding_spec_project_state",
+    "build_command_table",
     "build_export_manifests",
     "build_deployment_readiness",
     "build_layer_table",
@@ -463,6 +464,34 @@ def build_operator_checklist(
             }
         )
     return tuple(steps)
+
+
+def build_command_table(
+    project_state: StudioProjectState,
+) -> tuple[dict[str, object], ...]:
+    """Return copyable deployment-review commands for ready targets."""
+    readiness = build_deployment_readiness(project_state)
+    rows: list[dict[str, object]] = []
+    for target in readiness["targets"]:
+        if not isinstance(target, Mapping):
+            raise ValueError("readiness targets must be mappings")
+        status = _require_non_empty_text(target.get("status"), "status")
+        if status == "blocked":
+            continue
+        target_name = _require_non_empty_text(target.get("target"), "target")
+        commands = target.get("commands", ())
+        if isinstance(commands, str | bytes) or not isinstance(commands, Sequence):
+            raise ValueError("target commands must be a sequence of strings")
+        for index, command in enumerate(commands, 1):
+            rows.append(
+                {
+                    "target": target_name,
+                    "command_index": index,
+                    "command": _require_non_empty_text(command, "command"),
+                    "status": status,
+                }
+            )
+    return tuple(rows)
 
 
 def build_oscillator_edit_artifact(

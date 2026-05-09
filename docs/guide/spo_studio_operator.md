@@ -52,8 +52,10 @@ streamlit run tools/spo_studio.py
 The **Exports** tab emits `deployment_readiness.json` before the individual
 artefact downloads. It also shows a beginner checklist in execution order:
 run local replay, validate the binding, review Docker packaging, review WASM
-packaging, then attach hardware evidence when available. The readiness JSON
-gives each target a status and the next operator action:
+packaging, then attach hardware evidence when available. A separate command
+table exposes only currently reviewable commands, so blocked targets and
+hardware-without-evidence do not emit command rows. The readiness JSON gives
+each target a status and the next operator action:
 
 - `docker`: ready when binding validation passes; review `binding_spec.yaml`,
   `spo_studio_audit.json`, and `docker_manifest.json` before packaging. The
