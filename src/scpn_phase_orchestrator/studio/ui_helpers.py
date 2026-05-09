@@ -54,6 +54,7 @@ __all__ = [
     "build_canvas_edit_artifact",
     "build_canvas_binding_rewrite_candidate",
     "build_canvas_graph",
+    "build_canvas_interaction_state",
     "build_canvas_layout_manifest",
     "build_canvas_topology_patch",
     "build_command_table",
@@ -417,6 +418,59 @@ def build_canvas_topology_patch(
         payload=payload,
         command="review canvas_topology_patch.json before rewriting binding_spec.yaml",
     )
+
+
+def build_canvas_interaction_state(
+    *,
+    canvas_artifact: ExportManifest,
+    canvas_layout: ExportManifest,
+    canvas_patch: ExportManifest,
+    canvas_rewrite: Mapping[str, object],
+    operator_signoff: bool,
+) -> dict[str, object]:
+    """Summarise Canvas browser controls for deterministic operator feedback."""
+    record = json.loads(canvas_artifact.payload)
+    changed = bool(record.get("changed"))
+    rewrite_status = _require_non_empty_text(
+        canvas_rewrite.get("status"),
+        "rewrite_status",
+    )
+    validation_errors = _string_list(
+        canvas_rewrite.get("validation_errors", ()),
+        "validation_errors",
+    )
+    disabled_reasons: list[str] = []
+    if rewrite_status != "review_ready":
+        disabled_reasons.append("binding rewrite candidate is blocked")
+    disabled_reasons.extend(validation_errors)
+    if not operator_signoff:
+        disabled_reasons.append("operator sign-off required")
+    apply_enabled = not disabled_reasons
+    return {
+        "state_kind": "studio_canvas_interaction_state",
+        "changed": changed,
+        "rewrite_status": rewrite_status,
+        "apply_enabled": apply_enabled,
+        "disabled_reasons": disabled_reasons,
+        "next_action": _canvas_next_action(
+            changed=changed,
+            rewrite_status=rewrite_status,
+            operator_signoff=operator_signoff,
+            apply_enabled=apply_enabled,
+        ),
+        "status_message": (
+            "Canvas edits need review before apply."
+            if changed
+            else "Canvas graph matches the current binding."
+        ),
+        "download_manifest": [
+            canvas_artifact.file_name,
+            canvas_layout.file_name,
+            canvas_patch.file_name,
+            "binding_rewrite_candidate.yaml",
+        ],
+        "candidate_yaml_sha256": canvas_rewrite.get("candidate_yaml_sha256", ""),
+    }
 
 
 def build_canvas_binding_rewrite_candidate(
@@ -1490,6 +1544,33 @@ def _connector_by_transport(
         if connector.get("transport") == transport:
             return dict(connector)
     raise ValueError(f"connector transport {transport!r} not found")
+
+
+def _canvas_next_action(
+    *,
+    changed: bool,
+    rewrite_status: str,
+    operator_signoff: bool,
+    apply_enabled: bool,
+) -> str:
+    if apply_enabled:
+        return "apply reviewed binding rewrite or download artefacts"
+    if rewrite_status != "review_ready":
+        return "fix blocked canvas rewrite before apply"
+    if changed and not operator_signoff:
+        return "review artefacts and sign off before apply"
+    if not changed:
+        return "download artefacts or continue replay review"
+    return "review canvas artefacts"
+
+
+def _string_list(value: object, name: str) -> list[str]:
+    if isinstance(value, str | bytes) or not isinstance(value, Sequence):
+        raise ValueError(f"{name} must be a sequence of strings")
+    items: list[str] = []
+    for item in value:
+        items.append(_require_non_empty_text(item, name))
+    return items
 
 
 def _owned_runtime_blocked_reasons(

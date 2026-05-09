@@ -18,8 +18,8 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, binding apply review, and export review workflows. It still
-needs browser interaction polish, owned live connector runtimes, and real
-hardware evidence before it should be
+needs deployed live service processes and real hardware evidence before it should
+be
 described as a good standalone product.
 
 Run it with:
@@ -122,6 +122,11 @@ edges, and changed counts.
 Canvas edits remain review-gated. They do not open a live connector or enable
 actuation. This keeps topology edits auditable until a binding candidate has an
 explicit validation, hash check, backup, and operator sign-off.
+
+The Canvas tab also emits a deterministic interaction state. It centralises
+dirty-state, rewrite status, disabled apply reasons, the next operator action,
+and download availability so browser controls do not drift from the audited
+helper logic.
 
 `canvas_layout_manifest.json` persists only node positions, labels, and counts.
 It is intended for handoff and future layout restore; it does not alter topology

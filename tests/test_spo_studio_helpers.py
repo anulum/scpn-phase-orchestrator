@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_canvas_binding_rewrite_candidate,
     build_canvas_edit_artifact,
     build_canvas_graph,
+    build_canvas_interaction_state,
     build_canvas_layout_manifest,
     build_canvas_topology_patch,
     build_command_table,
@@ -418,6 +419,108 @@ def test_canvas_binding_rewrite_candidate_blocks_layer_edges() -> None:
         "only cross_channel_coupling edges can rewrite binding YAML"
     ]
     assert candidate["binding_spec_rewritten"] is False
+
+
+def test_canvas_interaction_state_enables_reviewed_apply_after_signoff() -> None:
+    result = run_binding_spec_replay(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml"),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+    edited_edges = [
+        {
+            "id": "cross_channel_reviewed",
+            "source": "channel_P",
+            "target": "channel_Quality",
+            "kind": "cross_channel_coupling",
+            "source_channel": "P",
+            "target_channel": "Quality",
+            "strength": 0.07,
+            "mode": "excitatory",
+            "template": "operator_reviewed_quality_probe",
+        },
+    ]
+    after_graph = {"nodes": result.canvas_graph["nodes"], "edges": edited_edges}
+    artifact = build_canvas_edit_artifact(result.canvas_graph, after_graph)
+    layout = build_canvas_layout_manifest(
+        project_name=result.project_state.project_name,
+        graph=after_graph,
+    )
+    patch = build_canvas_topology_patch(
+        project_name=result.project_state.project_name,
+        before_graph=result.canvas_graph,
+        after_graph=after_graph,
+    )
+    rewrite = build_canvas_binding_rewrite_candidate(result, after_graph=after_graph)
+
+    state = build_canvas_interaction_state(
+        canvas_artifact=artifact,
+        canvas_layout=layout,
+        canvas_patch=patch,
+        canvas_rewrite=rewrite,
+        operator_signoff=True,
+    )
+
+    assert state["state_kind"] == "studio_canvas_interaction_state"
+    assert state["changed"] is True
+    assert state["rewrite_status"] == "review_ready"
+    assert state["apply_enabled"] is True
+    assert state["disabled_reasons"] == []
+    assert (
+        state["next_action"] == "apply reviewed binding rewrite or download artefacts"
+    )
+    assert state["download_manifest"] == [
+        "canvas_edit_review.json",
+        "canvas_layout_manifest.json",
+        "canvas_topology_patch.json",
+        "binding_rewrite_candidate.yaml",
+    ]
+
+
+def test_canvas_interaction_state_blocks_unsafe_rewrite_apply() -> None:
+    result = run_binding_spec_replay(
+        _minimal_spec_path(),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+    after_graph = {
+        "nodes": result.canvas_graph["nodes"],
+        "edges": (
+            {
+                "id": "layer_edge",
+                "source": "layer_0",
+                "target": "layer_1",
+                "kind": "review_edge",
+            },
+        ),
+    }
+    artifact = build_canvas_edit_artifact(result.canvas_graph, after_graph)
+    layout = build_canvas_layout_manifest(
+        project_name=result.project_state.project_name,
+        graph=after_graph,
+    )
+    patch = build_canvas_topology_patch(
+        project_name=result.project_state.project_name,
+        before_graph=result.canvas_graph,
+        after_graph=after_graph,
+    )
+    rewrite = build_canvas_binding_rewrite_candidate(result, after_graph=after_graph)
+
+    state = build_canvas_interaction_state(
+        canvas_artifact=artifact,
+        canvas_layout=layout,
+        canvas_patch=patch,
+        canvas_rewrite=rewrite,
+        operator_signoff=True,
+    )
+
+    assert state["apply_enabled"] is False
+    assert state["disabled_reasons"] == [
+        "binding rewrite candidate is blocked",
+        "only cross_channel_coupling edges can rewrite binding YAML",
+    ]
+    assert state["next_action"] == "fix blocked canvas rewrite before apply"
+    assert state["status_message"] == "Canvas edits need review before apply."
 
 
 def test_apply_canvas_binding_rewrite_candidate_requires_signoff_and_backup(

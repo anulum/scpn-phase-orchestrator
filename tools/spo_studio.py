@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_beginner_guidance,
     build_canvas_binding_rewrite_candidate,
     build_canvas_edit_artifact,
+    build_canvas_interaction_state,
     build_canvas_layout_manifest,
     build_canvas_topology_patch,
     build_command_table,
@@ -369,9 +370,16 @@ with tabs[4]:
         value=False,
         help="Requires a review-ready candidate and an unchanged source SHA-256.",
     )
+    canvas_state = build_canvas_interaction_state(
+        canvas_artifact=canvas_artifact,
+        canvas_layout=canvas_layout,
+        canvas_patch=canvas_patch,
+        canvas_rewrite=canvas_rewrite,
+        operator_signoff=apply_signoff,
+    )
     if st.button(
         "Apply binding rewrite",
-        disabled=canvas_rewrite["status"] != "review_ready" or not apply_signoff,
+        disabled=not canvas_state["apply_enabled"],
         use_container_width=True,
     ):
         apply_record = apply_canvas_binding_rewrite_candidate(
@@ -384,11 +392,18 @@ with tabs[4]:
         else:
             st.error("Binding rewrite was blocked.")
         st.json(apply_record, expanded=False)
-    canvas_record = json.loads(canvas_artifact.payload)
-    if canvas_record["changed"]:
-        st.warning("Canvas edits are staged as a review artefact.")
+    if canvas_state["changed"]:
+        st.warning(canvas_state["status_message"])
     else:
-        st.success("Canvas graph matches the current binding.")
+        st.success(canvas_state["status_message"])
+    st.json(
+        {
+            "next_action": canvas_state["next_action"],
+            "apply_enabled": canvas_state["apply_enabled"],
+            "disabled_reasons": canvas_state["disabled_reasons"],
+        },
+        expanded=False,
+    )
     st.download_button(
         label=canvas_artifact.file_name,
         data=canvas_artifact.payload,
@@ -420,9 +435,9 @@ with tabs[4]:
     )
     st.json(
         {
-            "rewrite_status": canvas_rewrite["status"],
+            "rewrite_status": canvas_state["rewrite_status"],
             "validation_errors": canvas_rewrite["validation_errors"],
-            "candidate_yaml_sha256": canvas_rewrite["candidate_yaml_sha256"],
+            "candidate_yaml_sha256": canvas_state["candidate_yaml_sha256"],
         },
         expanded=False,
     )
