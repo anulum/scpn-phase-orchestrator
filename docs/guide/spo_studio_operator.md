@@ -18,8 +18,7 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, binding apply review, and export review workflows. It still
-needs deployed live service processes and real hardware evidence before it should
-be
+needs real hardware evidence before it should be
 described as a good standalone product.
 
 Run it with:
@@ -183,6 +182,15 @@ existing dependency-free adapter boundary, records the adapter response and
 queued count, and still keeps `network_opened`, `actuation_permitted`, and
 `hardware_write_permitted` false. It validates the runtime handoff surface; it
 does not start service processes or write to hardware.
+
+## Service Processes
+
+The **Exports** tab emits `service_process_manifest.json` and
+`spo_studio_services.compose.yaml` for operator-invoked localhost service
+packaging. The manifest defines the Studio UI, binding validator, and connector
+boundary review processes with deterministic commands, health checks, required
+artefacts, and SHA-256 coverage for the compose payload. Bindings stay on
+`127.0.0.1`; Studio does not start the services by itself.
 
 ## Error Recovery
 

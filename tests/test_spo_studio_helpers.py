@@ -44,6 +44,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_regime_chart_payload,
     build_runtime_snapshot,
     build_series_chart_payload,
+    build_service_process_manifest,
     build_verified_hardware_target_package,
     disabled_export_reasons,
     run_binding_spec_replay,
@@ -1087,6 +1088,81 @@ def test_deployment_package_collects_ready_artifacts_and_safety_gates() -> None:
         for artifact in package["export_artifacts"]
     )
     assert package["commands"][0]["target"] == "docker"
+
+
+def test_service_process_manifest_declares_localhost_services() -> None:
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={
+                "R_global": 0.72,
+                "regime": "nominal",
+                "layers": [{"name": "layer-a", "R": 0.7}],
+            },
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+
+    manifest = build_service_process_manifest(state)
+
+    assert manifest["manifest_kind"] == "studio_service_process_manifest"
+    assert manifest["overall_status"] == "operator_ready"
+    assert manifest["execution_mode"] == "operator_invoked"
+    assert manifest["network_opened"] is False
+    assert manifest["actuation_permitted"] is False
+    assert manifest["host_bind"] == "127.0.0.1"
+    assert manifest["compose_file"] == "spo_studio_services.compose.yaml"
+    assert len(manifest["compose_yaml_sha256"]) == 64
+    assert [service["name"] for service in manifest["services"]] == [
+        "spo-studio-ui",
+        "spo-binding-validator",
+        "spo-connector-boundary",
+    ]
+    studio_service = manifest["services"][0]
+    assert studio_service["ports"] == ["127.0.0.1:8501:8501"]
+    assert "streamlit run tools/spo_studio.py" in studio_service["command"]
+    assert "0.0.0.0" not in manifest["compose_yaml"]
+
+
+def test_service_process_manifest_blocks_on_validation_errors() -> None:
+    manifests = build_export_manifests(
+        project_name="broken",
+        binding_yaml="version: 1\n",
+        audit_payload={"project_name": "broken"},
+        validation_errors=("layer missing",),
+    )
+    state = binding_spec_project_state(
+        project_name="minimal_domain",
+        spec_path=_minimal_spec_path(),
+        knobs=StudioKnobState(K=1.0),
+        runtime=build_runtime_snapshot(
+            final_state={"R_global": 0.72, "regime": "nominal"},
+            knobs=StudioKnobState(K=1.0),
+            replay_status="completed",
+        ),
+    )
+    broken_state = type(state)(
+        project_name=state.project_name,
+        source=state.source,
+        binding=state.binding,
+        runtime=state.runtime,
+        exports=manifests,
+        metadata=state.metadata,
+    )
+
+    manifest = build_service_process_manifest(broken_state)
+
+    assert manifest["overall_status"] == "blocked"
+    assert manifest["services"] == []
+    assert manifest["blocked_reasons"] == [
+        "binding validation must pass before deploy manifests are enabled",
+        "layer missing",
+    ]
+    assert manifest["network_opened"] is False
+    assert manifest["hardware_write_permitted"] is False
 
 
 def test_deployment_readiness_blocks_targets_on_validation_errors() -> None:

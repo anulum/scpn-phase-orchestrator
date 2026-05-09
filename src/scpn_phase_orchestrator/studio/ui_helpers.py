@@ -74,6 +74,7 @@ __all__ = [
     "build_package_materialisation_plan",
     "build_runtime_snapshot",
     "build_series_chart_payload",
+    "build_service_process_manifest",
     "build_verified_hardware_target_package",
     "disabled_export_reasons",
     "discover_domainpacks",
@@ -1229,6 +1230,58 @@ def build_deployment_package(
     }
 
 
+def build_service_process_manifest(
+    project_state: StudioProjectState,
+) -> dict[str, object]:
+    """Return localhost-only service process packaging for Studio deployment."""
+    blocked_reasons = _deployment_blocked_reasons(project_state.exports)
+    if blocked_reasons:
+        return {
+            "manifest_kind": "studio_service_process_manifest",
+            "project_name": project_state.project_name,
+            "overall_status": "blocked",
+            "execution_mode": "operator_invoked",
+            "network_opened": False,
+            "actuation_permitted": False,
+            "hardware_write_permitted": False,
+            "host_bind": "127.0.0.1",
+            "compose_file": "spo_studio_services.compose.yaml",
+            "services": [],
+            "blocked_reasons": list(blocked_reasons),
+            "required_artifacts": [],
+            "compose_yaml": "",
+            "compose_yaml_sha256": "",
+        }
+
+    services = _studio_service_processes()
+    compose_yaml = _render_service_compose_yaml(services)
+    return {
+        "manifest_kind": "studio_service_process_manifest",
+        "project_name": project_state.project_name,
+        "overall_status": "operator_ready",
+        "execution_mode": "operator_invoked",
+        "network_opened": False,
+        "actuation_permitted": False,
+        "hardware_write_permitted": False,
+        "host_bind": "127.0.0.1",
+        "compose_file": "spo_studio_services.compose.yaml",
+        "services": services,
+        "blocked_reasons": [],
+        "required_artifacts": [
+            "binding_spec.yaml",
+            "spo_studio_audit.json",
+            "docker_manifest.json",
+            "owned_connector_runtime.json",
+        ],
+        "operator_commands": [
+            "docker compose -f spo_studio_services.compose.yaml config",
+            "docker compose -f spo_studio_services.compose.yaml up spo-studio-ui",
+        ],
+        "compose_yaml": compose_yaml,
+        "compose_yaml_sha256": sha256(compose_yaml.encode("utf-8")).hexdigest(),
+    }
+
+
 def build_package_materialisation_plan(
     project_state: StudioProjectState,
 ) -> dict[str, object]:
@@ -1597,6 +1650,95 @@ def _owned_runtime_blocked_reasons(
     if not isinstance(credential_label, str) or not credential_label.strip():
         blocked.append("auth_policy.credential_label must be assigned")
     return blocked
+
+
+def _studio_service_processes() -> list[dict[str, object]]:
+    validate_binding_command = (
+        "python -m scpn_phase_orchestrator.cli validate binding_spec.yaml"
+    )
+    return [
+        {
+            "name": "spo-studio-ui",
+            "image": "scpn-phase-orchestrator:local",
+            "command": (
+                "streamlit run tools/spo_studio.py "
+                "--server.address 127.0.0.1 --server.port 8501"
+            ),
+            "ports": ["127.0.0.1:8501:8501"],
+            "profiles": ["studio"],
+            "healthcheck": validate_binding_command,
+            "network_opened": False,
+            "actuation_permitted": False,
+        },
+        {
+            "name": "spo-binding-validator",
+            "image": "scpn-phase-orchestrator:local",
+            "command": validate_binding_command,
+            "ports": [],
+            "profiles": ["validation"],
+            "healthcheck": validate_binding_command,
+            "network_opened": False,
+            "actuation_permitted": False,
+        },
+        {
+            "name": "spo-connector-boundary",
+            "image": "scpn-phase-orchestrator:local",
+            "command": validate_binding_command,
+            "ports": [],
+            "profiles": ["connector-boundary-review"],
+            "healthcheck": validate_binding_command,
+            "network_opened": False,
+            "actuation_permitted": False,
+        },
+    ]
+
+
+def _render_service_compose_yaml(services: Sequence[Mapping[str, object]]) -> str:
+    lines = ["services:"]
+    for service in services:
+        name = _require_non_empty_text(service.get("name"), "service.name")
+        image = _require_non_empty_text(service.get("image"), "image")
+        command = json.dumps(_require_non_empty_text(service.get("command"), "command"))
+        lines.extend(
+            [
+                f"  {name}:",
+                f"    image: {image}",
+                "    working_dir: /workspace",
+                "    volumes:",
+                "      - .:/workspace:ro",
+                f"    command: {command}",
+            ]
+        )
+        ports = service.get("ports", ())
+        if isinstance(ports, Sequence) and not isinstance(ports, str | bytes) and ports:
+            lines.append("    ports:")
+            for port in ports:
+                port_text = json.dumps(_require_non_empty_text(port, "port"))
+                lines.append(f"      - {port_text}")
+        profiles = service.get("profiles", ())
+        if (
+            isinstance(profiles, Sequence)
+            and not isinstance(profiles, str | bytes)
+            and profiles
+        ):
+            lines.append("    profiles:")
+            for profile in profiles:
+                lines.append(
+                    f"      - {json.dumps(_require_non_empty_text(profile, 'profile'))}"
+                )
+        healthcheck = json.dumps(
+            _require_non_empty_text(service.get("healthcheck"), "healthcheck")
+        )
+        lines.extend(
+            [
+                "    healthcheck:",
+                f'      test: ["CMD-SHELL", {healthcheck}]',
+                "      interval: 30s",
+                "      timeout: 10s",
+                "      retries: 3",
+            ]
+        )
+    return "\n".join(lines) + "\n"
 
 
 def _owned_runtime_base_record(

@@ -43,6 +43,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_package_materialisation_plan,
     build_regime_chart_payload,
     build_series_chart_payload,
+    build_service_process_manifest,
     build_verified_hardware_target_package,
     disabled_export_reasons,
     discover_domainpacks,
@@ -576,6 +577,7 @@ with tabs[9]:
     readiness = build_deployment_readiness(project)
     package = build_deployment_package(project)
     materialisation_plan = build_package_materialisation_plan(project)
+    service_process_manifest = build_service_process_manifest(project)
     hardware_package = build_hardware_target_package(result)
     st.subheader("Deployment Readiness")
     st.dataframe(
@@ -612,6 +614,21 @@ with tabs[9]:
         file_name="package_materialisation_plan.json",
         mime="application/json",
         use_container_width=True,
+    )
+    st.download_button(
+        label="service_process_manifest.json",
+        data=json.dumps(service_process_manifest, sort_keys=True, indent=2),
+        file_name="service_process_manifest.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+    st.download_button(
+        label="spo_studio_services.compose.yaml",
+        data=service_process_manifest["compose_yaml"],
+        file_name="spo_studio_services.compose.yaml",
+        mime="application/x-yaml",
+        use_container_width=True,
+        disabled=service_process_manifest["overall_status"] != "operator_ready",
     )
     st.download_button(
         label="hardware_target_package.json",
