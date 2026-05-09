@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     binding_spec_project_state,
     build_command_table,
     build_deployment_readiness,
+    build_error_report,
     build_export_manifests,
     build_layer_table,
     build_operator_checklist,
@@ -308,6 +309,27 @@ def test_command_table_is_empty_when_validation_blocks_targets() -> None:
     )
 
     assert build_command_table(broken_state) == ()
+
+
+def test_error_report_scrubs_exception_text() -> None:
+    report = build_error_report(
+        operation="run_replay",
+        error=ValueError("bad file at /tmp/private/domainpacks/demo.yaml"),
+        project_name="minimal_domain",
+    )
+
+    assert report["project_name"] == "minimal_domain"
+    assert report["operation"] == "run_replay"
+    assert report["status"] == "blocked"
+    assert report["error_type"] == "ValueError"
+    assert report["operator_action"] == "review input artefacts and rerun"
+    assert "private" not in json.dumps(report)
+    assert "demo.yaml" not in json.dumps(report)
+
+
+def test_error_report_rejects_empty_operation() -> None:
+    with pytest.raises(ValueError, match="operation"):
+        build_error_report(operation="", error=RuntimeError("boom"))
 
 
 def test_deploy_exports_are_disabled_when_validation_fails() -> None:

@@ -72,6 +72,13 @@ If binding validation fails, all targets are blocked and the checklist carries
 the validation messages as `blocked_reasons`. This keeps review artefacts
 available while preventing deploy-like manifests from being treated as ready.
 
+## Error Recovery
+
+Replay and source-import failures render `studio_error_report.json` instead of
+exposing raw exception text. The report includes the operation, project name,
+exception type, blocked status, and the next operator action. It intentionally
+does not echo local paths, uploaded content, or raw exception messages.
+
 ## Safety Posture
 
 Studio does not open hardware handles, run live transport, or actuate a target.

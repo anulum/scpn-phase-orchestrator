@@ -40,6 +40,7 @@ __all__ = [
     "build_command_table",
     "build_export_manifests",
     "build_deployment_readiness",
+    "build_error_report",
     "build_layer_table",
     "build_oscillator_edit_artifact",
     "build_oscillator_table",
@@ -492,6 +493,22 @@ def build_command_table(
                 }
             )
     return tuple(rows)
+
+
+def build_error_report(
+    *,
+    operation: str,
+    error: Exception,
+    project_name: str = "unknown",
+) -> dict[str, object]:
+    """Return a path-safe operator report for failed Studio actions."""
+    return {
+        "project_name": _require_non_empty_text(project_name, "project_name"),
+        "operation": _require_non_empty_text(operation, "operation"),
+        "status": "blocked",
+        "error_type": type(error).__name__,
+        "operator_action": "review input artefacts and rerun",
+    }
 
 
 def build_oscillator_edit_artifact(

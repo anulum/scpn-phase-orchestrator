@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioReplayResult,
     build_command_table,
     build_deployment_readiness,
+    build_error_report,
     build_operator_checklist,
     build_oscillator_edit_artifact,
     build_regime_chart_payload,
@@ -93,6 +94,37 @@ def _mime_for_export(file_name: str) -> str:
     return "text/plain"
 
 
+def _render_error_report(report: dict[str, object]) -> None:
+    st.error(f"{report['operation']} failed: {report['error_type']}")
+    st.download_button(
+        label="studio_error_report.json",
+        data=json.dumps(report, sort_keys=True, indent=2),
+        file_name="studio_error_report.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+
+def _run_replay_or_report(
+    spec_path: Path,
+    *,
+    steps: int,
+    knobs: StudioKnobState,
+    project_name: str,
+) -> StudioReplayResult | None:
+    try:
+        return run_binding_spec_replay(spec_path, steps=steps, knobs=knobs)
+    except (OSError, ValueError, TypeError) as exc:
+        _render_error_report(
+            build_error_report(
+                operation="run_replay",
+                error=exc,
+                project_name=project_name,
+            )
+        )
+        return None
+
+
 domainpack_dir = _domainpack_dir()
 packs = discover_domainpacks(domainpack_dir)
 if not packs:
@@ -110,19 +142,25 @@ with st.sidebar:
         Psi=st.slider("Psi", 0.0, 10.0, 0.0, step=0.1),
     )
     if st.button("Run Replay", type="primary", use_container_width=True):
-        st.session_state["studio_result"] = run_binding_spec_replay(
+        replay_result = _run_replay_or_report(
             domainpack_dir / domain / "binding_spec.yaml",
             steps=steps,
             knobs=knobs,
+            project_name=domain,
         )
+        if replay_result is not None:
+            st.session_state["studio_result"] = replay_result
 
 result = _selected_result()
 if result is None:
-    result = run_binding_spec_replay(
+    result = _run_replay_or_report(
         domainpack_dir / domain / "binding_spec.yaml",
         steps=10,
         knobs=knobs,
+        project_name=domain,
     )
+    if result is None:
+        st.stop()
     st.session_state["studio_result"] = result
 
 project = result.project_state
@@ -155,28 +193,38 @@ with tabs[0]:
     )
     if uploaded is not None:
         text = uploaded.getvalue().decode("utf-8")
-        if source_kind == "time_series_csv":
-            proposal = propose_binding_from_time_series_csv(
-                text,
-                sample_rate_hz=st.number_input(
-                    "Sample rate Hz",
-                    min_value=0.001,
-                    value=1.0,
-                ),
-                project_name=uploaded.name,
-            )
-        elif source_kind == "event_log_json":
-            proposal = propose_binding_from_event_log(
-                text,
-                project_name=uploaded.name,
+        try:
+            if source_kind == "time_series_csv":
+                proposal = propose_binding_from_time_series_csv(
+                    text,
+                    sample_rate_hz=st.number_input(
+                        "Sample rate Hz",
+                        min_value=0.001,
+                        value=1.0,
+                    ),
+                    project_name=uploaded.name,
+                )
+            elif source_kind == "event_log_json":
+                proposal = propose_binding_from_event_log(
+                    text,
+                    project_name=uploaded.name,
+                )
+            else:
+                proposal = propose_binding_from_graph(
+                    text,
+                    project_name=uploaded.name,
+                )
+        except (ValueError, TypeError) as exc:
+            _render_error_report(
+                build_error_report(
+                    operation=f"import_{source_kind}",
+                    error=exc,
+                    project_name=uploaded.name,
+                )
             )
         else:
-            proposal = propose_binding_from_graph(
-                text,
-                project_name=uploaded.name,
-            )
-        st.code(proposal.binding.yaml_text, language="yaml")
-        st.json(proposal.binding.to_audit_record(), expanded=False)
+            st.code(proposal.binding.yaml_text, language="yaml")
+            st.json(proposal.binding.to_audit_record(), expanded=False)
 
 with tabs[1]:
     validation_errors = project.binding.validation_errors
