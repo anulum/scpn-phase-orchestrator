@@ -54,8 +54,8 @@ streamlit run tools/spo_studio.py
    - **Connectors**: memory, JSONL, REST, gRPC, Kafka, and hardware connector
      ownership plan, contract hash, auth posture, and `connector_plan.json`.
    - **Exports**: deployment-readiness checklist, deployment package manifest,
-     plus review artefacts for binding YAML, audit JSON, Docker manifest, WASM
-     manifest, and project state.
+     hardware target package, plus review artefacts for binding YAML, audit
+     JSON, Docker manifest, WASM manifest, and project state.
 
 ## Guided Deployment Path
 
@@ -88,6 +88,12 @@ The package JSON gathers the same target readiness with export payload hashes,
 required artefacts, review commands, blocked reasons, and safety gates. It is a
 single handover manifest for packaging jobs; it does not build images, run
 `wasm-pack`, open transports, or enable hardware output by itself.
+
+`hardware_target_package.json` is stricter. It records FPGA Verilog and
+neuromorphic schedule as target classes, but it remains `evidence_required`
+until a generated artefact path, simulator parity report, target toolchain
+version, and operator sign-off are attached. It keeps `hardware_write_permitted`
+false and points operators back to the connector plan before any handoff.
 
 ## Canvas Review
 

@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_deployment_readiness,
     build_error_report,
     build_export_manifests,
+    build_hardware_target_package,
     build_layer_table,
     build_live_connector_plan,
     build_operator_checklist,
@@ -220,6 +221,37 @@ def test_live_connector_plan_declares_owned_non_opened_transports() -> None:
         assert connector["operator_action"] == "assign connector owner and auth policy"
     assert hardware["hardware_write_permitted"] is False
     assert "live_transport_requires_auth" not in json.dumps(plan)
+
+
+def test_hardware_target_package_requires_evidence_before_readiness() -> None:
+    result = run_binding_spec_replay(
+        _minimal_spec_path(),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+
+    package = build_hardware_target_package(result)
+
+    assert package["package_kind"] == "studio_hardware_target_package"
+    assert package["project_name"] == "minimal_domain"
+    assert package["overall_status"] == "evidence_required"
+    assert package["hardware_write_permitted"] is False
+    assert package["network_opened"] is False
+    assert package["targets"] == ["fpga_verilog", "neuromorphic_schedule"]
+    assert package["required_evidence"] == [
+        "generated hardware artefact path",
+        "simulator parity report",
+        "target toolchain version",
+        "operator sign-off",
+    ]
+    assert package["commands"] == [
+        "review connector_plan.json",
+        "generate FPGA Verilog with KuramotoVerilogCompiler",
+        "run simulator parity before hardware handoff",
+    ]
+    assert package["connector"]["transport"] == "hardware"
+    assert package["connector"]["status"] == "owner_required"
+    assert len(package["contract_hash"]) == 64
 
 
 def test_beginner_guidance_explains_runtime_in_domain_terms() -> None:

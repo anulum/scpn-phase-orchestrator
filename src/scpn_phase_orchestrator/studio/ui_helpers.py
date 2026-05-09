@@ -50,6 +50,7 @@ __all__ = [
     "build_deployment_readiness",
     "build_error_report",
     "build_layer_table",
+    "build_hardware_target_package",
     "build_live_connector_plan",
     "build_oscillator_edit_artifact",
     "build_oscillator_table",
@@ -363,6 +364,41 @@ def build_live_connector_plan(spec: BindingSpec) -> dict[str, object]:
         "network_opened": False,
         "actuation_permitted": False,
         "connectors": connectors,
+    }
+
+
+def build_hardware_target_package(result: StudioReplayResult) -> dict[str, object]:
+    """Return a review-only hardware target package for Studio."""
+    if not isinstance(result, StudioReplayResult):
+        raise ValueError("replay result must be a StudioReplayResult")
+    connector_plan = result.connector_plan
+    hardware_connector = _connector_by_transport(connector_plan, "hardware")
+    return {
+        "package_kind": "studio_hardware_target_package",
+        "project_name": result.project_state.project_name,
+        "overall_status": "evidence_required",
+        "contract_hash": _require_non_empty_text(
+            connector_plan.get("contract_hash"),
+            "contract_hash",
+        ),
+        "hardware_write_permitted": False,
+        "network_opened": False,
+        "targets": ["fpga_verilog", "neuromorphic_schedule"],
+        "required_evidence": [
+            "generated hardware artefact path",
+            "simulator parity report",
+            "target toolchain version",
+            "operator sign-off",
+        ],
+        "commands": [
+            "review connector_plan.json",
+            "generate FPGA Verilog with KuramotoVerilogCompiler",
+            "run simulator parity before hardware handoff",
+        ],
+        "connector": hardware_connector,
+        "export_artifacts": [
+            manifest.to_audit_record() for manifest in result.export_manifests
+        ],
     }
 
 
@@ -965,6 +1001,21 @@ def _unique_artifacts(targets: Sequence[Mapping[str, object]]) -> list[str]:
             if name not in artifacts:
                 artifacts.append(name)
     return artifacts
+
+
+def _connector_by_transport(
+    connector_plan: Mapping[str, object],
+    transport: str,
+) -> dict[str, object]:
+    connectors = connector_plan.get("connectors", ())
+    if isinstance(connectors, str | bytes) or not isinstance(connectors, Sequence):
+        raise ValueError("connectors must be a sequence")
+    for connector in connectors:
+        if not isinstance(connector, Mapping):
+            raise ValueError("connector entries must be mappings")
+        if connector.get("transport") == transport:
+            return dict(connector)
+    raise ValueError(f"connector transport {transport!r} not found")
 
 
 def _layer_metrics(value: object) -> tuple[tuple[str, float], ...]:

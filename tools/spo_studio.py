@@ -30,6 +30,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_deployment_package,
     build_deployment_readiness,
     build_error_report,
+    build_hardware_target_package,
     build_operator_checklist,
     build_oscillator_edit_artifact,
     build_regime_chart_payload,
@@ -417,6 +418,7 @@ with tabs[8]:
 with tabs[9]:
     readiness = build_deployment_readiness(project)
     package = build_deployment_package(project)
+    hardware_package = build_hardware_target_package(result)
     st.subheader("Deployment Readiness")
     st.dataframe(
         list(build_operator_checklist(project)),
@@ -443,6 +445,13 @@ with tabs[9]:
         label="deployment_package.json",
         data=json.dumps(package, sort_keys=True, indent=2),
         file_name="deployment_package.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+    st.download_button(
+        label="hardware_target_package.json",
+        data=json.dumps(hardware_package, sort_keys=True, indent=2),
+        file_name="hardware_target_package.json",
         mime="application/json",
         use_container_width=True,
     )
