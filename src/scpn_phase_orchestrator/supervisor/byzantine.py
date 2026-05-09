@@ -233,7 +233,10 @@ def _signature_payload(
 
 
 def _json_round_trip(payload: Mapping[str, object]) -> dict[str, object]:
-    return json.loads(json.dumps(payload, sort_keys=True, allow_nan=False))
+    loaded = json.loads(json.dumps(payload, sort_keys=True, allow_nan=False))
+    if not isinstance(loaded, dict):
+        raise ValueError("payload must encode as a JSON object")
+    return {str(key): value for key, value in loaded.items()}
 
 
 def _require_text(value: object, label: str) -> str:

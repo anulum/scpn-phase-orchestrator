@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from math import isfinite
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 
@@ -515,7 +516,7 @@ def build_canvas_binding_rewrite_candidate(
         "network_opened": False,
         "before_yaml_sha256": before_digest,
         "candidate_yaml_sha256": sha256(candidate_yaml.encode("utf-8")).hexdigest(),
-        "coupling_count_before": int(result.canvas_graph["edge_count"]),
+        "coupling_count_before": _canvas_graph_count(result, "edge_count"),
         "coupling_count_after": len(after_edges),
         "validation_errors": validation_errors,
         "candidate_yaml": candidate_yaml,
@@ -694,7 +695,10 @@ def build_owned_live_connector_runtime_record(
     if not isinstance(result, StudioReplayResult):
         raise ValueError("replay result must be a StudioReplayResult")
     checked_transport = _require_non_empty_text(transport, "transport")
-    checked_payload = _normalise_json_mapping(payload, "payload")
+    checked_payload = _normalise_json_mapping(
+        cast("Mapping[object, object]", payload),
+        "payload",
+    )
     payload_json = _stable_json_payload(checked_payload, "payload")
     blocked_reasons = _owned_runtime_blocked_reasons(
         result.connector_plan,
@@ -744,7 +748,7 @@ def build_owned_live_connector_runtime_record(
         ),
         "response": response,
         "adapter": adapter_record,
-        "queued_count": int(adapter_record.get("queued_count", 0)),
+        "queued_count": _mapping_count(adapter_record, "queued_count"),
     }
 
 
@@ -805,8 +809,13 @@ def build_verified_hardware_target_package(
         "contract_hash": base_package["contract_hash"],
         "hardware_write_permitted": False,
         "network_opened": False,
-        "targets": list(base_package["targets"]),
-        "required_evidence": list(base_package["required_evidence"]),
+        "targets": list(_require_sequence(base_package.get("targets"), "targets")),
+        "required_evidence": list(
+            _require_sequence(
+                base_package.get("required_evidence"),
+                "required_evidence",
+            )
+        ),
         "invalid_evidence": invalid_evidence,
         "evidence": normalised,
         "connector": base_package["connector"],
@@ -825,7 +834,12 @@ def build_verified_hardware_target_package(
             "hardware evidence verified" if verified else "hardware evidence blocked",
             "hardware output remains operator-controlled",
         ],
-        "export_artifacts": list(base_package["export_artifacts"]),
+        "export_artifacts": list(
+            _require_sequence(
+                base_package.get("export_artifacts"),
+                "export_artifacts",
+            )
+        ),
     }
 
 
@@ -842,14 +856,14 @@ def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
     ]
     channels = [
         _require_non_empty_text(node.get("channel"), "channel")
-        for node in result.canvas_graph.get("nodes", ())
+        for node in _require_sequence(result.canvas_graph.get("nodes", ()), "nodes")
         if isinstance(node, Mapping) and node.get("kind") == "channel"
     ]
     validation_errors = list(project.binding.validation_errors)
     canvas_evidence = {
-        "layers": int(result.canvas_graph["layer_count"]),
-        "channels": int(result.canvas_graph["channel_count"]),
-        "couplings": int(result.canvas_graph["edge_count"]),
+        "layers": _canvas_graph_count(result, "layer_count"),
+        "channels": _canvas_graph_count(result, "channel_count"),
+        "couplings": _canvas_graph_count(result, "edge_count"),
     }
     return {
         "guide_kind": "beginner_mode",
@@ -887,7 +901,7 @@ def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
                     "alpha": float(runtime.alpha),
                     "zeta": float(runtime.zeta),
                     "Psi": float(runtime.Psi),
-                    "cross_channel_edges": int(result.canvas_graph["edge_count"]),
+                    "cross_channel_edges": _canvas_graph_count(result, "edge_count"),
                 },
             },
             {
@@ -964,7 +978,12 @@ def build_beginner_guidance(result: StudioReplayResult) -> dict[str, object]:
                 ),
                 "evidence": {
                     "export_count": len(result.export_manifests),
-                    "connector_count": len(result.connector_plan.get("connectors", ())),
+                    "connector_count": len(
+                        _require_sequence(
+                            result.connector_plan.get("connectors", ()),
+                            "connectors",
+                        )
+                    ),
                 },
             },
         ],
@@ -1311,8 +1330,12 @@ def build_package_materialisation_plan(
         "network_opened": False,
         "hardware_write_permitted": False,
         "commands": commands,
-        "blocked_targets": list(package["blocked_targets"]),
-        "blocked_reasons": list(package["blocked_reasons"]),
+        "blocked_targets": list(
+            _require_sequence(package.get("blocked_targets"), "blocked_targets")
+        ),
+        "blocked_reasons": list(
+            _require_sequence(package.get("blocked_reasons"), "blocked_reasons")
+        ),
         "postponed_targets": [
             {
                 "target": target["target"],
@@ -1324,8 +1347,12 @@ def build_package_materialisation_plan(
             for target in targets
             if target["status"] == "postponed"
         ],
-        "required_artifacts": list(package["required_artifacts"]),
-        "safety_gates": list(package["safety_gates"]),
+        "required_artifacts": list(
+            _require_sequence(package.get("required_artifacts"), "required_artifacts")
+        ),
+        "safety_gates": list(
+            _require_sequence(package.get("safety_gates"), "safety_gates")
+        ),
     }
 
 
@@ -1357,7 +1384,7 @@ def build_operator_checklist(
             ),
         },
     ]
-    for target in readiness["targets"]:
+    for target in _require_sequence(readiness.get("targets"), "targets"):
         if not isinstance(target, Mapping):
             raise ValueError("readiness targets must be mappings")
         target_name = _require_non_empty_text(target.get("target"), "target")
@@ -1367,7 +1394,11 @@ def build_operator_checklist(
             "operator_action",
         )
         blocked_detail = "; ".join(
-            str(reason) for reason in target.get("blocked_reasons", ())
+            str(reason)
+            for reason in _require_sequence(
+                target.get("blocked_reasons", ()),
+                "blocked_reasons",
+            )
         )
         steps.append(
             {
@@ -1387,7 +1418,7 @@ def build_command_table(
     """Return copyable deployment-review commands for ready targets."""
     readiness = build_deployment_readiness(project_state)
     rows: list[dict[str, object]] = []
-    for target in readiness["targets"]:
+    for target in _require_sequence(readiness.get("targets"), "targets"):
         if not isinstance(target, Mapping):
             raise ValueError("readiness targets must be mappings")
         status = _require_non_empty_text(target.get("status"), "status")
@@ -1783,26 +1814,26 @@ def _run_owned_live_adapter(
     headers = {"authorization": "Bearer studio-owned-runtime"}
     if transport == "rest":
         rest = DigitalTwinSyncRestAdapter.for_contract(contract, name="studio-rest")
-        response = rest.handle_post(envelope_record, headers=headers)
-        return response.to_audit_record(), rest.to_audit_record()
+        rest_response = rest.handle_post(envelope_record, headers=headers)
+        return rest_response.to_audit_record(), rest.to_audit_record()
     if transport == "grpc":
         grpc = DigitalTwinSyncGrpcAdapter.for_contract(contract, name="studio-grpc")
-        response = grpc.handle_unary(envelope_record, metadata=headers)
-        return response.to_audit_record(), grpc.to_audit_record()
+        grpc_response = grpc.handle_unary(envelope_record, metadata=headers)
+        return grpc_response.to_audit_record(), grpc.to_audit_record()
     if transport == "kafka":
         kafka = DigitalTwinSyncKafkaAdapter.for_contract(contract, name="studio-kafka")
-        response = kafka.handle_message(
+        kafka_response = kafka.handle_message(
             {"topic": kafka.topic, "value": envelope_record},
             headers=headers,
         )
-        return response.to_audit_record(), kafka.to_audit_record()
+        return kafka_response.to_audit_record(), kafka.to_audit_record()
     if transport == "hardware":
         hardware = DigitalTwinSyncHardwareAdapter.for_contract(
             contract,
             name="studio-hardware",
             device_ids=("studio-review-device",),
         )
-        response = hardware.handle_frame(
+        hardware_response = hardware.handle_frame(
             {
                 "device_id": "studio-review-device",
                 "safety_interlock": True,
@@ -1810,13 +1841,27 @@ def _run_owned_live_adapter(
             },
             headers=headers,
         )
-        return response.to_audit_record(), hardware.to_audit_record()
+        return hardware_response.to_audit_record(), hardware.to_audit_record()
     raise ValueError(f"connector transport {transport!r} is not a live runtime")
 
 
 def _non_negative_int(value: object, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{name} must be a non-negative int")
+    return value
+
+
+def _mapping_count(mapping: Mapping[str, object], name: str) -> int:
+    return _non_negative_int(mapping.get(name), name)
+
+
+def _canvas_graph_count(result: StudioReplayResult, name: str) -> int:
+    return _mapping_count(result.canvas_graph, name)
+
+
+def _require_sequence(value: object, name: str) -> Sequence[object]:
+    if isinstance(value, str | bytes) or not isinstance(value, Sequence):
+        raise ValueError(f"{name} must be a sequence")
     return value
 
 
@@ -1922,8 +1967,8 @@ def _blocked_binding_rewrite_candidate(
         "network_opened": False,
         "before_yaml_sha256": before_digest,
         "candidate_yaml_sha256": before_digest,
-        "coupling_count_before": int(result.canvas_graph["edge_count"]),
-        "coupling_count_after": int(result.canvas_graph["edge_count"]),
+        "coupling_count_before": _canvas_graph_count(result, "edge_count"),
+        "coupling_count_after": _canvas_graph_count(result, "edge_count"),
         "validation_errors": list(validation_errors),
         "candidate_yaml": yaml_text,
     }

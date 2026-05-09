@@ -41,7 +41,7 @@ class QuantumControlBridge:
             raise ValueError("trotter_order must be an integer >= 1")
         if trotter_order < 1:
             raise ValueError("trotter_order must be an integer >= 1")
-        self._n = n_oscillators
+        self._n: int = int(n_oscillators)
         self._trotter_order: int = int(trotter_order)
 
     def import_artifact(self, artifact_dict: dict) -> UPDEState:
@@ -111,7 +111,7 @@ class QuantumControlBridge:
         live actuation.
         """
         knm_array, omega_array = self._validate_compiler_inputs(knm, omegas, dt=dt)
-        frequency_terms = [
+        frequency_terms: list[dict[str, object]] = [
             {
                 "qubit": idx,
                 "omega": float(omega_array[idx]),
@@ -309,19 +309,19 @@ class QuantumControlBridge:
     ) -> dict[str, object]:
         frequency_error = 0.0
         for term in frequency_terms:
-            qubit = int(term["qubit"])
+            qubit = _int_field(term, "qubit")
             frequency_error = max(
                 frequency_error,
-                abs(float(term["omega"]) - float(omegas[qubit])),
+                abs(_float_field(term, "omega") - float(omegas[qubit])),
             )
         coupling_error = 0.0
         for term in coupling_terms:
-            source = int(term["source"])
-            target = int(term["target"])
+            source = _int_field(term, "source")
+            target = _int_field(term, "target")
             expected = 0.5 * (float(knm[source, target]) + float(knm[target, source]))
             coupling_error = max(
                 coupling_error,
-                abs(float(term["symmetric_coupling"]) - expected),
+                abs(_float_field(term, "symmetric_coupling") - expected),
             )
         return {
             "engine": "deterministic_xy_term_reconstruction",
@@ -332,4 +332,20 @@ class QuantumControlBridge:
 
 
 def _qasm_float(value: object) -> str:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError("QASM angle must be numeric")
     return f"{float(value):.12f}"
+
+
+def _int_field(mapping: dict[str, object], key: str) -> int:
+    value = mapping[key]
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{key} must be an integer")
+    return value
+
+
+def _float_field(mapping: dict[str, object], key: str) -> float:
+    value = mapping[key]
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{key} must be numeric")
+    return float(value)
