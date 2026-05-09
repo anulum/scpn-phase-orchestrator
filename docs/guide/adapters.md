@@ -52,7 +52,19 @@ bridge = QuantumControlBridge(n_oscillators=4, trotter_order=1)
 state = bridge.import_artifact({"phases": [0.1, 0.5, 1.2, 2.3], "fidelity": 0.95})
 export = bridge.export_artifact(state)
 coupling = bridge.import_knm(knm_array)
+compiler_manifest = bridge.build_quantum_compiler_manifest(
+    knm_array,
+    omega_array,
+    dt=0.01,
+)
 ```
+
+`build_quantum_compiler_manifest()` emits dependency-free OpenQASM 3 review
+text for Qiskit and PennyLane handoff. It records Z-frequency terms,
+symmetrised XY coupling terms, co-simulation parity evidence from deterministic
+term reconstruction, and SHA-256 hashes for the QASM and manifest payloads. The
+manifest keeps QPU execution and live actuation disabled until an operator runs
+external simulator parity and target handoff checks.
 
 ### SCPNControlBridge
 

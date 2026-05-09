@@ -95,6 +95,63 @@ class TestQuantumControlBridge:
         with pytest.raises(ValueError, match="square"):
             bridge.import_knm(np.ones((3, 4)))
 
+    def test_quantum_compiler_manifest_emits_qasm_with_parity_evidence(self):
+        bridge = QuantumControlBridge(n_oscillators=2, trotter_order=2)
+        knm = np.array([[0.0, 0.25], [0.5, 0.0]])
+        omegas = np.array([1.0, -0.5])
+
+        manifest = bridge.build_quantum_compiler_manifest(knm, omegas, dt=0.125)
+        repeated = bridge.build_quantum_compiler_manifest(knm, omegas, dt=0.125)
+
+        assert manifest == repeated
+        assert manifest["manifest_kind"] == "quantum_compiler_manifest"
+        assert manifest["schema_version"] == 1
+        assert manifest["status"] == "co_simulation_parity_passed"
+        assert manifest["target_backends"] == ["qiskit_openqasm3", "pennylane_qasm"]
+        assert manifest["n_qubits"] == 2
+        assert manifest["trotter_order"] == 2
+        assert manifest["qpu_execution_permitted"] is False
+        assert manifest["actuation_permitted"] is False
+        assert len(manifest["qasm_sha256"]) == 64
+        assert "OPENQASM 3.0;" in manifest["openqasm"]
+        assert "qubit[2] q;" in manifest["openqasm"]
+        assert "rz(0.125000000000) q[0];" in manifest["openqasm"]
+        assert "rz(-0.062500000000) q[1];" in manifest["openqasm"]
+        assert "rxx(0.046875000000) q[0], q[1];" in manifest["openqasm"]
+        assert "ryy(0.046875000000) q[0], q[1];" in manifest["openqasm"]
+        assert manifest["co_simulation_parity"] == {
+            "engine": "deterministic_xy_term_reconstruction",
+            "max_abs_frequency_error": 0.0,
+            "max_abs_coupling_error": 0.0,
+            "term_count": 3,
+        }
+        assert manifest["operator_commands"] == [
+            "review quantum_compiler_manifest.json",
+            "run Qiskit or PennyLane simulator parity before QPU handoff",
+        ]
+
+    def test_quantum_compiler_manifest_rejects_invalid_inputs(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+
+        with pytest.raises(ValueError, match="knm shape"):
+            bridge.build_quantum_compiler_manifest(
+                np.zeros((3, 3)),
+                np.ones(2),
+                dt=0.1,
+            )
+        with pytest.raises(ValueError, match="finite"):
+            bridge.build_quantum_compiler_manifest(
+                np.array([[0.0, np.nan], [0.0, 0.0]]),
+                np.ones(2),
+                dt=0.1,
+            )
+        with pytest.raises(ValueError, match="dt must be finite and positive"):
+            bridge.build_quantum_compiler_manifest(
+                np.zeros((2, 2)),
+                np.ones(2),
+                dt=0.0,
+            )
+
 
 class TestQuantumDomainpack:
     def test_binding_spec_loads(self):

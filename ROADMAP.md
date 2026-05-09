@@ -380,7 +380,10 @@ Near-term candidate tracks:
     histories recursively for larger multi-domain replay corpora.
   - Remaining scope: larger real audit-history training corpora and optional
     `scpn-meta` packaging.
-- Quantum-native compiler target: output Qiskit/PennyLane or OpenPulse/QASM fragments for the `quantum_simulation` path with co-simulation validation.
+- Quantum-native compiler target: deterministic OpenQASM 3 compiler manifests
+  are in place for Qiskit/PennyLane handoff, with Z-frequency terms,
+  symmetrised XY coupling terms, co-simulation parity evidence, SHA-256 hashes,
+  and QPU execution disabled. Real QPU target execution remains open.
 - Neuromorphic compiler target: deterministic Lava/PyNN schedule manifests
   from `UPDEState` are in place with population records, projections,
   control-action review records, simulator parity evidence, SHA-256 coverage,

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import json
+from hashlib import sha256
 from numbers import Integral
 from typing import TypeAlias, cast
 
@@ -95,6 +97,66 @@ class QuantumControlBridge:
             active_template="quantum_import",
         )
 
+    def build_quantum_compiler_manifest(
+        self,
+        knm: FloatArray,
+        omegas: FloatArray,
+        *,
+        dt: float,
+    ) -> dict[str, object]:
+        """Return a deterministic OpenQASM handoff with parity evidence.
+
+        The manifest is dependency-free review output for Qiskit/PennyLane
+        simulator handoff. It does not execute on a QPU and does not permit
+        live actuation.
+        """
+        knm_array, omega_array = self._validate_compiler_inputs(knm, omegas, dt=dt)
+        frequency_terms = [
+            {
+                "qubit": idx,
+                "omega": float(omega_array[idx]),
+                "angle": float(omega_array[idx] * dt),
+            }
+            for idx in range(self._n)
+        ]
+        coupling_terms = self._quantum_coupling_terms(knm_array, dt=dt)
+        openqasm = self._render_openqasm(frequency_terms, coupling_terms)
+        qasm_hash = sha256(openqasm.encode("utf-8")).hexdigest()
+        parity = self._quantum_compiler_parity(
+            omega_array,
+            frequency_terms,
+            knm_array,
+            coupling_terms,
+        )
+        manifest: dict[str, object] = {
+            "manifest_kind": "quantum_compiler_manifest",
+            "schema_version": 1,
+            "status": (
+                "co_simulation_parity_passed"
+                if parity["max_abs_frequency_error"] == 0.0
+                and parity["max_abs_coupling_error"] == 0.0
+                else "co_simulation_parity_failed"
+            ),
+            "target_backends": ["qiskit_openqasm3", "pennylane_qasm"],
+            "n_qubits": self._n,
+            "trotter_order": self._trotter_order,
+            "dt": float(dt),
+            "qpu_execution_permitted": False,
+            "actuation_permitted": False,
+            "frequency_terms": frequency_terms,
+            "coupling_terms": coupling_terms,
+            "openqasm": openqasm,
+            "qasm_sha256": qasm_hash,
+            "co_simulation_parity": parity,
+            "operator_commands": [
+                "review quantum_compiler_manifest.json",
+                "run Qiskit or PennyLane simulator parity before QPU handoff",
+            ],
+        }
+        canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
+        manifest["manifest_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+        return manifest
+
     def build_hamiltonian(self, knm: FloatArray, omegas: FloatArray) -> object:
         """Build Kuramoto XY Hamiltonian as SparsePauliOp.
 
@@ -158,3 +220,116 @@ class QuantumControlBridge:
         )
 
         return cast("dict", quantum_to_orchestrator_phases(quantum_theta))
+
+    def _validate_compiler_inputs(
+        self,
+        knm: FloatArray,
+        omegas: FloatArray,
+        *,
+        dt: float,
+    ) -> tuple[FloatArray, FloatArray]:
+        knm_array = np.asarray(knm, dtype=np.float64)
+        omega_array = np.asarray(omegas, dtype=np.float64)
+        if knm_array.shape != (self._n, self._n):
+            raise ValueError(
+                f"knm shape {knm_array.shape} does not match n_oscillators={self._n}"
+            )
+        if omega_array.shape != (self._n,):
+            raise ValueError(
+                f"omegas shape {omega_array.shape} does not match "
+                f"n_oscillators={self._n}"
+            )
+        if not np.all(np.isfinite(knm_array)):
+            raise ValueError("knm must contain finite values")
+        if not np.all(np.isfinite(omega_array)):
+            raise ValueError("omegas must contain finite values")
+        if not np.isfinite(dt) or dt <= 0.0:
+            raise ValueError("dt must be finite and positive")
+        return knm_array, omega_array
+
+    def _quantum_coupling_terms(
+        self,
+        knm: FloatArray,
+        *,
+        dt: float,
+    ) -> list[dict[str, object]]:
+        terms: list[dict[str, object]] = []
+        for source in range(self._n):
+            for target in range(source + 1, self._n):
+                forward = float(knm[source, target])
+                reverse = float(knm[target, source])
+                if forward == 0.0 and reverse == 0.0:
+                    continue
+                coupling = 0.5 * (forward + reverse)
+                if coupling == 0.0:
+                    continue
+                angle = coupling * dt
+                terms.append(
+                    {
+                        "source": source,
+                        "target": target,
+                        "forward_coupling": forward,
+                        "reverse_coupling": reverse,
+                        "symmetric_coupling": coupling,
+                        "xx_angle": float(angle),
+                        "yy_angle": float(angle),
+                    }
+                )
+        return terms
+
+    def _render_openqasm(
+        self,
+        frequency_terms: list[dict[str, object]],
+        coupling_terms: list[dict[str, object]],
+    ) -> str:
+        lines = [
+            "OPENQASM 3.0;",
+            'include "stdgates.inc";',
+            f"qubit[{self._n}] q;",
+        ]
+        for term in frequency_terms:
+            lines.append(f"rz({_qasm_float(term['angle'])}) q[{term['qubit']}];")
+        for term in coupling_terms:
+            source = term["source"]
+            target = term["target"]
+            lines.append(
+                f"rxx({_qasm_float(term['xx_angle'])}) q[{source}], q[{target}];"
+            )
+            lines.append(
+                f"ryy({_qasm_float(term['yy_angle'])}) q[{source}], q[{target}];"
+            )
+        return "\n".join(lines) + "\n"
+
+    def _quantum_compiler_parity(
+        self,
+        omegas: FloatArray,
+        frequency_terms: list[dict[str, object]],
+        knm: FloatArray,
+        coupling_terms: list[dict[str, object]],
+    ) -> dict[str, object]:
+        frequency_error = 0.0
+        for term in frequency_terms:
+            qubit = int(term["qubit"])
+            frequency_error = max(
+                frequency_error,
+                abs(float(term["omega"]) - float(omegas[qubit])),
+            )
+        coupling_error = 0.0
+        for term in coupling_terms:
+            source = int(term["source"])
+            target = int(term["target"])
+            expected = 0.5 * (float(knm[source, target]) + float(knm[target, source]))
+            coupling_error = max(
+                coupling_error,
+                abs(float(term["symmetric_coupling"]) - expected),
+            )
+        return {
+            "engine": "deterministic_xy_term_reconstruction",
+            "max_abs_frequency_error": frequency_error,
+            "max_abs_coupling_error": coupling_error,
+            "term_count": len(frequency_terms) + len(coupling_terms),
+        }
+
+
+def _qasm_float(value: object) -> str:
+    return f"{float(value):.12f}"
