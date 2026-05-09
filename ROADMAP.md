@@ -415,7 +415,11 @@ Speculative research watchlist:
     obstruction hardening.
 - Federated meta-orchestrator with differential-privacy policy-gradient aggregation across edge nodes.
 - Byzantine-fault-tolerant meta-orchestrator fabric over signed policy/topology proposals and hash-linked audit evidence.
-- Hybrid neuromorphic-quantum co-compiler with shared N-channel audit semantics.
+- Hybrid neuromorphic-quantum co-compiler:
+  deterministic hybrid manifests combine quantum compiler and neuromorphic
+  schedule artefacts under shared N-channel audit semantics, component hashes,
+  parity status, and disabled execution gates. Real hybrid target execution
+  remains open.
 - Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
   - Foundation is in place: value-alignment guard support exists.
   - Binding-spec templates are in place: `value_alignment` maps can be loaded

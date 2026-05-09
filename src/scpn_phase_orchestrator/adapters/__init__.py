@@ -18,6 +18,9 @@ from scpn_phase_orchestrator.adapters.hardware_io import (
     SampleBuffer,
     SimulatedBoardAdapter,
 )
+from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
+    build_hybrid_cocompiler_manifest,
+)
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import LSLBCIBridge
 from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
 from scpn_phase_orchestrator.adapters.modbus_tls import (
@@ -72,4 +75,5 @@ __all__ = [
     "SynapseChannelBridge",
     "SynapseCouplingBridge",
     "SynapseSnapshot",
+    "build_hybrid_cocompiler_manifest",
 ]

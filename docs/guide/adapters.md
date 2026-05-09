@@ -107,6 +107,27 @@ evidence from the numpy LIF rate path, and a SHA-256 schedule hash. The manifest
 keeps `actuation_permitted` and `hardware_write_permitted` false; it is a
 simulator-parity handoff, not a live neuromorphic target run.
 
+### Hybrid Neuromorphic-Quantum Co-Compiler
+
+The hybrid co-compiler combines a quantum compiler manifest and a neuromorphic
+schedule manifest under one shared audit envelope.
+
+```python
+from scpn_phase_orchestrator.adapters import build_hybrid_cocompiler_manifest
+
+hybrid = build_hybrid_cocompiler_manifest(
+    compiler_manifest,
+    schedule,
+    n_channel_semantics=("Q_control", "S_spike", "audit"),
+)
+```
+
+The combined manifest records target backends, component hashes,
+co-simulation parity status, and N-channel semantics in a deterministic JSON
+payload. It blocks if either component parity check fails or if a component
+tries to enable execution. `qpu_execution_permitted`,
+`hardware_write_permitted`, and `actuation_permitted` remain false.
+
 ### NeurocoreBridge
 
 Live integration with [sc-neurocore](https://github.com/anulum/sc-neurocore)
