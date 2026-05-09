@@ -44,6 +44,7 @@ __all__ = [
     "build_beginner_guidance",
     "build_canvas_edit_artifact",
     "build_canvas_graph",
+    "build_canvas_layout_manifest",
     "build_command_table",
     "build_export_manifests",
     "build_deployment_package",
@@ -313,6 +314,43 @@ def build_canvas_edit_artifact(
         file_name="canvas_edit_review.json",
         payload=payload,
         command="review canvas_edit_review.json before updating binding_spec.yaml",
+    )
+
+
+def build_canvas_layout_manifest(
+    *,
+    project_name: str,
+    graph: Mapping[str, object],
+) -> ExportManifest:
+    """Build a deterministic canvas layout manifest from node positions."""
+    nodes, edges = _normalise_canvas_graph(graph, "canvas_layout")
+    positions = []
+    for node in sorted(nodes, key=lambda item: str(item.get("id", ""))):
+        try:
+            node_id = _require_non_empty_text(node.get("id"), "canvas layout id")
+            kind = _require_non_empty_text(node.get("kind"), "canvas layout kind")
+            label = _require_non_empty_text(node.get("label"), "canvas layout label")
+            x = _finite_number(node.get("x"), "canvas layout x")
+            y = _finite_number(node.get("y"), "canvas layout y")
+        except ValueError as exc:
+            raise ValueError(f"canvas layout node is invalid: {exc}") from exc
+        positions.append({"id": node_id, "kind": kind, "label": label, "x": x, "y": y})
+    payload = json.dumps(
+        {
+            "manifest_kind": "canvas_layout_manifest",
+            "project_name": _require_non_empty_text(project_name, "project_name"),
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+            "positions": positions,
+        },
+        sort_keys=True,
+        indent=2,
+    )
+    return ExportManifest.review_artifact(
+        target_kind="canvas_layout_manifest",
+        file_name="canvas_layout_manifest.json",
+        payload=payload,
+        command="review canvas_layout_manifest.json before restoring Studio layout",
     )
 
 

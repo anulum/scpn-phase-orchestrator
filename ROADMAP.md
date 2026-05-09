@@ -185,11 +185,12 @@
   - Streamlit operator surface is in place for domainpack loading, raw-source
     import, binding review, beginner-mode guidance, oscillator edit review
     artefacts, live `R`/`Psi`/`K` metrics, replay-only knob tuning, hierarchy
-    monitor, layer/channel canvas review artefacts, connector ownership plans,
-    deployment readiness, deployment package manifests, hardware target package
-    manifests, recovery reports, and review/deploy export manifests. This is a
-    validated operator prototype, not a finished product-grade Studio: direct
-    drag/drop layout persistence, richer guided onboarding, live connector
+    monitor, layer/channel canvas review artefacts, canvas layout manifests,
+    connector ownership plans, deployment readiness, deployment package
+    manifests, hardware target package manifests, recovery reports, and
+    review/deploy export manifests. This is a validated operator prototype, not
+    a finished product-grade Studio: direct drag/drop topology persistence,
+    richer guided onboarding, live connector
     execution, package materialisation commands, browser polish, and verified
     FPGA packaging remain future product work.
 - Hierarchical multi-scale orchestration: support nested orchestrators where local/edge supervisors maintain local coherence, exchange reduced phase/coherence summaries, and escalate only bounded regime evidence to a parent supervisor. Reuse Hodge decomposition and transfer-entropy monitors to decide what crosses hierarchy boundaries.
@@ -222,13 +223,13 @@
 - One-click SPO Studio web UI for new control engineers:
   - Domainpack load, raw-source import, binding review, oscillator edit review
     artefacts, beginner-mode guidance, layer/channel canvas review artefacts,
-    live `R`/`Psi`/`K` visualisation, replay-only knob tuning, hierarchy
-    monitor, connector ownership plans, deployment readiness/package manifests,
-    hardware target package manifests, recovery reports, and Docker/WASM/project
-    export manifests are in place.
+    canvas layout manifests, live `R`/`Psi`/`K` visualisation, replay-only knob
+    tuning, hierarchy monitor, connector ownership plans, deployment
+    readiness/package manifests, hardware target package manifests, recovery
+    reports, and Docker/WASM/project export manifests are in place.
     This remains far from a good standalone product: current value is an
     auditable operator workflow and smoke-tested web surface, while true
-    one-click product quality still needs direct drag/drop layout persistence,
+    one-click product quality still needs direct drag/drop topology persistence,
     richer guided onboarding, package materialisation commands, live connector
     execution, and verified hardware-target packaging.
 - Auto-binding prototype:

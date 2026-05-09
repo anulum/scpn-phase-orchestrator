@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioReplayResult,
     build_beginner_guidance,
     build_canvas_edit_artifact,
+    build_canvas_layout_manifest,
     build_command_table,
     build_deployment_package,
     build_deployment_readiness,
@@ -338,6 +339,10 @@ with tabs[4]:
         canvas_graph,
         {"nodes": canvas_nodes, "edges": canvas_edges},
     )
+    canvas_layout = build_canvas_layout_manifest(
+        project_name=project.project_name,
+        graph={"nodes": canvas_nodes, "edges": canvas_edges},
+    )
     canvas_record = json.loads(canvas_artifact.payload)
     if canvas_record["changed"]:
         st.warning("Canvas edits are staged as a review artefact.")
@@ -347,6 +352,13 @@ with tabs[4]:
         label=canvas_artifact.file_name,
         data=canvas_artifact.payload,
         file_name=canvas_artifact.file_name,
+        mime="application/json",
+        use_container_width=True,
+    )
+    st.download_button(
+        label=canvas_layout.file_name,
+        data=canvas_layout.payload,
+        file_name=canvas_layout.file_name,
         mime="application/json",
         use_container_width=True,
     )

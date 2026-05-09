@@ -46,8 +46,8 @@ streamlit run tools/spo_studio.py
      live binding.
    - **Canvas**: editable layer/channel graph rows for the current binding.
      Nodes and cross-channel coupling edges produce a
-     `canvas_edit_review.json` artefact rather than silently changing a live
-     binding.
+     `canvas_edit_review.json` artefact and `canvas_layout_manifest.json`
+     rather than silently changing a live binding.
    - **Live**: `R`, regime timeline, and per-layer metrics from local replay.
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
    - **Hierarchy**: current hierarchy watermarks and reduced layer metrics.
@@ -107,6 +107,10 @@ edges, and changed counts.
 Canvas edits remain review-only. They do not rewrite `binding_spec.yaml`, open a
 live connector, or enable actuation. This keeps topology edits auditable until
 the binding update path has an explicit validation and review step.
+
+`canvas_layout_manifest.json` persists only node positions, labels, and counts.
+It is intended for handoff and future layout restore; it does not alter topology
+or validation state.
 
 ## Beginner Mode
 

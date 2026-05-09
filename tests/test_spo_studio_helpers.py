@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     build_beginner_guidance,
     build_canvas_edit_artifact,
     build_canvas_graph,
+    build_canvas_layout_manifest,
     build_command_table,
     build_deployment_package,
     build_deployment_readiness,
@@ -182,6 +183,60 @@ def test_canvas_edit_artifact_records_reviewable_node_and_edge_changes() -> None
     assert record["node_count_after"] == 1
     assert record["edge_count_after"] == 1
     assert record["nodes_after"][0]["x"] == 12.5
+
+
+def test_canvas_layout_manifest_persists_positions_without_edges() -> None:
+    graph = {
+        "nodes": (
+            {
+                "id": "layer_0",
+                "label": "source",
+                "kind": "layer",
+                "x": 12.5,
+                "y": 8.0,
+            },
+            {
+                "id": "channel_P",
+                "label": "P",
+                "kind": "channel",
+                "x": 220.0,
+                "y": 420.0,
+            },
+        ),
+        "edges": (
+            {
+                "id": "edge_1",
+                "source": "layer_0",
+                "target": "channel_P",
+                "kind": "review_edge",
+            },
+        ),
+    }
+
+    artifact = build_canvas_layout_manifest(
+        project_name="minimal_domain",
+        graph=graph,
+    )
+    record = json.loads(artifact.payload)
+
+    assert artifact.target_kind == "canvas_layout_manifest"
+    assert artifact.file_name == "canvas_layout_manifest.json"
+    assert record["manifest_kind"] == "canvas_layout_manifest"
+    assert record["project_name"] == "minimal_domain"
+    assert record["node_count"] == 2
+    assert record["edge_count"] == 1
+    assert record["positions"] == [
+        {"id": "channel_P", "kind": "channel", "label": "P", "x": 220.0, "y": 420.0},
+        {"id": "layer_0", "kind": "layer", "label": "source", "x": 12.5, "y": 8.0},
+    ]
+
+
+def test_canvas_layout_manifest_rejects_missing_coordinates() -> None:
+    with pytest.raises(ValueError, match="canvas layout"):
+        build_canvas_layout_manifest(
+            project_name="minimal_domain",
+            graph={"nodes": ({"id": "layer_0", "kind": "layer"},), "edges": ()},
+        )
 
 
 def test_canvas_edit_artifact_rejects_invalid_canvas_shape() -> None:
