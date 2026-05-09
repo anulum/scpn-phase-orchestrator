@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
@@ -44,6 +45,7 @@ __all__ = [
     "binding_spec_project_state",
     "build_beginner_guidance",
     "build_canvas_edit_artifact",
+    "build_canvas_binding_rewrite_candidate",
     "build_canvas_graph",
     "build_canvas_layout_manifest",
     "build_canvas_topology_patch",
@@ -407,6 +409,54 @@ def build_canvas_topology_patch(
         payload=payload,
         command="review canvas_topology_patch.json before rewriting binding_spec.yaml",
     )
+
+
+def build_canvas_binding_rewrite_candidate(
+    result: StudioReplayResult,
+    *,
+    after_graph: Mapping[str, object],
+) -> dict[str, object]:
+    """Build validated binding YAML candidate from reviewed canvas edits."""
+    if not isinstance(result, StudioReplayResult):
+        raise ValueError("replay result must be a StudioReplayResult")
+    _, after_edges = _normalise_canvas_graph(after_graph, "after_graph")
+    before_yaml = result.project_state.binding.yaml_text
+    before_digest = sha256(before_yaml.encode("utf-8")).hexdigest()
+    unsupported = [
+        _require_non_empty_text(edge.get("id"), "canvas edge id")
+        for edge in after_edges
+        if edge.get("kind") != "cross_channel_coupling"
+    ]
+    if unsupported:
+        return _blocked_binding_rewrite_candidate(
+            result,
+            before_digest,
+            ["only cross_channel_coupling edges can rewrite binding YAML"],
+        )
+
+    try:
+        candidate_yaml = _rewrite_binding_cross_channel_couplings(
+            before_yaml,
+            after_edges,
+        )
+    except ValueError as exc:
+        return _blocked_binding_rewrite_candidate(result, before_digest, [str(exc)])
+
+    validation_errors = _validate_candidate_binding_yaml(candidate_yaml)
+    return {
+        "candidate_kind": "canvas_binding_rewrite_candidate",
+        "project_name": result.project_state.project_name,
+        "status": "blocked" if validation_errors else "review_ready",
+        "binding_spec_rewritten": False,
+        "actuation_permitted": False,
+        "network_opened": False,
+        "before_yaml_sha256": before_digest,
+        "candidate_yaml_sha256": sha256(candidate_yaml.encode("utf-8")).hexdigest(),
+        "coupling_count_before": int(result.canvas_graph["edge_count"]),
+        "coupling_count_after": len(after_edges),
+        "validation_errors": validation_errors,
+        "candidate_yaml": candidate_yaml,
+    }
 
 
 def build_live_connector_plan(spec: BindingSpec) -> dict[str, object]:
@@ -1391,6 +1441,89 @@ def _normalise_hardware_evidence(
     else:
         invalid.append("operator_signoff must be true")
     return normalised, invalid
+
+
+def _blocked_binding_rewrite_candidate(
+    result: StudioReplayResult,
+    before_digest: str,
+    validation_errors: Sequence[str],
+) -> dict[str, object]:
+    yaml_text = result.project_state.binding.yaml_text
+    return {
+        "candidate_kind": "canvas_binding_rewrite_candidate",
+        "project_name": result.project_state.project_name,
+        "status": "blocked",
+        "binding_spec_rewritten": False,
+        "actuation_permitted": False,
+        "network_opened": False,
+        "before_yaml_sha256": before_digest,
+        "candidate_yaml_sha256": before_digest,
+        "coupling_count_before": int(result.canvas_graph["edge_count"]),
+        "coupling_count_after": int(result.canvas_graph["edge_count"]),
+        "validation_errors": list(validation_errors),
+        "candidate_yaml": yaml_text,
+    }
+
+
+def _rewrite_binding_cross_channel_couplings(
+    yaml_text: str,
+    edges: Sequence[Mapping[str, object]],
+) -> str:
+    import yaml
+
+    raw = yaml.safe_load(yaml_text)
+    if not isinstance(raw, dict):
+        raise ValueError("binding YAML must contain a mapping")
+    raw["cross_channel_couplings"] = [
+        _canvas_edge_to_cross_channel_coupling(edge) for edge in edges
+    ]
+    rendered: str = yaml.safe_dump(raw, sort_keys=False)
+    return rendered
+
+
+def _canvas_edge_to_cross_channel_coupling(
+    edge: Mapping[str, object],
+) -> dict[str, object]:
+    source = _canvas_edge_channel(edge, "source")
+    target = _canvas_edge_channel(edge, "target")
+    if source == target:
+        raise ValueError("cross-channel coupling source and target must differ")
+    return {
+        "source": source,
+        "target": target,
+        "strength": _finite_range(
+            edge.get("strength", 0.0),
+            "cross-channel coupling strength",
+            low=0.0,
+            high=100.0,
+        ),
+        "mode": _require_non_empty_text(edge.get("mode", "directed"), "mode"),
+        "template": _require_non_empty_text(
+            edge.get("template", "studio_canvas_review"),
+            "template",
+        ),
+    }
+
+
+def _canvas_edge_channel(edge: Mapping[str, object], endpoint: str) -> str:
+    explicit = edge.get(f"{endpoint}_channel")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+    raw_endpoint = _require_non_empty_text(edge.get(endpoint), endpoint)
+    if raw_endpoint.startswith("channel_"):
+        return raw_endpoint.removeprefix("channel_")
+    raise ValueError(f"{endpoint} must reference a channel node")
+
+
+def _validate_candidate_binding_yaml(candidate_yaml: str) -> list[str]:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        spec_path = Path(tmpdir) / "binding_spec.yaml"
+        spec_path.write_text(candidate_yaml, encoding="utf-8")
+        try:
+            spec = load_binding_spec(spec_path)
+        except Exception as exc:
+            return [f"candidate binding failed to load: {type(exc).__name__}"]
+        return list(validate_binding_spec(spec))
 
 
 def _is_sha256_digest(value: object) -> bool:

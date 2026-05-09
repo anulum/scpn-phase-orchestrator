@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     apply_knob_update,
     binding_spec_project_state,
     build_beginner_guidance,
+    build_canvas_binding_rewrite_candidate,
     build_canvas_edit_artifact,
     build_canvas_graph,
     build_canvas_layout_manifest,
@@ -336,6 +337,85 @@ def test_canvas_topology_patch_rejects_edges_with_unknown_endpoints() -> None:
                 ),
             },
         )
+
+
+def test_canvas_binding_rewrite_candidate_updates_cross_channel_couplings() -> None:
+    result = run_binding_spec_replay(
+        Path("domainpacks/digital_twin_nchannel/binding_spec.yaml"),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+    edited_edges = [
+        {
+            "id": "cross_channel_1",
+            "source": "channel_Thermal",
+            "target": "channel_P",
+            "kind": "cross_channel_coupling",
+            "source_channel": "Thermal",
+            "target_channel": "P",
+            "strength": 0.31,
+            "mode": "directed",
+            "template": "thermal_drift_to_machine_phase",
+        },
+        {
+            "id": "cross_channel_new",
+            "source": "channel_P",
+            "target": "channel_Quality",
+            "kind": "cross_channel_coupling",
+            "source_channel": "P",
+            "target_channel": "Quality",
+            "strength": 0.07,
+            "mode": "excitatory",
+            "template": "operator_reviewed_quality_probe",
+        },
+    ]
+
+    candidate = build_canvas_binding_rewrite_candidate(
+        result,
+        after_graph={"nodes": result.canvas_graph["nodes"], "edges": edited_edges},
+    )
+
+    assert candidate["candidate_kind"] == "canvas_binding_rewrite_candidate"
+    assert candidate["project_name"] == "digital_twin_nchannel"
+    assert candidate["status"] == "review_ready"
+    assert candidate["binding_spec_rewritten"] is False
+    assert candidate["actuation_permitted"] is False
+    assert candidate["validation_errors"] == []
+    assert candidate["coupling_count_before"] == 3
+    assert candidate["coupling_count_after"] == 2
+    assert len(candidate["before_yaml_sha256"]) == 64
+    assert len(candidate["candidate_yaml_sha256"]) == 64
+    assert "operator_reviewed_quality_probe" in candidate["candidate_yaml"]
+
+
+def test_canvas_binding_rewrite_candidate_blocks_layer_edges() -> None:
+    result = run_binding_spec_replay(
+        _minimal_spec_path(),
+        steps=3,
+        knobs=StudioKnobState(K=1.0),
+    )
+
+    candidate = build_canvas_binding_rewrite_candidate(
+        result,
+        after_graph={
+            "nodes": result.canvas_graph["nodes"],
+            "edges": (
+                {
+                    "id": "layer_edge",
+                    "source": "layer_0",
+                    "target": "layer_1",
+                    "kind": "review_edge",
+                },
+            ),
+        },
+    )
+
+    assert candidate["status"] == "blocked"
+    assert candidate["candidate_yaml"] == result.project_state.binding.yaml_text
+    assert candidate["validation_errors"] == [
+        "only cross_channel_coupling edges can rewrite binding YAML"
+    ]
+    assert candidate["binding_spec_rewritten"] is False
 
 
 def test_canvas_edit_artifact_rejects_invalid_canvas_shape() -> None:

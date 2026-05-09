@@ -187,12 +187,13 @@
     artefacts, ordered beginner walkthroughs, live `R`/`Psi`/`K` metrics,
     replay-only knob tuning, hierarchy monitor, layer/channel canvas review
     artefacts, canvas layout manifests,
-    canvas topology patch artefacts, connector ownership plans, deployment readiness, deployment package
+    canvas topology patch artefacts, validated binding rewrite candidates,
+    connector ownership plans, deployment readiness, deployment package
     manifests, dry-run connector run records, package materialisation plans,
     hardware target package manifests, verified hardware evidence packages,
     recovery reports, and
     review/deploy export manifests. This is a validated operator prototype, not
-    a finished product-grade Studio: live drag/drop binding rewrite,
+    a finished product-grade Studio: direct binding save/apply persistence,
     owned live connector runtimes, browser polish, and real FPGA/neuromorphic
     evidence remain future product work.
 - Hierarchical multi-scale orchestration: support nested orchestrators where local/edge supervisors maintain local coherence, exchange reduced phase/coherence summaries, and escalate only bounded regime evidence to a parent supervisor. Reuse Hodge decomposition and transfer-entropy monitors to decide what crosses hierarchy boundaries.
@@ -230,11 +231,12 @@
     hierarchy monitor, connector ownership plans, deployment
     readiness/package manifests, hardware target package manifests, recovery
     reports, dry-run connector run records, package materialisation plans,
-    verified hardware evidence packages, and Docker/WASM/project export
+    verified hardware evidence packages, validated binding rewrite candidates,
+    and Docker/WASM/project export
     manifests are in place.
     This remains far from a good standalone product: current value is an
     auditable operator workflow and smoke-tested web surface, while true
-    one-click product quality still needs live drag/drop binding rewrite,
+    one-click product quality still needs direct binding save/apply persistence,
     owned live connector runtimes, and real hardware evidence.
 - Auto-binding prototype:
   - Deterministic proposal builders from time-series CSV, event-log JSON, and

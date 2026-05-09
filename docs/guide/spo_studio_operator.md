@@ -18,8 +18,8 @@ without Streamlit.
 The current implementation is a validated operator prototype, not a finished
 product-grade Studio. It is useful for auditable replay, binding proposal,
 metric inspection, and export review workflows. It still needs live drag/drop
-binding rewrite polish, owned live connector runtimes, and real hardware
-evidence before it should be
+save/apply polish, owned live connector runtimes, and real hardware evidence
+before it should be
 described as a good standalone product.
 
 Run it with:
@@ -47,7 +47,7 @@ streamlit run tools/spo_studio.py
    - **Canvas**: editable layer/channel graph rows for the current binding.
      Nodes and cross-channel coupling edges produce a
      `canvas_edit_review.json` artefact, `canvas_layout_manifest.json`, and
-     `canvas_topology_patch.json`
+     `canvas_topology_patch.json`, plus validated binding rewrite candidates,
      rather than silently changing a live binding.
    - **Live**: `R`, regime timeline, and per-layer metrics from local replay.
    - **Autotune**: replay-only status and knob record. No actuation is enabled.
@@ -114,7 +114,7 @@ still keeps hardware writes disabled.
 
 The **Canvas** tab exposes the binding as a deterministic graph with layer
 nodes, declared channel nodes, and cross-channel coupling edges. It is designed
-for product-grade review workflows before live drag/drop binding rewrite:
+for product-grade review workflows before direct binding save/apply persistence:
 operators can inspect the topology, edit node or edge rows, and download a
 `canvas_edit_review.json` artefact that records before/after nodes, before/after
 edges, and changed counts.
@@ -131,6 +131,13 @@ or validation state.
 edges as a review patch. It validates that every edited edge references an
 existing node, keeps `binding_spec.yaml` untouched, and marks the patch as
 review-required before any binding rewrite.
+
+`binding_rewrite_candidate.yaml` is stricter: it rewrites only
+`cross_channel_couplings` from reviewed channel-to-channel canvas edges, runs the
+candidate through the real binding loader and validator, and exposes before/after
+YAML hashes. Unsupported layer-edge rewrites stay blocked. Studio still does not
+overwrite the source `binding_spec.yaml`; an operator must review and apply the
+candidate explicitly.
 
 ## Beginner Mode
 

@@ -25,6 +25,7 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     StudioKnobState,
     StudioReplayResult,
     build_beginner_guidance,
+    build_canvas_binding_rewrite_candidate,
     build_canvas_edit_artifact,
     build_canvas_layout_manifest,
     build_canvas_topology_patch,
@@ -357,6 +358,10 @@ with tabs[4]:
         before_graph=canvas_graph,
         after_graph={"nodes": canvas_nodes, "edges": canvas_edges},
     )
+    canvas_rewrite = build_canvas_binding_rewrite_candidate(
+        result,
+        after_graph={"nodes": canvas_nodes, "edges": canvas_edges},
+    )
     canvas_record = json.loads(canvas_artifact.payload)
     if canvas_record["changed"]:
         st.warning("Canvas edits are staged as a review artefact.")
@@ -382,6 +387,22 @@ with tabs[4]:
         file_name=canvas_patch.file_name,
         mime="application/json",
         use_container_width=True,
+    )
+    st.download_button(
+        label="binding_rewrite_candidate.yaml",
+        data=canvas_rewrite["candidate_yaml"],
+        file_name="binding_rewrite_candidate.yaml",
+        mime="application/x-yaml",
+        use_container_width=True,
+        disabled=canvas_rewrite["status"] != "review_ready",
+    )
+    st.json(
+        {
+            "rewrite_status": canvas_rewrite["status"],
+            "validation_errors": canvas_rewrite["validation_errors"],
+            "candidate_yaml_sha256": canvas_rewrite["candidate_yaml_sha256"],
+        },
+        expanded=False,
     )
 
 with tabs[5]:
