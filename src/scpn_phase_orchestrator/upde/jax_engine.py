@@ -58,6 +58,27 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     return value
 
 
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    value = float(value)
+    if not isfinite(value):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    return value
+
+
+def _validate_array(value: object, *, name: str, shape: tuple[int, ...]) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite array with shape {shape}") from exc
+    if array.shape != shape:
+        raise ValueError(f"{name} shape must be {shape}, got {array.shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
 def _validate_method(value: object) -> str:
     if not isinstance(value, str) or value not in ("euler", "rk4"):
         raise ValueError(f"unsupported method {value!r}")
@@ -161,6 +182,13 @@ class JaxUPDEEngine:  # pragma: no cover
         alpha: FloatArray,
     ) -> FloatArray:
         """Advance phases by one Kuramoto step on GPU via JIT-compiled JAX."""
+        phases = _validate_array(phases, name="phases", shape=(self._n,))
+        omegas = _validate_array(omegas, name="omegas", shape=(self._n,))
+        knm = _validate_array(knm, name="knm", shape=(self._n, self._n))
+        alpha = _validate_array(alpha, name="alpha", shape=(self._n, self._n))
+        zeta = _validate_finite_float(zeta, name="zeta")
+        psi = _validate_finite_float(psi, name="psi")
+
         jp = jnp.asarray(phases)
         jo = jnp.asarray(omegas)
         jk = jnp.asarray(knm)
@@ -198,6 +226,16 @@ class JaxStuartLandauEngine:  # pragma: no cover
         epsilon: float = 1.0,
     ) -> FloatArray:
         """Advance Stuart-Landau state by one RK4 step via JIT-compiled JAX."""
+        state = _validate_array(state, name="state", shape=(2 * self._n,))
+        omegas = _validate_array(omegas, name="omegas", shape=(self._n,))
+        mu = _validate_array(mu, name="mu", shape=(self._n,))
+        knm = _validate_array(knm, name="knm", shape=(self._n, self._n))
+        knm_r = _validate_array(knm_r, name="knm_r", shape=(self._n, self._n))
+        alpha = _validate_array(alpha, name="alpha", shape=(self._n, self._n))
+        zeta = _validate_finite_float(zeta, name="zeta")
+        psi = _validate_finite_float(psi, name="psi")
+        epsilon = _validate_finite_float(epsilon, name="epsilon")
+
         js = jnp.asarray(state)
         result = self._sl_rk4(
             js,

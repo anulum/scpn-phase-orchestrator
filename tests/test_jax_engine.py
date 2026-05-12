@@ -44,6 +44,42 @@ def test_jax_upde_phases_bounded(jax_upde):
     assert np.all(result < TWO_PI + 1e-6)
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("phases", np.zeros(7), "phases"),
+        ("omegas", np.zeros(7), "omegas"),
+        ("knm", np.zeros((8, 7)), "knm"),
+        ("alpha", np.zeros((7, 8)), "alpha"),
+        ("phases", np.full(8, np.nan), "phases"),
+        ("omegas", np.full(8, np.inf), "omegas"),
+        ("knm", np.full((8, 8), np.nan), "knm"),
+        ("alpha", np.full((8, 8), np.inf), "alpha"),
+        ("zeta", np.nan, "zeta"),
+        ("psi", "0.0", "psi"),
+    ],
+)
+def test_jax_upde_rejects_invalid_step_inputs(jax_upde, field, value, match):
+    values = {
+        "phases": np.zeros(8),
+        "omegas": np.ones(8),
+        "knm": np.zeros((8, 8)),
+        "zeta": 0.0,
+        "psi": 0.0,
+        "alpha": np.zeros((8, 8)),
+    }
+    values[field] = value
+    with pytest.raises(ValueError, match=match):
+        jax_upde.step(
+            values["phases"],
+            values["omegas"],
+            values["knm"],
+            values["zeta"],
+            values["psi"],
+            values["alpha"],
+        )
+
+
 def test_jax_upde_parity_with_numpy():
     from scpn_phase_orchestrator.upde.engine import UPDEEngine
     from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
@@ -100,6 +136,49 @@ def test_jax_sl_phases_and_amplitudes(jax_sl):
     assert np.all(result[:n] >= 0.0)
     assert np.all(result[:n] < TWO_PI + 1e-6)
     assert np.all(result[n:] >= 0.0)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("state", np.zeros(7), "state"),
+        ("omegas", np.zeros(3), "omegas"),
+        ("mu", np.zeros(3), "mu"),
+        ("knm", np.zeros((4, 3)), "knm"),
+        ("knm_r", np.zeros((3, 4)), "knm_r"),
+        ("alpha", np.zeros((3, 4)), "alpha"),
+        ("state", np.full(8, np.nan), "state"),
+        ("mu", np.full(4, np.inf), "mu"),
+        ("zeta", True, "zeta"),
+        ("psi", np.inf, "psi"),
+        ("epsilon", "1.0", "epsilon"),
+    ],
+)
+def test_jax_stuart_landau_rejects_invalid_step_inputs(jax_sl, field, value, match):
+    values = {
+        "state": np.concatenate([np.zeros(4), np.ones(4)]),
+        "omegas": np.ones(4),
+        "mu": np.ones(4),
+        "knm": np.zeros((4, 4)),
+        "knm_r": np.zeros((4, 4)),
+        "zeta": 0.0,
+        "psi": 0.0,
+        "alpha": np.zeros((4, 4)),
+        "epsilon": 1.0,
+    }
+    values[field] = value
+    with pytest.raises(ValueError, match=match):
+        jax_sl.step(
+            values["state"],
+            values["omegas"],
+            values["mu"],
+            values["knm"],
+            values["knm_r"],
+            values["zeta"],
+            values["psi"],
+            values["alpha"],
+            values["epsilon"],
+        )
 
 
 def test_jax_sl_parity():
