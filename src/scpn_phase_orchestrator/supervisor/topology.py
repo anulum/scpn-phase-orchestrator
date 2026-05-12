@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import combinations
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -65,8 +66,7 @@ class TopologyMutationPolicy:
             self.simplex_pairwise_support_floor, "simplex_pairwise_support_floor"
         )
         _require_non_negative(self.max_coupling, "max_coupling")
-        if self.max_new_simplices < 0:
-            raise ValueError("max_new_simplices must be non-negative")
+        _require_non_negative_int(self.max_new_simplices, "max_new_simplices")
 
 
 @dataclass(frozen=True)
@@ -278,10 +278,19 @@ def _has_pairwise_support(
 
 
 def _require_unit_interval(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and in [0, 1]")
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be finite and in [0, 1]")
 
 
 def _require_non_negative(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and non-negative")
     if not np.isfinite(value) or value < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
+
+
+def _require_non_negative_int(value: object, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")

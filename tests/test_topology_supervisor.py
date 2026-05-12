@@ -29,6 +29,33 @@ class TestTopologyMutationPolicy:
         with pytest.raises(ValueError, match="mutation_rate"):
             TopologyMutationPolicy(mutation_rate=1.5)
 
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"mutation_rate": True}, "mutation_rate"),
+            ({"coherence_floor": "0.75"}, "coherence_floor"),
+            ({"pairwise_threshold": True}, "pairwise_threshold"),
+            ({"simplex_threshold": "0.9"}, "simplex_threshold"),
+            ({"max_pairwise_delta": True}, "max_pairwise_delta"),
+            ({"max_simplex_strength": "0.2"}, "max_simplex_strength"),
+            ({"prune_threshold": True}, "prune_threshold"),
+            (
+                {"simplex_pairwise_support_floor": "0.0"},
+                "simplex_pairwise_support_floor",
+            ),
+            ({"max_coupling": True}, "max_coupling"),
+            ({"max_new_simplices": True}, "max_new_simplices"),
+            ({"max_new_simplices": 1.5}, "max_new_simplices"),
+        ],
+    )
+    def test_rejects_non_real_or_non_integral_policy_bounds(
+        self,
+        kwargs: dict[str, object],
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            TopologyMutationPolicy(**kwargs)
+
     def test_rejects_negative_simplex_budget(self) -> None:
         with pytest.raises(ValueError, match="max_new_simplices"):
             TopologyMutationPolicy(max_new_simplices=-1)
