@@ -1177,5 +1177,55 @@ def test_pll_clock_value_alignment_allows_bounded_loop_bandwidth():
     assert not decision.violations
 
 
+def test_digital_twin_value_alignment_blocks_excessive_twin_coupling():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "digital_twin_nchannel" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="K",
+        scope="global",
+        value=1.2,
+        ttl_s=1.0,
+        justification="review candidate exceeds twin-coupling prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-twin-coupling-step"
+    assert decision.actions_to_apply[0].justification == (
+        "digital twin value guard residual hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_digital_twin_value_alignment_allows_policy_scale_line_lag_correction():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "digital_twin_nchannel" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+    lag_actuator = next(act for act in spec.actuators if act.name == "line_phase_lag")
+
+    assert lag_actuator.limits[0] <= -0.04 <= lag_actuator.limits[1]
+    assert policy is not None
+    action = ControlAction(
+        knob="alpha",
+        scope="layer_1",
+        value=-0.04,
+        ttl_s=1.0,
+        justification="bounded line lag correction review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.

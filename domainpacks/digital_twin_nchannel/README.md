@@ -18,3 +18,6 @@ Compared with a P/I/S-only binding, `Thermal` and `Quality` make the
 cause of plant/twin divergence explicit, while `TwinResidual` gives
 audit, replay, and policy dry-runs a named derived channel instead of
 burying the residual inside a domain-specific script.
+
+The binding spec includes a `value_alignment` template for review-time twin
+coupling and signed line-lag correction guards.

@@ -148,6 +148,28 @@ actuators:
   - name: line_phase_lag
     knob: alpha
     scope: layer_1
-    limits: [0.0, 1.0]
+    limits: [-1.0, 1.0]
+
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-twin-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.45
+      weight: 2.0
+    - name: limit-line-lag-correction-step
+      knob: alpha
+      scope: layer_1
+      min_value: -0.50
+      max_value: 0.50
+      weight: 2.0
+  fallback_actions:
+    - knob: K
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: digital twin value guard residual hold
 
 policy: policy.yaml
