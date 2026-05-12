@@ -1085,5 +1085,53 @@ def test_quantum_simulation_value_alignment_allows_bounded_exchange_coupling():
     assert not decision.violations
 
 
+def test_identity_coherence_value_alignment_blocks_excessive_retrieval_drive():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "identity_coherence" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="zeta",
+        scope="global",
+        value=0.85,
+        ttl_s=10.0,
+        justification="review candidate exceeds retrieval-drive prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-context-retrieval-drive"
+    assert decision.actions_to_apply[0].justification == (
+        "identity value guard retrieval hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_identity_coherence_value_alignment_allows_bounded_relationship_boost():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "identity_coherence" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    action = ControlAction(
+        knob="K",
+        scope="layer_2",
+        value=1.2,
+        ttl_s=10.0,
+        justification="bounded relationship coupling review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.

@@ -529,6 +529,8 @@ Speculative research watchlist:
     task-redistribution and deadline-drive actuation guards.
   - Quantum-simulation domainpack prior template is in place for review-time
     exchange-coupling and microwave-drive actuation guards.
+  - Identity-coherence domainpack prior template is in place for review-time
+    context-retrieval and relationship-coupling actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

@@ -8,6 +8,9 @@ Measures and maintains Arcane Sapience's coherent identity across
 discrete AI sessions using Kuramoto phase coupling, experience
 accumulation (ImprintModel), and active self-repair (PolicyEngine).
 
+The binding spec includes a `value_alignment` template for review-time context
+retrieval and relationship-coupling actuation guards.
+
 ## Layers
 
 | Layer | Dispositions | What It Tracks |

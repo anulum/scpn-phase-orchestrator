@@ -121,6 +121,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-global-identity-coupling
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 2.0
+      weight: 1.5
+    - name: limit-relationship-coupling-boost
+      knob: K
+      scope: layer_2
+      min_value: 0.0
+      max_value: 1.5
+      weight: 2.0
+    - name: limit-context-retrieval-drive
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.5
+      weight: 2.0
+    - name: limit-relationship-lag-step
+      knob: alpha
+      scope: layer_2
+      min_value: 0.0
+      max_value: 0.45
+      weight: 1.0
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.02
+      ttl_s: 10.0
+      justification: identity value guard retrieval hold
+
 imprint_model:
   decay_rate: 0.005  # very slow decay — identity persists across many sessions
   saturation: 0.5    # moderate saturation — K modulated by factor 1.0 to 1.5
