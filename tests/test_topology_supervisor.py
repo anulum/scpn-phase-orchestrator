@@ -44,6 +44,7 @@ class TestTopologyMutationPolicy:
                 "simplex_pairwise_support_floor",
             ),
             ({"max_coupling": True}, "max_coupling"),
+            ({"max_coupling": 0.0}, "max_coupling"),
             ({"max_new_simplices": True}, "max_new_simplices"),
             ({"max_new_simplices": 1.5}, "max_new_simplices"),
         ],

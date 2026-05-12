@@ -65,7 +65,7 @@ class TopologyMutationPolicy:
         _require_non_negative(
             self.simplex_pairwise_support_floor, "simplex_pairwise_support_floor"
         )
-        _require_non_negative(self.max_coupling, "max_coupling")
+        _require_positive(self.max_coupling, "max_coupling")
         _require_non_negative_int(self.max_new_simplices, "max_new_simplices")
 
 
@@ -293,6 +293,13 @@ def _require_non_negative(value: float, name: str) -> None:
         raise ValueError(f"{name} must be finite and non-negative")
     if not np.isfinite(value) or value < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
+
+
+def _require_positive(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and positive")
+    if not np.isfinite(value) or value <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
 
 
 def _require_non_negative_int(value: object, name: str) -> None:
