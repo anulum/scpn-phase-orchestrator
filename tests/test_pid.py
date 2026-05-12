@@ -59,6 +59,26 @@ class TestRedundancy:
         phases = np.array([0.0, 1.0, 2.0])
         assert redundancy(phases, [0, 1], []) == 0.0
 
+    @pytest.mark.parametrize(
+        "phases",
+        [np.array([[0.0, 1.0]]), np.array([0.0, np.nan])],
+    )
+    def test_rejects_invalid_phase_vector(self, phases):
+        with pytest.raises(ValueError, match="phases"):
+            redundancy(phases, [0], [1])
+
+    @pytest.mark.parametrize("group", [[0.5], [True], [-1], [3], np.array([[0]])])
+    def test_rejects_invalid_group_indices(self, group):
+        phases = np.array([0.0, 1.0, 2.0])
+        with pytest.raises((TypeError, ValueError, IndexError), match="group_a"):
+            redundancy(phases, group, [1])
+
+    @pytest.mark.parametrize("n_bins", [0, 1, False, 4.5])
+    def test_rejects_invalid_bin_count(self, n_bins):
+        phases = np.array([0.0, 1.0, 2.0])
+        with pytest.raises((TypeError, ValueError), match="n_bins"):
+            redundancy(phases, [0], [1], n_bins=n_bins)
+
     def test_synchronized_phases_low_redundancy(self):
         """All phases identical → flat histogram → low entropy → low MI."""
         phases = np.zeros(100)
@@ -79,6 +99,18 @@ class TestSynergy:
     def test_empty_group(self):
         phases = np.array([0.0, 1.0, 2.0])
         assert synergy(phases, [], [0, 1]) == 0.0
+
+    @pytest.mark.parametrize("group", [[0.5], [True], [-1], [3], np.array([[0]])])
+    def test_rejects_invalid_group_indices(self, group):
+        phases = np.array([0.0, 1.0, 2.0])
+        with pytest.raises((TypeError, ValueError, IndexError), match="group_b"):
+            synergy(phases, [0], group)
+
+    @pytest.mark.parametrize("n_bins", [0, 1, True, 7.5])
+    def test_rejects_invalid_bin_count(self, n_bins):
+        phases = np.array([0.0, 1.0, 2.0])
+        with pytest.raises((TypeError, ValueError), match="n_bins"):
+            synergy(phases, [0], [1], n_bins=n_bins)
 
     def test_disjoint_uniform_groups(self):
         """Uniform random phases in disjoint groups should have finite synergy."""

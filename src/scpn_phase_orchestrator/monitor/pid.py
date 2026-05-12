@@ -26,6 +26,46 @@ IntArray: TypeAlias = NDArray[np.integer[Any]]
 _DEFAULT_BINS = 32
 
 
+def _validate_n_bins(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError("n_bins must be an integer greater than or equal to 2")
+    if value < 2:
+        raise ValueError("n_bins must be greater than or equal to 2")
+    return int(value)
+
+
+def _validate_phases(value: object) -> FloatArray:
+    try:
+        phases = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases must be a finite 1-D phase vector") from exc
+    if phases.ndim != 1:
+        raise ValueError("phases must be a finite 1-D phase vector")
+    if not np.all(np.isfinite(phases)):
+        raise ValueError("phases must contain only finite values")
+    return phases
+
+
+def _validate_group_indices(value: object, *, name: str, n_phases: int) -> IntArray:
+    raw = np.asarray(value)
+    if raw.ndim != 1:
+        raise ValueError(f"{name} must be a 1-D integer index array")
+    if raw.dtype == np.bool_:
+        raise TypeError(f"{name} must contain integer indices, not booleans")
+    try:
+        numeric = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(f"{name} must contain integer indices") from exc
+    if not np.all(np.isfinite(numeric)):
+        raise ValueError(f"{name} must contain finite integer indices")
+    if not np.all(numeric == np.floor(numeric)):
+        raise TypeError(f"{name} must contain integer indices")
+    indices = numeric.astype(np.intp)
+    if indices.size > 0 and (np.any(indices < 0) or np.any(indices >= n_phases)):
+        raise IndexError(f"{name} indices must be within [0, {n_phases})")
+    return indices
+
+
 def _circular_entropy(phases: FloatArray, n_bins: int = _DEFAULT_BINS) -> float:
     """Shannon entropy of a circular phase distribution via histogram."""
     if len(phases) == 0:
@@ -80,11 +120,13 @@ def redundancy(
 
     Williams & Beer 2010 minimum-MI redundancy.
     """
-    n = len(phases)
+    bin_count = _validate_n_bins(n_bins)
+    phase_values = _validate_phases(phases)
+    n = len(phase_values)
     if n == 0:
         return 0.0
-    group_a_idx: IntArray = np.asarray(group_a, dtype=np.intp)
-    group_b_idx: IntArray = np.asarray(group_b, dtype=np.intp)
+    group_a_idx = _validate_group_indices(group_a, name="group_a", n_phases=n)
+    group_b_idx = _validate_group_indices(group_b, name="group_b", n_phases=n)
     if len(group_a_idx) == 0 or len(group_b_idx) == 0:
         return 0.0
 
@@ -93,19 +135,19 @@ def redundancy(
 
         return float(
             _rust_red(
-                np.ascontiguousarray(phases.ravel()),
+                np.ascontiguousarray(phase_values.ravel()),
                 group_a_idx.tolist(),
                 group_b_idx.tolist(),
-                n_bins,
+                bin_count,
             )
         )
 
-    global_phase = float(np.angle(np.mean(np.exp(1j * phases))))
+    global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
     global_a: FloatArray = np.full(len(group_a_idx), global_phase)
     global_b: FloatArray = np.full(len(group_b_idx), global_phase)
 
-    mi_a = _mutual_information_paired(phases[group_a_idx], global_a, n_bins)
-    mi_b = _mutual_information_paired(phases[group_b_idx], global_b, n_bins)
+    mi_a = _mutual_information_paired(phase_values[group_a_idx], global_a, bin_count)
+    mi_b = _mutual_information_paired(phase_values[group_b_idx], global_b, bin_count)
     return min(mi_a, mi_b)
 
 
@@ -122,11 +164,13 @@ def synergy(
     Positive synergy means the combined group carries information
     about the global state that neither subgroup carries alone.
     """
-    n = len(phases)
+    bin_count = _validate_n_bins(n_bins)
+    phase_values = _validate_phases(phases)
+    n = len(phase_values)
     if n == 0:
         return 0.0
-    group_a_idx: IntArray = np.asarray(group_a, dtype=np.intp)
-    group_b_idx: IntArray = np.asarray(group_b, dtype=np.intp)
+    group_a_idx = _validate_group_indices(group_a, name="group_a", n_phases=n)
+    group_b_idx = _validate_group_indices(group_b, name="group_b", n_phases=n)
     if len(group_a_idx) == 0 or len(group_b_idx) == 0:
         return 0.0
 
@@ -135,23 +179,25 @@ def synergy(
 
         return float(
             _rust_syn(
-                np.ascontiguousarray(phases.ravel()),
+                np.ascontiguousarray(phase_values.ravel()),
                 group_a_idx.tolist(),
                 group_b_idx.tolist(),
-                n_bins,
+                bin_count,
             )
         )
 
-    global_phase = float(np.angle(np.mean(np.exp(1j * phases))))
+    global_phase = float(np.angle(np.mean(np.exp(1j * phase_values))))
 
     joint_indices: IntArray = np.concatenate([group_a_idx, group_b_idx])
     global_joint: FloatArray = np.full(len(joint_indices), global_phase)
     global_a: FloatArray = np.full(len(group_a_idx), global_phase)
     global_b: FloatArray = np.full(len(group_b_idx), global_phase)
 
-    mi_joint = _mutual_information_paired(phases[joint_indices], global_joint, n_bins)
-    mi_a = _mutual_information_paired(phases[group_a_idx], global_a, n_bins)
-    mi_b = _mutual_information_paired(phases[group_b_idx], global_b, n_bins)
+    mi_joint = _mutual_information_paired(
+        phase_values[joint_indices], global_joint, bin_count
+    )
+    mi_a = _mutual_information_paired(phase_values[group_a_idx], global_a, bin_count)
+    mi_b = _mutual_information_paired(phase_values[group_b_idx], global_b, bin_count)
     i_red = min(mi_a, mi_b)
 
     return max(0.0, mi_joint - mi_a - mi_b + i_red)
