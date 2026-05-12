@@ -44,7 +44,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from numbers import Real
+from numbers import Complex, Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -72,12 +72,14 @@ __all__ = [
 ]
 
 
-@dataclass
-class OAState:
-    z: complex
-    R: float
-    psi: float
-    K_c: float
+if "OAState" not in globals():
+
+    @dataclass
+    class OAState:
+        z: complex
+        R: float
+        psi: float
+        K_c: float
 
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
@@ -172,6 +174,35 @@ def _validate_finite_real(value: object, *, name: str) -> float:
     if not np.isfinite(coerced):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     return coerced
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    return int(value)
+
+
+def _validate_finite_complex(value: object, *, name: str) -> complex:
+    if isinstance(value, bool) or not isinstance(value, Complex):
+        raise ValueError(f"{name} must be a finite complex scalar, got {value!r}")
+    coerced = complex(value)
+    if not np.isfinite(coerced.real) or not np.isfinite(coerced.imag):
+        raise ValueError(f"{name} must be a finite complex scalar, got {value!r}")
+    return coerced
+
+
+def _validate_frequency_sample(value: object, *, name: str) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite one-dimensional array") from exc
+    if arr.ndim != 1:
+        raise ValueError(f"{name} shape {arr.shape} must be one-dimensional")
+    if arr.size == 0:
+        raise ValueError(f"{name} must contain at least one frequency")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
 
 
 def _oa_deriv(
@@ -284,12 +315,15 @@ class OttAntonsenReduction:
 
     def step(self, z: complex) -> complex:
         """Single RK4 step on the OA ODE."""
+        z = _validate_finite_complex(z, name="z")
         re, im, _, _ = self._run_scalar(z.real, z.imag, n_steps=1)
         return complex(re, im)
 
     def run(self, z0: complex, n_steps: int) -> OAState:
         """Integrate ``n_steps`` RK4 steps; return final
         ``OAState(z, R, ψ, K_c)`` via the dispatched kernel."""
+        z0 = _validate_finite_complex(z0, name="z0")
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
         re, im, r, psi = self._run_scalar(z0.real, z0.imag, n_steps)
         return OAState(z=complex(re, im), R=r, psi=psi, K_c=self.K_c)
 
@@ -299,6 +333,7 @@ class OttAntonsenReduction:
         z_im: float,
         n_steps: int,
     ) -> tuple[float, float, float, float]:
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(
@@ -328,12 +363,13 @@ class OttAntonsenReduction:
         """Fit Lorentzian to ``omegas`` (median → ω₀,
         IQR/2 → Δ), run OA reduction ~10 time units from a
         small seed, and return the final ``OAState``."""
+        omegas64 = _validate_frequency_sample(omegas, name="omegas")
+        K = _validate_finite_real(K, name="K")
         if _HAS_RUST_SCALAR:
-            o = np.ascontiguousarray(omegas, dtype=np.float64)
-            omega_0, delta = _rust_fit_lorentzian(o)
+            omega_0, delta = _rust_fit_lorentzian(omegas64)
         else:
-            omega_0 = float(np.median(omegas))
-            q75, q25 = np.percentile(omegas, [75, 25])
+            omega_0 = float(np.median(omegas64))
+            q75, q25 = np.percentile(omegas64, [75, 25])
             delta = (q75 - q25) / 2.0 if q75 > q25 else 0.01
         reducer = OttAntonsenReduction(omega_0, delta, K, dt=self._dt)
         return reducer.run(complex(0.01, 0.0), n_steps=int(10.0 / self._dt))

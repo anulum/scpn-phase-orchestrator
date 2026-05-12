@@ -744,6 +744,61 @@ class TestOttAntonsenReductionValidation:
         with pytest.raises(ValueError, match="dt must be positive"):
             OttAntonsenReduction(omega_0=1.0, delta=0.1, K=0.5, dt=0.0)
 
+    @pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "10"])
+    def test_run_rejects_invalid_step_count(self, n_steps: Any) -> None:
+        reducer = OttAntonsenReduction(omega_0=1.0, delta=0.1, K=0.5, dt=0.01)
+
+        with pytest.raises(ValueError, match="n_steps must be a positive integer"):
+            reducer.run(complex(0.1, 0.0), n_steps=n_steps)
+
+    @pytest.mark.parametrize(
+        "z0",
+        [False, complex(np.nan, 0.0), complex(0.0, np.inf), "0.1+0.0j"],
+    )
+    def test_run_rejects_invalid_initial_state(self, z0: Any) -> None:
+        reducer = OttAntonsenReduction(omega_0=1.0, delta=0.1, K=0.5, dt=0.01)
+
+        with pytest.raises(ValueError, match="z0"):
+            reducer.run(z0, n_steps=1)
+
+    @pytest.mark.parametrize(
+        "z",
+        [False, complex(np.nan, 0.0), complex(0.0, np.inf), "0.1+0.0j"],
+    )
+    def test_step_rejects_invalid_state(self, z: Any) -> None:
+        reducer = OttAntonsenReduction(omega_0=1.0, delta=0.1, K=0.5, dt=0.01)
+
+        with pytest.raises(ValueError, match="z"):
+            reducer.step(z)
+
+    @pytest.mark.parametrize(
+        ("omegas", "match"),
+        [
+            (np.array([], dtype=np.float64), "omegas"),
+            (np.zeros((2, 2), dtype=np.float64), "omegas shape"),
+            (np.array([0.0, np.nan, 1.0], dtype=np.float64), "omegas"),
+        ],
+    )
+    def test_predict_from_oscillators_rejects_invalid_frequency_sample(
+        self,
+        omegas: np.ndarray,
+        match: str,
+    ) -> None:
+        reducer = OttAntonsenReduction(omega_0=1.0, delta=0.1, K=0.5, dt=0.01)
+
+        with pytest.raises(ValueError, match=match):
+            reducer.predict_from_oscillators(omegas, K=0.5)
+
+    @pytest.mark.parametrize("K", [False, np.nan, np.inf, "1.0"])
+    def test_predict_from_oscillators_rejects_invalid_coupling(
+        self,
+        K: Any,
+    ) -> None:
+        reducer = OttAntonsenReduction(omega_0=1.0, delta=0.1, K=0.5, dt=0.01)
+
+        with pytest.raises(ValueError, match="K"):
+            reducer.predict_from_oscillators(np.array([0.0, 0.1, 0.2]), K=K)
+
 
 @pytest.mark.skipif(not _HAS_JAX, reason="jax not installed")
 class TestJaxEngineValidation:
