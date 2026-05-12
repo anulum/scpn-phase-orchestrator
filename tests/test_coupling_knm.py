@@ -59,6 +59,46 @@ def test_switch_template_missing_raises():
 class TestCouplingBuilderAlgebraic:
     """Deeper algebraic invariants for CouplingBuilder output."""
 
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"n_layers": 0, "base_strength": 0.45, "decay_alpha": 0.3}, "n_layers"),
+            ({"n_layers": True, "base_strength": 0.45, "decay_alpha": 0.3}, "n_layers"),
+            (
+                {"n_layers": 4, "base_strength": -0.1, "decay_alpha": 0.3},
+                "base_strength",
+            ),
+            (
+                {"n_layers": 4, "base_strength": np.nan, "decay_alpha": 0.3},
+                "base_strength",
+            ),
+            (
+                {"n_layers": 4, "base_strength": 0.45, "decay_alpha": -0.1},
+                "decay_alpha",
+            ),
+            (
+                {"n_layers": 4, "base_strength": 0.45, "decay_alpha": np.inf},
+                "decay_alpha",
+            ),
+        ],
+    )
+    def test_build_rejects_invalid_parameters(self, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            CouplingBuilder().build(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"k_base": 0.0, "alpha_decay": 0.3}, "k_base"),
+            ({"k_base": np.inf, "alpha_decay": 0.3}, "k_base"),
+            ({"k_base": 0.45, "alpha_decay": -0.1}, "alpha_decay"),
+            ({"k_base": 0.45, "alpha_decay": np.nan}, "alpha_decay"),
+        ],
+    )
+    def test_build_scpn_physics_rejects_invalid_parameters(self, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            CouplingBuilder().build_scpn_physics(**kwargs)
+
     @pytest.mark.parametrize("n", [4, 8, 16, 32])
     def test_symmetric_for_all_sizes(self, n):
         state = CouplingBuilder().build(n, 0.45, 0.3)
@@ -110,6 +150,24 @@ class TestCouplingBuilderAlgebraic:
         new = builder.switch_template(state, "ring", {"ring": ring})
         assert new.knm.shape == state.knm.shape
         assert new.active_template == "ring"
+
+    def test_switch_template_rejects_shape_and_nonfinite_values(self):
+        builder = CouplingBuilder()
+        state = builder.build(4, 0.5, 0.1)
+        with pytest.raises(ValueError, match="template shape"):
+            builder.switch_template(state, "bad", {"bad": np.ones((3, 3))})
+
+        bad = np.zeros((4, 4), dtype=np.float64)
+        bad[0, 1] = np.nan
+        with pytest.raises(ValueError, match="finite"):
+            builder.switch_template(state, "bad", {"bad": bad})
+
+    def test_build_with_amplitude_rejects_invalid_amplitude_parameters(self):
+        builder = CouplingBuilder()
+        with pytest.raises(ValueError, match="amp_strength"):
+            builder.build_with_amplitude(4, 0.45, 0.3, np.inf, 0.2)
+        with pytest.raises(ValueError, match="amp_decay"):
+            builder.build_with_amplitude(4, 0.45, 0.3, 0.2, -0.1)
 
 
 class TestCouplingKnmPipelineEndToEnd:

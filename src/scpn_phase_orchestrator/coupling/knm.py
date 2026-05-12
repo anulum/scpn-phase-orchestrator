@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from numbers import Integral, Real
 from pathlib import Path
 from typing import TypeAlias
 
@@ -48,7 +49,7 @@ SCPN_LAYER_TIMESCALES: dict[int, float] = {
     13: 0.001,  # Source Field (~1ms)
     14: 1e-20,  # Transdimensional (~Planck)
     15: 1.0,  # Consilium Oversoul (~1s)
-    16: 1e-30,  # Meta Director (atemporal, placeholder)
+    16: 1.0,  # Meta Director (operational anchor; adjacency handled explicitly)
 }
 
 SCPN_LAYER_NAMES: dict[int, str] = {
@@ -78,6 +79,39 @@ SCPN_CALIBRATION_ANCHORS: dict[tuple[int, int], float] = {
     (3, 4): 0.252,
     (4, 5): 0.154,
 }
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
+def _validate_finite_float(
+    value: object,
+    *,
+    name: str,
+    lower_bound: float | None = None,
+    inclusive: bool = True,
+) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite, got {value!r}")
+    if lower_bound is not None:
+        if inclusive and coerced < lower_bound:
+            raise ValueError(f"{name} must be >= {lower_bound}, got {value!r}")
+        if not inclusive and coerced <= lower_bound:
+            raise ValueError(f"{name} must be > {lower_bound}, got {value!r}")
+    return coerced
+
+
+def _validate_layer_index(value: object, *, name: str, n_layers: int) -> int:
+    index = _validate_positive_int(value, name=name)
+    if index > n_layers:
+        raise ValueError(f"{name} must be in [1, {n_layers}], got {value!r}")
+    return index
 
 
 @dataclass(frozen=True)
@@ -122,6 +156,17 @@ class CouplingBuilder:
         ``spo_kernel.PyCouplingBuilder`` and preserves the same output
         contract as the NumPy fallback.
         """
+        n_layers = _validate_positive_int(n_layers, name="n_layers")
+        base_strength = _validate_finite_float(
+            base_strength,
+            name="base_strength",
+            lower_bound=0.0,
+        )
+        decay_alpha = _validate_finite_float(
+            decay_alpha,
+            name="decay_alpha",
+            lower_bound=0.0,
+        )
         if _HAS_RUST:  # pragma: no cover
             from spo_kernel import PyCouplingBuilder
 
@@ -153,6 +198,17 @@ class CouplingBuilder:
 
         Returns CouplingState with 16×16 matrix.
         """
+        k_base = _validate_finite_float(
+            k_base,
+            name="k_base",
+            lower_bound=0.0,
+            inclusive=False,
+        )
+        alpha_decay = _validate_finite_float(
+            alpha_decay,
+            name="alpha_decay",
+            lower_bound=0.0,
+        )
         K = np.zeros((16, 16))
 
         # Pass 1: Adjacent layers. Use anchors where available.
@@ -213,11 +269,28 @@ class CouplingBuilder:
         """
         path = Path(handshakes_path)
         data = json.loads(path.read_text(encoding="utf-8"))
+        matrix = data.get("matrix")
+        if not isinstance(matrix, list):
+            raise ValueError("handshake matrix must be a list")
         knm = state.knm.copy()
-        for entry in data["matrix"]:
-            fr = int(entry["from_layer"])
-            to = int(entry["to_layer"])
-            strength = float(entry["coupling_strength"])
+        n_layers = knm.shape[0]
+        for idx, entry in enumerate(matrix):
+            if not isinstance(entry, dict):
+                raise ValueError(f"matrix[{idx}] must be a mapping")
+            fr = _validate_layer_index(
+                entry.get("from_layer"),
+                name="from_layer",
+                n_layers=n_layers,
+            )
+            to = _validate_layer_index(
+                entry.get("to_layer"),
+                name="to_layer",
+                n_layers=n_layers,
+            )
+            strength = _validate_finite_float(
+                entry.get("coupling_strength"),
+                name="coupling_strength",
+            )
             knm[fr - 1, to - 1] = strength
             # Symmetric unless negative (directional inhibition)
             if strength >= 0:
@@ -238,6 +311,16 @@ class CouplingBuilder:
         amp_decay: float,
     ) -> CouplingState:
         """Build phase + amplitude coupling matrices together."""
+        amp_strength = _validate_finite_float(
+            amp_strength,
+            name="amp_strength",
+            lower_bound=0.0,
+        )
+        amp_decay = _validate_finite_float(
+            amp_decay,
+            name="amp_decay",
+            lower_bound=0.0,
+        )
         phase = self.build(n_layers, base_strength, decay_alpha)
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
@@ -259,8 +342,15 @@ class CouplingBuilder:
         """Replace the active K_nm with a named template matrix."""
         if template_name not in templates:
             raise KeyError(f"Template {template_name!r} not found")
+        template = np.asarray(templates[template_name], dtype=np.float64)
+        if template.shape != state.knm.shape:
+            raise ValueError(
+                f"template shape {template.shape}, expected {state.knm.shape}"
+            )
+        if not np.all(np.isfinite(template)):
+            raise ValueError("template values must be finite")
         return CouplingState(
-            knm=templates[template_name].copy(),
+            knm=template.copy(),
             alpha=state.alpha.copy(),
             active_template=template_name,
             knm_r=state.knm_r,

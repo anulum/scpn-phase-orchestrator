@@ -167,6 +167,36 @@ class TestApplyHandshakes:
         result = builder.apply_handshakes(base, spec_path)
         np.testing.assert_allclose(result.alpha, base.alpha)
 
+    @pytest.mark.parametrize(
+        ("entry", "match"),
+        [
+            (
+                {"from_layer": 0, "to_layer": 2, "coupling_strength": 0.1},
+                "from_layer",
+            ),
+            (
+                {"from_layer": 1, "to_layer": 17, "coupling_strength": 0.1},
+                "to_layer",
+            ),
+            (
+                {"from_layer": 1, "to_layer": 2, "coupling_strength": np.nan},
+                "coupling_strength",
+            ),
+            (
+                {"from_layer": True, "to_layer": 2, "coupling_strength": 0.1},
+                "from_layer",
+            ),
+        ],
+    )
+    def test_rejects_malformed_entries(self, tmp_path, entry, match):
+        builder = CouplingBuilder()
+        base = builder.build_scpn_physics()
+        spec_path = tmp_path / "bad_handshakes.json"
+        spec_path.write_text(json.dumps({"matrix": [entry]}))
+
+        with pytest.raises(ValueError, match=match):
+            builder.apply_handshakes(base, spec_path)
+
 
 class TestScpnConstants:
     """Verify the exported constants are consistent."""
@@ -180,6 +210,9 @@ class TestScpnConstants:
     def test_all_timescales_positive(self):
         for layer, tau in SCPN_LAYER_TIMESCALES.items():
             assert tau > 0, f"Layer {layer} has non-positive timescale {tau}"
+
+    def test_meta_layer_uses_operational_anchor_not_artificial_subsecond_scale(self):
+        assert SCPN_LAYER_TIMESCALES[16] == pytest.approx(1.0)
 
     def test_anchors_within_layers_1_to_5(self):
         for (n, m), val in SCPN_CALIBRATION_ANCHORS.items():
