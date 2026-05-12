@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -143,10 +144,13 @@ class PredictiveSupervisor:
         horizon: int = 10,
         divergence_threshold: float = 0.3,
     ):
-        self._n = n_oscillators
-        self._dt = dt
-        self._horizon = horizon
-        self._divergence_threshold = divergence_threshold
+        self._n = _require_positive_int(n_oscillators, "n_oscillators")
+        self._dt = _require_positive_real(dt, "dt")
+        self._horizon = _require_positive_int(horizon, "horizon")
+        self._divergence_threshold = _require_non_negative_real(
+            divergence_threshold,
+            "divergence_threshold",
+        )
 
     def predict(
         self,
@@ -156,6 +160,13 @@ class PredictiveSupervisor:
         alpha: FloatArray,
     ) -> Prediction:
         """Predict R trajectory using OA reduction as fast forward model."""
+        phases, omegas, knm, alpha = _validate_predictive_inputs(
+            phases,
+            omegas,
+            knm,
+            alpha,
+            self._n,
+        )
         R_current, psi = compute_order_parameter(phases)
 
         # Fit Lorentzian to omegas for OA
@@ -494,6 +505,52 @@ def _validate_phase_inputs(
     if not np.all(np.isfinite(omega_arr)):
         raise ValueError("omegas must be finite")
     return phase_arr, omega_arr
+
+
+def _validate_predictive_inputs(
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    n_oscillators: int,
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
+    phase_arr, omega_arr = _validate_phase_inputs(phases, omegas, n_oscillators)
+    knm_arr = np.asarray(knm, dtype=np.float64)
+    alpha_arr = np.asarray(alpha, dtype=np.float64)
+    expected_shape = (n_oscillators, n_oscillators)
+    if knm_arr.shape != expected_shape:
+        raise ValueError(f"knm must have shape {expected_shape}")
+    if alpha_arr.shape != expected_shape:
+        raise ValueError(f"alpha must have shape {expected_shape}")
+    if not np.all(np.isfinite(knm_arr)):
+        raise ValueError("knm must be finite")
+    if not np.all(np.isfinite(alpha_arr)):
+        raise ValueError("alpha must be finite")
+    return phase_arr, omega_arr, knm_arr, alpha_arr
+
+
+def _require_positive_int(value: object, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f"{name} must be a positive integer")
+    return int(value)
+
+
+def _require_positive_real(value: object, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and positive")
+    float_value = float(value)
+    if not np.isfinite(float_value) or float_value <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
+    return float_value
+
+
+def _require_non_negative_real(value: object, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and non-negative")
+    float_value = float(value)
+    if not np.isfinite(float_value) or float_value < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return float_value
 
 
 def _require_unit_interval(value: float, name: str) -> None:

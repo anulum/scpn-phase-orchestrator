@@ -34,6 +34,67 @@ def _make_state(R: float) -> UPDEState:
 
 
 class TestPrediction:
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"n_oscillators": 0, "dt": 0.01}, "n_oscillators"),
+            ({"n_oscillators": True, "dt": 0.01}, "n_oscillators"),
+            ({"n_oscillators": 4, "dt": 0.0}, "dt"),
+            ({"n_oscillators": 4, "dt": np.nan}, "dt"),
+            ({"n_oscillators": 4, "dt": 0.01, "horizon": 0}, "horizon"),
+            ({"n_oscillators": 4, "dt": 0.01, "horizon": 1.5}, "horizon"),
+            (
+                {
+                    "n_oscillators": 4,
+                    "dt": 0.01,
+                    "divergence_threshold": -0.1,
+                },
+                "divergence_threshold",
+            ),
+            (
+                {
+                    "n_oscillators": 4,
+                    "dt": 0.01,
+                    "divergence_threshold": np.inf,
+                },
+                "divergence_threshold",
+            ),
+        ],
+    )
+    def test_constructor_rejects_invalid_bounds(self, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            PredictiveSupervisor(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("field", "value", "match"),
+        [
+            ("phases", np.zeros(3), "phases"),
+            ("omegas", np.zeros(3), "omegas"),
+            ("knm", np.zeros((4, 3)), "knm"),
+            ("alpha", np.zeros((3, 4)), "alpha"),
+            ("phases", np.array([0.0, np.nan, 0.0, 0.0]), "phases"),
+            ("omegas", np.array([1.0, np.inf, 1.0, 1.0]), "omegas"),
+            ("knm", np.full((4, 4), np.nan), "knm"),
+            ("alpha", np.full((4, 4), np.inf), "alpha"),
+        ],
+    )
+    def test_predict_rejects_invalid_inputs(self, field, value, match):
+        values = {
+            "phases": np.zeros(4),
+            "omegas": np.ones(4),
+            "knm": np.zeros((4, 4)),
+            "alpha": np.zeros((4, 4)),
+        }
+        values[field] = value
+        supervisor = PredictiveSupervisor(4, dt=0.01)
+        with pytest.raises(ValueError, match=match):
+            supervisor.predict(
+                values["phases"],
+                values["omegas"],
+                values["knm"],
+                values["alpha"],
+            )
+
     def test_returns_prediction(self):
         ps = PredictiveSupervisor(8, dt=0.01, horizon=10)
         phases = np.zeros(8)
@@ -383,9 +444,7 @@ class TestFEPHierarchyInPredictiveCoverage:
         ]
         assert len(record["child_R_values"]) == 2
         assert len(record["parent_phase_encoding"]) == 2
-        assert all(
-            0.0 <= value <= np.pi for value in record["parent_phase_encoding"]
-        )
+        assert all(0.0 <= value <= np.pi for value in record["parent_phase_encoding"])
         assert record["parent"]["actions"]
         assert all(child["actions"] for child in record["children"])
         assert record["parent"]["assessment"]["target_R"] == pytest.approx(0.7)
