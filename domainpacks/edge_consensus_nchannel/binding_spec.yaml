@@ -148,6 +148,28 @@ actuators:
   - name: gateway_lag
     knob: alpha
     scope: layer_1
-    limits: [0.0, 1.2]
+    limits: [-1.2, 1.2]
+
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-edge-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.50
+      weight: 2.0
+    - name: limit-gateway-lag-correction-step
+      knob: alpha
+      scope: layer_1
+      min_value: -0.50
+      max_value: 0.50
+      weight: 2.0
+  fallback_actions:
+    - knob: K
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: edge consensus value guard gateway hold
 
 policy: policy.yaml

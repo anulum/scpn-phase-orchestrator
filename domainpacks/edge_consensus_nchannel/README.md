@@ -23,6 +23,9 @@ phase drift, `Trust` separates peer-quality evidence from event cadence,
 and `ConsensusHealth` gives replay/report tooling one derived safety
 signal to track across the run.
 
+The binding spec includes a `value_alignment` template for review-time edge
+coupling and signed gateway-lag correction guards.
+
 ## Sheaf Obstruction Demo
 
 `sheaf_obstruction_demo.py` demonstrates the sheaf-coherence supervisor on this
