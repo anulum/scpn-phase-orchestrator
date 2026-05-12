@@ -11,6 +11,7 @@ from __future__ import annotations
 import sys
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
@@ -48,6 +49,31 @@ _NO_VIOLATIONS = BoundaryState()
 class TestRegimeEvaluation:
     """Verify that mean R across layers maps to the correct regime
     via the threshold boundaries."""
+
+    @pytest.mark.parametrize("hysteresis", [False, -0.1, np.nan, np.inf, "0.05"])
+    def test_rejects_invalid_hysteresis_config(self, hysteresis):
+        with pytest.raises(ValueError, match="hysteresis"):
+            RegimeManager(hysteresis=hysteresis)
+
+    @pytest.mark.parametrize("cooldown_steps", [True, -1, 1.5, "10"])
+    def test_rejects_invalid_cooldown_config(self, cooldown_steps):
+        with pytest.raises(ValueError, match="cooldown_steps"):
+            RegimeManager(cooldown_steps=cooldown_steps)
+
+    @pytest.mark.parametrize("hysteresis_hold_steps", [True, -1, 1.5, "3"])
+    def test_rejects_invalid_hold_steps_config(self, hysteresis_hold_steps):
+        with pytest.raises(ValueError, match="hysteresis_hold_steps"):
+            RegimeManager(hysteresis_hold_steps=hysteresis_hold_steps)
+
+    @pytest.mark.parametrize("regime", [None, "critical", 3])
+    def test_transition_rejects_invalid_regime(self, regime):
+        with pytest.raises(ValueError, match="regime"):
+            RegimeManager().transition(regime)
+
+    @pytest.mark.parametrize("regime", [None, "critical", 3])
+    def test_force_transition_rejects_invalid_regime(self, regime):
+        with pytest.raises(ValueError, match="regime"):
+            RegimeManager().force_transition(regime)
 
     def test_high_r_nominal(self):
         assert RegimeManager().evaluate(_state(0.9), _NO_VIOLATIONS) == Regime.NOMINAL

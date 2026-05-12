@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from collections import deque
 from enum import Enum
+from math import isfinite
+from numbers import Integral, Real
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
@@ -19,6 +21,27 @@ __all__ = ["Regime", "RegimeManager"]
 
 _R_CRITICAL = 0.3  # Acebrón et al. 2005 §2.3 — incoherence boundary
 _R_DEGRADED = 0.6  # Acebrón et al. 2005 §2.3 — partial sync threshold
+
+
+def _validate_nonnegative_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    out = float(value)
+    if not isfinite(out) or out < 0.0:
+        raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    return out
+
+
+def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
+    return int(value)
+
+
+def _validate_regime(value: object, *, name: str = "regime") -> Regime:
+    if not isinstance(value, Regime):
+        raise ValueError(f"{name} must be a Regime value, got {value!r}")
+    return value
 
 
 class Regime(Enum):
@@ -40,13 +63,22 @@ class RegimeManager:
         event_bus: EventBus | None = None,
         hysteresis_hold_steps: int = 0,
     ) -> None:
-        self._hysteresis = hysteresis
-        self._cooldown_steps = cooldown_steps
+        self._hysteresis = _validate_nonnegative_float(
+            hysteresis,
+            name="hysteresis",
+        )
+        self._cooldown_steps = _validate_nonnegative_int(
+            cooldown_steps,
+            name="cooldown_steps",
+        )
         self._current = Regime.NOMINAL
         self._step_counter = 0
-        self._last_transition_step = -cooldown_steps
+        self._last_transition_step = -self._cooldown_steps
         self._event_bus = event_bus
-        self._hysteresis_hold_steps = hysteresis_hold_steps
+        self._hysteresis_hold_steps = _validate_nonnegative_int(
+            hysteresis_hold_steps,
+            name="hysteresis_hold_steps",
+        )
         self._downward_streak = 0
         self.transition_history: deque[tuple[int, Regime, Regime]] = deque(maxlen=100)
 
@@ -84,6 +116,7 @@ class RegimeManager:
 
     def transition(self, proposed: Regime) -> Regime:
         """Apply cooldown/hysteresis logic and commit the regime transition."""
+        proposed = _validate_regime(proposed)
         self._step_counter += 1
 
         if proposed == self._current:
@@ -119,6 +152,7 @@ class RegimeManager:
 
     def force_transition(self, regime: Regime) -> Regime:
         """Bypass cooldown and hysteresis hold."""
+        regime = _validate_regime(regime)
         self._step_counter += 1
         prev = self._current
         if regime == prev:
