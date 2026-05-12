@@ -341,7 +341,10 @@ jobs:
           key: cargo-audit-0.22.1-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-audit-0.22.1-
       - name: Install cargo-audit
-        run: cargo install cargo-audit --version 0.22.1 --locked
+        run: |
+          if ! cargo audit --version | grep -q '0\.22\.1'; then
+            cargo install cargo-audit --version 0.22.1 --locked --force
+          fi
       - name: Audit Cargo.lock
         run: cargo audit --file Cargo.lock
 
