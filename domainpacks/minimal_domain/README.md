@@ -26,6 +26,11 @@ Useful as a template for new domain authors and as a regression test.
 |----------|------|-----------------|
 | coupling_global | K | Global coupling strength |
 
+## Actuation Guard
+
+The binding spec includes a `value_alignment` template for review-time baseline
+coupling guards over the minimal regression actuator.
+
 ## Imprint
 
 None. Stateless minimal dynamics.

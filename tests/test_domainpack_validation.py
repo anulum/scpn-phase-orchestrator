@@ -1759,5 +1759,53 @@ def test_metaphysics_demo_value_alignment_allows_bounded_signed_coupling():
     assert not decision.violations
 
 
+def test_minimal_domain_value_alignment_blocks_excessive_coupling():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "minimal_domain" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="K",
+        scope="global",
+        value=2.2,
+        ttl_s=1.0,
+        justification="review candidate exceeds minimal coupling prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-minimal-coupling-step"
+    assert decision.actions_to_apply[0].justification == (
+        "minimal domain value guard baseline-coupling hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_minimal_domain_value_alignment_allows_bounded_coupling():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "minimal_domain" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+    coupling_actuator = next(
+        act for act in spec.actuators if act.name == "coupling_global"
+    )
+
+    assert coupling_actuator.limits[0] <= 0.6 <= coupling_actuator.limits[1]
+    assert policy is not None
+    action = ControlAction(
+        knob="K",
+        scope="global",
+        value=0.6,
+        ttl_s=1.0,
+        justification="bounded minimal coupling review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.

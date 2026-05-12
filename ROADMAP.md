@@ -565,7 +565,10 @@ Speculative research watchlist:
     coupling guards over consensus-control actuation.
   - Metaphysics-demo domainpack prior template is in place for review-time
     signed-coupling, damping-drive, and target-phase actuation guards.
-  - Remaining scope: broader domainpack-specific prior templates.
+  - Minimal-domain prior template is in place for review-time baseline-coupling
+    guards over the minimal regression actuator.
+  - Remaining scope: production calibration of domainpack-specific prior
+    thresholds against real deployment or replay evidence.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
 - Intergenerational policy inheritance: signed lineage metadata for child orchestrators, inherited policy genomes, multi-objective replay fitness, and merge-only reviewed hot patches.
