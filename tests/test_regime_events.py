@@ -29,6 +29,18 @@ def test_event_invalid_kind():
         RegimeEvent(kind="bogus", step=0)
 
 
+@pytest.mark.parametrize("step", [True, -1, 1.5, "1"])
+def test_event_invalid_step(step):
+    with pytest.raises(ValueError, match="step"):
+        RegimeEvent(kind="manual", step=step)
+
+
+@pytest.mark.parametrize("detail", [None, 1, object()])
+def test_event_invalid_detail(detail):
+    with pytest.raises(ValueError, match="detail"):
+        RegimeEvent(kind="manual", step=0, detail=detail)
+
+
 def test_event_default_detail():
     e = RegimeEvent(kind="r_threshold", step=0)
     assert e.detail == ""
@@ -93,6 +105,24 @@ def test_bus_history_bounded():
     assert bus.count == 3
     assert bus.history[0].step == 2
     assert bus.history[-1].step == 4
+
+
+@pytest.mark.parametrize("maxlen", [True, 1.5, "3"])
+def test_bus_rejects_invalid_maxlen_type(maxlen):
+    with pytest.raises(ValueError, match="maxlen"):
+        EventBus(maxlen=maxlen)
+
+
+@pytest.mark.parametrize("callback", [None, object(), "not-callable"])
+def test_bus_rejects_non_callable_subscriber(callback):
+    with pytest.raises(ValueError, match="callback"):
+        EventBus().subscribe(callback)
+
+
+@pytest.mark.parametrize("event", [None, object(), "manual"])
+def test_bus_rejects_non_event_post(event):
+    with pytest.raises(ValueError, match="event"):
+        EventBus().post(event)
 
 
 def test_bus_clear():
