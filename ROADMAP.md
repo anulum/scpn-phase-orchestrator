@@ -557,6 +557,8 @@ Speculative research watchlist:
     guards.
   - Vortex-shedding domainpack prior template is in place for review-time wake
     coupling, blowing-rate, and splitter-angle actuation guards.
+  - Musical-acoustics domainpack prior template is in place for review-time
+    harmonic-coupling, tempo-drive, and tuning-offset actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

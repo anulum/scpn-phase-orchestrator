@@ -25,6 +25,11 @@ dissonance boundaries with coupled oscillators.
 - `dissonance_ceiling`: soft roughness-index ceiling.
 - `amplitude_ceiling`: hard sound-pressure ceiling.
 
+## Actuation Guard
+
+The binding spec includes a `value_alignment` template for review-time harmonic
+coupling, tempo-drive, and tuning-offset actuation guards.
+
 ## Run
 
 ```bash
