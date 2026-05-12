@@ -289,13 +289,17 @@ def test_input_shape_validation() -> None:
         (True, 0.01, 20, "n_oscillators must be an integer"),
         (4, 0.0, 20, "dt must be finite and > 0"),
         (4, np.inf, 20, "dt must be finite and > 0"),
+        (4, True, 20, "dt must be finite and > 0"),
+        (4, "0.01", 20, "dt must be finite and > 0"),
         (4, 0.01, 0, "horizon must be >= 1"),
+        (4, 0.01, True, "horizon must be a positive integer"),
+        (4, 0.01, 1.5, "horizon must be a positive integer"),
     ],
 )
 def test_constructor_validation(
     n_oscillators: int | bool,
-    dt: float,
-    horizon: int,
+    dt: object,
+    horizon: object,
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):

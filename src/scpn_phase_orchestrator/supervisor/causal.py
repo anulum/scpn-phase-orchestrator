@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -180,17 +181,20 @@ class CausalInterventionEngine:
         horizon: int = 20,
         method: str = "rk4",
     ):
-        if isinstance(n_oscillators, bool) or int(n_oscillators) != n_oscillators:
-            raise ValueError("n_oscillators must be an integer")
-        if int(n_oscillators) < 1:
-            raise ValueError("n_oscillators must be >= 1")
-        if not np.isfinite(dt) or dt <= 0.0:
-            raise ValueError("dt must be finite and > 0")
-        if horizon < 1:
-            raise ValueError("horizon must be >= 1")
-        self._n = int(n_oscillators)
-        self._dt = float(dt)
-        self._horizon = int(horizon)
+        self._n = _require_positive_int(
+            n_oscillators,
+            type_message="n_oscillators must be an integer",
+            range_message="n_oscillators must be >= 1",
+        )
+        self._dt = _require_positive_real(
+            dt,
+            message="dt must be finite and > 0",
+        )
+        self._horizon = _require_positive_int(
+            horizon,
+            type_message="horizon must be a positive integer",
+            range_message="horizon must be >= 1",
+        )
         self._method = method
 
     def evaluate_actions(
@@ -426,6 +430,29 @@ def _validate_causal_trace(
         data = np.asarray(values, dtype=np.float64)
         if not np.all(np.isfinite(data)):
             raise ValueError(f"trace signal {name!r} contains NaN/Inf")
+
+
+def _require_positive_int(
+    value: object,
+    *,
+    type_message: str,
+    range_message: str,
+) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(type_message)
+    coerced = int(value)
+    if coerced < 1:
+        raise ValueError(range_message)
+    return coerced
+
+
+def _require_positive_real(value: object, *, message: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(message)
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(message)
+    return coerced
 
 
 def _lagged_linear_effect(
