@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard
 
@@ -96,6 +99,40 @@ class TestLyapunovFunction:
         guard = LyapunovGuard(basin_threshold=0.5)
         state = guard.evaluate(phases, knm)
         assert not state.in_basin
+
+    @pytest.mark.parametrize(
+        "basin_threshold",
+        [False, 0.0, -0.1, np.nan, np.inf, "1.0"],
+    )
+    def test_rejects_invalid_basin_threshold(self, basin_threshold: Any) -> None:
+        with pytest.raises(ValueError, match="basin_threshold"):
+            LyapunovGuard(basin_threshold=basin_threshold)
+
+    @pytest.mark.parametrize(
+        ("phases", "knm", "match"),
+        [
+            (np.array([0.0, np.nan]), np.zeros((2, 2)), "phases"),
+            (np.array([0.0, np.inf]), np.zeros((2, 2)), "phases"),
+            ([["not-a-phase"]], np.zeros((1, 1)), "phases"),
+            (np.zeros(2), np.zeros((2, 1)), "knm shape"),
+            (np.zeros(2), np.array([[0.0, np.nan], [0.0, 0.0]]), "knm"),
+        ],
+    )
+    def test_evaluate_rejects_invalid_inputs(
+        self,
+        phases: Any,
+        knm: Any,
+        match: str,
+    ) -> None:
+        guard = LyapunovGuard()
+        with pytest.raises(ValueError, match=match):
+            guard.evaluate(phases, knm)
+
+    def test_evaluate_accepts_array_like_inputs(self) -> None:
+        guard = LyapunovGuard()
+        state = guard.evaluate([0.0, 0.1], [[0.0, 1.0], [1.0, 0.0]])
+
+        assert isinstance(state.V, float)
 
     def test_wrapping_phase_diff(self):
         # Phases near 0 and 2π should have small diff, not large

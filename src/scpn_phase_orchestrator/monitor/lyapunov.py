@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -112,6 +113,67 @@ def _dispatch() -> LyapunovBackendFn | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    result = float(value)
+    if not np.isfinite(result):
+        raise ValueError(f"{name} must be finite, got {value!r}")
+    return result
+
+
+def _validate_positive_real(value: object, *, name: str) -> float:
+    result = _validate_finite_real(value, name=name)
+    if result <= 0.0:
+        raise ValueError(f"{name} must be positive, got {result}")
+    return result
+
+
+def _validate_non_negative_real(value: object, *, name: str) -> float:
+    result = _validate_finite_real(value, name=name)
+    if result < 0.0:
+        raise ValueError(f"{name} must be non-negative, got {result}")
+    return result
+
+
+def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    result = int(value)
+    if result < minimum:
+        raise ValueError(f"{name} must be >= {minimum}, got {result}")
+    return result
+
+
+def _validate_vector(value: object, *, name: str) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite one-dimensional array") from exc
+    if array.ndim != 1:
+        raise ValueError(f"{name} must be one-dimensional, got shape {array.shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_matrix(
+    value: object,
+    *,
+    name: str,
+    expected_shape: tuple[int, int],
+) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite matrix") from exc
+    if array.shape != expected_shape:
+        raise ValueError(f"{name} shape {array.shape} does not match {expected_shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
 @dataclass
 class LyapunovState:
     """Lyapunov function V, dV/dt, basin membership, and max phase diff."""
@@ -133,15 +195,19 @@ class LyapunovGuard:
     van Hemmen & Wreszinski 1993, J. Stat. Phys. 72:145-166.
     """
 
-    def __init__(self, basin_threshold: float = np.pi / 2):
-        if basin_threshold <= 0.0:
-            raise ValueError(f"basin_threshold must be positive, got {basin_threshold}")
+    def __init__(self, basin_threshold: object = np.pi / 2):
+        basin_threshold = _validate_positive_real(
+            basin_threshold,
+            name="basin_threshold",
+        )
         self._basin_threshold = basin_threshold
         self._prev_V: float | None = None
 
-    def evaluate(self, phases: FloatArray, knm: FloatArray) -> LyapunovState:
+    def evaluate(self, phases: object, knm: object) -> LyapunovState:
         """Compute Lyapunov function, its time derivative, and basin check."""
+        phases = _validate_vector(phases, name="phases")
         n = len(phases)
+        knm = _validate_matrix(knm, name="knm", expected_shape=(n, n))
         if n == 0:
             return LyapunovState(V=0.0, dV_dt=0.0, in_basin=True, max_phase_diff=0.0)
 
@@ -296,15 +362,15 @@ def _lyapunov_spectrum_python(
 
 
 def lyapunov_spectrum(
-    phases_init: FloatArray,
-    omegas: FloatArray,
-    knm: FloatArray,
-    alpha: FloatArray,
-    dt: float = 0.01,
-    n_steps: int = 1000,
-    qr_interval: int = 10,
-    zeta: float = 0.0,
-    psi: float = 0.0,
+    phases_init: object,
+    omegas: object,
+    knm: object,
+    alpha: object,
+    dt: object = 0.01,
+    n_steps: object = 1000,
+    qr_interval: object = 10,
+    zeta: object = 0.0,
+    psi: object = 0.0,
 ) -> FloatArray:
     """Full Lyapunov spectrum (all N exponents) via QR decomposition.
 
@@ -334,10 +400,22 @@ def lyapunov_spectrum(
     Returns:
         (N,) array of Lyapunov exponents, sorted descending.
     """
-    p = np.ascontiguousarray(phases_init, dtype=np.float64)
-    o = np.ascontiguousarray(omegas, dtype=np.float64)
-    k = np.ascontiguousarray(knm, dtype=np.float64)
-    a = np.ascontiguousarray(alpha, dtype=np.float64)
+    p = _validate_vector(phases_init, name="phases_init")
+    n = int(p.size)
+    o = _validate_vector(omegas, name="omegas")
+    if o.shape != p.shape:
+        raise ValueError(f"omegas shape {o.shape} does not match {p.shape}")
+    k = _validate_matrix(knm, name="knm", expected_shape=(n, n))
+    a = _validate_matrix(alpha, name="alpha", expected_shape=(n, n))
+    dt = _validate_positive_real(dt, name="dt")
+    n_steps = _validate_int_at_least(n_steps, name="n_steps", minimum=0)
+    qr_interval = _validate_int_at_least(
+        qr_interval,
+        name="qr_interval",
+        minimum=1,
+    )
+    zeta = _validate_non_negative_real(zeta, name="zeta")
+    psi = _validate_finite_real(psi, name="psi")
     backend_fn = _dispatch()
     if backend_fn is None:
         return _lyapunov_spectrum_python(

@@ -18,6 +18,7 @@ meaningful when toolchains are missing.
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import numpy as np
 import pytest
@@ -247,23 +248,94 @@ class TestInputValidation:
         )
         assert spec.shape == (0,)
 
-    def test_zero_qr_interval_rejected_by_rust(self):
-        """The Rust kernel rejects qr_interval=0 at the FFI boundary.
-        Python reference silently never triggers QR; cover the Rust
-        error path via ``ValueError`` / ``RuntimeError``."""
-        if "rust" not in ly_mod.AVAILABLE_BACKENDS:
-            pytest.skip("Rust backend not available")
-        prev = ly_mod.ACTIVE_BACKEND
-        ly_mod.ACTIVE_BACKEND = "rust"
-        try:
-            with pytest.raises((ValueError, RuntimeError)):
-                lyapunov_spectrum(
-                    np.array([0.0]),
-                    np.array([1.0]),
-                    np.zeros((1, 1)),
-                    np.zeros((1, 1)),
-                    n_steps=10,
-                    qr_interval=0,
-                )
-        finally:
-            ly_mod.ACTIVE_BACKEND = prev
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("phases", np.array([0.0, np.nan]), "phases_init"),
+            ("omegas", np.array([1.0, np.inf]), "omegas"),
+            ("knm", np.zeros((2, 1)), "knm shape"),
+            ("knm", np.array([[0.0, np.nan], [0.0, 0.0]]), "knm"),
+            ("alpha", np.zeros((2, 1)), "alpha shape"),
+            ("alpha", np.array([[0.0, np.inf], [0.0, 0.0]]), "alpha"),
+        ],
+    )
+    def test_rejects_invalid_array_inputs(
+        self,
+        field: str,
+        bad_value: Any,
+        match: str,
+    ) -> None:
+        values = {
+            "phases": np.zeros(2, dtype=np.float64),
+            "omegas": np.ones(2, dtype=np.float64),
+            "knm": np.zeros((2, 2), dtype=np.float64),
+            "alpha": np.zeros((2, 2), dtype=np.float64),
+        }
+        values[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            lyapunov_spectrum(
+                values["phases"],
+                values["omegas"],
+                values["knm"],
+                values["alpha"],
+                n_steps=10,
+            )
+
+    @pytest.mark.parametrize(
+        ("name", "value"),
+        [
+            ("dt", False),
+            ("dt", 0.0),
+            ("dt", -0.01),
+            ("dt", np.nan),
+            ("dt", "0.01"),
+            ("n_steps", False),
+            ("n_steps", -1),
+            ("n_steps", 1.5),
+            ("n_steps", "10"),
+            ("qr_interval", False),
+            ("qr_interval", 0),
+            ("qr_interval", -1),
+            ("qr_interval", 1.5),
+            ("zeta", False),
+            ("zeta", -0.1),
+            ("zeta", np.nan),
+            ("zeta", np.inf),
+            ("psi", False),
+            ("psi", np.nan),
+            ("psi", np.inf),
+            ("psi", "0.0"),
+        ],
+    )
+    def test_rejects_invalid_scalar_inputs(self, name: str, value: Any) -> None:
+        kwargs = {
+            "dt": 0.01,
+            "n_steps": 10,
+            "qr_interval": 2,
+            "zeta": 0.0,
+            "psi": 0.0,
+        }
+        kwargs[name] = value
+
+        with pytest.raises(ValueError, match=name):
+            lyapunov_spectrum(
+                np.zeros(2),
+                np.ones(2),
+                np.zeros((2, 2)),
+                np.zeros((2, 2)),
+                **kwargs,
+            )
+
+    def test_accepts_array_like_inputs(self) -> None:
+        spec = lyapunov_spectrum(
+            [0.0, 0.1],
+            [1.0, 1.0],
+            [[0.0, 0.1], [0.1, 0.0]],
+            [[0.0, 0.0], [0.0, 0.0]],
+            n_steps=10,
+            qr_interval=2,
+        )
+
+        assert spec.shape == (2,)
+        assert np.all(np.isfinite(spec))
