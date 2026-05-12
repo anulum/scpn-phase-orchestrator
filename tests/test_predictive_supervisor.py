@@ -368,10 +368,17 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         ("kwargs", "match"),
         [
             ({"n_oscillators": 0, "dt": 0.01}, "n_oscillators"),
+            ({"n_oscillators": True, "dt": 0.01}, "n_oscillators"),
             ({"n_oscillators": 4, "dt": 0.0}, "dt"),
+            ({"n_oscillators": 4, "dt": True}, "dt"),
             ({"n_oscillators": 4, "dt": 0.01, "target_R": 1.1}, "target_R"),
+            ({"n_oscillators": 4, "dt": 0.01, "target_R": True}, "target_R"),
             (
                 {"n_oscillators": 4, "dt": 0.01, "free_energy_threshold": -0.1},
+                "free_energy_threshold",
+            ),
+            (
+                {"n_oscillators": 4, "dt": 0.01, "free_energy_threshold": "0.1"},
                 "free_energy_threshold",
             ),
             (
@@ -379,6 +386,7 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
                 "error_threshold",
             ),
             ({"n_oscillators": 4, "dt": 0.01, "drive_gain": -0.1}, "drive_gain"),
+            ({"n_oscillators": 4, "dt": 0.01, "drive_gain": True}, "drive_gain"),
             (
                 {"n_oscillators": 4, "dt": 0.01, "learning_rate": np.nan},
                 "learning_rate",

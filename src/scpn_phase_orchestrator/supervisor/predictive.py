@@ -277,10 +277,8 @@ class FEPPredictiveSupervisor:
         learning_rate: float = 0.01,
         prior_precision: float = 1.0,
     ) -> None:
-        if n_oscillators < 1:
-            raise ValueError("n_oscillators must be >= 1")
-        if not np.isfinite(dt) or dt <= 0.0:
-            raise ValueError("dt must be finite and positive")
+        n_oscillators = _require_positive_int(n_oscillators, "n_oscillators")
+        dt = _require_positive_real(dt, "dt")
         _require_unit_interval(target_R, "target_R")
         _require_non_negative(free_energy_threshold, "free_energy_threshold")
         _require_non_negative(error_threshold, "error_threshold")
@@ -554,11 +552,15 @@ def _require_non_negative_real(value: object, name: str) -> float:
 
 
 def _require_unit_interval(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and in [0, 1]")
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be finite and in [0, 1]")
 
 
 def _require_non_negative(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and non-negative")
     if not np.isfinite(value) or value < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
 
