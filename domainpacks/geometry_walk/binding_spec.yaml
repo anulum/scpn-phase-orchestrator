@@ -65,6 +65,22 @@ actuators:
     scope: global
     limits: [0.0, 2.0]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-graph-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.8
+      weight: 1.5
+  fallback_actions:
+    - knob: K
+      scope: global
+      value: 0.2
+      ttl_s: 0.5
+      justification: geometry walk value guard low-coupling hold
+
 amplitude:
   mu: 0.5
   epsilon: 0.1

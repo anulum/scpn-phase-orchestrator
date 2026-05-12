@@ -27,6 +27,11 @@ TAC 2003) proved consensus on graphs via coupled-oscillator dynamics.
 |----------|------|-----------------|
 | coupling_global | K | Graph adjacency coupling strength |
 
+## Actuation Guard
+
+The binding spec includes a `value_alignment` template for review-time graph
+coupling guards over the consensus-control actuator.
+
 ## Imprint
 
 None. Memoryless random walk dynamics.

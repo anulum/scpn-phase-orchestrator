@@ -561,6 +561,8 @@ Speculative research watchlist:
     harmonic-coupling, tempo-drive, and tuning-offset actuation guards.
   - Gene-oscillator domainpack prior template is in place for review-time
     quorum-coupling and inducer-dose actuation guards.
+  - Geometry-walk domainpack prior template is in place for review-time graph
+    coupling guards over consensus-control actuation.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
