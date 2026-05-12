@@ -18,6 +18,7 @@ Two kernels:
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Integral
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -110,7 +111,34 @@ def _dispatch(fn_name: str) -> object | None:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
-def compute_itpc(phases_trials: FloatArray) -> FloatArray:
+def _validate_phases_trials(phases_trials: object) -> FloatArray:
+    try:
+        phases = np.asarray(phases_trials, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases_trials must be a finite 1D or 2D float array") from exc
+    if phases.ndim not in {1, 2}:
+        raise ValueError(f"phases_trials must be 1D or 2D, got shape {phases.shape}")
+    if not np.all(np.isfinite(phases)):
+        raise ValueError("phases_trials must contain only finite values")
+    return np.ascontiguousarray(phases, dtype=np.float64)
+
+
+def _validate_pause_indices(pause_indices: object) -> IntArray:
+    raw = np.asarray(pause_indices, dtype=object)
+    if raw.ndim != 1:
+        raise ValueError("pause_indices must be a one-dimensional integer array")
+    if raw.size == 0:
+        return np.zeros(0, dtype=np.int64)
+    flat = raw.ravel()
+    if not all(
+        isinstance(value, Integral) and not isinstance(value, bool)
+        for value in flat
+    ):
+        raise ValueError("pause_indices must contain only integer indices")
+    return np.ascontiguousarray(flat, dtype=np.int64)
+
+
+def compute_itpc(phases_trials: object) -> FloatArray:
     """Inter-Trial Phase Coherence at each time point.
 
     ``ITPC = |mean(exp(i·θ))|`` across trials (Lachaux et al. 1999).
@@ -122,7 +150,7 @@ def compute_itpc(phases_trials: FloatArray) -> FloatArray:
     Returns:
         ``(n_timepoints,)`` array of ITPC values in ``[0, 1]``.
     """
-    phases = np.asarray(phases_trials, dtype=np.float64)
+    phases = _validate_phases_trials(phases_trials)
     if phases.ndim == 1:
         return np.array([1.0])
     if phases.shape[0] == 0:
@@ -146,8 +174,8 @@ def compute_itpc(phases_trials: FloatArray) -> FloatArray:
 
 
 def itpc_persistence(
-    phases_trials: FloatArray,
-    pause_indices: list[int] | IntArray,
+    phases_trials: object,
+    pause_indices: object,
 ) -> float:
     """Mean ITPC at stimulus-pause indices.
 
@@ -163,11 +191,11 @@ def itpc_persistence(
     Returns:
         Mean ITPC across ``pause_indices``. ``0.0`` if empty.
     """
-    pause_idx = np.asarray(pause_indices, dtype=int)
+    phases = _validate_phases_trials(phases_trials)
+    pause_idx = _validate_pause_indices(pause_indices)
     if pause_idx.size == 0:
         return 0.0
 
-    phases = np.asarray(phases_trials, dtype=np.float64)
     if phases.ndim == 1:
         phases = phases.reshape(1, -1)
     n_trials, n_tp = phases.shape

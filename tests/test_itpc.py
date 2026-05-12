@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 
@@ -50,6 +53,26 @@ def test_1d_input_returns_scalar_one():
     np.testing.assert_allclose(itpc[0], 1.0, atol=1e-12)
 
 
+@pytest.mark.parametrize(
+    ("phases", "match"),
+    [
+        (np.array([[0.0, np.nan]], dtype=np.float64), "phases_trials"),
+        (np.array([[0.0, np.inf]], dtype=np.float64), "phases_trials"),
+        (np.zeros((2, 3, 4), dtype=np.float64), "phases_trials"),
+        ([["not-a-phase"]], "phases_trials"),
+    ],
+)
+def test_compute_itpc_rejects_invalid_phase_trials(phases: Any, match: str) -> None:
+    with pytest.raises(ValueError, match=match):
+        compute_itpc(phases)
+
+
+def test_compute_itpc_accepts_array_like_phase_trials() -> None:
+    itpc = compute_itpc([[0.0, 0.1], [0.0, 0.1]])
+
+    np.testing.assert_allclose(itpc, 1.0, atol=1e-12)
+
+
 def test_empty_input():
     itpc = compute_itpc(np.zeros((0, 10)))
     assert itpc.size == 0
@@ -84,6 +107,35 @@ def test_persistence_out_of_bounds_indices_ignored():
     phases = np.zeros((10, 20))
     val = itpc_persistence(phases, [100, 200])
     assert val == 0.0
+
+
+@pytest.mark.parametrize(
+    "phases",
+    [
+        np.array([[0.0, np.nan]], dtype=np.float64),
+        np.array([[0.0, np.inf]], dtype=np.float64),
+        np.zeros((2, 3, 4), dtype=np.float64),
+        [["not-a-phase"]],
+    ],
+)
+def test_persistence_rejects_invalid_phase_trials(phases: Any) -> None:
+    with pytest.raises(ValueError, match="phases_trials"):
+        itpc_persistence(phases, [0])
+
+
+@pytest.mark.parametrize(
+    "pause_indices",
+    [[False], [1.0], [np.nan], ["1"], [[1]]],
+)
+def test_persistence_rejects_invalid_pause_indices(pause_indices: Any) -> None:
+    with pytest.raises(ValueError, match="pause_indices"):
+        itpc_persistence(np.zeros((2, 3)), pause_indices)
+
+
+def test_persistence_accepts_array_like_inputs() -> None:
+    val = itpc_persistence([[0.0, 0.0], [0.0, 0.0]], [0, 1])
+
+    assert val == pytest.approx(1.0, abs=1e-12)
 
 
 def test_itpc_values_bounded_zero_one():
