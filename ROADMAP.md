@@ -531,6 +531,9 @@ Speculative research watchlist:
     exchange-coupling and microwave-drive actuation guards.
   - Identity-coherence domainpack prior template is in place for review-time
     context-retrieval and relationship-coupling actuation guards.
+  - PLL-clock domainpack prior template is in place for review-time loop
+    bandwidth, frequency-trim, reference-drive, and phase-target actuation
+    guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

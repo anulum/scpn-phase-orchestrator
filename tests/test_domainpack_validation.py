@@ -1133,5 +1133,49 @@ def test_identity_coherence_value_alignment_allows_bounded_relationship_boost():
     assert not decision.violations
 
 
+def test_pll_clock_value_alignment_blocks_excessive_reference_drive():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "pll_clock" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="zeta",
+        scope="global",
+        value=0.9,
+        ttl_s=10.0,
+        justification="review candidate exceeds reference-drive prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-reference-drive-step"
+    assert decision.actions_to_apply[0].justification == (
+        "pll value guard holdover-safe reference hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_pll_clock_value_alignment_allows_bounded_loop_bandwidth():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "pll_clock" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    action = ControlAction(
+        knob="K",
+        scope="global",
+        value=0.45,
+        ttl_s=5.0,
+        justification="bounded loop bandwidth review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.

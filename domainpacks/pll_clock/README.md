@@ -2,6 +2,9 @@
 
 Maps phase-locked loop network clock synchronisation to SPO's Kuramoto/UPDE framework.
 
+The binding spec includes a `value_alignment` template for review-time loop
+bandwidth, frequency-trim, reference-drive, and phase-target actuation guards.
+
 ## Why Kuramoto Fits This Domain
 
 A PLL's phase detector computes sin(theta_ref - theta_vco) -- the exact

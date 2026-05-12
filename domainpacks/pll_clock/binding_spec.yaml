@@ -101,6 +101,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-loop-bandwidth-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.8
+      weight: 2.0
+    - name: limit-frequency-trim-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.35
+      weight: 1.5
+    - name: limit-reference-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.5
+      weight: 2.0
+    - name: limit-phase-target-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.28
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 5.0
+      justification: pll value guard holdover-safe reference hold
+
 # Crystal aging: quartz oscillator frequency drift over time.
 imprint_model:
   decay_rate: 0.001
