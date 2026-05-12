@@ -46,6 +46,32 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     return value
 
 
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    value = float(value)
+    if not isfinite(value):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    return value
+
+
+def _validate_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if arr.shape != shape:
+        raise ValueError(f"{name} shape {arr.shape} does not match {shape}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
 class DelayBuffer:
     """Circular buffer storing phase history for delayed coupling.
 
@@ -60,7 +86,8 @@ class DelayBuffer:
 
     def push(self, phases: FloatArray) -> None:
         """Append a phase snapshot to the buffer."""
-        self._buffer.append(phases.copy())
+        phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
+        self._buffer.append(phases64.copy())
 
     def get_delayed(self, delay_steps: int) -> FloatArray | None:
         """Return phases from `delay_steps` ago, or None if not enough history."""
@@ -104,16 +131,28 @@ class DelayedEngine:
         alpha: FloatArray | None = None,
         step_idx: int = 0,
     ) -> FloatArray:
-        self._buffer.append(phases.copy())
-        delayed = self._buffer[0] if len(self._buffer) > self._delay_steps else phases
+        del step_idx
+        phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
+        omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
+        knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
         if alpha is None:
-            alpha = np.zeros((self._n, self._n))
-        diff = delayed[np.newaxis, :] - phases[:, np.newaxis] - alpha
-        coupling = np.sum(knm * np.sin(diff), axis=1)
-        dtheta = omegas + coupling
+            alpha64 = np.zeros((self._n, self._n), dtype=np.float64)
+        else:
+            alpha64 = _validate_state_array(
+                alpha,
+                name="alpha",
+                shape=(self._n, self._n),
+            )
+        zeta = _validate_finite_float(zeta, name="zeta")
+        psi = _validate_finite_float(psi, name="psi")
+        self._buffer.append(phases64.copy())
+        delayed = self._buffer[0] if len(self._buffer) > self._delay_steps else phases64
+        diff = delayed[np.newaxis, :] - phases64[:, np.newaxis] - alpha64
+        coupling = np.sum(knm64 * np.sin(diff), axis=1)
+        dtheta = omegas64 + coupling
         if zeta != 0.0:
-            dtheta += zeta * np.sin(psi - phases)
-        step_out: FloatArray = (phases + self._dt * dtheta) % TWO_PI
+            dtheta += zeta * np.sin(psi - phases64)
+        step_out: FloatArray = (phases64 + self._dt * dtheta) % TWO_PI
         return step_out
 
     def run(
@@ -126,20 +165,27 @@ class DelayedEngine:
         alpha: FloatArray | None = None,
         n_steps: int = 100,
     ) -> FloatArray:
-        if _HAS_RUST:
-            p = np.ascontiguousarray(phases, dtype=np.float64)
-            o = np.ascontiguousarray(omegas, dtype=np.float64)
-            k = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
-            a = np.ascontiguousarray(
-                alpha.ravel() if alpha is not None else np.zeros(self._n * self._n),
-                dtype=np.float64,
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
+        phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
+        omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
+        knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
+        if alpha is None:
+            alpha64 = np.zeros((self._n, self._n), dtype=np.float64)
+        else:
+            alpha64 = _validate_state_array(
+                alpha,
+                name="alpha",
+                shape=(self._n, self._n),
             )
+        zeta = _validate_finite_float(zeta, name="zeta")
+        psi = _validate_finite_float(psi, name="psi")
+        if _HAS_RUST:
             result: FloatArray = np.asarray(
                 _rust_delayed_run(
-                    p,
-                    o,
-                    k,
-                    a,
+                    phases64,
+                    omegas64,
+                    knm64.ravel(),
+                    alpha64.ravel(),
                     self._n,
                     zeta,
                     psi,
@@ -149,7 +195,7 @@ class DelayedEngine:
                 )
             )
             return np.asarray(result, dtype=np.float64)
-        p = phases.copy()
+        p = phases64.copy()
         for i in range(n_steps):
-            p = self.step(p, omegas, knm, zeta, psi, alpha, step_idx=i)
+            p = self.step(p, omegas64, knm64, zeta, psi, alpha64, step_idx=i)
         return p
