@@ -260,14 +260,15 @@ class CausalInterventionEngine:
         next_psi = float(psi)
 
         for action in actions:
+            action_value = _require_finite_real(action.value, name="action.value")
             if action.knob == "K":
-                _apply_matrix_delta(next_knm, action.scope, action.value)
+                _apply_matrix_delta(next_knm, action.scope, action_value)
             elif action.knob == "alpha":
-                _apply_matrix_delta(next_alpha, action.scope, action.value)
+                _apply_matrix_delta(next_alpha, action.scope, action_value)
             elif action.knob == "zeta":
-                next_zeta += float(action.value)
+                next_zeta += action_value
             elif action.knob in {"Psi", "psi"}:
-                next_psi = (next_psi + float(action.value)) % TWO_PI
+                next_psi = (next_psi + action_value) % TWO_PI
             else:
                 msg = f"unsupported causal intervention knob {action.knob!r}"
                 raise ValueError(msg)
@@ -408,13 +409,20 @@ def learn_causal_graph(
 
 
 def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
+    if not isinstance(scope, str):
+        raise ValueError(f"unsupported causal intervention scope {scope!r}")
     if scope == "global":
-        matrix += float(value)
+        matrix += value
         return
     if scope.startswith("oscillator_"):
-        idx = int(scope.removeprefix("oscillator_"))
-        matrix[idx, :] += float(value)
-        matrix[:, idx] += float(value)
+        suffix = scope.removeprefix("oscillator_")
+        if not suffix.isdecimal():
+            raise ValueError("oscillator-scoped causal intervention requires an index")
+        idx = int(suffix)
+        if idx >= matrix.shape[0]:
+            raise ValueError("oscillator-scoped causal intervention index out of range")
+        matrix[idx, :] += value
+        matrix[:, idx] += value
         return
     if scope.startswith("layer_"):
         raise ValueError("layer-scoped causal interventions require layer membership")

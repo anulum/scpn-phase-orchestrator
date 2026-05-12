@@ -267,6 +267,60 @@ def test_unsupported_intervention_knob_raises() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("knob", "value"),
+    [
+        ("K", np.inf),
+        ("alpha", "0.1"),
+        ("zeta", True),
+        ("Psi", np.nan),
+    ],
+)
+def test_invalid_causal_action_values_fail_closed(knob: str, value: object) -> None:
+    _, _, knm, alpha = _system(4)
+    engine = CausalInterventionEngine(4, dt=0.01)
+
+    with pytest.raises(ValueError, match="action.value must be finite"):
+        engine.apply_actions(
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            actions=(
+                ControlAction(
+                    knob=knob,
+                    scope="global",
+                    value=value,
+                    ttl_s=1.0,
+                    justification="invalid action value must fail closed",
+                ),
+            ),
+        )
+
+
+@pytest.mark.parametrize("scope", ["oscillator_bad", "oscillator_99"])
+def test_invalid_oscillator_scope_fails_closed(scope: str) -> None:
+    _, _, knm, alpha = _system(4)
+    engine = CausalInterventionEngine(4, dt=0.01)
+
+    with pytest.raises(ValueError, match="oscillator-scoped causal intervention"):
+        engine.apply_actions(
+            knm,
+            alpha,
+            zeta=0.0,
+            psi=0.0,
+            actions=(
+                ControlAction(
+                    knob="K",
+                    scope=scope,
+                    value=0.1,
+                    ttl_s=1.0,
+                    justification="invalid oscillator scope must fail closed",
+                ),
+            ),
+        )
+
+
 def test_input_shape_validation() -> None:
     phases, omegas, knm, alpha = _system()
     engine = CausalInterventionEngine(6, dt=0.01)
