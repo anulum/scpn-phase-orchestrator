@@ -322,8 +322,8 @@ class TestSparseEngineEdgeCases:
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         engine = SparseUPDEEngine(3, dt=0.01, method="rk4")
-        phases = np.array([[0.1, 0.2, 0.3]], dtype=np.float64)
-        omegas = np.array([[1.0, 1.1, 1.2]], dtype=np.float64)
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
         row_ptr = np.array([0, 1, 2, 2], dtype=np.uint64)
         col = np.array([1, 2], dtype=np.uint64)
         kv = np.array([0.4, 0.5], dtype=np.float64)
@@ -333,6 +333,61 @@ class TestSparseEngineEdgeCases:
         run = engine.run(phases, omegas, row_ptr, col, kv, 0.2, 0.3, alpha, 4)
         np.testing.assert_allclose(step, [0.4, 0.5, 0.6], atol=1e-12)
         np.testing.assert_allclose(run, [0.7, 0.8, 0.9], atol=1e-12)
+
+    def test_step_rejects_malformed_csr_before_dispatch(self):
+        engine = SparseUPDEEngine(3, dt=0.01, method="euler")
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = np.array([0, 1, 3, 2], dtype=np.uint64)
+        col = np.array([1, 2], dtype=np.uint64)
+        kv = np.array([0.4, 0.5], dtype=np.float64)
+        alpha = np.array([0.0, 0.1], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="row_ptr must be monotonic"):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, alpha)
+
+    def test_step_rejects_undocumented_flattening(self):
+        engine = SparseUPDEEngine(3, dt=0.01, method="euler")
+        phases = np.array([[0.1, 0.2, 0.3]], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        alpha = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="phases.shape"):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, alpha)
+
+    def test_rk45_sparse_fallback_uses_error_control(self, monkeypatch):
+        monkeypatch.setattr(sparse_mod, "_HAS_RUST", False)
+        n = 4
+        dt = 0.5
+        rng = np.random.default_rng(113)
+        phases = rng.uniform(0.0, 2 * np.pi, n)
+        omegas = rng.uniform(1.0, 2.0, n)
+        knm = np.array(
+            [
+                [0.0, 1.2, 0.8, 0.0],
+                [0.7, 0.0, 1.1, 0.5],
+                [0.4, 0.9, 0.0, 1.0],
+                [0.6, 0.0, 0.3, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        alpha = np.where(knm > 0.0, 0.15, 0.0)
+        row_ptr, col, kv, av = dense_to_csr(knm, alpha)
+        rk45 = SparseUPDEEngine(n, dt=dt, method="rk45", atol=1e-12, rtol=1e-12)
+        rk4 = SparseUPDEEngine(n, dt=dt, method="rk4", atol=1e-12, rtol=1e-12)
+
+        out_rk45 = rk45.step(phases, omegas, row_ptr, col, kv, 0.3, -0.2, av)
+        out_rk4 = rk4.step(phases, omegas, row_ptr, col, kv, 0.3, -0.2, av)
+
+        assert rk45.last_dt < dt
+        assert np.all(np.isfinite(out_rk45))
+        assert np.all(out_rk45 >= 0.0)
+        assert np.all(out_rk45 < 2 * np.pi)
+        with pytest.raises(AssertionError):
+            np.testing.assert_allclose(out_rk45, out_rk4, atol=1e-12, rtol=1e-12)
 
 
 # Pipeline wiring: the sparse engine swaps in for UPDEEngine when the

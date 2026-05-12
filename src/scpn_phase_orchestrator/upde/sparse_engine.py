@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import threading
 from numbers import Integral, Real
 from typing import Any, TypeAlias
 
@@ -63,6 +64,27 @@ class SparseUPDEEngine:
     evolve concurrently with the phase dynamics.
     """
 
+    _DP_A = np.array(
+        [
+            [0, 0, 0, 0, 0, 0, 0],
+            [1 / 5, 0, 0, 0, 0, 0, 0],
+            [3 / 40, 9 / 40, 0, 0, 0, 0, 0],
+            [44 / 45, -56 / 15, 32 / 9, 0, 0, 0, 0],
+            [19372 / 6561, -25360 / 2187, 64448 / 6561, -212 / 729, 0, 0, 0],
+            [9017 / 3168, -355 / 33, 46732 / 5247, 49 / 176, -5103 / 18656, 0, 0],
+            [35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0],
+        ],
+        dtype=np.float64,
+    )
+    _DP_B4 = np.array(
+        [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 2100, 1 / 40],
+        dtype=np.float64,
+    )
+    _DP_B5 = np.array(
+        [35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0],
+        dtype=np.float64,
+    )
+
     def __init__(
         self,
         n_oscillators: int,
@@ -96,6 +118,7 @@ class SparseUPDEEngine:
         self._atol = atol
         self._rtol = rtol
         self._last_dt = dt
+        self._lock = threading.RLock()
 
         self._rust = None
         if _HAS_RUST:
@@ -139,32 +162,53 @@ class SparseUPDEEngine:
         Returns:
             New phase vector [theta_1(t+dt), ..., theta_N(t+dt)], shape (N,).
         """
-        if self._rust is not None:
-            return np.asarray(
-                self._rust.step(
-                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
-                    np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
-                    np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
+        self._validate_inputs(
+            phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            alpha_values,
+            zeta,
+            psi,
+        )
+        with self._lock:
+            if self._rust is not None:
+                return np.asarray(
+                    self._rust.step(
+                        np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                        np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                        np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
+                        np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
+                        np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
+                        float(zeta),
+                        float(psi),
+                        np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
+                    )
                 )
-            )
 
-        if self._method == "euler":
-            return self._euler_step(
-                phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-            )
-        if self._method in ("rk4", "rk45"):
+            if self._method == "euler":
+                return self._euler_step(
+                    phases,
+                    omegas,
+                    row_ptr,
+                    col_indices,
+                    knm_values,
+                    zeta,
+                    psi,
+                    alpha_values,
+                )
+            if self._method == "rk45":
+                return self._rk45_step(
+                    phases,
+                    omegas,
+                    row_ptr,
+                    col_indices,
+                    knm_values,
+                    zeta,
+                    psi,
+                    alpha_values,
+                )
             return self._rk4_step(
                 phases,
                 omegas,
@@ -175,9 +219,6 @@ class SparseUPDEEngine:
                 psi,
                 alpha_values,
             )
-        raise NotImplementedError(
-            f"Method {self._method} sparse fallback not implemented in Python"
-        )
 
     def run(
         self,
@@ -208,26 +249,91 @@ class SparseUPDEEngine:
             Final phase vector after n_steps.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
-        if self._rust is not None:
-            return np.asarray(
-                self._rust.run(
-                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
-                    np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
-                    np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
-                    n_steps,
+        self._validate_inputs(
+            phases,
+            omegas,
+            row_ptr,
+            col_indices,
+            knm_values,
+            alpha_values,
+            zeta,
+            psi,
+        )
+        with self._lock:
+            if self._rust is not None:
+                return np.asarray(
+                    self._rust.run(
+                        np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                        np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                        np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
+                        np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
+                        np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
+                        float(zeta),
+                        float(psi),
+                        np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
+                        n_steps,
+                    )
                 )
+            p = phases.copy()
+            for _ in range(n_steps):
+                p = self.step(
+                    p, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
+                )
+            return p
+
+    def _validate_inputs(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
+        alpha_values: FloatArray,
+        zeta: float,
+        psi: float,
+    ) -> None:
+        n = self._n
+        if not (np.isfinite(zeta) and np.isfinite(psi)):
+            raise ValueError("zeta and psi must be finite")
+        if phases.shape != (n,):
+            raise ValueError(f"phases.shape={phases.shape}, expected {(n,)}")
+        if omegas.shape != (n,):
+            raise ValueError(f"omegas.shape={omegas.shape}, expected {(n,)}")
+        if row_ptr.shape != (n + 1,):
+            raise ValueError(f"row_ptr.shape={row_ptr.shape}, expected {(n + 1,)}")
+        edge_count = int(row_ptr[-1]) if row_ptr.size else 0
+        if col_indices.shape != (edge_count,):
+            raise ValueError(
+                f"col_indices.shape={col_indices.shape}, expected {(edge_count,)}"
             )
-        p = phases.copy()
-        for _ in range(n_steps):
-            p = self.step(
-                p, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
+        if knm_values.shape != (edge_count,):
+            raise ValueError(
+                f"knm_values.shape={knm_values.shape}, expected {(edge_count,)}"
             )
-        return p
+        if alpha_values.shape != (edge_count,):
+            raise ValueError(
+                f"alpha_values.shape={alpha_values.shape}, expected {(edge_count,)}"
+            )
+        for name, arr in (
+            ("phases", phases),
+            ("omegas", omegas),
+            ("row_ptr", row_ptr),
+            ("col_indices", col_indices),
+            ("knm_values", knm_values),
+            ("alpha_values", alpha_values),
+        ):
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"{name} contains NaN/Inf")
+        if row_ptr[0] != 0:
+            raise ValueError("row_ptr must start at 0")
+        if np.any(row_ptr[1:] < row_ptr[:-1]):
+            raise ValueError("row_ptr must be monotonic non-decreasing")
+        if edge_count < 0:
+            raise ValueError("row_ptr final entry must be non-negative")
+        if col_indices.size and (
+            np.any(col_indices < 0) or np.any(col_indices >= self._n)
+        ):
+            raise ValueError("col_indices entries must be valid oscillator indices")
 
     def _derivative(
         self,
@@ -279,6 +385,64 @@ class SparseUPDEEngine:
             phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
         ) % TWO_PI
         return result
+
+    def _rk45_stage_vector(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
+        zeta: float,
+        psi: float,
+        alpha_values: FloatArray,
+        dt: float,
+    ) -> list[FloatArray]:
+        args = (omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
+        stages = [self._derivative(phases, *args)]
+        for i in range(1, 7):
+            increment = sum(self._DP_A[i, j] * stages[j] for j in range(i))
+            stages.append(self._derivative(phases + dt * increment, *args))
+        return stages
+
+    def _rk45_step(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+        row_ptr: IntArray,
+        col_indices: IntArray,
+        knm_values: FloatArray,
+        zeta: float,
+        psi: float,
+        alpha_values: FloatArray,
+    ) -> FloatArray:
+        dt = self._last_dt
+        max_reject = 3
+        for _ in range(max_reject + 1):
+            stages = self._rk45_stage_vector(
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                dt,
+            )
+            y5 = phases + dt * sum(self._DP_B5[i] * stages[i] for i in range(7))
+            y4 = phases + dt * sum(self._DP_B4[i] * stages[i] for i in range(7))
+            scale = self._atol + self._rtol * np.maximum(np.abs(phases), np.abs(y5))
+            err_norm = float(np.max(np.abs(y5 - y4) / scale))
+            if err_norm <= 1.0:
+                factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
+                self._last_dt = min(dt * factor, self._dt * 10.0)
+                result: FloatArray = y5 % TWO_PI
+                return result
+            dt *= max(0.2, 0.9 * err_norm ** (-0.25))
+        self._last_dt = dt
+        result_fallback: FloatArray = y5 % TWO_PI
+        return result_fallback
 
     def _euler_step(
         self,

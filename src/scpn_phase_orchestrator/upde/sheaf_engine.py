@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import threading
 from numbers import Integral, Real
 from typing import TypeAlias, cast
 
@@ -37,6 +38,12 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
 class SheafUPDEEngine:
     """Cellular Sheaf UPDE integrator for multi-dimensional phase vectors.
 
@@ -52,6 +59,27 @@ class SheafUPDEEngine:
     This enables complex cross-frequency coupling and opinion dynamics
     over multidimensional belief spaces.
     """
+
+    _DP_A = np.array(
+        [
+            [0, 0, 0, 0, 0, 0, 0],
+            [1 / 5, 0, 0, 0, 0, 0, 0],
+            [3 / 40, 9 / 40, 0, 0, 0, 0, 0],
+            [44 / 45, -56 / 15, 32 / 9, 0, 0, 0, 0],
+            [19372 / 6561, -25360 / 2187, 64448 / 6561, -212 / 729, 0, 0, 0],
+            [9017 / 3168, -355 / 33, 46732 / 5247, 49 / 176, -5103 / 18656, 0, 0],
+            [35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0],
+        ],
+        dtype=np.float64,
+    )
+    _DP_B4 = np.array(
+        [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 2100, 1 / 40],
+        dtype=np.float64,
+    )
+    _DP_B5 = np.array(
+        [35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0],
+        dtype=np.float64,
+    )
 
     def __init__(
         self,
@@ -83,6 +111,7 @@ class SheafUPDEEngine:
         self._atol = atol
         self._rtol = rtol
         self._last_dt = dt
+        self._lock = threading.RLock()
 
         self._rust = None
         if _HAS_RUST:
@@ -119,26 +148,26 @@ class SheafUPDEEngine:
         Returns:
             New phase matrix, shape (N, D).
         """
-        if self._rust is not None:
-            res = self._rust.step(
-                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                np.ascontiguousarray(restriction_maps.ravel(), dtype=np.float64),
-                float(zeta),
-                np.ascontiguousarray(psi.ravel(), dtype=np.float64),
-            )
-            return cast(
-                "FloatArray",
-                np.asarray(res).reshape((self._n, self._d)),
-            )
+        self._validate_inputs(phases, omegas, restriction_maps, zeta, psi)
+        with self._lock:
+            if self._rust is not None:
+                res = self._rust.step(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(restriction_maps.ravel(), dtype=np.float64),
+                    float(zeta),
+                    np.ascontiguousarray(psi.ravel(), dtype=np.float64),
+                )
+                return cast(
+                    "FloatArray",
+                    np.asarray(res).reshape((self._n, self._d)),
+                )
 
-        if self._method == "euler":
-            return self._euler_step(phases, omegas, restriction_maps, zeta, psi)
-        if self._method in ("rk4", "rk45"):
+            if self._method == "euler":
+                return self._euler_step(phases, omegas, restriction_maps, zeta, psi)
+            if self._method == "rk45":
+                return self._rk45_step(phases, omegas, restriction_maps, zeta, psi)
             return self._rk4_step(phases, omegas, restriction_maps, zeta, psi)
-        raise NotImplementedError(
-            f"Method {self._method} sheaf fallback not implemented in Python"
-        )
 
     def run(
         self,
@@ -150,25 +179,50 @@ class SheafUPDEEngine:
         n_steps: int,
     ) -> FloatArray:
         """Run multiple steps in a batch, return final phases."""
-        n_steps = _validate_positive_int(n_steps, name="n_steps")
-        if self._rust is not None:
-            res = self._rust.run(
-                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                np.ascontiguousarray(restriction_maps.ravel(), dtype=np.float64),
-                float(zeta),
-                np.ascontiguousarray(psi.ravel(), dtype=np.float64),
-                n_steps,
-            )
-            return cast(
-                "FloatArray",
-                np.asarray(res).reshape((self._n, self._d)),
-            )
+        n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
+        self._validate_inputs(phases, omegas, restriction_maps, zeta, psi)
+        with self._lock:
+            if self._rust is not None:
+                res = self._rust.run(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(restriction_maps.ravel(), dtype=np.float64),
+                    float(zeta),
+                    np.ascontiguousarray(psi.ravel(), dtype=np.float64),
+                    n_steps,
+                )
+                return cast(
+                    "FloatArray",
+                    np.asarray(res).reshape((self._n, self._d)),
+                )
 
-        p = phases.copy()
-        for _ in range(n_steps):
-            p = self.step(p, omegas, restriction_maps, zeta, psi)
-        return p
+            p = phases.copy()
+            for _ in range(n_steps):
+                p = self.step(p, omegas, restriction_maps, zeta, psi)
+            return p
+
+    def _validate_inputs(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
+        zeta: float,
+        psi: FloatArray,
+    ) -> None:
+        n, d = self._n, self._d
+        if not np.isfinite(zeta):
+            raise ValueError("zeta must be finite")
+        checks = (
+            ("phases", phases, (n, d)),
+            ("omegas", omegas, (n, d)),
+            ("restriction_maps", restriction_maps, (n, n, d, d)),
+            ("psi", psi, (d,)),
+        )
+        for name, arr, shape in checks:
+            if arr.shape != shape:
+                raise ValueError(f"{name}.shape={arr.shape}, expected {shape}")
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"{name} contains NaN/Inf")
 
     def _derivative(
         self,
@@ -212,6 +266,55 @@ class SheafUPDEEngine:
             phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
         ) % TWO_PI
         return result
+
+    def _rk45_stage_vector(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
+        zeta: float,
+        psi: FloatArray,
+        dt: float,
+    ) -> list[FloatArray]:
+        args = (omegas, restriction_maps, zeta, psi)
+        stages = [self._derivative(phases, *args)]
+        for i in range(1, 7):
+            increment = sum(self._DP_A[i, j] * stages[j] for j in range(i))
+            stages.append(self._derivative(phases + dt * increment, *args))
+        return stages
+
+    def _rk45_step(
+        self,
+        phases: FloatArray,
+        omegas: FloatArray,
+        restriction_maps: FloatArray,
+        zeta: float,
+        psi: FloatArray,
+    ) -> FloatArray:
+        dt = self._last_dt
+        max_reject = 3
+        for _ in range(max_reject + 1):
+            stages = self._rk45_stage_vector(
+                phases,
+                omegas,
+                restriction_maps,
+                zeta,
+                psi,
+                dt,
+            )
+            y5 = phases + dt * sum(self._DP_B5[i] * stages[i] for i in range(7))
+            y4 = phases + dt * sum(self._DP_B4[i] * stages[i] for i in range(7))
+            scale = self._atol + self._rtol * np.maximum(np.abs(phases), np.abs(y5))
+            err_norm = float(np.max(np.abs(y5 - y4) / scale))
+            if err_norm <= 1.0:
+                factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
+                self._last_dt = min(dt * factor, self._dt * 10.0)
+                result: FloatArray = y5 % TWO_PI
+                return result
+            dt *= max(0.2, 0.9 * err_norm ** (-0.25))
+        self._last_dt = dt
+        result_fallback: FloatArray = y5 % TWO_PI
+        return result_fallback
 
     def _euler_step(
         self,

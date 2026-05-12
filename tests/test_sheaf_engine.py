@@ -271,6 +271,84 @@ class TestSheafEngineEdgeCases:
         np.testing.assert_allclose(step, [[0.1, 0.2], [0.3, 0.4]], atol=1e-12)
         np.testing.assert_allclose(run, [[0.5, 0.6], [0.7, 0.8]], atol=1e-12)
 
+    def test_step_rejects_malformed_shapes_and_non_finite_values(self):
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="euler")
+        phases = np.zeros((2, 2), dtype=np.float64)
+        omegas = np.ones((2, 2), dtype=np.float64)
+        restriction_maps = np.zeros((2, 2, 2, 2), dtype=np.float64)
+        psi = np.zeros(2, dtype=np.float64)
+
+        with pytest.raises(ValueError, match="restriction_maps.shape"):
+            engine.step(phases, omegas, restriction_maps[:, :, :, :1], 0.0, psi)
+
+        bad_phases = phases.copy()
+        bad_phases[0, 0] = np.nan
+        with pytest.raises(ValueError, match="phases contains NaN/Inf"):
+            engine.step(bad_phases, omegas, restriction_maps, 0.0, psi)
+
+        with pytest.raises(ValueError, match="zeta must be finite"):
+            engine.step(phases, omegas, restriction_maps, np.inf, psi)
+
+    def test_run_zero_steps_returns_independent_copy(self):
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
+        phases = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64)
+        omegas = np.ones((2, 2), dtype=np.float64)
+        restriction_maps = np.zeros((2, 2, 2, 2), dtype=np.float64)
+        psi = np.zeros(2, dtype=np.float64)
+
+        out = engine.run(phases, omegas, restriction_maps, 0.0, psi, 0)
+        np.testing.assert_allclose(out, phases, atol=0.0)
+        assert out is not phases
+
+    def test_rk45_sheaf_fallback_uses_error_control(self, monkeypatch):
+        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", False)
+        n = 3
+        d = 2
+        dt = 0.4
+        phases = np.array(
+            [[0.0, 0.4], [1.0, 1.5], [2.0, 2.8]],
+            dtype=np.float64,
+        )
+        omegas = np.array(
+            [[1.1, 1.4], [0.9, 1.7], [1.3, 1.0]],
+            dtype=np.float64,
+        )
+        restriction_maps = np.zeros((n, n, d, d), dtype=np.float64)
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    restriction_maps[i, j] = np.array(
+                        [[0.8, 0.25], [0.35, 0.9]],
+                        dtype=np.float64,
+                    )
+        psi = np.array([0.2, -0.3], dtype=np.float64)
+        rk45 = SheafUPDEEngine(
+            n,
+            d_dimensions=d,
+            dt=dt,
+            method="rk45",
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        rk4 = SheafUPDEEngine(
+            n,
+            d_dimensions=d,
+            dt=dt,
+            method="rk4",
+            atol=1e-12,
+            rtol=1e-12,
+        )
+
+        out_rk45 = rk45.step(phases, omegas, restriction_maps, 0.4, psi)
+        out_rk4 = rk4.step(phases, omegas, restriction_maps, 0.4, psi)
+
+        assert rk45.last_dt > 0.0
+        assert np.all(np.isfinite(out_rk45))
+        assert np.all(out_rk45 >= 0.0)
+        assert np.all(out_rk45 < 2 * np.pi)
+        with pytest.raises(AssertionError):
+            np.testing.assert_allclose(out_rk45, out_rk4, atol=1e-12, rtol=1e-12)
+
 
 # Pipeline wiring: SheafUPDEEngine extends UPDEEngine to multi-dimensional
 # phase vectors with matrix-valued restriction maps. The D=1 parity case
