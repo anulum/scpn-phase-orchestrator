@@ -280,9 +280,7 @@ class TestOptionalQuantumControlBackend:
         np.testing.assert_allclose(calls[0][0], knm)
         np.testing.assert_allclose(calls[0][1], omegas)
 
-    def test_solve_q_upde_passes_physical_payload_to_optional_solver(
-        self, monkeypatch
-    ):
+    def test_solve_q_upde_passes_physical_payload_to_optional_solver(self, monkeypatch):
         root = ModuleType("scpn_quantum_control")
         phase_pkg = ModuleType("scpn_quantum_control.phase")
         solver_mod = ModuleType("scpn_quantum_control.phase.xy_kuramoto")

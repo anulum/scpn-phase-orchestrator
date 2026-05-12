@@ -301,9 +301,7 @@ def test_rest_boundary_reports_accepted_and_rejected_envelope_queues() -> None:
     assert audit["accepted_count"] == 1
     assert audit["rejected_count"] == 2
     assert audit["watermarks"] == {"edge-b": 2}
-    assert [item["source_node"] for item in audit["ledger"]["accepted"]] == [
-        "edge-b"
-    ]
+    assert [item["source_node"] for item in audit["ledger"]["accepted"]] == ["edge-b"]
     assert [item["reason"] for item in audit["ledger"]["rejected"]] == [
         "duplicate_sequence_conflict",
         "duplicate_sequence_conflict",

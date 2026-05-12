@@ -479,8 +479,9 @@ def test_hardware_packages_require_and_accept_complete_evidence() -> None:
     assert package["connector"]["transport"] == "hardware"
     assert incomplete["evidence_status"] == "blocked"
     assert "simulator_parity_report is required" in incomplete["invalid_evidence"]
-    assert "generated_artifact_sha256 must be a SHA-256 digest" in (
-        incomplete["invalid_evidence"]
+    assert (
+        "generated_artifact_sha256 must be a SHA-256 digest"
+        in (incomplete["invalid_evidence"])
     )
     assert complete["overall_status"] == "review_ready"
     assert complete["evidence"]["simulator_parity_status"] == "passed"
@@ -625,12 +626,8 @@ def test_owned_live_connector_runtime_reports_boundary_validation_errors() -> No
     assert offline_transport["blocked_reasons"] == [
         "owned runtime requires a live connector transport"
     ]
-    assert missing_auth_mapping["blocked_reasons"] == [
-        "auth_policy must be a mapping"
-    ]
-    assert incompatible["blocked_reasons"] == [
-        "connector manifest is incompatible"
-    ]
+    assert missing_auth_mapping["blocked_reasons"] == ["auth_policy must be a mapping"]
+    assert incompatible["blocked_reasons"] == ["connector manifest is incompatible"]
     assert missing_owner_and_auth["blocked_reasons"] == [
         "owner must be assigned",
         "auth_policy.scheme must be assigned",
@@ -821,9 +818,7 @@ def test_value_guards_reject_invalid_canvas_coupling_and_chart_inputs() -> None:
         },
     )
 
-    assert bad_endpoint["validation_errors"] == [
-        "source must reference a channel node"
-    ]
+    assert bad_endpoint["validation_errors"] == ["source must reference a channel node"]
     assert bad_strength["validation_errors"] == [
         "cross-channel coupling strength must be in [0.0, 100.0]"
     ]
@@ -879,7 +874,7 @@ def test_builders_validate_malformed_readiness_tables(
                     "required_artifacts": (),
                     "commands": "bad",
                 },
-            )
+            ),
         },
     )
     with pytest.raises(ValueError, match="target commands must be a sequence"):

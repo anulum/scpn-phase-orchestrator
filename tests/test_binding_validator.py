@@ -286,9 +286,7 @@ def test_invalid_replay_semantics_is_reported(sample_binding_spec):
     bad = replace(
         sample_binding_spec,
         channels={
-            "Risk": ChannelSpec(
-                role="risk", required=False, replay_semantics="log"
-            )
+            "Risk": ChannelSpec(role="risk", required=False, replay_semantics="log")
         },
     )
 

@@ -336,8 +336,8 @@ class TestDispatcherSurface:
         spo_kernel.fiedler_vector_rust = lambda flat, n: np.arange(n, dtype=np.float64)
         spo_kernel.spectral_gap_rust = lambda flat, n: 3.0
         spo_kernel.critical_coupling_rust = lambda omegas, flat, n: 4.0
-        spo_kernel.sync_convergence_rate_rust = (
-            lambda flat, omegas, n, gamma_max: 5.0 + gamma_max
+        spo_kernel.sync_convergence_rate_rust = lambda flat, omegas, n, gamma_max: (
+            5.0 + gamma_max
         )
         monkeypatch.setitem(sys.modules, "spo_kernel", spo_kernel)
 
@@ -367,15 +367,16 @@ class TestDispatcherSurface:
         def rust_bundle():
             return {
                 "fv": lambda flat, n: calls.append(("fv", flat.copy(), n)) or 2.0,
-                "fvec": lambda flat, n: calls.append(("fvec", flat.copy(), n))
-                or np.array([1.0, -1.0]),
+                "fvec": lambda flat, n: (
+                    calls.append(("fvec", flat.copy(), n)) or np.array([1.0, -1.0])
+                ),
                 "sg": lambda flat, n: calls.append(("sg", flat.copy(), n)) or 0.0,
-                "kc": lambda o, flat, n: calls.append(("kc", o.copy(), flat.copy(), n))
-                or 1.0,
-                "scr": lambda flat, o, n, gamma_max: calls.append(
-                    ("scr", flat.copy(), o.copy(), n, gamma_max)
-                )
-                or 0.5,
+                "kc": lambda o, flat, n: (
+                    calls.append(("kc", o.copy(), flat.copy(), n)) or 1.0
+                ),
+                "scr": lambda flat, o, n, gamma_max: (
+                    calls.append(("scr", flat.copy(), o.copy(), n, gamma_max)) or 0.5
+                ),
             }
 
         monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "rust")

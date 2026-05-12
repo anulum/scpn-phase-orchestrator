@@ -142,8 +142,7 @@ def _validate_coupling_matrix(
         raise ValueError(f"{name} must be square, got shape {matrix.shape}")
     if expected_n is not None and matrix.shape != (expected_n, expected_n):
         raise ValueError(
-            f"{name} must have shape ({expected_n}, {expected_n}), "
-            f"got {matrix.shape}"
+            f"{name} must have shape ({expected_n}, {expected_n}), got {matrix.shape}"
         )
     if not np.all(np.isfinite(matrix)):
         raise ValueError(f"{name} must contain only finite values")
@@ -177,8 +176,7 @@ def _validate_step_count(value: object, *, name: str) -> int:
 
 def _validate_reduction_schedule(values: list[float]) -> list[float]:
     return [
-        _validate_unit_interval(value, name="reduction_schedule")
-        for value in values
+        _validate_unit_interval(value, name="reduction_schedule") for value in values
     ]
 
 

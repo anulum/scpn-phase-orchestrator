@@ -328,12 +328,8 @@ def test_policy_rules_prism_export_preserves_or_guard_and_unique_actions() -> No
         "[shed_load] (regime = 0) & "
         "(boundary_violation_count >= 1 | imprint_mean < 0.20000000000000001)"
     ) in export.model
-    assert 'label "emits_shed_load_K_global_0" = shed_load_fires > 0;' in (
-        export.model
-    )
-    assert 'label "emits_shed_load_K_global_1" = shed_load_fires > 0;' in (
-        export.model
-    )
+    assert 'label "emits_shed_load_K_global_0" = shed_load_fires > 0;' in (export.model)
+    assert 'label "emits_shed_load_K_global_1" = shed_load_fires > 0;' in (export.model)
     assert "//   shed_load_K_global_1: knob='K', scope='global', value=-0.2" in (
         export.model
     )
@@ -479,8 +475,7 @@ def test_policy_rules_tla_export_preserves_or_safety_guard_and_unique_actions() 
     }
     assert "---- MODULE safety_policy ----" in export.module
     assert (
-        "  /\\ (boundary_violation_count >= 1 "
-        "\\/ imprint_mean < 0.20000000000000001)"
+        "  /\\ (boundary_violation_count >= 1 \\/ imprint_mean < 0.20000000000000001)"
     ) in export.module
     assert "Emits_shed_load_K_global_0 == shed_load_fires > 0" in export.module
     assert "Emits_shed_load_K_global_1 == shed_load_fires > 0" in export.module

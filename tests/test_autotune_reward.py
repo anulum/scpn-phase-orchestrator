@@ -153,9 +153,7 @@ class TestAutotuneRewardScoring:
         report = evaluate_knob_policy(candidate, observation)
 
         assert report.components["actuation"] == 0.0
-        assert report.reward == pytest.approx(
-            report.components["target_tracking"]
-        )
+        assert report.reward == pytest.approx(report.components["target_tracking"])
 
 
 class TestAutotuneReplayRanking:

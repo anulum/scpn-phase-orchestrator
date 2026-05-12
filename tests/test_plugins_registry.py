@@ -281,9 +281,7 @@ class TestPluginCompatibility:
         report = registry.compatibility_report(manifest)
 
         assert not report.compatible
-        assert report.reasons == (
-            "requires SPO >= 0.1.0, current release-candidate",
-        )
+        assert report.reasons == ("requires SPO >= 0.1.0, current release-candidate",)
 
 
 class TestPluginMarketplaceCatalog:

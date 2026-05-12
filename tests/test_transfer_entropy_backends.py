@@ -116,8 +116,8 @@ def test_backend_resolution_records_first_available_backend(monkeypatch) -> None
 def test_rust_loader_exposes_phase_and_matrix_kernels(monkeypatch) -> None:
     fake_spo = types.ModuleType("spo_kernel")
     fake_spo.phase_transfer_entropy_rust = lambda _src, _tgt, _bins: 0.25
-    fake_spo.transfer_entropy_matrix_rust = (
-        lambda _flat, n_osc, _n_time, _bins: np.zeros(n_osc * n_osc)
+    fake_spo.transfer_entropy_matrix_rust = lambda _flat, n_osc, _n_time, _bins: (
+        np.zeros(n_osc * n_osc)
     )
     monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 

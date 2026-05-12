@@ -131,8 +131,7 @@ def _validate_pause_indices(pause_indices: object) -> IntArray:
         return np.zeros(0, dtype=np.int64)
     flat = raw.ravel()
     if not all(
-        isinstance(value, Integral) and not isinstance(value, bool)
-        for value in flat
+        isinstance(value, Integral) and not isinstance(value, bool) for value in flat
     ):
         raise ValueError("pause_indices must contain only integer indices")
     return np.ascontiguousarray(flat, dtype=np.int64)

@@ -294,13 +294,16 @@ class TestDispatcherFallthroughForRust:
         assert loaded["mi"] is None
         assert loaded["nn"] is None
         assert loaded["optimal_delay"](np.arange(10, dtype=np.float64), 20, 8) == 7
-        assert loaded["optimal_dimension"](
-            np.arange(10, dtype=np.float64),
-            1,
-            5,
-            15.0,
-            2.0,
-        ) == 3
+        assert (
+            loaded["optimal_dimension"](
+                np.arange(10, dtype=np.float64),
+                1,
+                5,
+                15.0,
+                2.0,
+            )
+            == 3
+        )
 
     def test_rust_active_uses_native_delay_and_dimension_wrappers(
         self,

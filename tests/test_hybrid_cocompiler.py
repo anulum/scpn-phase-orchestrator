@@ -28,9 +28,7 @@ assert _COCOMPILER_SPEC is not None
 assert _COCOMPILER_SPEC.loader is not None
 _COCOMPILER_MODULE = importlib.util.module_from_spec(_COCOMPILER_SPEC)
 _COCOMPILER_SPEC.loader.exec_module(_COCOMPILER_MODULE)
-build_hybrid_cocompiler_manifest = (
-    _COCOMPILER_MODULE.build_hybrid_cocompiler_manifest
-)
+build_hybrid_cocompiler_manifest = _COCOMPILER_MODULE.build_hybrid_cocompiler_manifest
 
 
 def _quantum_manifest() -> dict[str, object]:
