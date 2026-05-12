@@ -155,6 +155,28 @@ def test_dict_form_baseline_accepted(tmp_path: Path) -> None:
     assert proc.returncode == 0
 
 
+def test_category_form_baseline_accepted(tmp_path: Path) -> None:
+    """Checked-in baselines may group benchmark entries by science kernel."""
+    baseline = {
+        "meta": {"generated": "fixture"},
+        "upde": [_entry(8, "euler", "rust", 10.0)],
+        "stuart_landau": [
+            {
+                "n_osc": 8,
+                "method": "euler",
+                "steps": 500,
+                "us_per_step": 27.7,
+            }
+        ],
+    }
+    current = {"results": [_entry(8, "euler", "rust", 11.0)]}
+    _write_json(tmp_path / "b.json", baseline)
+    _write_json(tmp_path / "c.json", current)
+    proc = _run(tmp_path / "b.json", tmp_path / "c.json")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "within regression threshold" in proc.stdout
+
+
 def test_missing_current_key_silently_skipped(tmp_path: Path) -> None:
     """Current entries without a baseline counterpart are ignored: a
     partial benchmark run does not fail the guard."""
@@ -164,7 +186,24 @@ def test_missing_current_key_silently_skipped(tmp_path: Path) -> None:
     _write_json(tmp_path / "c.json", current)
     proc = _run(tmp_path / "b.json", tmp_path / "c.json")
     assert proc.returncode == 0
-    assert "within regression threshold" in proc.stdout
+    assert "No overlapping benchmark entries found" in proc.stdout
+
+
+def test_malformed_benchmark_records_are_ignored(tmp_path: Path) -> None:
+    """Non-comparable records do not crash the guard."""
+    baseline = {
+        "meta": {"generated": "fixture"},
+        "results": [
+            {"method": "euler", "backend": "rust", "us_per_step": 10.0},
+            "not-a-record",
+        ],
+    }
+    current = {"results": [_entry(8, "euler", "rust", 11.0)]}
+    _write_json(tmp_path / "b.json", baseline)
+    _write_json(tmp_path / "c.json", current)
+    proc = _run(tmp_path / "b.json", tmp_path / "c.json")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "No overlapping benchmark entries found" in proc.stdout
 
 
 def test_zero_baseline_skipped(tmp_path: Path) -> None:
