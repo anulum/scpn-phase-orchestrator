@@ -20,6 +20,11 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.autotune.binding_proposal import (
+    propose_binding_from_event_log,
+    propose_binding_from_graph,
+    propose_binding_from_time_series_csv,
+)
 from scpn_phase_orchestrator.binding import (
     ChannelRuntimeExecutor,
     compile_symbolic_binding,
@@ -128,6 +133,65 @@ def inspect_binding(binding_spec: str, json_out: bool) -> None:
 
     for line in format_resolved_binding_config(summary):
         click.echo(line)
+
+
+@main.command("auto-bind")
+@click.argument(
+    "source_kind",
+    type=click.Choice(["time-series-csv", "event-log-json", "graph-json"]),
+)
+@click.argument("source_path", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--project-name",
+    required=True,
+    help="Name to embed in the review-only proposed binding spec.",
+)
+@click.option(
+    "--sample-rate-hz",
+    type=float,
+    default=None,
+    help="Sampling rate for time-series CSV sources.",
+)
+@click.option("--json-out", is_flag=True, help="Output proposal audit record as JSON")
+def auto_bind(
+    source_kind: str,
+    source_path: str,
+    project_name: str,
+    sample_rate_hz: float | None,
+    json_out: bool,
+) -> None:
+    """Propose a review-only binding spec from raw local source data."""
+    try:
+        source_text = Path(source_path).read_text(encoding="utf-8")
+        if source_kind == "time-series-csv":
+            if sample_rate_hz is None:
+                raise ValueError("sample_rate_hz is required for time-series CSV")
+            proposal = propose_binding_from_time_series_csv(
+                source_text,
+                sample_rate_hz=sample_rate_hz,
+                project_name=project_name,
+            )
+        elif source_kind == "event-log-json":
+            proposal = propose_binding_from_event_log(
+                source_text,
+                project_name=project_name,
+            )
+        else:
+            proposal = propose_binding_from_graph(
+                source_text,
+                project_name=project_name,
+            )
+    except (ValueError, TypeError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        raise SystemExit(1) from exc
+    except OSError as exc:
+        click.echo(f"ERROR: could not read source file: {exc.strerror}", err=True)
+        raise SystemExit(1) from exc
+
+    if json_out:
+        click.echo(json.dumps(proposal.to_audit_record(), indent=2, sort_keys=True))
+        return
+    click.echo(proposal.binding.yaml_text, nl=False)
 
 
 def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:

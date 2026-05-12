@@ -234,6 +234,9 @@ sessions do not treat them as abstract research labels.
   - Ingest raw streams such as CSV, sensor logs, and events.
   - Auto-propose oscillators, channels, initial `K`, extractor parameters, and a
     reviewable `binding_spec.yaml`.
+  - CLI proposal export is in place: `spo auto-bind` turns local time-series
+    CSV, event-log JSON, or graph JSON inputs into review-only binding YAML or
+    audit JSON without writing files or enabling actuation.
   - Use SINDy, coupling estimation, clustering, and graph/correlation evidence
     before any learned graph inference is promoted.
   - Acceptance: the five-minute new-dataset workflow is zero-config except for
@@ -297,8 +300,10 @@ sessions do not treat them as abstract research labels.
 - Auto-binding prototype:
   - Deterministic proposal builders from time-series CSV, event-log JSON, and
     graph JSON to reviewable `binding_spec.yaml` records are in place with
-    confidence factors and validation diagnostics. Deeper SINDy/graph-learning
-    inference remains experimental.
+    confidence factors and validation diagnostics.
+  - CLI proposal export is in place: `spo auto-bind` emits review-only binding
+    YAML or audit JSON from local raw sources without writing files or enabling
+    actuation. Deeper SINDy/graph-learning inference remains experimental.
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
   - Reward-evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, adaptive replay refinement, and PPO-like/SAC-like/hybrid-physics proposal generators are in place behind non-actuating gates. Real learner dependencies and benchmarked trained policies remain future work.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.

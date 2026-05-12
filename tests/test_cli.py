@@ -16,6 +16,7 @@ import yaml
 from click.testing import CliRunner
 
 import scpn_phase_orchestrator.cli as cli_module
+from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.plugins import PluginCapability, PluginManifest
 
@@ -133,6 +134,86 @@ def test_inspect_invalid_spec_reports_validation_errors(runner, invalid_spec_pat
     assert result.exit_code == 1
     assert "ERROR" in result.output
     assert "safety_tier" in result.output
+
+
+def test_auto_bind_csv_outputs_valid_yaml(runner, tmp_path):
+    csv_path = tmp_path / "grid.csv"
+    csv_path.write_text(
+        "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(csv_path),
+            "--sample-rate-hz",
+            "100",
+            "--project-name",
+            "grid_replay",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert 'name: "grid_replay"' in result.output
+    spec_path = tmp_path / "binding_spec.yaml"
+    spec_path.write_text(result.output, encoding="utf-8")
+    spec = load_binding_spec(spec_path)
+    assert validate_binding_spec(spec) == []
+
+
+def test_auto_bind_json_out_emits_audit_record(runner, tmp_path):
+    csv_path = tmp_path / "grid.csv"
+    csv_path.write_text(
+        "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(csv_path),
+            "--sample-rate-hz",
+            "100",
+            "--project-name",
+            "grid_replay",
+            "--json-out",
+        ],
+    )
+
+    assert result.exit_code == 0
+    record = json.loads(result.output)
+    assert record["source"]["source_kind"] == "time_series_csv"
+    assert record["binding"]["validation_errors"] == []
+    assert record["binding"]["inferred_channels"] == ["P", "I"]
+    assert record["runtime"]["replay_status"] == "proposal_only"
+
+
+def test_auto_bind_rejects_bad_source_with_scrubbed_error(runner, tmp_path):
+    csv_path = tmp_path / "bad.csv"
+    csv_path.write_text("time,grid\n0.00,not-a-number\n", encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(csv_path),
+            "--sample-rate-hz",
+            "100",
+            "--project-name",
+            "bad_replay",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "ERROR:" in result.output
+    assert "non-numeric sample" in result.output
+    assert str(csv_path) not in result.output
 
 
 def test_run_simulation(runner, valid_spec_path):
@@ -1417,8 +1498,7 @@ def test_run_accepts_non_physical_psi_drivers(
             "phys": {"channel": "P", "extractor_type": "hilbert", "config": {}},
         },
         "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
-        "drivers": {"physical": {}, "informational": {}, "symbolic": {}}
-        | driver_block,
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}} | driver_block,
         "objectives": {"good_layers": [0], "bad_layers": []},
         "boundaries": [],
         "actuators": [],
