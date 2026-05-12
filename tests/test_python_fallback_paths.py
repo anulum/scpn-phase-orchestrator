@@ -219,14 +219,15 @@ def test_sleep_staging_python_and_rust_adapter_paths(
     phase = sleep_staging.ultradian_phase(timestamps, ["Wake", "N3", "N2", "REM"])
     assert phase == pytest.approx((2700.0 - 900.0) / (90.0 * 60.0))
     assert sleep_staging.ultradian_phase(np.array([]), []) == 0.0
-    assert sleep_staging.ultradian_phase(timestamps, ["Wake", "N2"]) == 0.0
+    with pytest.raises(ValueError, match="same length"):
+        sleep_staging.ultradian_phase(timestamps, ["Wake", "N2"])
 
     if hasattr(sleep_staging, "_rust_classify"):
         monkeypatch.setattr(sleep_staging, "_HAS_RUST", True)
         monkeypatch.setattr(sleep_staging, "_rust_classify", lambda r, d: 4)
         monkeypatch.setattr(sleep_staging, "_rust_ultradian", lambda ts, codes: 0.25)
         assert sleep_staging.classify_sleep_stage(0.1) == "REM"
-        assert sleep_staging.ultradian_phase(timestamps, ["N3", "REM"]) == 0.25
+        assert sleep_staging.ultradian_phase(timestamps[:2], ["N3", "REM"]) == 0.25
 
 
 def test_ei_balance_python_fallback_handles_degenerate_and_scaling_cases(

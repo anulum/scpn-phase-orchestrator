@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.sleep_staging import (
     classify_sleep_stage,
@@ -47,6 +48,18 @@ def test_rem_with_functional_desync():
 def test_wake_low_r_no_desync():
     assert classify_sleep_stage(0.15) == "Wake"
     assert classify_sleep_stage(0.0) == "Wake"
+
+
+@pytest.mark.parametrize("value", [-0.01, 1.01, np.nan, np.inf, True])
+def test_classify_sleep_stage_rejects_invalid_order_parameter(value):
+    with pytest.raises((TypeError, ValueError), match="R"):
+        classify_sleep_stage(value)
+
+
+@pytest.mark.parametrize("functional_desync", [0, 1, "yes"])
+def test_classify_sleep_stage_requires_boolean_desync_flag(functional_desync):
+    with pytest.raises(TypeError, match="functional_desync"):
+        classify_sleep_stage(0.25, functional_desync=functional_desync)
 
 
 def test_wake_very_low_r_even_with_desync():
@@ -94,6 +107,21 @@ def test_ultradian_no_n3_returns_zero():
 
 def test_ultradian_empty_input():
     assert ultradian_phase(np.array([]), []) == 0.0
+
+
+@pytest.mark.parametrize(
+    ("timestamps", "stages", "match"),
+    [
+        (np.array([[0.0, 1.0]]), ["N3", "REM"], "timestamps"),
+        (np.array([0.0, np.nan]), ["N3", "REM"], "timestamps"),
+        (np.array([60.0, 30.0]), ["N3", "REM"], "monotonic"),
+        (np.array([0.0, 30.0]), ["N3"], "same length"),
+        (np.array([0.0, 30.0]), ["N3", "Invalid"], "stage_history"),
+    ],
+)
+def test_ultradian_rejects_invalid_history_contract(timestamps, stages, match):
+    with pytest.raises(ValueError, match=match):
+        ultradian_phase(timestamps, stages)
 
 
 class TestSleepStagingPipelineWiring:

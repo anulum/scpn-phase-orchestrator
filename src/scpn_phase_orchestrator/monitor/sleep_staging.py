@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -60,20 +61,21 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
     Returns:
         One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
     """
+    r_value = _validate_order_parameter(R)
+    desync = _validate_functional_desync(functional_desync)
     if _HAS_RUST:
-        code = _rust_classify(float(R), functional_desync)
+        code = _rust_classify(r_value, desync)
         return _STAGE_NAMES[code]
-    R = float(R)
-    if _STAGE_THRESHOLDS["N3"] <= R:
+    if _STAGE_THRESHOLDS["N3"] <= r_value:
         return "N3"
-    if _STAGE_THRESHOLDS["N2"] <= R:
+    if _STAGE_THRESHOLDS["N2"] <= r_value:
         return "N2"
-    if _STAGE_THRESHOLDS["N1"] <= R:
-        if functional_desync:
+    if _STAGE_THRESHOLDS["N1"] <= r_value:
+        if desync:
             return "REM"
         return "N1"
     # Below N1 threshold
-    if functional_desync and _STAGE_THRESHOLDS["REM"] <= R:
+    if desync and _STAGE_THRESHOLDS["REM"] <= r_value:
         return "REM"
     return "Wake"
 
@@ -103,21 +105,22 @@ def ultradian_phase(
         0.5 ≈ mid-cycle (REM), wrapping back toward 0.
         Returns 0.0 if no N3 epoch is found.
     """
+    ts = _validate_timestamps(timestamps)
+    stages = _validate_stage_history(stage_history, expected_n=int(ts.size))
+    if ts.size == 0:
+        return 0.0
     if _HAS_RUST:
-        rust_ts: FloatArray = np.ascontiguousarray(timestamps, dtype=np.float64)
+        rust_ts: FloatArray = np.ascontiguousarray(ts, dtype=np.float64)
         codes: StageCodeArray = np.array(
-            [_STAGE_CODES.get(s, 0) for s in stage_history],
+            [_STAGE_CODES[s] for s in stages],
             dtype=np.uint8,
         )
         return float(_rust_ultradian(rust_ts, codes))
-    ts: FloatArray = np.asarray(timestamps, dtype=np.float64)
-    if len(ts) == 0 or len(stage_history) == 0:
-        return 0.0
-    n = min(len(ts), len(stage_history))
+    n = int(ts.size)
 
     last_n3_idx = -1
     for i in range(n - 1, -1, -1):
-        if stage_history[i] == "N3":
+        if stages[i] == "N3":
             last_n3_idx = i
             break
 
@@ -126,3 +129,44 @@ def ultradian_phase(
 
     elapsed = float(ts[n - 1] - ts[last_n3_idx])
     return (elapsed % _ULTRADIAN_PERIOD_S) / _ULTRADIAN_PERIOD_S
+
+
+def _validate_order_parameter(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError("R must be a finite real value in [0, 1]")
+    r_value = float(value)
+    if not np.isfinite(r_value) or r_value < 0.0 or r_value > 1.0:
+        raise ValueError("R must be a finite real value in [0, 1]")
+    return r_value
+
+
+def _validate_functional_desync(value: object) -> bool:
+    if not isinstance(value, bool):
+        raise TypeError("functional_desync must be a bool")
+    return value
+
+
+def _validate_timestamps(value: object) -> FloatArray:
+    try:
+        timestamps = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("timestamps must be a finite 1-D array") from exc
+    if timestamps.ndim != 1:
+        raise ValueError("timestamps must be a finite 1-D array")
+    if not np.all(np.isfinite(timestamps)):
+        raise ValueError("timestamps must contain only finite values")
+    if timestamps.size > 1 and np.any(np.diff(timestamps) < 0.0):
+        raise ValueError("timestamps must be monotonic non-decreasing")
+    return timestamps
+
+
+def _validate_stage_history(stage_history: list[str], *, expected_n: int) -> list[str]:
+    if len(stage_history) != expected_n:
+        raise ValueError(
+            "stage_history must have the same length as timestamps, "
+            f"got {len(stage_history)} and {expected_n}"
+        )
+    invalid = [stage for stage in stage_history if stage not in _STAGE_CODES]
+    if invalid:
+        raise ValueError(f"stage_history contains unknown sleep stage {invalid[0]!r}")
+    return stage_history
