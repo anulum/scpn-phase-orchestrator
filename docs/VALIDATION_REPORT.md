@@ -8,8 +8,8 @@ Contact: www.anulum.li | protoscience@anulum.li
 
 # Software Verification & Validation Report
 
-**Version:** 0.5.10
-**Date:** 2026-03-28
+**Version:** 0.5.11
+**Date:** 2026-05-13
 **Author:** Miroslav Šotek / Arcane Sapience
 
 This document reports measured validation results for the SCPN Phase

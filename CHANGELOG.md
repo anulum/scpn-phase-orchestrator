@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.11] - 2026-05-13
+
+### Added
+
+- Added SPO Studio operator workflow surfaces for deployment commands,
+  readiness checks, connector planning, canvas review, topology patch export,
+  package materialisation, and beginner walkthroughs.
+- Added hierarchy, digital-twin, STL policy, morphogenetic-field, sheaf
+  obstruction, integrated-information, network-security, biology, and
+  domain-value alignment manifests and demonstrations.
+- Added value guards across active domainpacks and demo surfaces so generated
+  scenarios carry explicit domain, safety, and output-shape expectations.
+
+### Changed
+
+- Bumped release and development tooling pins for CodeQL, Ruff, maturin, mypy,
+  build, twine, and related publish locks.
+- Tightened public documentation hygiene by removing internal planning files
+  from the published documentation surface.
+
+### Fixed
+
+- Bounded reported coherence/order-parameter magnitudes to the physical
+  interval `[0, 1]`, eliminating floating-point roundoff leakage above unity.
+- Hardened runtime validation across Kuramoto, UPDE, monitor, topology,
+  FEP hierarchy, causal rollout, Petri, policy, supervisor, and domainpack
+  configuration surfaces.
+- Stabilised CI, benchmark, cargo-audit, pre-push, type-check, and publish
+  gates, including idempotent cargo-audit installation.
+- Raised the `urllib3` security floor and refreshed lockfiles for current
+  advisory compliance.
+
 ## [0.5.10] - 2026-05-06
 
 ### Fixed
@@ -1486,7 +1518,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.10...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.11...HEAD
+[0.5.11]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.5.0...v0.5.8
