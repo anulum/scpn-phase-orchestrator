@@ -3290,9 +3290,9 @@ traitlets==5.14.3 \
     #   nbclient
     #   nbconvert
     #   nbformat
-twine==5.1.1 \
-    --hash=sha256:215dbe7b4b94c2c50a7315c0275d2258399280fbb7d04182c7e55e24b5f93997 \
-    --hash=sha256:9aa0825139c02b3434d913545c7b847a21c835e11597f5255842d457da2322db
+twine==6.2.0 \
+    --hash=sha256:418ebf08ccda9a8caaebe414433b0ba5e25eb5e4a927667122fbe8f829f985d8 \
+    --hash=sha256:e5ed0d2fd70c9959770dce51c8f39c8945c574e18173a7b81802dab51b4b75cf
     # via scpn-phase-orchestrator (pyproject.toml)
 types-pyyaml==6.0.12.20260408 \
     --hash=sha256:92a73f2b8d7f39ef392a38131f76b970f8c66e4c42b3125ae872b7c93b556307 \

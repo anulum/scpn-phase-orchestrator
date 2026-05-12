@@ -325,14 +325,28 @@ jobs:
   cargo-audit:
     runs-on: ubuntu-latest
     permissions:
-      checks: write
       contents: read
+    defaults:
+      run:
+        working-directory: spo-kernel
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: spo-kernel
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-audit
+          key: cargo-audit-0.22.1-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-audit-0.22.1-
+      - name: Install cargo-audit
+        run: |
+          if ! cargo audit --version | grep -q '0\.22\.1'; then
+            cargo install cargo-audit --version 0.22.1 --locked --force
+          fi
+      - name: Audit Cargo.lock
+        run: cargo audit --file Cargo.lock
 
   rust-msrv:
     runs-on: ubuntu-latest

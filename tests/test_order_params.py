@@ -87,6 +87,25 @@ class TestOrderParameter:
         assert r == pytest.approx(1.0, abs=1e-12)
         assert psi == pytest.approx(0.7, abs=1e-12)
 
+    def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_order(phases: np.ndarray) -> tuple[float, float]:
+            return 1.0 + np.finfo(np.float64).eps, float(phases[0])
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: {"order_parameter": fake_order},
+        )
+
+        r, psi = op_mod.compute_order_parameter(np.array([0.25], dtype=np.float64))
+
+        assert r == 1.0
+        assert psi == 0.25
+
 
 # ---------------------------------------------------------------------
 # compute_plv
@@ -125,6 +144,24 @@ class TestPLV:
         with pytest.raises(ValueError, match="equal-length"):
             compute_plv(np.zeros(5), np.zeros(6))
 
+    def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
+            assert a.shape == b.shape
+            return 1.0 + np.finfo(np.float64).eps
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(op_mod, "_load_backend", lambda name: {"plv": fake_plv})
+
+        val = op_mod.compute_plv(
+            np.array([0.0, 0.1], dtype=np.float64),
+            np.array([0.0, 0.1], dtype=np.float64),
+        )
+
+        assert val == 1.0
+
 
 # ---------------------------------------------------------------------
 # compute_layer_coherence
@@ -153,6 +190,28 @@ class TestLayerCoherence:
         phases = np.array([0.7, 1.0, 2.0])
         r = compute_layer_coherence(phases, np.array([0], dtype=np.int64))
         assert r == pytest.approx(1.0, abs=1e-12)
+
+    def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_layer(phases: np.ndarray, indices: np.ndarray) -> float:
+            assert phases.size >= indices.size
+            return 1.0 + np.finfo(np.float64).eps
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: {"layer_coherence": fake_layer},
+        )
+
+        r = op_mod.compute_layer_coherence(
+            np.array([0.0, 0.1], dtype=np.float64),
+            np.array([0, 1], dtype=np.int64),
+        )
+
+        assert r == 1.0
 
 
 # ---------------------------------------------------------------------

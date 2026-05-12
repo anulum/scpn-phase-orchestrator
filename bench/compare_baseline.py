@@ -19,14 +19,45 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 REGRESSION_THRESHOLD_PCT = 20.0
+BENCHMARK_KEY_FIELDS = ("n_osc", "method", "backend")
+BENCHMARK_VALUE_FIELD = "us_per_step"
 
 
-def _extract_results(data):
+def _is_benchmark_entry(entry: Any) -> bool:
+    return (
+        isinstance(entry, dict)
+        and all(field in entry for field in BENCHMARK_KEY_FIELDS)
+        and BENCHMARK_VALUE_FIELD in entry
+    )
+
+
+def _extract_results(data: Any) -> list[dict[str, Any]]:
+    """Return comparable benchmark entries from supported JSON layouts.
+
+    Historical baselines are category maps such as ``{"upde": [...]}``,
+    whereas fresh benchmark runs use ``{"results": [...]}``.  Only records
+    with the full regression key are comparable; unrelated science-kernel
+    sections stay in the file but are not part of this guard.
+    """
     if isinstance(data, list):
-        return data
-    return data.get("results", data)
+        return [entry for entry in data if _is_benchmark_entry(entry)]
+    if not isinstance(data, dict):
+        return []
+    if isinstance(data.get("results"), list):
+        return [entry for entry in data["results"] if _is_benchmark_entry(entry)]
+
+    results: list[dict[str, Any]] = []
+    for value in data.values():
+        if isinstance(value, list):
+            results.extend(entry for entry in value if _is_benchmark_entry(entry))
+    return results
+
+
+def _benchmark_key(entry: dict[str, Any]) -> tuple[int, str, str]:
+    return (int(entry["n_osc"]), str(entry["method"]), str(entry["backend"]))
 
 
 def main() -> int:
@@ -41,18 +72,20 @@ def main() -> int:
 
     base_map: dict[tuple[int, str, str], float] = {}
     for entry in baseline:
-        key = (entry["n_osc"], entry["method"], entry["backend"])
-        base_map[key] = entry["us_per_step"]
+        key = _benchmark_key(entry)
+        base_map[key] = float(entry["us_per_step"])
 
     failures = []
+    comparisons = 0
     for entry in current:
-        key = (entry["n_osc"], entry["method"], entry["backend"])
+        key = _benchmark_key(entry)
         if key not in base_map:
             continue
         base_val = base_map[key]
-        cur_val = entry["us_per_step"]
+        cur_val = float(entry["us_per_step"])
         if base_val <= 0:
             continue
+        comparisons += 1
         pct = (cur_val - base_val) / base_val * 100.0
         status = "PASS" if pct <= REGRESSION_THRESHOLD_PCT else "FAIL"
         label = f"N={key[0]:4d} {key[1]:>5s} {key[2]:>6s}"
@@ -70,6 +103,10 @@ def main() -> int:
         for label, pct in failures:
             print(f"  {label}: {pct:+.1f}%")
         return 1
+
+    if comparisons == 0:
+        print("\nNo overlapping benchmark entries found.")
+        return 0
 
     print("\nAll benchmarks within regression threshold.")
     return 0
