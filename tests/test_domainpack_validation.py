@@ -1321,5 +1321,51 @@ def test_firefly_swarm_value_alignment_allows_policy_scale_visual_coupling():
     assert not decision.violations
 
 
+def test_queuewaves_value_alignment_blocks_excessive_micro_lag():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "queuewaves" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="alpha",
+        scope="layer_0",
+        value=1.2,
+        ttl_s=5.0,
+        justification="review candidate exceeds retry-lag prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-retry-lag-step"
+    assert decision.actions_to_apply[0].justification == (
+        "queuewaves value guard retry-lag hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_queuewaves_value_alignment_allows_policy_scale_retry_lag():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "queuewaves" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+    lag_actuator = next(act for act in spec.actuators if act.name == "lag_micro")
+
+    assert lag_actuator.limits[0] <= 0.3 <= lag_actuator.limits[1]
+    assert policy is not None
+    action = ControlAction(
+        knob="alpha",
+        scope="layer_0",
+        value=0.3,
+        ttl_s=5.0,
+        justification="bounded retry-lag review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.

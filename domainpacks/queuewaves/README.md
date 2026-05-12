@@ -31,6 +31,9 @@ the control objective -- inverse of classical Kuramoto.
 | lag_micro | alpha | Retry backoff (phase shift) |
 | damping | zeta | Circuit breaker / rate limiting |
 
+The binding spec includes a `value_alignment` template for review-time
+retry-lag, service-coupling, and damping-drive actuation guards.
+
 ## Imprint
 
 Service degradation: memory leaks, connection pool exhaustion, and GC
