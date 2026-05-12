@@ -22,6 +22,7 @@ a full Vietoris–Rips persistence (ripser) with O(N²) union-find.
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -117,8 +118,36 @@ def _dispatch(fn_name: str) -> object:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
+def _validate_phases(phases: object) -> FloatArray:
+    try:
+        array = np.asarray(phases, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases must be a one-dimensional float array") from exc
+    if array.ndim != 1:
+        raise ValueError(f"phases shape {array.shape} must be one-dimensional")
+    if not np.all(np.isfinite(array)):
+        raise ValueError("phases must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_max_radius(max_radius: float | None) -> float:
+    if max_radius is None:
+        return float(np.pi)
+    if isinstance(max_radius, bool) or not isinstance(max_radius, Real):
+        raise ValueError(
+            f"max_radius must be a finite non-negative real, got {max_radius!r}"
+        )
+    radius = float(max_radius)
+    if not np.isfinite(radius) or radius < 0.0:
+        raise ValueError(
+            f"max_radius must be finite and non-negative, got {max_radius!r}"
+        )
+    return radius
+
+
 def phase_distance_matrix(phases: FloatArray) -> FloatArray:
     """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``."""
+    phases = _validate_phases(phases)
     n = phases.size
     backend_fn = _dispatch("phase_distance_matrix")
     if backend_fn is not None:
@@ -139,10 +168,11 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
     ``~0`` means one dominant cluster (synchronised); ``~1`` means
     uniform lifetime distribution (incoherent).
     """
+    phases = _validate_phases(phases)
     n = phases.size
+    radius = _validate_max_radius(max_radius)
     if n < 2:
         return 0.0
-    radius = np.pi if max_radius is None else float(max_radius)
 
     backend_fn = _dispatch("compute_npe")
     if backend_fn is not None:

@@ -8,9 +8,10 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from typing import Any, get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.npe import compute_npe, phase_distance_matrix
 
@@ -46,6 +47,22 @@ class TestPhaseDistanceMatrix:
         phases = np.array([0.0, np.pi])
         D = phase_distance_matrix(phases)
         assert abs(D[0, 1] - np.pi) < 1e-10
+
+    @pytest.mark.parametrize(
+        ("phases", "match"),
+        [
+            (np.zeros((3, 1), dtype=np.float64), "phases shape"),
+            (np.array([0.0, np.nan], dtype=np.float64), "phases"),
+            (np.array([0.0, np.inf], dtype=np.float64), "phases"),
+        ],
+    )
+    def test_rejects_invalid_phase_buffers(
+        self,
+        phases: np.ndarray,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            phase_distance_matrix(phases)
 
 
 class TestNPE:
@@ -94,6 +111,32 @@ class TestNPE:
         npe_half = compute_npe(phases, max_radius=0.5)
         # Restricting radius may change result
         assert isinstance(npe_half, float)
+
+    @pytest.mark.parametrize(
+        ("phases", "match"),
+        [
+            (np.zeros((3, 1), dtype=np.float64), "phases shape"),
+            (np.array([0.0, np.nan], dtype=np.float64), "phases"),
+            (np.array([0.0, np.inf], dtype=np.float64), "phases"),
+        ],
+    )
+    def test_rejects_invalid_phase_buffers(
+        self,
+        phases: np.ndarray,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            compute_npe(phases)
+
+    @pytest.mark.parametrize("max_radius", [False, np.nan, np.inf, "1.0", -0.1])
+    def test_rejects_invalid_max_radius(self, max_radius: Any) -> None:
+        with pytest.raises(ValueError, match="max_radius"):
+            compute_npe(np.array([0.0, 1.0, 2.0]), max_radius=max_radius)
+
+    def test_accepts_array_like_phase_buffer(self) -> None:
+        npe = compute_npe([0.0, 1.0, 2.0, 3.0], max_radius=1.5)
+
+        assert 0.0 <= npe <= 1.0
 
 
 class TestNPEPipelineWiring:
