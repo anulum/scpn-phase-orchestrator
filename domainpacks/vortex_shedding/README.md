@@ -25,6 +25,11 @@ and wake-stabilisation objectives.
 - `strouhal_band`: expected shedding-frequency band.
 - `amplitude_ceiling`: hard lift-coefficient ceiling.
 
+## Actuation Guard
+
+The binding spec includes a `value_alignment` template for review-time wake
+coupling, blowing-rate, and splitter-angle actuation guards.
+
 ## Run
 
 ```bash

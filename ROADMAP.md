@@ -555,6 +555,8 @@ Speculative research watchlist:
   - Bio-stub domainpack prior template is in place for review-time
     inter-scale coupling, entrainment-drive, and reference-phase actuation
     guards.
+  - Vortex-shedding domainpack prior template is in place for review-time wake
+    coupling, blowing-rate, and splitter-angle actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

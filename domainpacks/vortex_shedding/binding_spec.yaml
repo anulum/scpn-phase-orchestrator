@@ -93,6 +93,34 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-wake-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.0
+      weight: 1.5
+    - name: limit-blowing-rate-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.6
+      weight: 2.0
+    - name: limit-splitter-angle-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 3.14
+      weight: 0.75
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 0.5
+      justification: vortex shedding value guard passive-flow hold
+
 amplitude:
   mu: 1.0
   epsilon: 0.3
