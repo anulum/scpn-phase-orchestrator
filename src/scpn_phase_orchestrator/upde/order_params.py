@@ -130,10 +130,17 @@ def _load_backend(name: str) -> dict[str, object]:
     return loaded
 
 
+def _unit_interval(value: float) -> float:
+    """Preserve the physical bound of coherence magnitudes."""
+    if not np.isfinite(value):
+        return value
+    return float(np.clip(value, 0.0, 1.0))
+
+
 def _python_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
     with np.errstate(invalid="ignore"):
         z = np.mean(np.exp(1j * phases))
-    return float(np.abs(z)), float(np.angle(z) % TWO_PI)
+    return _unit_interval(float(np.abs(z))), float(np.angle(z) % TWO_PI)
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
@@ -197,7 +204,7 @@ def compute_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
         fn = cast("Callable[[NDArray[np.float64]], tuple[float, float]]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         r, psi = fn(p)
-        return float(r), float(psi)
+        return _unit_interval(float(r)), float(psi)
 
     return _python_order_parameter(phases)
 
@@ -221,9 +228,9 @@ def compute_plv(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) ->
         )
         a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
         b = np.ascontiguousarray(phases_b.ravel(), dtype=np.float64)
-        return float(fn(a, b))
+        return _unit_interval(float(fn(a, b)))
 
-    return float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b)))))
+    return _unit_interval(float(np.abs(np.mean(np.exp(1j * (phases_a - phases_b))))))
 
 
 def compute_layer_coherence(
@@ -244,10 +251,10 @@ def compute_layer_coherence(
             "Callable[[NDArray[np.float64], NDArray[np.int64]], float]", backend_fn
         )
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-        return float(fn(p, indices))
+        return _unit_interval(float(fn(p, indices)))
 
     sub = phases[indices]
     if sub.size == 0:
         return 0.0
     z = np.mean(np.exp(1j * sub))
-    return float(np.abs(z))
+    return _unit_interval(float(np.abs(z)))
