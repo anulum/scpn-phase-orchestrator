@@ -1277,5 +1277,49 @@ def test_edge_consensus_value_alignment_allows_policy_scale_gateway_lag():
     assert not decision.violations
 
 
+def test_firefly_swarm_value_alignment_blocks_excessive_ambient_light():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "firefly_swarm" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="zeta",
+        scope="global",
+        value=1.3,
+        ttl_s=10.0,
+        justification="review candidate exceeds ambient-light prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-ambient-light-drive-step"
+    assert decision.actions_to_apply[0].justification == (
+        "firefly value guard dark-adaptation hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_firefly_swarm_value_alignment_allows_policy_scale_visual_coupling():
+    spec = load_binding_spec(DOMAINPACKS_DIR / "firefly_swarm" / "binding_spec.yaml")
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    action = ControlAction(
+        knob="K",
+        scope="global",
+        value=0.3,
+        ttl_s=8.0,
+        justification="bounded visual coupling review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.

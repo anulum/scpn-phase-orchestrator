@@ -538,6 +538,8 @@ Speculative research watchlist:
     review-time twin-coupling and signed line-lag correction guards.
   - Edge-consensus N-channel domainpack prior template is in place for
     review-time edge-coupling and signed gateway-lag correction guards.
+  - Firefly-swarm domainpack prior template is in place for review-time
+    visual-coupling, ambient-light-drive, and flash-target actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

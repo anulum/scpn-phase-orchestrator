@@ -2,6 +2,9 @@
 
 Maps firefly flash synchronisation to SPO's Kuramoto/UPDE framework.
 
+The binding spec includes a `value_alignment` template for review-time visual
+coupling, ambient-light drive, and flash-target actuation guards.
+
 ## Why Kuramoto Fits This Domain
 
 Firefly flash synchronisation is the canonical biological example of
