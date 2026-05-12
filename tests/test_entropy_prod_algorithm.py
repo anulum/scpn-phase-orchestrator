@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import functools
 import math
+from typing import Any
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -154,6 +156,104 @@ class TestEdgeCases:
             )
             == 0.0
         )
+
+
+class TestInputValidation:
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("phases", np.zeros((3, 1), dtype=np.float64), "phases shape"),
+            ("omegas", np.zeros((4,), dtype=np.float64), "omegas shape"),
+            ("knm", np.zeros((3, 2), dtype=np.float64), "knm shape"),
+        ],
+    )
+    def test_rejects_shape_mismatch(
+        self,
+        field: str,
+        bad_value: np.ndarray,
+        match: str,
+    ) -> None:
+        values = {
+            "phases": np.zeros(3, dtype=np.float64),
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm": np.zeros((3, 3), dtype=np.float64),
+        }
+        values[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            entropy_production_rate(
+                values["phases"],
+                values["omegas"],
+                values["knm"],
+                alpha=1.0,
+                dt=0.01,
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("phases", np.nan),
+            ("omegas", np.inf),
+            ("knm", np.nan),
+        ],
+    )
+    def test_rejects_non_finite_arrays(
+        self,
+        field: str,
+        bad_value: float,
+    ) -> None:
+        phases = np.zeros(3, dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        knm = np.zeros((3, 3), dtype=np.float64)
+        if field == "knm":
+            knm[0, 1] = bad_value
+        else:
+            locals()[field][0] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            entropy_production_rate(phases, omegas, knm, alpha=1.0, dt=0.01)
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("alpha", False),
+            ("alpha", np.nan),
+            ("alpha", np.inf),
+            ("alpha", "1.0"),
+            ("dt", False),
+            ("dt", np.nan),
+            ("dt", np.inf),
+            ("dt", "0.01"),
+        ],
+    )
+    def test_rejects_invalid_scalar_inputs(
+        self,
+        field: str,
+        bad_value: Any,
+    ) -> None:
+        kwargs = {"alpha": 1.0, "dt": 0.01}
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            entropy_production_rate(
+                np.zeros(3, dtype=np.float64),
+                np.ones(3, dtype=np.float64),
+                np.zeros((3, 3), dtype=np.float64),
+                alpha=kwargs["alpha"],
+                dt=kwargs["dt"],
+            )
+
+    def test_accepts_array_like_float_buffers(self) -> None:
+        rate = entropy_production_rate(
+            [0.0, 0.1],
+            [1.0, -1.0],
+            [[0.0, 0.2], [0.2, 0.0]],
+            alpha=1.0,
+            dt=0.01,
+        )
+
+        assert math.isfinite(rate)
+        assert rate >= 0.0
 
 
 class TestHypothesis:

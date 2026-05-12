@@ -19,6 +19,7 @@ Reference: Acebrón et al. 2005, Rev. Mod. Phys. 77:137–185.
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -117,12 +118,50 @@ def _dispatch() -> Callable[..., float] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    result = float(value)
+    if not np.isfinite(result):
+        raise ValueError(f"{name} must be finite, got {value!r}")
+    return result
+
+
+def _validate_vector(value: object, *, name: str) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a one-dimensional float array") from exc
+    if array.ndim != 1:
+        raise ValueError(f"{name} shape {array.shape} must be one-dimensional")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_matrix(
+    value: object,
+    *,
+    name: str,
+    expected_shape: tuple[int, int],
+) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a two-dimensional float array") from exc
+    if array.shape != expected_shape:
+        raise ValueError(f"{name} shape {array.shape} does not match {expected_shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
 def entropy_production_rate(
-    phases: FloatArray,
-    omegas: FloatArray,
-    knm: FloatArray,
-    alpha: float,
-    dt: float,
+    phases: object,
+    omegas: object,
+    knm: object,
+    alpha: object,
+    dt: object,
 ) -> float:
     """Thermodynamic dissipation rate ``Σ (dθ/dt)² · dt``.
 
@@ -141,12 +180,19 @@ def entropy_production_rate(
     Returns:
         Non-negative dissipation scalar.
     """
+    phases = _validate_vector(phases, name="phases")
     n = int(phases.size)
+    omegas = _validate_vector(omegas, name="omegas")
+    if omegas.shape != phases.shape:
+        raise ValueError(f"omegas shape {omegas.shape} does not match {phases.shape}")
+    knm = _validate_matrix(knm, name="knm", expected_shape=(n, n))
+    alpha = _validate_finite_float(alpha, name="alpha")
+    dt = _validate_finite_float(dt, name="dt")
     if n == 0 or dt <= 0.0:
         return 0.0
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(backend_fn(phases, omegas, knm, float(alpha), float(dt)))
+        return float(backend_fn(phases, omegas, knm, alpha, dt))
 
     diff = phases[np.newaxis, :] - phases[:, np.newaxis]
     coupling = np.sum(knm * np.sin(diff), axis=1)
