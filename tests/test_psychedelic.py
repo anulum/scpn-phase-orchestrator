@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.psychedelic import (
     entropy_from_phases,
@@ -54,6 +55,24 @@ def test_reduce_coupling_half():
     np.testing.assert_allclose(result, np.eye(4), atol=1e-15)
 
 
+@pytest.mark.parametrize(
+    ("knm", "match"),
+    [
+        (np.ones(4), "knm must be a finite 2-D matrix"),
+        (np.array([[0.0, np.nan], [1.0, 0.0]]), "knm"),
+    ],
+)
+def test_reduce_coupling_rejects_invalid_coupling_matrix(knm, match):
+    with pytest.raises(ValueError, match=match):
+        reduce_coupling(knm, 0.5)
+
+
+@pytest.mark.parametrize("reduction_factor", [-0.1, 1.1, np.nan, True])
+def test_reduce_coupling_rejects_invalid_reduction_factor(reduction_factor):
+    with pytest.raises((TypeError, ValueError), match="reduction_factor"):
+        reduce_coupling(np.eye(3), reduction_factor)
+
+
 def test_entropy_uniform_phases_high():
     """Uniformly distributed phases should have near-maximal entropy."""
     phases = np.linspace(0, 2 * np.pi, 360, endpoint=False)
@@ -71,6 +90,18 @@ def test_entropy_concentrated_phases_low():
 
 def test_entropy_empty_phases():
     assert entropy_from_phases(np.array([])) == 0.0
+
+
+@pytest.mark.parametrize("phases", [np.array([[0.0, 1.0]]), np.array([0.0, np.inf])])
+def test_entropy_rejects_non_vector_or_non_finite_phases(phases):
+    with pytest.raises(ValueError, match="phases"):
+        entropy_from_phases(phases)
+
+
+@pytest.mark.parametrize("n_bins", [0, 1, False, 18.5])
+def test_entropy_rejects_invalid_bin_counts(n_bins):
+    with pytest.raises((TypeError, ValueError), match="n_bins"):
+        entropy_from_phases(np.linspace(0.0, 1.0, 8), n_bins=n_bins)
 
 
 def test_simulate_trajectory_returns_correct_length():
@@ -124,6 +155,54 @@ def test_trajectory_entropy_increases_with_coupling_reduction():
     )
     # With strong coupling reduction, entropy should not decrease overall
     assert results[-1]["entropy"] >= results[0]["entropy"] - 0.5
+
+
+def test_simulate_trajectory_rejects_mismatched_runtime_shapes():
+    n = 4
+    engine = UPDEEngine(n, dt=0.01)
+    phases = np.linspace(0.0, 1.0, n)
+    omegas = np.ones(n - 1)
+    knm = np.eye(n)
+    alpha = np.zeros((n, n))
+    with pytest.raises(ValueError, match="omegas"):
+        simulate_psychedelic_trajectory(
+            engine,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            [0.0],
+            n_steps_per_level=1,
+        )
+
+
+def test_simulate_trajectory_rejects_invalid_schedule_and_step_count():
+    n = 4
+    engine = UPDEEngine(n, dt=0.01)
+    phases = np.linspace(0.0, 1.0, n)
+    omegas = np.ones(n)
+    knm = np.eye(n)
+    alpha = np.zeros((n, n))
+    with pytest.raises(ValueError, match="reduction_schedule"):
+        simulate_psychedelic_trajectory(
+            engine,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            [0.0, 1.2],
+            n_steps_per_level=1,
+        )
+    with pytest.raises((TypeError, ValueError), match="n_steps_per_level"):
+        simulate_psychedelic_trajectory(
+            engine,
+            phases,
+            omegas,
+            knm,
+            alpha,
+            [0.0],
+            n_steps_per_level=True,
+        )
 
 
 class TestPsychedelicPipelineWiring:

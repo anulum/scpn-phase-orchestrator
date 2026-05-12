@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -116,6 +117,71 @@ def _dispatch() -> Callable[..., float] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    try:
+        phases = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
+    if phases.ndim != 1:
+        raise ValueError(f"{name} must be a finite 1-D phase vector")
+    if not np.all(np.isfinite(phases)):
+        raise ValueError(f"{name} must contain only finite values")
+    return phases
+
+
+def _validate_coupling_matrix(
+    value: object, *, name: str, expected_n: int | None = None
+) -> FloatArray:
+    try:
+        matrix = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite 2-D matrix") from exc
+    if matrix.ndim != 2:
+        raise ValueError(f"{name} must be a finite 2-D matrix")
+    if matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"{name} must be square, got shape {matrix.shape}")
+    if expected_n is not None and matrix.shape != (expected_n, expected_n):
+        raise ValueError(
+            f"{name} must have shape ({expected_n}, {expected_n}), "
+            f"got {matrix.shape}"
+        )
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError(f"{name} must contain only finite values")
+    return matrix
+
+
+def _validate_unit_interval(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"{name} must be a finite real value in [0, 1]")
+    scalar = float(value)
+    if not np.isfinite(scalar) or scalar < 0.0 or scalar > 1.0:
+        raise ValueError(f"{name} must be a finite real value in [0, 1]")
+    return scalar
+
+
+def _validate_n_bins(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError("n_bins must be an integer greater than or equal to 2")
+    if value < 2:
+        raise ValueError("n_bins must be greater than or equal to 2")
+    return int(value)
+
+
+def _validate_step_count(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{name} must be a non-negative integer")
+    if value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return int(value)
+
+
+def _validate_reduction_schedule(values: list[float]) -> list[float]:
+    return [
+        _validate_unit_interval(value, name="reduction_schedule")
+        for value in values
+    ]
+
+
 def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
     """Scale coupling matrix by ``(1 − reduction_factor)``.
 
@@ -126,11 +192,12 @@ def reduce_coupling(knm: FloatArray, reduction_factor: float) -> FloatArray:
     Returns:
         Scaled copy. Zero when ``reduction_factor == 1``.
     """
-    k: FloatArray = np.asarray(knm, dtype=np.float64)
+    k = _validate_coupling_matrix(knm, name="knm")
+    factor = _validate_unit_interval(reduction_factor, name="reduction_factor")
     if _HAS_RUST_REDUCE:
         flat = np.ascontiguousarray(k.ravel())
-        return np.asarray(_rust_reduce(flat, reduction_factor)).reshape(k.shape)
-    return k * (1.0 - reduction_factor)
+        return np.asarray(_rust_reduce(flat, factor)).reshape(k.shape)
+    return k * (1.0 - factor)
 
 
 def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
@@ -143,17 +210,18 @@ def entropy_from_phases(phases: FloatArray, n_bins: int = 36) -> float:
     Carhart-Harris et al. 2014, Front. Hum. Neurosci. **8**:20
     ("The entropic brain").
     """
-    phase_values: FloatArray = np.asarray(phases, dtype=np.float64)
+    bin_count = _validate_n_bins(n_bins)
+    phase_values = _validate_phase_vector(phases, name="phases")
     if phase_values.size == 0:
         return 0.0
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(backend_fn(phase_values, int(n_bins)))
+        return float(backend_fn(phase_values, bin_count))
 
     wrapped = phase_values % (2.0 * np.pi)
     counts, _ = np.histogram(
         wrapped,
-        bins=int(n_bins),
+        bins=bin_count,
         range=(0, 2.0 * np.pi),
     )
     total = counts.sum()
@@ -192,19 +260,29 @@ def simulate_psychedelic_trajectory(
         List of dicts, one per level, with keys:
             reduction_factor, R, entropy, chimera_index, phases.
     """
-    p: FloatArray = np.asarray(phases, dtype=np.float64).copy()
+    p = _validate_phase_vector(phases, name="phases").copy()
+    n = int(p.size)
+    if n == 0:
+        raise ValueError("phases must contain at least one oscillator")
+    omega_values = _validate_phase_vector(omegas, name="omegas")
+    if omega_values.shape != (n,):
+        raise ValueError(f"omegas must have shape ({n},), got {omega_values.shape}")
+    k_base = _validate_coupling_matrix(knm, name="knm", expected_n=n)
+    alpha_values = _validate_coupling_matrix(alpha, name="alpha", expected_n=n)
+    schedule = _validate_reduction_schedule(reduction_schedule)
+    step_count = _validate_step_count(n_steps_per_level, name="n_steps_per_level")
     results: list[dict] = []
 
-    for rf in reduction_schedule:
-        k_reduced = reduce_coupling(knm, rf)
+    for rf in schedule:
+        k_reduced = reduce_coupling(k_base, rf)
         p = engine.run(
             p,
-            omegas,
+            omega_values,
             k_reduced,
             zeta=0.0,
             psi=0.0,
-            alpha=alpha,
-            n_steps=n_steps_per_level,
+            alpha=alpha_values,
+            n_steps=step_count,
         )
         r_val, _ = engine.compute_order_parameter(p)
         ent = entropy_from_phases(p)
