@@ -208,7 +208,14 @@ class CausalInterventionEngine:
         actions: list[ControlAction] | tuple[ControlAction, ...],
     ) -> CounterfactualRollout:
         """Compare no-action and intervened trajectories."""
-        self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
+        phases, omegas, knm, alpha, zeta, psi = self._validate_inputs(
+            phases,
+            omegas,
+            knm,
+            alpha,
+            zeta,
+            psi,
+        )
         action_tuple = tuple(actions)
         intervened = self.apply_actions(knm, alpha, zeta, psi, action_tuple)
 
@@ -303,7 +310,7 @@ class CausalInterventionEngine:
         alpha: FloatArray,
         zeta: float,
         psi: float,
-    ) -> None:
+    ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray, float, float]:
         n = self._n
         checks = (
             ("phases", phases, (n,)),
@@ -311,13 +318,22 @@ class CausalInterventionEngine:
             ("knm", knm, (n, n)),
             ("alpha", alpha, (n, n)),
         )
+        validated: list[FloatArray] = []
         for name, arr, expected in checks:
-            if arr.shape != expected:
-                raise ValueError(f"{name}.shape={arr.shape}, expected {expected}")
-            if not np.all(np.isfinite(arr)):
+            data = _coerce_float_array(name, arr)
+            if data.shape != expected:
+                raise ValueError(f"{name}.shape={data.shape}, expected {expected}")
+            if not np.all(np.isfinite(data)):
                 raise ValueError(f"{name} contains NaN/Inf")
-        if not (np.isfinite(zeta) and np.isfinite(psi)):
-            raise ValueError("zeta and psi must be finite")
+            validated.append(data)
+        return (
+            validated[0],
+            validated[1],
+            validated[2],
+            validated[3],
+            _require_finite_real(zeta, name="zeta"),
+            _require_finite_real(psi, name="psi"),
+        )
 
 
 def learn_causal_graph(
@@ -453,6 +469,22 @@ def _require_positive_real(value: object, *, message: str) -> float:
     if not np.isfinite(coerced) or coerced <= 0.0:
         raise ValueError(message)
     return coerced
+
+
+def _require_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite")
+    return coerced
+
+
+def _coerce_float_array(name: str, value: object) -> FloatArray:
+    try:
+        return np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
 
 
 def _lagged_linear_effect(

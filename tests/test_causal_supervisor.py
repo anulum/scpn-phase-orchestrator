@@ -278,8 +278,47 @@ def test_input_shape_validation() -> None:
     with pytest.raises(ValueError, match="knm contains NaN/Inf"):
         engine.evaluate_actions(phases, omegas, invalid_knm, alpha, 0.0, 0.0, [])
 
-    with pytest.raises(ValueError, match="zeta and psi must be finite"):
+    with pytest.raises(ValueError, match="zeta must be finite"):
         engine.evaluate_actions(phases, omegas, knm, alpha, np.inf, 0.0, [])
+
+
+def test_evaluate_actions_accepts_array_like_inputs_after_validation() -> None:
+    phases, omegas, knm, alpha = _system(4)
+    engine = CausalInterventionEngine(4, dt=0.01, horizon=2)
+
+    rollout = engine.evaluate_actions(
+        phases.tolist(),
+        omegas.tolist(),
+        knm.tolist(),
+        alpha.tolist(),
+        zeta=0.0,
+        psi=0.0,
+        actions=[],
+    )
+
+    assert len(rollout.baseline_R) == 3
+    assert len(rollout.intervention_R) == 3
+
+
+@pytest.mark.parametrize(
+    ("zeta", "psi", "message"),
+    [
+        (True, 0.0, "zeta must be finite"),
+        (0.0, True, "psi must be finite"),
+        ("0.0", 0.0, "zeta must be finite"),
+        (0.0, "0.0", "psi must be finite"),
+    ],
+)
+def test_evaluate_actions_rejects_non_real_drive_scalars(
+    zeta: object,
+    psi: object,
+    message: str,
+) -> None:
+    phases, omegas, knm, alpha = _system()
+    engine = CausalInterventionEngine(6, dt=0.01)
+
+    with pytest.raises(ValueError, match=message):
+        engine.evaluate_actions(phases, omegas, knm, alpha, zeta, psi, [])
 
 
 @pytest.mark.parametrize(
