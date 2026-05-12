@@ -63,6 +63,29 @@ class TestTransferEntropy:
         finally:
             te_mod.ACTIVE_BACKEND = previous
 
+    @pytest.mark.parametrize("n_bins", [0, 1, True, 4.5])
+    def test_phase_te_rejects_invalid_bin_counts(self, n_bins):
+        with pytest.raises((TypeError, ValueError), match="n_bins"):
+            phase_transfer_entropy(
+                np.linspace(0.0, 1.0, 8),
+                np.linspace(0.1, 1.1, 8),
+                n_bins=n_bins,
+            )
+
+    @pytest.mark.parametrize(
+        ("source", "target", "match"),
+        [
+            ([[0.0, 1.0, 2.0]], np.array([0.0, 1.0, 2.0]), "source must be 1-D"),
+            (np.array([0.0, np.nan, 2.0]), np.array([0.0, 1.0, 2.0]), "source"),
+            (np.array([0.0, 1.0, 2.0]), np.array([0.0, np.inf, 2.0]), "target"),
+        ],
+    )
+    def test_phase_te_rejects_non_vector_or_non_finite_inputs(
+        self, source, target, match
+    ):
+        with pytest.raises(ValueError, match=match):
+            phase_transfer_entropy(source, target)
+
     def test_matrix_shape(self):
         rng = np.random.default_rng(42)
         data = rng.uniform(0, 2 * np.pi, (4, 100))
@@ -72,6 +95,23 @@ class TestTransferEntropy:
     def test_matrix_rejects_non_oscillator_time_series_shape(self):
         with pytest.raises(ValueError, match="phase_series must be 2-D"):
             transfer_entropy_matrix(np.linspace(0.0, 1.0, 8))
+
+    def test_matrix_rejects_non_finite_phase_series(self):
+        series = np.array([[0.0, 1.0, np.nan], [0.1, 1.1, 2.1]])
+        with pytest.raises(ValueError, match="phase_series"):
+            transfer_entropy_matrix(series)
+
+    @pytest.mark.parametrize("shape", [(0, 8), (3, 0)])
+    def test_matrix_rejects_empty_axes(self, shape):
+        with pytest.raises(ValueError, match="phase_series"):
+            transfer_entropy_matrix(np.empty(shape))
+
+    @pytest.mark.parametrize("n_bins", [0, 1, False, 8.25])
+    def test_matrix_rejects_invalid_bin_counts(self, n_bins):
+        rng = np.random.default_rng(42)
+        series = rng.uniform(0, 2 * np.pi, (3, 32))
+        with pytest.raises((TypeError, ValueError), match="n_bins"):
+            transfer_entropy_matrix(series, n_bins=n_bins)
 
     def test_matrix_diagonal_zero(self):
         rng = np.random.default_rng(42)
