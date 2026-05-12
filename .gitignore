@@ -50,6 +50,7 @@ Thumbs.db
 
 # Internal business docs — never commit
 docs/internal/
+docs/superpowers/
 experiments/.eeg_cache/
 
 # Coordination — local-only session logs and handovers

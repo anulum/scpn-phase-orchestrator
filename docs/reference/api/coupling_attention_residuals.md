@@ -203,9 +203,8 @@ against random ``N ∈ [4, 24]`` each session.
 
 ## 4. Physics Validation
 
-The Phase-3 research brief
-(`docs/internal/research_attention_residuals_2026-04-06.md §5`)
-lists five criteria. All five are under test in this repo:
+The internal Phase-3 research brief lists five criteria. All five are under
+test in this repo:
 
 ### 4.1 Criterion 1 — ``R`` within 5 % of baseline
 
@@ -481,7 +480,7 @@ value that meets the objective.
 | `tests/test_attention_residuals_backends.py` | 14 per-backend parity tests. |
 | `tests/test_attention_residuals_stability.py` | 3 Lyapunov / long-run stability tests (slow). |
 | `benchmarks/attnres_modulation_benchmark.py` | Multi-backend wall-clock harness. |
-| `docs/internal/research_attention_residuals_2026-04-06.md` | Phase-3 research brief (gitignored). |
+| Internal Phase-3 research brief | Validation criteria source. |
 
 ---
 
@@ -590,8 +589,7 @@ bridge if it reproduces.
   scaling used in ``default_projections``.
 * Kuramoto 1984, *Chemical Oscillations, Waves, and Turbulence* —
   baseline dynamics the modulation reshapes.
-* `docs/internal/research_attention_residuals_2026-04-06.md` —
-  Phase-3 research brief and §5 validation criteria (gitignored).
+* Internal Phase-3 research brief — validation criteria source.
 * `feedback_no_simplistic_models.md`,
   `feedback_module_standard_attnres.md`,
   `feedback_multi_language_accel.md` — governing rules.

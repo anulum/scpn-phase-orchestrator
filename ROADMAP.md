@@ -105,7 +105,7 @@
   - Track this item as verified, rather than active backlog unless future untyped array annotations are reintroduced.
 - Test-hardening maintenance track:
   - Broad superficial-assertion cleanup is registered as long-running quality debt, not an active feature-track blocker.
-  - Use `docs/internal/superficial_assertion_audit.md` as the candidate ledger.
+  - Use the local internal audit ledger as the candidate source.
   - Remediate weak shape/type/existence-only assertions opportunistically when touching the related module or feature.
   - Prefer behavioural, invariant, error-semantic, parity, or pipeline-effect checks that would fail under a plausible wrong implementation.
   - Do not spend multi-session sweeps on this track unless explicitly prioritised over feature/module roadmap work.
