@@ -104,6 +104,34 @@ actuators:
     scope: layer_1
     limits: [0.0, 1.57]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-speed-setpoint-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 1.0
+      weight: 2.0
+    - name: limit-blade-damper-step
+      knob: alpha
+      scope: layer_1
+      min_value: 0.0
+      max_value: 0.6
+      weight: 2.0
+    - name: limit-bearing-stiffness-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 2.0
+      weight: 1.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: rotating machinery value guard coast-down hold
+
 # Bearing wear: ISO 15243 spalling progression modulates mechanical coupling.
 imprint_model:
   decay_rate: 0.002

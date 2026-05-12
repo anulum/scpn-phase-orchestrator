@@ -34,6 +34,9 @@ specific bearing frequencies = inner/outer race defect.
 | bearing_stiffness | K | Support stiffness (pedestal adjustment) |
 | damper_viscosity | alpha | Squeeze-film damper viscosity |
 
+The binding spec includes a `value_alignment` template for review-time speed
+setpoint, blade-damper, and bearing-stiffness actuation guards.
+
 ## Imprint
 
 Bearing wear: ISO 15243 spalling progression accumulates and modulates

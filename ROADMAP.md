@@ -542,6 +542,8 @@ Speculative research watchlist:
     visual-coupling, ambient-light-drive, and flash-target actuation guards.
   - QueueWaves domainpack prior template is in place for review-time
     retry-lag, service-coupling, and damping-drive actuation guards.
+  - Rotating-machinery domainpack prior template is in place for review-time
+    speed-setpoint, blade-damper, and bearing-stiffness actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.
