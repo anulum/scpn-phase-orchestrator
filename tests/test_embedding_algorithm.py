@@ -88,9 +88,10 @@ class TestMutualInformation:
         assert mutual_information(sig, lag=sig.size, n_bins=8) == 0.0
 
     @_python
-    def test_empty_negative_lag_has_zero_histogram_mass(self):
+    def test_negative_lag_is_rejected(self):
         sig = np.array([], dtype=np.float64)
-        assert mutual_information(sig, lag=-1, n_bins=4) == 0.0
+        with pytest.raises(ValueError, match="lag"):
+            mutual_information(sig, lag=-1, n_bins=4)
 
 
 class TestNearestNeighborDistances:

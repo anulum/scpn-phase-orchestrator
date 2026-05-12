@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -15,6 +17,8 @@ from scpn_phase_orchestrator.monitor.embedding import (
     EmbeddingResult,
     auto_embed,
     delay_embed,
+    mutual_information,
+    nearest_neighbor_distances,
     optimal_delay,
     optimal_dimension,
 )
@@ -47,6 +51,82 @@ class TestDelayEmbed:
         assert emb.shape[1] == 3
         assert emb.shape[0] == 200 - 2 * 5
 
+    @pytest.mark.parametrize(
+        "signal",
+        [
+            np.array([0.0, np.nan], dtype=np.float64),
+            np.array([0.0, np.inf], dtype=np.float64),
+            ["not-a-signal"],
+        ],
+    )
+    def test_rejects_invalid_signal(self, signal: Any) -> None:
+        with pytest.raises(ValueError, match="signal"):
+            delay_embed(signal, delay=1, dimension=1)
+
+    @pytest.mark.parametrize("delay", [False, 0, -1, 1.5, "1"])
+    def test_rejects_invalid_delay(self, delay: Any) -> None:
+        with pytest.raises(ValueError, match="delay"):
+            delay_embed(np.arange(10, dtype=np.float64), delay=delay, dimension=2)
+
+    @pytest.mark.parametrize("dimension", [False, 0, -1, 1.5, "2"])
+    def test_rejects_invalid_dimension(self, dimension: Any) -> None:
+        with pytest.raises(ValueError, match="dimension"):
+            delay_embed(np.arange(10, dtype=np.float64), delay=1, dimension=dimension)
+
+    def test_accepts_array_like_signal(self) -> None:
+        emb = delay_embed([0.0, 1.0, 2.0, 3.0], delay=1, dimension=2)
+
+        np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
+
+
+class TestMutualInformationContracts:
+    @pytest.mark.parametrize(
+        "signal",
+        [
+            np.array([0.0, np.nan], dtype=np.float64),
+            np.array([0.0, np.inf], dtype=np.float64),
+            ["not-a-signal"],
+        ],
+    )
+    def test_rejects_invalid_signal(self, signal: Any) -> None:
+        with pytest.raises(ValueError, match="signal"):
+            mutual_information(signal, lag=1, n_bins=4)
+
+    @pytest.mark.parametrize("lag", [False, -1, 1.5, "1"])
+    def test_rejects_invalid_lag(self, lag: Any) -> None:
+        with pytest.raises(ValueError, match="lag"):
+            mutual_information(np.arange(10, dtype=np.float64), lag=lag, n_bins=4)
+
+    @pytest.mark.parametrize("n_bins", [False, 0, 1, 1.5, "4"])
+    def test_rejects_invalid_n_bins(self, n_bins: Any) -> None:
+        with pytest.raises(ValueError, match="n_bins"):
+            mutual_information(np.arange(10, dtype=np.float64), lag=1, n_bins=n_bins)
+
+    def test_accepts_array_like_signal(self) -> None:
+        mi = mutual_information([0.0, 1.0, 0.0, 1.0], lag=1, n_bins=2)
+
+        assert mi >= 0.0
+
+
+class TestNearestNeighborContracts:
+    @pytest.mark.parametrize(
+        "embedded",
+        [
+            np.array([[0.0], [np.nan]], dtype=np.float64),
+            np.array([[0.0], [np.inf]], dtype=np.float64),
+            [["not-a-point"]],
+        ],
+    )
+    def test_rejects_invalid_embedded_points(self, embedded: Any) -> None:
+        with pytest.raises(ValueError, match="embedded"):
+            nearest_neighbor_distances(embedded)
+
+    def test_accepts_array_like_embedded_points(self) -> None:
+        dist, idx = nearest_neighbor_distances([[0.0], [1.0], [3.0]])
+
+        np.testing.assert_allclose(dist, [1.0, 1.0, 2.0])
+        np.testing.assert_array_equal(idx, [1, 0, 1])
+
 
 class TestOptimalDelay:
     def test_sine_wave(self):
@@ -70,6 +150,16 @@ class TestOptimalDelay:
         tau = optimal_delay(s, max_lag=10)
         assert tau >= 1
 
+    @pytest.mark.parametrize("max_lag", [False, 0, -1, 1.5, "10"])
+    def test_rejects_invalid_max_lag(self, max_lag: Any) -> None:
+        with pytest.raises(ValueError, match="max_lag"):
+            optimal_delay(np.arange(20, dtype=np.float64), max_lag=max_lag)
+
+    @pytest.mark.parametrize("n_bins", [False, 0, 1, 1.5, "8"])
+    def test_rejects_invalid_n_bins(self, n_bins: Any) -> None:
+        with pytest.raises(ValueError, match="n_bins"):
+            optimal_delay(np.arange(20, dtype=np.float64), max_lag=5, n_bins=n_bins)
+
 
 class TestOptimalDimension:
     def test_sine_2d(self):
@@ -84,6 +174,28 @@ class TestOptimalDimension:
         s = np.ones(500)
         m = optimal_dimension(s, delay=1, max_dim=5)
         assert m == 1
+
+    @pytest.mark.parametrize("delay", [False, 0, -1, 1.5, "1"])
+    def test_rejects_invalid_delay(self, delay: Any) -> None:
+        with pytest.raises(ValueError, match="delay"):
+            optimal_dimension(np.arange(20, dtype=np.float64), delay=delay)
+
+    @pytest.mark.parametrize("max_dim", [False, 0, -1, 1.5, "5"])
+    def test_rejects_invalid_max_dim(self, max_dim: Any) -> None:
+        with pytest.raises(ValueError, match="max_dim"):
+            optimal_dimension(np.arange(20, dtype=np.float64), delay=1, max_dim=max_dim)
+
+    @pytest.mark.parametrize(("name", "value"), [("rtol", -0.1), ("atol", np.nan)])
+    def test_rejects_invalid_tolerances(self, name: str, value: Any) -> None:
+        kwargs = {"rtol": 15.0, "atol": 2.0}
+        kwargs[name] = value
+        with pytest.raises(ValueError, match=name):
+            optimal_dimension(
+                np.arange(20, dtype=np.float64),
+                delay=1,
+                rtol=kwargs["rtol"],
+                atol=kwargs["atol"],
+            )
 
 
 class TestAutoEmbed:

@@ -39,6 +39,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -184,14 +185,60 @@ class EmbeddingResult:
     T_effective: int
 
 
+def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
+    try:
+        array = np.asarray(signal, dtype=np.float64).ravel()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"{name} must be a finite one-dimensional float array"
+        ) from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_embedded(embedded: object) -> FloatArray:
+    try:
+        array = np.atleast_2d(np.asarray(embedded, dtype=np.float64))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "embedded must be a finite two-dimensional float array"
+        ) from exc
+    if array.ndim != 2:
+        raise ValueError(f"embedded must be two-dimensional, got shape {array.shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError("embedded must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    result = int(value)
+    if result < minimum:
+        raise ValueError(f"{name} must be >= {minimum}, got {result}")
+    return result
+
+
+def _validate_non_negative_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    result = float(value)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative, got {value!r}")
+    return result
+
+
 def delay_embed(
-    signal: FloatArray,
-    delay: int,
-    dimension: int,
+    signal: object,
+    delay: object,
+    dimension: object,
 ) -> FloatArray:
     """Time-delay embedding: ``v(t) = [x(t), x(t+τ), x(t+2τ), …]``."""
-    s = np.asarray(signal, dtype=np.float64).ravel()
-    t_eff = int(s.size) - (int(dimension) - 1) * int(delay)
+    s = _validate_signal(signal)
+    delay = _validate_int_at_least(delay, name="delay", minimum=1)
+    dimension = _validate_int_at_least(dimension, name="dimension", minimum=1)
+    t_eff = int(s.size) - (dimension - 1) * delay
     if t_eff <= 0:
         msg = (
             f"Signal too short (T={s.size}) for delay={delay}, "
@@ -203,34 +250,36 @@ def delay_embed(
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
         return np.asarray(
-            fn(s, int(delay), int(dimension)),
+            fn(s, delay, dimension),
             dtype=np.float64,
-        ).reshape(t_eff, int(dimension))
+        ).reshape(t_eff, dimension)
 
-    indices = np.arange(int(dimension)) * int(delay)
+    indices = np.arange(dimension) * delay
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
     return cast("FloatArray", s[rows])
 
 
 def mutual_information(
-    signal: FloatArray,
-    lag: int,
-    n_bins: int = 32,
+    signal: object,
+    lag: object,
+    n_bins: object = 32,
 ) -> float:
     """Fraser-Swinney 1986 average mutual information at ``lag``."""
-    s = np.asarray(signal, dtype=np.float64).ravel()
-    if s.size - int(lag) <= 0:
+    s = _validate_signal(signal)
+    lag = _validate_int_at_least(lag, name="lag", minimum=0)
+    n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
+    if s.size - lag <= 0:
         return 0.0
 
     backend_fn = _dispatch("mi")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
-        return float(fn(s, int(lag), int(n_bins)))
+        return float(fn(s, lag, n_bins))
 
-    t_total = s.size - int(lag)
+    t_total = s.size - lag
     x = s[:t_total]
-    y = s[int(lag) : int(lag) + t_total]
-    hist_xy, _, _ = np.histogram2d(x, y, bins=int(n_bins))
+    y = s[lag : lag + t_total]
+    hist_xy, _, _ = np.histogram2d(x, y, bins=n_bins)
     hist_x = hist_xy.sum(axis=1)
     hist_y = hist_xy.sum(axis=0)
     total = hist_xy.sum()
@@ -240,18 +289,18 @@ def mutual_information(
     p_x = hist_x / total
     p_y = hist_y / total
     mi = 0.0
-    for i in range(int(n_bins)):
-        for j in range(int(n_bins)):
+    for i in range(n_bins):
+        for j in range(n_bins):
             if p_xy[i, j] > 0 and p_x[i] > 0 and p_y[j] > 0:
                 mi += p_xy[i, j] * np.log(p_xy[i, j] / (p_x[i] * p_y[j]))
     return float(mi)
 
 
 def nearest_neighbor_distances(
-    embedded: FloatArray,
+    embedded: object,
 ) -> tuple[FloatArray, IntArray]:
     """Brute-force ``k = 1`` kNN on the rows of ``embedded``."""
-    e = np.atleast_2d(embedded)
+    e = _validate_embedded(embedded)
     t, m = int(e.shape[0]), int(e.shape[1])
     if t == 0:
         return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.int64)
@@ -281,21 +330,23 @@ def nearest_neighbor_distances(
 
 
 def optimal_delay(
-    signal: FloatArray,
-    max_lag: int = 100,
-    n_bins: int = 32,
+    signal: object,
+    max_lag: object = 100,
+    n_bins: object = 32,
 ) -> int:
     """First local minimum of :func:`mutual_information` vs ``lag``."""
-    s = np.asarray(signal, dtype=np.float64).ravel()
+    s = _validate_signal(signal)
+    max_lag = _validate_int_at_least(max_lag, name="max_lag", minimum=1)
+    n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
 
     if ACTIVE_BACKEND == "rust":
         fn = cast(
             "Callable[[FloatArray, int, int], int]",
             _LOADERS["rust"]()["optimal_delay"],
         )
-        return int(fn(s, int(max_lag), int(n_bins)))
+        return int(fn(s, max_lag, n_bins))
 
-    max_lag = min(int(max_lag), s.size // 2)
+    max_lag = min(max_lag, s.size // 2)
     mi_values = np.array([mutual_information(s, lag, n_bins) for lag in range(max_lag)])
     for i in range(1, len(mi_values) - 1):
         if mi_values[i] < mi_values[i - 1] and mi_values[i] < mi_values[i + 1]:
@@ -304,14 +355,18 @@ def optimal_delay(
 
 
 def optimal_dimension(
-    signal: FloatArray,
-    delay: int,
-    max_dim: int = 10,
-    rtol: float = 15.0,
-    atol: float = 2.0,
+    signal: object,
+    delay: object,
+    max_dim: object = 10,
+    rtol: object = 15.0,
+    atol: object = 2.0,
 ) -> int:
     """Kennel-Brown-Abarbanel 1992 FNN to select embedding dimension."""
-    s = np.asarray(signal, dtype=np.float64).ravel()
+    s = _validate_signal(signal)
+    delay = _validate_int_at_least(delay, name="delay", minimum=1)
+    max_dim = _validate_int_at_least(max_dim, name="max_dim", minimum=1)
+    rtol = _validate_non_negative_real(rtol, name="rtol")
+    atol = _validate_non_negative_real(atol, name="atol")
     sigma = float(np.std(s))
     if sigma == 0:
         return 1
@@ -322,14 +377,14 @@ def optimal_dimension(
             _LOADERS["rust"]()["optimal_dimension"],
         )
         return int(
-            fn(s, int(delay), int(max_dim), float(rtol), float(atol)),
+            fn(s, delay, max_dim, rtol, atol),
         )
 
-    for m in range(1, int(max_dim) + 1):
-        t_next = s.size - m * int(delay)
+    for m in range(1, max_dim + 1):
+        t_next = s.size - m * delay
         if t_next <= 1:
             return m
-        emb_m = delay_embed(s, int(delay), m)
+        emb_m = delay_embed(s, delay, m)
         t_m = emb_m.shape[0]
         nn_dist, nn_idx = nearest_neighbor_distances(emb_m)
 
@@ -340,8 +395,8 @@ def optimal_dimension(
             d = nn_dist[i]
             if d == 0 or not np.isfinite(d):
                 continue
-            i_next = i + m * int(delay)
-            j_next = j + m * int(delay)
+            i_next = i + m * delay
+            j_next = j + m * delay
             if i_next >= s.size or j_next >= s.size:
                 continue
             n_valid += 1
@@ -355,13 +410,13 @@ def optimal_dimension(
         fnn_frac = n_false / n_valid if n_valid > 0 else 0.0
         if fnn_frac < 0.01:
             return m
-    return int(max_dim)
+    return max_dim
 
 
 def auto_embed(
-    signal: FloatArray,
-    max_lag: int = 100,
-    max_dim: int = 10,
+    signal: object,
+    max_lag: object = 100,
+    max_dim: object = 10,
 ) -> EmbeddingResult:
     """``optimal_delay`` ∘ ``optimal_dimension`` ∘ ``delay_embed``."""
     tau = optimal_delay(signal, max_lag)
