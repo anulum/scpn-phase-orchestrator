@@ -559,6 +559,8 @@ Speculative research watchlist:
     coupling, blowing-rate, and splitter-angle actuation guards.
   - Musical-acoustics domainpack prior template is in place for review-time
     harmonic-coupling, tempo-drive, and tuning-offset actuation guards.
+  - Gene-oscillator domainpack prior template is in place for review-time
+    quorum-coupling and inducer-dose actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

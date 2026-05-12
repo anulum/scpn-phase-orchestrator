@@ -26,6 +26,11 @@ channels.
 - `expression_ceiling`: soft protein-concentration ceiling.
 - `quorum_threshold`: soft AHL concentration floor.
 
+## Actuation Guard
+
+The binding spec includes a `value_alignment` template for review-time quorum
+coupling and inducer-dose actuation guards.
+
 ## Run
 
 ```bash
