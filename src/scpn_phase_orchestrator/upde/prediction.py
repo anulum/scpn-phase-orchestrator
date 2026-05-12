@@ -18,6 +18,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -33,6 +35,48 @@ __all__ = [
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _validate_positive_int(name: str, value: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or int(value) < 1:
+        raise ValueError(f"{name} must be an integer >= 1")
+    return int(value)
+
+
+def _validate_nonnegative_float(name: str, value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite non-negative real")
+    out = float(value)
+    if not isfinite(out) or out < 0.0:
+        raise ValueError(f"{name} must be a finite non-negative real")
+    return out
+
+
+def _validate_positive_float(name: str, value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite positive real")
+    out = float(value)
+    if not isfinite(out) or out <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real")
+    return out
+
+
+def _validate_vector(name: str, value: FloatArray, n_oscillators: int) -> FloatArray:
+    array = np.asarray(value, dtype=np.float64)
+    if array.shape != (n_oscillators,):
+        raise ValueError(f"{name} must have shape ({n_oscillators},)")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return array
+
+
+def _validate_positive_vector(
+    name: str, value: FloatArray, n_oscillators: int
+) -> FloatArray:
+    array = _validate_vector(name, value, n_oscillators)
+    if not np.all(array > 0.0):
+        raise ValueError(f"{name} must contain only positive values")
+    return array
 
 
 @dataclass
@@ -66,10 +110,10 @@ class PredictionModel:
         learning_rate: float = 0.01,
         error_gain: float = 0.1,
     ):
-        self._n = n_oscillators
-        self._lr = learning_rate
-        self._error_gain = error_gain
-        self._W = np.zeros((n_oscillators, n_oscillators), dtype=np.float64)
+        self._n = _validate_positive_int("n_oscillators", n_oscillators)
+        self._lr = _validate_nonnegative_float("learning_rate", learning_rate)
+        self._error_gain = _validate_nonnegative_float("error_gain", error_gain)
+        self._W = np.zeros((self._n, self._n), dtype=np.float64)
         self._prev_phases: FloatArray | None = None
         self._prev_predicted: FloatArray | None = None
 
@@ -85,6 +129,9 @@ class PredictionModel:
 
     def predict(self, phases: FloatArray, omegas: FloatArray, dt: float) -> FloatArray:
         """Predict phases at next timestep."""
+        phases = _validate_vector("phases", phases, self._n)
+        omegas = _validate_vector("omegas", omegas, self._n)
+        dt = _validate_positive_float("dt", dt)
         diff = phases[np.newaxis, :] - phases[:, np.newaxis]
         coupling_pred = np.sum(self._W * np.sin(diff), axis=1)
         predicted: FloatArray = (phases + dt * (omegas + coupling_pred)) % TWO_PI
@@ -97,6 +144,9 @@ class PredictionModel:
 
         Call once per timestep AFTER the solver step.
         """
+        phases = _validate_vector("phases", phases, self._n)
+        omegas = _validate_vector("omegas", omegas, self._n)
+        dt = _validate_positive_float("dt", dt)
         if self._prev_phases is None or self._prev_predicted is None:
             # First call — no prediction to compare
             predicted = self.predict(phases, omegas, dt)
@@ -140,6 +190,9 @@ class PredictionModel:
         Add this to the UPDE derivative to implement predictive coding:
           dθ/dt = ω + K·sin(Δθ) + gain·ε
         """
+        phases = _validate_vector("phases", phases, self._n)
+        _validate_vector("omegas", omegas, self._n)
+        _validate_positive_float("dt", dt)
         if self._prev_predicted is None:
             return np.zeros(self._n)
         error = phases - self._prev_predicted
@@ -197,13 +250,15 @@ class VariationalPredictor:
         prior_precision: float = 1.0,
         learning_rate: float = 0.01,
     ):
-        self._n = n_oscillators
-        self._lr = learning_rate
+        self._n = _validate_positive_int("n_oscillators", n_oscillators)
+        self._lr = _validate_nonnegative_float("learning_rate", learning_rate)
+        self._prior_precision = _validate_positive_float(
+            "prior_precision", prior_precision
+        )
         # Precision matrix (diagonal): initialized to prior_precision.
         # Under the FEP-Kuramoto correspondence, precision_ij ~ K_ij.
-        self._precision = np.full(n_oscillators, prior_precision, dtype=np.float64)
-        self._prior_precision = prior_precision
-        self._mu = np.zeros(n_oscillators, dtype=np.float64)
+        self._precision = np.full(self._n, self._prior_precision, dtype=np.float64)
+        self._mu = np.zeros(self._n, dtype=np.float64)
         self._omegas: FloatArray | None = None
         self._error_history: list[FloatArray] = []
         # Exponential moving average decay for precision updates
@@ -228,6 +283,9 @@ class VariationalPredictor:
         Second term: log-precision (complexity under Gaussian q).
         The sign convention follows Friston (2010): F is minimized.
         """
+        predicted = _validate_vector("predicted", predicted, self._n)
+        observed = _validate_vector("observed", observed, self._n)
+        precision = _validate_positive_vector("precision", precision, self._n)
         error = observed - predicted
         error = (error + np.pi) % TWO_PI - np.pi
         accuracy = float(np.sum(error**2 * precision / 2.0))
@@ -246,6 +304,9 @@ class VariationalPredictor:
         3. Update mu (gradient descent on F).
         4. Update precision from error statistics.
         """
+        phases = _validate_vector("phases", phases, self._n)
+        omegas = _validate_vector("omegas", omegas, self._n)
+        dt = _validate_positive_float("dt", dt)
         self._omegas = omegas
 
         # Forward model: f(mu) = mu + dt * omega (simplest generative model)

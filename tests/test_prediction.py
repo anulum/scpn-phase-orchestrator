@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.upde.prediction import (
     PredictionModel,
@@ -19,6 +20,48 @@ from scpn_phase_orchestrator.upde.prediction import (
 
 
 class TestPredictionModel:
+    @pytest.mark.parametrize("n_oscillators", [0, -1, 1.5, True, "4"])
+    def test_rejects_invalid_oscillator_count(self, n_oscillators):
+        with pytest.raises(ValueError, match="n_oscillators"):
+            PredictionModel(n_oscillators)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("learning_rate", [-0.1, np.nan, np.inf, True, "0.1"])
+    def test_rejects_invalid_learning_rate(self, learning_rate):
+        with pytest.raises(ValueError, match="learning_rate"):
+            PredictionModel(4, learning_rate=learning_rate)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("error_gain", [-0.1, np.nan, np.inf, True, "0.1"])
+    def test_rejects_invalid_error_gain(self, error_gain):
+        with pytest.raises(ValueError, match="error_gain"):
+            PredictionModel(4, error_gain=error_gain)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        ("phases", "omegas", "dt", "message"),
+        [
+            (np.zeros(3), np.ones(4), 0.01, "phases"),
+            (np.zeros(4), np.ones(3), 0.01, "omegas"),
+            (np.array([0.0, np.nan, 1.0, 2.0]), np.ones(4), 0.01, "phases"),
+            (np.zeros(4), np.array([1.0, np.inf, 1.0, 1.0]), 0.01, "omegas"),
+            (np.zeros(4), np.ones(4), 0.0, "dt"),
+            (np.zeros(4), np.ones(4), -0.01, "dt"),
+            (np.zeros(4), np.ones(4), np.inf, "dt"),
+        ],
+    )
+    def test_rejects_invalid_prediction_inputs(self, phases, omegas, dt, message):
+        model = PredictionModel(4)
+        with pytest.raises(ValueError, match=message):
+            model.predict(phases, omegas, dt)
+
+    def test_update_rejects_invalid_runtime_inputs(self):
+        model = PredictionModel(4)
+        with pytest.raises(ValueError, match="phases"):
+            model.update(np.zeros((2, 2)), np.ones(4), dt=0.01)
+
+    def test_error_coupling_rejects_invalid_runtime_inputs(self):
+        model = PredictionModel(4)
+        with pytest.raises(ValueError, match="dt"):
+            model.error_coupling(np.zeros(4), np.ones(4), dt=np.nan)
+
     def test_first_call_zero_error(self):
         model = PredictionModel(4)
         phases = np.array([0.0, 1.0, 2.0, 3.0])
@@ -124,6 +167,46 @@ class TestPredictionModel:
 
 
 class TestVariationalPredictor:
+    @pytest.mark.parametrize("n_oscillators", [0, -1, 1.5, False, "4"])
+    def test_rejects_invalid_oscillator_count(self, n_oscillators):
+        with pytest.raises(ValueError, match="n_oscillators"):
+            VariationalPredictor(n_oscillators)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "prior_precision", [0.0, -1.0, np.nan, np.inf, True, "1.0"]
+    )
+    def test_rejects_invalid_prior_precision(self, prior_precision):
+        with pytest.raises(ValueError, match="prior_precision"):
+            VariationalPredictor(4, prior_precision=prior_precision)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("learning_rate", [-0.1, np.nan, np.inf, True, "0.1"])
+    def test_rejects_invalid_learning_rate(self, learning_rate):
+        with pytest.raises(ValueError, match="learning_rate"):
+            VariationalPredictor(4, learning_rate=learning_rate)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        ("predicted", "observed", "precision", "message"),
+        [
+            (np.zeros(3), np.zeros(4), np.ones(4), "predicted"),
+            (np.zeros(4), np.zeros(3), np.ones(4), "observed"),
+            (np.zeros(4), np.zeros(4), np.ones(3), "precision"),
+            (np.array([0.0, np.nan, 0.0, 0.0]), np.zeros(4), np.ones(4), "predicted"),
+            (np.zeros(4), np.array([0.0, np.inf, 0.0, 0.0]), np.ones(4), "observed"),
+            (np.zeros(4), np.zeros(4), np.array([1.0, 0.0, 1.0, 1.0]), "precision"),
+        ],
+    )
+    def test_free_energy_rejects_invalid_inputs(
+        self, predicted, observed, precision, message
+    ):
+        vp = VariationalPredictor(4)
+        with pytest.raises(ValueError, match=message):
+            vp.free_energy(predicted, observed, precision)
+
+    def test_update_rejects_invalid_runtime_inputs(self):
+        vp = VariationalPredictor(4)
+        with pytest.raises(ValueError, match="dt"):
+            vp.update(np.zeros(4), np.ones(4), dt=0.0)
+
     def test_variational_state_fields(self):
         vp = VariationalPredictor(4)
         state = vp.update(np.zeros(4), np.ones(4), dt=0.01)
