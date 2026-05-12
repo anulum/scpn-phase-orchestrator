@@ -1254,7 +1254,18 @@ class TestPolicyRules:
             logic="OR",
         )
         state = _make_upde([0.05])
-        engine = PolicyEngine([])
+        engine = PolicyEngine(
+            [
+                PolicyRule(
+                    name="condition_probe",
+                    regimes=["NOMINAL"],
+                    condition=cc,
+                    actions=[
+                        PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0),
+                    ],
+                )
+            ]
+        )
         assert engine._check_condition(cc, state, [], []) is True
 
     def test_compound_and_condition_fails(self):
@@ -1276,7 +1287,18 @@ class TestPolicyRules:
             logic="AND",
         )
         state = _make_upde([0.5])
-        engine = PolicyEngine([])
+        engine = PolicyEngine(
+            [
+                PolicyRule(
+                    name="condition_probe",
+                    regimes=["NOMINAL"],
+                    condition=cc,
+                    actions=[
+                        PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0),
+                    ],
+                )
+            ]
+        )
         assert engine._check_condition(cc, state, [], []) is False
 
     def test_cooldown_prevents_repeated_fire(self):
