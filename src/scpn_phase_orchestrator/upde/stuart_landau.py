@@ -31,6 +31,17 @@ _Params = tuple[
     FloatArray,
     float,
 ]
+_ValidatedStep = tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    float,
+    float,
+    FloatArray,
+    float,
+]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -46,6 +57,43 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     if not np.isfinite(coerced) or coerced <= 0.0:
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     return coerced
+
+
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    return coerced
+
+
+def _validate_phase_drive_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"zeta and psi must be finite; {name} got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"zeta and psi must be finite; {name} got {value!r}")
+    return coerced
+
+
+def _validate_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+    finite_message: str,
+) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if arr.shape != shape:
+        expected = ", ".join(str(part) for part in shape)
+        raise ValueError(f"{name}.shape={arr.shape}, expected ({expected},)")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(finite_message)
+    return np.ascontiguousarray(arr, dtype=np.float64)
 
 
 class StuartLandauEngine:
@@ -148,19 +196,29 @@ class StuartLandauEngine:
         epsilon: float = 1.0,
     ) -> FloatArray:
         """Advance (θ, r) by one timestep. Returns new state (2N,)."""
-        self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
+        (
+            state,
+            omegas,
+            mu,
+            knm,
+            knm_r,
+            zeta,
+            psi,
+            alpha,
+            epsilon,
+        ) = self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
         with self._lock:
             if self._use_rust:  # pragma: no cover
                 result = np.asarray(
                     self._rust.step(
-                        np.ascontiguousarray(state),
-                        np.ascontiguousarray(omegas),
-                        np.ascontiguousarray(mu),
-                        np.ascontiguousarray(knm.ravel()),
-                        np.ascontiguousarray(knm_r.ravel()),
+                        state,
+                        omegas,
+                        mu,
+                        knm.ravel(),
+                        knm_r.ravel(),
                         zeta,
                         psi,
-                        np.ascontiguousarray(alpha.ravel()),
+                        alpha.ravel(),
                         epsilon,
                     )
                 )
@@ -194,36 +252,48 @@ class StuartLandauEngine:
         psi: float,
         alpha: FloatArray,
         epsilon: float = 1.0,
-    ) -> None:
+    ) -> _ValidatedStep:
         n = self._n
-        if state.shape != (2 * n,):
-            raise ValueError(f"state.shape={state.shape}, expected ({2 * n},)")
-        if omegas.shape != (n,):
-            raise ValueError(f"omegas.shape={omegas.shape}, expected ({n},)")
-        if mu.shape != (n,):
-            raise ValueError(f"mu.shape={mu.shape}, expected ({n},)")
-        if knm.shape != (n, n):
-            raise ValueError(f"knm.shape={knm.shape}, expected ({n}, {n})")
-        if knm_r.shape != (n, n):
-            raise ValueError(f"knm_r.shape={knm_r.shape}, expected ({n}, {n})")
-        if alpha.shape != (n, n):
-            raise ValueError(f"alpha.shape={alpha.shape}, expected ({n}, {n})")
-        if not (np.isfinite(zeta) and np.isfinite(psi)):
-            raise ValueError("zeta and psi must be finite")
-        if not np.all(np.isfinite(state)):
-            raise ValueError("state contains NaN or Inf")
-        if not np.all(np.isfinite(omegas)):
-            raise ValueError("omegas contain NaN/Inf")
-        if not np.all(np.isfinite(mu)):
-            raise ValueError("mu contains NaN/Inf")
-        if not np.all(np.isfinite(knm)):
-            raise ValueError("knm contains NaN/Inf")
-        if not np.all(np.isfinite(knm_r)):
-            raise ValueError("knm_r contains NaN/Inf")
-        if not np.all(np.isfinite(alpha)):
-            raise ValueError("alpha contains NaN/Inf")
-        if not np.isfinite(epsilon):
-            raise ValueError("epsilon must be finite")
+        state = _validate_state_array(
+            state,
+            name="state",
+            shape=(2 * n,),
+            finite_message="state contains NaN or Inf",
+        )
+        omegas = _validate_state_array(
+            omegas,
+            name="omegas",
+            shape=(n,),
+            finite_message="omegas contain NaN/Inf",
+        )
+        mu = _validate_state_array(
+            mu,
+            name="mu",
+            shape=(n,),
+            finite_message="mu contains NaN/Inf",
+        )
+        knm = _validate_state_array(
+            knm,
+            name="knm",
+            shape=(n, n),
+            finite_message="knm contains NaN/Inf",
+        )
+        knm_r = _validate_state_array(
+            knm_r,
+            name="knm_r",
+            shape=(n, n),
+            finite_message="knm_r contains NaN/Inf",
+        )
+        alpha = _validate_state_array(
+            alpha,
+            name="alpha",
+            shape=(n, n),
+            finite_message="alpha contains NaN/Inf",
+        )
+        zeta = _validate_phase_drive_float(zeta, name="zeta")
+        psi = _validate_phase_drive_float(psi, name="psi")
+        epsilon = _validate_finite_float(epsilon, name="epsilon")
+        return state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon
 
     def _derivative(self, state: FloatArray, p: _Params) -> FloatArray:
         omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon = p

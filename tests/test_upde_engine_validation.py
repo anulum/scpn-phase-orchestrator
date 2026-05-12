@@ -112,6 +112,63 @@ class TestStuartLandauEngineValidation:
         assert pytest.approx(1e-6) == engine._atol
         assert pytest.approx(1e-3) == engine._rtol
 
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("zeta", False),
+            ("zeta", np.nan),
+            ("zeta", np.inf),
+            ("zeta", "1.0"),
+            ("psi", False),
+            ("psi", np.nan),
+            ("psi", np.inf),
+            ("psi", "0.0"),
+            ("epsilon", False),
+            ("epsilon", np.nan),
+            ("epsilon", np.inf),
+            ("epsilon", "1.0"),
+        ],
+    )
+    def test_step_rejects_invalid_scalar_inputs(
+        self,
+        field: str,
+        bad_value: Any,
+    ) -> None:
+        engine = StuartLandauEngine(n_oscillators=4, dt=0.01)
+        kwargs = {"zeta": 0.0, "psi": 0.0, "epsilon": 1.0}
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            engine.step(
+                np.zeros(8, dtype=np.float64),
+                np.ones(4, dtype=np.float64),
+                np.ones(4, dtype=np.float64),
+                np.zeros((4, 4), dtype=np.float64),
+                np.zeros((4, 4), dtype=np.float64),
+                kwargs["zeta"],
+                kwargs["psi"],
+                np.zeros((4, 4), dtype=np.float64),
+                epsilon=kwargs["epsilon"],
+            )
+
+    def test_step_accepts_array_like_float_buffers(self) -> None:
+        engine = StuartLandauEngine(n_oscillators=2, dt=0.01)
+
+        out = engine.step(
+            [0.0, 0.1, 1.0, 1.0],
+            [1.0, 1.0],
+            [0.5, 0.5],
+            [[0.0, 0.1], [0.1, 0.0]],
+            [[0.0, 0.0], [0.0, 0.0]],
+            0.0,
+            0.0,
+            [[0.0, 0.0], [0.0, 0.0]],
+            epsilon=1.0,
+        )
+
+        assert out.shape == (4,)
+        assert np.all(np.isfinite(out))
+
 
 class TestSheafUPDEEngineValidation:
     @pytest.mark.parametrize("n_oscillators", [False, 0, -1, 1.5, "4"])
