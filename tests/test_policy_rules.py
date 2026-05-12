@@ -86,6 +86,19 @@ def test_fires_when_condition_met():
     assert actions[0].knob == "K"
 
 
+@pytest.mark.parametrize("rules", [None, [], [object()]])
+def test_policy_engine_rejects_invalid_rules(rules):
+    with pytest.raises(ValueError, match="rules"):
+        PolicyEngine(rules)
+
+
+@pytest.mark.parametrize("dt", [True, -0.1, float("nan"), float("inf"), "1.0"])
+def test_policy_engine_rejects_invalid_clock_increment(dt):
+    engine = PolicyEngine([_rule()])
+    with pytest.raises(ValueError, match="dt"):
+        engine.advance_clock(dt)
+
+
 def test_no_fire_when_condition_unmet():
     engine = PolicyEngine([_rule(op=">", threshold=0.9)])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.5]), [0], [])

@@ -11,6 +11,7 @@ from __future__ import annotations
 import operator
 from dataclasses import dataclass
 from math import isfinite
+from numbers import Real
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -140,13 +141,22 @@ class PolicyEngine:
     """Evaluate domainpack policy rules against current state."""
 
     def __init__(self, rules: list[PolicyRule]) -> None:
-        self._rules = rules
+        if not isinstance(rules, list) or not rules:
+            raise ValueError("rules must be a non-empty list of PolicyRule objects")
+        if not all(isinstance(rule, PolicyRule) for rule in rules):
+            raise ValueError("rules must contain only PolicyRule objects")
+        self._rules = list(rules)
         self._fire_counts: dict[str, int] = {}
         self._last_fire_t: dict[str, float] = {}
         self._clock: float = 0.0
 
     def advance_clock(self, dt: float) -> None:
         """Advance the internal clock used for cooldown tracking."""
+        if isinstance(dt, bool) or not isinstance(dt, Real):
+            raise ValueError(f"dt must be a finite non-negative real, got {dt!r}")
+        dt = float(dt)
+        if not isfinite(dt) or dt < 0.0:
+            raise ValueError(f"dt must be a finite non-negative real, got {dt!r}")
         self._clock += dt
 
     def evaluate(
