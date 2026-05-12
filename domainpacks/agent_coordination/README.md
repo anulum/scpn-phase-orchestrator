@@ -12,6 +12,9 @@ Models multi-agent task coordination as a coupled oscillator system.
 Agent liveness, task cadence, topic alignment, operator intent, and
 derived conflict risk become phase layers that the supervisor can monitor.
 
+The binding spec includes a `value_alignment` template for review-time task
+redistribution and deadline-drive actuation guards.
+
 ## Layers
 
 | Layer | Oscillators | Channel | Purpose |
