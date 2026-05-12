@@ -20,6 +20,7 @@ from __future__ import annotations
 import functools
 import sys
 import types
+from typing import Any
 
 import numpy as np
 import pytest
@@ -176,6 +177,72 @@ class TestExtractPhase:
         assert phase.shape == (200, 4)
         assert np.all(phase >= 0.0)
         assert np.all(phase < 2 * np.pi + 1e-12)
+
+
+class TestInputValidation:
+    @pytest.mark.parametrize(
+        ("series", "match"),
+        [
+            (np.array([], dtype=np.float64), "series"),
+            (np.zeros((4, 2, 1), dtype=np.float64), "series shape"),
+            (np.array([0.0, np.nan, 1.0], dtype=np.float64), "series"),
+        ],
+    )
+    def test_extract_phase_rejects_invalid_series(
+        self,
+        series: np.ndarray,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            extract_phase(series)
+
+    @pytest.mark.parametrize(
+        ("phases", "match"),
+        [
+            (np.zeros((4, 0), dtype=np.float64), "phases"),
+            (np.array([[0.0, np.nan]], dtype=np.float64), "phases"),
+        ],
+    )
+    def test_order_parameter_rejects_invalid_phases(
+        self,
+        phases: np.ndarray,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            market_order_parameter(phases)
+
+    @pytest.mark.parametrize("window", [False, 0, -1, 1.5, "3"])
+    def test_plv_rejects_invalid_window(self, window: Any) -> None:
+        with pytest.raises(ValueError, match="window"):
+            market_plv(np.zeros((4, 2), dtype=np.float64), window=window)
+
+    @pytest.mark.parametrize(
+        ("R", "sync_threshold", "desync_threshold", "match"),
+        [
+            (np.array([], dtype=np.float64), 0.7, 0.3, "R"),
+            (np.array([0.1, np.nan], dtype=np.float64), 0.7, 0.3, "R"),
+            (np.array([0.1, 0.5], dtype=np.float64), np.nan, 0.3, "sync_threshold"),
+            (np.array([0.1, 0.5], dtype=np.float64), 0.2, 0.3, "sync_threshold"),
+        ],
+    )
+    def test_detect_regimes_rejects_invalid_contract(
+        self,
+        R: np.ndarray,
+        sync_threshold: Any,
+        desync_threshold: Any,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            detect_regimes(
+                R,
+                sync_threshold=sync_threshold,
+                desync_threshold=desync_threshold,
+            )
+
+    @pytest.mark.parametrize("lookback", [False, 0, -1, 1.5, "10"])
+    def test_sync_warning_rejects_invalid_lookback(self, lookback: Any) -> None:
+        with pytest.raises(ValueError, match="lookback"):
+            sync_warning(np.array([0.1, 0.8], dtype=np.float64), lookback=lookback)
 
 
 class TestHypothesis:
