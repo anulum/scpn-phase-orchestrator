@@ -195,6 +195,43 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    return coerced
+
+
+def _validate_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> NDArray[np.float64]:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if arr.shape != shape:
+        raise ValueError(f"{name} shape {arr.shape} does not match {shape}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _validate_optional_state_array(
+    value: object | None,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> NDArray[np.float64]:
+    if value is None:
+        return np.empty(0, dtype=np.float64)
+    return _validate_state_array(value, name=name, shape=shape).ravel()
+
+
 def _validate_hyperedge(edge: Hyperedge, *, n_oscillators: int) -> Hyperedge:
     nodes = tuple(edge.nodes)
     if len(nodes) < 2:
@@ -380,22 +417,26 @@ class HypergraphEngine:
         """Integrate ``n_steps`` Euler steps through the fastest
         available backend; return final phases."""
         n_steps = _validate_positive_int(n_steps, name="n_steps")
+        phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
+        omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
+        knm_flat = _validate_optional_state_array(
+            pairwise_knm,
+            name="pairwise_knm",
+            shape=(self._n, self._n),
+        )
+        alpha_flat = _validate_optional_state_array(
+            alpha,
+            name="alpha",
+            shape=(self._n, self._n),
+        )
+        zeta = _validate_finite_float(zeta, name="zeta")
+        psi = _validate_finite_float(psi, name="psi")
         en, eo, es = self._encode_edges()
-        knm_flat = (
-            np.ascontiguousarray(pairwise_knm, dtype=np.float64).ravel()
-            if pairwise_knm is not None
-            else np.empty(0, dtype=np.float64)
-        )
-        alpha_flat = (
-            np.ascontiguousarray(alpha, dtype=np.float64).ravel()
-            if alpha is not None
-            else np.empty(0, dtype=np.float64)
-        )
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(
-                np.ascontiguousarray(phases, dtype=np.float64),
-                np.ascontiguousarray(omegas, dtype=np.float64),
+                phases64,
+                omegas64,
                 self._n,
                 en,
                 eo,
@@ -408,8 +449,8 @@ class HypergraphEngine:
                 int(n_steps),
             )
         return _python_run(
-            np.ascontiguousarray(phases, dtype=np.float64),
-            np.ascontiguousarray(omegas, dtype=np.float64),
+            phases64,
+            omegas64,
             self._n,
             en,
             eo,
