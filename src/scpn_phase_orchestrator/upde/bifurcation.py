@@ -37,6 +37,7 @@ the N_points × dispatch-call path.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -86,6 +87,71 @@ class BifurcationDiagram:
     @property
     def R_values(self) -> FloatArray:
         return np.array([p.R for p in self.points])
+
+
+def _validate_integral(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
+        raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    return int(value)
+
+
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    return coerced
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    coerced = _validate_finite_float(value, name=name)
+    if coerced <= 0.0:
+        raise ValueError(f"{name} must be positive, got {value!r}")
+    return coerced
+
+
+def _validate_omegas(value: object) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("omegas must be a finite one-dimensional array") from exc
+    if arr.ndim != 1:
+        raise ValueError(f"omegas shape {arr.shape} must be one-dimensional")
+    if arr.size < 1:
+        raise ValueError("omegas must contain at least one oscillator")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("omegas must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float matrix") from exc
+    if arr.shape != (n, n):
+        raise ValueError(f"{name} shape {arr.shape} does not match ({n}, {n})")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _default_coupling(n: int) -> FloatArray:
+    knm_template = np.ones((n, n), dtype=np.float64) / n
+    np.fill_diagonal(knm_template, 0.0)
+    return knm_template
+
+
+def _validate_k_range(value: object) -> tuple[float, float]:
+    if not isinstance(value, tuple) or len(value) != 2:
+        raise ValueError("K_range must contain exactly two finite values")
+    start, stop = value
+    start = _validate_finite_float(start, name="K_range")
+    stop = _validate_finite_float(stop, name="K_range")
+    if stop <= start:
+        raise ValueError("K_range stop must be greater than start")
+    return start, stop
 
 
 def _steady_state_R_dispatch(
@@ -141,15 +207,25 @@ def trace_sync_transition(
     5-backend chain inherited from
     :func:`basin_stability.steady_state_r`.
     """
-    n = len(omegas)
-    rng = np.random.default_rng(seed)
+    omegas = _validate_omegas(omegas)
+    n = int(omegas.shape[0])
+    K_range = _validate_k_range(K_range)
+    n_points = _validate_integral(n_points, name="n_points", minimum=2)
+    dt = _validate_positive_float(dt, name="dt")
+    n_transient = _validate_integral(n_transient, name="n_transient", minimum=0)
+    n_measure = _validate_integral(n_measure, name="n_measure", minimum=0)
+    seed = _validate_integral(seed, name="seed", minimum=0)
 
     if knm_template is None:
-        knm_template = np.ones((n, n)) / n
-        np.fill_diagonal(knm_template, 0.0)
+        knm_template = _default_coupling(n)
+    else:
+        knm_template = _validate_matrix(knm_template, name="knm_template", n=n)
     if alpha is None:
-        alpha = np.zeros((n, n))
+        alpha = np.zeros((n, n), dtype=np.float64)
+    else:
+        alpha = _validate_matrix(alpha, name="alpha", n=n)
 
+    rng = np.random.default_rng(seed)
     phases_init = rng.uniform(0, 2 * np.pi, n)
     diagram = BifurcationDiagram()
 
@@ -236,14 +312,21 @@ def find_critical_coupling(
     ``K_c`` is needed. Returns ``nan`` if no transition is found
     in ``[0, 20]``.
     """
-    n = len(omegas)
-    rng = np.random.default_rng(seed)
+    omegas = _validate_omegas(omegas)
+    n = int(omegas.shape[0])
+    dt = _validate_positive_float(dt, name="dt")
+    n_transient = _validate_integral(n_transient, name="n_transient", minimum=0)
+    n_measure = _validate_integral(n_measure, name="n_measure", minimum=0)
+    tol = _validate_positive_float(tol, name="tol")
+    seed = _validate_integral(seed, name="seed", minimum=0)
 
     if knm_template is None:
-        knm_template = np.ones((n, n)) / n
-        np.fill_diagonal(knm_template, 0.0)
+        knm_template = _default_coupling(n)
+    else:
+        knm_template = _validate_matrix(knm_template, name="knm_template", n=n)
 
     alpha = np.zeros((n, n))
+    rng = np.random.default_rng(seed)
     phases_init = rng.uniform(0, 2 * np.pi, n)
 
     if _HAS_COMPOSITE_RUST:

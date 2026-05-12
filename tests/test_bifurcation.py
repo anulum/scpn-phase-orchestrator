@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.upde.bifurcation import (
     BifurcationDiagram,
@@ -178,6 +181,102 @@ class TestTraceSyncTransitionCoverage:
         assert [point.stable for point in diag.points] == [True, True, True, True]
         np.testing.assert_allclose(diag.R_values, [0.02, 0.07, 0.13, 0.40])
         assert diag.K_critical == 1.5
+
+
+class TestInputValidation:
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("omegas", np.zeros((3, 1), dtype=np.float64), "omegas shape"),
+            ("omegas", np.array([0.0, np.nan], dtype=np.float64), "omegas"),
+            ("knm_template", np.zeros((3, 2), dtype=np.float64), "knm_template"),
+            ("alpha", np.zeros((2, 3), dtype=np.float64), "alpha"),
+        ],
+    )
+    def test_trace_rejects_invalid_arrays(
+        self,
+        field: str,
+        bad_value: np.ndarray,
+        match: str,
+    ) -> None:
+        kwargs = {
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm_template": np.zeros((3, 3), dtype=np.float64),
+            "alpha": np.zeros((3, 3), dtype=np.float64),
+            "n_points": 2,
+            "n_transient": 1,
+            "n_measure": 1,
+        }
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            trace_sync_transition(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("K_range", (1.0, 1.0)),
+            ("K_range", (0.0, np.nan)),
+            ("n_points", False),
+            ("n_points", 1),
+            ("n_points", 2.5),
+            ("dt", 0.0),
+            ("dt", np.inf),
+            ("n_transient", -1),
+            ("n_measure", -1),
+            ("seed", False),
+            ("seed", 1.5),
+        ],
+    )
+    def test_trace_rejects_invalid_runtime_parameters(
+        self,
+        field: str,
+        bad_value: Any,
+    ) -> None:
+        kwargs = {
+            "K_range": (0.0, 1.0),
+            "n_points": 2,
+            "dt": 0.01,
+            "n_transient": 1,
+            "n_measure": 1,
+            "seed": 1,
+        }
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            trace_sync_transition(np.ones(3, dtype=np.float64), **kwargs)
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("omegas", np.zeros((3, 1), dtype=np.float64)),
+            ("knm_template", np.zeros((3, 2), dtype=np.float64)),
+            ("dt", 0.0),
+            ("n_transient", -1),
+            ("n_measure", -1),
+            ("tol", 0.0),
+            ("seed", False),
+        ],
+    )
+    def test_find_rejects_invalid_contract(
+        self,
+        field: str,
+        bad_value: Any,
+    ) -> None:
+        kwargs = {
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm_template": np.zeros((3, 3), dtype=np.float64),
+            "dt": 0.01,
+            "n_transient": 1,
+            "n_measure": 1,
+            "tol": 0.1,
+            "seed": 1,
+        }
+        kwargs[field] = bad_value
+        omegas = kwargs.pop("omegas")
+
+        with pytest.raises(ValueError, match=field):
+            find_critical_coupling(omegas, **kwargs)
 
 
 class TestFindCriticalCoupling:
