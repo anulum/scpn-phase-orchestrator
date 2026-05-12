@@ -212,6 +212,32 @@ def _validate_nonzero_finite_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    return coerced
+
+
+def _validate_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if arr.shape != shape:
+        raise ValueError(f"{name} shape {arr.shape} does not match {shape}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
 def _coupling_deriv(
     theta: FloatArray,
     knm: FloatArray,
@@ -347,16 +373,27 @@ class SplittingEngine:
         alpha: FloatArray,
         n_steps: int,
     ) -> FloatArray:
-        knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
-        alpha_flat = np.ascontiguousarray(alpha, dtype=np.float64).ravel()
+        phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
+        omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
+        knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
+        alpha64 = _validate_state_array(
+            alpha,
+            name="alpha",
+            shape=(self._n, self._n),
+        )
+        zeta = _validate_finite_float(zeta, name="zeta")
+        psi = _validate_finite_float(psi, name="psi")
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
+        knm_flat = knm64.ravel()
+        alpha_flat = alpha64.ravel()
         backend_fn = _dispatch() if self._dt > 0.0 else None
         # Non-Rust backends also validate dt > 0 internally, so
         # negative dt (symplectic-reversibility checks) falls back
         # to the Python reference.
         if backend_fn is not None:
             return backend_fn(
-                np.ascontiguousarray(phases, dtype=np.float64),
-                np.ascontiguousarray(omegas, dtype=np.float64),
+                phases64,
+                omegas64,
                 knm_flat,
                 alpha_flat,
                 self._n,
@@ -366,8 +403,8 @@ class SplittingEngine:
                 int(n_steps),
             )
         return _python_run(
-            np.ascontiguousarray(phases, dtype=np.float64),
-            np.ascontiguousarray(omegas, dtype=np.float64),
+            phases64,
+            omegas64,
             knm_flat,
             alpha_flat,
             self._n,
