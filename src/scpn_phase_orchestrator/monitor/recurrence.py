@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -162,6 +163,35 @@ def _dispatch(fn_name: str) -> object | None:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
+def _validate_trajectory(value: object, *, name: str) -> FloatArray:
+    try:
+        trajectory = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite 1D or 2D float array") from exc
+    if trajectory.ndim == 1:
+        trajectory = trajectory[:, np.newaxis]
+    elif trajectory.ndim != 2:
+        raise ValueError(f"{name} must be 1D or 2D, got shape {trajectory.shape}")
+    if not np.all(np.isfinite(trajectory)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(trajectory, dtype=np.float64)
+
+
+def _validate_epsilon(epsilon: object) -> float:
+    if isinstance(epsilon, bool) or not isinstance(epsilon, Real):
+        raise ValueError(f"epsilon must be a finite non-negative real, got {epsilon!r}")
+    result = float(epsilon)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"epsilon must be finite and non-negative, got {epsilon!r}")
+    return result
+
+
+def _validate_metric(metric: object) -> bool:
+    if metric not in {"euclidean", "angular"}:
+        raise ValueError("metric must be 'euclidean' or 'angular'")
+    return metric == "angular"
+
+
 @dataclass
 class RQAResult:
     """Standard RQA measures from Marwan et al. 2007."""
@@ -192,14 +222,11 @@ def recurrence_matrix(
     Returns:
         ``(T, T)`` boolean array.
     """
-    traj: FloatArray = np.asarray(trajectory, dtype=np.float64)
-    if traj.ndim == 1:
-        traj = traj[:, np.newaxis]
-    elif traj.ndim != 2:
-        raise ValueError(f"trajectory must be 1D or 2D, got shape {traj.shape}")
+    traj = _validate_trajectory(trajectory, name="trajectory")
+    epsilon = _validate_epsilon(epsilon)
     t, d = int(traj.shape[0]), int(traj.shape[1])
-    angular = metric == "angular"
-    flat = np.ascontiguousarray(traj.ravel(), dtype=np.float64)
+    angular = _validate_metric(metric)
+    flat = traj.ravel()
 
     backend_fn = _dispatch("rm")
     if backend_fn is not None:
@@ -207,7 +234,7 @@ def recurrence_matrix(
             "Callable[[FloatArray, int, int, float, bool], ByteArray]",
             backend_fn,
         )
-        out = np.asarray(fn(flat, t, d, float(epsilon), angular), dtype=np.uint8)
+        out = np.asarray(fn(flat, t, d, epsilon, angular), dtype=np.uint8)
         return out.reshape(t, t).astype(bool)
 
     if angular:
@@ -231,22 +258,15 @@ def cross_recurrence_matrix(
     ``traj_a`` and ``traj_b`` must have the same length and
     dimensionality.
     """
-    a: FloatArray = np.asarray(traj_a, dtype=np.float64)
-    b: FloatArray = np.asarray(traj_b, dtype=np.float64)
-    if a.ndim == 1:
-        a = a[:, np.newaxis]
-    elif a.ndim != 2:
-        raise ValueError(f"traj_a must be 1D or 2D, got shape {a.shape}")
-    if b.ndim == 1:
-        b = b[:, np.newaxis]
-    elif b.ndim != 2:
-        raise ValueError(f"traj_b must be 1D or 2D, got shape {b.shape}")
+    a = _validate_trajectory(traj_a, name="traj_a")
+    b = _validate_trajectory(traj_b, name="traj_b")
+    epsilon = _validate_epsilon(epsilon)
     t, d = int(a.shape[0]), int(a.shape[1])
     if b.shape != a.shape:
         raise ValueError(f"trajectories must match: a={a.shape} b={b.shape}")
-    angular = metric == "angular"
-    a_flat = np.ascontiguousarray(a.ravel(), dtype=np.float64)
-    b_flat = np.ascontiguousarray(b.ravel(), dtype=np.float64)
+    angular = _validate_metric(metric)
+    a_flat = a.ravel()
+    b_flat = b.ravel()
 
     backend_fn = _dispatch("cross_rm")
     if backend_fn is not None:
@@ -255,7 +275,7 @@ def cross_recurrence_matrix(
             backend_fn,
         )
         out = np.asarray(
-            fn(a_flat, b_flat, t, d, float(epsilon), angular),
+            fn(a_flat, b_flat, t, d, epsilon, angular),
             dtype=np.uint8,
         )
         return out.reshape(t, t).astype(bool)

@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.recurrence import (
     RQAResult,
@@ -55,6 +58,38 @@ class TestRecurrenceMatrix:
         traj = np.zeros(10)
         R = recurrence_matrix(traj, epsilon=0.1)
         assert R.shape == (10, 10)
+
+    @pytest.mark.parametrize(
+        ("trajectory", "match"),
+        [
+            (np.array([0.0, np.nan], dtype=np.float64), "trajectory"),
+            (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
+            ([["not-a-state"]], "trajectory"),
+        ],
+    )
+    def test_rejects_invalid_trajectory_buffers(
+        self,
+        trajectory: Any,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            recurrence_matrix(trajectory, epsilon=0.1)
+
+    @pytest.mark.parametrize("epsilon", [False, np.nan, np.inf, "0.1", -0.1])
+    def test_rejects_invalid_epsilon(self, epsilon: Any) -> None:
+        with pytest.raises(ValueError, match="epsilon"):
+            recurrence_matrix(np.zeros(4), epsilon=epsilon)
+
+    @pytest.mark.parametrize("metric", ["manhattan", "", None])
+    def test_rejects_unknown_metric(self, metric: Any) -> None:
+        with pytest.raises(ValueError, match="metric"):
+            recurrence_matrix(np.zeros(4), epsilon=0.1, metric=metric)
+
+    def test_accepts_array_like_trajectory(self) -> None:
+        R = recurrence_matrix([0.0, 0.05, 0.2], epsilon=0.1)
+
+        assert R.shape == (3, 3)
+        assert R.dtype == bool
 
 
 class TestRQA:
@@ -163,6 +198,38 @@ class TestCrossRecurrence:
         result = cross_rqa(a, b, epsilon=1.0, metric="angular")
         assert isinstance(result, RQAResult)
         assert 0.0 <= result.recurrence_rate <= 1.0
+
+    @pytest.mark.parametrize(
+        ("traj_a", "traj_b", "match"),
+        [
+            (np.array([0.0, np.nan]), np.zeros(2), "traj_a"),
+            (np.zeros(2), np.array([0.0, np.inf]), "traj_b"),
+            ([["not-a-state"]], np.zeros((1, 1)), "traj_a"),
+        ],
+    )
+    def test_cross_rejects_invalid_trajectory_buffers(
+        self,
+        traj_a: Any,
+        traj_b: Any,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            cross_recurrence_matrix(traj_a, traj_b, epsilon=0.1)
+
+    @pytest.mark.parametrize("epsilon", [False, np.nan, np.inf, "0.1", -0.1])
+    def test_cross_rejects_invalid_epsilon(self, epsilon: Any) -> None:
+        with pytest.raises(ValueError, match="epsilon"):
+            cross_recurrence_matrix(np.zeros(4), np.zeros(4), epsilon=epsilon)
+
+    @pytest.mark.parametrize("metric", ["manhattan", "", None])
+    def test_cross_rejects_unknown_metric(self, metric: Any) -> None:
+        with pytest.raises(ValueError, match="metric"):
+            cross_recurrence_matrix(
+                np.zeros(4),
+                np.zeros(4),
+                epsilon=0.1,
+                metric=metric,
+            )
 
 
 class TestRecurrencePipelineWiring:
