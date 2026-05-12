@@ -405,7 +405,7 @@ def test_sheaf_engine_rejects_invalid_python_configuration(
             np.zeros((2, 2, 2, 2)),
             0.0,
             np.zeros(2),
-            0,
+            -1,
         )
 
 
