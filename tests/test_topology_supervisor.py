@@ -186,6 +186,8 @@ class TestHigherOrderTopologySupervisor:
                 _zero_knm(3),
                 (Hyperedge((0, 1, 2), strength=np.nan),),
             )
+        with pytest.raises(ValueError, match="hyperedges must be Hyperedge"):
+            supervisor.mutate(np.zeros(3), _zero_knm(3), (object(),))
 
     def test_does_not_add_simplices_when_global_coherence_is_already_high(self) -> None:
         phases = np.array([0.0, 0.01, 0.02, 0.03])

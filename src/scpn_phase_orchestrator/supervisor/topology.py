@@ -186,10 +186,14 @@ def _validate_hyperedges(hyperedges: tuple[Hyperedge, ...], n: int) -> None:
 
 
 def _canonical_hyperedges(hyperedges: tuple[Hyperedge, ...]) -> tuple[Hyperedge, ...]:
-    return tuple(
-        Hyperedge(nodes=tuple(sorted(edge.nodes)), strength=float(edge.strength))
-        for edge in hyperedges
-    )
+    canonical: list[Hyperedge] = []
+    for edge in hyperedges:
+        if not isinstance(edge, Hyperedge):
+            raise ValueError("hyperedges must be Hyperedge instances")
+        canonical.append(
+            Hyperedge(nodes=tuple(sorted(edge.nodes)), strength=float(edge.strength))
+        )
+    return tuple(canonical)
 
 
 def _order_parameter(phases: FloatArray) -> float:
