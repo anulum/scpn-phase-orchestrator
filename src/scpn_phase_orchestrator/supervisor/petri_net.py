@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import operator
 from dataclasses import dataclass, field
+from math import isfinite
+from numbers import Integral, Real
 
 from scpn_phase_orchestrator.exceptions import PolicyError
 
@@ -24,11 +26,41 @@ _OPS = {
 }
 
 
+def _validate_name(value: object, *, kind: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise PolicyError(f"{kind} names must not be empty, got {value!r}")
+    return value
+
+
+def _validate_positive_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise PolicyError(f"{name} must be a positive integer, got {value!r}")
+    return int(value)
+
+
+def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise PolicyError(f"{name} must be a non-negative integer, got {value!r}")
+    return int(value)
+
+
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise PolicyError(f"{name} must be finite, got {value!r}")
+    out = float(value)
+    if not isfinite(out):
+        raise PolicyError(f"{name} must be finite, got {value!r}")
+    return out
+
+
 @dataclass(frozen=True)
 class Place:
     """Named place (state) in the Petri net."""
 
     name: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "name", _validate_name(self.name, kind="place"))
 
 
 @dataclass(frozen=True)
@@ -38,6 +70,14 @@ class Arc:
     place: str
     weight: int = 1
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "place", _validate_name(self.place, kind="place"))
+        object.__setattr__(
+            self,
+            "weight",
+            _validate_positive_int(self.weight, name="weight"),
+        )
+
 
 @dataclass(frozen=True)
 class Guard:
@@ -46,6 +86,18 @@ class Guard:
     metric: str
     op: str
     threshold: float
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "metric", _validate_name(self.metric, kind="metric"))
+        if not isinstance(self.op, str) or self.op not in _OPS:
+            raise PolicyError(
+                f"operator must be one of {sorted(_OPS)}, got {self.op!r}"
+            )
+        object.__setattr__(
+            self,
+            "threshold",
+            _validate_finite_real(self.threshold, name="threshold"),
+        )
 
     def evaluate(self, ctx: dict[str, float]) -> bool:
         """Return True if the guard condition is satisfied by *ctx*."""
@@ -67,6 +119,13 @@ class Transition:
     outputs: list[Arc]
     guard: Guard | None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "name",
+            _validate_name(self.name, kind="transition"),
+        )
+
 
 @dataclass
 class Marking:
@@ -74,12 +133,18 @@ class Marking:
 
     tokens: dict[str, int] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        initial = dict(self.tokens)
+        self.tokens.clear()
+        for place, count in initial.items():
+            self[place] = count
+
     def __getitem__(self, place: str) -> int:
         return self.tokens.get(place, 0)
 
     def __setitem__(self, place: str, count: int) -> None:
-        if count < 0:
-            raise PolicyError(f"negative token count for {place!r}")
+        place = _validate_name(place, kind="place")
+        count = _validate_nonnegative_int(count, name="token count")
         if count == 0:
             self.tokens.pop(place, None)
         else:
@@ -99,7 +164,11 @@ def parse_guard(text: str) -> Guard:
     parts = text.split()
     if len(parts) != 3:
         raise PolicyError(f"guard must be 'metric op threshold', got {text!r}")
-    return Guard(metric=parts[0], op=parts[1], threshold=float(parts[2]))
+    try:
+        threshold = float(parts[2])
+    except ValueError as exc:
+        raise PolicyError(f"threshold must be finite, got {parts[2]!r}") from exc
+    return Guard(metric=parts[0], op=parts[1], threshold=threshold)
 
 
 class PetriNet:

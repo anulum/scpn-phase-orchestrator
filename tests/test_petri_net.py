@@ -52,6 +52,42 @@ def test_initial_marking():
     assert m["nominal"] == 0
 
 
+@pytest.mark.parametrize("name", ["", 3, None])
+def test_place_rejects_invalid_name(name):
+    with pytest.raises(ValueError, match="place"):
+        Place(name)
+
+
+@pytest.mark.parametrize("weight", [0, -1, True, 1.5, "1"])
+def test_arc_rejects_invalid_weight(weight):
+    with pytest.raises(ValueError, match="weight"):
+        Arc("warmup", weight=weight)
+
+
+@pytest.mark.parametrize("op", ["!=", "=>", "", 3])
+def test_guard_rejects_invalid_operator(op):
+    with pytest.raises(ValueError, match="operator"):
+        Guard("R", op, 0.5)
+
+
+@pytest.mark.parametrize("threshold", [True, float("nan"), float("inf"), "0.5"])
+def test_guard_rejects_invalid_threshold(threshold):
+    with pytest.raises(ValueError, match="threshold"):
+        Guard("R", ">", threshold)
+
+
+@pytest.mark.parametrize("name", ["", None, 3])
+def test_transition_rejects_invalid_name(name):
+    with pytest.raises(ValueError, match="transition"):
+        Transition(name, inputs=[Arc("a")], outputs=[Arc("b")])
+
+
+@pytest.mark.parametrize("tokens", [{"a": -1}, {"a": True}, {"a": 1.5}, {3: 1}])
+def test_marking_rejects_invalid_initial_tokens(tokens):
+    with pytest.raises(ValueError, match="token|place"):
+        Marking(tokens=tokens)
+
+
 def test_marking_active_places():
     m = Marking(tokens={"warmup": 1, "cooldown": 0})
     assert m.active_places() == ["warmup"]
@@ -86,6 +122,12 @@ def test_parse_guard():
 def test_parse_guard_bad_format():
     with pytest.raises(ValueError, match="guard must be"):
         parse_guard("bad")
+
+
+@pytest.mark.parametrize("text", ["R != 0.5", "R > NaN", "R > inf"])
+def test_parse_guard_rejects_invalid_surface(text):
+    with pytest.raises(ValueError, match="operator|threshold"):
+        parse_guard(text)
 
 
 def test_guard_evaluate_true():
