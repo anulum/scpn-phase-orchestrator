@@ -107,6 +107,16 @@ def _dispatch() -> Callable[..., IntArray] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_phase_history(phases_history: object) -> FloatArray:
+    try:
+        array = np.asarray(phases_history, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases_history must be a numeric array") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError("phases_history must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
 def winding_numbers(phases_history: FloatArray) -> IntArray:
     """Cumulative winding number of each oscillator over a trajectory.
 
@@ -119,6 +129,7 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     Returns:
         ``(N,)`` int64 array of winding numbers.
     """
+    phases_history = _validate_phase_history(phases_history)
     if phases_history.ndim != 2 or phases_history.shape[0] < 2:
         n = phases_history.shape[-1] if phases_history.ndim == 2 else 0
         return np.zeros(n, dtype=np.int64)

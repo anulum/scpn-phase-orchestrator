@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
 
@@ -100,6 +101,33 @@ class TestWindingNumbers:
         assert w[0] == 1
         assert w[1] == 3
         assert w[2] == -2
+
+    @pytest.mark.parametrize(
+        "history",
+        [
+            np.array([[0.0, np.nan], [1.0, 2.0]], dtype=np.float64),
+            np.array([[0.0, np.inf], [1.0, 2.0]], dtype=np.float64),
+            np.array([0.0, np.nan], dtype=np.float64),
+        ],
+    )
+    def test_rejects_non_finite_history(self, history: np.ndarray) -> None:
+        with pytest.raises(ValueError, match="phases_history"):
+            winding_numbers(history)
+
+    def test_rejects_non_numeric_history(self) -> None:
+        with pytest.raises(ValueError, match="phases_history"):
+            winding_numbers([["not-a-phase"]])
+
+    def test_accepts_array_like_history(self) -> None:
+        history = np.column_stack(
+            [
+                np.linspace(0.0, 2.1 * np.pi, 10),
+                np.linspace(0.0, -2.1 * np.pi, 10),
+            ]
+        ).tolist()
+        w = winding_numbers(history)
+
+        np.testing.assert_array_equal(w, [1, -2])
 
 
 class TestWindingPipelineWiring:
