@@ -99,6 +99,40 @@ actuators:
     scope: global
     limits: [0.0, 6.28]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-detuning-offset-step
+      knob: alpha
+      scope: layer_0
+      min_value: 0.0
+      max_value: 0.5
+      weight: 2.0
+    - name: limit-phase-lock-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.0
+      weight: 1.5
+    - name: limit-injection-current-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.8
+      weight: 2.0
+    - name: limit-feedback-phase-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 5.5
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: laser array value guard feedback-quench hold
+
 # Mirror degradation: reflectivity loss modulates coupling.
 imprint_model:
   decay_rate: 0.002

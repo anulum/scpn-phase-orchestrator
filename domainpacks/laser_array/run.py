@@ -10,10 +10,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
 
+from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.imprint.state import ImprintState
@@ -61,6 +63,55 @@ def _build_layer_map(spec):
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
         osc_idx += n
     return ranges
+
+
+def _apply_laser_array_action(
+    coupling: CouplingState,
+    action: ControlAction,
+    *,
+    zeta: float,
+    psi_target: float,
+    layer_map: Mapping[int, Sequence[int]],
+) -> tuple[CouplingState, float, float]:
+    if action.knob == "zeta":
+        return coupling, min(zeta + action.value, 3.0), psi_target
+    if action.knob == "K" and action.scope == "global":
+        return (
+            CouplingState(
+                knm=coupling.knm * (1.0 + action.value),
+                alpha=coupling.alpha,
+                active_template=coupling.active_template,
+                knm_r=coupling.knm_r,
+            ),
+            zeta,
+            psi_target,
+        )
+    if action.knob == "alpha" and action.scope.startswith("layer_"):
+        try:
+            layer_idx = int(action.scope.removeprefix("layer_"))
+        except ValueError:
+            return coupling, zeta, psi_target
+        ids = tuple(layer_map.get(layer_idx, ()))
+        if len(ids) < 2:
+            return coupling, zeta, psi_target
+        alpha = coupling.alpha.copy()
+        for i in ids:
+            for j in ids:
+                if i != j:
+                    alpha[i, j] = action.value
+        return (
+            CouplingState(
+                knm=coupling.knm,
+                alpha=alpha,
+                active_template=coupling.active_template,
+                knm_r=coupling.knm_r,
+            ),
+            zeta,
+            psi_target,
+        )
+    if action.knob == "Psi":
+        return coupling, zeta, action.value
+    return coupling, zeta, psi_target
 
 
 def main():
@@ -204,17 +255,13 @@ def main():
             )
 
         for act in actions:
-            if act.knob == "zeta":
-                zeta = min(zeta + act.value, 3.0)
-            elif act.knob == "K" and act.scope == "global":
-                coupling = CouplingState(
-                    knm=coupling.knm * (1.0 + act.value),
-                    alpha=coupling.alpha,
-                    active_template=coupling.active_template,
-                    knm_r=coupling.knm_r,
-                )
-            elif act.knob == "Psi":
-                psi_target = act.value
+            coupling, zeta, psi_target = _apply_laser_array_action(
+                coupling,
+                act,
+                zeta=zeta,
+                psi_target=psi_target,
+                layer_map=layer_map,
+            )
 
         exposure = np.array(
             [

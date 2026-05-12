@@ -33,6 +33,10 @@ Kozyreff et al., PRL 85(18), 2000.
 | detuning_offset | alpha | Individual laser frequency detuning |
 | feedback_phase | Psi | External cavity round-trip phase |
 
+The binding spec includes a `value_alignment` template for review-time
+detuning-offset, phase-lock coupling, injection-current, and feedback-phase
+actuation guards.
+
 ## Imprint
 
 Mirror degradation: facet reflectivity loss from COD (catastrophic optical
