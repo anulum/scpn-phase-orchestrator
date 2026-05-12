@@ -83,6 +83,34 @@ actuators:
     scope: global
     limits: [-3.15, 3.15]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-signed-coupling-step
+      knob: K
+      scope: global
+      min_value: -0.25
+      max_value: 0.25
+      weight: 1.5
+    - name: limit-damping-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.3
+      weight: 2.0
+    - name: limit-target-phase-step
+      knob: Psi
+      scope: global
+      min_value: -1.57
+      max_value: 1.57
+      weight: 0.75
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 0.5
+      justification: metaphysics demo value guard neutral-damping hold
+
 imprint_model:
   decay_rate: 0.01
   saturation: 2.0

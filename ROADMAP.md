@@ -563,6 +563,8 @@ Speculative research watchlist:
     quorum-coupling and inducer-dose actuation guards.
   - Geometry-walk domainpack prior template is in place for review-time graph
     coupling guards over consensus-control actuation.
+  - Metaphysics-demo domainpack prior template is in place for review-time
+    signed-coupling, damping-drive, and target-phase actuation guards.
   - Remaining scope: broader domainpack-specific prior templates.
 - Autopoietic lineage sandbox for resource-bounded child-policy evolution over audit replays, merging only through reviewable diffs.
 - Temporal-causal hypergraph experiments, explicitly gated as research until conventional causal baselines are beaten.

@@ -31,6 +31,11 @@ Kuramoto dynamics.  The ablation run quantifies imprint contribution.
 | phase_target | Psi | Reference phase target |
 | damping | zeta | External drive / damping |
 
+## Actuation Guard
+
+The binding spec includes a `value_alignment` template for review-time signed
+coupling, damping-drive, and target-phase actuation guards.
+
 ## Imprint
 
 Demonstration imprint: decay_rate=0.01, saturation=2.0, modulates K and
