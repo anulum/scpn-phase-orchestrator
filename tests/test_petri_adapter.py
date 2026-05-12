@@ -144,6 +144,47 @@ def test_invalid_regime_name():
         )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"net": object()}, "net"),
+        ({"initial_marking": object()}, "initial_marking"),
+        ({"place_to_regime": []}, "place_to_regime"),
+        ({"event_bus": object()}, "event_bus"),
+    ],
+)
+def test_rejects_invalid_constructor_inputs(kwargs, match):
+    values = {
+        "net": _protocol_net(),
+        "initial_marking": Marking(tokens={"warmup": 1}),
+        "place_to_regime": _place_regime_map(),
+        "event_bus": None,
+    }
+    values.update(kwargs)
+    with pytest.raises(ValueError, match=match):
+        PetriNetAdapter(**values)
+
+
+def test_rejects_mapping_for_unknown_place():
+    with pytest.raises(ValueError, match="unknown place"):
+        PetriNetAdapter(
+            _protocol_net(),
+            Marking(tokens={"warmup": 1}),
+            {"not_in_net": "NOMINAL"},
+        )
+
+
+@pytest.mark.parametrize("ctx", [None, [], {"stability_proxy": "0.8"}, {"R_0": True}])
+def test_step_rejects_invalid_context(ctx):
+    adapter = PetriNetAdapter(
+        _protocol_net(),
+        Marking(tokens={"warmup": 1}),
+        _place_regime_map(),
+    )
+    with pytest.raises(ValueError, match="ctx"):
+        adapter.step(ctx)
+
+
 def test_highest_priority_regime_wins():
     places = [Place("a"), Place("b")]
     net = PetriNet(places, [])
