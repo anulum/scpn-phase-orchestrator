@@ -157,6 +157,47 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _validate_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> NDArray[np.float64]:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if arr.shape != shape:
+        raise ValueError(f"{name} shape {arr.shape} does not match {shape}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _validate_positive_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> NDArray[np.float64]:
+    arr = _validate_state_array(value, name=name, shape=shape)
+    if not np.all(arr > 0.0):
+        raise ValueError(f"{name} must contain only positive finite values")
+    return arr
+
+
+def _validate_nonnegative_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> NDArray[np.float64]:
+    arr = _validate_state_array(value, name=name, shape=shape)
+    if not np.all(arr >= 0.0):
+        raise ValueError(f"{name} must contain only non-negative finite values")
+    return arr
+
+
 def _python_step(
     theta: NDArray[np.float64],
     omega_dot: NDArray[np.float64],
@@ -214,26 +255,44 @@ class InertialKuramotoEngine:
         inertia: NDArray[np.float64],
         damping: NDArray[np.float64],
     ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
+        theta64 = _validate_state_array(theta, name="theta", shape=(self._n,))
+        omega_dot64 = _validate_state_array(
+            omega_dot,
+            name="omega_dot",
+            shape=(self._n,),
+        )
+        power64 = _validate_state_array(power, name="power", shape=(self._n,))
+        knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
+        inertia64 = _validate_positive_state_array(
+            inertia,
+            name="inertia",
+            shape=(self._n,),
+        )
+        damping64 = _validate_nonnegative_state_array(
+            damping,
+            name="damping",
+            shape=(self._n,),
+        )
+        knm_flat = knm64.ravel()
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(
-                theta,
-                omega_dot,
-                power,
+                theta64,
+                omega_dot64,
+                power64,
                 knm_flat,
-                inertia,
-                damping,
+                inertia64,
+                damping64,
                 self._n,
                 self._dt,
             )
         return _python_step(
-            np.asarray(theta, dtype=np.float64),
-            np.asarray(omega_dot, dtype=np.float64),
-            np.asarray(power, dtype=np.float64),
+            theta64,
+            omega_dot64,
+            power64,
             knm_flat,
-            np.asarray(inertia, dtype=np.float64),
-            np.asarray(damping, dtype=np.float64),
+            inertia64,
+            damping64,
             self._n,
             self._dt,
         )
@@ -253,9 +312,15 @@ class InertialKuramotoEngine:
         NDArray[np.float64],
         NDArray[np.float64],
     ]:
+        n_steps = _validate_positive_int(n_steps, name="n_steps")
         theta_traj = np.empty((n_steps, self._n))
         omega_traj = np.empty((n_steps, self._n))
-        th, od = theta.copy(), omega_dot.copy()
+        th = _validate_state_array(theta, name="theta", shape=(self._n,)).copy()
+        od = _validate_state_array(
+            omega_dot,
+            name="omega_dot",
+            shape=(self._n,),
+        ).copy()
         for i in range(n_steps):
             th, od = self.step(th, od, power, knm, inertia, damping)
             theta_traj[i] = th
