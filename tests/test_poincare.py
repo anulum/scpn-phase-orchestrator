@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.poincare import (
     PoincareResult,
@@ -59,6 +62,44 @@ class TestPoincareSection:
         )
         assert len(result.crossings) >= 1
 
+    @pytest.mark.parametrize(
+        ("trajectory", "match"),
+        [
+            (np.array([[0.0], [np.nan]], dtype=np.float64), "trajectory"),
+            (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
+            ([["not-a-state"]], "trajectory"),
+        ],
+    )
+    def test_rejects_invalid_trajectory(
+        self,
+        trajectory: Any,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            poincare_section(trajectory, normal=np.array([1.0]))
+
+    @pytest.mark.parametrize(
+        ("normal", "match"),
+        [
+            (np.array([1.0, 0.0]), "normal shape"),
+            (np.array([np.nan]), "normal"),
+            ([["not-a-normal"]], "normal"),
+        ],
+    )
+    def test_rejects_invalid_normal(self, normal: Any, match: str) -> None:
+        with pytest.raises(ValueError, match=match):
+            poincare_section(np.zeros((3, 1)), normal=normal)
+
+    @pytest.mark.parametrize("offset", [False, np.nan, np.inf, "0.0"])
+    def test_rejects_invalid_offset(self, offset: Any) -> None:
+        with pytest.raises(ValueError, match="offset"):
+            poincare_section(np.zeros((3, 1)), normal=np.array([1.0]), offset=offset)
+
+    def test_accepts_array_like_section_inputs(self) -> None:
+        result = poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
+
+        assert result.crossings.shape == (1, 1)
+
 
 class TestReturnTimes:
     def test_returns_array(self):
@@ -104,6 +145,33 @@ class TestPhasePoincare:
         result = phase_poincare(phases, oscillator_idx=0)
         if len(result.crossings) > 0:
             assert result.crossings.shape[1] == N
+
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([[0.0], [np.nan]], dtype=np.float64),
+            np.array([[0.0], [np.inf]], dtype=np.float64),
+            [["not-a-phase"]],
+        ],
+    )
+    def test_rejects_invalid_phase_history(self, phases: Any) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            phase_poincare(phases)
+
+    @pytest.mark.parametrize("oscillator_idx", [False, -1, 2, 1.5, "0"])
+    def test_rejects_invalid_oscillator_index(self, oscillator_idx: Any) -> None:
+        with pytest.raises(ValueError, match="oscillator_idx"):
+            phase_poincare(np.zeros((3, 2)), oscillator_idx=oscillator_idx)
+
+    @pytest.mark.parametrize("section_phase", [False, np.nan, np.inf, "0.0"])
+    def test_rejects_invalid_section_phase(self, section_phase: Any) -> None:
+        with pytest.raises(ValueError, match="section_phase"):
+            phase_poincare(np.zeros((3, 2)), section_phase=section_phase)
+
+    def test_accepts_array_like_phase_history(self) -> None:
+        result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]])
+
+        assert result.crossings.shape[1] == 1
 
 
 class TestPoincarePipelineWiring:

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -161,6 +162,52 @@ def _dispatch(fn_name: str) -> object | None:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
+def _validate_state_history(value: object, *, name: str) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite 1D or 2D float array") from exc
+    if array.ndim == 1:
+        array = array[:, np.newaxis]
+    elif array.ndim != 2:
+        raise ValueError(f"{name} must be 1D or 2D, got shape {array.shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
+    try:
+        normal_vec = np.asarray(normal, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("normal must be a finite one-dimensional float array") from exc
+    if normal_vec.ndim != 1 or normal_vec.shape != (expected_dim,):
+        raise ValueError(
+            f"normal shape {normal_vec.shape} does not match ({expected_dim},)"
+        )
+    if not np.all(np.isfinite(normal_vec)):
+        raise ValueError("normal must contain only finite values")
+    return np.ascontiguousarray(normal_vec, dtype=np.float64)
+
+
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    result = float(value)
+    if not np.isfinite(result):
+        raise ValueError(f"{name} must be finite, got {value!r}")
+    return result
+
+
+def _validate_oscillator_idx(value: object, *, n: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"oscillator_idx must be an integer in [0, {n})")
+    idx = int(value)
+    if idx < 0 or idx >= n:
+        raise ValueError(f"oscillator_idx must be in [0, {n}), got {idx}")
+    return idx
+
+
 @dataclass
 class PoincareResult:
     """Poincaré-section output."""
@@ -199,15 +246,16 @@ def _assemble_result(
 
 
 def poincare_section(
-    trajectory: FloatArray,
-    normal: FloatArray,
-    offset: float = 0.0,
+    trajectory: object,
+    normal: object,
+    offset: object = 0.0,
     direction: str = "positive",
 ) -> PoincareResult:
     """Hyperplane-crossing Poincaré section."""
-    traj = np.atleast_2d(np.asarray(trajectory, dtype=np.float64))
+    traj = _validate_state_history(trajectory, name="trajectory")
     t, d = int(traj.shape[0]), int(traj.shape[1])
-    norm_vec = np.asarray(normal, dtype=np.float64)
+    norm_vec = _validate_normal(normal, expected_dim=d)
+    offset = _validate_finite_real(offset, name="offset")
     direction_id = _DIRECTION_IDS.get(direction)
     if direction_id is None:
         raise ValueError(
@@ -226,7 +274,7 @@ def poincare_section(
             t,
             d,
             norm_vec,
-            float(offset),
+            offset,
             int(direction_id),
         )
         return _assemble_result(cr_flat, times, n_cr, d)
@@ -259,9 +307,9 @@ def poincare_section(
 
 
 def return_times(
-    trajectory: FloatArray,
-    normal: FloatArray,
-    offset: float = 0.0,
+    trajectory: object,
+    normal: object,
+    offset: object = 0.0,
 ) -> FloatArray:
     """Shortcut: return only the return-time sequence."""
     return poincare_section(
@@ -273,17 +321,19 @@ def return_times(
 
 
 def phase_poincare(
-    phases: FloatArray,
-    oscillator_idx: int = 0,
-    section_phase: float = 0.0,
+    phases: object,
+    oscillator_idx: object = 0,
+    section_phase: object = 0.0,
 ) -> PoincareResult:
     """Poincaré section for phase-oscillator trajectories.
 
     Detects when ``phases[:, oscillator_idx]`` crosses
     ``section_phase (mod 2π)``.
     """
-    phases = np.atleast_2d(np.asarray(phases, dtype=np.float64))
+    phases = _validate_state_history(phases, name="phases")
     t, n = int(phases.shape[0]), int(phases.shape[1])
+    oscillator_idx = _validate_oscillator_idx(oscillator_idx, n=n)
+    section_phase = _validate_finite_real(section_phase, name="section_phase")
 
     backend_fn = _dispatch("phase")
     if backend_fn is not None:
@@ -296,8 +346,8 @@ def phase_poincare(
             phases.ravel(),
             t,
             n,
-            int(oscillator_idx),
-            float(section_phase),
+            oscillator_idx,
+            section_phase,
         )
         return _assemble_result(cr_flat, times, n_cr, n)
 
