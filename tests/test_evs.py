@@ -12,7 +12,7 @@ import importlib
 import math
 import sys
 import types
-from typing import get_type_hints
+from typing import Any, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -76,6 +76,51 @@ def test_random_signal_fails():
     assert result.itpc_value < 0.3
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"itpc_threshold": -0.1}, "itpc_threshold"),
+        ({"itpc_threshold": 1.1}, "itpc_threshold"),
+        ({"persistence_threshold": math.nan}, "persistence_threshold"),
+        ({"specificity_threshold": 0.0}, "specificity_threshold"),
+        ({"specificity_threshold": True}, "specificity_threshold"),
+    ],
+)
+def test_constructor_rejects_invalid_thresholds(kwargs, match):
+    with pytest.raises((TypeError, ValueError), match=match):
+        EVSMonitor(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("phases", "match"),
+    [
+        (np.array([0.0, 1.0, 2.0]), "phases_trials"),
+        (np.empty((0, 4)), "phases_trials"),
+        (np.array([[0.0, np.nan], [1.0, 2.0]]), "phases_trials"),
+    ],
+)
+def test_evaluate_rejects_invalid_phase_trials(phases, match):
+    with pytest.raises(ValueError, match=match):
+        EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
+
+
+@pytest.mark.parametrize("pause_indices", [[0.5], [True], np.array([[0, 1]])])
+def test_evaluate_rejects_invalid_pause_indices(pause_indices):
+    phases = _entrained_phases(n_trials=4, n_time=8)
+    with pytest.raises((TypeError, ValueError), match="pause_indices"):
+        EVSMonitor().evaluate(phases, pause_indices, 10.0, 20.0)
+
+
+@pytest.mark.parametrize(
+    ("target_freq", "control_freq"),
+    [(0.0, 20.0), (10.0, 0.0), (math.inf, 20.0), (10.0, math.nan), (True, 20.0)],
+)
+def test_evaluate_rejects_invalid_frequencies(target_freq, control_freq):
+    phases = _entrained_phases(n_trials=4, n_time=8)
+    with pytest.raises((TypeError, ValueError), match="freq"):
+        EVSMonitor().evaluate(phases, [0], target_freq, control_freq)
+
+
 def test_persistence_criterion_required():
     """High ITPC overall but empty pause window should fail persistence."""
     phases = _entrained_phases()
@@ -95,9 +140,8 @@ def test_specificity_with_same_freq_gives_one():
 def test_specificity_zero_freq_handled():
     phases = _entrained_phases()
     mon = EVSMonitor()
-    result = mon.evaluate(phases, list(range(80, 100)), 0.0, 10.0)
-    assert result.specificity_ratio == 0.0
-    assert not result.is_entrained
+    with pytest.raises(ValueError, match="target_freq"):
+        mon.evaluate(phases, list(range(80, 100)), 0.0, 10.0)
 
 
 def test_module_detects_available_rust_frequency_specificity(monkeypatch):
@@ -165,8 +209,9 @@ def test_rust_frequency_specificity_receives_flat_phase_trials(monkeypatch):
 
 def test_evs_result_is_frozen():
     r = EVSResult(0.8, 0.6, 2.0, True)
+    mutable = cast(Any, r)
     with pytest.raises(AttributeError):
-        r.itpc_value = 0.1  # type: ignore[misc]
+        mutable.itpc_value = 0.1
 
 
 def test_high_specificity_threshold_rejects_broadband():
