@@ -578,10 +578,9 @@ def _validate_hierarchy_inputs(
 ) -> None:
     if not children:
         raise ValueError("children must contain at least one child observation")
-    if not np.isfinite(dt) or dt <= 0.0:
-        raise ValueError("dt must be finite and positive")
-    if parent_dt is not None and (not np.isfinite(parent_dt) or parent_dt <= 0.0):
-        raise ValueError("parent_dt must be finite and positive")
+    _require_positive_real(dt, "dt")
+    if parent_dt is not None:
+        _require_positive_real(parent_dt, "parent_dt")
     _require_unit_interval(child_target_R, "child_target_R")
     _require_unit_interval(parent_target_R, "parent_target_R")
     _require_non_negative(free_energy_threshold, "free_energy_threshold")

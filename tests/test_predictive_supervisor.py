@@ -466,10 +466,34 @@ class TestFEPHierarchyInPredictiveCoverage:
                 "dt",
             ),
             (
+                {"children": {"a": (np.zeros(2), np.ones(2))}, "dt": True},
+                "dt",
+            ),
+            (
+                {"children": {"a": (np.zeros(2), np.ones(2))}, "dt": "0.01"},
+                "dt",
+            ),
+            (
                 {
                     "children": {"a": (np.zeros(2), np.ones(2))},
                     "dt": 0.01,
                     "parent_dt": np.inf,
+                },
+                "parent_dt",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "parent_dt": True,
+                },
+                "parent_dt",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "parent_dt": "0.01",
                 },
                 "parent_dt",
             ),
