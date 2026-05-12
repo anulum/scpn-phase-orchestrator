@@ -23,6 +23,7 @@ import functools
 import math
 import sys
 import types
+from typing import Any
 
 import numpy as np
 import pytest
@@ -372,6 +373,161 @@ class TestInputShapes:
         assert result.n_samples == 0
         assert result.n_converged == 0
         assert result.R_final.shape == (0,)
+
+
+class TestInputValidation:
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("phases_init", np.zeros((3, 1), dtype=np.float64), "phases_init"),
+            ("omegas", np.zeros((4,), dtype=np.float64), "omegas shape"),
+            ("knm", np.zeros((3, 2), dtype=np.float64), "knm shape"),
+            ("alpha", np.zeros((2, 3), dtype=np.float64), "alpha shape"),
+        ],
+    )
+    def test_steady_state_rejects_shape_mismatch(
+        self,
+        field: str,
+        bad_value: np.ndarray,
+        match: str,
+    ) -> None:
+        values = {
+            "phases_init": np.zeros(3, dtype=np.float64),
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm": np.zeros((3, 3), dtype=np.float64),
+            "alpha": np.zeros((3, 3), dtype=np.float64),
+        }
+        values[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            steady_state_r(
+                values["phases_init"],
+                values["omegas"],
+                values["knm"],
+                alpha=values["alpha"],
+                n_transient=1,
+                n_measure=1,
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("phases_init", np.nan),
+            ("omegas", np.inf),
+            ("knm", np.nan),
+            ("alpha", np.inf),
+        ],
+    )
+    def test_steady_state_rejects_non_finite_arrays(
+        self,
+        field: str,
+        bad_value: float,
+    ) -> None:
+        phases_init = np.zeros(3, dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        knm = np.zeros((3, 3), dtype=np.float64)
+        alpha = np.zeros((3, 3), dtype=np.float64)
+        if field in {"knm", "alpha"}:
+            locals()[field][0, 1] = bad_value
+        else:
+            locals()[field][0] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            steady_state_r(
+                phases_init,
+                omegas,
+                knm,
+                alpha=alpha,
+                n_transient=1,
+                n_measure=1,
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("k_scale", False),
+            ("k_scale", np.nan),
+            ("k_scale", np.inf),
+            ("k_scale", "1.0"),
+            ("dt", False),
+            ("dt", 0.0),
+            ("dt", np.nan),
+            ("n_transient", False),
+            ("n_transient", -1),
+            ("n_transient", 1.5),
+            ("n_measure", False),
+            ("n_measure", -1),
+            ("n_measure", "1"),
+        ],
+    )
+    def test_steady_state_rejects_invalid_runtime_parameters(
+        self,
+        field: str,
+        bad_value: Any,
+    ) -> None:
+        kwargs = {"k_scale": 1.0, "dt": 0.01, "n_transient": 1, "n_measure": 1}
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            steady_state_r(
+                np.zeros(3, dtype=np.float64),
+                np.ones(3, dtype=np.float64),
+                np.zeros((3, 3), dtype=np.float64),
+                **kwargs,
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("dt", 0.0),
+            ("n_transient", -1),
+            ("n_measure", -1),
+            ("n_samples", -1),
+            ("R_threshold", np.nan),
+            ("R_threshold", 1.5),
+            ("seed", False),
+            ("seed", 1.5),
+        ],
+    )
+    def test_basin_stability_rejects_invalid_runtime_parameters(
+        self,
+        field: str,
+        bad_value: Any,
+    ) -> None:
+        kwargs = {
+            "dt": 0.01,
+            "n_transient": 1,
+            "n_measure": 1,
+            "n_samples": 1,
+            "R_threshold": 0.5,
+            "seed": 1,
+        }
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            basin_stability(
+                np.ones(3, dtype=np.float64),
+                np.zeros((3, 3), dtype=np.float64),
+                **kwargs,
+            )
+
+    @pytest.mark.parametrize(
+        "R_thresholds",
+        [(), (0.3, np.nan), (-0.1, 0.5), (0.7, 1.2), (False, 0.5)],
+    )
+    def test_multi_basin_stability_rejects_invalid_thresholds(
+        self,
+        R_thresholds: tuple[Any, ...],
+    ) -> None:
+        with pytest.raises(ValueError, match="R_thresholds"):
+            multi_basin_stability(
+                np.ones(3, dtype=np.float64),
+                np.zeros((3, 3), dtype=np.float64),
+                n_transient=1,
+                n_measure=1,
+                n_samples=1,
+                R_thresholds=R_thresholds,
+            )
 
 
 class TestBackendLoaderContracts:

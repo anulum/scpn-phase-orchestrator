@@ -39,6 +39,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -151,6 +152,74 @@ def _dispatch() -> Callable[..., float] | None:
     return _LOADERS[ACTIVE_BACKEND]()
 
 
+def _validate_integral(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
+        raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    return int(value)
+
+
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be a finite real, got {value!r}")
+    return coerced
+
+
+def _validate_positive_float(value: object, *, name: str) -> float:
+    coerced = _validate_finite_float(value, name=name)
+    if coerced <= 0.0:
+        raise ValueError(f"{name} must be positive, got {value!r}")
+    return coerced
+
+
+def _validate_unit_interval(value: object, *, name: str) -> float:
+    coerced = _validate_finite_float(value, name=name)
+    if coerced < 0.0 or coerced > 1.0:
+        raise ValueError(f"{name} must be in [0, 1], got {value!r}")
+    return coerced
+
+
+def _validate_vector(value: object, *, name: str, shape: tuple[int, ...]) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if arr.shape != shape:
+        raise ValueError(f"{name} shape {arr.shape} does not match {shape}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _validate_omegas(value: object) -> FloatArray:
+    return _validate_nonempty_vector(value, name="omegas")
+
+
+def _validate_nonempty_vector(value: object, *, name: str) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite one-dimensional array") from exc
+    if arr.ndim != 1:
+        raise ValueError(f"{name} shape {arr.shape} must be one-dimensional")
+    if arr.size < 1:
+        raise ValueError(f"{name} must contain at least one oscillator")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _validate_thresholds(values: tuple[float, ...]) -> tuple[float, ...]:
+    if len(values) == 0:
+        raise ValueError("R_thresholds must contain at least one threshold")
+    return tuple(
+        _validate_unit_interval(value, name=f"R_thresholds[{idx}]")
+        for idx, value in enumerate(values)
+    )
+
+
 def _python_steady_state_r(
     phases_init: FloatArray,
     omegas: FloatArray,
@@ -209,38 +278,44 @@ def steady_state_r(
     and returns the time-averaged order parameter over the latter
     window. Delegates to the fastest available backend.
     """
-    N = int(len(omegas))
+    phases_init = _validate_nonempty_vector(phases_init, name="phases_init")
+    N = int(phases_init.shape[0])
+    omegas = _validate_vector(omegas, name="omegas", shape=(N,))
+    knm = _validate_vector(knm, name="knm", shape=(N, N))
     if alpha is None:
         alpha_flat = np.zeros(N * N, dtype=np.float64)
     else:
-        alpha_flat = np.ascontiguousarray(alpha, dtype=np.float64).ravel()
-    knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
-    phases_in = np.ascontiguousarray(phases_init, dtype=np.float64)
+        alpha_flat = _validate_vector(alpha, name="alpha", shape=(N, N)).ravel()
+    k_scale = _validate_finite_float(k_scale, name="k_scale")
+    dt = _validate_positive_float(dt, name="dt")
+    n_transient = _validate_integral(n_transient, name="n_transient", minimum=0)
+    n_measure = _validate_integral(n_measure, name="n_measure", minimum=0)
+    knm_flat = knm.ravel()
     backend_fn = _dispatch()
     if backend_fn is not None:
         return float(
             backend_fn(
-                phases_in,
-                np.ascontiguousarray(omegas, dtype=np.float64),
+                phases_init,
+                omegas,
                 knm_flat,
                 alpha_flat,
                 N,
-                float(k_scale),
-                float(dt),
-                int(n_transient),
-                int(n_measure),
+                k_scale,
+                dt,
+                n_transient,
+                n_measure,
             )
         )
     return _python_steady_state_r(
-        phases_in,
+        phases_init,
         omegas,
         knm_flat,
         alpha_flat,
         N,
-        float(k_scale),
-        float(dt),
-        int(n_transient),
-        int(n_measure),
+        k_scale,
+        dt,
+        n_transient,
+        n_measure,
     )
 
 
@@ -339,23 +414,30 @@ def basin_stability(
     Returns:
         BasinStabilityResult with S_B, R_final array, and counts.
     """
-    N = int(len(omegas))
-    knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
+    omegas = _validate_omegas(omegas)
+    N = int(omegas.shape[0])
+    knm = _validate_vector(knm, name="knm", shape=(N, N))
     if alpha is None:
         alpha_flat = np.zeros(N * N, dtype=np.float64)
     else:
-        alpha_flat = np.ascontiguousarray(alpha, dtype=np.float64).ravel()
+        alpha_flat = _validate_vector(alpha, name="alpha", shape=(N, N)).ravel()
+    dt = _validate_positive_float(dt, name="dt")
+    n_transient = _validate_integral(n_transient, name="n_transient", minimum=0)
+    n_measure = _validate_integral(n_measure, name="n_measure", minimum=0)
+    n_samples = _validate_integral(n_samples, name="n_samples", minimum=0)
+    R_threshold = _validate_unit_interval(R_threshold, name="R_threshold")
+    seed = _validate_integral(seed, name="seed", minimum=0)
 
     R_finals = _monte_carlo_R_finals(
-        np.ascontiguousarray(omegas, dtype=np.float64),
-        knm_flat,
+        omegas,
+        knm.ravel(),
         alpha_flat,
         N,
-        float(dt),
-        int(n_transient),
-        int(n_measure),
-        int(n_samples),
-        int(seed),
+        dt,
+        n_transient,
+        n_measure,
+        n_samples,
+        seed,
     )
     n_converged = int(np.sum(R_finals >= R_threshold))
     return BasinStabilityResult(
@@ -386,23 +468,30 @@ def multi_basin_stability(
     Returns:
         Dict mapping ``"R>={thresh:.2f}"`` to BasinStabilityResult.
     """
-    N = int(len(omegas))
-    knm_flat = np.ascontiguousarray(knm, dtype=np.float64).ravel()
+    omegas = _validate_omegas(omegas)
+    N = int(omegas.shape[0])
+    knm = _validate_vector(knm, name="knm", shape=(N, N))
     if alpha is None:
         alpha_flat = np.zeros(N * N, dtype=np.float64)
     else:
-        alpha_flat = np.ascontiguousarray(alpha, dtype=np.float64).ravel()
+        alpha_flat = _validate_vector(alpha, name="alpha", shape=(N, N)).ravel()
+    dt = _validate_positive_float(dt, name="dt")
+    n_transient = _validate_integral(n_transient, name="n_transient", minimum=0)
+    n_measure = _validate_integral(n_measure, name="n_measure", minimum=0)
+    n_samples = _validate_integral(n_samples, name="n_samples", minimum=0)
+    R_thresholds = _validate_thresholds(R_thresholds)
+    seed = _validate_integral(seed, name="seed", minimum=0)
 
     R_finals = _monte_carlo_R_finals(
-        np.ascontiguousarray(omegas, dtype=np.float64),
-        knm_flat,
+        omegas,
+        knm.ravel(),
         alpha_flat,
         N,
-        float(dt),
-        int(n_transient),
-        int(n_measure),
-        int(n_samples),
-        int(seed),
+        dt,
+        n_transient,
+        n_measure,
+        n_samples,
+        seed,
     )
     results: dict[str, BasinStabilityResult] = {}
     for thresh in R_thresholds:
