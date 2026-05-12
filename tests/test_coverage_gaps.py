@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.binding.types import (
 )
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 from scpn_phase_orchestrator.supervisor.petri_net import Guard, Marking, PetriNet, Place
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
@@ -1424,8 +1425,8 @@ class TestPetriNetGuard:
         assert g.evaluate({}) is False
 
     def test_guard_unknown_op(self):
-        g = Guard(metric="x", op="!=", threshold=0.5)
-        assert g.evaluate({"x": 0.3}) is False
+        with pytest.raises(PolicyError, match="operator must be one of"):
+            Guard(metric="x", op="!=", threshold=0.5)
 
     def test_place_names_property(self):
         from scpn_phase_orchestrator.supervisor.petri_net import Arc, Transition
