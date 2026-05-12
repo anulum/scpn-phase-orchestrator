@@ -35,17 +35,19 @@ coupling matrix. Every Transformer component is present here:
 ``default_projections(n_heads, seed)`` that returns the four
 matrices (W_Q, W_K, W_V, W_O) sampled from a seeded Gaussian with
 the canonical Xavier/Glorot scaling. Callers that want bit-stable
-behaviour pass their own matrices. Callers that just want "it
-works" rely on the default seed.
+behaviour pass their own matrices. Callers that need reproducible
+default initialisation rely on the default seed.
 
-**Rule compliance.** This file is the full multi-head architecture
-on day one — no single-head proxy, no "add heads in a follow-up"
-placeholder. See ``feedback_no_simplistic_models.md``.
+**Architecture contract.** This file implements the complete
+multi-head path directly: learned per-head projections, full
+scaled dot-product attention, output projection, and symmetric
+coupling modulation are all part of the public implementation.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -75,6 +77,39 @@ single-ring structure of Kuramoto phases while leaving three extra
 heads for higher-order Fourier components."""
 
 
+def _validate_positive_int(name: str, value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        msg = f"{name} must be a positive integer, got {value!r}"
+        raise ValueError(msg)
+    value_int = int(value)
+    if value_int < 1:
+        msg = f"{name} must be a positive integer, got {value_int}"
+        raise ValueError(msg)
+    return value_int
+
+
+def _validate_even_model_width(d_model: object) -> int:
+    d_model_int = _validate_positive_int("d_model", d_model)
+    if d_model_int < 2 or d_model_int % 2 != 0:
+        msg = (
+            "d_model must be an even integer >= 2 so every Fourier-feature "
+            f"dimension is initialised, got {d_model_int}"
+        )
+        raise ValueError(msg)
+    return d_model_int
+
+
+def _validate_finite_real(name: str, value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        msg = f"{name} must be a finite real number, got {value!r}"
+        raise ValueError(msg)
+    value_float = float(value)
+    if not np.isfinite(value_float):
+        msg = f"{name} must be finite, got {value_float}"
+        raise ValueError(msg)
+    return value_float
+
+
 def default_projections(
     n_heads: int = 4,
     seed: int = 0,
@@ -98,6 +133,8 @@ def default_projections(
     ``w_q, w_k, w_v`` each ``(H, d_model, d_head)``;
     ``w_o`` is ``(H · d_head, d_model)``.
     """
+    n_heads = _validate_positive_int("n_heads", n_heads)
+    d_model = _validate_even_model_width(d_model)
     if d_model % n_heads != 0:
         msg = f"d_model={d_model} not divisible by n_heads={n_heads}"
         raise ValueError(msg)
@@ -357,21 +394,30 @@ def attnres_modulate(
     ------
     ValueError
         On shape mismatches, negative ``lambda_``, non-positive
-        ``temperature``, or ``d_model`` not divisible by ``n_heads``.
+        ``temperature``, non-finite numeric inputs, or invalid model
+        topology.
     """
-    if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
-        raise ValueError(f"knm must be square 2-D; got shape {knm.shape}")
-    n = knm.shape[0]
-    if theta.shape != (n,):
-        raise ValueError(f"theta shape {theta.shape} does not match knm (N={n})")
+    n_heads = _validate_positive_int("n_heads", n_heads)
+    temperature = _validate_finite_real("temperature", temperature)
+    lambda_ = _validate_finite_real("lambda_", lambda_)
     if temperature <= 0.0:
         raise ValueError(f"temperature must be > 0, got {temperature}")
     if lambda_ < 0.0:
         raise ValueError(f"lambda_ must be ≥ 0, got {lambda_}")
-    if block_size is not None and block_size < 1:
-        raise ValueError(
-            f"block_size must be ≥ 1 or None for full attention, got {block_size}"
-        )
+    if block_size is not None:
+        block_size = _validate_positive_int("block_size", block_size)
+
+    knm64 = np.asarray(knm, dtype=np.float64)
+    theta64 = np.asarray(theta, dtype=np.float64)
+    if knm64.ndim != 2 or knm64.shape[0] != knm64.shape[1]:
+        raise ValueError(f"knm must be square 2-D; got shape {knm64.shape}")
+    n = knm64.shape[0]
+    if theta64.shape != (n,):
+        raise ValueError(f"theta shape {theta64.shape} does not match knm (N={n})")
+    if not np.all(np.isfinite(knm64)):
+        raise ValueError("knm must contain only finite values")
+    if not np.all(np.isfinite(theta64)):
+        raise ValueError("theta must contain only finite values")
 
     if any(p is None for p in (w_q, w_k, w_v, w_o)):
         d_q, d_k, d_v, d_o = default_projections(n_heads=n_heads, seed=projection_seed)
@@ -382,25 +428,38 @@ def attnres_modulate(
 
     if w_q is None or w_k is None or w_v is None or w_o is None:
         raise ValueError("attention projections must be provided or defaultable")
+    w_q = np.asarray(w_q, dtype=np.float64)
+    w_k = np.asarray(w_k, dtype=np.float64)
+    w_v = np.asarray(w_v, dtype=np.float64)
+    w_o = np.asarray(w_o, dtype=np.float64)
     if w_q.shape != w_k.shape or w_q.shape != w_v.shape:
         raise ValueError(
             f"w_q / w_k / w_v shape mismatch: {w_q.shape}, {w_k.shape}, {w_v.shape}"
         )
+    if w_q.ndim != 3:
+        raise ValueError(f"w_q / w_k / w_v must be 3-D, got {w_q.shape}")
     if w_q.shape[0] != n_heads:
         raise ValueError(f"w_q leading dim {w_q.shape[0]} != n_heads={n_heads}")
-    d_model = w_q.shape[1]
-    d_head = w_q.shape[2]
+    d_model = _validate_even_model_width(w_q.shape[1])
+    d_head = _validate_positive_int("d_head", w_q.shape[2])
     if d_model != n_heads * d_head:
         raise ValueError(f"d_model {d_model} != n_heads {n_heads} · d_head {d_head}")
     if w_o.shape != (n_heads * d_head, d_model):
         raise ValueError(f"w_o shape {w_o.shape} != ({n_heads * d_head}, {d_model})")
+    for name, projection in (
+        ("w_q", w_q),
+        ("w_k", w_k),
+        ("w_v", w_v),
+        ("w_o", w_o),
+    ):
+        if not np.all(np.isfinite(projection)):
+            raise ValueError(f"{name} must contain only finite values")
 
-    knm64 = np.asarray(knm, dtype=np.float64)
     if lambda_ == 0.0:
         return knm64.copy()
 
     knm_flat = np.ascontiguousarray(knm64.ravel(), dtype=np.float64)
-    theta64 = np.ascontiguousarray(theta, dtype=np.float64)
+    theta64 = np.ascontiguousarray(theta64, dtype=np.float64)
     bs_int = -1 if block_size is None else block_size
 
     # Compiled backends take 1-D flat buffers; Python fallback takes

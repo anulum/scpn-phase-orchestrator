@@ -30,6 +30,7 @@ from __future__ import annotations
 import sys
 import types
 from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pytest
@@ -88,6 +89,16 @@ class TestDefaultProjections:
     def test_non_divisible_rejected(self) -> None:
         with pytest.raises(ValueError, match="not divisible"):
             default_projections(n_heads=3, d_model=8)
+
+    @pytest.mark.parametrize("n_heads", [0, True, 1.5])
+    def test_invalid_head_count_rejected(self, n_heads: object) -> None:
+        with pytest.raises(ValueError, match="n_heads"):
+            default_projections(n_heads=cast("int", n_heads))
+
+    @pytest.mark.parametrize("d_model", [0, True, 7, 8.5])
+    def test_invalid_model_width_rejected(self, d_model: object) -> None:
+        with pytest.raises(ValueError, match="d_model"):
+            default_projections(n_heads=1, d_model=cast("int", d_model))
 
 
 # ---------------------------------------------------------------------
@@ -232,6 +243,33 @@ class TestContractFailures:
         with pytest.raises(ValueError, match="lambda_"):
             attnres_modulate(_symmetric_knm(4), np.zeros(4), lambda_=-0.1)
 
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("knm", np.inf),
+            ("theta", np.nan),
+            ("temperature", np.inf),
+            ("lambda_", np.nan),
+        ],
+    )
+    def test_non_finite_numeric_inputs_rejected(
+        self,
+        field: str,
+        value: float,
+    ) -> None:
+        knm = _symmetric_knm(4)
+        theta = np.zeros(4)
+        kwargs: dict[str, float] = {}
+        if field == "knm":
+            knm[0, 1] = knm[1, 0] = value
+        elif field == "theta":
+            theta[0] = value
+        else:
+            kwargs[field] = value
+
+        with pytest.raises(ValueError, match=field):
+            attnres_modulate(knm, theta, **kwargs)
+
     def test_default_projection_factory_must_fill_all_missing_slots(
         self,
         monkeypatch,
@@ -290,6 +328,37 @@ class TestContractFailures:
                 w_v=w_v,
                 w_o=w_o,
                 n_heads=2,
+            )
+
+    def test_odd_projection_model_width_rejected(self) -> None:
+        w_q = np.zeros((1, 7, 7), dtype=np.float64)
+        w_k = np.zeros((1, 7, 7), dtype=np.float64)
+        w_v = np.zeros((1, 7, 7), dtype=np.float64)
+        w_o = np.zeros((7, 7), dtype=np.float64)
+        with pytest.raises(ValueError, match="d_model"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=1,
+            )
+
+    def test_non_finite_projection_rejected(self) -> None:
+        w_q, w_k, w_v, w_o = default_projections(n_heads=1)
+        w_q = w_q.copy()
+        w_q[0, 0, 0] = np.inf
+        with pytest.raises(ValueError, match="w_q"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=1,
             )
 
     def test_output_projection_shape_mismatch_rejected(self) -> None:
