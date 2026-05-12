@@ -142,7 +142,7 @@ class TestSheafUPDEEngineValidation:
         with pytest.raises(ValueError, match="rtol must be positive"):
             SheafUPDEEngine(n_oscillators=4, d_dimensions=2, dt=0.01, rtol=rtol)
 
-    @pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "10"])
+    @pytest.mark.parametrize("n_steps", [False, -1, 1.5, "10"])
     def test_run_rejects_invalid_step_count(self, n_steps: Any) -> None:
         engine = SheafUPDEEngine(n_oscillators=4, d_dimensions=2, dt=0.01)
         phases = np.zeros((4, 2), dtype=np.float64)
@@ -150,8 +150,20 @@ class TestSheafUPDEEngineValidation:
         restriction_maps = np.zeros((4, 4, 2, 2), dtype=np.float64)
         psi = np.zeros(2, dtype=np.float64)
 
-        with pytest.raises(ValueError, match="n_steps must be >= 1"):
+        with pytest.raises(ValueError, match="n_steps must be >= 0"):
             engine.run(phases, omegas, restriction_maps, 0.0, psi, n_steps=n_steps)
+
+    def test_run_accepts_zero_step_copy(self) -> None:
+        engine = SheafUPDEEngine(n_oscillators=4, d_dimensions=2, dt=0.01)
+        phases = np.arange(8, dtype=np.float64).reshape(4, 2)
+        omegas = np.ones((4, 2), dtype=np.float64)
+        restriction_maps = np.zeros((4, 4, 2, 2), dtype=np.float64)
+        psi = np.zeros(2, dtype=np.float64)
+
+        out = engine.run(phases, omegas, restriction_maps, 0.0, psi, n_steps=0)
+
+        np.testing.assert_array_equal(out, phases)
+        assert not np.shares_memory(out, phases)
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
         engine = SheafUPDEEngine(
@@ -221,6 +233,73 @@ class TestSwarmalatorEngineValidation:
         assert engine._n == 4
         assert engine._dim == 2
         assert pytest.approx(0.01) == engine._dt
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("pos", np.zeros((4, 3), dtype=np.float64), "pos shape"),
+            ("phases", np.zeros((5,), dtype=np.float64), "phases shape"),
+            ("omegas", np.zeros((3,), dtype=np.float64), "omegas shape"),
+        ],
+    )
+    def test_step_rejects_state_shape_mismatch(
+        self,
+        field: str,
+        bad_value: np.ndarray,
+        match: str,
+    ) -> None:
+        engine = SwarmalatorEngine(n_agents=4, dim=2, dt=0.01)
+        pos = np.zeros((4, 2), dtype=np.float64)
+        phases = np.zeros(4, dtype=np.float64)
+        omegas = np.ones(4, dtype=np.float64)
+        values = {"pos": pos, "phases": phases, "omegas": omegas}
+        values[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            engine.step(values["pos"], values["phases"], values["omegas"])
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
+            ("pos", np.inf),
+            ("phases", np.nan),
+            ("omegas", np.inf),
+        ],
+    )
+    def test_step_rejects_non_finite_state_arrays(
+        self,
+        field: str,
+        bad_value: float,
+    ) -> None:
+        engine = SwarmalatorEngine(n_agents=4, dim=2, dt=0.01)
+        pos = np.zeros((4, 2), dtype=np.float64)
+        phases = np.zeros(4, dtype=np.float64)
+        omegas = np.ones(4, dtype=np.float64)
+        if field == "pos":
+            pos[0, 0] = bad_value
+        elif field == "phases":
+            phases[0] = bad_value
+        else:
+            omegas[0] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            engine.step(pos, phases, omegas)
+
+    @pytest.mark.parametrize("coefficient", ["a", "b", "j", "k"])
+    @pytest.mark.parametrize("bad_value", [False, np.nan, np.inf, "1.0"])
+    def test_step_rejects_invalid_coefficients(
+        self,
+        coefficient: str,
+        bad_value: Any,
+    ) -> None:
+        engine = SwarmalatorEngine(n_agents=4, dim=2, dt=0.01)
+        pos = np.zeros((4, 2), dtype=np.float64)
+        phases = np.zeros(4, dtype=np.float64)
+        omegas = np.ones(4, dtype=np.float64)
+        kwargs = {coefficient: bad_value}
+
+        with pytest.raises(ValueError, match=coefficient):
+            engine.step(pos, phases, omegas, **kwargs)
 
 
 class TestSimplicialEngineValidation:

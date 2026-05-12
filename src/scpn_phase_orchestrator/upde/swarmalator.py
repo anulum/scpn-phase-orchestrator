@@ -157,6 +157,32 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _validate_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    return coerced
+
+
+def _validate_state_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> FloatArray:
+    try:
+        arr = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if arr.shape != shape:
+        raise ValueError(f"{name} shape {arr.shape} does not match {shape}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(arr, dtype=np.float64)
+
+
 def _python_step(
     pos: FloatArray,
     phases: FloatArray,
@@ -254,12 +280,32 @@ class SwarmalatorEngine:
         The dispatcher selects the first available accelerated backend and
         falls back to the NumPy reference path with the same state contract.
         """
+        pos64 = _validate_state_array(
+            pos,
+            name="pos",
+            shape=(self._n, self._dim),
+        )
+        phases64 = _validate_state_array(
+            phases,
+            name="phases",
+            shape=(self._n,),
+        )
+        omegas64 = _validate_state_array(
+            omegas,
+            name="omegas",
+            shape=(self._n,),
+        )
+        a = _validate_finite_float(a, name="a")
+        b = _validate_finite_float(b, name="b")
+        j = _validate_finite_float(j, name="j")
+        k = _validate_finite_float(k, name="k")
+
         backend_fn = _dispatch()
         if backend_fn is not None:
             return backend_fn(
-                pos,
-                phases,
-                omegas,
+                pos64,
+                phases64,
+                omegas64,
                 self._n,
                 self._dim,
                 a,
@@ -269,9 +315,9 @@ class SwarmalatorEngine:
                 self._dt,
             )
         return _python_step(
-            pos,
-            phases,
-            omegas,
+            pos64,
+            phases64,
+            omegas64,
             self._n,
             self._dim,
             a,
@@ -293,14 +339,28 @@ class SwarmalatorEngine:
         n_steps: int = 100,
     ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
         n_steps = _validate_positive_int(n_steps, name="n_steps")
-        curr_pos, curr_phases = pos.copy(), phases.copy()
+        curr_pos = _validate_state_array(
+            pos,
+            name="pos",
+            shape=(self._n, self._dim),
+        ).copy()
+        curr_phases = _validate_state_array(
+            phases,
+            name="phases",
+            shape=(self._n,),
+        ).copy()
+        omegas64 = _validate_state_array(
+            omegas,
+            name="omegas",
+            shape=(self._n,),
+        )
         pos_traj = np.empty((n_steps, self._n, self._dim))
         phase_traj = np.empty((n_steps, self._n))
         for i in range(n_steps):
             curr_pos, curr_phases = self.step(
                 curr_pos,
                 curr_phases,
-                omegas,
+                omegas64,
                 a,
                 b,
                 j,
