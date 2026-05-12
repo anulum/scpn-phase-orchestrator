@@ -76,8 +76,20 @@ def _install_policy_rule_stubs() -> None:
         def evaluate_result(self, trace: object) -> STLTraceResult:
             return STLTraceResult()
 
+    class STLMonitoringAutomaton:
+        def to_audit_record(self) -> dict[str, object]:
+            return {}
+
+    def synthesise_stl_monitoring_automaton(
+        spec: str, trace: object
+    ) -> STLMonitoringAutomaton:
+        _ = (spec, trace)
+        return STLMonitoringAutomaton()
+
     stl.STLMonitor = STLMonitor
+    stl.STLMonitoringAutomaton = STLMonitoringAutomaton
     stl.STLTraceResult = STLTraceResult
+    stl.synthesise_stl_monitoring_automaton = synthesise_stl_monitoring_automaton
     sys.modules.setdefault("scpn_phase_orchestrator.monitor.stl", stl)
 
 
