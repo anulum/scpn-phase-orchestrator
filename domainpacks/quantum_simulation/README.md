@@ -2,6 +2,9 @@
 
 Maps qubit register phases to SPO's Kuramoto/UPDE framework.
 
+The binding spec includes a `value_alignment` template for review-time exchange
+coupling and microwave-drive actuation guards.
+
 ## Why Kuramoto Fits This Domain
 
 Qubit XY-plane phases (Bloch sphere azimuthal angle) evolve under

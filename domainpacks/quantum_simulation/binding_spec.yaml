@@ -73,6 +73,28 @@ actuators:
     scope: global
     limits: [0.0, 1.0]
 
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-exchange-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 0.6
+      weight: 2.0
+    - name: limit-microwave-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.35
+      weight: 2.0
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 5.0
+      justification: quantum value guard decoupling hold
+
 amplitude:
   mu: 1.5
   epsilon: 0.3

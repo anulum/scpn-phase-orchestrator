@@ -1037,5 +1037,53 @@ def test_agent_coordination_value_alignment_allows_bounded_task_coupling():
     assert not decision.violations
 
 
+def test_quantum_simulation_value_alignment_blocks_excessive_drive():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "quantum_simulation" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    unsafe = ControlAction(
+        knob="zeta",
+        scope="global",
+        value=0.65,
+        ttl_s=8.0,
+        justification="review candidate exceeds microwave-drive prior",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([unsafe])
+
+    assert not decision.satisfied
+    assert decision.blocked_actions == (unsafe,)
+    assert decision.violations[0].constraint == "limit-microwave-drive-step"
+    assert decision.actions_to_apply[0].justification == (
+        "quantum value guard decoupling hold"
+    )
+    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+        "blocked_action_prevents_constraint_violation"
+    )
+
+
+def test_quantum_simulation_value_alignment_allows_bounded_exchange_coupling():
+    spec = load_binding_spec(
+        DOMAINPACKS_DIR / "quantum_simulation" / "binding_spec.yaml"
+    )
+    policy = value_alignment_policy_from_binding_spec(spec)
+
+    assert policy is not None
+    action = ControlAction(
+        knob="K",
+        scope="global",
+        value=0.25,
+        ttl_s=5.0,
+        justification="bounded exchange coupling review candidate",
+    )
+    decision = ValueAlignmentGuard(policy).evaluate([action])
+
+    assert decision.satisfied
+    assert decision.approved_actions == (action,)
+    assert not decision.violations
+
+
 # Pipeline wiring: domainpack validation tested via real domainpack loading and
 # schema enforcement. TestDomainpackLoading (above) proves domainpacks are functional.
