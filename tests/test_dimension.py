@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import sys
 import types
+from typing import Any
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor import dimension as dim_mod
 from scpn_phase_orchestrator.monitor.dimension import (
@@ -67,6 +69,49 @@ class TestCorrelationIntegral:
 
         np.testing.assert_array_equal(C, np.zeros_like(epsilons))
 
+    def test_one_dimensional_trajectory_is_time_axis(self):
+        """A 1D signal is interpreted as T scalar samples, not one T-D point."""
+        C = correlation_integral([0.0, 1.0, 2.0], np.array([0.5, 1.5]))
+
+        np.testing.assert_allclose(C, [0.0, 2.0 / 3.0])
+
+    @pytest.mark.parametrize(
+        "trajectory",
+        [
+            np.array([0.0, np.nan], dtype=np.float64),
+            np.array([[0.0], [np.inf]], dtype=np.float64),
+            np.zeros((2, 3, 4), dtype=np.float64),
+            [["not-a-point"]],
+        ],
+    )
+    def test_rejects_invalid_trajectory(self, trajectory: Any) -> None:
+        with pytest.raises(ValueError, match="trajectory"):
+            correlation_integral(trajectory, np.array([1.0]))
+
+    @pytest.mark.parametrize(
+        "epsilons",
+        [
+            np.array([np.nan], dtype=np.float64),
+            np.array([np.inf], dtype=np.float64),
+            np.array([-0.1], dtype=np.float64),
+            np.zeros((1, 1), dtype=np.float64),
+            ["not-epsilon"],
+        ],
+    )
+    def test_rejects_invalid_epsilons(self, epsilons: Any) -> None:
+        with pytest.raises(ValueError, match="epsilons"):
+            correlation_integral(np.zeros((3, 1)), epsilons)
+
+    @pytest.mark.parametrize("max_pairs", [False, 0, -1, 1.5, "10"])
+    def test_rejects_invalid_max_pairs(self, max_pairs: Any) -> None:
+        with pytest.raises(ValueError, match="max_pairs"):
+            correlation_integral(np.zeros((3, 1)), np.array([1.0]), max_pairs=max_pairs)
+
+    @pytest.mark.parametrize("seed", [False, -1, 1.5, "42"])
+    def test_rejects_invalid_seed(self, seed: Any) -> None:
+        with pytest.raises(ValueError, match="seed"):
+            correlation_integral(np.zeros((3, 1)), np.array([1.0]), seed=seed)
+
 
 class TestCorrelationDimension:
     def test_circle_dimension(self):
@@ -98,6 +143,11 @@ class TestCorrelationDimension:
         assert len(result.epsilons) == 20
         assert len(result.C_eps) == 20
         assert result.scaling_range[0] <= result.scaling_range[1]
+
+    @pytest.mark.parametrize("n_epsilons", [False, 1, 0, -1, 2.5, "10"])
+    def test_rejects_invalid_n_epsilons(self, n_epsilons: Any) -> None:
+        with pytest.raises(ValueError, match="n_epsilons"):
+            correlation_dimension(np.zeros((4, 1)), n_epsilons=n_epsilons)
 
 
 class TestKaplanYorkeDimension:
@@ -147,6 +197,19 @@ class TestKaplanYorkeDimension:
         # cumsum = [1.0, 1.0, 0.0] → j=2, but j+1=3 >= len → returns 3
         # Actually: j=2 (0-indexed cumsum[2]=0.0 ≥ 0), j+1=3 ≥ 3 → returns 3.0
         assert d == 3.0
+
+    @pytest.mark.parametrize(
+        "lyapunov_exponents",
+        [
+            np.array([0.1, np.nan], dtype=np.float64),
+            np.array([0.1, np.inf], dtype=np.float64),
+            np.zeros((2, 2), dtype=np.float64),
+            ["not-an-exponent"],
+        ],
+    )
+    def test_rejects_invalid_spectrum(self, lyapunov_exponents: Any) -> None:
+        with pytest.raises(ValueError, match="lyapunov_exponents"):
+            kaplan_yorke_dimension(lyapunov_exponents)
 
 
 class TestBackendDispatch:

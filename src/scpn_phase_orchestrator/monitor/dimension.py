@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from numbers import Integral
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -123,6 +124,55 @@ def _dispatch(fn_name: str) -> object | None:
     return _LOADERS[ACTIVE_BACKEND]()[fn_name]
 
 
+def _validate_trajectory(trajectory: object) -> FloatArray:
+    try:
+        traj = np.asarray(trajectory, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("trajectory must be a finite 1D or 2D float array") from exc
+    if traj.ndim == 1:
+        traj = traj[:, np.newaxis]
+    elif traj.ndim != 2:
+        raise ValueError(f"trajectory must be 1D or 2D, got shape {traj.shape}")
+    if not np.all(np.isfinite(traj)):
+        raise ValueError("trajectory must contain only finite values")
+    return np.ascontiguousarray(traj, dtype=np.float64)
+
+
+def _validate_epsilons(epsilons: object) -> FloatArray:
+    try:
+        eps = np.asarray(epsilons, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("epsilons must be a finite one-dimensional array") from exc
+    if eps.ndim != 1:
+        raise ValueError(f"epsilons must be one-dimensional, got shape {eps.shape}")
+    if not np.all(np.isfinite(eps)) or np.any(eps < 0.0):
+        raise ValueError("epsilons must contain only finite non-negative values")
+    return np.ascontiguousarray(np.sort(eps), dtype=np.float64)
+
+
+def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    result = int(value)
+    if result < minimum:
+        raise ValueError(f"{name} must be >= {minimum}, got {result}")
+    return result
+
+
+def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
+    try:
+        le = np.asarray(lyapunov_exponents, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("lyapunov_exponents must be a finite 1D float array") from exc
+    if le.ndim != 1:
+        raise ValueError(
+            f"lyapunov_exponents must be one-dimensional, got shape {le.shape}"
+        )
+    if not np.all(np.isfinite(le)):
+        raise ValueError("lyapunov_exponents must contain only finite values")
+    return np.ascontiguousarray(le, dtype=np.float64)
+
+
 @dataclass
 class CorrelationDimensionResult:
     """Result of correlation dimension estimation.
@@ -170,10 +220,10 @@ def _prepare_pair_indices(
 
 
 def correlation_integral(
-    trajectory: FloatArray,
-    epsilons: FloatArray,
-    max_pairs: int = 50000,
-    seed: int = 42,
+    trajectory: object,
+    epsilons: object,
+    max_pairs: object = 50000,
+    seed: object = 42,
 ) -> FloatArray:
     """Correlation integral ``C(ε) = fraction of pairs within ε``.
 
@@ -196,9 +246,11 @@ def correlation_integral(
     Returns:
         ``(K,)`` array of ``C(ε)`` values.
     """
-    traj = np.atleast_2d(trajectory)
+    traj = _validate_trajectory(trajectory)
     t, d = int(traj.shape[0]), int(traj.shape[1])
-    eps_sorted = np.ascontiguousarray(np.sort(epsilons), dtype=np.float64)
+    eps_sorted = _validate_epsilons(epsilons)
+    max_pairs = _validate_int_at_least(max_pairs, name="max_pairs", minimum=1)
+    seed = _validate_int_at_least(seed, name="seed", minimum=0)
 
     backend_fn = _dispatch("ci")
     if backend_fn is not None and ACTIVE_BACKEND == "rust":
@@ -212,13 +264,13 @@ def correlation_integral(
                 t,
                 d,
                 eps_sorted,
-                int(max_pairs),
-                int(seed),
+                max_pairs,
+                seed,
             ),
             dtype=np.float64,
         )
 
-    pair_result = _prepare_pair_indices(t, int(max_pairs), int(seed))
+    pair_result = _prepare_pair_indices(t, max_pairs, seed)
     if pair_result is None:
         return np.zeros(eps_sorted.size, dtype=np.float64)
     idx_i, idx_j = pair_result
@@ -250,13 +302,20 @@ def correlation_integral(
 
 
 def correlation_dimension(
-    trajectory: FloatArray,
-    n_epsilons: int = 30,
-    max_pairs: int = 50000,
-    seed: int = 42,
+    trajectory: object,
+    n_epsilons: object = 30,
+    max_pairs: object = 50000,
+    seed: object = 42,
 ) -> CorrelationDimensionResult:
     """Estimate ``D₂`` via a log-log plateau over ``C(ε)``."""
-    traj = np.atleast_2d(trajectory)
+    traj = _validate_trajectory(trajectory)
+    n_epsilons = _validate_int_at_least(
+        n_epsilons,
+        name="n_epsilons",
+        minimum=2,
+    )
+    max_pairs = _validate_int_at_least(max_pairs, name="max_pairs", minimum=1)
+    seed = _validate_int_at_least(seed, name="seed", minimum=0)
     diam = _attractor_diameter(traj)
     if diam == 0:
         return CorrelationDimensionResult(
@@ -353,7 +412,7 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
         ``D_KY``. Returns ``0.0`` if the largest exponent is negative
         (stable fixed point, zero-dimensional attractor).
     """
-    le = np.asarray(lyapunov_exponents, dtype=np.float64)
+    le = _validate_spectrum(lyapunov_exponents)
     if le.size == 0:
         return 0.0
     backend_fn = _dispatch("ky")
