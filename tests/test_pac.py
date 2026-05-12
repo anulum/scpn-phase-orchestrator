@@ -10,9 +10,13 @@
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.upde import pac as pac_mod
 from scpn_phase_orchestrator.upde.pac import modulation_index, pac_gate, pac_matrix
 
 TWO_PI = 2.0 * np.pi
@@ -61,6 +65,11 @@ class TestModulationIndex:
         mi_36 = modulation_index(theta, amp, n_bins=36)
         assert mi_18 > 0.05
         assert mi_36 > 0.05
+
+    def test_degenerate_private_histogram_resolution_returns_zero(self) -> None:
+        theta = np.linspace(0.0, TWO_PI, 64, endpoint=False)
+        amp = 1.0 + 0.25 * np.cos(theta)
+        assert pac_mod._modulation_index_python(theta, amp, n_bins=1) == 0.0
 
 
 class TestPACMatrix:
@@ -166,3 +175,75 @@ class TestPACPipelineWiring:
             pac_matrix(phases, amps)
         elapsed = (time.perf_counter() - t0) / 10
         assert elapsed < 0.2, f"pac_matrix(8,200) = {elapsed * 1000:.1f}ms > 200ms"
+
+
+class TestPACBackendDispatchFallbacks:
+    def test_rust_loader_contract_with_contiguous_fake_kernel(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: dict[str, tuple[tuple[int, ...], tuple[int, ...], int]] = {}
+
+        def fake_mi(theta: np.ndarray, amp: np.ndarray, n_bins: int) -> float:
+            calls["mi"] = (theta.shape, amp.shape, n_bins)
+            return 0.125
+
+        def fake_matrix(
+            phases_flat: np.ndarray,
+            amps_flat: np.ndarray,
+            t: int,
+            n: int,
+            n_bins: int,
+        ) -> np.ndarray:
+            calls["matrix"] = (phases_flat.shape, amps_flat.shape, n_bins)
+            return np.full(n * n, 0.25, dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.pac_modulation_index = fake_mi
+        fake_spo.pac_matrix_compute = fake_matrix
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        loaded = pac_mod._load_rust_fns()
+        theta = np.linspace(0.0, TWO_PI, 8)
+        amp = 1.0 + np.cos(theta)
+        assert loaded["modulation_index"](theta, amp, 12) == 0.125
+        mat = loaded["pac_matrix"](
+            theta.reshape(4, 2).ravel(),
+            amp.reshape(4, 2).ravel(),
+            4,
+            2,
+            12,
+        )
+        np.testing.assert_allclose(mat.reshape(2, 2), 0.25)
+        assert calls == {
+            "mi": ((8,), (8,), 12),
+            "matrix": ((8,), (8,), 12),
+        }
+
+    def test_probe_marks_backend_infinite_when_callable_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def raising_mi(*_args: object) -> float:
+            raise RuntimeError("backend down")
+
+        monkeypatch.setattr(
+            pac_mod,
+            "_load_backend",
+            lambda _name: {"modulation_index": raising_mi},
+        )
+        assert pac_mod._modulation_index_probe_seconds("rust") == float("inf")
+
+    def test_dispatch_falls_back_to_python_when_active_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(pac_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(
+            pac_mod,
+            "_load_backend",
+            lambda _name: (_ for _ in ()).throw(OSError("backend unavailable")),
+        )
+        theta = np.linspace(0.0, TWO_PI, 128, endpoint=False)
+        amp = 1.0 + 0.4 * np.cos(theta)
+        assert modulation_index(theta, amp, n_bins=1) == 0.0
+        got = modulation_index(theta, amp, n_bins=18)
+        ref = pac_mod._modulation_index_python(theta, amp, 18)
+        assert got == ref

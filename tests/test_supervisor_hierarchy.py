@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Iterator, Mapping
 
 import pytest
 
@@ -15,6 +16,7 @@ from scpn_phase_orchestrator.supervisor import (
     load_hierarchy_sync_envelope,
     simulate_hierarchy_gossip_consensus,
 )
+from scpn_phase_orchestrator.supervisor.hierarchy import _reject_raw_instance_attributes
 
 
 def test_hierarchical_plan_composes_reduced_child_summaries_only() -> None:
@@ -110,6 +112,59 @@ def test_hierarchical_plan_escalates_degraded_critical_and_low_confidence() -> N
         ("child-uncertain", "degraded", "child_summary_below_min_confidence"),
     ]
     assert plan.to_audit_record()["escalations"][0]["child_regime"] == "critical"
+
+
+def test_hierarchical_plan_escalates_declared_regime_even_when_coherent() -> None:
+    children = (
+        ChildSupervisorSummary(
+            name="critical-reporter",
+            channel="grid",
+            R=0.9,
+            psi=0.0,
+            regime="critical-local-actuator-clamped",
+        ),
+        ChildSupervisorSummary(
+            name="degraded-reporter",
+            channel="thermal",
+            R=0.8,
+            psi=0.0,
+            regime="degraded-observer-confidence",
+        ),
+    )
+
+    plan = build_hierarchical_orchestration_plan(children)
+
+    assert plan.parent_state.regime_id == "hierarchical_nominal"
+    assert [(item.child, item.severity, item.reason) for item in plan.escalations] == [
+        ("critical-reporter", "critical", "child_regime_escalation"),
+        ("degraded-reporter", "degraded", "child_regime_escalation"),
+    ]
+
+
+def test_hierarchical_plan_zero_confidence_children_produce_zero_parent_order() -> None:
+    plan = build_hierarchical_orchestration_plan(
+        (
+            ChildSupervisorSummary(
+                "silent-a",
+                "grid",
+                R=0.9,
+                psi=0.0,
+                confidence=0.0,
+            ),
+            ChildSupervisorSummary(
+                "silent-b",
+                "thermal",
+                R=0.8,
+                psi=math.pi,
+                confidence=0.0,
+            ),
+        )
+    )
+
+    assert [layer.R for layer in plan.parent_state.layers] == [0.0, 0.0]
+    assert plan.parent_R == 0.0
+    assert plan.parent_psi == 0.0
+    assert plan.parent_state.regime_id == "hierarchical_critical"
 
 
 @pytest.mark.parametrize(
@@ -366,6 +421,14 @@ def test_hierarchy_sync_ingestion_requires_one_accepted_envelope() -> None:
         )
 
 
+def test_hierarchy_sync_ingestion_rejects_empty_batch_after_config_check() -> None:
+    with pytest.raises(
+        ValueError,
+        match="at least one hierarchy sync envelope must be accepted",
+    ):
+        ingest_hierarchy_sync_envelopes(())
+
+
 def test_hierarchy_sync_ingestion_accepts_latest_same_source() -> None:
     sequence_2 = build_hierarchy_sync_envelope(
         ChildSupervisorSummary("edge-seq-2", "power", R=0.2, psi=0.0),
@@ -467,6 +530,17 @@ def test_hierarchy_transport_runtime_ingests_json_and_mapping_batch() -> None:
         "previous_sequences": {"node-a": 2, "node-b": 3},
         "audit_scope": "reduced_child_summaries_only",
     }
+
+
+def test_hierarchy_transport_runtime_rejects_inverted_thresholds() -> None:
+    with pytest.raises(
+        ValueError,
+        match="critical_threshold must be <= degraded_threshold",
+    ):
+        HierarchyTransportRuntime(
+            critical_threshold=0.8,
+            degraded_threshold=0.6,
+        )
 
 
 def test_hierarchy_transport_runtime_rejects_stale_followup_only() -> None:
@@ -587,6 +661,136 @@ def test_load_hierarchy_sync_envelope_rejects_malformed_payloads(
 
     with pytest.raises(ValueError):
         load_hierarchy_sync_envelope(json.dumps(record))
+
+
+@pytest.mark.parametrize(
+    ("record", "message"),
+    [
+        ('{"protocol_version":', "hierarchy sync envelope must be valid JSON"),
+        ("[]", "hierarchy sync envelope JSON must decode to a mapping"),
+        (object(), "hierarchy sync envelope must be a mapping or JSON string"),
+    ],
+)
+def test_load_hierarchy_sync_envelope_rejects_non_mapping_transport_records(
+    record: object,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        load_hierarchy_sync_envelope(record)
+
+
+@pytest.mark.parametrize(
+    ("record", "message"),
+    [
+        (
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-a",
+                "sequence": 1,
+                "monotonic_time_s": -0.1,
+                "summary": {
+                    "name": "edge-a",
+                    "channel": "power",
+                    "R": 0.8,
+                    "psi": 0.0,
+                },
+            },
+            "monotonic_time_s must be finite and non-negative",
+        ),
+        (
+            {
+                "protocol_version": "",
+                "source_node": "node-a",
+                "sequence": 1,
+                "summary": {
+                    "name": "edge-a",
+                    "channel": "power",
+                    "R": 0.8,
+                    "psi": 0.0,
+                },
+            },
+            "protocol_version must be a non-empty string",
+        ),
+        (
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "   ",
+                "sequence": 1,
+                "summary": {
+                    "name": "edge-a",
+                    "channel": "power",
+                    "R": 0.8,
+                    "psi": 0.0,
+                },
+            },
+            "source_node must be a non-empty string",
+        ),
+        (
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-a",
+                "sequence": 1,
+                "summary": {
+                    "name": "",
+                    "channel": "power",
+                    "R": 0.8,
+                    "psi": 0.0,
+                },
+            },
+            "name must be a non-empty string",
+        ),
+    ],
+)
+def test_load_hierarchy_sync_envelope_rejects_invalid_sync_contract_fields(
+    record: dict[str, object],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        load_hierarchy_sync_envelope(record)
+
+
+def test_load_hierarchy_sync_envelope_rejects_non_string_decoded_keys() -> None:
+    with pytest.raises(
+        ValueError,
+        match="hierarchy sync envelope keys must be strings",
+    ):
+        load_hierarchy_sync_envelope(
+            {
+                1: "node-a",
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-a",
+                "sequence": 1,
+                "summary": {
+                    "name": "edge-a",
+                    "channel": "power",
+                    "R": 0.8,
+                    "psi": 0.0,
+                },
+            }
+        )
+
+    with pytest.raises(ValueError, match="hierarchy sync summary keys must be strings"):
+        load_hierarchy_sync_envelope(
+            {
+                "protocol_version": "spo-hierarchy-sync/v1",
+                "source_node": "node-a",
+                "sequence": 1,
+                "summary": {
+                    1: "edge-a",
+                    "name": "edge-a",
+                    "channel": "power",
+                    "R": 0.8,
+                    "psi": 0.0,
+                },
+            }
+        )
+
+
+def test_load_hierarchy_sync_envelope_rejects_adversarial_raw_transport_keys() -> None:
+    record = _TwoPassRawEnvelopeMapping()
+
+    with pytest.raises(ValueError, match="raw_phases"):
+        load_hierarchy_sync_envelope(record)
 
 
 @pytest.mark.parametrize(
@@ -907,6 +1111,42 @@ def test_load_hierarchy_sync_envelope_rejects_oversized_numeric_fields(
         load_hierarchy_sync_envelope(record)
 
 
+def test_load_hierarchy_sync_envelope_rejects_infinite_metadata_float() -> None:
+    record = {
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "source_node": "node-a",
+        "sequence": 1,
+        "summary": {
+            "name": "edge-a",
+            "channel": "power",
+            "R": 0.8,
+            "psi": 0.0,
+            "metadata": {"bad_weight": math.inf},
+        },
+    }
+
+    with pytest.raises(ValueError, match="finite JSON-safe metadata"):
+        load_hierarchy_sync_envelope(record)
+
+
+def test_load_hierarchy_sync_envelope_rejects_compact_raw_metadata_prefix() -> None:
+    record = {
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "source_node": "node-a",
+        "sequence": 1,
+        "summary": {
+            "name": "edge-a",
+            "channel": "power",
+            "R": 0.8,
+            "psi": 0.0,
+            "metadata": {"rawphase": [0.1, 0.2]},
+        },
+    }
+
+    with pytest.raises(ValueError, match="rawphase"):
+        load_hierarchy_sync_envelope(record)
+
+
 def test_hierarchy_sync_envelope_rejects_oversized_sequence() -> None:
     summary = ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0)
 
@@ -1216,6 +1456,20 @@ def test_hierarchy_sync_ingestion_rejects_invalid_previous_sequences(
         )
 
 
+def test_hierarchy_sync_ingestion_rejects_negative_previous_sequence() -> None:
+    envelope = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0),
+        source_node="node-a",
+        sequence=2,
+    )
+
+    with pytest.raises(ValueError, match="sequence must be >= 0"):
+        ingest_hierarchy_sync_envelopes(
+            (envelope,),
+            previous_sequences={"node-a": -1},
+        )
+
+
 def test_hierarchy_sync_ingestion_rejects_non_mapping_previous_sequences() -> None:
     envelope = build_hierarchy_sync_envelope(
         ChildSupervisorSummary("edge-a", "power", R=0.8, psi=0.0),
@@ -1247,6 +1501,40 @@ def test_hierarchy_gossip_consensus_rejects_direct_raw_metadata() -> None:
         )
 
 
+def test_public_entrypoints_reject_forged_object_types() -> None:
+    with pytest.raises(ValueError, match="summary must be a ChildSupervisorSummary"):
+        build_hierarchical_orchestration_plan((object(),))
+
+    with pytest.raises(ValueError, match="envelope must be a HierarchySyncEnvelope"):
+        ingest_hierarchy_sync_envelopes((object(),))
+
+
+def test_direct_envelope_revalidation_rejects_negative_monotonic_time() -> None:
+    envelope = _unchecked_hierarchy_sync_envelope()
+    object.__setattr__(envelope, "monotonic_time_s", -0.1)
+
+    with pytest.raises(ValueError, match="monotonic_time_s must be finite"):
+        load_hierarchy_sync_envelope(envelope)
+
+    with pytest.raises(ValueError, match="monotonic_time_s must be finite"):
+        ingest_hierarchy_sync_envelopes((envelope,))
+
+
+def test_forged_child_summary_rejects_non_mapping_metadata() -> None:
+    summary = _unchecked_child_summary({})
+    object.__setattr__(summary, "metadata", ["not", "mapping"])
+
+    with pytest.raises(ValueError, match="metadata must be a decoded mapping"):
+        build_hierarchical_orchestration_plan((summary,))
+
+
+def test_raw_attribute_scanner_accepts_slot_only_adapter_objects() -> None:
+    class SlotOnlyAdapter:
+        __slots__ = ()
+
+    _reject_raw_instance_attributes(SlotOnlyAdapter(), "adapter")
+
+
 def _unchecked_hierarchy_sync_envelope(
     metadata: dict[str, object] | None = None,
     *,
@@ -1266,6 +1554,35 @@ def _unchecked_hierarchy_sync_envelope(
     )
     object.__setattr__(envelope, "monotonic_time_s", None)
     return envelope
+
+
+class _TwoPassRawEnvelopeMapping(Mapping[str, object]):
+    def __init__(self) -> None:
+        self._passes = 0
+        self._payload: dict[str, object] = {
+            "protocol_version": "spo-hierarchy-sync/v1",
+            "source_node": "node-a",
+            "sequence": 1,
+            "summary": {
+                "name": "edge-a",
+                "channel": "power",
+                "R": 0.8,
+                "psi": 0.0,
+            },
+            "raw_phases": [0.1, 0.2],
+        }
+
+    def __getitem__(self, key: str) -> object:
+        return self._payload[key]
+
+    def __iter__(self) -> Iterator[str]:
+        self._passes += 1
+        if self._passes == 1:
+            return iter(("protocol_version", "source_node", "sequence", "summary"))
+        return iter(self._payload)
+
+    def __len__(self) -> int:
+        return len(self._payload)
 
 
 def _unchecked_child_summary(
@@ -1410,3 +1727,80 @@ def test_hierarchy_gossip_consensus_rejects_invalid_inputs(
             neighbour_map={},
             **kwargs,  # type: ignore[arg-type]
         )
+
+
+def test_hierarchy_transport_runtime_rejects_malformed_batch_atomically() -> None:
+    runtime = HierarchyTransportRuntime()
+    accepted_candidate = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary("edge-a", "grid", R=0.9, psi=0.0),
+        source_node="node-a",
+        sequence=7,
+    )
+
+    with pytest.raises(ValueError, match="source_node must be a non-empty string"):
+        runtime.ingest(
+            (
+                accepted_candidate,
+                {
+                    "protocol_version": "spo-hierarchy-sync/v1",
+                    "source_node": "",
+                    "sequence": 8,
+                    "summary": {
+                        "name": "edge-b",
+                        "channel": "grid",
+                        "R": 0.8,
+                        "psi": 0.0,
+                    },
+                },
+            )
+        )
+
+    assert runtime.previous_sequences == {}
+
+
+def test_hierarchy_escalation_records_remain_bounded_and_json_safe() -> None:
+    plan = build_hierarchical_orchestration_plan(
+        (
+            ChildSupervisorSummary(
+                "critical-edge",
+                "grid",
+                R=0.2,
+                psi=math.pi,
+                regime="critical-local-actuator-clamped",
+                confidence=0.25,
+                metadata={
+                    "site": "north",
+                    "operator_note": "summary-only",
+                },
+            ),
+        ),
+        critical_threshold=0.35,
+        degraded_threshold=0.65,
+        min_confidence=0.5,
+    )
+
+    records = [record.to_audit_record() for record in plan.escalations]
+
+    assert records == [
+        {
+            "child": "critical-edge",
+            "channel": "grid",
+            "severity": "degraded",
+            "reason": "child_summary_below_min_confidence",
+            "R": 0.2,
+            "confidence": 0.25,
+            "child_regime": "critical-local-actuator-clamped",
+        },
+        {
+            "child": "critical-edge",
+            "channel": "grid",
+            "severity": "critical",
+            "reason": "child_coherence_below_critical",
+            "R": 0.2,
+            "confidence": 0.25,
+            "child_regime": "critical-local-actuator-clamped",
+        },
+    ]
+    assert all("metadata" not in record for record in records)
+    assert all("raw_phases" not in record for record in records)
+    json.dumps(records, allow_nan=False)

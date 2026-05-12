@@ -64,6 +64,10 @@ class TestConstructor:
         with pytest.raises(ValueError, match="dt"):
             SwarmalatorEngine(n_agents=4, dim=2, dt=0.0)
 
+    def test_rejects_non_real_dt(self):
+        with pytest.raises(ValueError, match="dt"):
+            SwarmalatorEngine(n_agents=4, dim=2, dt=object())
+
 
 class TestStep:
     @_python

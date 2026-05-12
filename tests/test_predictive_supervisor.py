@@ -9,11 +9,17 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.predictive import (
+    FEPHierarchyAssessment,
+    FEPHierarchyChildAssessment,
+    FEPPredictionAssessment,
+    FEPPredictiveSupervisor,
     Prediction,
     PredictiveSupervisor,
+    assess_fep_hierarchy,
 )
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
@@ -133,8 +139,10 @@ class TestDecide:
         actions = ps.decide(
             phases, omegas, knm, alpha, _make_state(0.15), BoundaryState()
         )
-        # Should produce K boost or MPC action
-        assert len(actions) >= 0  # May or may not trigger depending on OA
+        assert len(actions) == 1
+        assert actions[0].knob == "K"
+        assert actions[0].value == pytest.approx(0.2)
+        assert "CRITICAL" in actions[0].justification
 
     def test_hard_violation_action(self):
         """Hard boundary violation → zeta=0.1 override."""
@@ -184,3 +192,283 @@ class TestPredictiveSupervisorPipelineWiring:
         )
         assert isinstance(actions, list)
         assert 0.0 <= r <= 1.0
+
+
+class TestFEPPredictiveSupervisorInPredictiveCoverage:
+    def test_fep_assessment_updates_audit_record_and_reset_state(self):
+        supervisor = FEPPredictiveSupervisor(4, dt=0.01, target_R=0.75)
+        phases = np.array([0.0, 0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.array([0.8, 0.9, 1.1, 1.2], dtype=np.float64)
+
+        assessment = supervisor.assess(phases, omegas)
+        record = assessment.to_audit_record()
+
+        assert supervisor.target_R == pytest.approx(0.75)
+        assert supervisor.last_assessment is assessment
+        assert isinstance(assessment, FEPPredictionAssessment)
+        assert set(record) == {
+            "free_energy",
+            "complexity",
+            "mean_abs_error",
+            "precision_mean",
+            "precision_spread",
+            "observed_R",
+            "observed_psi",
+            "predicted_R",
+            "target_R",
+            "surprise",
+        }
+        assert 0.0 <= record["observed_R"] <= 1.0
+        assert 0.0 <= record["predicted_R"] <= 1.0
+
+        supervisor.reset()
+
+        assert supervisor.last_assessment is None
+
+    def test_fep_hard_boundary_violation_fails_closed_before_assessment(self):
+        supervisor = FEPPredictiveSupervisor(4, dt=0.01, drive_gain=0.12)
+
+        actions = supervisor.decide(
+            np.zeros(4),
+            np.ones(4),
+            _make_state(0.9),
+            BoundaryState(hard_violations=["R_floor"]),
+        )
+
+        assert len(actions) == 1
+        assert actions[0].knob == "zeta"
+        assert actions[0].value == pytest.approx(0.12)
+        assert actions[0].justification == "FEP-MPC: hard boundary violation"
+        assert supervisor.last_assessment is None
+
+    def test_fep_error_threshold_ranks_zeta_before_antiphase_target(self):
+        supervisor = FEPPredictiveSupervisor(
+            4,
+            dt=0.01,
+            target_R=0.5,
+            free_energy_threshold=1e9,
+            error_threshold=0.0,
+            drive_gain=0.2,
+        )
+
+        actions = supervisor.decide(
+            np.zeros(4),
+            np.ones(4),
+            _make_state(1.0),
+            BoundaryState(),
+        )
+
+        assert [action.knob for action in actions] == ["zeta", "Psi"]
+        assert actions[0].value == pytest.approx(0.2)
+        assert "free energy" in actions[0].justification
+        assert actions[1].value == pytest.approx(np.pi)
+
+    def test_fep_stability_risk_branch_acts_without_threshold_breach(self):
+        supervisor = FEPPredictiveSupervisor(
+            6,
+            dt=0.01,
+            target_R=0.95,
+            free_energy_threshold=1e9,
+            error_threshold=1e9,
+            drive_gain=0.07,
+        )
+        phases = np.linspace(0.0, 2.0 * np.pi, 6, endpoint=False)
+
+        actions = supervisor.decide(
+            phases,
+            np.ones(6),
+            _make_state(0.2),
+            BoundaryState(),
+        )
+
+        assert [action.knob for action in actions] == ["zeta", "Psi"]
+        assert actions[0].value == pytest.approx(0.07)
+        assert 0.0 <= actions[1].value < 2.0 * np.pi
+
+    def test_fep_stable_state_does_not_emit_actions(self):
+        supervisor = FEPPredictiveSupervisor(
+            4,
+            dt=0.01,
+            target_R=0.5,
+            free_energy_threshold=1e9,
+            error_threshold=1e9,
+        )
+
+        actions = supervisor.decide(
+            np.zeros(4),
+            np.ones(4),
+            _make_state(0.9),
+            BoundaryState(),
+        )
+
+        assert actions == []
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"n_oscillators": 0, "dt": 0.01}, "n_oscillators"),
+            ({"n_oscillators": 4, "dt": 0.0}, "dt"),
+            ({"n_oscillators": 4, "dt": 0.01, "target_R": 1.1}, "target_R"),
+            (
+                {"n_oscillators": 4, "dt": 0.01, "free_energy_threshold": -0.1},
+                "free_energy_threshold",
+            ),
+            (
+                {"n_oscillators": 4, "dt": 0.01, "error_threshold": np.inf},
+                "error_threshold",
+            ),
+            ({"n_oscillators": 4, "dt": 0.01, "drive_gain": -0.1}, "drive_gain"),
+            (
+                {"n_oscillators": 4, "dt": 0.01, "learning_rate": np.nan},
+                "learning_rate",
+            ),
+            (
+                {"n_oscillators": 4, "dt": 0.01, "prior_precision": -1.0},
+                "prior_precision",
+            ),
+        ],
+    )
+    def test_fep_constructor_rejects_invalid_bounds(self, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            FEPPredictiveSupervisor(**kwargs)
+
+    def test_fep_assess_rejects_invalid_phase_and_omega_vectors(self):
+        supervisor = FEPPredictiveSupervisor(4, dt=0.01)
+
+        with pytest.raises(ValueError, match="phases must have shape"):
+            supervisor.assess(np.zeros(3), np.ones(4))
+        with pytest.raises(ValueError, match="omegas must have shape"):
+            supervisor.assess(np.zeros(4), np.ones(3))
+        with pytest.raises(ValueError, match="phases must be finite"):
+            supervisor.assess(np.array([0.0, np.nan, 0.2, 0.3]), np.ones(4))
+        with pytest.raises(ValueError, match="omegas must be finite"):
+            supervisor.assess(np.zeros(4), np.array([1.0, 1.1, np.inf, 1.3]))
+
+
+class TestFEPHierarchyInPredictiveCoverage:
+    def test_fep_hierarchy_serialises_child_parent_actions_and_phase_encoding(self):
+        children = {
+            "coherent_child": (
+                np.array([0.0, 0.02, 0.04], dtype=np.float64),
+                np.array([1.0, 1.0, 1.0], dtype=np.float64),
+            ),
+            "dispersed_child": (
+                np.array([0.0, 2.1, 4.2], dtype=np.float64),
+                np.array([0.8, 1.1, 1.4], dtype=np.float64),
+            ),
+        }
+
+        hierarchy = assess_fep_hierarchy(
+            children,
+            dt=0.01,
+            parent_dt=0.02,
+            child_target_R=0.75,
+            parent_target_R=0.7,
+            free_energy_threshold=0.0,
+            child_drive_gain=0.08,
+            parent_drive_gain=0.05,
+            hierarchy="predictive_coverage_hierarchy",
+        )
+        record = hierarchy.to_audit_record()
+
+        assert isinstance(hierarchy, FEPHierarchyAssessment)
+        assert all(
+            isinstance(child, FEPHierarchyChildAssessment)
+            for child in hierarchy.children
+        )
+        assert record["hierarchy"] == "predictive_coverage_hierarchy"
+        assert [child["name"] for child in record["children"]] == [
+            "coherent_child",
+            "dispersed_child",
+        ]
+        assert len(record["child_R_values"]) == 2
+        assert len(record["parent_phase_encoding"]) == 2
+        assert all(
+            0.0 <= value <= np.pi for value in record["parent_phase_encoding"]
+        )
+        assert record["parent"]["actions"]
+        assert all(child["actions"] for child in record["children"])
+        assert record["parent"]["assessment"]["target_R"] == pytest.approx(0.7)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"children": {}, "dt": 0.01}, "at least one child"),
+            (
+                {"children": {"a": (np.zeros(2), np.ones(2))}, "dt": 0.0},
+                "dt",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "parent_dt": np.inf,
+                },
+                "parent_dt",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "child_target_R": -0.1,
+                },
+                "child_target_R",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "parent_target_R": 1.1,
+                },
+                "parent_target_R",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "free_energy_threshold": -0.1,
+                },
+                "free_energy_threshold",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "child_drive_gain": np.nan,
+                },
+                "child_drive_gain",
+            ),
+            (
+                {
+                    "children": {"a": (np.zeros(2), np.ones(2))},
+                    "dt": 0.01,
+                    "parent_drive_gain": -0.1,
+                },
+                "parent_drive_gain",
+            ),
+        ],
+    )
+    def test_fep_hierarchy_rejects_invalid_global_bounds(self, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            assess_fep_hierarchy(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("children", "match"),
+        [
+            ({"": (np.zeros(2), np.ones(2))}, "non-empty strings"),
+            ({"empty": (np.empty((0,), dtype=np.float64), np.ones(0))}, "phases"),
+            ({"rank": (np.zeros((1, 2)), np.ones((1, 2)))}, "phases"),
+            ({"shape": (np.zeros(3), np.ones(2))}, "omegas must match"),
+            (
+                {"phase_nan": (np.array([0.0, np.nan]), np.ones(2))},
+                "phases must be finite",
+            ),
+            (
+                {"omega_nan": (np.zeros(2), np.array([1.0, np.nan]))},
+                "omegas must be finite",
+            ),
+        ],
+    )
+    def test_fep_hierarchy_rejects_invalid_child_observations(self, children, match):
+        with pytest.raises(ValueError, match=match):
+            assess_fep_hierarchy(children, dt=0.01)

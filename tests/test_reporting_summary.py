@@ -62,6 +62,36 @@ def test_audit_report_summary_includes_core_report_fields() -> None:
     assert summary["hash_chain_verified"] == 3
 
 
+def test_audit_report_summary_ignores_malformed_layers_actions_and_r_values() -> None:
+    entries: list[dict[str, object]] = [
+        {
+            "step": 0,
+            "regime": "nominal",
+            "layers": "not-a-layer-list",
+            "actions": "not-an-action-list",
+        },
+        {
+            "step": 1,
+            "regime": "nominal",
+            "layers": [{"R": "not-numeric"}, {"R": 0.4}],
+            "actions": [{"knob": "zeta"}, "bad-action"],
+        },
+    ]
+
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=False,
+        hash_chain_verified=1,
+    )
+
+    assert summary["steps"] == 2
+    assert summary["layers"] == 2
+    assert summary["layer_r_mean"] == [0.0, 0.4]
+    assert summary["layer_r_final"] == [0.0, 0.4]
+    assert summary["action_counts"] == {"zeta": 1}
+    assert summary["hash_chain_ok"] is False
+
+
 def test_audit_report_summary_preserves_binding_channel_algebra() -> None:
     channel_algebra = {
         "channels": ["P", "Risk"],
@@ -133,3 +163,9 @@ def test_audit_report_summary_rejects_logs_without_steps() -> None:
             hash_chain_ok=True,
             hash_chain_verified=1,
         )
+
+
+def test_non_numeric_private_summary_value_defaults_to_zero() -> None:
+    record: dict[str, object] = {"phi": "not-numeric"}
+
+    assert summary_module._numeric_value(record, "phi") == 0.0

@@ -21,6 +21,8 @@ Tolerances:
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import get_type_hints
 
 import numpy as np
@@ -49,6 +51,8 @@ from scpn_phase_orchestrator.monitor.embedding import (
     delay_embed,
     mutual_information,
     nearest_neighbor_distances,
+    optimal_delay,
+    optimal_dimension,
 )
 
 
@@ -203,19 +207,142 @@ class TestNearestNeighborParity:
 
 
 class TestDispatcherFallthroughForRust:
-    def test_rust_active_still_resolves_mi_nn(self) -> None:
+    def test_rust_active_still_resolves_mi_nn(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Rust has no standalone MI / NN FFI; with Rust active the
         dispatcher must still produce a value via the next backend."""
-        if "rust" not in AVAILABLE_BACKENDS:
-            pytest.skip("Rust backend not built")
         sig = _signal(0)
+        emb = _reference_de(sig, 5, 3)
+
+        def rust_loader() -> dict[str, object]:
+            return {
+                "de": lambda signal, delay, dim: _reference_de(signal, delay, dim),
+                "mi": None,
+                "nn": None,
+            }
+
+        def python_loader() -> dict[str, object]:
+            return {
+                "de": None,
+                "mi": lambda signal, lag, n_bins: _reference_mi(signal, lag, n_bins),
+                "nn": lambda embedded, _t, _m: _reference_nn(embedded),
+            }
+
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setitem(em_mod._LOADERS, "rust", rust_loader)
+        monkeypatch.setitem(em_mod._LOADERS, "go", python_loader)
         prev = _force("rust")
         try:
             mi = mutual_information(sig, 5, 16)
-            emb = delay_embed(sig, 5, 3)
+            got_emb = delay_embed(sig, 5, 3)
             dist, idx = nearest_neighbor_distances(emb)
         finally:
             _reset(prev)
         assert np.isfinite(mi)
+        np.testing.assert_array_equal(got_emb, emb)
         assert dist.size == emb.shape[0]
         assert idx.size == emb.shape[0]
+
+    def test_dispatch_returns_python_fallback_when_chain_reaches_python(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+        monkeypatch.setitem(em_mod._LOADERS, "rust", lambda: {"mi": None})
+        assert em_mod._dispatch("mi") is None
+
+    def test_dispatch_returns_none_when_non_python_backends_have_no_kernel(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["rust"])
+        monkeypatch.setitem(em_mod._LOADERS, "rust", lambda: {"mi": None})
+        assert em_mod._dispatch("mi") is None
+
+    def test_rust_loader_wraps_flat_delay_kernel(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        spo_kernel = types.ModuleType("spo_kernel")
+        calls: dict[str, object] = {}
+
+        def delay_embed_rust(signal: np.ndarray, delay: int, dim: int) -> np.ndarray:
+            calls["signal"] = signal.copy()
+            calls["delay"] = delay
+            calls["dim"] = dim
+            return np.array([[0.0, 2.0, 4.0], [1.0, 3.0, 5.0]], dtype=np.float64)
+
+        spo_kernel.delay_embed_rust = delay_embed_rust
+        spo_kernel.optimal_delay_rust = lambda signal, max_lag, n_bins: 7
+        spo_kernel.optimal_dimension_rust = lambda signal, delay, max_dim, rtol, atol: 3
+        monkeypatch.setitem(sys.modules, "spo_kernel", spo_kernel)
+
+        loaded = em_mod._load_rust_fns()
+        got = loaded["de"](np.arange(6, dtype=np.float64).reshape(2, 3), 2, 3)
+
+        np.testing.assert_array_equal(got, [[0.0, 2.0, 4.0], [1.0, 3.0, 5.0]])
+        np.testing.assert_array_equal(
+            calls["signal"],
+            np.arange(6, dtype=np.float64).reshape(2, 3),
+        )
+        assert calls["delay"] == 2
+        assert calls["dim"] == 3
+        assert loaded["mi"] is None
+        assert loaded["nn"] is None
+        assert loaded["optimal_delay"](np.arange(10, dtype=np.float64), 20, 8) == 7
+        assert loaded["optimal_dimension"](
+            np.arange(10, dtype=np.float64),
+            1,
+            5,
+            15.0,
+            2.0,
+        ) == 3
+
+    def test_rust_active_uses_native_delay_and_dimension_wrappers(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: dict[str, tuple[object, ...]] = {}
+
+        def rust_loader() -> dict[str, object]:
+            def rust_delay(signal: np.ndarray, max_lag: int, n_bins: int) -> int:
+                calls["delay"] = (signal.copy(), max_lag, n_bins)
+                return 5
+
+            def rust_dim(
+                signal: np.ndarray,
+                delay: int,
+                max_dim: int,
+                rtol: float,
+                atol: float,
+            ) -> int:
+                calls["dimension"] = (signal.copy(), delay, max_dim, rtol, atol)
+                return 4
+
+            return {
+                "de": None,
+                "mi": None,
+                "nn": None,
+                "optimal_delay": rust_delay,
+                "optimal_dimension": rust_dim,
+            }
+
+        sig = _signal(12, t=64)
+        monkeypatch.setitem(em_mod._LOADERS, "rust", rust_loader)
+        prev = _force("rust")
+        try:
+            tau = optimal_delay(sig, max_lag=11, n_bins=9)
+            dim = optimal_dimension(sig, delay=2, max_dim=6, rtol=12.5, atol=1.5)
+        finally:
+            _reset(prev)
+
+        assert tau == 5
+        assert dim == 4
+        np.testing.assert_array_equal(calls["delay"][0], sig)
+        assert calls["delay"][1:] == (11, 9)
+        np.testing.assert_array_equal(calls["dimension"][0], sig)
+        assert calls["dimension"][1:] == (2, 6, 12.5, 1.5)

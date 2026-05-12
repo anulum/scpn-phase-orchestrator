@@ -60,13 +60,25 @@ class TestConstructor:
         with pytest.raises(ValueError, match="n_oscillators"):
             SimplicialEngine(0, 0.01)
 
+    def test_rejects_boolean_n(self):
+        with pytest.raises(ValueError, match="n_oscillators"):
+            SimplicialEngine(True, 0.01)
+
     def test_rejects_non_positive_dt(self):
         with pytest.raises(ValueError, match="dt"):
             SimplicialEngine(4, 0.0)
 
+    def test_rejects_non_real_dt(self):
+        with pytest.raises(ValueError, match="dt"):
+            SimplicialEngine(4, "0.01")
+
     def test_rejects_negative_sigma2(self):
         with pytest.raises(ValueError, match="sigma2"):
             SimplicialEngine(4, 0.01, sigma2=-0.1)
+
+    def test_rejects_boolean_sigma2(self):
+        with pytest.raises(ValueError, match="sigma2"):
+            SimplicialEngine(4, 0.01, sigma2=False)
 
     def test_sigma2_setter_rejects_negative(self):
         eng = SimplicialEngine(4, 0.01, sigma2=0.0)

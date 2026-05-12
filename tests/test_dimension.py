@@ -8,8 +8,12 @@
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 
+from scpn_phase_orchestrator.monitor import dimension as dim_mod
 from scpn_phase_orchestrator.monitor.dimension import (
     CorrelationDimensionResult,
     correlation_dimension,
@@ -41,6 +45,27 @@ class TestCorrelationIntegral:
         epsilons = np.logspace(-1, 1, 10)
         C = correlation_integral(traj, epsilons, max_pairs=5000)
         assert C[-1] > 0
+
+    def test_empty_subsample_returns_zero_for_all_thresholds(self, monkeypatch):
+        """If deterministic subsampling yields no distinct pairs, C(eps)=0."""
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        dim_mod.ACTIVE_BACKEND = "python"
+        monkeypatch.setattr(
+            dim_mod,
+            "_prepare_pair_indices",
+            lambda _t, _max_pairs, _seed: (
+                np.array([], dtype=np.int64),
+                np.array([], dtype=np.int64),
+            ),
+        )
+        traj = np.array([[0.0], [1.0], [2.0]], dtype=np.float64)
+        epsilons = np.array([0.1, 1.0, 10.0], dtype=np.float64)
+        try:
+            C = correlation_integral(traj, epsilons, max_pairs=2, seed=4)
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+
+        np.testing.assert_array_equal(C, np.zeros_like(epsilons))
 
 
 class TestCorrelationDimension:
@@ -122,6 +147,56 @@ class TestKaplanYorkeDimension:
         # cumsum = [1.0, 1.0, 0.0] → j=2, but j+1=3 >= len → returns 3
         # Actually: j=2 (0-indexed cumsum[2]=0.0 ≥ 0), j+1=3 ≥ 3 → returns 3.0
         assert d == 3.0
+
+
+class TestBackendDispatch:
+    def test_rust_loader_exposes_ci_and_ky_functions(self, monkeypatch):
+        def fake_ci(*_args):
+            return np.array([0.0], dtype=np.float64)
+
+        def fake_ky(_exponents):
+            return 0.0
+
+        monkeypatch.setitem(
+            sys.modules,
+            "spo_kernel",
+            types.SimpleNamespace(
+                correlation_integral_rust=fake_ci,
+                kaplan_yorke_dimension_rust=fake_ky,
+            ),
+        )
+
+        loaded = dim_mod._load_rust_fns()
+
+        assert loaded == {"ci": fake_ci, "ky": fake_ky}
+
+    def test_rust_correlation_dispatch_sorts_epsilons_and_uses_contiguous_buffers(
+        self,
+        monkeypatch,
+    ):
+        calls: list[tuple[int, int, int, int]] = []
+
+        def fake_ci(traj_flat, t, d, eps_sorted, max_pairs, seed):
+            calls.append((int(t), int(d), int(max_pairs), int(seed)))
+            assert traj_flat.flags.c_contiguous
+            assert traj_flat.dtype == np.float64
+            np.testing.assert_array_equal(eps_sorted, np.array([0.1, 1.0, 2.0]))
+            return np.array([0.25, 0.5, 1.0], dtype=np.float64)
+
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_loader = dim_mod._LOADERS["rust"]
+        dim_mod.ACTIVE_BACKEND = "rust"
+        monkeypatch.setitem(dim_mod._LOADERS, "rust", lambda: {"ci": fake_ci})
+        try:
+            traj = np.array([[0.0, 1.0], [1.0, 1.5], [2.0, 3.0]])
+            eps = np.array([2.0, 0.1, 1.0])
+            C = correlation_integral(traj, eps, max_pairs=17, seed=9)
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            monkeypatch.setitem(dim_mod._LOADERS, "rust", previous_loader)
+
+        np.testing.assert_array_equal(C, np.array([0.25, 0.5, 1.0]))
+        assert calls == [(3, 2, 17, 9)]
 
 
 class TestCorrelationDimensionEdgeCases:

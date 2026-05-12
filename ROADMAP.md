@@ -224,6 +224,58 @@
 - Extractor and actuator plugin ecosystem: define a stable Python/Rust plugin interface for custom `PhaseExtractor` and `ActuationMapper` implementations, including schema validation, entry-point discovery, audit metadata, compatibility tests, and versioned capability declarations.
   - Python manifest foundation is in place: `plugins.registry` provides entry-point discovery, versioned capability declarations, compatibility reports, audit records, tests, and API documentation.
 
+### Next high-impact differentiated moves
+
+These are the next moves to keep on the active TODO surface. They overlap with
+existing v1.x tracks, but are listed here as operator-visible outcomes so future
+sessions do not treat them as abstract research labels.
+
+- Auto-discovery / data-driven binding:
+  - Ingest raw streams such as CSV, sensor logs, and events.
+  - Auto-propose oscillators, channels, initial `K`, extractor parameters, and a
+    reviewable `binding_spec.yaml`.
+  - Use SINDy, coupling estimation, clustering, and graph/correlation evidence
+    before any learned graph inference is promoted.
+  - Acceptance: the five-minute new-dataset workflow is zero-config except for
+    operator review, with validation diagnostics and deterministic replay.
+- RL / optimisation on knobs:
+  - Use JAX `nn/` plus `autotune` to learn replay-only or simulator-backed
+    policies for `K`, `alpha`, `zeta`, `Psi`, channel weights, and cross-channel
+    gains.
+  - Optimise `R_good - penalty(R_bad, safety, regime churn)` and hybridise
+    learned proposals with supervisor rules.
+  - Acceptance: PPO-like, gradient-based, or hybrid physics learners produce
+    benchmarked, auditable policy candidates that remain non-actuating until
+    explicit safety gates pass.
+- Hierarchical and distributed orchestration:
+  - Make nested orchestrators explicit: edge supervisors sync locally, report
+    reduced aggregates upward, and escalate only bounded evidence.
+  - Build on Hodge, transfer entropy, N-channel summaries, and the current
+    hierarchy adapter/runtime boundaries.
+  - Acceptance: live owned transports and multi-domain distributed demos pass
+    replay, sequence, protocol, and safety validation.
+- Formal verification export:
+  - Export Petri nets, supervisor transitions, policy DSL, and STL monitors to
+    PRISM, SPIN, TLA+, SMT, or equivalent proof workflows.
+  - Acceptance: plasma, power, and medical-style policies have reproducible
+    safety artefacts suitable for credibility reviews.
+- Neuromorphic and quantum tighter integration:
+  - Surface partner bridges by emitting Lava/BrainScaleS-style schedules and QPU
+    control schedules from validated phase-control plans.
+  - Acceptance: execution stays disabled until real target evidence, hashes,
+    parity reports, and operator approval exist.
+- Plugin ecosystem:
+  - Standardise Python and Rust extension interfaces for custom extractors,
+    monitors, actuators, and bridges.
+  - Acceptance: domain experts can ship schema-validated, capability-declared,
+    audit-visible plugins without core forks.
+- Observability and digital-twin polish:
+  - Promote Prometheus/Grafana live-run telemetry, adapter health, replay
+    linkage, twin residuals, and mismatch evidence to first-class operator
+    surfaces.
+  - Acceptance: live and replayed runs expose the same digital-twin residual
+    channels and operational evidence in dashboards and audit records.
+
 ### Usability moat — finish the job
 
 - One-click SPO Studio web UI for new control engineers:

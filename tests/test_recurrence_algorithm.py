@@ -19,8 +19,11 @@ from __future__ import annotations
 
 import functools
 import math
+import sys
+import types
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -86,6 +89,11 @@ class TestRecurrenceMatrix:
         # Only the main diagonal should be recurrent (self-distance = 0).
         assert int(R.sum()) == R.shape[0]
 
+    @_python
+    def test_rejects_rank_three_trajectory(self):
+        with pytest.raises(ValueError, match="trajectory must be 1D or 2D"):
+            recurrence_matrix(np.zeros((2, 3, 4)), 0.1)
+
 
 class TestAngularMetric:
     @_python
@@ -112,13 +120,38 @@ class TestCrossRecurrence:
         np.testing.assert_array_equal(R, CR)
 
     @_python
-    def test_mismatched_shape_raises(self):
-        import pytest
+    def test_one_dimensional_inputs_coerce_to_single_state_dimension(self):
+        t = np.linspace(0.0, 2.0 * math.pi, 32)
+        a = np.sin(t)
+        b = np.sin(t + 0.05)
+        CR = cross_recurrence_matrix(a, b, 0.1)
+        assert CR.shape == (32, 32)
+        assert CR.dtype == bool
+        assert np.any(np.diag(CR))
 
+    @_python
+    def test_mismatched_shape_raises(self):
         a = np.zeros((10, 3))
         b = np.zeros((8, 3))
         with pytest.raises(ValueError, match="trajectories must match"):
             cross_recurrence_matrix(a, b, 0.5)
+
+    @_python
+    def test_rejects_rank_three_inputs(self):
+        good = np.zeros((4, 2))
+        with pytest.raises(ValueError, match="traj_a must be 1D or 2D"):
+            cross_recurrence_matrix(np.zeros((2, 3, 4)), good, 0.1)
+        with pytest.raises(ValueError, match="traj_b must be 1D or 2D"):
+            cross_recurrence_matrix(good, np.zeros((2, 3, 4)), 0.1)
+
+    @_python
+    def test_cross_angular_wraps_phase_boundary(self):
+        a = np.array([0.0, math.pi])[:, np.newaxis]
+        b = np.array([TWO_PI - 0.02, math.pi + 0.03])[:, np.newaxis]
+        CR = cross_recurrence_matrix(a, b, 0.05, metric="angular")
+        assert CR[0, 0]
+        assert CR[1, 1]
+        assert not CR[0, 1]
 
 
 class TestRQA:
@@ -187,3 +220,49 @@ class TestDispatcherSurface:
 
     def test_active_is_first(self):
         assert r_mod.AVAILABLE_BACKENDS[0] == r_mod.ACTIVE_BACKEND
+
+
+class TestBackendLoaderContracts:
+    def test_rust_loader_wraps_recurrence_kernels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: dict[str, object] = {}
+
+        def fake_rm(
+            traj_flat: np.ndarray,
+            t: int,
+            d: int,
+            epsilon: float,
+            angular: bool,
+        ) -> np.ndarray:
+            seen["rm"] = (traj_flat.copy(), t, d, epsilon, angular)
+            return np.eye(t, dtype=np.uint8).ravel()
+
+        def fake_cross(
+            a_flat: np.ndarray,
+            b_flat: np.ndarray,
+            t: int,
+            d: int,
+            epsilon: float,
+            angular: bool,
+        ) -> np.ndarray:
+            seen["cross"] = (a_flat.copy(), b_flat.copy(), t, d, epsilon, angular)
+            return np.ones(t * t, dtype=np.uint8)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.recurrence_matrix_rust = fake_rm
+        fake_spo.cross_recurrence_matrix_rust = fake_cross
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        loaded = r_mod._load_rust_fns()
+        traj_flat = np.arange(6, dtype=np.float64)
+        rm = loaded["rm"](traj_flat, 3, 2, 0.25, True).reshape(3, 3)
+        cross = loaded["cross_rm"](traj_flat, traj_flat + 1.0, 3, 2, 0.5, False)
+
+        np.testing.assert_array_equal(rm, np.eye(3, dtype=np.uint8))
+        np.testing.assert_array_equal(cross, np.ones(9, dtype=np.uint8))
+        rm_flat, t, d, epsilon, angular = seen["rm"]
+        np.testing.assert_array_equal(rm_flat, traj_flat)
+        assert (t, d, epsilon, angular) == (3, 2, 0.25, True)
+        _, _, t, d, epsilon, angular = seen["cross"]
+        assert (t, d, epsilon, angular) == (3, 2, 0.5, False)

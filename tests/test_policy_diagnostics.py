@@ -15,6 +15,7 @@ from typing import Any
 import yaml
 from click.testing import CliRunner
 
+import scpn_phase_orchestrator.supervisor.policy_diagnostics as diagnostics_module
 from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.supervisor.policy_diagnostics import (
     dry_run_policy_rules,
@@ -132,6 +133,96 @@ def test_policy_dry_run_reports_unreachable_rules(tmp_path: Path) -> None:
     assert report.fire_counts["suppress_bad"] == 1
     assert report.unreachable_rules == ("never_fires",)
     assert report.step_reports[0].fired_rules == ("boost_degraded",)
+
+
+def test_policy_dry_run_reports_overlaps_collisions_and_unknown_regime(
+    tmp_path: Path,
+) -> None:
+    policy_data = {
+        "rules": [
+            {
+                "name": "default_nominal",
+                "regime": ["NOMINAL"],
+                "condition": {
+                    "metric": "stability_proxy",
+                    "op": "==",
+                    "threshold": 0.0,
+                },
+                "action": {
+                    "knob": "zeta",
+                    "scope": "global",
+                    "value": 0.1,
+                    "ttl_s": 5.0,
+                },
+            },
+            {
+                "name": "boost_low_stability",
+                "regime": ["DEGRADED"],
+                "condition": {
+                    "metric": "stability_proxy",
+                    "op": "<",
+                    "threshold": 0.5,
+                },
+                "action": {
+                    "knob": "K",
+                    "scope": "global",
+                    "value": 0.1,
+                    "ttl_s": 5.0,
+                },
+            },
+            {
+                "name": "second_global_boost",
+                "regime": ["DEGRADED"],
+                "condition": {
+                    "metric": "R",
+                    "layer": 0,
+                    "op": ">",
+                    "threshold": 0.1,
+                },
+                "action": {
+                    "knob": "K",
+                    "scope": "global",
+                    "value": 0.2,
+                    "ttl_s": 5.0,
+                },
+            },
+        ]
+    }
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(yaml.safe_dump(policy_data), encoding="utf-8")
+    entries = [
+        {
+            "step": 7,
+            "regime": "unknown-regime",
+            "layers": [{"R": 0.0}],
+        },
+        {
+            "step": 8,
+            "regime": "DEGRADED",
+            "stability": 0.3,
+            "layers": [{"R": 0.7}],
+        },
+    ]
+
+    report = dry_run_policy_rules(
+        load_policy_rules(policy_path),
+        entries,
+        good_layers=[0],
+        bad_layers=[],
+    )
+
+    assert report.step_reports[0].regime == "nominal"
+    assert report.step_reports[0].fired_rules == ("default_nominal",)
+    assert report.overlapping_steps == (8,)
+    assert report.action_collision_steps == (8,)
+    assert report.action_counts["K:global"] == 2
+
+
+def test_unknown_policy_justification_is_preserved_for_diagnostics() -> None:
+    assert diagnostics_module._rule_name_from_justification("") == "<unknown>"
+    assert diagnostics_module._rule_name_from_justification("manual override") == (
+        "manual override"
+    )
 
 
 def test_policy_dry_run_cli_outputs_json(tmp_path: Path) -> None:

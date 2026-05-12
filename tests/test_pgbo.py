@@ -11,11 +11,21 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
+import scpn_phase_orchestrator.ssgf.pgbo as pgbo_module
 from scpn_phase_orchestrator.ssgf.pgbo import PGBO, PGBOSnapshot
 
 
 class TestPGBO:
+    def test_rejects_empty_cost_weights(self):
+        with pytest.raises(ValueError, match="at least one weight"):
+            PGBO(cost_weights=())
+
+    def test_rejects_negative_cost_weights(self):
+        with pytest.raises(ValueError, match="non-negative"):
+            PGBO(cost_weights=(1.0, -0.1))
+
     def test_observe_returns_snapshot(self):
         pgbo = PGBO()
         phases = np.zeros(4)
@@ -92,6 +102,40 @@ class TestPGBO:
         np.fill_diagonal(W, 0.0)
         snap = pgbo.observe(phases, W)
         assert np.isfinite(snap.gauge_curvature)
+
+    def test_zero_coupling_matrix_has_zero_gauge_curvature(self):
+        pgbo = PGBO()
+        phases = np.array([0.0, 0.5, 1.0, 1.5])
+        W = np.zeros((4, 4), dtype=np.float64)
+
+        snap = pgbo.observe(phases, W)
+
+        assert snap.gauge_curvature == 0.0
+
+    def test_non_finite_alignment_falls_back_to_zero(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        pgbo = PGBO()
+        phases = np.array([0.0, 0.3, 1.1, 2.0])
+        W = np.array(
+            [
+                [0.0, 0.1, 0.4, 0.7],
+                [0.1, 0.0, 0.2, 0.8],
+                [0.4, 0.2, 0.0, 0.3],
+                [0.7, 0.8, 0.3, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        monkeypatch.setattr(
+            pgbo_module.np,
+            "corrcoef",
+            lambda *_args, **_kwargs: np.array([[1.0, np.nan], [np.nan, 1.0]]),
+        )
+
+        snap = pgbo.observe(phases, W)
+
+        assert snap.phase_geometry_alignment == 0.0
 
     def test_public_array_contracts_are_parameterised(self) -> None:
         hints = get_type_hints(PGBO.observe)

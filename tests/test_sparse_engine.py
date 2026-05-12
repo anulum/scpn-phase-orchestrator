@@ -8,9 +8,13 @@
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.upde import sparse_engine as sparse_mod
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.sparse_engine import SparseUPDEEngine
 
@@ -245,6 +249,90 @@ class TestSparseEngineEdgeCases:
         out = engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
         # θ(dt) = (θ(0) + ω·dt) mod 2π = 0.5 + 0.02 = 0.52
         np.testing.assert_allclose(out, [0.52], atol=1e-10)
+
+    def test_last_dt_reports_configured_python_timestep(self):
+        engine = SparseUPDEEngine(3, dt=0.0125, method="rk4")
+        assert engine.last_dt == pytest.approx(0.0125)
+
+    def test_rust_import_error_falls_back_to_python(self, monkeypatch):
+        """If the compatibility flag is true but the sparse Rust class is
+        absent, construction must keep the Python fallback usable."""
+        fake_spo = types.ModuleType("spo_kernel")
+        monkeypatch.setattr(sparse_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SparseUPDEEngine(2, dt=0.01, method="euler")
+        assert engine._rust is None
+
+        phases = np.array([0.1, 0.2], dtype=np.float64)
+        omegas = np.array([1.0, 1.5], dtype=np.float64)
+        row_ptr = np.array([0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        alpha = np.array([], dtype=np.float64)
+        out = engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, alpha)
+        np.testing.assert_allclose(out, phases + 0.01 * omegas, atol=1e-12)
+
+    def test_rust_stepper_dispatches_contiguous_arrays(self, monkeypatch):
+        """The optional Rust path receives flattened contiguous CSR arrays and
+        its step/run outputs are returned as NumPy arrays without mutation."""
+
+        class FakeSparseStepper:
+            def __init__(self, n, dt, method, *, atol, rtol):
+                assert (n, dt, method, atol, rtol) == (3, 0.01, "rk4", 1e-6, 1e-3)
+
+            def step(
+                self,
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+            ):
+                assert phases.flags.c_contiguous
+                assert omegas.flags.c_contiguous
+                assert row_ptr.dtype == np.uint64
+                assert col_indices.dtype == np.uint64
+                assert knm_values.flags.c_contiguous
+                assert alpha_values.flags.c_contiguous
+                assert (zeta, psi) == (0.2, 0.3)
+                return np.array([0.4, 0.5, 0.6], dtype=np.float64)
+
+            def run(
+                self,
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                n_steps,
+            ):
+                assert n_steps == 4
+                return np.array([0.7, 0.8, 0.9], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySparseUPDEStepper = FakeSparseStepper
+        monkeypatch.setattr(sparse_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SparseUPDEEngine(3, dt=0.01, method="rk4")
+        phases = np.array([[0.1, 0.2, 0.3]], dtype=np.float64)
+        omegas = np.array([[1.0, 1.1, 1.2]], dtype=np.float64)
+        row_ptr = np.array([0, 1, 2, 2], dtype=np.uint64)
+        col = np.array([1, 2], dtype=np.uint64)
+        kv = np.array([0.4, 0.5], dtype=np.float64)
+        alpha = np.array([0.0, 0.1], dtype=np.float64)
+
+        step = engine.step(phases, omegas, row_ptr, col, kv, 0.2, 0.3, alpha)
+        run = engine.run(phases, omegas, row_ptr, col, kv, 0.2, 0.3, alpha, 4)
+        np.testing.assert_allclose(step, [0.4, 0.5, 0.6], atol=1e-12)
+        np.testing.assert_allclose(run, [0.7, 0.8, 0.9], atol=1e-12)
 
 
 # Pipeline wiring: the sparse engine swaps in for UPDEEngine when the

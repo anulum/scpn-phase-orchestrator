@@ -18,6 +18,8 @@ measured parity sits at ~5e-17 on this host (bit-equivalent).
 
 from __future__ import annotations
 
+import sys
+from types import ModuleType
 from typing import get_type_hints
 
 import numpy as np
@@ -97,6 +99,151 @@ def test_backend_array_contracts_are_parameterised() -> None:
         if fn.__name__.startswith("compute_itpc"):
             assert "numpy.ndarray" in str(hints["return"])
             assert "float64" in str(hints["return"])
+
+
+def test_rust_loader_returns_kernel_functions(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_kernel = ModuleType("spo_kernel")
+    fake_kernel.compute_itpc_rust = object()
+    fake_kernel.itpc_persistence_rust = object()
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_kernel)
+
+    loaded = it_mod._load_rust_fns()
+
+    assert loaded == {
+        "itpc": fake_kernel.compute_itpc_rust,
+        "persistence": fake_kernel.itpc_persistence_rust,
+    }
+
+
+def test_rust_itpc_dispatch_uses_contiguous_flattened_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[np.ndarray, int, int]] = []
+
+    def fake_rust_itpc(
+        phases_flat: np.ndarray,
+        n_trials: int,
+        n_tp: int,
+    ) -> np.ndarray:
+        calls.append((phases_flat, n_trials, n_tp))
+        return np.array([0.25, 0.5, 0.75], dtype=np.float64)
+
+    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setitem(
+        it_mod._LOADERS,
+        "rust",
+        lambda: {"itpc": fake_rust_itpc, "persistence": lambda *_args: 0.0},
+    )
+    phases = np.asfortranarray(
+        np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
+    )
+
+    result = compute_itpc(phases)
+
+    np.testing.assert_allclose(result, np.array([0.25, 0.5, 0.75]))
+    assert len(calls) == 1
+    phases_flat, n_trials, n_tp = calls[0]
+    assert phases_flat.flags.c_contiguous
+    np.testing.assert_array_equal(phases_flat, phases.ravel())
+    assert (n_trials, n_tp) == (2, 3)
+
+
+def test_rust_persistence_dispatch_uses_contiguous_arrays(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[np.ndarray, int, int, np.ndarray]] = []
+
+    def fake_rust_persistence(
+        phases_flat: np.ndarray,
+        n_trials: int,
+        n_tp: int,
+        pause_indices: np.ndarray,
+    ) -> float:
+        calls.append((phases_flat, n_trials, n_tp, pause_indices))
+        return 0.875
+
+    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setitem(
+        it_mod._LOADERS,
+        "rust",
+        lambda: {
+            "itpc": lambda *_args: np.array([]),
+            "persistence": fake_rust_persistence,
+        },
+    )
+    phases = np.asfortranarray(
+        np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
+    )
+
+    result = itpc_persistence(phases, [0, 2])
+
+    assert result == 0.875
+    assert len(calls) == 1
+    phases_flat, n_trials, n_tp, pause_indices = calls[0]
+    assert phases_flat.flags.c_contiguous
+    assert pause_indices.flags.c_contiguous
+    assert pause_indices.dtype == np.int64
+    np.testing.assert_array_equal(phases_flat, phases.ravel())
+    np.testing.assert_array_equal(pause_indices, np.array([0, 2], dtype=np.int64))
+    assert (n_trials, n_tp) == (2, 3)
+
+
+def test_non_rust_dispatch_flattens_inputs_and_preserves_backend_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[np.ndarray, int, int]] = []
+
+    def fake_itpc(phases_flat: np.ndarray, n_trials: int, n_tp: int) -> np.ndarray:
+        calls.append((phases_flat.copy(), n_trials, n_tp))
+        return np.array([0.125, 0.25, 0.5], dtype=np.float64)
+
+    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setitem(
+        it_mod._LOADERS,
+        "go",
+        lambda: {"itpc": fake_itpc, "persistence": lambda *_args: 0.0},
+    )
+    phases = np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
+
+    result = compute_itpc(phases)
+
+    np.testing.assert_allclose(result, np.array([0.125, 0.25, 0.5]))
+    assert len(calls) == 1
+    phases_flat, n_trials, n_tp = calls[0]
+    np.testing.assert_array_equal(phases_flat, phases.ravel())
+    assert (n_trials, n_tp) == (2, 3)
+
+
+def test_non_rust_persistence_dispatch_passes_pause_indices(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[np.ndarray, int, int, np.ndarray]] = []
+
+    def fake_persistence(
+        phases_flat: np.ndarray,
+        n_trials: int,
+        n_tp: int,
+        pause_indices: np.ndarray,
+    ) -> float:
+        calls.append((phases_flat.copy(), n_trials, n_tp, pause_indices.copy()))
+        return 0.625
+
+    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "mojo")
+    monkeypatch.setitem(
+        it_mod._LOADERS,
+        "mojo",
+        lambda: {"itpc": lambda *_args: np.array([]), "persistence": fake_persistence},
+    )
+    phases = np.array([[0.0, 0.25, 0.5], [1.0, 1.25, 1.5]], dtype=np.float64)
+
+    result = itpc_persistence(phases, [0, 2])
+
+    assert result == 0.625
+    assert len(calls) == 1
+    phases_flat, n_trials, n_tp, pause_indices = calls[0]
+    np.testing.assert_array_equal(phases_flat, phases.ravel())
+    assert (n_trials, n_tp) == (2, 3)
+    np.testing.assert_array_equal(pause_indices, np.array([0, 2]))
 
 
 class TestRustParity:

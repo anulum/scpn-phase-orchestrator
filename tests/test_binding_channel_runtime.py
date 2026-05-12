@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
 import yaml
 
 from scpn_phase_orchestrator.binding import (
@@ -105,3 +108,29 @@ def test_channel_runtime_audit_record_identifies_delayed_uncertain_layers(tmp_pa
     assert layer_records[1]["uncertainty_policy"] == (
         "confidence_weight_runtime_contribution"
     )
+
+
+def test_channel_runtime_rejects_layer_count_mismatch(tmp_path):
+    spec = load_binding_spec(_write_runtime_spec(tmp_path))
+    executor = ChannelRuntimeExecutor.from_spec(spec)
+
+    with pytest.raises(ValueError, match="raw layer count must match"):
+        executor.execute([LayerState(R=0.7, psi=0.1)])
+
+
+def test_channel_runtime_non_finite_confidence_fails_closed_to_unit_weight(tmp_path):
+    spec_path = Path(_write_runtime_spec(tmp_path))
+    with spec_path.open(encoding="utf-8") as handle:
+        data = yaml.safe_load(handle)
+    data["drivers"]["Forecast"]["confidence_weight"] = float("inf")
+    with spec_path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(data, handle)
+    spec = load_binding_spec(str(spec_path))
+    executor = ChannelRuntimeExecutor.from_spec(spec)
+
+    execution = executor.execute(
+        [LayerState(R=0.7, psi=0.1), LayerState(R=0.4, psi=0.2)]
+    )
+
+    assert execution.layers[1].R == 0.4
+    assert execution.evidence[1].confidence_weight == 1.0

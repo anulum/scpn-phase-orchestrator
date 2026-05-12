@@ -400,6 +400,154 @@ def test_loader_validate_control_period_and_channels(tmp_path):
     assert any("limits" in e for e in errors)
 
 
+def test_loader_rejects_non_string_name_after_structural_parse(tmp_path):
+    data = {**_SPEC_DATA, "name": False}
+    p = tmp_path / "bad_name.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(BindingLoadError, match="expected string in name, got bool"):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_boolean_layer_index(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "layers": [{"name": "L1", "index": True, "oscillator_ids": ["a"]}],
+    }
+    p = tmp_path / "bad_layer_index.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError, match="expected integer in layers\\[\\].index, got bool"
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_boolean_numeric_period(tmp_path):
+    data = {**_SPEC_DATA, "sample_period_s": True}
+    p = tmp_path / "bad_period.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError, match="expected number in sample_period_s, got bool"
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_non_boolean_channel_required_flag(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "channels": {"P": {"role": "plant", "required": "yes"}},
+    }
+    p = tmp_path / "bad_channel_flag.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError, match="expected boolean in channels.P.required, got str"
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_preserves_optional_layer_omegas_and_missing_boundary_bounds(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "layers": [
+            {
+                "name": "L1",
+                "index": 0,
+                "oscillator_ids": ["a", "b"],
+                "omegas": [0.75, 1],
+            }
+        ],
+        "boundaries": [{"name": "b1", "variable": "R", "severity": "soft"}],
+    }
+    p = tmp_path / "layer_omegas.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    spec = load_binding_spec(p)
+
+    assert spec.layers[0].omegas == [0.75, 1.0]
+    assert spec.boundaries[0].lower is None
+    assert spec.boundaries[0].upper is None
+
+
+def test_loader_rejects_actuator_limits_with_wrong_arity(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "actuators": [
+            {"name": "K_glob", "knob": "K", "scope": "global", "limits": [0.0]},
+        ],
+    }
+    p = tmp_path / "bad_actuator_limits.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError,
+        match="expected two numbers in actuators\\[\\].limits, got 1 item",
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_invalid_channel_group_identifier(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "channel_groups": {"1-risk": {"channels": ["P"]}},
+    }
+    p = tmp_path / "bad_channel_group.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError,
+        match="channel_groups.1-risk: invalid channel group identifier",
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_preserves_protocol_net_and_amplitude_blocks(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "protocol_net": {
+            "places": ["idle", "active"],
+            "initial": {"idle": 1, "active": 0},
+            "place_regime": {"idle": "safe_hold"},
+            "transitions": [
+                {
+                    "name": "activate",
+                    "inputs": [{"place": "idle", "weight": 1}],
+                    "outputs": [{"place": "active", "weight": 1}],
+                    "guard": "R > 0.8",
+                }
+            ],
+        },
+        "amplitude": {
+            "mu": 0.2,
+            "epsilon": 0.01,
+            "amp_coupling_strength": 0.05,
+            "amp_coupling_decay": 0.4,
+        },
+    }
+    p = tmp_path / "protocol_amplitude.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    spec = load_binding_spec(p)
+
+    assert spec.protocol_net is not None
+    assert spec.protocol_net.places == ["idle", "active"]
+    assert spec.protocol_net.initial == {"idle": 1, "active": 0}
+    assert spec.protocol_net.place_regime == {"idle": "safe_hold"}
+    assert spec.protocol_net.transitions[0].name == "activate"
+    assert spec.protocol_net.transitions[0].inputs == [{"place": "idle", "weight": 1}]
+    assert spec.protocol_net.transitions[0].outputs == [
+        {"place": "active", "weight": 1}
+    ]
+    assert spec.protocol_net.transitions[0].guard == "R > 0.8"
+    assert spec.amplitude is not None
+    assert spec.amplitude.mu == 0.2
+    assert spec.amplitude.epsilon == 0.01
+    assert spec.amplitude.amp_coupling_strength == 0.05
+    assert spec.amplitude.amp_coupling_decay == 0.4
+
+
 class TestPipelineWiring:
     """Pipeline wiring: load_binding_spec -> build engine params -> UPDEEngine -> R.
 

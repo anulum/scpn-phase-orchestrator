@@ -27,6 +27,8 @@ doc ``research_attention_residuals_2026-04-06.md §5``:
 
 from __future__ import annotations
 
+import sys
+import types
 from collections.abc import Callable
 
 import numpy as np
@@ -34,6 +36,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.coupling import attention_residuals as attnres_mod
 from scpn_phase_orchestrator.coupling.attention_residuals import (
     ACTIVE_BACKEND,
     AVAILABLE_BACKENDS,
@@ -229,6 +232,82 @@ class TestContractFailures:
         with pytest.raises(ValueError, match="lambda_"):
             attnres_modulate(_symmetric_knm(4), np.zeros(4), lambda_=-0.1)
 
+    def test_default_projection_factory_must_fill_all_missing_slots(
+        self,
+        monkeypatch,
+    ) -> None:
+        def broken_defaults(n_heads: int, seed: int):
+            w_q, w_k, w_v, w_o = default_projections(n_heads=n_heads, seed=seed)
+            return w_q, None, w_v, w_o
+
+        monkeypatch.setattr(attnres_mod, "default_projections", broken_defaults)
+        with pytest.raises(ValueError, match="attention projections"):
+            attnres_modulate(_symmetric_knm(4), np.zeros(4), w_q=None)
+
+    def test_query_key_value_shape_mismatch_rejected(self) -> None:
+        w_q = np.zeros((2, 4, 2), dtype=np.float64)
+        w_k = np.zeros((2, 4, 1), dtype=np.float64)
+        w_v = np.zeros((2, 4, 2), dtype=np.float64)
+        w_o = np.zeros((4, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="shape mismatch"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=2,
+            )
+
+    def test_projection_head_count_mismatch_rejected(self) -> None:
+        w_q = np.zeros((1, 4, 4), dtype=np.float64)
+        w_k = np.zeros((1, 4, 4), dtype=np.float64)
+        w_v = np.zeros((1, 4, 4), dtype=np.float64)
+        w_o = np.zeros((4, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="leading dim"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=2,
+            )
+
+    def test_projection_model_width_mismatch_rejected(self) -> None:
+        w_q = np.zeros((2, 5, 2), dtype=np.float64)
+        w_k = np.zeros((2, 5, 2), dtype=np.float64)
+        w_v = np.zeros((2, 5, 2), dtype=np.float64)
+        w_o = np.zeros((4, 5), dtype=np.float64)
+        with pytest.raises(ValueError, match="d_model"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=2,
+            )
+
+    def test_output_projection_shape_mismatch_rejected(self) -> None:
+        w_q = np.zeros((2, 4, 2), dtype=np.float64)
+        w_k = np.zeros((2, 4, 2), dtype=np.float64)
+        w_v = np.zeros((2, 4, 2), dtype=np.float64)
+        w_o = np.zeros((3, 4), dtype=np.float64)
+        with pytest.raises(ValueError, match="w_o shape"):
+            attnres_modulate(
+                _symmetric_knm(4),
+                np.zeros(4),
+                w_q=w_q,
+                w_k=w_k,
+                w_v=w_v,
+                w_o=w_o,
+                n_heads=2,
+            )
+
 
 # ---------------------------------------------------------------------
 # Idempotence
@@ -260,3 +339,91 @@ class TestDispatcher:
         canonical = ["rust", "mojo", "julia", "go", "python"]
         indices = [canonical.index(b) for b in AVAILABLE_BACKENDS]
         assert indices == sorted(indices)
+
+    def test_rust_loader_returns_backend_callable(self, monkeypatch) -> None:
+        def fake_backend(
+            knm_flat,
+            theta,
+            w_q,
+            w_k,
+            w_v,
+            w_o,
+            n,
+            n_heads,
+            block_size,
+            temperature,
+            lambda_,
+        ):
+            assert knm_flat.flags.c_contiguous
+            assert theta.flags.c_contiguous
+            assert w_q.flags.c_contiguous
+            assert n == 3
+            assert n_heads == 1
+            assert block_size == -1
+            assert temperature == 1.0
+            assert lambda_ == 0.25
+            return knm_flat
+
+        monkeypatch.setitem(
+            sys.modules,
+            "spo_kernel",
+            types.SimpleNamespace(attnres_modulate_rust=fake_backend),
+        )
+        backend = attnres_mod._load_rust()
+        knm = _symmetric_knm(3)
+        theta = np.linspace(0.0, TWO_PI, 3, endpoint=False)
+        w_q, w_k, w_v, w_o = default_projections(n_heads=1)
+
+        out = backend(
+            np.ascontiguousarray(knm.ravel()),
+            np.ascontiguousarray(theta),
+            np.ascontiguousarray(w_q.ravel()),
+            np.ascontiguousarray(w_k.ravel()),
+            np.ascontiguousarray(w_v.ravel()),
+            np.ascontiguousarray(w_o.ravel()),
+            3,
+            1,
+            -1,
+            1.0,
+            0.25,
+        )
+
+        np.testing.assert_array_equal(out, knm.ravel())
+
+
+def test_python_reference_lambda_zero_returns_independent_identity_copy() -> None:
+    knm = _symmetric_knm(5, seed=17)
+    theta = np.linspace(0.0, TWO_PI, 5, endpoint=False)
+    w_q, w_k, w_v, w_o = default_projections(n_heads=4)
+
+    out = attnres_mod._python_fallback(
+        knm.ravel(),
+        theta,
+        w_q,
+        w_k,
+        w_v,
+        w_o,
+        5,
+        4,
+        -1,
+        1.0,
+        0.0,
+    )
+
+    np.testing.assert_array_equal(out.reshape(5, 5), knm)
+    assert not np.shares_memory(out, knm)
+
+
+def test_python_reference_block_mask_preserves_out_of_band_edges() -> None:
+    previous = attnres_mod.ACTIVE_BACKEND
+    attnres_mod.ACTIVE_BACKEND = "python"
+    try:
+        knm = _symmetric_knm(7, strength=0.2, seed=23)
+        theta = np.random.default_rng(23).uniform(0.0, TWO_PI, size=7)
+        modulated = attnres_modulate(knm, theta, block_size=1, lambda_=0.4)
+    finally:
+        attnres_mod.ACTIVE_BACKEND = previous
+
+    far = np.abs(np.arange(7)[:, None] - np.arange(7)[None, :]) > 1
+    np.testing.assert_allclose(modulated[far], knm[far], atol=1e-12)
+    assert np.any(np.abs(modulated[~far] - knm[~far]) > 1e-10)

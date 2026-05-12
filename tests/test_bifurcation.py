@@ -143,6 +143,42 @@ class TestTraceSyncTransitionCoverage:
         assert np.all(diag.R_values >= 0)
         assert np.all(diag.R_values <= 1.0 + 1e-6)
 
+    def test_python_fallback_interpolates_threshold_crossing(self, monkeypatch):
+        """Controlled R(K) curve gives the expected interpolated K_c."""
+        from scpn_phase_orchestrator.upde import bifurcation as bif
+
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        r_by_k = {
+            0.0: 0.02,
+            1.0: 0.07,
+            2.0: 0.13,
+            3.0: 0.40,
+        }
+
+        def _steady_state_probe(
+            _phases_init,
+            _omegas,
+            K_scale,
+            _knm_template,
+            _alpha,
+            _dt,
+            _n_transient,
+            _n_measure,
+        ):
+            return r_by_k[float(K_scale)]
+
+        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _steady_state_probe)
+        diag = bif.trace_sync_transition(
+            np.array([-0.2, 0.0, 0.2]),
+            K_range=(0.0, 3.0),
+            n_points=4,
+            n_transient=0,
+            n_measure=1,
+        )
+        assert [point.stable for point in diag.points] == [True, True, True, True]
+        np.testing.assert_allclose(diag.R_values, [0.02, 0.07, 0.13, 0.40])
+        assert diag.K_critical == 1.5
+
 
 class TestFindCriticalCoupling:
     def test_returns_finite(self):
@@ -197,6 +233,66 @@ class TestFindCriticalCoupling:
             tol=1.0,
         )
         assert isinstance(Kc, float)
+
+    def test_returns_nan_when_upper_bound_remains_subcritical(self, monkeypatch):
+        from scpn_phase_orchestrator.upde import bifurcation as bif
+
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        calls: list[float] = []
+
+        def _always_subcritical(
+            _phases_init,
+            _omegas,
+            K_scale,
+            _knm_template,
+            _alpha,
+            _dt,
+            _n_transient,
+            _n_measure,
+        ):
+            calls.append(float(K_scale))
+            return 0.05
+
+        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _always_subcritical)
+        Kc = bif.find_critical_coupling(
+            np.array([-1.0, 1.0]),
+            n_transient=0,
+            n_measure=1,
+        )
+        assert np.isnan(Kc)
+        assert calls == [20.0]
+
+    def test_binary_search_moves_lower_bound_after_subcritical_midpoint(
+        self,
+        monkeypatch,
+    ):
+        from scpn_phase_orchestrator.upde import bifurcation as bif
+
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        calls: list[float] = []
+
+        def _threshold_response(
+            _phases_init,
+            _omegas,
+            K_scale,
+            _knm_template,
+            _alpha,
+            _dt,
+            _n_transient,
+            _n_measure,
+        ):
+            calls.append(float(K_scale))
+            return 0.05 if K_scale < 15.0 else 0.8
+
+        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _threshold_response)
+        Kc = bif.find_critical_coupling(
+            np.array([-0.5, 0.5]),
+            n_transient=0,
+            n_measure=1,
+            tol=6.0,
+        )
+        assert calls[:3] == [20.0, 10.0, 15.0]
+        assert Kc == 12.5
 
 
 class TestBifurcationPipelineWiring:

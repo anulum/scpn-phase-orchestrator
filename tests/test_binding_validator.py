@@ -12,8 +12,12 @@ from dataclasses import replace
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
+    AmplitudeSpec,
     BoundaryDef,
+    ChannelGroupSpec,
     ChannelSpec,
+    CrossChannelCouplingSpec,
+    ImprintSpec,
     OscillatorFamily,
 )
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
@@ -276,6 +280,144 @@ def test_derive_rule_requires_sources(sample_binding_spec):
     errors = validate_binding_spec(bad)
 
     assert any("derive_rule requires derived_from" in e for e in errors)
+
+
+def test_invalid_replay_semantics_is_reported(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channels={
+            "Risk": ChannelSpec(
+                role="risk", required=False, replay_semantics="log"
+            )
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("replay_semantics must be one of" in e and "log" in e for e in errors)
+
+
+def test_derived_channel_cannot_reference_itself(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channels={
+            "Risk": ChannelSpec(
+                role="risk",
+                required=False,
+                replay_semantics="derived",
+                derived_from=["Risk"],
+                derive_rule="risk = lag(Risk)",
+            )
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("derived_from must not include itself" in e for e in errors)
+
+
+def test_channel_group_rejects_unknown_member(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channel_groups={
+            "control_surface": ChannelGroupSpec(channels=["P", "MissingRisk"])
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("channel_group 'control_surface'" in e for e in errors)
+    assert any("MissingRisk" in e for e in errors)
+
+
+def test_cross_channel_coupling_rejects_unknown_source_and_target(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        cross_channel_couplings=[
+            CrossChannelCouplingSpec(
+                source="UnknownSource",
+                target="UnknownTarget",
+                strength=0.1,
+                mode="directed",
+            )
+        ],
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("source references unknown channel" in e for e in errors)
+    assert any("UnknownSource" in e for e in errors)
+    assert any("target references unknown channel" in e for e in errors)
+    assert any("UnknownTarget" in e for e in errors)
+
+
+def test_invalid_extractor_type_is_reported(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        oscillator_families={
+            "phys": OscillatorFamily(
+                channel="P", extractor_type="spectrogram", config={}
+            )
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("extractor_type must be one of" in e for e in errors)
+    assert any("spectrogram" in e for e in errors)
+
+
+def test_boundary_lower_greater_than_upper_is_reported(sample_binding_spec):
+    boundary = object.__new__(BoundaryDef)
+    object.__setattr__(boundary, "name", "unsafe_R")
+    object.__setattr__(boundary, "variable", "R")
+    object.__setattr__(boundary, "lower", 0.9)
+    object.__setattr__(boundary, "upper", 0.2)
+    object.__setattr__(boundary, "severity", "hard")
+    bad = replace(sample_binding_spec, boundaries=[boundary])
+
+    errors = validate_binding_spec(bad)
+
+    assert any("unsafe_R" in e and "must be <= upper" in e for e in errors)
+
+
+def test_actuator_scope_must_match_global_or_layer_index(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        actuators=[
+            ActuatorMapping(
+                name="K_future", knob="K", scope="layer_99", limits=(0.0, 1.0)
+            )
+        ],
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("scope 'layer_99'" in e and "valid scopes" in e for e in errors)
+
+
+def test_imprint_model_bounds_are_reported(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        imprint_model=ImprintSpec(decay_rate=-0.01, saturation=0.0, modulates=["K"]),
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("imprint_model.decay_rate must be >= 0" in e for e in errors)
+    assert any("imprint_model.saturation must be > 0" in e for e in errors)
+
+
+def test_amplitude_model_bounds_are_reported(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        amplitude=AmplitudeSpec(mu=float("inf"), epsilon=-0.01),
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert "amplitude.mu must be finite" in errors
+    assert any("amplitude.epsilon must be >= 0" in e for e in errors)
 
 
 # Pipeline wiring: binding validator tested via schema enforcement, required field

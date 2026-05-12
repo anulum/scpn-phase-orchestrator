@@ -183,3 +183,37 @@ class TestDispatcherSurface:
 
     def test_active_is_first(self):
         assert g_mod.AVAILABLE_BACKENDS[0] == g_mod.ACTIVE_BACKEND
+
+
+class TestDerivativeInspection:
+    @_python
+    def test_private_rhs_matches_public_one_step_drift_for_small_dt(self):
+        n = 3
+        dt = 1e-6
+        theta = np.array([0.2, 1.1, 2.4], dtype=np.float64)
+        omegas = np.array([0.3, -0.1, 0.2], dtype=np.float64)
+        knm = np.array(
+            [
+                [0.0, 0.2, 0.1],
+                [0.3, 0.0, 0.4],
+                [0.1, 0.5, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        alpha = np.array(
+            [
+                [0.0, 0.1, -0.2],
+                [0.2, 0.0, 0.05],
+                [-0.1, 0.15, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        zeta = 0.4
+        psi = 0.7
+        eng = TorusEngine(n, dt)
+
+        rhs = eng._derivative(theta, omegas, knm, zeta, psi, alpha)
+        stepped = eng.step(theta, omegas, knm, zeta, psi, alpha)
+        tangent = ((stepped - theta + np.pi) % TWO_PI - np.pi) / dt
+
+        np.testing.assert_allclose(tangent, rhs, rtol=1e-6, atol=1e-9)

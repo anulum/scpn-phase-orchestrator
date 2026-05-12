@@ -61,6 +61,13 @@ class TestMetaTransferContracts:
         with pytest.raises(ValueError, match="features"):
             MetaPolicyRecord("bad", {"R": float("nan")}, {"K": 0.1})
 
+    def test_record_rejects_non_finite_reward_and_non_string_keys(self) -> None:
+        with pytest.raises(ValueError, match="reward"):
+            MetaPolicyRecord("bad_reward", {"R": 0.5}, {"K": 0.1}, reward=float("inf"))
+
+        with pytest.raises(ValueError, match="features keys"):
+            MetaPolicyRecord("bad_feature_key", {1: 0.5}, {"K": 0.1})
+
     def test_model_requires_records(self) -> None:
         with pytest.raises(ValueError, match="at least one"):
             CrossDomainMetaTransfer.fit(())
@@ -145,10 +152,17 @@ class TestMetaTransferBehaviour:
     def test_loads_records_from_audit_jsonl(self, tmp_path) -> None:
         audit_path = tmp_path / "audit.jsonl"
         payloads = [
+            "",
             {
                 "domain": "alpha",
                 "metrics": {"R_global": 0.2, "stability_proxy": 0.1},
-                "actions": [{"knob": "K", "value": 0.04}],
+                "actions": [
+                    "manual-review-note",
+                    {"knob": "K", "value": 0.04},
+                    {"knob": "alpha", "value": 0.02},
+                    {"knob": "unknown", "value": 1.0},
+                    {"knob": "zeta", "value": float("nan")},
+                ],
                 "reward": 0.5,
             },
             {
@@ -158,7 +172,10 @@ class TestMetaTransferBehaviour:
             },
         ]
         audit_path.write_text(
-            "\n".join(json.dumps(payload) for payload in payloads),
+            "\n".join(
+                payload if isinstance(payload, str) else json.dumps(payload)
+                for payload in payloads
+            ),
             encoding="utf-8",
         )
 
@@ -166,7 +183,7 @@ class TestMetaTransferBehaviour:
 
         assert len(records) == 2
         assert records[0].domain == "alpha"
-        assert records[0].knobs == {"K": 0.04}
+        assert records[0].knobs == {"K": 0.04, "alpha": 0.02}
         assert records[1].domain == "beta"
 
     def test_fit_audit_history_aggregates_multiple_jsonl_files(self, tmp_path) -> None:
@@ -252,6 +269,9 @@ class TestMetaTransferBehaviour:
     def test_records_from_audit_directory_validates_empty_corpus(
         self, tmp_path
     ) -> None:
+        with pytest.raises(ValueError, match="min_records"):
+            records_from_audit_directory(tmp_path, min_records=0)
+
         with pytest.raises(ValueError, match="no JSONL files"):
             records_from_audit_directory(tmp_path)
 
@@ -283,3 +303,68 @@ class TestMetaTransferBehaviour:
     def test_json_package_rejects_unknown_schema(self) -> None:
         with pytest.raises(ValueError, match="schema"):
             CrossDomainMetaTransfer.from_json_package('{"schema":"wrong"}')
+
+    @pytest.mark.parametrize(
+        ("payload", "expected_error"),
+        [
+            ("[]", "JSON object"),
+            ('{"schema":"scpn_meta_transfer_package_v1"}', "records must be a list"),
+            (
+                '{"schema":"scpn_meta_transfer_package_v1","records":[1]}',
+                "records must be objects",
+            ),
+        ],
+    )
+    def test_json_package_rejects_invalid_record_package_shape(
+        self,
+        payload: str,
+        expected_error: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=expected_error):
+            CrossDomainMetaTransfer.from_json_package(payload)
+
+    @pytest.mark.parametrize(
+        ("payload", "expected_error"),
+        [
+            (
+                {"domain": "bad", "features": [("R", 0.2)], "knobs": {"K": 0.1}},
+                "features/metrics",
+            ),
+            (
+                {"domain": "bad", "features": {"R": 0.2}, "knobs": [("K", 0.1)]},
+                "knobs/actions",
+            ),
+            (
+                {"domain": "bad", "features": {"R": 0.2}, "actions": "K=0.1"},
+                "knobs",
+            ),
+        ],
+    )
+    def test_audit_jsonl_rejects_invalid_feature_and_knob_payloads(
+        self,
+        tmp_path,
+        payload: dict[str, object],
+        expected_error: str,
+    ) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match=expected_error):
+            records_from_audit_jsonl(audit_path)
+
+    def test_audit_directory_enforces_minimum_replay_count(self, tmp_path) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text(
+            json.dumps(
+                {
+                    "domain": "single",
+                    "metrics": {"R_global": 0.4},
+                    "actions": [{"knob": "K", "value": 0.05}],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="min_records=2"):
+            records_from_audit_directory(tmp_path, min_records=2)

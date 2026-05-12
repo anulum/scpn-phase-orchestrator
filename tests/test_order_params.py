@@ -17,6 +17,9 @@ invariants. Per-backend parity lives in
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 import pytest
 from hypothesis import given, settings
@@ -158,6 +161,33 @@ class TestLayerCoherence:
 
 
 class TestDispatcher:
+    def test_rust_loader_maps_spo_kernel_symbols(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def order_parameter(phases: np.ndarray) -> tuple[float, float]:
+            return float(phases.size), 0.0
+
+        def plv(a: np.ndarray, b: np.ndarray) -> float:
+            return float(a.size == b.size)
+
+        def compute_layer_coherence_rust(
+            phases: np.ndarray, indices: np.ndarray
+        ) -> float:
+            return float(indices.size) / max(float(phases.size), 1.0)
+
+        fake_spo_kernel = types.ModuleType("spo_kernel")
+        fake_spo_kernel.order_parameter = order_parameter
+        fake_spo_kernel.plv = plv
+        fake_spo_kernel.compute_layer_coherence_rust = compute_layer_coherence_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo_kernel)
+
+        loaded = op_mod._load_rust_fns()
+
+        phases = np.arange(4.0)
+        assert loaded["order_parameter"](phases) == (4.0, 0.0)
+        assert loaded["plv"](phases, phases) == 1.0
+        assert loaded["layer_coherence"](phases, np.array([0, 2])) == 0.5
+
     def test_python_is_always_available(self) -> None:
         assert "python" in AVAILABLE_BACKENDS
         assert AVAILABLE_BACKENDS[-1] == "python"
@@ -169,3 +199,157 @@ class TestDispatcher:
         canonical = ["rust", "mojo", "julia", "go", "python"]
         indices = [canonical.index(b) for b in AVAILABLE_BACKENDS]
         assert indices == sorted(indices)
+
+    def test_probe_marks_faulty_backend_unusable(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def broken_backend(name: str) -> dict[str, object]:
+            raise RuntimeError(f"{name} unavailable during probe")
+
+        monkeypatch.setattr(op_mod, "_load_backend", broken_backend)
+
+        elapsed = op_mod._order_parameter_probe_seconds("rust")
+
+        assert elapsed == float("inf")
+
+    def test_resolve_backends_keeps_working_backend_before_python(
+        self, monkeypatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def fake_loader(name: str) -> dict[str, object]:
+            if name == "rust":
+                return {
+                    "order_parameter": lambda phases: (
+                        float(phases.size),
+                        float(phases[0]),
+                    )
+                }
+            raise ImportError(name)
+
+        monkeypatch.setattr(op_mod, "_BACKEND_NAMES", ("rust", "mojo", "python"))
+        monkeypatch.setattr(op_mod, "_load_backend", fake_loader)
+        monkeypatch.setattr(
+            op_mod,
+            "_order_parameter_probe_seconds",
+            lambda name: 0.0 if name == "rust" else 1.0,
+        )
+
+        active, available = op_mod._resolve_backends()
+
+        assert active == "rust"
+        assert available == ["rust", "python"]
+
+    def test_dispatch_ignores_rust_when_rust_flag_is_false(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
+
+        assert op_mod._dispatch("order_parameter") is None
+
+    def test_dispatch_falls_back_when_active_backend_raises(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def failing_loader(name: str) -> dict[str, object]:
+            raise OSError(f"{name} backend failed after selection")
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "mojo")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
+        monkeypatch.setattr(op_mod, "_load_backend", failing_loader)
+
+        assert op_mod._dispatch("plv") is None
+
+    def test_public_kernels_use_active_backend_with_flat_contiguous_payloads(
+        self, monkeypatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        observed: dict[str, tuple[tuple[int, ...], bool, str]] = {}
+
+        def fake_order(phases: np.ndarray) -> tuple[float, float]:
+            observed["order"] = (
+                phases.shape,
+                phases.flags.c_contiguous,
+                phases.dtype.name,
+            )
+            return 0.25, 1.5
+
+        def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
+            observed["plv_a"] = (a.shape, a.flags.c_contiguous, a.dtype.name)
+            observed["plv_b"] = (b.shape, b.flags.c_contiguous, b.dtype.name)
+            return 0.75
+
+        def fake_layer(phases: np.ndarray, indices: np.ndarray) -> float:
+            observed["layer_phases"] = (
+                phases.shape,
+                phases.flags.c_contiguous,
+                phases.dtype.name,
+            )
+            observed["layer_indices"] = (
+                indices.shape,
+                indices.flags.c_contiguous,
+                indices.dtype.name,
+            )
+            return 0.5
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            op_mod,
+            "_load_backend",
+            lambda name: {
+                "order_parameter": fake_order,
+                "plv": fake_plv,
+                "layer_coherence": fake_layer,
+            },
+        )
+
+        phases_2d = np.array([[0.0, 0.5], [1.0, 1.5]], dtype=np.float32)
+        r, psi = op_mod.compute_order_parameter(phases_2d)
+        plv = op_mod.compute_plv(phases_2d, phases_2d + 0.25)
+        layer = op_mod.compute_layer_coherence(
+            phases_2d,
+            np.array([True, False, True, False]),
+        )
+
+        assert (r, psi) == (0.25, 1.5)
+        assert plv == 0.75
+        assert layer == 0.5
+        assert observed["order"] == ((4,), True, "float64")
+        assert observed["plv_a"] == ((4,), True, "float64")
+        assert observed["plv_b"] == ((4,), True, "float64")
+        assert observed["layer_phases"] == ((4,), True, "float64")
+        assert observed["layer_indices"] == ((2,), True, "int64")
+
+    def test_layer_coherence_empty_selected_subarray_returns_zero(
+        self, monkeypatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "python")
+        phases = np.empty((1, 0), dtype=np.float64)
+        indices = np.array([0], dtype=np.int64)
+
+        assert op_mod.compute_layer_coherence(phases, indices) == 0.0
+
+    def test_python_fallback_kernels_preserve_physical_invariants(
+        self, monkeypatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "python")
+        phases = np.array([0.0, np.pi], dtype=np.float64)
+        shifted = phases + 0.5
+
+        r, psi = op_mod.compute_order_parameter(phases)
+        plv = op_mod.compute_plv(phases, shifted)
+        layer = op_mod.compute_layer_coherence(
+            phases,
+            np.array([0, 1], dtype=np.int64),
+        )
+
+        assert r == pytest.approx(0.0, abs=1e-12)
+        assert 0.0 <= psi < TWO_PI
+        assert plv == pytest.approx(1.0, abs=1e-12)
+        assert layer == pytest.approx(0.0, abs=1e-12)

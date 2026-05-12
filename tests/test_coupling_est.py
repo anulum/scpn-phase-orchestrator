@@ -113,6 +113,12 @@ class TestHarmonicCoupling:
         assert "sin_3" in result
         assert "cos_3" in result
 
+    def test_harmonic_estimator_rejects_too_short_trajectories(self):
+        phases = np.ones((3, 2), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="Need >= 3 timesteps, got 2"):
+            estimate_coupling_harmonics(phases, np.ones(3), dt=0.01)
+
 
 class TestCouplingEstPipelineWiring:
     """Pipeline: engine trajectory → estimate_coupling → recovered K_nm."""

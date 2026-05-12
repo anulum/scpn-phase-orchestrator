@@ -8,17 +8,27 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
-from scpn_phase_orchestrator.autotune.binding_proposal import (
-    propose_binding_from_event_log,
-    propose_binding_from_graph,
-    propose_binding_from_time_series_csv,
-)
 from scpn_phase_orchestrator.binding import load_binding_spec
+from scpn_phase_orchestrator.exceptions import BindingError
+
+
+def _load_binding_proposal_module() -> ModuleType:
+    return importlib.import_module("scpn_phase_orchestrator.autotune.binding_proposal")
+
+
+binding_proposal = _load_binding_proposal_module()
+propose_binding_from_event_log = binding_proposal.propose_binding_from_event_log
+propose_binding_from_graph = binding_proposal.propose_binding_from_graph
+propose_binding_from_time_series_csv = (
+    binding_proposal.propose_binding_from_time_series_csv
+)
 
 
 def test_time_series_csv_proposal_is_reviewable_and_validated() -> None:
@@ -62,6 +72,29 @@ def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
     assert spec.objectives.good_layers == [0, 1, 2]
 
 
+@pytest.mark.parametrize(
+    ("csv_text", "sample_rate_hz", "expected_error"),
+    [
+        ("time,grid\n0.0,1.0\n", 0.0, "sample_rate_hz"),
+        ("", 100.0, "CSV header"),
+        ("time\n0.0\n", 100.0, "signal channel"),
+        ("time,grid\n", 100.0, "at least one sample"),
+        ("time,grid\n0.0,not-a-number\n", 100.0, "non-numeric sample"),
+    ],
+)
+def test_time_series_csv_rejects_invalid_replay_shapes(
+    csv_text: str,
+    sample_rate_hz: float,
+    expected_error: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_error):
+        propose_binding_from_time_series_csv(
+            csv_text,
+            sample_rate_hz=sample_rate_hz,
+            project_name="invalid_replay",
+        )
+
+
 def test_event_log_proposal_records_low_confidence_for_sparse_sources() -> None:
     events = [
         {"time": 0.0, "source": "breaker", "event": "open"},
@@ -97,6 +130,25 @@ def test_event_log_yaml_binds_event_family_to_layer(tmp_path: Path) -> None:
     assert spec.oscillator_families[layer.family].channel == "I"
 
 
+@pytest.mark.parametrize(
+    ("events", "expected_error"),
+    [
+        ([], "at least one event"),
+        ([{"time": 0.0, "source": "breaker"}], "event field"),
+        ([1], "event log"),
+    ],
+)
+def test_event_log_rejects_non_reviewable_event_streams(
+    events: object,
+    expected_error: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_error):
+        propose_binding_from_event_log(
+            json.dumps(events),
+            project_name="invalid_event_replay",
+        )
+
+
 def test_graph_proposal_rejects_edges_with_unknown_nodes() -> None:
     graph = {
         "nodes": [{"id": "a"}],
@@ -123,6 +175,54 @@ def test_graph_yaml_binds_graph_family_to_layer(tmp_path: Path) -> None:
 
     assert layer.family is not None
     assert spec.oscillator_families[layer.family].channel == "S"
+
+
+@pytest.mark.parametrize(
+    ("graph", "expected_error"),
+    [
+        ([], "graph must be a mapping"),
+        ({"nodes": []}, "at least one node"),
+        ({"nodes": [{"label": "missing-id"}]}, "non-empty string id"),
+        ({"nodes": [{"id": ""}]}, "non-empty string id"),
+        ({"nodes": [{"id": "a"}], "edges": "a->b"}, "graph.edges"),
+    ],
+)
+def test_graph_proposal_rejects_invalid_topology_payloads(
+    graph: object,
+    expected_error: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_error):
+        propose_binding_from_graph(json.dumps(graph), project_name="invalid_graph")
+
+
+def test_proposal_requires_non_empty_project_name() -> None:
+    csv_text = "time,grid\n0.00,0.0\n0.01,0.2\n"
+
+    with pytest.raises(ValueError, match="project_name"):
+        propose_binding_from_time_series_csv(
+            csv_text,
+            sample_rate_hz=100.0,
+            project_name="",
+        )
+
+
+def test_validation_errors_are_preserved_when_generated_yaml_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def reject_generated_yaml(path: Path) -> object:
+        raise BindingError(f"invalid generated binding: {path.name}")
+
+    monkeypatch.setattr(binding_proposal, "load_binding_spec", reject_generated_yaml)
+
+    proposal = propose_binding_from_graph(
+        json.dumps({"nodes": [{"id": "a"}], "edges": []}),
+        project_name="graph_replay",
+    )
+
+    assert proposal.binding.validation_errors == (
+        "invalid generated binding: binding_spec.yaml",
+    )
+    assert proposal.binding.confidence_factors["validator_acceptance"] == 0.0
 
 
 def _load_proposal_yaml(tmp_path: Path, yaml_text: str):

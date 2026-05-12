@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import cast, get_type_hints
 
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.autotune import (
@@ -137,6 +138,37 @@ class TestReplayPolicySearch:
         assert seed_record["cross_channel_gains"] == [0.3, 0.4]
         assert proposal_record["accepted"] is True
 
+    def test_audit_record_serialises_array_knobs_deterministically(self) -> None:
+        seed = KnobPolicyCandidate(
+            K=np.array([[0.0, 0.2], [0.3, 0.0]], dtype=np.float64),
+            alpha=np.array([0.1, 0.2], dtype=np.float64),
+            zeta=0.05,
+            Psi=0.01,
+        )
+
+        def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
+            assert candidate == seed
+            return RewardObservation(coherence=0.82, previous_coherence=0.7)
+
+        result = search_replay_policy(
+            seed,
+            evaluator,
+            search_config=OfflinePolicySearchConfig(
+                K_step=0.0,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.0,
+                cross_channel_gain_step=0.0,
+            ),
+        )
+
+        record = result.to_audit_record()
+        seed_record = cast("dict[str, object]", record["seed"])
+
+        assert seed_record["K"] == [[0.0, 0.2], [0.3, 0.0]]
+        assert seed_record["alpha"] == [0.1, 0.2]
+
     def test_evaluator_alias_accepts_candidate_to_observation_callable(self) -> None:
         def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
             return RewardObservation(coherence=0.75)
@@ -237,6 +269,42 @@ class TestAdaptiveReplayPolicySearch:
         assert "cross_channel_gain_step" in base_config
         assert len(rounds_record) == 1
         assert cast("dict[str, object]", record["proposal"])["accepted"] is True
+
+    def test_adaptive_min_step_zeroes_decayed_search_steps(self) -> None:
+        evaluated: list[float] = []
+
+        def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
+            assert isinstance(candidate.K, float)
+            evaluated.append(candidate.K)
+            return RewardObservation(coherence=0.7, previous_coherence=0.6)
+
+        result = search_adaptive_replay_policy(
+            KnobPolicyCandidate(K=0.0),
+            evaluator,
+            adaptive_config=AdaptiveReplayPolicySearchConfig(
+                base_search_config=OfflinePolicySearchConfig(
+                    K_step=0.05,
+                    alpha_step=0.0,
+                    zeta_step=0.0,
+                    Psi_step=0.0,
+                    channel_weight_step=0.0,
+                    cross_channel_gain_step=0.0,
+                ),
+                iterations=2,
+                step_decay=0.5,
+                min_step=0.04,
+            ),
+        )
+
+        assert [round_result.candidates for round_result in result.rounds] == [
+            (
+                KnobPolicyCandidate(K=0.0),
+                KnobPolicyCandidate(K=-0.05),
+                KnobPolicyCandidate(K=0.05),
+            ),
+            (KnobPolicyCandidate(K=0.0),),
+        ]
+        assert evaluated == [0.0, -0.05, 0.05, 0.0]
 
     def test_adaptive_config_validates_bounds(self) -> None:
         with pytest.raises(ValueError, match="iterations"):

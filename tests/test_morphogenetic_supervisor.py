@@ -129,6 +129,79 @@ class TestMorphogeneticTopologySupervisor:
         assert record["field"]["shape"] == [3, 3]
         assert record["grown_edges"]
 
+    def test_reset_clears_cached_result_without_mutating_field_snapshot(self) -> None:
+        phases = np.array([0.0, 0.01, np.pi])
+        supervisor = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(growth_rate=0.5, max_delta=0.1),
+        )
+        result = supervisor.step(phases, _zero_knm(3))
+        cached_field = result.field_state.field.copy()
+
+        supervisor.reset()
+
+        assert supervisor.last_result is None
+        np.testing.assert_allclose(result.field_state.field, cached_field)
+
+    def test_zero_coupling_policy_keeps_single_oscillator_field_bounded(self) -> None:
+        phases = np.array([0.75])
+        knm = np.array([[2.0]], dtype=np.float64)
+        supervisor = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(
+                growth_rate=1.0,
+                shrink_rate=1.0,
+                diffusion_rate=1.0,
+                coherence_target=0.0,
+                max_delta=1.0,
+                max_coupling=0.0,
+            )
+        )
+
+        result = supervisor.step(phases, knm)
+
+        np.testing.assert_allclose(result.knm, [[0.0]])
+        np.testing.assert_allclose(result.field_state.field, [[0.0]])
+        assert result.delta_norm == pytest.approx(2.0)
+        assert result.grown_edges == ()
+        assert result.shrunk_edges == ()
+        assert result.global_coherence == pytest.approx(1.0)
+
+    def test_diagonal_field_deltas_do_not_become_control_actions(self) -> None:
+        phases = np.array([0.0, np.pi])
+        knm = np.array(
+            [
+                [0.25, 0.5],
+                [0.5, 0.25],
+            ],
+            dtype=np.float64,
+        )
+        field = np.array(
+            [
+                [0.9, 0.8],
+                [0.8, 0.9],
+            ],
+            dtype=np.float64,
+        )
+        supervisor = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(
+                growth_rate=0.0,
+                shrink_rate=0.5,
+                diffusion_rate=0.0,
+                coherence_target=1.0,
+                max_delta=0.2,
+                max_coupling=1.0,
+            )
+        )
+
+        result = supervisor.step(phases, knm, MorphogeneticFieldState(field))
+
+        assert result.shrunk_edges == (
+            (0, 1, pytest.approx(-0.1)),
+            (1, 0, pytest.approx(-0.1)),
+        )
+        assert result.grown_edges == ()
+        assert all(src != dst for src, dst, _ in result.shrunk_edges)
+        np.testing.assert_allclose(np.diag(result.field_state.field), 0.0)
+
     def test_field_snapshot_builds_heatmap_and_top_edges(self) -> None:
         field = np.array(
             [
@@ -162,6 +235,32 @@ class TestMorphogeneticTopologySupervisor:
             {"source": 1, "target": 2, "weight": pytest.approx(0.75)},
             {"source": 1, "target": 0, "weight": pytest.approx(0.5)},
         ]
+
+    def test_snapshot_one_symbol_palette_and_diagonal_edges_are_audit_safe(
+        self,
+    ) -> None:
+        field = np.array(
+            [
+                [1.0, 0.2, 0.0],
+                [0.0, 0.9, 0.8],
+                [0.4, 0.0, 0.7],
+            ],
+            dtype=np.float64,
+        )
+
+        snapshot = build_morphogenetic_field_snapshot(
+            MorphogeneticFieldState(field),
+            top_k=5,
+            palette="x",
+        )
+
+        assert snapshot.heatmap_rows == ("xxx", "xxx", "xxx")
+        assert snapshot.top_edges == (
+            (1, 2, pytest.approx(0.8)),
+            (2, 0, pytest.approx(0.4)),
+            (0, 1, pytest.approx(0.2)),
+        )
+        assert all(src != dst for src, dst, _ in snapshot.top_edges)
 
     def test_field_snapshot_accepts_step_results(self) -> None:
         result = MorphogeneticTopologySupervisor(
@@ -242,7 +341,62 @@ class TestMorphogeneticTopologySupervisor:
                 **kwargs,
             )
 
-    def test_rejects_invalid_inputs(self) -> None:
+    @pytest.mark.parametrize(
+        ("phases", "knm", "field_state", "message"),
+        [
+            (
+                np.array([], dtype=np.float64),
+                np.zeros((0, 0), dtype=np.float64),
+                None,
+                "at least one oscillator",
+            ),
+            (
+                np.array([0.0, np.nan], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                None,
+                "phases must be finite",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.array([[0.0, np.inf], [0.0, 0.0]], dtype=np.float64),
+                None,
+                "knm must be finite",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.array([[0.0, -0.1], [0.0, 0.0]], dtype=np.float64),
+                None,
+                "knm must be non-negative",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                MorphogeneticFieldState(
+                    np.array([[0.0, np.nan], [0.0, 0.0]], dtype=np.float64)
+                ),
+                "field must be finite",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                MorphogeneticFieldState(
+                    np.array([[0.0, 1.1], [0.0, 0.0]], dtype=np.float64)
+                ),
+                r"field values must be in \[0, 1\]",
+            ),
+        ],
+    )
+    def test_rejects_invalid_supervisor_state_domains(
+        self,
+        phases: np.ndarray,
+        knm: np.ndarray,
+        field_state: MorphogeneticFieldState | None,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            MorphogeneticTopologySupervisor().step(phases, knm, field_state)
+
+    def test_rejects_invalid_input_geometry(self) -> None:
         supervisor = MorphogeneticTopologySupervisor()
         with pytest.raises(ValueError, match="one-dimensional"):
             supervisor.step(np.zeros((2, 2)), _zero_knm(2))
@@ -254,6 +408,28 @@ class TestMorphogeneticTopologySupervisor:
                 _zero_knm(3),
                 MorphogeneticFieldState(np.zeros((2, 2))),
             )
+
+    @pytest.mark.parametrize(
+        ("field", "message"),
+        [
+            (np.zeros((2, 3), dtype=np.float64), "field must be a square matrix"),
+            (
+                np.array([[0.0, np.inf], [0.0, 0.0]], dtype=np.float64),
+                "field must be finite",
+            ),
+            (
+                np.array([[0.0, -0.1], [0.0, 0.0]], dtype=np.float64),
+                r"field values must be in \[0, 1\]",
+            ),
+        ],
+    )
+    def test_snapshot_rejects_invalid_audit_field_domains(
+        self,
+        field: np.ndarray,
+        message: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            build_morphogenetic_field_snapshot(MorphogeneticFieldState(field))
 
     def test_result_feeds_upde_engine(self) -> None:
         phases = np.array([0.0, 0.02, 0.04, np.pi, np.pi + 0.01, np.pi + 0.03])

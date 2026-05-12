@@ -48,6 +48,21 @@ class TestValueAlignmentContracts:
         with pytest.raises(ValueError, match="<="):
             ValueConstraint("bad", min_value=1.0, max_value=0.0)
 
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"name": ""}, "non-empty"),
+            ({"name": "bad-abs", "max_abs_value": -0.1}, "non-negative"),
+            ({"name": "bad-weight", "weight": -0.1}, "weight"),
+            ({"name": "nan-bound", "max_value": float("nan")}, "max_value"),
+        ],
+    )
+    def test_constraint_validation_rejects_unsafe_policy_shapes(
+        self, kwargs: dict[str, object], message: str
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            ValueConstraint(**kwargs)
+
     def test_bad_policy_score_is_rejected(self) -> None:
         constraint = ValueConstraint("limit", max_abs_value=1.0)
 
@@ -106,6 +121,36 @@ class TestValueAlignmentBehaviour:
         assert not decision.satisfied
         assert decision.violations[0].knob == "zeta"
 
+    def test_minimum_bound_violation_is_blocked_fail_closed(self) -> None:
+        fallback = ControlAction(
+            knob="K",
+            scope="global",
+            value=0.0,
+            ttl_s=1.0,
+            justification="alignment fallback: restore lower bound",
+        )
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("floor-K", knob="K", min_value=0.1),),
+                fallback_actions=(fallback,),
+            )
+        )
+
+        decision = guard.evaluate([_action(value=0.05)])
+        record = decision.to_audit_record()
+
+        assert not decision.satisfied
+        assert decision.blocked_actions == (_action(value=0.05),)
+        assert decision.actions_to_apply == (fallback,)
+        assert decision.violations[0].failed_bounds == ("min_value",)
+        assert record["actions_to_apply"][0] == {
+            "knob": "K",
+            "scope": "global",
+            "value": 0.0,
+            "ttl_s": 1.0,
+            "justification": "alignment fallback: restore lower bound",
+        }
+
     def test_non_applicable_constraint_does_not_penalise_action(self) -> None:
         guard = ValueAlignmentGuard(
             ValueAlignmentPolicy(
@@ -117,6 +162,26 @@ class TestValueAlignmentBehaviour:
 
         assert decision.satisfied
         assert decision.alignment_score == pytest.approx(1.0)
+
+    def test_score_uses_tightest_lower_and_upper_bound_margin(self) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(
+                    ValueConstraint(
+                        "operating-window",
+                        knob="K",
+                        min_value=0.2,
+                        max_value=0.8,
+                    ),
+                )
+            )
+        )
+
+        decision = guard.evaluate([_action(value=0.5)])
+
+        assert decision.satisfied
+        assert decision.alignment_score == pytest.approx(0.3)
+        assert decision.actions_to_apply == (_action(value=0.5),)
 
     def test_minimum_score_can_force_fallback_without_bound_violation(self) -> None:
         fallback = ControlAction(
@@ -141,6 +206,38 @@ class TestValueAlignmentBehaviour:
         assert decision.actions_to_apply == (fallback,)
         assert decision.score_counterfactuals[0].counterfactual == (
             "fallback_applied_because_alignment_score_below_policy_minimum"
+        )
+
+    def test_score_threshold_counterfactual_is_serialised_for_audit(self) -> None:
+        fallback = ControlAction(
+            knob="zeta",
+            scope="global",
+            value=0.0,
+            ttl_s=1.0,
+            justification="alignment fallback: hold",
+        )
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("prefer-small", max_abs_value=1.0),),
+                fallback_actions=(fallback,),
+                minimum_score=0.96,
+            )
+        )
+
+        record = guard.evaluate([_action(value=0.05)]).to_audit_record()
+
+        assert record["satisfied"] is False
+        assert record["score_counterfactuals"] == [
+            {
+                "observed_score": pytest.approx(0.95),
+                "required_score": pytest.approx(0.96),
+                "counterfactual": (
+                    "fallback_applied_because_alignment_score_below_policy_minimum"
+                ),
+            }
+        ]
+        assert record["actions_to_apply"][0]["justification"] == (
+            "alignment fallback: hold"
         )
 
     def test_audit_record_contains_counterfactual_violation(self) -> None:
@@ -197,6 +294,15 @@ class TestValueAlignmentBehaviour:
 
         assert value_alignment_policy_from_binding_spec(Spec()) is None
 
+    def test_binding_spec_template_loader_rejects_non_mapping_value_alignment(
+        self,
+    ) -> None:
+        class Spec:
+            value_alignment = ["not", "a", "mapping"]
+
+        with pytest.raises(ValueError, match="must be a mapping"):
+            value_alignment_policy_from_binding_spec(Spec())
+
     def test_binding_spec_template_loader_uses_value_alignment_mapping(self) -> None:
         class Spec:
             value_alignment = {
@@ -218,3 +324,29 @@ class TestValueAlignmentBehaviour:
             value_alignment_policy_from_template(
                 {"minimum_score": "high", "constraints": []}
             )
+
+    @pytest.mark.parametrize(
+        "template",
+        [
+            {"constraints": {"name": "limit-K"}},
+            {"constraints": [{"name": ""}]},
+            {"constraints": [{"name": "limit-K"}], "fallback_actions": "hold"},
+            {
+                "constraints": [{"name": "limit-K"}],
+                "fallback_actions": [
+                    {
+                        "knob": "",
+                        "scope": "global",
+                        "value": 0.0,
+                        "ttl_s": 1.0,
+                        "justification": "value guard safe hold",
+                    }
+                ],
+            },
+        ],
+    )
+    def test_template_loader_rejects_invalid_collection_and_string_shapes(
+        self, template: dict[str, object]
+    ) -> None:
+        with pytest.raises(ValueError, match="value_alignment"):
+            value_alignment_policy_from_template(template)

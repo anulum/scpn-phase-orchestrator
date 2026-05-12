@@ -8,11 +8,15 @@
 
 from __future__ import annotations
 
+import importlib
+import sys
+import types
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.adapters.lsl_bci_bridge as lsl_mod
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import HAS_LSL, LSLBCIBridge
 
 
@@ -41,6 +45,69 @@ class TestConnectWithoutLSL:
         bridge = LSLBCIBridge()
         if not HAS_LSL:
             assert bridge.connect(timeout=0.1) is False
+
+
+class TestConnectWithLSL:
+    def test_returns_false_when_named_stream_is_absent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fake_pylsl = types.SimpleNamespace(
+            resolve_byprop=MagicMock(return_value=()),
+            StreamInlet=MagicMock(),
+        )
+        monkeypatch.setitem(sys.modules, "pylsl", fake_pylsl)
+        reloaded = importlib.reload(lsl_mod)
+        try:
+            bridge = reloaded.LSLBCIBridge(stream_name="EEG")
+
+            assert bridge.connect(timeout=0.25) is False
+
+            fake_pylsl.resolve_byprop.assert_called_once_with(
+                "name",
+                "EEG",
+                timeout=0.25,
+            )
+            fake_pylsl.StreamInlet.assert_not_called()
+        finally:
+            monkeypatch.delitem(sys.modules, "pylsl", raising=False)
+            importlib.reload(lsl_mod)
+
+    def test_resolves_stream_and_records_buffer_length(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class FakeInfo:
+            def nominal_srate(self) -> float:
+                return 128.0
+
+        class FakeInlet:
+            def __init__(self, stream) -> None:
+                self.stream = stream
+
+            def info(self) -> FakeInfo:
+                return FakeInfo()
+
+        fake_pylsl = types.SimpleNamespace(
+            resolve_byprop=MagicMock(return_value=("stream-1",)),
+            StreamInlet=FakeInlet,
+        )
+        monkeypatch.setitem(sys.modules, "pylsl", fake_pylsl)
+        reloaded = importlib.reload(lsl_mod)
+        try:
+            bridge = reloaded.LSLBCIBridge(stream_name="EEG", buffer_size_s=0.5)
+
+            assert bridge.connect(timeout=0.25) is True
+
+            fake_pylsl.resolve_byprop.assert_called_once_with(
+                "name",
+                "EEG",
+                timeout=0.25,
+            )
+            assert bridge._inlet.stream == "stream-1"
+            assert bridge.sampling_rate == 128.0
+            assert bridge._buffer_len == 64
+        finally:
+            monkeypatch.delitem(sys.modules, "pylsl", raising=False)
+            importlib.reload(lsl_mod)
 
 
 class TestGetInstantaneousPhase:
@@ -96,6 +163,26 @@ class TestStartWithoutInlet:
             assert "TOPOLOGY_DETAIL" not in msg
 
 
+class TestStartWithInlet:
+    def test_start_uses_existing_inlet_and_starts_capture_thread(self) -> None:
+        class FakeThread:
+            def __init__(self) -> None:
+                self.started = False
+
+            def start(self) -> None:
+                self.started = True
+
+        bridge = LSLBCIBridge()
+        fake_thread = FakeThread()
+        bridge._inlet = object()
+        bridge._thread = fake_thread
+
+        bridge.start()
+
+        assert bridge._running is True
+        assert fake_thread.started is True
+
+
 class TestStopIdempotent:
     def test_stop_before_start(self) -> None:
         bridge = LSLBCIBridge()
@@ -107,6 +194,29 @@ class TestStopIdempotent:
         bridge = LSLBCIBridge()
         bridge.stop()
         bridge.stop()
+
+    def test_stop_joins_live_capture_thread(self) -> None:
+        class FakeThread:
+            def __init__(self) -> None:
+                self.join_timeout = None
+
+            def is_alive(self) -> bool:
+                return True
+
+            def join(self, timeout: float) -> None:
+                self.join_timeout = timeout
+
+        bridge = LSLBCIBridge()
+        fake_thread = FakeThread()
+        bridge._thread = fake_thread
+        bridge._inlet = object()
+        bridge._running = True
+
+        bridge.stop()
+
+        assert bridge._running is False
+        assert bridge._inlet is None
+        assert fake_thread.join_timeout == 1.0
 
 
 class TestCaptureLoop:

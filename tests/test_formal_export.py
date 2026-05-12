@@ -113,6 +113,52 @@ def test_petri_net_prism_export_rejects_initial_tokens_above_bound() -> None:
         export_petri_net_prism(_net(), Marking(tokens={"warmup": 3}), max_tokens=2)
 
 
+def test_petri_net_prism_export_normalises_collisions_and_source_arcs() -> None:
+    net = PetriNet(
+        [
+            Place("!!!"),
+            Place("123-start"),
+            Place("phase-1"),
+            Place("phase 1"),
+        ],
+        [
+            Transition(
+                name="emit source",
+                inputs=[],
+                outputs=[Arc("123-start")],
+            ),
+            Transition(
+                name="advance",
+                inputs=[Arc("123-start")],
+                outputs=[Arc("phase-1"), Arc("phase 1")],
+            ),
+        ],
+    )
+
+    export = export_petri_net_prism(
+        net,
+        Marking(tokens={"!!!": 1}),
+        module_name="123 module",
+    )
+
+    assert export.place_names == {
+        "!!!": "p",
+        "123-start": "p_123_start",
+        "phase 1": "phase_1",
+        "phase-1": "phase_1_2",
+    }
+    assert "module module_123_module" in export.model
+    assert "[emit_source] true & true ->" in export.model
+    assert "(p_123_start'=p_123_start+1)" in export.model
+    assert "//   phase 1 -> phase_1" in export.model
+    assert "//   phase-1 -> phase_1_2" in export.model
+
+
+def test_petri_net_prism_export_rejects_empty_net() -> None:
+    with pytest.raises(PolicyError, match="without places"):
+        export_petri_net_prism(PetriNet([], []), Marking())
+
+
 def test_petri_net_tla_export_serialises_actions_and_invariants() -> None:
     export = export_petri_net_tla(
         _net(),
@@ -145,6 +191,46 @@ def test_petri_net_tla_export_serialises_actions_and_invariants() -> None:
     )
     assert "Safety == TypeOK" in export.module
     assert "Active_done == done > 0" in export.module
+
+
+def test_petri_net_tla_export_serialises_source_and_stuttering_nets() -> None:
+    source_net = PetriNet(
+        [Place("123-start"), Place("phase-1")],
+        [
+            Transition(
+                name="emit source",
+                inputs=[],
+                outputs=[Arc("phase-1")],
+            )
+        ],
+    )
+
+    source_export = export_petri_net_tla(
+        source_net,
+        Marking(tokens={"123-start": 1}),
+        module_name="123 module",
+    )
+    assert "---- MODULE SpoModule_123_module ----" in source_export.module
+    assert "emit_source ==" in source_export.module
+    assert "  /\\ TRUE" not in source_export.module
+    assert "  /\\ phase_1' = phase_1 + 1" in source_export.module
+
+    stuttering_export = export_petri_net_tla(
+        PetriNet([Place("idle")], []),
+        Marking(tokens={"idle": 1}),
+    )
+    assert "Next ==\n  /\\ UNCHANGED <<idle>>" in stuttering_export.module
+
+
+def test_petri_net_tla_export_rejects_empty_net_and_bad_bounds() -> None:
+    with pytest.raises(PolicyError, match="without places"):
+        export_petri_net_tla(PetriNet([], []), Marking())
+
+    with pytest.raises(PolicyError, match="max_tokens"):
+        export_petri_net_tla(_net(), Marking(tokens={"warmup": 1}), max_tokens=0)
+
+    with pytest.raises(PolicyError, match="exceeds max_tokens"):
+        export_petri_net_tla(_net(), Marking(tokens={"warmup": 3}), max_tokens=2)
 
 
 def _rules() -> list[PolicyRule]:
@@ -213,6 +299,46 @@ def test_policy_rules_prism_export_serialises_rules_and_actions() -> None:
     assert 'label "emits_boost_K_K_global_0" = boost_K_fires > 0;' in export.model
 
 
+def test_policy_rules_prism_export_preserves_or_guard_and_unique_actions() -> None:
+    rules = [
+        PolicyRule(
+            name="shed load",
+            regimes=["DEGRADED"],
+            condition=CompoundCondition(
+                conditions=[
+                    PolicyCondition("boundary_violation_count", None, ">=", 1.0),
+                    PolicyCondition("imprint_mean", None, "<", 0.2),
+                ],
+                logic="OR",
+            ),
+            actions=[
+                PolicyAction("K", "global", -0.1, 2.0),
+                PolicyAction("K", "global", -0.2, 4.0),
+            ],
+        )
+    ]
+
+    export = export_policy_rules_prism(rules, module_name="safety policy")
+
+    assert export.action_names == {
+        "shed load.K.global.0": "shed_load_K_global_0",
+        "shed load.K.global.1": "shed_load_K_global_1",
+    }
+    assert (
+        "[shed_load] (regime = 0) & "
+        "(boundary_violation_count >= 1 | imprint_mean < 0.20000000000000001)"
+    ) in export.model
+    assert 'label "emits_shed_load_K_global_0" = shed_load_fires > 0;' in (
+        export.model
+    )
+    assert 'label "emits_shed_load_K_global_1" = shed_load_fires > 0;' in (
+        export.model
+    )
+    assert "//   shed_load_K_global_1: knob='K', scope='global', value=-0.2" in (
+        export.model
+    )
+
+
 def test_policy_rules_prism_export_rejects_bad_rules() -> None:
     with pytest.raises(PolicyError, match="without rules"):
         export_policy_rules_prism([])
@@ -225,6 +351,76 @@ def test_policy_rules_prism_export_rejects_bad_rules() -> None:
     )
     with pytest.raises(PolicyError, match="unsupported operator"):
         export_policy_rules_prism([bad])
+
+
+@pytest.mark.parametrize(
+    ("rule", "message"),
+    [
+        (
+            PolicyRule(
+                name="",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("R", None, ">", 0.1),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "names must not be empty",
+        ),
+        (
+            PolicyRule(
+                name="no regimes",
+                regimes=[],
+                condition=PolicyCondition("R", None, ">", 0.1),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "has no regimes",
+        ),
+        (
+            PolicyRule(
+                name="no actions",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("R", None, ">", 0.1),
+                actions=[],
+            ),
+            "has no actions",
+        ),
+        (
+            PolicyRule(
+                name="empty metric",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("", None, ">", 0.1),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "empty metric",
+        ),
+        (
+            PolicyRule(
+                name="non finite",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("R", None, ">", float("inf")),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "non-finite threshold",
+        ),
+    ],
+)
+def test_policy_rules_prism_export_rejects_invalid_rule_shapes(
+    rule: PolicyRule,
+    message: str,
+) -> None:
+    with pytest.raises(PolicyError, match=message):
+        export_policy_rules_prism([rule])
+
+
+def test_policy_rules_prism_export_rejects_empty_compound_conditions() -> None:
+    rule = PolicyRule(
+        name="empty compound",
+        regimes=["DEGRADED"],
+        condition=CompoundCondition(conditions=[]),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+
+    with pytest.raises(PolicyError, match="compound policy condition"):
+        export_policy_rules_prism([rule])
 
 
 def test_policy_rules_tla_export_serialises_guards_and_emission_predicates() -> None:
@@ -254,6 +450,127 @@ def test_policy_rules_tla_export_serialises_guards_and_emission_predicates() -> 
     ) in export.module
     assert "Fires_boost_K == boost_K_fires > 0" in export.module
     assert "Emits_boost_K_K_global_0 == boost_K_fires > 0" in export.module
+
+
+def test_policy_rules_tla_export_preserves_or_safety_guard_and_unique_actions() -> None:
+    rules = [
+        PolicyRule(
+            name="shed load",
+            regimes=["DEGRADED"],
+            condition=CompoundCondition(
+                conditions=[
+                    PolicyCondition("boundary_violation_count", None, ">=", 1.0),
+                    PolicyCondition("imprint_mean", None, "<", 0.2),
+                ],
+                logic="OR",
+            ),
+            actions=[
+                PolicyAction("K", "global", -0.1, 2.0),
+                PolicyAction("K", "global", -0.2, 4.0),
+            ],
+        )
+    ]
+
+    export = export_policy_rules_tla(rules, module_name="safety policy")
+
+    assert export.action_names == {
+        "shed load.K.global.0": "shed_load_K_global_0",
+        "shed load.K.global.1": "shed_load_K_global_1",
+    }
+    assert "---- MODULE safety_policy ----" in export.module
+    assert (
+        "  /\\ (boundary_violation_count >= 1 "
+        "\\/ imprint_mean < 0.20000000000000001)"
+    ) in export.module
+    assert "Emits_shed_load_K_global_0 == shed_load_fires > 0" in export.module
+    assert "Emits_shed_load_K_global_1 == shed_load_fires > 0" in export.module
+    assert "\\*   shed_load_K_global_1: knob='K', scope='global', value=-0.2" in (
+        export.module
+    )
+
+
+def test_policy_rules_tla_export_rejects_empty_rules() -> None:
+    with pytest.raises(PolicyError, match="without rules"):
+        export_policy_rules_tla([])
+
+
+@pytest.mark.parametrize(
+    ("rule", "message"),
+    [
+        (
+            PolicyRule(
+                name="",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("R", None, ">", 0.1),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "names must not be empty",
+        ),
+        (
+            PolicyRule(
+                name="no regimes",
+                regimes=[],
+                condition=PolicyCondition("R", None, ">", 0.1),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "has no regimes",
+        ),
+        (
+            PolicyRule(
+                name="no actions",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("R", None, ">", 0.1),
+                actions=[],
+            ),
+            "has no actions",
+        ),
+        (
+            PolicyRule(
+                name="empty metric",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("", None, ">", 0.1),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "empty metric",
+        ),
+        (
+            PolicyRule(
+                name="non finite",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("R", None, ">", float("inf")),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "non-finite threshold",
+        ),
+        (
+            PolicyRule(
+                name="bad op",
+                regimes=["DEGRADED"],
+                condition=PolicyCondition("R", None, "!=", 0.1),
+                actions=[PolicyAction("K", "global", 0.1, 1.0)],
+            ),
+            "unsupported operator",
+        ),
+    ],
+)
+def test_policy_rules_tla_export_rejects_invalid_rule_shapes(
+    rule: PolicyRule,
+    message: str,
+) -> None:
+    with pytest.raises(PolicyError, match=message):
+        export_policy_rules_tla([rule])
+
+
+def test_policy_rules_tla_export_rejects_empty_compound_conditions() -> None:
+    rule = PolicyRule(
+        name="empty compound",
+        regimes=["DEGRADED"],
+        condition=CompoundCondition(conditions=[]),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+
+    with pytest.raises(PolicyError, match="compound policy condition"):
+        export_policy_rules_tla([rule])
 
 
 def test_stl_specs_prism_export_serialises_satisfaction_labels() -> None:
@@ -292,6 +609,29 @@ def test_stl_specs_prism_export_serialises_satisfaction_labels() -> None:
 def test_stl_specs_prism_export_rejects_unsupported_syntax() -> None:
     with pytest.raises(PolicyError, match="unsupported export syntax"):
         export_stl_specs_prism([PolicySTLSpec("until", "x until y")])
+
+
+@pytest.mark.parametrize(
+    ("specs", "message"),
+    [
+        ([], "without specs"),
+        ([PolicySTLSpec("", "always (R >= 0.3)")], "names must not be empty"),
+        (
+            [PolicySTLSpec("bad severity", "always (R >= 0.3)", "critical")],
+            "unsupported severity",
+        ),
+        (
+            [PolicySTLSpec("bad predicate", "always (R != 0.3)")],
+            "unsupported predicate syntax",
+        ),
+    ],
+)
+def test_stl_specs_prism_export_rejects_invalid_monitor_shapes(
+    specs: list[PolicySTLSpec],
+    message: str,
+) -> None:
+    with pytest.raises(PolicyError, match=message):
+        export_stl_specs_prism(specs)
 
 
 def test_formal_export_cli_writes_prism_model(tmp_path: Path) -> None:

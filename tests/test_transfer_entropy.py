@@ -11,7 +11,9 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
+from scpn_phase_orchestrator.monitor import transfer_entropy as te_mod
 from scpn_phase_orchestrator.monitor.transfer_entropy import (
     phase_transfer_entropy,
     transfer_entropy_matrix,
@@ -54,13 +56,22 @@ class TestTransferEntropy:
         assert te_fwd >= 0.0
 
     def test_short_signals(self):
-        assert phase_transfer_entropy(np.array([1.0, 2.0]), np.array([1.0])) == 0.0
+        previous = te_mod.ACTIVE_BACKEND
+        te_mod.ACTIVE_BACKEND = "python"
+        try:
+            assert phase_transfer_entropy(np.array([1.0, 2.0]), np.array([1.0])) == 0.0
+        finally:
+            te_mod.ACTIVE_BACKEND = previous
 
     def test_matrix_shape(self):
         rng = np.random.default_rng(42)
         data = rng.uniform(0, 2 * np.pi, (4, 100))
         te = transfer_entropy_matrix(data)
         assert te.shape == (4, 4)
+
+    def test_matrix_rejects_non_oscillator_time_series_shape(self):
+        with pytest.raises(ValueError, match="phase_series must be 2-D"):
+            transfer_entropy_matrix(np.linspace(0.0, 1.0, 8))
 
     def test_matrix_diagonal_zero(self):
         rng = np.random.default_rng(42)
@@ -73,6 +84,27 @@ class TestTransferEntropy:
         data = rng.uniform(0, 2 * np.pi, (3, 100))
         te = transfer_entropy_matrix(data)
         assert np.all(te >= 0.0)
+
+    def test_python_fallback_matrix_populates_each_off_diagonal_pair(self):
+        previous = te_mod.ACTIVE_BACKEND
+        te_mod.ACTIVE_BACKEND = "python"
+        try:
+            rng = np.random.default_rng(123)
+            driver = np.cumsum(0.03 + 0.01 * rng.standard_normal(600))
+            follower = np.roll(driver, 1) + 0.02 * rng.standard_normal(600)
+            independent = rng.uniform(0.0, 2 * np.pi, size=600)
+
+            te = transfer_entropy_matrix(
+                np.stack([driver % (2 * np.pi), follower % (2 * np.pi), independent]),
+                n_bins=12,
+            )
+        finally:
+            te_mod.ACTIVE_BACKEND = previous
+
+        assert te.shape == (3, 3)
+        np.testing.assert_array_equal(np.diag(te), 0.0)
+        assert np.count_nonzero(te) == 6
+        assert te[0, 1] > te[1, 0]
 
 
 class TestTEPipelineWiring:

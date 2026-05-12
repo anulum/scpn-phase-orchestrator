@@ -15,6 +15,8 @@ round-trip.
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import get_type_hints
 
 import numpy as np
@@ -198,3 +200,50 @@ class TestBackendTypingContracts:
             text = str(hints[name])
             assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+
+class TestBackendLoaderDispatch:
+    def test_rust_loader_wraps_spo_kernel_flattened_arrays(self, monkeypatch) -> None:
+        calls: list[tuple[np.ndarray, np.ndarray, int]] = []
+
+        def fake_rust(knm_flat, phases, n):
+            calls.append((knm_flat, phases, n))
+            return (
+                np.full(n, 1.0, dtype=np.float64),
+                np.full(n, 2.0, dtype=np.float64),
+                np.full(n, 3.0, dtype=np.float64),
+            )
+
+        fake_module = types.ModuleType("spo_kernel")
+        fake_module.hodge_decomposition_rust = fake_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
+
+        backend = h_mod._load_rust_fn()
+        knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
+        phases = np.array([0.1, 0.4], dtype=np.float64)
+
+        gradient, curl, harmonic = backend(knm, phases, 2)
+
+        np.testing.assert_array_equal(gradient, [1.0, 1.0])
+        np.testing.assert_array_equal(curl, [2.0, 2.0])
+        np.testing.assert_array_equal(harmonic, [3.0, 3.0])
+        assert calls[0][2] == 2
+        assert calls[0][0].flags.c_contiguous
+        np.testing.assert_array_equal(calls[0][0], knm.ravel())
+
+    def test_julia_loader_requires_juliacall_then_returns_backend(
+        self,
+        monkeypatch,
+    ) -> None:
+        sentinel = object()
+        fake_juliacall = types.ModuleType("juliacall")
+        fake_backend = types.ModuleType("scpn_phase_orchestrator.coupling._hodge_julia")
+        fake_backend.hodge_decomposition_julia = sentinel
+        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
+        monkeypatch.setitem(
+            sys.modules,
+            "scpn_phase_orchestrator.coupling._hodge_julia",
+            fake_backend,
+        )
+
+        assert h_mod._load_julia_fn() is sentinel

@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     evaluate_policy_stl_specs,
     load_policy_rules,
     load_policy_stl_specs,
+    synthesise_policy_stl_automata,
 )
 from scpn_phase_orchestrator.supervisor.regimes import Regime
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -34,6 +35,23 @@ def _state(rs: list[float], stability: float | None = None) -> UPDEState:
         cross_layer_alignment=np.zeros((len(rs), len(rs))),
         stability_proxy=stab,
         regime_id="test",
+    )
+
+
+def _rich_state() -> UPDEState:
+    return UPDEState(
+        layers=[
+            LayerState(R=0.21, psi=0.0, mean_amplitude=0.44, amplitude_spread=0.12),
+            LayerState(R=0.82, psi=0.0, mean_amplitude=0.91, amplitude_spread=0.34),
+        ],
+        cross_layer_alignment=np.zeros((2, 2)),
+        stability_proxy=0.62,
+        regime_id="test",
+        mean_amplitude=0.71,
+        pac_max=0.23,
+        subcritical_fraction=0.15,
+        boundary_violation_count=3,
+        imprint_mean=0.56,
     )
 
 
@@ -96,6 +114,109 @@ def test_r_good_metric():
     assert len(actions) == 1
 
 
+def test_policy_actions_preserve_metadata_and_rule_order():
+    first = _rule(
+        name="raise_k",
+        threshold=0.7,
+        knob="K",
+        scope="global",
+        value=0.2,
+    )
+    second = _rule(
+        name="trim_alpha",
+        threshold=0.7,
+        knob="alpha",
+        scope="layer_1",
+        value=-0.05,
+    )
+    engine = PolicyEngine([first, second])
+
+    actions = engine.evaluate(Regime.NOMINAL, _state([0.8]), [0], [])
+
+    assert [action.knob for action in actions] == ["K", "alpha"]
+    assert [action.scope for action in actions] == ["global", "layer_1"]
+    assert [action.value for action in actions] == [0.2, -0.05]
+    assert [action.ttl_s for action in actions] == [5.0, 5.0]
+    assert [action.justification for action in actions] == [
+        "policy rule: raise_k",
+        "policy rule: trim_alpha",
+    ]
+
+
+def test_missing_metric_and_unsupported_operator_do_not_fire():
+    rules = [
+        PolicyRule(
+            name="unknown_metric",
+            regimes=["NOMINAL"],
+            condition=PolicyCondition(
+                metric="not_a_metric", layer=None, op=">", threshold=0.0
+            ),
+            actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+        ),
+        PolicyRule(
+            name="unknown_operator",
+            regimes=["NOMINAL"],
+            condition=PolicyCondition(metric="R", layer=0, op="!=", threshold=0.0),
+            actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+        ),
+    ]
+
+    assert PolicyEngine(rules).evaluate(Regime.NOMINAL, _state([0.8]), [0], []) == []
+
+
+@pytest.mark.parametrize(
+    ("metric", "layer", "threshold"),
+    [
+        ("R_good", 1, 0.0),
+        ("R_bad", 1, 0.0),
+        ("amplitude_spread", 5, 0.0),
+        ("mean_amplitude_layer", 5, 0.0),
+    ],
+)
+def test_missing_layer_mapped_metrics_do_not_fire(
+    metric: str, layer: int, threshold: float
+):
+    rule = _rule(metric=metric, layer=layer, op=">", threshold=threshold)
+
+    actions = PolicyEngine([rule]).evaluate(Regime.NOMINAL, _rich_state(), [0], [1])
+
+    assert actions == []
+
+
+@pytest.mark.parametrize(
+    ("metric", "layer", "op", "threshold"),
+    [
+        ("pac_max", None, "==", 0.23),
+        ("mean_amplitude", None, ">=", 0.70),
+        ("subcritical_fraction", None, "<=", 0.15),
+        ("amplitude_spread", 1, "==", 0.34),
+        ("mean_amplitude_layer", 0, "==", 0.44),
+        ("boundary_violation_count", None, "==", 3.0),
+        ("imprint_mean", None, "==", 0.56),
+    ],
+)
+def test_policy_engine_evaluates_diagnostic_metrics(
+    metric: str, layer: int | None, op: str, threshold: float
+):
+    rule = PolicyRule(
+        name=f"diagnostic_{metric}",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(
+            metric=metric,
+            layer=layer,
+            op=op,
+            threshold=threshold,
+        ),
+        actions=[PolicyAction(knob="diagnostic", scope="global", value=1.0, ttl_s=2.0)],
+    )
+
+    actions = PolicyEngine([rule]).evaluate(Regime.NOMINAL, _rich_state(), [0], [1])
+
+    assert [action.justification for action in actions] == [
+        f"policy rule: diagnostic_{metric}"
+    ]
+
+
 def test_load_policy_rules_yaml(tmp_path):
     p = tmp_path / "policy.yaml"
     p.write_text(
@@ -126,6 +247,12 @@ def test_load_policy_rules_yaml(tmp_path):
 def test_load_empty_policy_yaml(tmp_path):
     p = tmp_path / "policy.yaml"
     p.write_text("rules: []\n", encoding="utf-8")
+    assert load_policy_rules(p) == []
+
+
+def test_load_policy_rules_missing_rules_section_returns_empty(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text("stl_monitors: []\n", encoding="utf-8")
     assert load_policy_rules(p) == []
 
 
@@ -202,6 +329,24 @@ def test_evaluate_policy_stl_specs_returns_audit_records():
     assert audit_records[1]["satisfied"] is True
 
 
+def test_synthesise_policy_stl_automata_returns_named_audit_records():
+    specs = [
+        PolicySTLSpec(
+            name="recover",
+            spec="eventually (R >= 0.8)",
+            severity="hard",
+        )
+    ]
+
+    automata = synthesise_policy_stl_automata(specs, {"R": [0.2, 0.9]})
+    audit_record = automata[0].to_audit_record()
+
+    assert audit_record["name"] == "recover"
+    assert audit_record["severity"] == "hard"
+    assert audit_record["spec"] == "eventually (R >= 0.8)"
+    assert "states" in audit_record
+
+
 def test_load_policy_rules_recursion_error_is_parse_error(tmp_path, monkeypatch):
     import yaml
 
@@ -231,6 +376,299 @@ def test_load_policy_stl_specs_fuzzer_unicode_overflow_is_parse_error(tmp_path):
     p.write_text('"\\\\\\U' + ("e" * 57) + "\\\\~", encoding="utf-8")
 
     with pytest.raises(ValueError, match="policy rules YAML parse error"):
+        load_policy_stl_specs(p)
+
+
+def test_policy_loaders_wrap_unreadable_paths(tmp_path):
+    with pytest.raises(ValueError, match="cannot read policy rules"):
+        load_policy_rules(tmp_path)
+    with pytest.raises(ValueError, match="cannot read policy rules"):
+        load_policy_stl_specs(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("body", "match"),
+    [
+        ("rules: not-a-list\n", "rules must be a list"),
+        ("rules:\n  - 5\n", "rule must be a mapping"),
+        (
+            "rules:\n"
+            "  - regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "rule missing required key 'name'",
+        ),
+        (
+            "rules:\n"
+            "  - name: ''\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "rule.name must be a non-empty string",
+        ),
+        (
+            "rules:\n"
+            "  - name: bad_threshold\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: not-finite\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "condition.threshold must be a finite number",
+        ),
+        (
+            "rules:\n"
+            "  - name: infinite_value\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: .inf\n"
+            "      ttl_s: 1.0\n",
+            "action.value must be a finite number",
+        ),
+        (
+            "rules:\n"
+            "  - name: negative_ttl\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: -1.0\n",
+            "action.ttl_s must be non-negative",
+        ),
+        (
+            "rules:\n"
+            "  - name: bool_layer\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: true\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "condition.layer must be a non-negative integer",
+        ),
+        (
+            "rules:\n"
+            "  - name: text_layer\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: first\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "condition.layer must be a non-negative integer",
+        ),
+        (
+            "rules:\n"
+            "  - name: negative_fires\n"
+            "    regime: [NOMINAL]\n"
+            "    max_fires: -1\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "rule.max_fires must be non-negative",
+        ),
+        (
+            "rules:\n"
+            "  - name: bad_op\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '!='\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "condition.op is unsupported",
+        ),
+        (
+            "rules:\n"
+            "  - name: empty_conditions\n"
+            "    regime: [NOMINAL]\n"
+            "    conditions: []\n"
+            "    actions:\n"
+            "      - knob: K\n"
+            "        scope: global\n"
+            "        value: 0.1\n"
+            "        ttl_s: 1.0\n",
+            "rule.conditions must not be empty",
+        ),
+        (
+            "rules:\n"
+            "  - name: bad_logic_type\n"
+            "    regime: [NOMINAL]\n"
+            "    logic: 5\n"
+            "    conditions:\n"
+            "      - metric: R\n"
+            "        layer: 0\n"
+            "        op: '>'\n"
+            "        threshold: 0.1\n"
+            "    actions:\n"
+            "      - knob: K\n"
+            "        scope: global\n"
+            "        value: 0.1\n"
+            "        ttl_s: 1.0\n",
+            "rule.logic must be a string",
+        ),
+        (
+            "rules:\n"
+            "  - name: bad_logic\n"
+            "    regime: [NOMINAL]\n"
+            "    logic: XOR\n"
+            "    conditions:\n"
+            "      - metric: R\n"
+            "        layer: 0\n"
+            "        op: '>'\n"
+            "        threshold: 0.1\n"
+            "    actions:\n"
+            "      - knob: K\n"
+            "        scope: global\n"
+            "        value: 0.1\n"
+            "        ttl_s: 1.0\n",
+            "rule.logic must be AND or OR",
+        ),
+        (
+            "rules:\n"
+            "  - name: empty_actions\n"
+            "    regime: [NOMINAL]\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    actions: []\n",
+            "rule.actions must not be empty",
+        ),
+        (
+            "rules:\n"
+            "  - name: bad_regime\n"
+            "    regime: [NOMINAL, '']\n"
+            "    condition:\n"
+            "      metric: R\n"
+            "      layer: 0\n"
+            "      op: '>'\n"
+            "      threshold: 0.1\n"
+            "    action:\n"
+            "      knob: K\n"
+            "      scope: global\n"
+            "      value: 0.1\n"
+            "      ttl_s: 1.0\n",
+            "rule.regime must be a list of non-empty strings",
+        ),
+    ],
+)
+def test_load_policy_rules_rejects_bad_schema(tmp_path, body: str, match: str):
+    p = tmp_path / "policy.yaml"
+    p.write_text(body, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=match):
+        load_policy_rules(p)
+
+
+def test_load_policy_rules_rejects_rule_and_action_caps(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text("rules:\n" + ("  - {}\n" * 1001), encoding="utf-8")
+    with pytest.raises(ValueError, match="too many rules"):
+        load_policy_rules(p)
+
+    too_many_conditions = "\n".join(
+        "      - {metric: R, layer: 0, op: '>', threshold: 0.1}" for _ in range(33)
+    )
+    p.write_text(
+        "rules:\n"
+        "  - name: too_many_conditions\n"
+        "    regime: [NOMINAL]\n"
+        "    conditions:\n"
+        f"{too_many_conditions}\n"
+        "    actions:\n"
+        "      - {knob: K, scope: global, value: 0.1, ttl_s: 1.0}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="too many rule conditions"):
+        load_policy_rules(p)
+
+    too_many_actions = "\n".join(
+        "      - {knob: K, scope: global, value: 0.1, ttl_s: 1.0}" for _ in range(33)
+    )
+    p.write_text(
+        "rules:\n"
+        "  - name: too_many_actions\n"
+        "    regime: [NOMINAL]\n"
+        "    condition: {metric: R, layer: 0, op: '>', threshold: 0.1}\n"
+        "    actions:\n"
+        f"{too_many_actions}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="too many rule actions"):
+        load_policy_rules(p)
+
+
+def test_load_policy_stl_specs_rejects_bad_schema_and_cap(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text("stl_monitors: not-a-list\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="stl_monitors must be a list"):
+        load_policy_stl_specs(p)
+
+    p.write_text("stl_monitors:\n  - 5\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="stl_monitor must be a mapping"):
+        load_policy_stl_specs(p)
+
+    p.write_text("stl_monitors:\n" + ("  - {}\n" * 1001), encoding="utf-8")
+    with pytest.raises(ValueError, match="too many stl monitors"):
         load_policy_stl_specs(p)
 
 
@@ -366,6 +804,27 @@ def test_cooldown_blocks_rapid_refire():
     assert engine.evaluate(Regime.NOMINAL, s, [0], []) == []
     engine.advance_clock(11.0)
     assert len(engine.evaluate(Regime.NOMINAL, s, [0], [])) == 1
+
+
+def test_cooldown_refires_at_exact_boundary_and_preserves_rule_caps():
+    rule = PolicyRule(
+        name="boundary_cd",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.0),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
+        cooldown_s=10.0,
+        max_fires=2,
+    )
+    engine = PolicyEngine([rule])
+    state = _state([0.5])
+
+    assert len(engine.evaluate(Regime.NOMINAL, state, [0], [])) == 1
+    engine.advance_clock(9.999)
+    assert engine.evaluate(Regime.NOMINAL, state, [0], []) == []
+    engine.advance_clock(0.001)
+    assert len(engine.evaluate(Regime.NOMINAL, state, [0], [])) == 1
+    engine.advance_clock(10.0)
+    assert engine.evaluate(Regime.NOMINAL, state, [0], []) == []
 
 
 def test_max_fires_cap():

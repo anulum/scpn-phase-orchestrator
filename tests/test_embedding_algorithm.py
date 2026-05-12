@@ -82,6 +82,16 @@ class TestMutualInformation:
         sig = np.full(200, 0.5)
         assert mutual_information(sig, 5, 16) == 0.0
 
+    @_python
+    def test_lag_without_overlap_has_zero_mi(self):
+        sig = np.arange(8, dtype=np.float64)
+        assert mutual_information(sig, lag=sig.size, n_bins=8) == 0.0
+
+    @_python
+    def test_empty_negative_lag_has_zero_histogram_mass(self):
+        sig = np.array([], dtype=np.float64)
+        assert mutual_information(sig, lag=-1, n_bins=4) == 0.0
+
 
 class TestNearestNeighborDistances:
     @_python
@@ -114,6 +124,37 @@ class TestOptimalDelay:
         sig = np.sin(t)
         tau = optimal_delay(sig, max_lag=80, n_bins=16)
         assert 1 <= tau < 80
+
+
+class TestOptimalDimensionEdgeCases:
+    @_python
+    def test_stops_when_next_dimension_has_no_valid_pairs(self):
+        sig = np.array([0.0, 1.0, 0.0])
+        assert em_mod.optimal_dimension(sig, delay=2, max_dim=4) == 1
+
+    @_python
+    def test_false_neighbour_absolute_growth_can_dominate(self):
+        sig = np.array([0.0, 0.02, 1.0, 1.03, 2.1, 2.15], dtype=np.float64)
+        dim = em_mod.optimal_dimension(
+            sig,
+            delay=1,
+            max_dim=2,
+            rtol=1_000.0,
+            atol=0.01,
+        )
+        assert dim == 2
+
+    @_python
+    def test_returns_max_dim_when_relative_growth_never_settles(self):
+        sig = np.array([0.0, 1.0, 0.1, 1.2, 0.2, 1.4, 0.3], dtype=np.float64)
+        dim = em_mod.optimal_dimension(
+            sig,
+            delay=1,
+            max_dim=3,
+            rtol=0.0,
+            atol=1_000.0,
+        )
+        assert dim == 3
 
 
 class TestAutoEmbed:

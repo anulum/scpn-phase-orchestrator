@@ -57,6 +57,16 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="restriction_maps"):
             sheaf_coherence(states, np.zeros((2, 2), dtype=np.float64))
 
+    def test_laplacian_rejects_invalid_restriction_shape(self) -> None:
+        with pytest.raises(ValueError, match="restriction_maps"):
+            sheaf_laplacian(np.zeros((2, 2, 1), dtype=np.float64))
+
+    def test_empty_node_state_matrix_is_rejected(self) -> None:
+        maps = np.zeros((0, 0, 1, 1), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="at least one node"):
+            sheaf_coherence(np.zeros((0, 1), dtype=np.float64), maps)
+
     def test_non_finite_inputs_are_rejected(self) -> None:
         states = np.zeros((2, 1), dtype=np.float64)
         states[0, 0] = np.inf
@@ -64,6 +74,18 @@ class TestSheafCoherenceContracts:
 
         with pytest.raises(ValueError, match="finite"):
             sheaf_coherence(states, maps)
+
+    def test_non_finite_restrictions_are_rejected_by_coherence_and_laplacian(
+        self,
+    ) -> None:
+        states = np.zeros((2, 1), dtype=np.float64)
+        maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
+        maps[0, 1, 0, 0] = np.nan
+
+        with pytest.raises(ValueError, match="finite"):
+            sheaf_coherence(states, maps)
+        with pytest.raises(ValueError, match="finite"):
+            sheaf_laplacian(maps)
 
     def test_negative_tolerance_is_rejected(self) -> None:
         states = np.zeros((2, 1), dtype=np.float64)
@@ -104,6 +126,21 @@ class TestSheafCoherenceBehaviour:
         assert result.obstruction_score > 0.0
         assert result.consistency_energy > 0.0
         assert result.obstruction_dimension > 0
+
+    def test_subthreshold_restrictions_do_not_create_edges_or_residuals(self) -> None:
+        states = np.array([[1.0], [2.0]], dtype=np.float64)
+        maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
+        maps[0, 1, 0, 0] = 1e-10
+        maps[1, 0, 0, 0] = 1e-10
+
+        result = sheaf_coherence(states, maps, tolerance=1e-8)
+        laplacian = sheaf_laplacian(maps, tolerance=1e-8)
+
+        assert result.edge_count == 0
+        assert result.obstruction_score == pytest.approx(0.0)
+        assert result.obstruction_dimension == 0
+        assert np.allclose(result.residuals, 0.0)
+        assert np.allclose(laplacian, 0.0)
 
     def test_laplacian_is_symmetric_positive_semidefinite(self) -> None:
         maps = _identity_maps(n_nodes=4, n_channels=2)
@@ -232,3 +269,7 @@ class TestSheafCoherencePipelineWiring:
         assert result.laplacian.shape == (n_nodes * n_channels, n_nodes * n_channels)
         assert np.isfinite(result.obstruction_score)
         assert result.edge_count == n_nodes * (n_nodes - 1)
+
+
+def test_empty_laplacian_kernel_dimension_guard() -> None:
+    assert sheaf_module._kernel_dimension(np.zeros((0, 0), dtype=np.float64), 1e-8) == 0

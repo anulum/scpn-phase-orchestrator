@@ -20,7 +20,10 @@ from scpn_phase_orchestrator.binding.types import (
     ObjectivePartition,
     OscillatorFamily,
 )
-from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+from scpn_phase_orchestrator.oscillators.init_phases import (
+    _resolve_channel,
+    extract_initial_phases,
+)
 
 TWO_PI = 2.0 * np.pi
 
@@ -139,6 +142,51 @@ def test_named_channels_route_by_extractor_semantics():
     assert phases.shape == (4,)
     assert np.all(phases >= 0.0)
     assert np.all(phases < TWO_PI)
+
+
+def test_unknown_channel_and_extractor_falls_back_to_random_phase():
+    layers = [
+        HierarchyLayer(
+            name="L1",
+            index=0,
+            oscillator_ids=["osc0"],
+            family="unknown",
+        ),
+    ]
+    families = {
+        "unknown": OscillatorFamily(
+            channel="X",
+            extractor_type="bespoke",
+            config={},
+        ),
+    }
+    spec = BindingSpec(
+        name="test-random-fallback",
+        version="1.0.0",
+        safety_tier="research",
+        sample_period_s=0.01,
+        control_period_s=0.1,
+        layers=layers,
+        oscillator_families=families,
+        coupling=CouplingSpec(base_strength=0.45, decay_alpha=0.3, templates={}),
+        drivers=DriverSpec(physical={}, informational={}, symbolic={}),
+        objectives=ObjectivePartition(good_layers=[0], bad_layers=[]),
+        boundaries=[],
+        actuators=[],
+    )
+
+    phases = extract_initial_phases(spec, np.array([1.0]), seed=7)
+
+    assert phases.shape == (1,)
+    assert 0.0 <= phases[0] < TWO_PI
+
+
+def test_resolve_channel_uses_explicit_family_binding():
+    families = {
+        "events": OscillatorFamily(channel="I", extractor_type="event", config={}),
+    }
+
+    assert _resolve_channel("events", families, osc_idx=0) == "I"
 
 
 class TestInitPhasesPipelineWiring:

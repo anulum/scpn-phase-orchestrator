@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import get_type_hints
 
 import numpy as np
@@ -80,6 +82,91 @@ def test_backend_array_contracts_are_parameterised() -> None:
         for hint in checked_hints:
             assert "numpy.ndarray" in str(hint)
             assert "float64" in str(hint)
+
+
+def test_backend_resolution_records_first_available_backend(monkeypatch) -> None:
+    calls: list[str] = []
+
+    def unavailable(name: str):
+        def _loader() -> dict[str, object]:
+            calls.append(name)
+            raise ImportError(name)
+
+        return _loader
+
+    def rust_loader() -> dict[str, object]:
+        calls.append("rust")
+        return {
+            "phase_te": lambda _src, _tgt, _bins: 0.125,
+            "te_matrix": lambda _flat, n_osc, _n_time, _bins: np.eye(n_osc).ravel(),
+        }
+
+    monkeypatch.setitem(te_mod._LOADERS, "rust", rust_loader)
+    monkeypatch.setitem(te_mod._LOADERS, "mojo", unavailable("mojo"))
+    monkeypatch.setitem(te_mod._LOADERS, "julia", unavailable("julia"))
+    monkeypatch.setitem(te_mod._LOADERS, "go", unavailable("go"))
+
+    active, available = te_mod._resolve_backends()
+
+    assert active == "rust"
+    assert available == ["rust", "python"]
+    assert calls == ["rust", "mojo", "julia", "go"]
+
+
+def test_rust_loader_exposes_phase_and_matrix_kernels(monkeypatch) -> None:
+    fake_spo = types.ModuleType("spo_kernel")
+    fake_spo.phase_transfer_entropy_rust = lambda _src, _tgt, _bins: 0.25
+    fake_spo.transfer_entropy_matrix_rust = (
+        lambda _flat, n_osc, _n_time, _bins: np.zeros(n_osc * n_osc)
+    )
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+    kernels = te_mod._load_rust_fns()
+
+    assert kernels["phase_te"] is fake_spo.phase_transfer_entropy_rust
+    assert kernels["te_matrix"] is fake_spo.transfer_entropy_matrix_rust
+
+
+def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def phase_te(src: np.ndarray, tgt: np.ndarray, n_bins: int) -> float:
+        captured["phase_src_contiguous"] = src.flags.c_contiguous
+        captured["phase_tgt_contiguous"] = tgt.flags.c_contiguous
+        captured["phase_bins"] = n_bins
+        return 0.375
+
+    def te_matrix(flat: np.ndarray, n_osc: int, n_time: int, n_bins: int) -> np.ndarray:
+        captured["matrix_flat_contiguous"] = flat.flags.c_contiguous
+        captured["matrix_shape"] = (n_osc, n_time)
+        captured["matrix_bins"] = n_bins
+        return np.arange(n_osc * n_osc, dtype=np.float64)
+
+    monkeypatch.setitem(
+        te_mod._LOADERS,
+        "rust",
+        lambda: {"phase_te": phase_te, "te_matrix": te_matrix},
+    )
+    previous = _force("rust")
+    try:
+        src = np.arange(12, dtype=np.float64)[::2]
+        tgt = np.arange(12, dtype=np.float64)[1::2]
+        assert phase_transfer_entropy(src, tgt, n_bins=7) == 0.375
+
+        series = np.arange(30, dtype=np.float64).reshape(3, 10)[:, ::2]
+        matrix = transfer_entropy_matrix(series, n_bins=5)
+    finally:
+        _reset(previous)
+
+    assert captured == {
+        "phase_src_contiguous": True,
+        "phase_tgt_contiguous": True,
+        "phase_bins": 7,
+        "matrix_flat_contiguous": True,
+        "matrix_shape": (3, 5),
+        "matrix_bins": 5,
+    }
+    np.testing.assert_array_equal(matrix, np.arange(9, dtype=np.float64).reshape(3, 3))
 
 
 class TestRustParity:

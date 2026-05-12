@@ -18,6 +18,8 @@ invariant; Hypothesis property that output shapes match the spec.
 from __future__ import annotations
 
 import functools
+import sys
+import types
 
 import numpy as np
 import pytest
@@ -204,3 +206,93 @@ class TestDispatcherSurface:
 
     def test_active_is_first(self):
         assert m_mod.AVAILABLE_BACKENDS[0] == m_mod.ACTIVE_BACKEND
+
+
+class TestBackendLoaderContracts:
+    def test_rust_loader_wraps_order_parameter_and_plv_kernels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: dict[str, object] = {}
+
+        def fake_order(phases_flat: np.ndarray, t: int, n: int) -> np.ndarray:
+            seen["order"] = (phases_flat.flags.c_contiguous, t, n)
+            return np.linspace(0.25, 0.75, t, dtype=np.float64)
+
+        def fake_plv(
+            phases_flat: np.ndarray,
+            t: int,
+            n: int,
+            window: int,
+        ) -> np.ndarray:
+            seen["plv"] = (phases_flat.flags.c_contiguous, t, n, window)
+            return np.eye(n, dtype=np.float64).ravel()
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.market_order_parameter_rust = fake_order
+        fake_spo.market_plv_rust = fake_plv
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        op_fn, plv_fn = m_mod._load_rust_fn()
+        phases = np.arange(6, dtype=np.float64)
+        np.testing.assert_allclose(op_fn(phases, 3, 2), [0.25, 0.5, 0.75])
+        np.testing.assert_allclose(plv_fn(phases, 3, 2, 3).reshape(2, 2), np.eye(2))
+        assert seen == {
+            "order": (True, 3, 2),
+            "plv": (True, 3, 2, 3),
+        }
+
+    def test_optional_loader_contracts_return_order_and_plv_functions(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_order(*_args: object) -> np.ndarray:
+            return np.array([1.0])
+
+        def fake_plv(*_args: object) -> np.ndarray:
+            return np.array([1.0])
+
+        mojo_mod = types.ModuleType("scpn_phase_orchestrator.upde._market_mojo")
+        mojo_mod._ensure_exe = lambda: None
+        mojo_mod.market_order_parameter_mojo = fake_order
+        mojo_mod.market_plv_mojo = fake_plv
+
+        julia_mod = types.ModuleType("scpn_phase_orchestrator.upde._market_julia")
+        julia_mod.market_order_parameter_julia = fake_order
+        julia_mod.market_plv_julia = fake_plv
+
+        go_mod = types.ModuleType("scpn_phase_orchestrator.upde._market_go")
+        go_mod._load_lib = lambda: None
+        go_mod.market_order_parameter_go = fake_order
+        go_mod.market_plv_go = fake_plv
+
+        monkeypatch.setitem(sys.modules, mojo_mod.__name__, mojo_mod)
+        monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
+        monkeypatch.setitem(sys.modules, julia_mod.__name__, julia_mod)
+        monkeypatch.setitem(sys.modules, go_mod.__name__, go_mod)
+
+        assert m_mod._load_mojo_fn() == (fake_order, fake_plv)
+        assert m_mod._load_julia_fn() == (fake_order, fake_plv)
+        assert m_mod._load_go_fn() == (fake_order, fake_plv)
+
+    def test_detect_regimes_uses_rust_classifier_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: dict[str, object] = {}
+
+        def fake_detect(
+            r_flat: np.ndarray,
+            sync_threshold: float,
+            desync_threshold: float,
+        ) -> np.ndarray:
+            seen["args"] = (r_flat.copy(), sync_threshold, desync_threshold)
+            return np.array([0, 2, 1], dtype=np.int32)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.detect_regimes_rust = fake_detect
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        R = np.array([0.1, 0.9, 0.5])
+        regimes = detect_regimes(R, sync_threshold=0.8, desync_threshold=0.2)
+        np.testing.assert_array_equal(regimes, [0, 2, 1])
+        r_flat, sync_threshold, desync_threshold = seen["args"]
+        np.testing.assert_array_equal(r_flat, R)
+        assert (sync_threshold, desync_threshold) == (0.8, 0.2)

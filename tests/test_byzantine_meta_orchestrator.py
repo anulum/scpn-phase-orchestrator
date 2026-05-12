@@ -85,3 +85,95 @@ def test_bft_meta_orchestrator_rejects_invalid_configuration() -> None:
         build_bft_meta_orchestrator_manifest([proposal], keyring, quorum=0)
     with pytest.raises(ValueError, match="previous_audit_hash"):
         sign_policy_proposal("node-a", payload, "bad", keyring["node-a"])
+
+
+def test_bft_meta_orchestrator_rejects_invalid_collection_shapes() -> None:
+    keyring = {"node-a": "alpha"}
+    proposal = sign_policy_proposal(
+        "node-a",
+        {"policy": "hold", "actuation": False},
+        "d" * 64,
+        keyring["node-a"],
+    )
+
+    with pytest.raises(ValueError, match="proposals"):
+        build_bft_meta_orchestrator_manifest({"node-a": proposal}, keyring, quorum=1)
+    with pytest.raises(ValueError, match="proposals"):
+        build_bft_meta_orchestrator_manifest([], keyring, quorum=1)
+    with pytest.raises(ValueError, match="keyring"):
+        build_bft_meta_orchestrator_manifest([proposal], ["alpha"], quorum=1)
+    with pytest.raises(ValueError, match="keyring"):
+        build_bft_meta_orchestrator_manifest([proposal], {}, quorum=1)
+
+
+def test_bft_meta_orchestrator_marks_duplicate_node_as_rejected() -> None:
+    keyring = {"node-a": "alpha", "node-b": "bravo"}
+    payload = {"policy": "hold", "knobs": {"K": 0.3}, "actuation": False}
+    parent_hash = "e" * 64
+    node_a = sign_policy_proposal("node-a", payload, parent_hash, keyring["node-a"])
+    duplicate_node_a = sign_policy_proposal(
+        "node-a",
+        payload,
+        parent_hash,
+        keyring["node-a"],
+    )
+    node_b = sign_policy_proposal("node-b", payload, parent_hash, keyring["node-b"])
+
+    manifest = build_bft_meta_orchestrator_manifest(
+        [node_a, duplicate_node_a, node_b],
+        keyring,
+        quorum=2,
+    )
+
+    assert manifest["status"] == "accepted"
+    assert manifest["accepted_node_ids"] == ["node-a", "node-b"]
+    assert manifest["rejected_node_ids"] == ["node-a"]
+    assert manifest["blocked_reasons"] == ["node-a duplicate proposal"]
+
+
+def test_bft_meta_orchestrator_fails_closed_for_malformed_or_tampered_records() -> None:
+    keyring = {"node-a": "alpha", "node-b": "bravo"}
+    payload = {"policy": "hold", "knobs": {"K": 0.3}, "actuation": False}
+    parent_hash = "f" * 64
+    missing_key = sign_policy_proposal(
+        "node-b",
+        payload,
+        parent_hash,
+        keyring["node-b"],
+    )
+    tampered_payload = dict(
+        sign_policy_proposal("node-a", payload, parent_hash, keyring["node-a"])
+    )
+    tampered_payload["payload"] = {"policy": "raise", "knobs": {"K": 0.8}}
+
+    manifest = build_bft_meta_orchestrator_manifest(
+        [missing_key, tampered_payload],
+        {"node-a": "alpha"},
+        quorum=2,
+    )
+
+    assert manifest["status"] == "blocked"
+    assert manifest["accepted_node_ids"] == []
+    assert manifest["rejected_node_ids"] == ["node-a", "node-b"]
+    assert "node-b missing signing key" in manifest["blocked_reasons"]
+    assert "node-a payload hash mismatch" in manifest["blocked_reasons"]
+    assert "valid quorum not reached" in manifest["blocked_reasons"]
+
+
+def test_bft_meta_orchestrator_rejects_non_mapping_payload_and_blank_text() -> None:
+    keyring = {"node-a": "alpha"}
+    proposal = sign_policy_proposal(
+        "node-a",
+        {"policy": "hold", "actuation": False},
+        "1" * 64,
+        keyring["node-a"],
+    )
+    malformed = dict(proposal)
+    malformed["payload"] = ["not", "a", "mapping"]
+
+    with pytest.raises(ValueError, match="payload must be a mapping"):
+        build_bft_meta_orchestrator_manifest([malformed], keyring, quorum=1)
+    with pytest.raises(ValueError, match="payload must encode as a JSON object"):
+        sign_policy_proposal("node-a", ["not", "a", "mapping"], "1" * 64, "alpha")
+    with pytest.raises(ValueError, match="node_id"):
+        sign_policy_proposal("   ", {"policy": "hold"}, "1" * 64, "alpha")

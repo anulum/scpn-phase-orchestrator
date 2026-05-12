@@ -16,6 +16,9 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.reporting.explainability import (
+    _make_pdf_bytes,
+    _metric_summary,
+    _regime_transitions,
     build_explainability_report,
     render_markdown,
     write_markdown,
@@ -144,3 +147,159 @@ def test_explain_cli_rejects_empty_log(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "no step records" in result.output
+
+
+def test_report_summarises_causal_transfer_hodge_and_safety_channels() -> None:
+    entries = [
+        {
+            "step": 0,
+            "regime": "NOMINAL",
+            "stability": 0.74,
+            "layers": [{"R": "not-a-number"}, {"R": 0.62}],
+            "actions": [
+                {
+                    "knob": "K_nm",
+                    "scope": "layer:0",
+                    "value": 0.035,
+                    "ttl_s": 1.5,
+                    "justification": "causal parent K_nm selected after TE=0.42",
+                },
+                "malformed action is ignored",
+            ],
+        },
+        {
+            "step": 1,
+            "regime": "NOMINAL",
+            "stability": 0.69,
+            "layers": [{"R": 0.58}, {"R": 0.61}],
+            "actions": [
+                {
+                    "knob": "hodge_projection",
+                    "scope": "cycle:3",
+                    "value": -0.2,
+                    "ttl_s": 2.0,
+                    "justification": "",
+                }
+            ],
+        },
+        {
+            "event": "safety_residual",
+            "step": 1,
+            "channel": "residual_norm",
+            "value": 0.018,
+        },
+        {
+            "event": "hodge_summary",
+            "detail": {"gradient": 0.71, "curl": 0.08, "harmonic": 0.02},
+        },
+    ]
+
+    report = build_explainability_report(entries)
+    markdown = render_markdown(report)
+
+    assert report.regime_transitions == ()
+    assert report.metric_summary[0] == (
+        "Layer 0: mean R=0.290, final R=0.580, min R=0.000, max R=0.580"
+    )
+    assert report.action_explanations[0].reason == (
+        "causal parent K_nm selected after TE=0.42"
+    )
+    assert report.action_explanations[0].evidence == (
+        "mean layer R=0.310",
+        "stability proxy=0.740",
+        "L0 R=0.000",
+        "L1 R=0.620",
+    )
+    assert "hodge_projection=-0.2000" in markdown
+    assert "NOMINAL regime with mean layer R=0.595" in markdown
+    assert "safety_residual" in markdown
+    assert "{'channel': 'residual_norm', 'value': 0.018}" in markdown
+    assert "hodge_summary" in markdown
+    assert "causal parent K_nm" in markdown
+
+
+def test_report_handles_missing_actions_events_and_transitions() -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 7,
+                "regime": "STABLE",
+                "stability": 1.0,
+                "layers": [{"R": 0.4}],
+                "actions": "not a list",
+            }
+        ]
+    )
+
+    markdown = render_markdown(report)
+
+    assert report.action_explanations == ()
+    assert report.events == ()
+    assert report.regime_transitions == ()
+    assert "- STABLE: 1 steps (100.0%)" in markdown
+    assert "- No regime transitions recorded." in markdown
+    assert "- No control actions recorded." in markdown
+    assert "- No auxiliary events recorded." in markdown
+
+
+def test_action_explanation_limit_preserves_first_actions_in_order() -> None:
+    entries = [
+        {
+            "step": idx,
+            "regime": "WATCH" if idx < 3 else "INTERVENE",
+            "stability": 0.5 + idx / 100.0,
+            "layers": [{"R": 0.2 + idx / 100.0}],
+            "actions": [
+                {
+                    "knob": "gain",
+                    "scope": f"layer:{idx}",
+                    "value": float(idx),
+                    "ttl_s": 1.0,
+                    "justification": f"ranked action {idx}",
+                }
+            ],
+        }
+        for idx in range(5)
+    ]
+
+    report = build_explainability_report(entries, max_actions=3)
+
+    assert [action.step for action in report.action_explanations] == [0, 1, 2]
+    assert [action.reason for action in report.action_explanations] == [
+        "ranked action 0",
+        "ranked action 1",
+        "ranked action 2",
+    ]
+    assert report.regime_transitions == ("Step 3: WATCH -> INTERVENE",)
+
+
+def test_event_summary_limits_auxiliary_audit_lines() -> None:
+    entries: list[dict[str, Any]] = [
+        {
+            "step": 0,
+            "regime": "NOMINAL",
+            "stability": 0.8,
+            "layers": [{"R": 0.8}],
+            "actions": [],
+        }
+    ]
+    entries.extend({"event": f"audit_{idx}", "step": idx} for idx in range(15))
+
+    report = build_explainability_report(entries)
+
+    assert len(report.events) == 12
+    assert report.events[0] == "Step 0: audit_0 — {}"
+    assert report.events[-1] == "Step 11: audit_11 — {}"
+    assert all("audit_12" not in event for event in report.events)
+
+
+def test_private_aggregation_helpers_define_empty_input_contracts() -> None:
+    assert _regime_transitions([]) == ()
+    assert _metric_summary([]) == ()
+
+    pdf = _make_pdf_bytes([])
+
+    assert pdf.startswith(b"%PDF-1.4")
+    assert b"/Type /Pages" in pdf
+    assert b"/Count 1" in pdf
+    assert pdf.endswith(b"%%EOF\n")

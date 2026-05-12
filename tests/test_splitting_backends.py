@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import contextlib
 import math
+import sys
+import types
 from typing import get_type_hints
 
 import numpy as np
@@ -158,3 +160,72 @@ class TestBackendTypingContracts:
             text = str(hints[name])
             assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+
+class TestBackendLoaderDispatch:
+    def test_rust_loader_preserves_contiguous_float64_contract(self, monkeypatch):
+        calls: list[tuple[np.dtype, bool, int, float]] = []
+
+        def fake_rust(
+            phases,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            zeta,
+            psi,
+            dt,
+            n_steps,
+        ):
+            calls.append((phases.dtype, phases.flags.c_contiguous, int(n), float(dt)))
+            assert omegas.flags.c_contiguous
+            assert knm_flat.flags.c_contiguous
+            assert alpha_flat.flags.c_contiguous
+            assert n_steps == 3
+            assert zeta == 0.25
+            assert psi == 0.75
+            return phases + dt * omegas
+
+        monkeypatch.setitem(
+            sys.modules,
+            "spo_kernel",
+            types.SimpleNamespace(splitting_run_rust=fake_rust),
+        )
+        run = sp_mod._load_rust_fn()
+        phases = np.arange(6.0, dtype=np.float64)[::2]
+        omegas = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        knm = np.eye(3, dtype=np.float64).ravel()
+        alpha = np.zeros(9, dtype=np.float64)
+
+        got = run(phases, omegas, knm, alpha, 3, 0.25, 0.75, 0.5, 3)
+
+        np.testing.assert_allclose(got, np.array([0.05, 2.1, 4.15]))
+        assert calls == [(np.dtype("float64"), True, 3, 0.5)]
+
+    def test_toolchain_loaders_return_callable_with_dependencies_stubbed(
+        self,
+        monkeypatch,
+    ):
+        monkeypatch.setitem(sys.modules, "juliacall", types.SimpleNamespace())
+        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.upde._splitting_mojo._ensure_exe",
+            lambda: object(),
+        )
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.upde._splitting_go._load_lib",
+            lambda: object(),
+        )
+
+        assert callable(sp_mod._load_mojo_fn())
+        assert callable(sp_mod._load_julia_fn())
+        assert callable(sp_mod._load_go_fn())
+
+    def test_probe_marks_backend_failure_as_infinite(self, monkeypatch):
+        def failing_backend():
+            raise RuntimeError("backend unavailable")
+
+        monkeypatch.setitem(sp_mod._LOADERS, "rust", failing_backend)
+        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
+
+        assert sp_mod._splitting_probe_seconds("rust") == float("inf")

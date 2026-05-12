@@ -131,12 +131,70 @@ class TestHigherOrderTopologySupervisor:
 
     def test_rejects_invalid_inputs(self) -> None:
         supervisor = HigherOrderTopologySupervisor()
+        with pytest.raises(ValueError, match="at least one oscillator"):
+            supervisor.mutate(np.array([]), np.zeros((0, 0)))
         with pytest.raises(ValueError, match="one-dimensional"):
             supervisor.mutate(np.zeros((2, 2)), _zero_knm(2))
+        with pytest.raises(ValueError, match="phases must be finite"):
+            supervisor.mutate(np.array([0.0, np.nan]), _zero_knm(2))
         with pytest.raises(ValueError, match="shape"):
             supervisor.mutate(np.zeros(3), _zero_knm(2))
+        invalid_knm = _zero_knm(3)
+        invalid_knm[0, 1] = np.inf
+        with pytest.raises(ValueError, match="knm must be finite"):
+            supervisor.mutate(np.zeros(3), invalid_knm)
+        negative_knm = _zero_knm(3)
+        negative_knm[0, 1] = -0.1
+        with pytest.raises(ValueError, match="knm must be non-negative"):
+            supervisor.mutate(np.zeros(3), negative_knm)
+        with pytest.raises(ValueError, match="at least 3 nodes"):
+            supervisor.mutate(np.zeros(3), _zero_knm(3), (Hyperedge((0, 1)),))
+        with pytest.raises(ValueError, match="nodes must be unique"):
+            supervisor.mutate(np.zeros(3), _zero_knm(3), (Hyperedge((0, 0, 1)),))
         with pytest.raises(ValueError, match="out of range"):
             supervisor.mutate(np.zeros(3), _zero_knm(3), (Hyperedge((0, 1, 4)),))
+        with pytest.raises(ValueError, match="strength"):
+            supervisor.mutate(
+                np.zeros(3),
+                _zero_knm(3),
+                (Hyperedge((0, 1, 2), strength=np.nan),),
+            )
+
+    def test_does_not_add_simplices_when_global_coherence_is_already_high(self) -> None:
+        phases = np.array([0.0, 0.01, 0.02, 0.03])
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=1.0,
+                coherence_floor=0.8,
+                simplex_threshold=0.99,
+                max_new_simplices=4,
+            )
+        )
+
+        result = supervisor.mutate(phases, _zero_knm(4))
+
+        assert result.global_coherence >= 0.8
+        assert result.added_simplices == ()
+        assert result.hyperedges == ()
+
+    def test_pairwise_support_floor_blocks_unsupported_candidate_simplex(self) -> None:
+        phases = np.array([0.0, 0.02, 0.04, np.pi, np.pi + 0.02, np.pi + 0.04])
+        knm = _zero_knm(6)
+        knm[0, 1] = knm[1, 0] = 1.0
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=0.5,
+                coherence_floor=0.95,
+                simplex_threshold=0.99,
+                simplex_pairwise_support_floor=0.5,
+                max_new_simplices=4,
+            )
+        )
+
+        result = supervisor.mutate(phases, knm)
+
+        assert result.global_coherence < 0.95
+        assert result.added_simplices == ()
 
     def test_result_feeds_hypergraph_engine(self) -> None:
         phases = np.array([0.0, 0.02, 0.04, np.pi, np.pi + 0.01, np.pi + 0.03])

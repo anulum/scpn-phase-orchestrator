@@ -17,6 +17,8 @@ and Mojo drifts only by the text-round-trip epsilon.
 from __future__ import annotations
 
 import contextlib
+import sys
+import types
 
 import numpy as np
 import pytest
@@ -154,3 +156,103 @@ class TestHypothesisParity:
         got_th, got_od = _run_backend("go", n, seed)
         assert np.max(np.abs(got_th - ref_th)) < TOL
         assert np.max(np.abs(got_od - ref_od)) < TOL
+
+
+class TestBackendLoaderContracts:
+    def test_rust_loader_adapts_kernel_output_to_float64_arrays(self, monkeypatch):
+        calls = {}
+
+        def inertial_step_rust(
+            theta, omega_dot, power, knm_flat, inertia, damping, n, dt
+        ):
+            calls["n"] = n
+            calls["dt"] = dt
+            calls["contiguous"] = (
+                theta.flags.c_contiguous and knm_flat.flags.c_contiguous
+            )
+            return theta + dt * omega_dot, omega_dot + dt * (power - damping)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.inertial_step_rust = inertial_step_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        fn = i_mod._load_rust_fn()
+        theta = np.array([0.1, 0.3], dtype=np.float64)
+        omega = np.array([0.2, -0.1], dtype=np.float64)
+        power = np.array([1.0, -0.5], dtype=np.float64)
+        knm = np.array([[0.0, 0.2], [0.1, 0.0]], dtype=np.float64)
+        inertia = np.ones(2, dtype=np.float64)
+        damping = np.array([0.3, 0.4], dtype=np.float64)
+
+        got_theta, got_omega = fn(
+            theta, omega, power, knm.ravel(), inertia, damping, 2, 0.05
+        )
+
+        np.testing.assert_allclose(got_theta, theta + 0.05 * omega)
+        np.testing.assert_allclose(got_omega, omega + 0.05 * (power - damping))
+        assert got_theta.dtype == np.float64
+        assert got_omega.dtype == np.float64
+        assert calls == {"n": 2, "dt": 0.05, "contiguous": True}
+
+    def test_optional_backend_loaders_return_callable_numeric_kernels(
+        self, monkeypatch
+    ):
+        def install_backend(
+            module_name: str, function_name: str, offset: float
+        ) -> None:
+            module = types.ModuleType(module_name)
+            module.loaded = False
+
+            def _ensure_exe():
+                module.loaded = True
+
+            def _load_lib():
+                module.loaded = True
+
+            def kernel(theta, omega_dot, power, knm_flat, inertia, damping, n, dt):
+                return theta + offset + dt, omega_dot - offset + dt
+
+            module._ensure_exe = _ensure_exe
+            module._load_lib = _load_lib
+            setattr(module, function_name, kernel)
+            monkeypatch.setitem(sys.modules, module_name, module)
+
+        fake_juliacall = types.ModuleType("juliacall")
+        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
+        install_backend(
+            "scpn_phase_orchestrator.upde._inertial_mojo",
+            "inertial_step_mojo",
+            0.10,
+        )
+        install_backend(
+            "scpn_phase_orchestrator.upde._inertial_julia",
+            "inertial_step_julia",
+            0.20,
+        )
+        install_backend(
+            "scpn_phase_orchestrator.upde._inertial_go",
+            "inertial_step_go",
+            0.30,
+        )
+
+        theta = np.array([0.0, 1.0], dtype=np.float64)
+        omega = np.array([0.5, -0.5], dtype=np.float64)
+        args = (
+            theta,
+            omega,
+            np.ones(2),
+            np.zeros(4),
+            np.ones(2),
+            np.ones(2),
+            2,
+            0.01,
+        )
+
+        for loader, offset in (
+            (i_mod._load_mojo_fn, 0.10),
+            (i_mod._load_julia_fn, 0.20),
+            (i_mod._load_go_fn, 0.30),
+        ):
+            got_theta, got_omega = loader()(*args)
+            np.testing.assert_allclose(got_theta, theta + offset + 0.01)
+            np.testing.assert_allclose(got_omega, omega - offset + 0.01)

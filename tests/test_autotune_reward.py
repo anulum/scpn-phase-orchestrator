@@ -146,6 +146,17 @@ class TestAutotuneRewardScoring:
         assert strict.components["bad_coherence"] < mild.components["bad_coherence"]
         assert strict.reward < mild.reward
 
+    def test_empty_array_knobs_have_zero_actuation_energy(self) -> None:
+        candidate = KnobPolicyCandidate(K=np.array([], dtype=np.float64))
+        observation = RewardObservation(coherence=0.75, previous_coherence=0.75)
+
+        report = evaluate_knob_policy(candidate, observation)
+
+        assert report.components["actuation"] == 0.0
+        assert report.reward == pytest.approx(
+            report.components["target_tracking"]
+        )
+
 
 class TestAutotuneReplayRanking:
     def test_ranks_replay_candidates_by_reward(self) -> None:
@@ -389,6 +400,28 @@ class TestAutotunePolicyProposal:
         assert record["alternatives"][0]["observation"]["coherence"] == 0.7
         assert record["config"]["require_safe"] is True
 
+    def test_rejects_selected_unsafe_candidate_when_policy_allows_audit(self) -> None:
+        replay = (
+            (
+                KnobPolicyCandidate(K=0.1),
+                RewardObservation(coherence=0.95, previous_coherence=0.5, unsafe=True),
+            ),
+            (
+                KnobPolicyCandidate(K=100.0),
+                RewardObservation(coherence=0.55, previous_coherence=0.5),
+            ),
+        )
+
+        proposal = propose_replay_policy(
+            replay,
+            proposal_config=PolicyProposalConfig(require_safe=False),
+        )
+
+        assert not proposal.accepted
+        assert proposal.selected is None
+        assert proposal.reasons == ("selected rollout is marked unsafe",)
+        assert proposal.alternatives[0].observation.coherence == 0.55
+
 
 class TestAutotuneRewardValidation:
     def test_rejects_non_probability_observations(self) -> None:
@@ -452,6 +485,14 @@ class TestAutotuneRewardValidation:
     def test_policy_proposal_rejects_invalid_coherence_gate(self) -> None:
         with pytest.raises(ValueError, match="min_coherence"):
             PolicyProposalConfig(min_coherence=1.1)
+
+    @pytest.mark.parametrize("min_reward", [float("nan"), float("inf")])
+    def test_policy_proposal_rejects_non_finite_reward_gate(
+        self,
+        min_reward: float,
+    ) -> None:
+        with pytest.raises(ValueError, match="min_reward"):
+            PolicyProposalConfig(min_reward=min_reward)
 
     def test_policy_proposal_rejects_negative_alternative_limit(self) -> None:
         with pytest.raises(ValueError, match="max_alternatives"):

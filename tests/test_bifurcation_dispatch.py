@@ -20,6 +20,10 @@ across Rust / Mojo / Julia / Go / Python.
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+from types import ModuleType
+
 import numpy as np
 
 from scpn_phase_orchestrator.upde import basin_stability as bs
@@ -101,3 +105,144 @@ class TestPythonCompositeUsesDispatchedKernel:
         # regime at K=3 (R_final > 0.9 for identical oscillators).
         assert r_vals[-1] > r_vals[0]
         assert r_vals[-1] > 0.9
+
+
+class TestCompositeRustFastPathContracts:
+    """Exercise the batched Rust fast-path boundary with deterministic fakes."""
+
+    def _load_with_fake_spo_kernel(self, monkeypatch, fake_kernel):
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_kernel)
+        spec = importlib.util.spec_from_file_location(
+            "test_bifurcation_with_fake_spo_kernel",
+            bif.__file__,
+        )
+        assert spec is not None
+        assert spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return module
+
+    def test_trace_uses_composite_rust_batch_and_preserves_kc(self, monkeypatch):
+        captured: dict[str, object] = {}
+        fake_kernel = ModuleType("spo_kernel")
+
+        def _trace(
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            phases,
+            K_start,
+            K_stop,
+            n_points,
+            dt,
+            n_transient,
+            n_measure,
+        ):
+            captured["shape"] = (
+                len(omegas),
+                len(knm_flat),
+                len(alpha_flat),
+                len(phases),
+            )
+            captured["scan"] = (K_start, K_stop, n_points)
+            captured["integration"] = (dt, n_transient, n_measure)
+            return (
+                np.array([0.0, 1.0, 2.0]),
+                np.array([0.02, 0.11, 0.80]),
+                1.25,
+            )
+
+        def _find(*_args):
+            raise AssertionError("trace test must not call the Kc kernel")
+
+        fake_kernel.trace_sync_transition_rust = _trace
+        fake_kernel.find_critical_coupling_bif_rust = _find
+        module = self._load_with_fake_spo_kernel(monkeypatch, fake_kernel)
+        diagram = module.trace_sync_transition(
+            np.array([-0.3, 0.0, 0.3]),
+            K_range=(0.0, 2.0),
+            n_points=3,
+            dt=0.02,
+            n_transient=7,
+            n_measure=5,
+            seed=11,
+        )
+        assert module._HAS_COMPOSITE_RUST is True
+        assert captured["shape"] == (3, 9, 9, 3)
+        assert captured["scan"] == (0.0, 2.0, 3)
+        assert captured["integration"] == (0.02, 7, 5)
+        assert diagram.K_critical == 1.25
+        assert [point.stable for point in diagram.points] == [True, True, True]
+        np.testing.assert_allclose(diagram.K_values, [0.0, 1.0, 2.0])
+        np.testing.assert_allclose(diagram.R_values, [0.02, 0.11, 0.80])
+
+    def test_trace_leaves_kc_unset_when_rust_reports_nan(self, monkeypatch):
+        fake_kernel = ModuleType("spo_kernel")
+
+        def _trace(*_args):
+            return (
+                np.array([0.0, 1.0]),
+                np.array([0.01, 0.04]),
+                float("nan"),
+            )
+
+        def _find(*_args):
+            raise AssertionError("trace test must not call the Kc kernel")
+
+        fake_kernel.trace_sync_transition_rust = _trace
+        fake_kernel.find_critical_coupling_bif_rust = _find
+        module = self._load_with_fake_spo_kernel(monkeypatch, fake_kernel)
+        diagram = module.trace_sync_transition(
+            np.array([-1.0, 1.0]),
+            K_range=(0.0, 1.0),
+            n_points=2,
+            n_transient=3,
+            n_measure=2,
+        )
+        assert diagram.K_critical is None
+        np.testing.assert_allclose(diagram.R_values, [0.01, 0.04])
+
+    def test_find_kc_delegates_to_composite_rust_search(self, monkeypatch):
+        captured: dict[str, object] = {}
+        fake_kernel = ModuleType("spo_kernel")
+
+        def _trace(*_args):
+            raise AssertionError("find test must not call the trace kernel")
+
+        def _find(
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            phases,
+            dt,
+            n_transient,
+            n_measure,
+            tol,
+        ):
+            captured["shape"] = (
+                len(omegas),
+                len(knm_flat),
+                len(alpha_flat),
+                len(phases),
+                n,
+            )
+            captured["integration"] = (dt, n_transient, n_measure, tol)
+            return 2.75
+
+        fake_kernel.trace_sync_transition_rust = _trace
+        fake_kernel.find_critical_coupling_bif_rust = _find
+        module = self._load_with_fake_spo_kernel(monkeypatch, fake_kernel)
+        kc = module.find_critical_coupling(
+            np.array([-0.4, 0.0, 0.4]),
+            dt=0.03,
+            n_transient=9,
+            n_measure=6,
+            tol=0.2,
+            seed=5,
+        )
+        assert kc == 2.75
+        assert captured["shape"] == (3, 9, 9, 3, 3)
+        assert captured["integration"] == (0.03, 9, 6, 0.2)

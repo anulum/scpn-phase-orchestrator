@@ -8,8 +8,13 @@
 
 from __future__ import annotations
 
-import numpy as np
+import sys
+import types
 
+import numpy as np
+import pytest
+
+from scpn_phase_orchestrator.upde import sheaf_engine as sheaf_mod
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
 
@@ -183,6 +188,88 @@ class TestSheafEngineEdgeCases:
         p = engine.run(phases, omegas, restriction_maps, 0.0, psi, 300)
         assert np.all(p >= 0)
         assert np.all(p < 2 * np.pi)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"n_oscillators": 0, "d_dimensions": 2, "dt": 0.01}, "n_oscillators"),
+            ({"n_oscillators": True, "d_dimensions": 2, "dt": 0.01}, "n_oscillators"),
+            ({"n_oscillators": 2, "d_dimensions": 0, "dt": 0.01}, "d_dimensions"),
+            ({"n_oscillators": 2, "d_dimensions": 2, "dt": False}, "dt"),
+            ({"n_oscillators": 2, "d_dimensions": 2, "dt": np.inf}, "dt"),
+            (
+                {"n_oscillators": 2, "d_dimensions": 2, "dt": 0.01, "method": "heun"},
+                "Unknown method",
+            ),
+        ],
+    )
+    def test_constructor_rejects_invalid_configuration(self, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            SheafUPDEEngine(**kwargs)
+
+    def test_last_dt_reports_configured_python_timestep(self):
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.0125, method="rk4")
+        assert engine.last_dt == pytest.approx(0.0125)
+
+    def test_rust_import_error_falls_back_to_python(self, monkeypatch):
+        """A missing optional Rust sheaf class must leave the Python path
+        available instead of failing construction."""
+        fake_spo = types.ModuleType("spo_kernel")
+        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
+        assert engine._rust is None
+
+        phases = np.array([[0.1], [0.2]], dtype=np.float64)
+        omegas = np.array([[1.0], [1.5]], dtype=np.float64)
+        restriction_maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
+        psi = np.zeros(1, dtype=np.float64)
+        out = engine.step(phases, omegas, restriction_maps, 0.0, psi)
+        np.testing.assert_allclose(out, phases + 0.01 * omegas, atol=1e-12)
+
+    def test_rust_stepper_dispatches_and_reshapes_outputs(self, monkeypatch):
+        """The optional Rust path is flattened at the FFI boundary and
+        reshaped back to the engine's (N, D) phase matrix."""
+
+        class FakeSheafStepper:
+            def __init__(self, n, d, dt, method, *, atol, rtol):
+                assert (n, d, dt, method, atol, rtol) == (
+                    2,
+                    2,
+                    0.01,
+                    "rk4",
+                    1e-6,
+                    1e-3,
+                )
+
+            def step(self, phases, omegas, restriction_maps, zeta, psi):
+                assert phases.flags.c_contiguous
+                assert omegas.flags.c_contiguous
+                assert restriction_maps.flags.c_contiguous
+                assert psi.flags.c_contiguous
+                assert zeta == 0.25
+                return np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
+
+            def run(self, phases, omegas, restriction_maps, zeta, psi, n_steps):
+                assert n_steps == 5
+                return np.array([0.5, 0.6, 0.7, 0.8], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySheafUPDEStepper = FakeSheafStepper
+        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
+        phases = np.array([[0.0, 0.1], [0.2, 0.3]], dtype=np.float64)
+        omegas = np.ones((2, 2), dtype=np.float64)
+        restriction_maps = np.zeros((2, 2, 2, 2), dtype=np.float64)
+        psi = np.array([0.0, 1.0], dtype=np.float64)
+
+        step = engine.step(phases, omegas, restriction_maps, 0.25, psi)
+        run = engine.run(phases, omegas, restriction_maps, 0.25, psi, 5)
+        np.testing.assert_allclose(step, [[0.1, 0.2], [0.3, 0.4]], atol=1e-12)
+        np.testing.assert_allclose(run, [[0.5, 0.6], [0.7, 0.8]], atol=1e-12)
 
 
 # Pipeline wiring: SheafUPDEEngine extends UPDEEngine to multi-dimensional

@@ -21,8 +21,11 @@ from __future__ import annotations
 
 import functools
 import math
+import sys
+import types
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -369,3 +372,81 @@ class TestInputShapes:
         assert result.n_samples == 0
         assert result.n_converged == 0
         assert result.R_final.shape == (0,)
+
+
+class TestBackendLoaderContracts:
+    def test_rust_loader_wraps_flat_arrays_as_contiguous_kernel_inputs(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: dict[str, object] = {}
+
+        def fake_steady_state(
+            phases_init: np.ndarray,
+            omegas: np.ndarray,
+            knm_flat: np.ndarray,
+            alpha_flat: np.ndarray,
+            n: int,
+            k_scale: float,
+            dt: float,
+            n_transient: int,
+            n_measure: int,
+        ) -> float:
+            seen["contiguous"] = (
+                phases_init.flags.c_contiguous,
+                omegas.flags.c_contiguous,
+                knm_flat.flags.c_contiguous,
+                alpha_flat.flags.c_contiguous,
+            )
+            seen["scalars"] = (n, k_scale, dt, n_transient, n_measure)
+            return 0.875
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.steady_state_r_rust = fake_steady_state
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        wrapped = b_mod._load_rust_fn()
+        n = 3
+        result = wrapped(
+            np.array([0.0, 0.2, 0.4]),
+            np.ones(n),
+            _all_to_all(n).ravel(),
+            np.zeros((n, n)).ravel(),
+            n,
+            1.5,
+            0.02,
+            7,
+            5,
+        )
+        assert result == 0.875
+        assert seen["contiguous"] == (True, True, True, True)
+        assert seen["scalars"] == (3, 1.5, 0.02, 7, 5)
+
+    def test_optional_loader_contracts_return_callable_backend_functions(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_backend(*_args: object) -> float:
+            return 0.5
+
+        mojo_mod = types.ModuleType(
+            "scpn_phase_orchestrator.upde._basin_stability_mojo"
+        )
+        mojo_mod._ensure_exe = lambda: None
+        mojo_mod.steady_state_r_mojo = fake_backend
+
+        julia_mod = types.ModuleType(
+            "scpn_phase_orchestrator.upde._basin_stability_julia"
+        )
+        julia_mod.steady_state_r_julia = fake_backend
+
+        go_mod = types.ModuleType("scpn_phase_orchestrator.upde._basin_stability_go")
+        go_mod._load_lib = lambda: None
+        go_mod.steady_state_r_go = fake_backend
+
+        monkeypatch.setitem(sys.modules, mojo_mod.__name__, mojo_mod)
+        monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
+        monkeypatch.setitem(sys.modules, julia_mod.__name__, julia_mod)
+        monkeypatch.setitem(sys.modules, go_mod.__name__, go_mod)
+
+        assert b_mod._load_mojo_fn() is fake_backend
+        assert b_mod._load_julia_fn() is fake_backend
+        assert b_mod._load_go_fn() is fake_backend

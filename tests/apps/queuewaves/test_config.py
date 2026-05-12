@@ -8,8 +8,10 @@
 
 from __future__ import annotations
 
+import json
 import textwrap
 from collections.abc import Callable
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -215,6 +217,132 @@ def test_load_config_normalises_numeric_scalars(tmp_path: Path) -> None:
     assert isinstance(cfg.buffer_length, int)
     assert isinstance(cfg.server.port, int)
     assert isinstance(cfg.security.rate_limit_per_minute, int)
+
+
+def test_load_config_rejects_malformed_yaml_without_leaking_secret_path(
+    tmp_path: Path,
+) -> None:
+    secret_path = tmp_path / "vault" / "secret" / "queuewaves.yaml"
+    secret_path.parent.mkdir(parents=True)
+    secret_path.write_text("- prometheus_url: http://prom:9090\n", encoding="utf-8")
+
+    with pytest.raises(ValueError) as exc_info:
+        load_config(secret_path)
+
+    message = str(exc_info.value)
+    assert message == "QueueWaves config must be a YAML mapping, got list"
+    assert str(secret_path) not in message
+    assert "vault" not in message
+    assert "secret" not in message
+
+
+def test_load_config_requires_prometheus_url_without_leaking_secret_path(
+    tmp_path: Path,
+) -> None:
+    secret_path = tmp_path / "secrets" / "queuewaves.yaml"
+    secret_path.parent.mkdir()
+    secret_path.write_text(
+        textwrap.dedent("""\
+            services:
+              - name: s1
+                promql: up
+        """),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        load_config(secret_path)
+
+    message = str(exc_info.value)
+    assert message == "QueueWaves config missing required key 'prometheus_url'"
+    assert str(secret_path) not in message
+    assert "secrets" not in message
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: ThresholdConfig(r_bad_warn=object()),
+        lambda: CouplingConfig(decay="not-a-number"),
+        lambda: QueueWavesConfig(
+            prometheus_url="http://prom:9090",
+            services=[ServiceDef(name="s1", promql="up", layer="micro")],
+            scrape_interval_s=None,
+        ),
+    ],
+)
+def test_numeric_config_fields_reject_non_floatable_values(
+    factory: Callable[[], object],
+) -> None:
+    with pytest.raises(ValueError, match="must be finite and non-negative"):
+        factory()
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: ServerConfig(port=True),
+        lambda: SecurityConfig(rate_limit_per_minute=False),
+    ],
+)
+def test_integer_config_fields_reject_boolean_values(
+    factory: Callable[[], object],
+) -> None:
+    with pytest.raises(ValueError, match="must be an integer"):
+        factory()
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: ServerConfig(port="not-a-port"),
+        lambda: SecurityConfig(rate_limit_per_minute="bursty"),
+        lambda: QueueWavesConfig(
+            prometheus_url="http://prom:9090",
+            services=[ServiceDef(name="s1", promql="up", layer="micro")],
+            buffer_length="many",
+        ),
+    ],
+)
+def test_integer_config_fields_reject_non_integral_values(
+    factory: Callable[[], object],
+) -> None:
+    with pytest.raises(ValueError, match="must be an integer"):
+        factory()
+
+
+def test_config_compiler_fails_closed_for_unresolved_service_extractor() -> None:
+    service = ServiceDef(name="s1", promql="up", layer="micro")
+    object.__setattr__(service, "extractor_type", None)
+    cfg = QueueWavesConfig(
+        prometheus_url="http://prom:9090",
+        services=[service],
+    )
+
+    with pytest.raises(ValueError, match="service.extractor_type was not resolved"):
+        ConfigCompiler().compile(cfg)
+
+
+def test_compiled_binding_serialisation_is_deterministic() -> None:
+    cfg = QueueWavesConfig(
+        prometheus_url="http://prom:9090",
+        services=[
+            ServiceDef(name="macro-tput", promql="rate(done[5m])", layer="macro"),
+            ServiceDef(name="micro-latency", promql="rate(latency[1m])", layer="micro"),
+            ServiceDef(name="meso-errors", promql="rate(errors[5m])", layer="meso"),
+        ],
+        scrape_interval_s=5.0,
+        coupling=CouplingConfig(strength=0.4, decay=0.2),
+    )
+
+    spec = ConfigCompiler().compile(cfg)
+    serialised_once = json.dumps(asdict(spec), sort_keys=True)
+    serialised_twice = json.dumps(asdict(ConfigCompiler().compile(cfg)), sort_keys=True)
+
+    assert [layer.name for layer in spec.layers] == ["micro", "meso", "macro"]
+    assert serialised_once == serialised_twice
+    assert '"sample_period_s": 5.0' in serialised_once
+    assert '"base_strength": 0.4' in serialised_once
 
 
 @pytest.mark.parametrize(

@@ -15,11 +15,16 @@ by the S6 audit.
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType
 from typing import Any, cast
 
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.autotune.sindy as sindy_module
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 
 
@@ -186,6 +191,104 @@ def test_sindy_equations_dump_format():
     for node_i, eq in enumerate(eqs):
         assert isinstance(eq, str)
         assert f"d(theta_{node_i})/dt" in eq
+
+
+def test_sindy_import_detects_available_rust_backend(monkeypatch: pytest.MonkeyPatch):
+    """Import-time backend detection must enable the Rust path when available."""
+
+    fake_kernel = ModuleType("spo_kernel")
+    fake_kernel.sindy_fit_rust = lambda *_args: np.zeros(1, dtype=np.float64)
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_kernel)
+
+    module_path = Path(sindy_module.__file__).resolve()
+    spec = importlib.util.spec_from_file_location("_sindy_rust_available", module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    loaded = importlib.util.module_from_spec(spec)
+
+    spec.loader.exec_module(loaded)
+
+    assert loaded._HAS_RUST is True
+
+
+def test_sindy_rust_backend_remaps_matrix_coefficients(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Rust backend returns an NxN matrix that PhaseSINDy remaps per oscillator."""
+
+    captured: dict[str, float | int | tuple[float, ...]] = {}
+
+    def fake_rust_sindy_fit(
+        p_flat: np.ndarray,
+        n_oscillators: int,
+        n_steps: int,
+        dt: float,
+        threshold: float,
+        max_iter: int,
+    ) -> np.ndarray:
+        captured["flat"] = tuple(float(v) for v in p_flat)
+        captured["n_oscillators"] = n_oscillators
+        captured["n_steps"] = n_steps
+        captured["dt"] = dt
+        captured["threshold"] = threshold
+        captured["max_iter"] = max_iter
+        return np.array(
+            [
+                1.1,
+                0.2,
+                0.3,
+                0.4,
+                2.2,
+                0.5,
+                0.6,
+                0.7,
+                3.3,
+            ],
+            dtype=np.float64,
+        )
+
+    phases = np.array(
+        [
+            [0.0, 0.1, 0.2],
+            [0.3, 0.4, 0.5],
+        ],
+        dtype=np.float64,
+    )
+    monkeypatch.setattr(sindy_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sindy_module,
+        "_rust_sindy_fit",
+        fake_rust_sindy_fit,
+        raising=False,
+    )
+
+    sindy = PhaseSINDy(threshold=0.125, max_iter=7)
+    coeffs = sindy.fit(phases, dt=0.05)
+
+    assert captured == {
+        "flat": tuple(float(v) for v in phases.ravel()),
+        "n_oscillators": 3,
+        "n_steps": 2,
+        "dt": 0.05,
+        "threshold": 0.125,
+        "max_iter": 7,
+    }
+    assert [c.tolist() for c in coeffs] == [
+        [1.1, 0.2, 0.3],
+        [2.2, 0.4, 0.5],
+        [3.3, 0.6, 0.7],
+    ]
+    assert sindy.feature_names == [
+        ["1", "sin(theta_1 - theta_0)", "sin(theta_2 - theta_0)"],
+        ["1", "sin(theta_0 - theta_1)", "sin(theta_2 - theta_1)"],
+        ["1", "sin(theta_0 - theta_2)", "sin(theta_1 - theta_2)"],
+    ]
+
+
+def test_sindy_get_equations_requires_fit_first():
+    """Equation export must fail closed until coefficients are fitted."""
+    with pytest.raises(RuntimeError, match="called before fit"):
+        PhaseSINDy().get_equations()
 
 
 def test_sindy_empty_phases_does_not_crash():

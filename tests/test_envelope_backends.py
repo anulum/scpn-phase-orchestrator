@@ -15,6 +15,8 @@ bit-equivalent (0.0) on Rust/Julia/Go and 3.3e-15 on Mojo.
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import get_type_hints
 
 import numpy as np
@@ -234,3 +236,65 @@ class TestBackendTypingContracts:
         text = str(hints["env"])
         assert "numpy.ndarray" in text, f"{label}:env missing ndarray annotation"
         assert "numpy.float64" in text, f"{label}:env missing float64 annotation"
+
+
+class TestBackendLoaderContracts:
+    def test_rust_loader_flattens_inputs_and_returns_float64(self, monkeypatch) -> None:
+        calls = {}
+
+        def extract_envelope_rust(amps, window: int):
+            calls["extract"] = (amps.flags.c_contiguous, window, amps.shape)
+            return amps + window
+
+        def envelope_modulation_depth_rust(env):
+            calls["mod"] = (env.flags.c_contiguous, env.shape)
+            return 0.375
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.extract_envelope_rust = extract_envelope_rust
+        fake_spo.envelope_modulation_depth_rust = envelope_modulation_depth_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        loaded = e_mod._load_rust_fns()
+        amps = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
+        env = np.array([[0.5, 0.75], [1.0, 1.25]], dtype=np.float64)
+
+        extract = loaded["extract"]
+        mod = loaded["mod"]
+        got_env = extract(amps, 3)
+        got_mod = mod(env)
+
+        np.testing.assert_allclose(got_env, amps.ravel() + 3)
+        assert got_env.dtype == np.float64
+        assert got_mod == 0.375
+        assert calls == {
+            "extract": (True, 3, (4,)),
+            "mod": (True, (4,)),
+        }
+
+    def test_probe_returns_infinite_latency_for_broken_backend(
+        self, monkeypatch
+    ) -> None:
+        def broken_loader() -> dict[str, object]:
+            raise RuntimeError("backend unavailable during probe")
+
+        monkeypatch.setitem(e_mod._LOADERS, "go", broken_loader)
+        e_mod._BACKEND_CACHE.pop("go", None)
+
+        assert e_mod._extract_probe_seconds("go") == float("inf")
+
+    def test_dispatch_falls_back_to_python_when_active_backend_fails(
+        self, monkeypatch
+    ) -> None:
+        def broken_loader() -> dict[str, object]:
+            raise OSError("backend disappeared after discovery")
+
+        monkeypatch.setattr(e_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setitem(e_mod._LOADERS, "go", broken_loader)
+        e_mod._BACKEND_CACHE.pop("go", None)
+
+        amps = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+        got = extract_envelope(amps, window=2)
+        expected = np.array([np.sqrt(2.5), np.sqrt(2.5), np.sqrt(6.5)])
+
+        np.testing.assert_allclose(got, expected)

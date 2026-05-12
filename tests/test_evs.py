@@ -8,12 +8,16 @@
 
 from __future__ import annotations
 
+import importlib
 import math
+import sys
+import types
 from typing import get_type_hints
 
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import evs as evs_mod
 from scpn_phase_orchestrator.monitor.evs import EVSMonitor, EVSResult
 
 
@@ -96,6 +100,69 @@ def test_specificity_zero_freq_handled():
     assert not result.is_entrained
 
 
+def test_module_detects_available_rust_frequency_specificity(monkeypatch):
+    fake_spo = types.ModuleType("spo_kernel")
+    fake_spo.frequency_specificity_rust = lambda *_args: 1.75
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+    reloaded = importlib.reload(evs_mod)
+    try:
+        assert reloaded._HAS_RUST is True
+        assert reloaded._rust_freq_spec is fake_spo.frequency_specificity_rust
+    finally:
+        monkeypatch.setitem(sys.modules, "spo_kernel", None)
+        importlib.reload(evs_mod)
+
+
+def test_specificity_zero_control_mean_preserves_target_lock(monkeypatch):
+    phases = _entrained_phases()
+    calls = iter([np.full(phases.shape[1], 0.8), np.zeros(phases.shape[1])])
+    monkeypatch.setattr(evs_mod, "compute_itpc", lambda _phases: next(calls))
+
+    specificity = EVSMonitor._frequency_specificity(phases, 10.0, 20.0)
+
+    assert math.isinf(specificity)
+
+
+def test_specificity_zero_control_and_zero_target_returns_zero(monkeypatch):
+    phases = _random_phases()
+    calls = iter([np.zeros(phases.shape[1]), np.zeros(phases.shape[1])])
+    monkeypatch.setattr(evs_mod, "compute_itpc", lambda _phases: next(calls))
+
+    specificity = EVSMonitor._frequency_specificity(phases, 10.0, 20.0)
+
+    assert specificity == 0.0
+
+
+def test_rust_frequency_specificity_receives_flat_phase_trials(monkeypatch):
+    phases = _entrained_phases(n_trials=3, n_time=5)
+    captured: dict[str, object] = {}
+
+    def rust_freq_spec(
+        flat: np.ndarray,
+        n_trials: int,
+        n_tp: int,
+        target_freq: float,
+        control_freq: float,
+    ) -> float:
+        captured["flat_contiguous"] = flat.flags.c_contiguous
+        captured["shape"] = (n_trials, n_tp)
+        captured["frequencies"] = (target_freq, control_freq)
+        return 2.5
+
+    monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
+    monkeypatch.setattr(evs_mod, "_rust_freq_spec", rust_freq_spec, raising=False)
+
+    specificity = EVSMonitor._frequency_specificity(phases[:, ::-1], 12.0, 18.0)
+
+    assert specificity == 2.5
+    assert captured == {
+        "flat_contiguous": True,
+        "shape": (3, 5),
+        "frequencies": (12.0, 18.0),
+    }
+
+
 def test_evs_result_is_frozen():
     r = EVSResult(0.8, 0.6, 2.0, True)
     with pytest.raises(AttributeError):
@@ -147,5 +214,5 @@ class TestEVSPipelineWiring:
 
         mon = EVSMonitor()
         result = mon.evaluate(trajectory, list(range(80, 100)), 10.0, 20.0)
-        assert isinstance(result, EVSResult)
+        assert isinstance(result, evs_mod.EVSResult)
         assert isinstance(result.is_entrained, bool)

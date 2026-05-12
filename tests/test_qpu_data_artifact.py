@@ -16,9 +16,12 @@ import pytest
 
 from scpn_phase_orchestrator.artifacts.qpu_data import (
     SCHEMA_VERSION,
+    QPUDataArtifact,
     compile_domain_to_qpu_artifact,
     emit_qpu_data_artifact,
+    read_qpu_data_artifact,
     validate_qpu_data_artifact,
+    write_qpu_data_artifact,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -147,3 +150,98 @@ def test_artifact_sha256_is_verified() -> None:
     payload = _base_payload(artifact_sha256="bad")
     with pytest.raises(ValueError, match="artifact_sha256"):
         validate_qpu_data_artifact(payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("domain", "   ", "domain must be non-empty"),
+        ("source_name", "", "source_name must be non-empty"),
+        ("source_mode", "unreviewed", "source_mode must be one of"),
+        ("normalization", "", "normalization must be non-empty"),
+        ("extraction_method", " ", "extraction_method must be non-empty"),
+    ],
+)
+def test_emit_rejects_missing_required_provenance_strings(
+    field: str, value: object, match: str
+) -> None:
+    kwargs = {
+        "domain": "unit",
+        "source_name": "unit-fixture",
+        "source_mode": "curated",
+        "K_nm": np.array([[0.0, 0.4], [0.4, 0.0]]),
+        "omega": np.array([1.0, 1.2]),
+        "normalization": "unit canonical scaling",
+        "extraction_method": "unit-test",
+        "replay_id": "unit:replay:1",
+    }
+    kwargs[field] = value
+
+    with pytest.raises(ValueError, match=match):
+        emit_qpu_data_artifact(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("K_nm", [0.0, 0.4], "K_nm must be 2-D"),
+        ("omega", [1.0, np.nan], "omega must contain only finite values"),
+    ],
+)
+def test_emit_rejects_malformed_numeric_arrays(
+    field: str, value: object, match: str
+) -> None:
+    kwargs = {
+        "domain": "unit",
+        "source_name": "unit-fixture",
+        "source_mode": "curated",
+        "K_nm": np.array([[0.0, 0.4], [0.4, 0.0]]),
+        "omega": np.array([1.0, 1.2]),
+        "normalization": "unit canonical scaling",
+        "extraction_method": "unit-test",
+        "replay_id": "unit:replay:1",
+    }
+    kwargs[field] = value
+
+    with pytest.raises(ValueError, match=match):
+        emit_qpu_data_artifact(**kwargs)
+
+
+def test_from_dict_rejects_missing_fields_and_schema_mismatch() -> None:
+    payload = _base_payload()
+    missing_hash = dict(payload)
+    missing_hash.pop("hashes")
+
+    with pytest.raises(ValueError, match="artifact missing required fields"):
+        QPUDataArtifact.from_dict(missing_hash)
+
+    unsupported_schema = dict(payload)
+    unsupported_schema["schema_version"] = "scpn-quantum-control.qpu-data-artifact.v0"
+    with pytest.raises(
+        ValueError,
+        match="unsupported QPU data artifact schema version",
+    ):
+        QPUDataArtifact.from_dict(unsupported_schema)
+
+
+def test_json_roundtrip_preserves_payload_and_hashes() -> None:
+    payload = _base_payload()
+
+    artifact = QPUDataArtifact.from_json(QPUDataArtifact.from_dict(payload).to_json())
+
+    assert artifact.to_dict() == payload
+    assert artifact.hashes == payload["hashes"]
+    assert artifact.replay_id == "unit:replay:1"
+
+
+def test_qpu_artifact_file_io_writes_newline_and_reads_validated_payload(tmp_path):
+    payload = _base_payload()
+    artifact = QPUDataArtifact.from_dict(payload)
+    path = tmp_path / "qpu-data-artifact.json"
+
+    write_qpu_data_artifact(path, artifact)
+    raw = path.read_text(encoding="utf-8")
+    loaded = read_qpu_data_artifact(path)
+
+    assert raw.endswith("\n")
+    assert loaded.to_dict() == payload

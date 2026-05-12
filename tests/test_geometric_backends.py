@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import contextlib
 import math
+import sys
+import types
 
 import numpy as np
 import pytest
@@ -147,3 +149,94 @@ class TestHypothesisParity:
         ref = _run_backend("python", seed, n=n)
         got = _run_backend("go", seed, n=n)
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
+
+
+class TestBackendLoaderContracts:
+    def test_rust_loader_returns_float64_torus_phases(self, monkeypatch):
+        calls = {}
+
+        def torus_run_rust(
+            phases, omegas, knm_flat, alpha_flat, n, zeta, psi, dt, n_steps
+        ):
+            calls["params"] = (n, zeta, psi, dt, n_steps)
+            calls["contiguous"] = (
+                phases.flags.c_contiguous,
+                omegas.flags.c_contiguous,
+                knm_flat.flags.c_contiguous,
+                alpha_flat.flags.c_contiguous,
+            )
+            return phases + dt * n_steps * omegas + zeta * np.sin(psi - phases)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.torus_run_rust = torus_run_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        fn = g_mod._load_rust_fn()
+        phases = np.array([0.1, 0.3], dtype=np.float64)
+        omegas = np.array([1.0, -0.5], dtype=np.float64)
+        knm_flat = np.zeros(4, dtype=np.float64)
+        alpha_flat = np.zeros(4, dtype=np.float64)
+
+        got = fn(phases, omegas, knm_flat, alpha_flat, 2, 0.2, 1.1, 0.01, 5)
+
+        np.testing.assert_allclose(
+            got,
+            phases + 0.05 * omegas + 0.2 * np.sin(1.1 - phases),
+        )
+        assert got.dtype == np.float64
+        assert calls == {
+            "params": (2, 0.2, 1.1, 0.01, 5),
+            "contiguous": (True, True, True, True),
+        }
+
+    def test_optional_backend_loaders_return_callable_numeric_kernels(
+        self, monkeypatch
+    ):
+        def install_backend(
+            module_name: str, function_name: str, offset: float
+        ) -> None:
+            module = types.ModuleType(module_name)
+            module.loaded = False
+
+            def _ensure_exe() -> None:
+                module.loaded = True
+
+            def _load_lib() -> None:
+                module.loaded = True
+
+            def kernel(phases, omegas, knm_flat, alpha_flat, n, zeta, psi, dt, n_steps):
+                return (phases + offset + dt * n_steps * omegas) % TWO_PI
+
+            module._ensure_exe = _ensure_exe
+            module._load_lib = _load_lib
+            setattr(module, function_name, kernel)
+            monkeypatch.setitem(sys.modules, module_name, module)
+
+        monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
+        install_backend(
+            "scpn_phase_orchestrator.upde._geometric_mojo",
+            "torus_run_mojo",
+            0.10,
+        )
+        install_backend(
+            "scpn_phase_orchestrator.upde._geometric_julia",
+            "torus_run_julia",
+            0.20,
+        )
+        install_backend(
+            "scpn_phase_orchestrator.upde._geometric_go",
+            "torus_run_go",
+            0.30,
+        )
+
+        phases = np.array([0.2, 0.8], dtype=np.float64)
+        omegas = np.array([1.0, -0.25], dtype=np.float64)
+        args = (phases, omegas, np.zeros(4), np.zeros(4), 2, 0.0, 0.0, 0.01, 3)
+
+        for loader, offset in (
+            (g_mod._load_mojo_fn, 0.10),
+            (g_mod._load_julia_fn, 0.20),
+            (g_mod._load_go_fn, 0.30),
+        ):
+            got = loader()(*args)
+            np.testing.assert_allclose(got, (phases + offset + 0.03 * omegas) % TWO_PI)

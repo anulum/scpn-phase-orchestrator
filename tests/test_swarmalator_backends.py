@@ -17,6 +17,8 @@ pre-migration Python used ``dist³`` which drifted by O(1e-4)).
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import get_type_hints
 
 import numpy as np
@@ -202,3 +204,94 @@ class TestBackendTypingContracts:
             text = str(hints[name])
             assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
+
+
+class TestBackendLoaderContracts:
+    def test_rust_loader_reshapes_flat_kernel_positions(self, monkeypatch) -> None:
+        calls = {}
+
+        class PySwarmalatorStepper:
+            def __init__(self, n: int, dim: int, dt: float) -> None:
+                calls["init"] = (n, dim, dt)
+
+            def step(self, pos, phases, omegas, a, b, j, k):
+                calls["contiguous"] = (
+                    pos.flags.c_contiguous,
+                    phases.flags.c_contiguous,
+                    omegas.flags.c_contiguous,
+                )
+                return pos + a - b + j - k, phases + omegas
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySwarmalatorStepper = PySwarmalatorStepper
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        fn = sw_mod._load_rust_fn()
+        pos = np.array([[0.0, 0.5], [1.0, -0.5]], dtype=np.float64)
+        phases = np.array([0.2, 0.4], dtype=np.float64)
+        omegas = np.array([0.1, -0.2], dtype=np.float64)
+
+        got_pos, got_phases = fn(pos, phases, omegas, 2, 2, 1.0, 0.5, 0.25, 0.75, 0.01)
+
+        np.testing.assert_allclose(got_pos, pos.ravel().reshape(2, 2))
+        np.testing.assert_allclose(got_phases, phases + omegas)
+        assert got_pos.dtype == np.float64
+        assert got_phases.dtype == np.float64
+        assert calls == {"init": (2, 2, 0.01), "contiguous": (True, True, True)}
+
+    def test_optional_backend_loaders_return_callable_numeric_kernels(
+        self, monkeypatch
+    ) -> None:
+        def install_backend(
+            module_name: str, function_name: str, offset: float
+        ) -> None:
+            module = types.ModuleType(module_name)
+
+            def _ensure_exe() -> None:
+                module.loaded = True
+
+            def _load_lib() -> None:
+                module.loaded = True
+
+            def kernel(pos, phases, omegas, n, dim, a, b, j, k, dt):
+                return pos + offset + dt, (phases + omegas * dt + offset) % TWO_PI
+
+            module.loaded = False
+            module._ensure_exe = _ensure_exe
+            module._load_lib = _load_lib
+            setattr(module, function_name, kernel)
+            monkeypatch.setitem(sys.modules, module_name, module)
+
+        monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
+        install_backend(
+            "scpn_phase_orchestrator.upde._swarmalator_mojo",
+            "swarmalator_step_mojo",
+            0.10,
+        )
+        install_backend(
+            "scpn_phase_orchestrator.upde._swarmalator_julia",
+            "swarmalator_step_julia",
+            0.20,
+        )
+        install_backend(
+            "scpn_phase_orchestrator.upde._swarmalator_go",
+            "swarmalator_step_go",
+            0.30,
+        )
+
+        pos = np.array([[0.0, 1.0], [2.0, 3.0]], dtype=np.float64)
+        phases = np.array([0.5, 1.5], dtype=np.float64)
+        omegas = np.array([0.2, -0.1], dtype=np.float64)
+        args = (pos, phases, omegas, 2, 2, 1.0, 1.0, 0.8, 1.2, 0.01)
+
+        for loader, offset in (
+            (sw_mod._load_mojo_fn, 0.10),
+            (sw_mod._load_julia_fn, 0.20),
+            (sw_mod._load_go_fn, 0.30),
+        ):
+            got_pos, got_phases = loader()(*args)
+            np.testing.assert_allclose(got_pos, pos + offset + 0.01)
+            np.testing.assert_allclose(
+                got_phases,
+                (phases + omegas * 0.01 + offset) % TWO_PI,
+            )

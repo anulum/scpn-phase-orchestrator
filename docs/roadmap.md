@@ -74,6 +74,22 @@ control engineers who do not already live in phase dynamics.
 | Cross-domain meta-transfer | replay-backed proposals, multi-audit fitting, nested audit-directory corpus loading, training summaries, and deterministic JSON package export are implemented; larger real audit-history corpora and optional `scpn-meta` packaging remain open |
 | Plugin ecosystem | manifest registry foundation is implemented for entry-point discovery, capability declarations, compatibility checks, audit records, marketplace catalogue packaging, a runnable catalogue example, CLI catalogue export, and Rust-facing flattened registry export; deeper Rust runtime loading remains open |
 
+## Next High-Impact Differentiated Moves
+
+These items are the next product/research moves that would most clearly
+separate SPO from ordinary simulation or dashboard tooling. They are TODO
+items until they have implementation evidence, tests, and reproducible docs.
+
+| Move | Acceptance shape |
+|------|------------------|
+| Auto-discovery / data-driven binding | raw CSV, sensor logs, and event streams produce reviewable oscillator, channel, initial `K`, and binding proposals via SINDy, coupling estimation, clustering, and validation diagnostics; the five-minute new-dataset path becomes genuinely zero-config except for operator review |
+| RL / optimisation on knobs | JAX `nn/` and `autotune` train replay-only or simulator-backed policies for `K`, `alpha`, `zeta`, `Psi`, channel weights, and cross-channel gains using `R_good - penalty(R_bad, safety, regime churn)` objectives; learned proposals remain auditable and hybridised with supervisor rules before any live actuation |
+| Hierarchical and distributed orchestration | nested edge supervisors maintain local coherence, exchange bounded aggregate evidence upward, and support live owned transports after offline replay and non-socket adapter gates prove sequence, protocol, and safety semantics |
+| Formal verification export | Petri nets, policy DSL, STL monitors, and supervisor transitions export to PRISM, SPIN, TLA+, SMT, or equivalent proof workflows with reproducible safety artefacts for plasma, power, and medical-style domainpacks |
+| Neuromorphic and quantum tighter integration | validated phase-control plans emit Lava/BrainScaleS-style schedules and QPU control schedules through partner bridges, with execution disabled until real target evidence, hashes, parity, and operator approval exist |
+| Plugin ecosystem | standard Python and Rust extension interfaces let domain experts add extractors, monitors, actuators, and bridges with schema validation, capability metadata, audit records, compatibility tests, and no core fork |
+| Observability and digital-twin polish | Prometheus/Grafana live-run telemetry, digital-twin residual channels, adapter health, replay linkage, and twin mismatch evidence become first-class operator surfaces |
+
 ## Deferred Maintenance Track
 
 These items are acknowledged but not the current documentation slice:

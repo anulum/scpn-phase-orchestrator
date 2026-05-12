@@ -131,13 +131,24 @@ def test_named_extension_channel_quality_score():
 def test_low_initial_coherence_warns():
     n = 10
     states = _make_states(n, quality=0.8)
-    rng = np.random.default_rng(99)
-    random_phases = rng.uniform(0, TWO_PI, n)
+    random_phases = np.linspace(0.0, TWO_PI, n, endpoint=False)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
 
     report = check_session_start(states, random_phases, imprint, n)
-    # 10 random phases → R typically < 0.8 (not fully synchronized)
-    assert report.initial_r < 0.95
+    assert report.initial_r < 0.05
+    assert any("Low initial coherence" in warning for warning in report.warnings)
+
+
+def test_initial_phase_shape_mismatch_skips_coherence_without_failing():
+    n = 6
+    states = _make_states(n, quality=0.8)
+    imprint = ImprintState(m_k=np.full(n, 0.3), last_update=10.0)
+
+    report = check_session_start(states, np.zeros(n - 1), imprint, n)
+
+    assert report.passed
+    assert report.initial_r == 0.0
+    assert report.imprint_level == 0.3
 
 
 class TestSessionStartPipelineWiring:
