@@ -87,6 +87,34 @@ actuators:
     scope: global
     limits: [0.0, 6.2832]
 
+value_alignment:
+  minimum_score: 0.10
+  constraints:
+    - name: limit-inter-scale-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.0
+      weight: 1.5
+    - name: limit-entrainment-drive-step
+      knob: zeta
+      scope: global
+      min_value: 0.0
+      max_value: 0.7
+      weight: 2.0
+    - name: limit-reference-phase-step
+      knob: Psi
+      scope: global
+      min_value: 0.0
+      max_value: 6.2832
+      weight: 0.5
+  fallback_actions:
+    - knob: zeta
+      scope: global
+      value: 0.0
+      ttl_s: 1.0
+      justification: bio stub value guard homeostatic hold
+
 imprint_model:
   decay_rate: 0.01
   saturation: 2.0

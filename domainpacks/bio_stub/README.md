@@ -22,7 +22,6 @@ populations; Strogatz (2003) *Sync* Ch. 5 formalised the connection.
 ## Boundaries
 
 - **heart_rate**: 40-180 bpm (upper: hard, lower: soft) -- clinical range
-- **circadian_deviation**: < 3 h (soft) -- circadian disruption threshold
 
 ## Actuators
 
@@ -31,6 +30,9 @@ populations; Strogatz (2003) *Sync* Ch. 5 formalised the connection.
 | entrainment | zeta | External pacemaker drive |
 | coupling_global | K | Inter-scale coupling strength |
 | reference_phase | Psi | Circadian reference phase |
+
+The binding spec includes a `value_alignment` template for review-time
+inter-scale coupling, entrainment-drive, and reference-phase actuation guards.
 
 ## Imprint
 
