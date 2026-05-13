@@ -3493,6 +3493,9 @@ twine==6.2.0 \
     --hash=sha256:418ebf08ccda9a8caaebe414433b0ba5e25eb5e4a927667122fbe8f829f985d8 \
     --hash=sha256:e5ed0d2fd70c9959770dce51c8f39c8945c574e18173a7b81802dab51b4b75cf
     # via scpn-phase-orchestrator (pyproject.toml)
+types-protobuf==6.32.1.20260221 \
+    --hash=sha256:da7cdd947975964a93c30bfbcc2c6841ee646b318d3816b033adc2c4eb6448e4
+    # via scpn-phase-orchestrator (pyproject.toml)
 types-pyyaml==6.0.12.20260408 \
     --hash=sha256:92a73f2b8d7f39ef392a38131f76b970f8c66e4c42b3125ae872b7c93b556307 \
     --hash=sha256:fbc42037d12159d9c801ebfcc79ebd28335a7c13b08a4cfbc6916df78fee9384
