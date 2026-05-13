@@ -14,6 +14,8 @@ SCPN Phase Orchestrator has two maintained execution paths for production use:
   monitors, and deployment-facing acceleration.
 - **JAX** for differentiable models, neural layers, inverse problems, and GPU or
   autodiff workflows.
+- **WebGPU** for browser, mobile GPU, WebView, and edge JavaScript deployments
+  where native toolchains are unavailable.
 
 Pure Python remains the reference fallback. Auxiliary Go, Julia, and Mojo shims
 exist only for selected kernels and should be treated as experimental unless a
@@ -44,6 +46,23 @@ Examples:
 | Physical, informational, symbolic extractors | `spo_kernel` functions | SciPy/NumPy/Python extractors |
 
 Use this path when runtime stability matters.
+
+### WebGPU Browser/Edge Dispatch
+
+The UPDE stateless dispatcher declares a WebGPU slot:
+
+```text
+rust -> webgpu -> mojo -> julia -> go -> python
+```
+
+Plain CPython does not report WebGPU as available. The WebGPU loader only
+activates when a host provides an explicit Python bridge through
+`SPO_WEBGPU_DISPATCH_BRIDGE=module:function`. Browser and edge deployments can
+also bypass Python dispatch and run the WGSL/ES-module package emitted by
+`upde._engine_webgpu` directly.
+
+Use this path when runtime portability matters more than `f64` parity and the
+deployment contract accepts the documented Euler/f32 WebGPU kernel.
 
 ### Five-Backend Experimental Dispatch
 
@@ -96,6 +115,7 @@ change.
 | CLI simulation, domainpack validation, audit replay | Rust if installed, Python fallback | Stable API and deterministic fallback. |
 | Real-time adapters, supervisor, monitors | Rust FFI | Lower latency and parity-covered behaviour. |
 | Differentiable training, inverse coupling, neural layers | JAX | Gradients and JIT compilation are the core contract. |
+| Browser, mobile GPU, WebView, and edge JavaScript UPDE Euler runs | WebGPU package | Avoids native toolchain installation and uses the host GPU. |
 | Research comparison of analysis kernels | Rust, then auxiliary backend, then Python | Useful for parity and benchmarking experiments. |
 | Production deployment with optional backends unavailable | Python fallback or Rust FFI | Avoid hidden dependence on Go, Julia, or Mojo toolchains. |
 
@@ -108,6 +128,7 @@ module. The tolerance depends on the kernel:
 | --- | --- |
 | Direct algebraic metrics | Float64-close to Python/Rust reference. |
 | ODE integration | Same integrator, same step order, bounded floating-point drift. |
+| WebGPU UPDE Euler | Same dense derivative and phase wrapping; `f32` tolerance and invariant checks. |
 | Randomised Monte Carlo estimators | Python owns the seed where possible; compare deterministic summaries, not scheduler order. |
 | JAX training paths | Compare physical invariants and loss trends, not byte-for-byte arrays. |
 
@@ -163,6 +184,7 @@ Before relying on a backend in a deployment:
 ## Related Pages
 
 - [Rust FFI Acceleration](rust_ffi.md)
+- [WebGPU Compute Backend](webgpu_backend.md)
 - [Differentiable Kuramoto Layer](differentiable_kuramoto.md)
 - [Performance Tuning](performance.md)
 - [Testing](testing.md)

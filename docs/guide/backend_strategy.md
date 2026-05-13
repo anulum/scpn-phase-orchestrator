@@ -5,8 +5,10 @@ path is deliberately narrow:
 
 1. Rust FFI for production hot paths.
 2. JAX for differentiable and accelerator-oriented workflows.
-3. NumPy/SciPy Python as the portable reference fallback.
-4. Julia, Go, and Mojo as experimental parity or benchmark backends.
+3. WebGPU for browser, mobile GPU, WebView, and edge deployments where native
+   toolchains are unavailable.
+4. NumPy/SciPy Python as the portable reference fallback.
+5. Julia, Go, and Mojo as experimental parity or benchmark backends.
 
 Use this page to decide which backend should carry a deployment.
 
@@ -16,6 +18,7 @@ Use this page to decide which backend should carry a deployment.
 |------|---------|--------|---------|
 | Primary | Rust FFI (`spo_kernel`) | production path | low-latency CPU stepping, monitors, coupling, supervisor hot paths |
 | Primary | JAX | production path for differentiable work | gradient-based training, GPU/TPU experiments, learned policies |
+| Portable accelerator | WebGPU | browser/edge package path | Euler UPDE stepping in WebGPU-capable browsers and edge runtimes |
 | Reference | NumPy/SciPy Python | always available | correctness, portability, debugging, fallback execution |
 | Experimental | Julia | benchmark/parity | numerical experiments that prove a clear advantage |
 | Experimental | Go | benchmark/parity | deployment experiments that prove operational simplicity or speed |
@@ -31,6 +34,8 @@ The runtime preference is:
 ```text
 Rust FFI available and supported for this module
     -> use Rust
+else WebGPU bridge is explicitly configured or browser/edge package is selected
+    -> use WebGPU bridge/package
 else JAX workflow explicitly selected
     -> use JAX APIs
 else
@@ -73,6 +78,25 @@ Use it when:
 
 JAX should not replace the Rust path for ordinary CPU production stepping unless
 measurements show it is better for that workload.
+
+## WebGPU Path
+
+WebGPU is the first browser/edge compute path. It is designed for deployments
+where the host can expose a WebGPU runner or execute the generated browser
+package, but cannot install native Rust, Julia, Go, or Mojo toolchains.
+
+Use it when:
+
+- the workload runs in a browser, WebView, mobile GPU, or edge JavaScript
+  runtime,
+- Python dispatch is wired through `SPO_WEBGPU_DISPATCH_BRIDGE=module:function`
+  or the generated ES-module package is run directly,
+- Euler UPDE stepping is sufficient for the deployment contract,
+- `f32` WebGPU arithmetic is acceptable and documented,
+- a native toolchain install is not acceptable.
+
+Do not use it for certification-grade `f64` comparisons, formal safety
+evidence, or differentiable training. Those remain Rust/JAX/NumPy duties.
 
 ## Python Reference Path
 

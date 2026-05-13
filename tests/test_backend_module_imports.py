@@ -75,6 +75,7 @@ BACKEND_MODULES = (
     "scpn_phase_orchestrator.upde._engine_go",
     "scpn_phase_orchestrator.upde._engine_julia",
     "scpn_phase_orchestrator.upde._engine_mojo",
+    "scpn_phase_orchestrator.upde._engine_webgpu",
     "scpn_phase_orchestrator.upde._envelope_go",
     "scpn_phase_orchestrator.upde._envelope_julia",
     "scpn_phase_orchestrator.upde._envelope_mojo",

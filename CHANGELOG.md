@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an adaptive fixed-point rate-limit contract for certifiable actuator
   envelopes, including exact integer projection helpers and Rust regression
   tests.
+- Added a WebGPU UPDE backend package generator with WGSL compute shader,
+  browser ES-module runner, dispatcher registration, tests, and documentation.
 
 ### Changed
 

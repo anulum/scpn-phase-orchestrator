@@ -12,7 +12,7 @@ Exports:
 
 * :data:`ACTIVE_BACKEND` / :data:`AVAILABLE_BACKENDS` — resolved at
   import time with the fastest-first preference
-  (Rust → Mojo → Julia → Go → Python).
+  (Rust → WebGPU → Mojo → Julia → Go → Python).
 * :func:`upde_run` — stateless entry point that any caller can use
   directly; :class:`scpn_phase_orchestrator.upde.engine.UPDEEngine`
   also routes through here.
@@ -31,7 +31,7 @@ from scpn_phase_orchestrator.upde._ref_kernel import upde_run_python
 __all__ = ["ACTIVE_BACKEND", "AVAILABLE_BACKENDS", "upde_run"]
 
 
-_BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
+_BACKEND_NAMES = ("rust", "webgpu", "mojo", "julia", "go", "python")
 
 
 def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
@@ -82,6 +82,14 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     return upde_run_mojo
 
 
+def _load_webgpu_fn() -> Callable[..., NDArray[np.float64]]:
+    from scpn_phase_orchestrator.upde._engine_webgpu import (
+        load_webgpu_dispatch_bridge,
+    )
+
+    return load_webgpu_dispatch_bridge()
+
+
 def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
@@ -100,6 +108,7 @@ def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
 
 _LOADERS: dict[str, Callable[[], Callable[..., NDArray[np.float64]]]] = {
     "rust": _load_rust_fn,
+    "webgpu": _load_webgpu_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
     "go": _load_go_fn,
@@ -144,7 +153,7 @@ def upde_run(
     """Stateless batched UPDE integrator.
 
     Dispatches to the first available backend per the SPO chain
-    (Rust → Mojo → Julia → Go → Python). Every backend runs the
+    (Rust → WebGPU → Mojo → Julia → Go → Python). Every backend runs the
     same algorithm: ``method ∈ {"euler", "rk4", "rk45"}`` with
     ``n_substeps`` applied to the fixed-step methods; RK45 is
     adaptive with ``(atol, rtol)`` tolerances. Phases are wrapped

@@ -74,6 +74,7 @@ nav:
       - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
       - QueueWaves Cascade Detector: guide/queuewaves.md
       - Rust FFI Acceleration: guide/rust_ffi.md
+      - WebGPU Compute Backend: guide/webgpu_backend.md
       - Backend Fallback Chain: guide/backend_fallbacks.md
       - Backend Strategy: guide/backend_strategy.md
       - Adapter Bridges: guide/adapters.md
