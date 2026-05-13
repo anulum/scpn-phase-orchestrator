@@ -6,9 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Differentiable neural network module
 
-"""Differentiable phase dynamics for neural network integration.
+"""GPU-first differentiable phase dynamics for neural network integration.
 
 Requires: ``pip install scpn-phase-orchestrator[nn]`` (installs jax + equinox).
+Production training code should call ``require_accelerator()`` during start-up
+to fail fast when JAX is present but only a CPU backend is visible.
+
+Runtime API:
+    HAS_JAX, JaxRuntimeInfo, jax_runtime_info, require_jax,
+    require_accelerator, default_device
 
 Functional API (jax only):
     kuramoto_step, kuramoto_rk4_step, kuramoto_forward,
@@ -26,7 +32,27 @@ JAX installed.  Symbols are resolved on first attribute access.
 
 from __future__ import annotations
 
+from .runtime import (
+    HAS_JAX,
+    JaxRuntimeInfo,
+    default_device,
+    jax_runtime_info,
+    require_accelerator,
+    require_jax,
+)
+
 __all__ = [
+    "HAS_JAX",
+    "JaxRuntimeInfo",
+    "jax_runtime_info",
+    "require_jax",
+    "require_accelerator",
+    "default_device",
+    "KuramotoLayer",
+    "SimplicialKuramotoLayer",
+    "StuartLandauLayer",
+    "UDEKuramotoLayer",
+    "CouplingResidual",
     "kuramoto_step",
     "kuramoto_rk4_step",
     "kuramoto_forward",
@@ -44,11 +70,6 @@ __all__ = [
     "coupling_laplacian",
     "saf_order_parameter",
     "saf_loss",
-    "KuramotoLayer",
-    "SimplicialKuramotoLayer",
-    "StuartLandauLayer",
-    "UDEKuramotoLayer",
-    "CouplingResidual",
     "analytical_inverse",
     "hybrid_inverse",
     "infer_coupling",

@@ -1,8 +1,9 @@
 # nn/ Module — Complete API Reference
 
-The `nn/` module is SPO's differentiable JAX backend. Every function is
+The `nn/` module is SPO's GPU-first differentiable ML API. Every function is
 JIT-compilable, `vmap`-compatible, and fully differentiable via JAX autodiff.
-It turns oscillator dynamics into gradient-trainable building blocks.
+It turns oscillator dynamics into gradient-trainable building blocks while
+making runtime accelerator status explicit for production training jobs.
 
 **Installation:** `pip install scpn-phase-orchestrator[nn]`
 (installs `jax>=0.4`, `equinox>=0.11`, `optax>=0.2`)
@@ -13,6 +14,7 @@ It turns oscillator dynamics into gradient-trainable building blocks.
 
 ```
 nn/
+├── runtime.py             JAX runtime and accelerator contract
 ├── functional.py          Pure JAX functions (no state)
 ├── kuramoto_layer.py      KuramotoLayer (equinox Module)
 ├── stuart_landau_layer.py StuartLandauLayer (equinox Module)
@@ -26,11 +28,43 @@ nn/
 ├── chimera.py             Chimera state detection
 ├── spectral.py            Laplacian spectral analysis
 ├── training.py            Loss functions + training loop
-└── __init__.py            Lazy-loaded public API (90 symbols)
+└── __init__.py            Runtime-aware lazy public API
 ```
 
-All imports are lazy: `import scpn_phase_orchestrator.nn` succeeds without
-JAX installed. Symbols resolve on first attribute access.
+All imports are lazy except the runtime contract: `import
+scpn_phase_orchestrator.nn` succeeds without JAX installed, and runtime helpers
+report whether JAX and GPU/TPU devices are visible before numerical symbols are
+resolved.
+
+---
+
+## 0. Runtime API
+
+ML users should start from the public runtime contract:
+
+```python
+from scpn_phase_orchestrator.nn import (
+    KuramotoLayer,
+    jax_runtime_info,
+    require_accelerator,
+)
+
+print(jax_runtime_info())
+device = require_accelerator()
+```
+
+| Function | Purpose |
+|---|---|
+| `HAS_JAX` | Boolean import probe for the JAX package. |
+| `jax_runtime_info()` | Returns backend, device labels, device count, and accelerator count. |
+| `require_jax()` | Returns the JAX module or raises an installation error. |
+| `require_accelerator()` | Returns a GPU/TPU device label or raises on CPU-only runtimes. |
+| `require_accelerator(allow_cpu=True)` | Explicit CPU-only escape hatch for CI and smoke tests. |
+| `default_device()` | Returns the default visible JAX device label. |
+
+Production training entry points should call `require_accelerator()` before
+allocating model state. This avoids accidentally running large differentiable
+oscillator workloads on CPU when a GPU/TPU job was intended.
 
 ---
 

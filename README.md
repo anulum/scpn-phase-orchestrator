@@ -59,7 +59,22 @@ Domain Binder → Oscillator Extractors (P/I/S) → UPDE Engine → Supervisor �
 
 ## Capabilities
 
-### Differentiable Phase Dynamics (`nn/` module, JAX)
+### GPU-First Differentiable Phase Dynamics (`nn/` module, JAX)
+
+`nn/` is the primary API for ML users. It exposes JAX/equinox layers and
+runtime checks directly from `scpn_phase_orchestrator.nn` so production
+training jobs fail fast when no GPU/TPU backend is visible.
+
+```python
+from scpn_phase_orchestrator.nn import (
+    KuramotoLayer,
+    jax_runtime_info,
+    require_accelerator,
+)
+
+print(jax_runtime_info())
+device = require_accelerator()  # raises on CPU-only JAX runtimes
+```
 
 | Module | What it does |
 |--------|-------------|
@@ -75,6 +90,8 @@ Domain Binder → Oscillator Extractors (P/I/S) → UPDE Engine → Supervisor �
 
 All functions are JIT-compilable, vmap-compatible, and differentiable.
 Install: `pip install scpn-phase-orchestrator[nn]`
+For CI and smoke tests on CPU-only hosts, use
+`require_accelerator(allow_cpu=True)` explicitly.
 
 ### Advanced Dynamics (`upde/` module, NumPy)
 

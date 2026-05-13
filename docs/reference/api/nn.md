@@ -1,11 +1,32 @@
 # Neural Network Module (nn)
 
-Differentiable Kuramoto dynamics for neural network integration via
+GPU-first differentiable Kuramoto dynamics for neural network integration via
 JAX and equinox. Every function and layer is JIT-compilable, vmap-compatible,
 and fully differentiable — enabling gradient-based coupling inference,
 synchronisation optimisation, and physics-informed machine learning.
 
 **Requires:** `pip install scpn-phase-orchestrator[nn]` (installs jax + equinox + optax)
+
+## Runtime API
+
+Production ML jobs should make the accelerator contract explicit at start-up:
+
+```python
+from scpn_phase_orchestrator.nn import (
+    KuramotoLayer,
+    jax_runtime_info,
+    require_accelerator,
+)
+
+print(jax_runtime_info())
+device = require_accelerator()
+```
+
+`require_accelerator()` raises when JAX is installed but only CPU devices are
+visible. Use `require_accelerator(allow_cpu=True)` only for CI, notebooks, and
+smoke tests that intentionally run without a GPU/TPU.
+
+::: scpn_phase_orchestrator.nn.runtime
 
 ## Architecture
 
