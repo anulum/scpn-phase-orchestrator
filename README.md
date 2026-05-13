@@ -157,6 +157,10 @@ pip install scpn-phase-orchestrator[otel]         # OpenTelemetry export
 # Scaffold a new domainpack
 spo scaffold my_domain
 
+# Scaffold from natural-language intent with a configured LLM provider
+spo scaffold traffic_grid --llm \
+  --description "I am modelling traffic lights in a 4-intersection grid"
+
 # Validate a domain binding spec
 spo validate domainpacks/minimal_domain/binding_spec.yaml
 

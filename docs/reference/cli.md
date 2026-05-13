@@ -120,6 +120,8 @@ Scaffold a new domainpack directory with starter files.
 
 ```
 spo scaffold <name>
+spo scaffold <name> --llm --description "..."
+spo scaffold <name> --llm --description "..." --llm-response-json proposal.json
 ```
 
 **Arguments:**
@@ -133,16 +135,22 @@ spo scaffold <name>
 ```
 domainpacks/<name>/
     binding_spec.yaml
-    policy.yaml
-    run.py
     README.md
+    llm_scaffold_audit.json   # only with --llm
 ```
 
 **Example:**
 
 ```bash
 spo scaffold power_grid
+spo scaffold traffic_grid --llm \
+  --description "I am modelling traffic lights in a 4-intersection grid"
 ```
+
+LLM mode requires a configured provider through `SPO_LLM_ENDPOINT` and
+`SPO_LLM_MODEL`, or an offline captured proposal via `--llm-response-json`.
+The generated JSON proposal is normalised, converted to binding YAML, and
+validated before any domainpack files are written.
 
 ---
 

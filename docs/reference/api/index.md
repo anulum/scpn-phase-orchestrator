@@ -57,6 +57,7 @@ the compatibility impact.
 | [Audit](audit.md) | SHA256-chained audit logging and deterministic replay |
 | [Reporting](reporting.md) | Matplotlib coherence visualizations |
 | [Artifacts](artifacts.md) | Portable run artifacts and QPU data packaging/validation |
+| [Scaffold](scaffold.md) | Domainpack scaffolding, including fail-closed LLM-guided proposals |
 | [Visualization](visualization.md) | Real-time WebXR/network/torus visualization surfaces |
 | [Adapters](adapters.md) | Bridges to SCPN ecosystem, observability, SNN controllers |
 | [Plugins](plugins.md) | Extension manifests and compatibility checks |

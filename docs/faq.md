@@ -28,7 +28,10 @@ identical in both backends.
 ### How do I add a new domain?
 
 Run `spo scaffold <name>` to generate starter files, then follow the
-[New Domain Checklist](tutorials/01_new_domain_checklist.md) tutorial.
+[New Domain Checklist](tutorials/01_new_domain_checklist.md) tutorial. If you
+have a configured LLM gateway, `spo scaffold <name> --llm --description "..."`
+can generate a reviewable binding proposal; without provider configuration it
+fails closed and writes nothing.
 
 ### What is R_good vs R_bad?
 

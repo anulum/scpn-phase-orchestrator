@@ -60,6 +60,12 @@ from scpn_phase_orchestrator.plugins import (
     discover_plugin_manifests,
 )
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
+from scpn_phase_orchestrator.scaffold.llm import (
+    LLMScaffoldProvider,
+    StaticJSONScaffoldProvider,
+    configured_llm_scaffold_provider,
+    propose_domainpack_from_description,
+)
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
     export_petri_net_prism,
@@ -1295,13 +1301,77 @@ def check(config_path: str) -> None:
 
 @main.command()
 @click.argument("domain_name")
-def scaffold(domain_name: str) -> None:
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="Generate the binding spec from a natural-language description.",
+)
+@click.option(
+    "--description",
+    default=None,
+    help="Natural-language domain description for --llm mode.",
+)
+@click.option(
+    "--llm-response-json",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Offline JSON response file for deterministic LLM scaffold review.",
+)
+def scaffold(
+    domain_name: str,
+    use_llm: bool,
+    description: str | None,
+    llm_response_json: str | None,
+) -> None:
     """Create a domainpack directory structure with template files."""
     if not re.match(r"^[a-zA-Z0-9_-]+$", domain_name):
         raise click.BadParameter(
             f"domain_name must match [a-zA-Z0-9_-]+, got {domain_name!r}"
         )
     base = Path(f"domainpacks/{domain_name}")
+    if use_llm:
+        if not description:
+            raise click.BadParameter("--description is required with --llm")
+        provider: LLMScaffoldProvider
+        if llm_response_json:
+            provider = StaticJSONScaffoldProvider(
+                Path(llm_response_json).read_text(encoding="utf-8")
+            )
+        else:
+            try:
+                provider = configured_llm_scaffold_provider()
+            except RuntimeError as exc:
+                raise click.ClickException(str(exc)) from exc
+        try:
+            proposal = propose_domainpack_from_description(
+                description,
+                project_name=domain_name,
+                provider=provider,
+            )
+        except (RuntimeError, ValueError) as exc:
+            raise click.ClickException(str(exc)) from exc
+        base.mkdir(parents=True, exist_ok=True)
+        (base / "binding_spec.yaml").write_text(
+            proposal.yaml_text,
+            encoding="utf-8",
+        )
+        readme = base / "README.md"
+        if not readme.exists():
+            readme.write_text(
+                f"# {domain_name} domainpack\n\n"
+                "LLM-assisted domainpack scaffold. Review the generated "
+                "binding_spec.yaml, llm_scaffold_audit.json, boundaries, "
+                "actuators, and oscillator mappings before production use.\n",
+                encoding="utf-8",
+            )
+        (base / "llm_scaffold_audit.json").write_text(
+            json.dumps(proposal.to_audit_record(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        click.echo(f"Scaffolded LLM-assisted domainpack at {base}")
+        return
+
     base.mkdir(parents=True, exist_ok=True)
     spec_file = base / "binding_spec.yaml"
     if not spec_file.exists():

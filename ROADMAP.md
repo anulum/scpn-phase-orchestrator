@@ -437,6 +437,10 @@ Near-term candidate tracks:
     that passes projected plans through the full safety/actuation stack.
 - Symbolic-to-binding compiler: generate reviewable `binding_spec.yaml`, policy DSL, and notebook drafts from natural-language domain intent plus local retrieval over docs and domainpacks.
   - Foundation is in place: symbolic binding compiler support exists.
+  - LLM-guided scaffold foundation is in place: `spo scaffold --llm` accepts
+    natural-language intent, requires a configured provider or offline JSON
+    proposal file, normalises strict JSON into deterministic binding YAML, and
+    validates the result before writing a domainpack.
   - Retrieval, confidence, and notebook polish are in place: generation now
     records local domainpack plus long-form public-doc retrieval evidence,
     confidence factors, and a `review_notebook.ipynb` validation notebook.
