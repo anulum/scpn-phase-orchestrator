@@ -257,12 +257,14 @@ sessions do not treat them as abstract research labels.
   - Multi-library SINDy selection evidence is in place: fitted affine and
     phase-aware SINDy candidates are scored with residual RMSE and a BIC-style
     complexity penalty before a review-only selected library is recorded.
+  - Learned graph inference evidence is in place: lagged sparse linear
+    prediction emits directed source-to-target graph edges, residual evidence,
+    and graph density for review without binding actuation.
   - Auto-coupling estimation is in place: `spo auto-coupling-estimation`
     ingests CSV or `.npy` phase tables and emits transfer-entropy coupling
     matrices with deterministic audit JSON for review before binding use.
-  - Remaining work: promote learned graph inference, extractor-parameter
-    proposals, and initial `K` binding only after reproducible benchmark
-    evidence.
+  - Remaining work: promote extractor-parameter proposals and initial `K`
+    binding only after reproducible benchmark evidence.
   - Acceptance: the five-minute new-dataset workflow is zero-config except for
     operator review, with validation diagnostics, deterministic replay, and
     benchmarked graph evidence.

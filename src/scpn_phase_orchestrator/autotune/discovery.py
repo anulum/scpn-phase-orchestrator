@@ -40,6 +40,7 @@ class TimeSeriesDiscoveryConfig:
     correlation_threshold: float = 0.75
     sindy_threshold: float = 0.05
     phase_sindy_threshold: float = 0.05
+    learned_graph_threshold: float = 0.2
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.correlation_threshold <= 1.0:
@@ -48,6 +49,10 @@ class TimeSeriesDiscoveryConfig:
             raise ValueError("sindy_threshold must be finite and non-negative")
         if self.phase_sindy_threshold < 0.0 or not isfinite(self.phase_sindy_threshold):
             raise ValueError("phase_sindy_threshold must be finite and non-negative")
+        if self.learned_graph_threshold < 0.0 or not isfinite(
+            self.learned_graph_threshold
+        ):
+            raise ValueError("learned_graph_threshold must be finite and non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +65,7 @@ class TimeSeriesDiscoveryReport:
     sindy: Mapping[str, JsonValue]
     phase_sindy: Mapping[str, JsonValue]
     sindy_model_selection: Mapping[str, JsonValue]
+    learned_graph: Mapping[str, JsonValue]
     correlation_graph: Mapping[str, JsonValue]
     clustering: Mapping[str, JsonValue]
 
@@ -87,6 +93,10 @@ class TimeSeriesDiscoveryReport:
         }
         if self.phase_sindy.get("status") == "fitted":
             factors["phase_sindy_sparsity"] = cast(float, self.phase_sindy["sparsity"])
+        if self.learned_graph.get("status") == "fitted":
+            factors["learned_graph_density"] = cast(
+                float, self.learned_graph["density"]
+            )
         return factors
 
     def to_audit_record(self) -> dict[str, JsonValue]:
@@ -97,6 +107,7 @@ class TimeSeriesDiscoveryReport:
             "sindy": dict(self.sindy),
             "phase_sindy": dict(self.phase_sindy),
             "sindy_model_selection": dict(self.sindy_model_selection),
+            "learned_graph": dict(self.learned_graph),
             "correlation_graph": dict(self.correlation_graph),
             "clustering": dict(self.clustering),
         }
@@ -189,6 +200,11 @@ def discover_time_series_structure(
         sindy=sindy,
         phase_sindy=phase_sindy,
     )
+    learned_graph = _lagged_learned_graph(
+        table,
+        column_names,
+        threshold=cfg.learned_graph_threshold,
+    )
     return TimeSeriesDiscoveryReport(
         sample_period_s=sample_period_s,
         sample_count=int(table.shape[0]),
@@ -196,6 +212,7 @@ def discover_time_series_structure(
         sindy=sindy,
         phase_sindy=phase_sindy,
         sindy_model_selection=sindy_model_selection,
+        learned_graph=learned_graph,
         correlation_graph=correlation_graph,
         clustering=clustering,
     )
@@ -530,6 +547,102 @@ def _sindy_model_selection(
         "selected_score": cast(float, selected["score"]),
         "candidates": candidates,
     }
+
+
+def _lagged_learned_graph(
+    table: np.ndarray,
+    columns: tuple[str, ...],
+    *,
+    threshold: float,
+) -> dict[str, JsonValue]:
+    if table.shape[1] < 2:
+        return _skipped_learned_graph("requires_at_least_two_columns", threshold)
+    if table.shape[0] < 3:
+        return _skipped_learned_graph("requires_at_least_three_samples", threshold)
+
+    features = _standardise(table)
+    predictors = features[:-1, :]
+    targets = features[1:, :]
+    library = np.column_stack([np.ones(predictors.shape[0]), predictors])
+    coefficients, *_ = np.linalg.lstsq(library, targets, rcond=None)
+    predictions = library @ coefficients
+    active_mask = np.abs(coefficients) >= threshold
+    active_terms = int(np.count_nonzero(active_mask))
+    total_terms = int(coefficients.size)
+    quality = _regression_quality(
+        observations=targets,
+        predictions=predictions,
+        active_terms=active_terms,
+    )
+    edges = _lagged_graph_edges(
+        columns,
+        coefficients=coefficients,
+        threshold=threshold,
+    )
+    possible_edges = len(columns) * (len(columns) - 1)
+    density = 0.0 if possible_edges == 0 else len(edges) / possible_edges
+    return {
+        "status": "fitted",
+        "method": "lagged_sparse_linear_prediction",
+        "threshold": threshold,
+        "active_terms": active_terms,
+        "total_terms": total_terms,
+        "residual_rmse": quality["residual_rmse"],
+        "score": quality["score"],
+        "edge_count": len(edges),
+        "possible_edges": possible_edges,
+        "density": float(density),
+        "edges": edges,
+    }
+
+
+def _skipped_learned_graph(reason: str, threshold: float) -> dict[str, JsonValue]:
+    return {
+        "status": reason,
+        "method": "lagged_sparse_linear_prediction",
+        "threshold": threshold,
+        "active_terms": 0,
+        "total_terms": 0,
+        "residual_rmse": None,
+        "score": None,
+        "edge_count": 0,
+        "possible_edges": 0,
+        "density": 0.0,
+        "edges": [],
+    }
+
+
+def _lagged_graph_edges(
+    columns: tuple[str, ...],
+    *,
+    coefficients: np.ndarray,
+    threshold: float,
+) -> list[JsonValue]:
+    edges: list[JsonValue] = []
+    for target_index, target_column in enumerate(columns):
+        for source_index, source_column in enumerate(columns):
+            if source_index == target_index:
+                continue
+            coefficient = float(coefficients[source_index + 1, target_index])
+            if abs(coefficient) < threshold:
+                continue
+            edges.append(
+                {
+                    "source": source_column,
+                    "target": target_column,
+                    "lag": 1,
+                    "coefficient": coefficient,
+                    "abs_coefficient": abs(coefficient),
+                }
+            )
+    return sorted(
+        edges,
+        key=lambda edge: (
+            -cast(float, cast(dict[str, JsonValue], edge)["abs_coefficient"]),
+            cast(str, cast(dict[str, JsonValue], edge)["source"]),
+            cast(str, cast(dict[str, JsonValue], edge)["target"]),
+        ),
+    )
 
 
 def _selection_candidate(

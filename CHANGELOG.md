@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added deterministic time-series discovery evidence for auto-binding
   proposals, including regular time-column sample-rate inference,
   sparse-derivative regression summaries, phase-aware Kuramoto SINDy evidence,
-  residual-scored SINDy library selection, correlation graph edges, clustering
-  evidence, CLI zero-config support, tests, and documentation.
+  residual-scored SINDy library selection, correlation graph edges, lagged
+  directed graph inference, clustering evidence, CLI zero-config support,
+  tests, and documentation.
 - Added crate-owned Kani formal safety harnesses and function contracts for
   supervisor action projection and regime classification invariants.
 - Added an adaptive fixed-point rate-limit contract for certifiable actuator

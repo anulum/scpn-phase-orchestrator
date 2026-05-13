@@ -69,10 +69,10 @@ diagnostics.
 The discovery module extracts deterministic review evidence from raw
 time-series tables: sparse derivative regressions, phase-aware Kuramoto SINDy
 fits for phase-like columns, residual-scored SINDy library selection,
-correlation graph edges, connected-component clusters, and regular time-column
-sample-rate inference. Non-phase data carries an explicit phase-SINDy skipped
-status. The reports are JSON-ready provenance for binding review and do not
-promote learned graph inference or actuation.
+correlation graph edges, lagged directed graph inference,
+connected-component clusters, and regular time-column sample-rate inference.
+Non-phase data carries an explicit phase-SINDy skipped status. The reports are
+JSON-ready provenance for binding review and do not promote actuation.
 
 ::: scpn_phase_orchestrator.autotune.discovery
 

@@ -52,10 +52,10 @@ print(state.binding.provenance["discovery_evidence"])
 For time-series CSV imports, provenance includes derivative sparse-regression
 evidence, phase-aware Kuramoto SINDy evidence when columns are phase-like, a
 residual-scored SINDy library selection record, a correlation graph,
-connected-component clusters, and the sampling-rate inference path. Non-phase
-tables carry an explicit phase-SINDy skipped status instead of a fitted phase
-model. These records are audit evidence for operator review; they do not enable
-automatic actuation.
+lagged directed graph inference record, connected-component clusters, and the
+sampling-rate inference path. Non-phase tables carry an explicit phase-SINDy
+skipped status instead of a fitted phase model. These records are audit evidence
+for operator review; they do not enable automatic actuation.
 
 The output is suitable for human review in SPO Studio or for tests that need a
 deterministic proposal package.

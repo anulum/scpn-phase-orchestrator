@@ -107,6 +107,29 @@ def test_discover_time_series_structure_ranks_sindy_libraries() -> None:
     assert all(candidate["residual_rmse"] >= 0.0 for candidate in fitted)
 
 
+def test_discover_time_series_structure_reports_lagged_graph_edges() -> None:
+    driver = np.asarray([1.0, -1.0, 0.8, -0.8, 0.6, -0.6, 0.4, -0.4], dtype=np.float64)
+    response = np.asarray([0.0, 0.9, -0.9, 0.72, -0.72, 0.54, -0.54, 0.36])
+    independent = np.linspace(-0.2, 0.2, driver.size, dtype=np.float64)
+    samples = np.column_stack([driver, response, independent])
+
+    report = discover_time_series_structure(
+        samples,
+        columns=("driver", "response", "independent"),
+        sample_period_s=0.1,
+    )
+    learned_graph = report.to_audit_record()["learned_graph"]
+
+    assert learned_graph["status"] == "fitted"
+    assert learned_graph["method"] == "lagged_sparse_linear_prediction"
+    assert learned_graph["edge_count"] >= 1
+    assert {(edge["source"], edge["target"]) for edge in learned_graph["edges"]} >= {
+        ("driver", "response")
+    }
+    assert learned_graph["residual_rmse"] >= 0.0
+    assert "learned_graph_density" in report.confidence_evidence
+
+
 def test_discover_time_series_structure_marks_non_phase_sindy_skipped() -> None:
     samples = np.asarray(
         [[0.0, 10.0], [1.0, 20.0], [2.0, 30.0], [3.0, 40.0]],

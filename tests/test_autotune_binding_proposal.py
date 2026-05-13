@@ -125,6 +125,8 @@ def test_time_series_csv_records_phase_sindy_evidence() -> None:
         "affine_state_derivative",
         "kuramoto_sine_phase_differences",
     }
+    assert discovery["learned_graph"]["status"] == "fitted"
+    assert "learned_graph_density" in proposal.binding.confidence_factors
     assert "phase_sindy_sparsity" in proposal.binding.confidence_factors
 
 
