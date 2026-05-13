@@ -177,8 +177,6 @@ def auto_bind(
     try:
         source_text = Path(source_path).read_text(encoding="utf-8")
         if source_kind == "time-series-csv":
-            if sample_rate_hz is None:
-                raise ValueError("sample_rate_hz is required for time-series CSV")
             proposal = propose_binding_from_time_series_csv(
                 source_text,
                 sample_rate_hz=sample_rate_hz,

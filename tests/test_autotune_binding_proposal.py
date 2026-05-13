@@ -49,6 +49,52 @@ def test_time_series_csv_proposal_is_reviewable_and_validated() -> None:
     assert proposal.binding.validation_errors == ()
 
 
+def test_time_series_csv_proposal_records_discovery_evidence() -> None:
+    csv_text = "\n".join(
+        [
+            "time,source,driven,independent",
+            "0.00,0.00,0.00,1.00",
+            "0.10,0.20,0.10,0.98",
+            "0.20,0.40,0.20,0.92",
+            "0.30,0.60,0.31,0.83",
+            "0.40,0.78,0.42,0.70",
+            "0.50,0.94,0.54,0.54",
+            "0.60,1.07,0.66,0.36",
+            "0.70,1.17,0.77,0.17",
+        ]
+    )
+
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=10.0,
+        project_name="discovered_replay",
+    )
+
+    discovery = proposal.binding.provenance["discovery_evidence"]
+    assert discovery["sample_period_s"] == pytest.approx(0.1)
+    assert discovery["columns"] == ("source", "driven", "independent")
+    assert discovery["sindy"]["active_terms"] > 0
+    assert discovery["sindy"]["library"] == "affine_state_derivative"
+    assert discovery["correlation_graph"]["edge_count"] >= 1
+    assert discovery["clustering"]["cluster_count"] >= 1
+    assert "sindy_sparsity" in proposal.binding.confidence_factors
+    assert "correlation_graph_density" in proposal.binding.confidence_factors
+
+
+def test_time_series_csv_infers_sample_rate_from_time_column() -> None:
+    csv_text = "time,grid,load\n0.0,0.0,1.0\n0.2,0.2,0.8\n0.4,0.4,0.6\n"
+
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=None,
+        project_name="inferred_rate_replay",
+    )
+
+    assert proposal.binding.provenance["sample_rate_hz"] == pytest.approx(5.0)
+    assert proposal.binding.provenance["sample_rate_inference"] == "time_column"
+    assert "sample_period_s: 0.2" in proposal.binding.yaml_text
+
+
 def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
     tmp_path: Path,
 ) -> None:
@@ -84,7 +130,7 @@ def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
 )
 def test_time_series_csv_rejects_invalid_replay_shapes(
     csv_text: str,
-    sample_rate_hz: float,
+    sample_rate_hz: float | None,
     expected_error: str,
 ) -> None:
     with pytest.raises(ValueError, match=expected_error):
@@ -92,6 +138,15 @@ def test_time_series_csv_rejects_invalid_replay_shapes(
             csv_text,
             sample_rate_hz=sample_rate_hz,
             project_name="invalid_replay",
+        )
+
+
+def test_time_series_csv_rejects_missing_rate_without_time_column() -> None:
+    with pytest.raises(ValueError, match="sample_rate_hz"):
+        propose_binding_from_time_series_csv(
+            "grid,load\n0.0,1.0\n0.2,0.8\n",
+            sample_rate_hz=None,
+            project_name="missing_rate_replay",
         )
 
 

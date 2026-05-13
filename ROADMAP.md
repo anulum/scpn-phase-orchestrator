@@ -250,13 +250,18 @@ sessions do not treat them as abstract research labels.
   - CLI proposal export is in place: `spo auto-bind` turns local time-series
     CSV, event-log JSON, or graph JSON inputs into review-only binding YAML or
     audit JSON without writing files or enabling actuation.
+  - Time-series proposal evidence is in place: regular time columns can infer
+    sampling rate with no CLI parameter, and provenance records deterministic
+    sparse-derivative, correlation-graph, and clustering evidence for review.
   - Auto-coupling estimation is in place: `spo auto-coupling-estimation`
     ingests CSV or `.npy` phase tables and emits transfer-entropy coupling
     matrices with deterministic audit JSON for review before binding use.
-  - Use SINDy, coupling estimation, clustering, and graph/correlation evidence
-    before any learned graph inference is promoted.
+  - Remaining work: promote deeper SINDy libraries, learned graph inference,
+    extractor-parameter proposals, and initial `K` binding only after
+    reproducible benchmark evidence.
   - Acceptance: the five-minute new-dataset workflow is zero-config except for
-    operator review, with validation diagnostics and deterministic replay.
+    operator review, with validation diagnostics, deterministic replay, and
+    benchmarked graph evidence.
 - RL / optimisation on knobs:
   - Use JAX `nn/` plus `autotune` to learn replay-only or simulator-backed
     policies for `K`, `alpha`, `zeta`, `Psi`, channel weights, and cross-channel

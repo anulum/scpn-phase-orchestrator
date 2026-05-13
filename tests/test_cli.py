@@ -193,6 +193,33 @@ def test_auto_bind_json_out_emits_audit_record(runner, tmp_path):
     assert record["runtime"]["replay_status"] == "proposal_only"
 
 
+def test_auto_bind_infers_sample_rate_from_time_column(runner, tmp_path):
+    csv_path = tmp_path / "signals.csv"
+    csv_path.write_text(
+        "time,grid,load\n0.0,0.0,1.0\n0.5,0.2,0.8\n1.0,0.4,0.6\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(csv_path),
+            "--project-name",
+            "grid_review",
+            "--json-out",
+        ],
+    )
+
+    assert result.exit_code == 0
+    record = json.loads(result.output)
+    provenance = record["binding"]["provenance"]
+    assert provenance["sample_rate_hz"] == pytest.approx(2.0)
+    assert provenance["sample_rate_inference"] == "time_column"
+    assert "discovery_evidence" in provenance
+
+
 def test_auto_bind_rejects_bad_source_with_scrubbed_error(runner, tmp_path):
     csv_path = tmp_path / "bad.csv"
     csv_path.write_text("time,grid\n0.00,not-a-number\n", encoding="utf-8")

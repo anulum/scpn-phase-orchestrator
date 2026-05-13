@@ -14,6 +14,12 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_time_series_csv,
 )
 from scpn_phase_orchestrator.autotune.coupling_est import estimate_coupling
+from scpn_phase_orchestrator.autotune.discovery import (
+    TimeSeriesDiscoveryConfig,
+    TimeSeriesDiscoveryReport,
+    discover_time_series_structure,
+    infer_sample_rate_from_time_column,
+)
 from scpn_phase_orchestrator.autotune.freq_id import (
     FrequencyResult,
     identify_frequencies,
@@ -69,6 +75,9 @@ __all__ = [
     "RewardObservation",
     "ReplayPolicyEvaluator",
     "ReplayPolicySearchResult",
+    "TimeSeriesDiscoveryConfig",
+    "TimeSeriesDiscoveryReport",
+    "discover_time_series_structure",
     "evaluate_knob_policy",
     "estimate_coupling",
     "extract_phases",
@@ -78,6 +87,7 @@ __all__ = [
     "generate_sac_like_proposal",
     "identify_binding_spec",
     "identify_frequencies",
+    "infer_sample_rate_from_time_column",
     "propose_binding_from_event_log",
     "propose_binding_from_graph",
     "propose_binding_from_time_series_csv",

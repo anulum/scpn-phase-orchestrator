@@ -13,9 +13,16 @@ import io
 import json
 import tempfile
 from collections.abc import Mapping, Sequence
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
+from scpn_phase_orchestrator.autotune.discovery import (
+    discover_time_series_structure,
+    infer_sample_rate_from_time_column,
+)
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.exceptions import BindingError
 from scpn_phase_orchestrator.studio.workflow import (
@@ -45,12 +52,10 @@ class _EventLogSourceSummary(ImportedSourceSummary):
 def propose_binding_from_time_series_csv(
     csv_text: str,
     *,
-    sample_rate_hz: float,
+    sample_rate_hz: float | None,
     project_name: str,
 ) -> StudioProjectState:
     """Propose a review-only binding for a tabular time-series replay."""
-    if sample_rate_hz <= 0.0:
-        raise ValueError("sample_rate_hz must be positive")
     payload = csv_text.encode("utf-8")
     reader = csv.DictReader(io.StringIO(csv_text))
     if not reader.fieldnames:
@@ -67,10 +72,20 @@ def propose_binding_from_time_series_csv(
         raise ValueError("CSV must contain at least one signal channel")
     if not rows:
         raise ValueError("CSV must contain at least one sample")
-    _require_numeric_columns(rows, channels)
+    signal_table = _numeric_signal_table(rows, channels)
 
     inferred_channels = _inferred_channels(len(channels), prefer_event=False)
-    sample_period_s = 1.0 / sample_rate_hz
+    resolved_sample_rate_hz, sample_rate_inference = _resolve_sample_rate_hz(
+        sample_rate_hz,
+        rows=rows,
+        fieldnames=reader.fieldnames,
+    )
+    sample_period_s = 1.0 / resolved_sample_rate_hz
+    discovery = discover_time_series_structure(
+        signal_table,
+        columns=channels,
+        sample_period_s=sample_period_s,
+    )
     yaml_text = _binding_yaml(
         project_name=project_name,
         sample_period_s=sample_period_s,
@@ -80,14 +95,21 @@ def propose_binding_from_time_series_csv(
     confidence: dict[str, float] = {
         "phase_quality": _bounded_confidence(min(1.0, len(rows) / 3.0)),
         "channel_coverage": _bounded_confidence(min(1.0, len(channels) / 2.0)),
+        "sindy_sparsity": _bounded_confidence(discovery.sindy_sparsity),
+        "correlation_graph_density": _bounded_confidence(
+            discovery.correlation_graph_density
+        ),
+        "cluster_coverage": _bounded_confidence(discovery.cluster_coverage),
         "validator_acceptance": 1.0 if not validation_errors else 0.0,
     }
     source_columns: list[JsonValue] = []
     source_columns.extend(channels)
     provenance: dict[str, JsonValue] = {
         "input_family": "time_series",
-        "sample_rate_hz": float(sample_rate_hz),
+        "sample_rate_hz": float(resolved_sample_rate_hz),
+        "sample_rate_inference": sample_rate_inference,
         "source_columns": source_columns,
+        "discovery_evidence": discovery.to_audit_record(),
         "validator": "load_binding_spec+validate_binding_spec",
     }
     source = ImportedSourceSummary.from_payload(
@@ -229,18 +251,40 @@ def propose_binding_from_graph(
     )
 
 
-def _require_numeric_columns(
+def _numeric_signal_table(
     rows: Sequence[Mapping[str, str]],
     columns: Sequence[str],
-) -> None:
+) -> np.ndarray:
+    values: list[list[float]] = []
     for row_index, row in enumerate(rows):
+        row_values: list[float] = []
         for column in columns:
             try:
-                float(row[column])
+                value = float(row[column])
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(
                     f"CSV channel {column!r} has non-numeric sample at row {row_index}"
                 ) from exc
+            if not isfinite(value):
+                raise ValueError(
+                    f"CSV channel {column!r} has non-finite sample at row {row_index}"
+                )
+            row_values.append(value)
+        values.append(row_values)
+    return np.asarray(values, dtype=np.float64)
+
+
+def _resolve_sample_rate_hz(
+    sample_rate_hz: float | None,
+    *,
+    rows: Sequence[Mapping[str, str]],
+    fieldnames: Sequence[str],
+) -> tuple[float, str]:
+    if sample_rate_hz is None:
+        return infer_sample_rate_from_time_column(rows, fieldnames)
+    if sample_rate_hz <= 0.0 or not isfinite(sample_rate_hz):
+        raise ValueError("sample_rate_hz must be positive")
+    return float(sample_rate_hz), "explicit"
 
 
 def _event_sequence(value: object) -> tuple[Mapping[str, Any], ...]:
