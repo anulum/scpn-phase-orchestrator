@@ -216,6 +216,12 @@
 - Distributed edge orchestration: multi-node phase consensus with gossip or local Kuramoto coupling, plus WASM/FPGA deployment paths for decentralised operation.
   - Offline hierarchy sync-envelope ingestion and two domainpack replay demos are in place for reduced summaries.
   - Deterministic offline gossip/local-consensus replay is in place via `simulate_hierarchy_gossip_consensus()`, using accepted sync envelopes and caller-supplied neighbour maps without sockets or live actuation. Live transport remains open.
+  - Phase-vector gossip protocol foundation is in place:
+    `PhaseGossipNode` and `PhaseSyncMessage` provide canonical JSON wire
+    messages, digest verification, sequence watermarks, dimension checks,
+    peer timeout handling, bounded circular phase correction, and
+    deterministic lossy-network replay for UPDE node phase states. Owned live
+    transport adapters and cross-machine deployment demos remain open.
 - Digital-twin binding standard: version `binding_spec.yaml` as an open bidirectional live-sync contract for simulators, services, and hardware twins.
   - Digital-twin binding contract foundation is in place: `build_digital_twin_binding_contract()` emits deterministic timing, layer, actuator, N-channel algebra, sync-capability, and contract-hash payloads without opening transport or applying control.
   - Transport-neutral payload validation is in place: digital-twin sync envelopes validate contract hashes, declared capabilities, directions, sequence numbers, and non-empty payloads before a REST/gRPC/Kafka/file/hardware adapter hands data to runtime code.

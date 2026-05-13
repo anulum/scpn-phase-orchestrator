@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `spo scaffold --llm`, including strict JSON proposal validation,
   deterministic binding YAML generation, audit records, tests, and
   documentation.
+- Added a transport-neutral distributed phase synchronisation protocol for
+  UPDE nodes, with canonical wire messages, digest checks, sequence
+  watermarks, bounded circular phase correction, deterministic lossy-gossip
+  replay, tests, and API documentation.
 
 ### Changed
 
