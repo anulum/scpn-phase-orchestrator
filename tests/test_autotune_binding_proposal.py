@@ -120,6 +120,11 @@ def test_time_series_csv_records_phase_sindy_evidence() -> None:
     assert discovery["phase_sindy"]["status"] == "fitted"
     assert discovery["phase_sindy"]["library"] == "kuramoto_sine_phase_differences"
     assert discovery["phase_sindy"]["coupling_edge_count"] >= 1
+    assert discovery["sindy_model_selection"]["candidate_count"] == 2
+    assert discovery["sindy_model_selection"]["selected_library"] in {
+        "affine_state_derivative",
+        "kuramoto_sine_phase_differences",
+    }
     assert "phase_sindy_sparsity" in proposal.binding.confidence_factors
 
 

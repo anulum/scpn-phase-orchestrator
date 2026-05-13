@@ -59,6 +59,7 @@ class TimeSeriesDiscoveryReport:
     columns: tuple[str, ...]
     sindy: Mapping[str, JsonValue]
     phase_sindy: Mapping[str, JsonValue]
+    sindy_model_selection: Mapping[str, JsonValue]
     correlation_graph: Mapping[str, JsonValue]
     clustering: Mapping[str, JsonValue]
 
@@ -95,6 +96,7 @@ class TimeSeriesDiscoveryReport:
             "columns": list(self.columns),
             "sindy": dict(self.sindy),
             "phase_sindy": dict(self.phase_sindy),
+            "sindy_model_selection": dict(self.sindy_model_selection),
             "correlation_graph": dict(self.correlation_graph),
             "clustering": dict(self.clustering),
         }
@@ -183,12 +185,17 @@ def discover_time_series_structure(
         sample_period_s=sample_period_s,
         threshold=cfg.phase_sindy_threshold,
     )
+    sindy_model_selection = _sindy_model_selection(
+        sindy=sindy,
+        phase_sindy=phase_sindy,
+    )
     return TimeSeriesDiscoveryReport(
         sample_period_s=sample_period_s,
         sample_count=int(table.shape[0]),
         columns=column_names,
         sindy=sindy,
         phase_sindy=phase_sindy,
+        sindy_model_selection=sindy_model_selection,
         correlation_graph=correlation_graph,
         clustering=clustering,
     )
@@ -296,9 +303,15 @@ def _sparse_derivative_library(
     library = np.column_stack([np.ones(features.shape[0]), features])
     derivatives = np.gradient(features, sample_period_s, axis=0)
     coefficients, *_ = np.linalg.lstsq(library, derivatives, rcond=None)
+    predictions = library @ coefficients
     active_mask = np.abs(coefficients) >= threshold
     active_terms = int(np.count_nonzero(active_mask))
     total_terms = int(coefficients.size)
+    quality = _regression_quality(
+        observations=derivatives,
+        predictions=predictions,
+        active_terms=active_terms,
+    )
     sparsity = 1.0 if total_terms == 0 else 1.0 - active_terms / total_terms
     term_names = ("1", *columns)
     equations: list[JsonValue] = [
@@ -315,6 +328,8 @@ def _sparse_derivative_library(
         "threshold": threshold,
         "active_terms": active_terms,
         "total_terms": total_terms,
+        "residual_rmse": quality["residual_rmse"],
+        "score": quality["score"],
         "sparsity": float(max(0.0, min(1.0, sparsity))),
         "equations": equations,
     }
@@ -346,6 +361,16 @@ def _phase_sindy_library(
             for coefficient in coefficients
         )
     )
+    predictions = _phase_sindy_predictions(
+        table,
+        coefficients=coefficients,
+    )
+    derivatives = np.diff(np.unwrap(table, axis=0), axis=0) / sample_period_s
+    quality = _regression_quality(
+        observations=derivatives,
+        predictions=predictions,
+        active_terms=active_terms,
+    )
     sparsity = 1.0 if total_terms == 0 else 1.0 - active_terms / total_terms
     coupling_edges = _phase_sindy_edges(
         columns,
@@ -358,6 +383,8 @@ def _phase_sindy_library(
         "threshold": threshold,
         "active_terms": active_terms,
         "total_terms": total_terms,
+        "residual_rmse": quality["residual_rmse"],
+        "score": quality["score"],
         "sparsity": float(max(0.0, min(1.0, sparsity))),
         "coupling_edge_count": len(coupling_edges),
         "coupling_edges": coupling_edges,
@@ -372,6 +399,8 @@ def _skipped_phase_sindy(reason: str, threshold: float) -> dict[str, JsonValue]:
         "threshold": threshold,
         "active_terms": 0,
         "total_terms": 0,
+        "residual_rmse": None,
+        "score": None,
         "sparsity": 1.0,
         "coupling_edge_count": 0,
         "coupling_edges": [],
@@ -422,6 +451,101 @@ def _phase_sindy_edges(
             cast(str, cast(dict[str, JsonValue], edge)["target"]),
         ),
     )
+
+
+def _phase_sindy_predictions(
+    table: np.ndarray,
+    *,
+    coefficients: Sequence[np.ndarray],
+) -> np.ndarray:
+    source = table[:-1, :]
+    predictions = np.zeros_like(source, dtype=np.float64)
+    for target_index, coefficient in enumerate(coefficients):
+        predictions[:, target_index] = float(coefficient[0])
+        term_index = 1
+        for source_index in range(source.shape[1]):
+            if source_index == target_index:
+                continue
+            predictions[:, target_index] += float(coefficient[term_index]) * np.sin(
+                source[:, source_index] - source[:, target_index]
+            )
+            term_index += 1
+    return predictions
+
+
+def _regression_quality(
+    *,
+    observations: np.ndarray,
+    predictions: np.ndarray,
+    active_terms: int,
+) -> dict[str, float]:
+    residual = np.asarray(observations, dtype=np.float64) - np.asarray(
+        predictions,
+        dtype=np.float64,
+    )
+    sample_count = max(1, int(residual.size))
+    residual_sum_squares = float(np.sum(residual * residual))
+    residual_mse = max(residual_sum_squares / sample_count, np.finfo(float).tiny)
+    residual_rmse = float(np.sqrt(residual_mse))
+    score = float(
+        sample_count * np.log(residual_mse) + active_terms * np.log(sample_count)
+    )
+    return {
+        "residual_rmse": residual_rmse,
+        "score": score,
+    }
+
+
+def _sindy_model_selection(
+    *,
+    sindy: Mapping[str, JsonValue],
+    phase_sindy: Mapping[str, JsonValue],
+) -> dict[str, JsonValue]:
+    candidates: list[JsonValue] = [
+        _selection_candidate(_SINDY_LIBRARY, "fitted", sindy),
+        _selection_candidate(
+            _PHASE_SINDY_LIBRARY,
+            str(phase_sindy["status"]),
+            phase_sindy,
+        ),
+    ]
+    fitted_candidates = [
+        cast(dict[str, JsonValue], candidate)
+        for candidate in candidates
+        if cast(dict[str, JsonValue], candidate)["status"] == "fitted"
+        and cast(dict[str, JsonValue], candidate)["score"] is not None
+    ]
+    selected = min(
+        fitted_candidates,
+        key=lambda candidate: (
+            cast(float, candidate["score"]),
+            -cast(float, candidate["sparsity"]),
+            cast(str, candidate["library"]),
+        ),
+    )
+    return {
+        "method": "residual_bic_with_sparsity_tie_break",
+        "candidate_count": len(candidates),
+        "selected_library": cast(str, selected["library"]),
+        "selected_score": cast(float, selected["score"]),
+        "candidates": candidates,
+    }
+
+
+def _selection_candidate(
+    library: str,
+    status: str,
+    payload: Mapping[str, JsonValue],
+) -> dict[str, JsonValue]:
+    return {
+        "library": library,
+        "status": status,
+        "active_terms": cast(int, payload["active_terms"]),
+        "total_terms": cast(int, payload["total_terms"]),
+        "sparsity": cast(float, payload["sparsity"]),
+        "residual_rmse": cast(float | None, payload.get("residual_rmse")),
+        "score": cast(float | None, payload.get("score")),
+    }
 
 
 def _standardise(table: np.ndarray) -> np.ndarray:

@@ -73,6 +73,40 @@ def test_discover_time_series_structure_reports_phase_sindy_edges() -> None:
     assert "phase_sindy_sparsity" in report.confidence_evidence
 
 
+def test_discover_time_series_structure_ranks_sindy_libraries() -> None:
+    times = np.linspace(0.0, 2.4, 25, dtype=np.float64)
+    phases = np.column_stack(
+        [
+            0.8 * times,
+            0.8 * times + 0.35 * np.sin(times),
+            -0.4 * times + 0.2 * np.cos(times),
+        ]
+    )
+
+    report = discover_time_series_structure(
+        phases,
+        columns=("theta_source", "theta_driven", "theta_aux"),
+        sample_period_s=float(times[1] - times[0]),
+    )
+    selection = report.to_audit_record()["sindy_model_selection"]
+
+    assert selection["method"] == "residual_bic_with_sparsity_tie_break"
+    assert selection["candidate_count"] == 2
+    assert selection["selected_library"] in {
+        "affine_state_derivative",
+        "kuramoto_sine_phase_differences",
+    }
+    candidates = selection["candidates"]
+    assert {candidate["library"] for candidate in candidates} == {
+        "affine_state_derivative",
+        "kuramoto_sine_phase_differences",
+    }
+    fitted = [candidate for candidate in candidates if candidate["status"] == "fitted"]
+    assert fitted
+    assert all(np.isfinite(candidate["score"]) for candidate in fitted)
+    assert all(candidate["residual_rmse"] >= 0.0 for candidate in fitted)
+
+
 def test_discover_time_series_structure_marks_non_phase_sindy_skipped() -> None:
     samples = np.asarray(
         [[0.0, 10.0], [1.0, 20.0], [2.0, 30.0], [3.0, 40.0]],
@@ -86,6 +120,9 @@ def test_discover_time_series_structure_marks_non_phase_sindy_skipped() -> None:
     )
 
     assert report.to_audit_record()["phase_sindy"]["status"] == "skipped_non_phase_like"
+    selection = report.to_audit_record()["sindy_model_selection"]
+    assert selection["selected_library"] == "affine_state_derivative"
+    assert selection["candidate_count"] == 2
     assert "phase_sindy_sparsity" not in report.confidence_evidence
 
 
