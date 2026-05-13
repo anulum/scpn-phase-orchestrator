@@ -109,6 +109,24 @@ __all__ = [
     "local_order_parameter",
     "chimera_index",
     "detect_chimera",
+    "DifferentiableSupervisorConfig",
+    "DifferentiableSupervisorPolicy",
+    "SupervisorAction",
+    "KuramotoSupervisorScenario",
+    "SupervisorLossAux",
+    "SupervisorPPOBatch",
+    "SupervisorPPOAux",
+    "masked_order_parameter",
+    "apply_supervisor_action",
+    "closed_loop_supervisor_loss",
+    "supervisor_train_step",
+    "pack_supervisor_action",
+    "unpack_supervisor_action",
+    "sample_supervisor_action",
+    "supervisor_action_log_prob",
+    "ppo_supervisor_loss",
+    "ppo_supervisor_train_step",
+    "control_actions_from_supervisor",
 ]
 
 _FUNCTIONAL = {
@@ -184,6 +202,26 @@ _CHIMERA = {
     "chimera_index",
     "detect_chimera",
 }
+_SUPERVISOR = {
+    "DifferentiableSupervisorConfig",
+    "DifferentiableSupervisorPolicy",
+    "SupervisorAction",
+    "KuramotoSupervisorScenario",
+    "SupervisorLossAux",
+    "SupervisorPPOBatch",
+    "SupervisorPPOAux",
+    "masked_order_parameter",
+    "apply_supervisor_action",
+    "closed_loop_supervisor_loss",
+    "supervisor_train_step",
+    "pack_supervisor_action",
+    "unpack_supervisor_action",
+    "sample_supervisor_action",
+    "supervisor_action_log_prob",
+    "ppo_supervisor_loss",
+    "ppo_supervisor_train_step",
+    "control_actions_from_supervisor",
+}
 
 
 def __getattr__(name: str) -> object:  # noqa: ANN204
@@ -248,5 +286,9 @@ def _resolve(name: str) -> object:
         from . import chimera
 
         return getattr(chimera, name)
+    if name in _SUPERVISOR:
+        from . import supervisor
+
+        return getattr(supervisor, name)
     msg = f"module 'scpn_phase_orchestrator.nn' has no attribute {name!r}"
     raise AttributeError(msg)

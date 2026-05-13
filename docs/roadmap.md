@@ -63,7 +63,7 @@ control engineers who do not already live in phase dynamics.
 |------|----------------|
 | Dynamic higher-order topology adaptation | foundation, plasma-control demo, traffic-flow/network-security transfer-entropy demos, Lyapunov mutation validation, and pairwise-support policy hardening are implemented; broader multi-domain Lyapunov policy validation remains open |
 | Causal intervention engine | counterfactual rollout foundation, live causal-graph learning, and cardiac/power-grid/traffic-flow/network-security attribution demos are implemented; larger causal-model learners and additional attribution demos remain open |
-| RL/autotune layer on JAX `nn` backend | reward evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, adaptive replay refinement, and PPO-like/SAC-like/hybrid-physics proposal generators are implemented behind non-actuating replay gates; real learner dependencies and benchmarks remain future work |
+| RL/autotune layer on JAX `nn` backend | reward evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, adaptive replay refinement, PPO-like/SAC-like/hybrid-physics proposal generators, and a differentiable Equinox supervisor objective are implemented behind non-actuating replay gates; large-scale learner benchmarks remain future work |
 | FEP / predictive-coding supervisor backend | predictive supervisor foundation, reusable hierarchy assessment, and power-grid/cardiac hierarchy proofs are implemented; deeper predictive-coding world-model integration remains open |
 | Full N-channel algebra | channel algebra summary, resolved-config integration, audit-header coverage, report JSON/text exposure, reusable report summary payloads, delayed/uncertain classification, runtime policy records, delayed/uncertain supervisor execution with audit evidence, and replay-only channel-weight/cross-coupling optimisation surfaces are implemented; deeper learner-backed optimisation remains open |
 | Hierarchical orchestration | reduced-summary parent orchestration, bounded escalation audit records, deterministic edge/cloud sync envelopes, strict transport runtime validation, decoded JSONL/REST/frame adapter boundaries, power-grid/cardiac replay demos, and offline gossip consensus replay are implemented; live owned transports and broader multi-domain demos remain open |
@@ -83,7 +83,7 @@ items until they have implementation evidence, tests, and reproducible docs.
 | Move | Acceptance shape |
 |------|------------------|
 | Auto-discovery / data-driven binding | raw CSV, sensor logs, and event streams produce reviewable oscillator, channel, initial `K`, and binding proposals via SINDy, coupling estimation, clustering, and validation diagnostics; the five-minute new-dataset path becomes genuinely zero-config except for operator review |
-| RL / optimisation on knobs | JAX `nn/` and `autotune` train replay-only or simulator-backed policies for `K`, `alpha`, `zeta`, `Psi`, channel weights, and cross-channel gains using `R_good - penalty(R_bad, safety, regime churn)` objectives; learned proposals remain auditable and hybridised with supervisor rules before any live actuation |
+| RL / optimisation on knobs | JAX `nn/` and `autotune` train replay-only or simulator-backed policies for `K`, `alpha`, `zeta`, `Psi`, channel weights, and cross-channel gains using `R_good - penalty(R_bad, safety, regime churn)` objectives; `nn.supervisor` now provides a differentiable closed-loop policy/loss surface, while full PPO/SAC experiments, baselines, and publication artefacts remain open |
 | Hierarchical and distributed orchestration | nested edge supervisors maintain local coherence, exchange bounded aggregate evidence upward, and support live owned transports after offline replay and non-socket adapter gates prove sequence, protocol, and safety semantics |
 | Formal verification export | Petri nets, policy DSL, STL monitors, and supervisor transitions export to PRISM, SPIN, TLA+, SMT, or equivalent proof workflows with reproducible safety artefacts for plasma, power, and medical-style domainpacks |
 | Neuromorphic and quantum tighter integration | validated phase-control plans emit Lava/BrainScaleS-style schedules and QPU control schedules through partner bridges, with execution disabled until real target evidence, hashes, parity, and operator approval exist |
@@ -110,7 +110,7 @@ These areas may evolve behind explicit experimental flags or separate guides:
 | Area | Roadmap stance |
 |------|----------------|
 | ML-assisted binding proposals | promising, but outputs must remain reviewable binding specs |
-| Learned supervisor policies | research path only until auditability and safety constraints are clear |
+| Learned supervisor policies | differentiable `nn.supervisor` policy surface exists for replay/simulator training; live use remains research-only until auditability, safety constraints, and benchmark evidence are complete |
 | Distributed edge orchestration | useful for multi-node deployments; keep audit and replay semantics central |
 | Formal verification exports | desirable for safety-critical policies, but separate from normal user onboarding |
 | Neuromorphic and quantum-native backends | bridge work remains experimental unless a maintained workload depends on it |

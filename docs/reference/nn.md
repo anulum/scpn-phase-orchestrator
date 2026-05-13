@@ -28,6 +28,7 @@ nn/
 ├── chimera.py             Chimera state detection
 ├── spectral.py            Laplacian spectral analysis
 ├── training.py            Loss functions + training loop
+├── supervisor.py          Differentiable supervisor policy + rollout loss
 └── __init__.py            Runtime-aware lazy public API
 ```
 
@@ -609,7 +610,94 @@ Full loop. The inner step is `eqx.filter_jit`-compiled.
 
 ---
 
-## 10. GPU Benchmark Results
+## 10. Differentiable Supervisor (`supervisor.py`)
+
+The differentiable supervisor is the ML-facing counterpart to
+`supervisor.policy.SupervisorPolicy`. It does not execute live actuation
+directly. Instead, it learns continuous `K` and `zeta` proposals inside a
+JAX-differentiable Kuramoto rollout, then detaches those proposals into the
+existing `ControlAction` path where mapper limits, safety projection, and
+operator gates still apply.
+
+### Main types
+
+| Symbol | Purpose |
+|---|---|
+| `DifferentiableSupervisorConfig` | Static Equinox policy and objective configuration |
+| `DifferentiableSupervisorPolicy` | MLP policy returning bounded continuous supervisor actions |
+| `KuramotoSupervisorScenario` | Phase, frequency, coupling, mask, and rollout horizon bundle |
+| `SupervisorAction` | Continuous `delta_K_global`, `delta_zeta_global`, and partition `delta_K` output |
+| `SupervisorLossAux` | Final `R_good`, `R_bad`, energy, and smoothness diagnostics |
+
+### Closed-loop objective
+
+`closed_loop_supervisor_loss(policy, scenario)` composes the policy with
+`kuramoto_forward` through `jax.lax.scan`. The minimised loss is the negative
+of the coherence-control reward plus penalties:
+
+$$
+\mathcal{L}
+= -\left(R_{good} - w_{bad} R_{bad}\right)
++ w_E \|u\|_2^2
++ w_S \|\Delta u\|_2^2
+$$
+
+This is a differentiable policy-gradient surface suitable for optax updates.
+The repository also ships a squashed-Gaussian action sampler and clipped PPO
+loss/train-step primitives for on-policy RL experiments. Large-scale PPO/SAC
+baselines and preprint artefacts remain research work until measured,
+reproducible experiments exist.
+
+```python
+import equinox as eqx
+import jax
+import jax.numpy as jnp
+import optax
+
+from scpn_phase_orchestrator.nn import (
+    DifferentiableSupervisorConfig,
+    DifferentiableSupervisorPolicy,
+    KuramotoSupervisorScenario,
+    control_actions_from_supervisor,
+    sample_supervisor_action,
+    supervisor_train_step,
+)
+
+scenario = KuramotoSupervisorScenario(
+    phases=jnp.array([0.0, 0.1, 2.7, 3.1]),
+    omegas=jnp.array([0.04, 0.03, -0.03, -0.04]),
+    base_K=jnp.full((4, 4), 0.03) - jnp.eye(4) * 0.03,
+    good_mask=jnp.array([1.0, 1.0, 0.0, 0.0]),
+    bad_mask=jnp.array([0.0, 0.0, 1.0, 1.0]),
+    dt=0.02,
+    inner_steps=4,
+    horizon=3,
+)
+policy = DifferentiableSupervisorPolicy(
+    DifferentiableSupervisorConfig(n_oscillators=4),
+    key=jax.random.PRNGKey(0),
+)
+optimizer = optax.adam(1e-3)
+opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+policy, opt_state, loss = supervisor_train_step(
+    policy,
+    scenario,
+    opt_state,
+    optimizer,
+)
+sampled_action, log_prob = sample_supervisor_action(
+    policy,
+    scenario,
+    key=jax.random.PRNGKey(1),
+)
+actions = control_actions_from_supervisor(policy(scenario), ttl_s=5.0)
+```
+
+::: scpn_phase_orchestrator.nn.supervisor
+
+---
+
+## 11. GPU Benchmark Results
 
 All benchmarks use the same `tools/gpu_benchmark.py` suite. 9 benchmark
 suites, checkpoint/resume, saves after each benchmark.
@@ -673,7 +761,7 @@ only when the underlying model deviates from standard Kuramoto.
 
 ---
 
-## 11. Design Decisions
+## 12. Design Decisions
 
 **Why JAX, not PyTorch?** `jax.lax.scan` compiles the full ODE integration
 loop into a single XLA kernel. PyTorch's eager mode would require one kernel
@@ -694,7 +782,7 @@ the functional API.
 
 ---
 
-## 12. References
+## 13. References
 
 - Kuramoto, Y. (1975). Self-entrainment of a population of coupled non-linear oscillators.
 - Winfree, A.T. (1967). Biological rhythms and the behavior of populations of coupled oscillators. *J. Theor. Biol.* 16(1):15–42.
@@ -708,4 +796,5 @@ the functional API.
 - Kuramoto, Y. & Battogtokh, D. (2002). Coexistence of coherence and incoherence in nonlocally coupled phase oscillators. *Nonlinear Phenom. Complex Syst.* 5(4):380–385.
 - Gambuzza, L.V. et al. (2023). Stability of synchronization in simplicial complexes. *Nature Physics* 17(7):1093–1098.
 - Dorfler, F. & Bullo, F. (2014). Synchronization in complex networks of phase oscillators: A survey. *Automatica* 50(6):1539–1564.
+- Schulman, J. et al. (2017). Proximal Policy Optimization Algorithms. *arXiv:1707.06347*.
 - Böhm, F. & Schumacher, J. (2020). Graph coloring with physics-inspired graph neural networks. *arXiv:2009.00490*.

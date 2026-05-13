@@ -49,10 +49,10 @@ smoke tests that intentionally run without a GPU/TPU.
               training.py     UDEKuramotoLayer   BOLDGenerator
               (loss + optim)  (physics + MLP)    (hemodynamics)
                     │
-          ┌─────────┼──────────┐
-          ↓         ↓          ↓
-     InverseKuramoto  Reservoir   OIM
-     (coupling inference) (readout) (combinatorial)
+          ┌─────────┼──────────┬───────────────┐
+          ↓         ↓          ↓               ↓
+     InverseKuramoto  Reservoir   OIM   DifferentiableSupervisor
+     (coupling inference) (readout) (combinatorial) (closed-loop policy)
 ```
 
 ---
@@ -342,6 +342,62 @@ model, losses = train(
 | `generate_chimera_data(N, T, dt, coupling, range, key)` | `(K, omegas, trajectory)` |
 
 ::: scpn_phase_orchestrator.nn.training
+
+---
+
+## Differentiable Supervisor
+
+`nn.supervisor` provides the differentiable neural policy surface for
+closed-loop Kuramoto control. It is intentionally separate from
+`supervisor.policy.SupervisorPolicy`: the neural policy remains a
+JAX/equinox module trained over simulator or replay rollouts, while live
+actuation still flows through `ControlAction`, mapper limits, and safety gates.
+
+The built-in objective maximizes good-partition synchrony while penalizing
+bad-partition synchrony, control energy, and abrupt action changes. The module
+also includes a squashed-Gaussian action sampler and clipped PPO loss/train
+step for on-policy RL experiments. This is a production-quality differentiable
+training surface, not a claim that large-scale RL benchmarks or a preprint have
+already been completed.
+
+```python
+import equinox as eqx
+import jax
+import jax.numpy as jnp
+import optax
+
+from scpn_phase_orchestrator.nn import (
+    DifferentiableSupervisorConfig,
+    DifferentiableSupervisorPolicy,
+    KuramotoSupervisorScenario,
+    supervisor_train_step,
+)
+
+scenario = KuramotoSupervisorScenario(
+    phases=jnp.array([0.0, 0.1, 2.7, 3.1]),
+    omegas=jnp.array([0.04, 0.03, -0.03, -0.04]),
+    base_K=jnp.full((4, 4), 0.03) - jnp.eye(4) * 0.03,
+    good_mask=jnp.array([1.0, 1.0, 0.0, 0.0]),
+    bad_mask=jnp.array([0.0, 0.0, 1.0, 1.0]),
+    dt=0.02,
+    inner_steps=4,
+    horizon=3,
+)
+policy = DifferentiableSupervisorPolicy(
+    DifferentiableSupervisorConfig(n_oscillators=4),
+    key=jax.random.PRNGKey(0),
+)
+optimizer = optax.adam(1e-3)
+opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+policy, opt_state, loss = supervisor_train_step(
+    policy,
+    scenario,
+    opt_state,
+    optimizer,
+)
+```
+
+::: scpn_phase_orchestrator.nn.supervisor
 
 ---
 

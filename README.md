@@ -87,6 +87,7 @@ device = require_accelerator()  # raises on CPU-only JAX runtimes
 | UDE-Kuramoto | Physics backbone sin(Δθ) + learned neural residual |
 | Inverse Pipeline | Infer coupling K and frequencies ω from observed data |
 | OIM Graph Coloring | Oscillator Ising machine for combinatorial optimization |
+| Differentiable Supervisor | Equinox policy for closed-loop `K`/`zeta` proposals with `ControlAction` adapter |
 
 All functions are JIT-compilable, vmap-compatible, and differentiable.
 Install: `pip install scpn-phase-orchestrator[nn]`
