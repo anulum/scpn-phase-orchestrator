@@ -17,6 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.audit.stream import EventStreamWriter
 from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
@@ -26,17 +27,38 @@ __all__ = ["AuditLogger"]
 class AuditLogger:
     """Append-only JSONL audit log for UPDE simulation steps."""
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, *, event_stream: str | Path | None = None):
         self._path = Path(path)
+        self._prev_hash = self._load_previous_hash()
         self._fh = self._path.open("a", encoding="utf-8", buffering=1)
-        self._prev_hash: str = "0" * 64
+        self._event_stream = (
+            EventStreamWriter(event_stream) if event_stream is not None else None
+        )
+
+    def _load_previous_hash(self) -> str:
+        if not self._path.exists() or self._path.stat().st_size == 0:
+            return "0" * 64
+        previous = "0" * 64
+        with self._path.open(encoding="utf-8") as fh:
+            for line in fh:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                record = json.loads(stripped)
+                stored = record.get("_hash")
+                if isinstance(stored, str) and len(stored) == 64:
+                    previous = stored
+        return previous
 
     def _write_record(self, record: dict) -> None:
         clean = {k: v for k, v in record.items() if k != "_hash"}
         json_line = json.dumps(clean, separators=(",", ":"), sort_keys=True)
         digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()
         self._prev_hash = digest
-        self._fh.write(json.dumps({**clean, "_hash": digest}, sort_keys=True) + "\n")
+        stored = {**clean, "_hash": digest}
+        self._fh.write(json.dumps(stored, sort_keys=True) + "\n")
+        if self._event_stream is not None:
+            self._event_stream.write(stored)
 
     def log_header(
         self,
@@ -136,6 +158,8 @@ class AuditLogger:
         """Flush and close the audit log file handle."""
         self._fh.flush()
         self._fh.close()
+        if self._event_stream is not None:
+            self._event_stream.close()
 
     def __enter__(self) -> AuditLogger:
         return self

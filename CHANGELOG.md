@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tests.
 - Added a WebGPU UPDE backend package generator with WGSL compute shader,
   browser ES-module runner, dispatcher registration, tests, and documentation.
+- Added a protobuf-backed audit event stream with hash-chained envelopes,
+  `spo watch` live replay, tests, and documentation.
 
 ### Changed
 

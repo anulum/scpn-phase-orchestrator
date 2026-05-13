@@ -1,9 +1,17 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+<!-- SCPN Phase Orchestrator — audit API reference -->
+
 # Audit
 
-SHA256-chained audit logging and deterministic replay for regulatory
-compliance, debugging, and formal verification. Every supervisor
-decision, regime transition, and actuation command is recorded with
-a cryptographic hash chain that detects post-hoc tampering.
+SHA256-chained audit logging, protobuf event streaming, and deterministic
+replay for regulatory compliance, debugging, and formal verification. Every
+supervisor decision, regime transition, and actuation command can be recorded
+with tamper-evident JSONL records and a parallel event-sourced protobuf stream.
 
 ## Motivation
 
@@ -17,8 +25,8 @@ control, medical devices). These domains require:
 3. **Reproducibility** — given the same inputs and code version, the
    system must produce identical outputs
 
-The audit subsystem provides all three via hash-chained logging and
-deterministic replay.
+The audit subsystem provides all three via hash-chained logging,
+event-sourced streaming, and deterministic replay.
 
 ## Hash Chain Structure
 
@@ -43,24 +51,18 @@ includes `channel_algebra`, covering required and optional channels, derived
 channels, runtime evidence channels, group membership, coupling participants,
 and missing required channel evidence.
 
-Design follows NIST SP 800-92 (Guide to Computer Security Log Management)
-adapted for real-time control systems.
-
 ## Audit Logger
 
-Appends timestamped, SHA256-chained records to a JSONL audit trail.
-Thread-safe (uses a lock for concurrent writes). Flushes after each
-record to prevent data loss on crash.
+Appends timestamped, SHA256-chained records to a JSONL audit trail. When
+`event_stream` is supplied, the same stored records are also appended to a
+length-delimited protobuf stream.
 
 ```python
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 
-logger = AuditLogger("audit.jsonl")
-logger.log("regime_transition", {"from": "nominal", "to": "degraded", "R": 0.55})
-logger.log("actuation", {"knob": "K", "value": 0.3, "ttl_s": 5.0})
-
-# Verify chain integrity
-assert logger.verify_chain()
+logger = AuditLogger("audit.jsonl", event_stream="audit.spoa")
+logger.log_event("regime_transition", {"from": "nominal", "to": "degraded"})
+logger.close()
 ```
 
 ::: scpn_phase_orchestrator.audit.logger
@@ -91,6 +93,28 @@ if divergences:
 
 ::: scpn_phase_orchestrator.audit.replay
 
+## Protobuf Event Stream
+
+`scpn_phase_orchestrator.audit.stream` provides the event-sourced stream layer.
+The schema is tracked in `proto/audit.proto` and packaged as
+`scpn_phase_orchestrator/audit/audit.proto`.
+
+```python
+from scpn_phase_orchestrator.audit.stream import (
+    read_event_stream,
+    verify_event_stream_integrity,
+)
+
+events = read_event_stream("audit.spoa")
+ok, verified = verify_event_stream_integrity(events)
+```
+
+The stream is not a replacement for deterministic replay; it is the live
+transport for the same audit records. The JSONL file remains the compatibility
+format for existing reports and replay tooling.
+
+::: scpn_phase_orchestrator.audit.stream
+
 ## Pipeline integration
 
 The audit logger sits at the output of the supervisor loop:
@@ -104,6 +128,7 @@ SupervisorPolicy.decide() ──→ list[ControlAction]
                                    Logger
                                      │
                               audit.jsonl (append)
+                              audit.spoa (append)
                                      │
                               SHA-256 chain
 ```
@@ -115,7 +140,7 @@ the system did and why.
 ## AuditLogger API
 
 ```python
-AuditLogger(log_path: str | Path)
+AuditLogger(log_path: str | Path, *, event_stream: str | Path | None = None)
 ```
 
 | Method | Signature | Description |

@@ -20,6 +20,12 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.audit.stream import (
+    AuditStreamEvent,
+    iter_event_stream,
+    read_event_stream,
+    verify_event_stream_integrity,
+)
 from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_event_log,
     propose_binding_from_graph,
@@ -485,8 +491,20 @@ def policy_dry_run(
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.option("--steps", default=100, type=int, help="Simulation steps")
 @click.option("--audit", default=None, type=click.Path(), help="Audit log (JSONL)")
+@click.option(
+    "--audit-stream",
+    default=None,
+    type=click.Path(),
+    help="Audit event stream (length-delimited protobuf)",
+)
 @click.option("--seed", default=42, type=int, help="RNG seed")
-def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
+def run(
+    binding_spec: str,
+    steps: int,
+    audit: str | None,
+    audit_stream: str | None,
+    seed: int,
+) -> None:
     """Run simulation from a binding spec."""
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
@@ -635,7 +653,16 @@ def run(binding_spec: str, steps: int, audit: str | None, seed: int) -> None:
             sequence=spec.drivers.symbolic["sequence"],
         )
     control_interval = max(1, round(spec.control_period_s / spec.sample_period_s))
-    audit_logger = AuditLogger(audit) if audit else None
+    audit_logger = (
+        AuditLogger(audit, event_stream=audit_stream)
+        if audit
+        else AuditLogger(
+            Path(audit_stream).with_suffix(".jsonl"),
+            event_stream=audit_stream,
+        )
+        if audit_stream
+        else None
+    )
     if audit_logger is not None:
         audit_logger.log_header(
             n_oscillators=n_osc,
@@ -918,6 +945,86 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
         else:
             click.echo(f"Determinism FAILED at transition {n}", err=True)
             raise SystemExit(1)
+
+
+def _watch_line(event: AuditStreamEvent) -> str:
+    payload = event.payload
+    if event.event_type == "step":
+        step = _int_value(payload.get("step"))
+        regime = str(payload.get("regime", "unknown"))
+        stability = _float_value(payload.get("stability"))
+        return (
+            f"#{event.sequence} step step={step} regime={regime} "
+            f"stability={stability:.4f} hash={event.event_hash[:12]}"
+        )
+    if event.event_type == "header":
+        n_osc = _int_value(payload.get("n_oscillators"))
+        dt = _float_value(payload.get("dt"))
+        return (
+            f"#{event.sequence} header n_oscillators={n_osc} "
+            f"dt={dt:.6g} hash={event.event_hash[:12]}"
+        )
+    step_value = payload.get("step")
+    suffix = f" step={step_value}" if isinstance(step_value, int) else ""
+    return f"#{event.sequence} {event.event_type}{suffix} hash={event.event_hash[:12]}"
+
+
+@main.command()
+@click.argument("stream_path", type=click.Path(exists=True))
+@click.option(
+    "--format",
+    "stream_format",
+    type=click.Choice(["protobuf"]),
+    default="protobuf",
+    show_default=True,
+    help="Audit stream encoding.",
+)
+@click.option("--from-start", is_flag=True, help="Replay existing events first")
+@click.option("--max-events", default=None, type=int, help="Stop after N events")
+@click.option("--poll-interval", default=0.2, type=float, help="Tail poll interval")
+def watch(
+    stream_path: str,
+    stream_format: str,
+    from_start: bool,
+    max_events: int | None,
+    poll_interval: float,
+) -> None:
+    """Tail and replay the live audit event stream."""
+    if max_events is not None and max_events < 1:
+        click.echo("ERROR: --max-events must be >= 1", err=True)
+        raise SystemExit(1)
+    if poll_interval <= 0.0:
+        click.echo("ERROR: --poll-interval must be positive", err=True)
+        raise SystemExit(1)
+    if stream_format != "protobuf":
+        click.echo("ERROR: unsupported stream format", err=True)
+        raise SystemExit(1)
+
+    events: list[AuditStreamEvent] = []
+    try:
+        if from_start and max_events is None:
+            events = read_event_stream(stream_path)
+            for event in events:
+                click.echo(_watch_line(event))
+        else:
+            for event in iter_event_stream(
+                stream_path,
+                from_start=from_start,
+                poll_interval_s=poll_interval,
+            ):
+                events.append(event)
+                click.echo(_watch_line(event))
+                if max_events is not None and len(events) >= max_events:
+                    break
+    except ValueError as exc:
+        click.echo(f"ERROR: {exc}", err=True)
+        raise SystemExit(1) from exc
+
+    ok, verified = verify_event_stream_integrity(events)
+    status = "OK" if ok else "FAILED"
+    click.echo(f"stream integrity: {status} ({verified} events)")
+    if not ok:
+        raise SystemExit(1)
 
 
 @main.command()

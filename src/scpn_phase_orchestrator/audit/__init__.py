@@ -10,5 +10,18 @@ from __future__ import annotations
 
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.audit.stream import (
+    AuditStreamEvent,
+    EventStreamWriter,
+    read_event_stream,
+    verify_event_stream_integrity,
+)
 
-__all__ = ["AuditLogger", "ReplayEngine"]
+__all__ = [
+    "AuditLogger",
+    "AuditStreamEvent",
+    "EventStreamWriter",
+    "ReplayEngine",
+    "read_event_stream",
+    "verify_event_stream_integrity",
+]

@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Commercial license available
+// © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+// © Code 2020–2026 Miroslav Šotek. All rights reserved.
+// ORCID: 0009-0009-3560-0851
+// Contact: www.anulum.li | protoscience@anulum.li
+// SCPN Phase Orchestrator — audit event-stream schema
+
+syntax = "proto3";
+
+package spo.audit;
+
+import "google/protobuf/timestamp.proto";
+
+message AuditEnvelope {
+  uint32 schema_version = 1;
+  string stream_id = 2;
+  uint64 sequence = 3;
+  string event_type = 4;
+  google.protobuf.Timestamp recorded_at = 5;
+  string source = 6;
+  string previous_hash = 7;
+  string payload_json = 8;
+  string payload_sha256 = 9;
+  string event_hash = 10;
+}
