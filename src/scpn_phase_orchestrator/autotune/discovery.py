@@ -17,6 +17,7 @@ from typing import cast
 
 import numpy as np
 
+from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 from scpn_phase_orchestrator.studio.workflow import JsonValue
 
 __all__ = [
@@ -28,6 +29,8 @@ __all__ = [
 
 _TIME_COLUMNS = frozenset({"time", "timestamp", "t"})
 _SINDY_LIBRARY = "affine_state_derivative"
+_PHASE_SINDY_LIBRARY = "kuramoto_sine_phase_differences"
+_PHASE_COLUMN_MARKERS = ("phase", "theta", "angle", "phi")
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,12 +39,15 @@ class TimeSeriesDiscoveryConfig:
 
     correlation_threshold: float = 0.75
     sindy_threshold: float = 0.05
+    phase_sindy_threshold: float = 0.05
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.correlation_threshold <= 1.0:
             raise ValueError("correlation_threshold must be in [0, 1]")
         if self.sindy_threshold < 0.0 or not isfinite(self.sindy_threshold):
             raise ValueError("sindy_threshold must be finite and non-negative")
+        if self.phase_sindy_threshold < 0.0 or not isfinite(self.phase_sindy_threshold):
+            raise ValueError("phase_sindy_threshold must be finite and non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +58,7 @@ class TimeSeriesDiscoveryReport:
     sample_count: int
     columns: tuple[str, ...]
     sindy: Mapping[str, JsonValue]
+    phase_sindy: Mapping[str, JsonValue]
     correlation_graph: Mapping[str, JsonValue]
     clustering: Mapping[str, JsonValue]
 
@@ -70,12 +77,24 @@ class TimeSeriesDiscoveryReport:
         largest_cluster_size = cast(int, self.clustering["largest_cluster_size"])
         return float(largest_cluster_size) / float(len(self.columns))
 
+    @property
+    def confidence_evidence(self) -> dict[str, float]:
+        factors = {
+            "sindy_sparsity": self.sindy_sparsity,
+            "correlation_graph_density": self.correlation_graph_density,
+            "cluster_coverage": self.cluster_coverage,
+        }
+        if self.phase_sindy.get("status") == "fitted":
+            factors["phase_sindy_sparsity"] = cast(float, self.phase_sindy["sparsity"])
+        return factors
+
     def to_audit_record(self) -> dict[str, JsonValue]:
         return {
             "sample_period_s": self.sample_period_s,
             "sample_count": self.sample_count,
             "columns": list(self.columns),
             "sindy": dict(self.sindy),
+            "phase_sindy": dict(self.phase_sindy),
             "correlation_graph": dict(self.correlation_graph),
             "clustering": dict(self.clustering),
         }
@@ -158,11 +177,18 @@ def discover_time_series_structure(
         sample_period_s=sample_period_s,
         threshold=cfg.sindy_threshold,
     )
+    phase_sindy = _phase_sindy_library(
+        table,
+        column_names,
+        sample_period_s=sample_period_s,
+        threshold=cfg.phase_sindy_threshold,
+    )
     return TimeSeriesDiscoveryReport(
         sample_period_s=sample_period_s,
         sample_count=int(table.shape[0]),
         columns=column_names,
         sindy=sindy,
+        phase_sindy=phase_sindy,
         correlation_graph=correlation_graph,
         clustering=clustering,
     )
@@ -292,6 +318,110 @@ def _sparse_derivative_library(
         "sparsity": float(max(0.0, min(1.0, sparsity))),
         "equations": equations,
     }
+
+
+def _phase_sindy_library(
+    table: np.ndarray,
+    columns: tuple[str, ...],
+    *,
+    sample_period_s: float,
+    threshold: float,
+) -> dict[str, JsonValue]:
+    if table.shape[1] < 2:
+        return _skipped_phase_sindy("requires_at_least_two_phase_columns", threshold)
+    if table.shape[0] < 3:
+        return _skipped_phase_sindy("requires_at_least_three_samples", threshold)
+    if not _is_phase_like_table(table, columns):
+        return _skipped_phase_sindy("skipped_non_phase_like", threshold)
+
+    sindy = PhaseSINDy(threshold=threshold)
+    coefficients = sindy.fit(
+        np.ascontiguousarray(table, dtype=np.float64), sample_period_s
+    )
+    equations: list[JsonValue] = list(sindy.get_equations())
+    total_terms = int(sum(coefficient.size for coefficient in coefficients))
+    active_terms = int(
+        sum(
+            np.count_nonzero(np.abs(coefficient) >= threshold)
+            for coefficient in coefficients
+        )
+    )
+    sparsity = 1.0 if total_terms == 0 else 1.0 - active_terms / total_terms
+    coupling_edges = _phase_sindy_edges(
+        columns,
+        coefficients=coefficients,
+        threshold=threshold,
+    )
+    return {
+        "status": "fitted",
+        "library": _PHASE_SINDY_LIBRARY,
+        "threshold": threshold,
+        "active_terms": active_terms,
+        "total_terms": total_terms,
+        "sparsity": float(max(0.0, min(1.0, sparsity))),
+        "coupling_edge_count": len(coupling_edges),
+        "coupling_edges": coupling_edges,
+        "equations": equations,
+    }
+
+
+def _skipped_phase_sindy(reason: str, threshold: float) -> dict[str, JsonValue]:
+    return {
+        "status": reason,
+        "library": _PHASE_SINDY_LIBRARY,
+        "threshold": threshold,
+        "active_terms": 0,
+        "total_terms": 0,
+        "sparsity": 1.0,
+        "coupling_edge_count": 0,
+        "coupling_edges": [],
+        "equations": [],
+    }
+
+
+def _is_phase_like_table(table: np.ndarray, columns: tuple[str, ...]) -> bool:
+    if any(
+        marker in column.strip().lower()
+        for column in columns
+        for marker in _PHASE_COLUMN_MARKERS
+    ):
+        return True
+    ranges = np.ptp(table, axis=0)
+    return bool(np.all(ranges <= 4.0 * np.pi))
+
+
+def _phase_sindy_edges(
+    columns: tuple[str, ...],
+    *,
+    coefficients: Sequence[np.ndarray],
+    threshold: float,
+) -> list[JsonValue]:
+    edges: list[JsonValue] = []
+    for target_index, coefficient in enumerate(coefficients):
+        term_index = 1
+        for source_index, source_column in enumerate(columns):
+            if source_index == target_index:
+                continue
+            strength = float(coefficient[term_index])
+            term_index += 1
+            if abs(strength) < threshold:
+                continue
+            edges.append(
+                {
+                    "source": source_column,
+                    "target": columns[target_index],
+                    "coefficient": strength,
+                    "abs_coefficient": abs(strength),
+                }
+            )
+    return sorted(
+        edges,
+        key=lambda edge: (
+            -cast(float, cast(dict[str, JsonValue], edge)["abs_coefficient"]),
+            cast(str, cast(dict[str, JsonValue], edge)["source"]),
+            cast(str, cast(dict[str, JsonValue], edge)["target"]),
+        ),
+    )
 
 
 def _standardise(table: np.ndarray) -> np.ndarray:

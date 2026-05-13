@@ -67,10 +67,11 @@ diagnostics.
 ## Time-Series Discovery Evidence
 
 The discovery module extracts deterministic review evidence from raw
-time-series tables: sparse derivative regressions, correlation graph edges,
-connected-component clusters, and regular time-column sample-rate inference.
-The reports are JSON-ready provenance for binding review and do not promote
-learned graph inference or actuation.
+time-series tables: sparse derivative regressions, phase-aware Kuramoto SINDy
+fits for phase-like columns, correlation graph edges, connected-component
+clusters, and regular time-column sample-rate inference. Non-phase data carries
+an explicit phase-SINDy skipped status. The reports are JSON-ready provenance
+for binding review and do not promote learned graph inference or actuation.
 
 ::: scpn_phase_orchestrator.autotune.discovery
 

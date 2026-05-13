@@ -95,13 +95,14 @@ def propose_binding_from_time_series_csv(
     confidence: dict[str, float] = {
         "phase_quality": _bounded_confidence(min(1.0, len(rows) / 3.0)),
         "channel_coverage": _bounded_confidence(min(1.0, len(channels) / 2.0)),
-        "sindy_sparsity": _bounded_confidence(discovery.sindy_sparsity),
-        "correlation_graph_density": _bounded_confidence(
-            discovery.correlation_graph_density
-        ),
-        "cluster_coverage": _bounded_confidence(discovery.cluster_coverage),
         "validator_acceptance": 1.0 if not validation_errors else 0.0,
     }
+    confidence.update(
+        {
+            name: _bounded_confidence(value)
+            for name, value in discovery.confidence_evidence.items()
+        }
+    )
     source_columns: list[JsonValue] = []
     source_columns.extend(channels)
     provenance: dict[str, JsonValue] = {

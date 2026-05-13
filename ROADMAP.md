@@ -252,13 +252,14 @@ sessions do not treat them as abstract research labels.
     audit JSON without writing files or enabling actuation.
   - Time-series proposal evidence is in place: regular time columns can infer
     sampling rate with no CLI parameter, and provenance records deterministic
-    sparse-derivative, correlation-graph, and clustering evidence for review.
+    sparse-derivative, phase-aware Kuramoto SINDy, correlation-graph, and
+    clustering evidence for review.
   - Auto-coupling estimation is in place: `spo auto-coupling-estimation`
     ingests CSV or `.npy` phase tables and emits transfer-entropy coupling
     matrices with deterministic audit JSON for review before binding use.
-  - Remaining work: promote deeper SINDy libraries, learned graph inference,
-    extractor-parameter proposals, and initial `K` binding only after
-    reproducible benchmark evidence.
+  - Remaining work: promote benchmarked multi-library SINDy selection, learned
+    graph inference, extractor-parameter proposals, and initial `K` binding
+    only after reproducible benchmark evidence.
   - Acceptance: the five-minute new-dataset workflow is zero-config except for
     operator review, with validation diagnostics, deterministic replay, and
     benchmarked graph evidence.

@@ -95,6 +95,34 @@ def test_time_series_csv_infers_sample_rate_from_time_column() -> None:
     assert "sample_period_s: 0.2" in proposal.binding.yaml_text
 
 
+def test_time_series_csv_records_phase_sindy_evidence() -> None:
+    csv_text = "\n".join(
+        [
+            "time,theta_source,theta_driven",
+            "0.0,0.00,0.20",
+            "0.1,0.10,0.26",
+            "0.2,0.20,0.34",
+            "0.3,0.30,0.43",
+            "0.4,0.40,0.53",
+            "0.5,0.50,0.64",
+            "0.6,0.60,0.76",
+            "0.7,0.70,0.88",
+        ]
+    )
+
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=None,
+        project_name="phase_replay",
+    )
+    discovery = proposal.binding.provenance["discovery_evidence"]
+
+    assert discovery["phase_sindy"]["status"] == "fitted"
+    assert discovery["phase_sindy"]["library"] == "kuramoto_sine_phase_differences"
+    assert discovery["phase_sindy"]["coupling_edge_count"] >= 1
+    assert "phase_sindy_sparsity" in proposal.binding.confidence_factors
+
+
 def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
     tmp_path: Path,
 ) -> None:
