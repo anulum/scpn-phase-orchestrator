@@ -165,6 +165,10 @@
 
 - ML-driven auto-binding and oscillator discovery: ingest raw multimodal data, propose P/I/S or N-channel extractors, infer an initial coupling graph, and emit a reviewable binding spec.
 - Auto domain binding pipeline: turn raw time-series, event logs, and sensor streams into candidate oscillator families, extractor parameters, initial coupling matrices, and a scored `binding_spec.yaml` proposal. Start with SINDy-assisted feature discovery and leave graph-learning coupling inference behind an experimental flag until it has reproducible benchmarks.
+  - Transfer-entropy causal coupling inference is in place as
+    `auto-coupling-estimation`, returning source-to-target `K_nm` estimates,
+    support masks, audit records, and UPDE-orientation conversion from phase
+    time series.
 - RL and hybrid optimisation layer for knob tuning: leverage the JAX `nn/` backend and `autotune` module to learn policies for `K`, `alpha`, `zeta`, `Psi`, and channel weights from rewards based on coherence metrics minus penalties for `R_bad`, unsafe actuation, and regime churn. Initial scope: replay-trained model-free or hybrid PPO/SAC experiments that emit auditable policy candidates rather than direct production control.
   - Reward-evaluation foundation is in place: `autotune.reward` scores candidate knob policies from replay/simulation observations and emits audit-ready records before any learner can actuate.
   - Replay candidate ranking is in place: `rank_replay_candidates()` orders replay/simulation candidates by reward, filters unsafe rollouts by default, and returns audit-ready reports.
@@ -237,6 +241,9 @@ sessions do not treat them as abstract research labels.
   - CLI proposal export is in place: `spo auto-bind` turns local time-series
     CSV, event-log JSON, or graph JSON inputs into review-only binding YAML or
     audit JSON without writing files or enabling actuation.
+  - Auto-coupling estimation is in place: `spo auto-coupling-estimation`
+    ingests CSV or `.npy` phase tables and emits transfer-entropy coupling
+    matrices with deterministic audit JSON for review before binding use.
   - Use SINDy, coupling estimation, clustering, and graph/correlation evidence
     before any learned graph inference is promoted.
   - Acceptance: the five-minute new-dataset workflow is zero-config except for

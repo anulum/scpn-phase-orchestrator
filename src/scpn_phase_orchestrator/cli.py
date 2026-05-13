@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import TypeAlias
+from typing import Literal, TypeAlias, cast
 
 import click
 import numpy as np
@@ -46,6 +46,7 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
     SymmetryConstraint,
     project_knm,
 )
+from scpn_phase_orchestrator.coupling.infer import auto_coupling_estimation
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.drivers.psi_informational import InformationalDriver
 from scpn_phase_orchestrator.drivers.psi_physical import PhysicalDriver
@@ -198,6 +199,83 @@ def auto_bind(
         click.echo(json.dumps(proposal.to_audit_record(), indent=2, sort_keys=True))
         return
     click.echo(proposal.binding.yaml_text, nl=False)
+
+
+def _load_phase_series_table(source_path: Path) -> FloatArray:
+    try:
+        if source_path.suffix.lower() == ".npy":
+            values = np.load(source_path, allow_pickle=False)
+        else:
+            values = np.loadtxt(source_path, delimiter=",")
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(
+            f"could not read numeric phase-series data: {exc}"
+        ) from exc
+    series = np.asarray(values, dtype=np.float64)
+    if series.ndim != 2:
+        raise click.ClickException(
+            f"phase-series source must be a 2-D table, got shape {series.shape}"
+        )
+    return np.ascontiguousarray(series, dtype=np.float64)
+
+
+@main.command("auto-coupling-estimation")
+@click.argument("source_path", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--orientation",
+    type=click.Choice(["oscillator-by-time", "time-by-oscillator"]),
+    default="oscillator-by-time",
+    show_default=True,
+    help="Input table orientation.",
+)
+@click.option("--n-bins", type=int, default=8, show_default=True)
+@click.option("--threshold-quantile", type=float, default=0.75, show_default=True)
+@click.option("--threshold-absolute", type=float, default=None)
+@click.option(
+    "--normalisation",
+    type=click.Choice(["max", "none"]),
+    default="max",
+    show_default=True,
+)
+@click.option("--json-out", is_flag=True, help="Output JSON audit record")
+def auto_coupling_estimation_command(
+    source_path: str,
+    orientation: str,
+    n_bins: int,
+    threshold_quantile: float,
+    threshold_absolute: float | None,
+    normalisation: str,
+    json_out: bool,
+) -> None:
+    """Infer directed K_nm from phase time-series data."""
+
+    series = _load_phase_series_table(Path(source_path))
+    if orientation == "time-by-oscillator":
+        series = np.ascontiguousarray(series.T, dtype=np.float64)
+    try:
+        result = auto_coupling_estimation(
+            series,
+            n_bins=n_bins,
+            threshold_quantile=threshold_quantile,
+            threshold_absolute=threshold_absolute,
+            normalisation=cast(Literal["max", "none"], normalisation),
+        )
+    except (TypeError, ValueError, RuntimeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    record = result.to_audit_record()
+    if json_out:
+        click.echo(json.dumps(record, indent=2, sort_keys=True))
+        return
+
+    click.echo(
+        "auto-coupling-estimation "
+        f"method={record['method']} orientation={record['orientation']} "
+        f"shape={record['shape']} edges={result.edge_count} "
+        f"density={result.density:.6g}"
+    )
+    for row in result.knm:
+        click.echo(",".join(f"{value:.17g}" for value in row))
 
 
 def _petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:

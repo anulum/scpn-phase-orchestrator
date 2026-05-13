@@ -4,10 +4,10 @@ The coupling subsystem builds, adapts, and analyses the inter-oscillator
 coupling matrix K_nm — the central object in Kuramoto dynamics. K_ij
 determines how strongly oscillator j pulls oscillator i toward synchrony.
 
-The subsystem spans 10 modules: construction (knm), geometry constraints,
+The subsystem spans 11 modules: construction (knm), geometry constraints,
 phase lag estimation, template management, Hodge decomposition, spectral
-analysis, plasticity, transfer-entropy adaptation, connectome generation,
-E/I balance, and a universal Bayesian prior.
+analysis, plasticity, transfer-entropy adaptation, causal inference,
+connectome generation, E/I balance, and a universal Bayesian prior.
 
 ## Pipeline position
 
@@ -17,12 +17,16 @@ CouplingBuilder.build() ──→ K_nm, α ──→ UPDEEngine.step()
   UniversalPrior                                ↓
   LagModel.estimate ────→ α            compute_order_parameter()
   connectome loader ─────→ K_nm                 │
+  auto-coupling-estimation ← raw phase time series
   plasticity/TE ←────────────────── phase history
 ```
 
 CouplingBuilder is the **entry point** of the SPO pipeline. Every engine
 variant consumes `(phases, omegas, knm, zeta, psi, alpha)`, so the
 coupling matrix and phase-lag matrix are required for any simulation.
+For data-first onboarding, `auto_coupling_estimation()` infers an initial
+directed coupling graph from phase time series before review, projection, or
+engine execution.
 
 ---
 

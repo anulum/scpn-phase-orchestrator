@@ -13,6 +13,8 @@ from typing import Any
 
 __all__ = [
     "CouplingBuilder",
+    "CouplingInferenceConfig",
+    "CouplingInferenceResult",
     "CouplingPrior",
     "CouplingState",
     "EIBalance",
@@ -28,6 +30,7 @@ __all__ = [
     "SymmetryConstraint",
     "UniversalPrior",
     "adjust_ei_ratio",
+    "auto_coupling_estimation",
     "compute_ei_balance",
     "compute_eligibility",
     "critical_coupling",
@@ -36,6 +39,7 @@ __all__ = [
     "fiedler_vector",
     "graph_laplacian",
     "hodge_decomposition",
+    "infer_coupling_from_timeseries",
     "load_hcp_connectome",
     "load_neurolib_hcp",
     "project_knm",
@@ -59,6 +63,13 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "validate_knm": (".geometry_constraints", "validate_knm"),
     "HodgeResult": (".hodge", "HodgeResult"),
     "hodge_decomposition": (".hodge", "hodge_decomposition"),
+    "CouplingInferenceConfig": (".infer", "CouplingInferenceConfig"),
+    "CouplingInferenceResult": (".infer", "CouplingInferenceResult"),
+    "auto_coupling_estimation": (".infer", "auto_coupling_estimation"),
+    "infer_coupling_from_timeseries": (
+        ".infer",
+        "infer_coupling_from_timeseries",
+    ),
     "CouplingBuilder": (".knm", "CouplingBuilder"),
     "CouplingState": (".knm", "CouplingState"),
     "SCPN_CALIBRATION_ANCHORS": (".knm", "SCPN_CALIBRATION_ANCHORS"),

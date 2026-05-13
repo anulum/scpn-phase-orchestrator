@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   browser ES-module runner, dispatcher registration, tests, and documentation.
 - Added a protobuf-backed audit event stream with hash-chained envelopes,
   `spo watch` live replay, tests, and documentation.
+- Added `auto-coupling-estimation` for transfer-entropy causal discovery of
+  directed coupling matrices from phase time-series data, with CLI, audit
+  records, tests, and API documentation.
 
 ### Changed
 
