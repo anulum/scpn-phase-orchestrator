@@ -185,6 +185,9 @@
     any learner-backed actuation is allowed.
 - Trainable supervisor policies: extend rule-based policy evaluation with reinforcement learning or active-inference loops that optimise long-horizon `R_good` / `R_bad` trade-offs under replayable safety constraints.
 - Uncertainty-aware phase estimation: Bayesian or ensemble phase estimates propagated through MPC/OA reduction and supervisor decisions.
+  - Bayesian UPDE uncertainty propagation is in place for sampled `omega` and
+    `K_nm` distributions, returning posterior-predictive `R ± sigma`,
+    credible intervals, and audit records through the existing UPDE kernel.
 - SPO Studio GUI: web-based binding and policy builder that scaffolds, visualises, validates, and replays binding specs, with WASM-backed previews where useful.
   - Streamlit operator surface is in place for domainpack loading, raw-source
     import, binding review, beginner-mode guidance, oscillator edit review
@@ -257,6 +260,14 @@ sessions do not treat them as abstract research labels.
   - Acceptance: PPO-like, gradient-based, or hybrid physics learners produce
     benchmarked, auditable policy candidates that remain non-actuating until
     explicit safety gates pass.
+- Bayesian / uncertainty-aware control:
+  - Propagate uncertainty in natural frequencies and coupling matrices through
+    UPDE rollouts before supervisor review.
+  - Foundation is in place: `bayesian_upde_run()` samples deterministic or
+    Gaussian `omega`/`K_nm` distributions and emits `R ± sigma`, credible
+    intervals, sampled final phases, and JSON-safe audit diagnostics.
+  - Remaining scope: posterior fitting from data and benchmarked NumPyro or
+    BlackJAX samplers behind the existing fail-closed backend names.
 - Hierarchical and distributed orchestration:
   - Make nested orchestrators explicit: edge supervisors sync locally, report
     reduced aggregates upward, and escalate only bounded evidence.

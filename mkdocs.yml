@@ -127,6 +127,7 @@ nav:
       - Binding: reference/api/binding.md
       - UPDE Engine: reference/api/upde.md
       - "UPDE — Core Integrator": reference/api/upde_engine.md
+      - "UPDE — Bayesian Uncertainty": reference/api/upde_bayesian.md
       - "UPDE — Simplicial (3-body)": reference/api/upde_simplicial.md
       - "UPDE — Hypergraph (k-body)": reference/api/upde_hypergraph.md
       - "UPDE — Geometric (SO(2))": reference/api/upde_geometric.md

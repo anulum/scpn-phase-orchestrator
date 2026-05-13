@@ -1,7 +1,8 @@
 # UPDE Engine
 
 The Unified Phase Dynamics Engine (UPDE) is SPO's core integrator subsystem.
-It provides 18 ODE engine variants covering standard Kuramoto, amplitude
+It provides 19 ODE engine variants covering standard Kuramoto, Bayesian
+uncertainty propagation, amplitude
 dynamics (Stuart-Landau), higher-order interactions (simplicial), inertial
 systems (power grids), stochastic resonance, geometric integration, time
 delays, financial markets, spatial-phase coupling (swarmalators),
@@ -27,6 +28,8 @@ Drivers.compute() ──→ Ψ        │
                                 ↓
                      compute_order_parameter(θ) → R, ψ
                                 │
+             BayesianUPDE → posterior predictive R ± sigma
+                                │
                                 ↓
                      RegimeManager.evaluate() → Regime
 ```
@@ -40,6 +43,7 @@ output (order parameters, monitors, supervisor).
 | Engine | State | ODE | Use case |
 |--------|-------|-----|----------|
 | UPDEEngine | θ ∈ [0,2π)^N | Kuramoto | General synchronisation |
+| BayesianUPDE | θ plus sampled K,ω | Monte Carlo UPDE | Safety-tier uncertainty quantification |
 | SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ($O(N \log N)$) |
 | SheafUPDEEngine | $\vec{\theta} \in \mathbb{R}^{N \times D}$ | Cellular Sheaf | Multi-dimensional block coupling |
 | StuartLandauEngine | [θ,r] ∈ R^{2N} | Stuart-Landau | Amplitude dynamics |
@@ -77,6 +81,14 @@ acceleration via `spo_kernel.PyUPDEStepper`.
 ::: scpn_phase_orchestrator.upde.engine
     options:
       members: false
+
+## Bayesian UPDE Uncertainty Propagation
+
+Samples natural frequencies and coupling matrices from explicit distributions,
+runs the existing UPDE kernel for each draw, and reports posterior-predictive
+`R ± sigma` with credible intervals and audit diagnostics.
+
+::: scpn_phase_orchestrator.upde.bayesian
 
 ## JAX-Accelerated Kuramoto Engine
 

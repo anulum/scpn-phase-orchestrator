@@ -1,0 +1,140 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Bayesian UPDE uncertainty tests
+
+from __future__ import annotations
+
+import json
+
+import numpy as np
+import pytest
+
+from scpn_phase_orchestrator.upde import (
+    BayesianUPDEConfig,
+    GaussianArrayDistribution,
+    bayesian_upde_run,
+)
+
+
+def _base_problem() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    phases = np.array([0.0, 0.4, 1.1, 1.9], dtype=np.float64)
+    omegas = np.array([0.9, 1.0, 1.08, 1.16], dtype=np.float64)
+    knm = np.full((4, 4), 0.18, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((4, 4), dtype=np.float64)
+    return phases, omegas, knm, alpha
+
+
+def test_bayesian_upde_reports_reproducible_r_uncertainty() -> None:
+    phases, omegas, knm, alpha = _base_problem()
+
+    config = BayesianUPDEConfig(
+        n_samples=96,
+        seed=1234,
+        dt=0.01,
+        n_steps=12,
+        method="rk4",
+        credible_interval=0.90,
+    )
+    omega_dist = GaussianArrayDistribution(
+        mean=omegas,
+        std=np.full_like(omegas, 0.015),
+    )
+    knm_dist = GaussianArrayDistribution(
+        mean=knm,
+        std=np.full_like(knm, 0.01),
+        non_negative=True,
+        zero_diagonal=True,
+    )
+
+    result = bayesian_upde_run(
+        phases,
+        omega=omega_dist,
+        knm=knm_dist,
+        alpha=alpha,
+        zeta=0.02,
+        psi=0.1,
+        config=config,
+    )
+    repeated = bayesian_upde_run(
+        phases,
+        omega=omega_dist,
+        knm=knm_dist,
+        alpha=alpha,
+        zeta=0.02,
+        psi=0.1,
+        config=config,
+    )
+
+    assert result.backend == "numpy"
+    assert result.r_samples.shape == (96,)
+    assert result.final_phase_samples.shape == (96, 4)
+    assert 0.0 <= result.r_mean <= 1.0
+    assert result.r_sigma > 0.0
+    assert result.r_lower <= result.r_mean <= result.r_upper
+    np.testing.assert_allclose(result.r_samples, repeated.r_samples)
+    np.testing.assert_allclose(result.final_phase_samples, repeated.final_phase_samples)
+
+
+def test_bayesian_upde_collapses_to_zero_sigma_for_deterministic_inputs() -> None:
+    phases, omegas, knm, alpha = _base_problem()
+
+    result = bayesian_upde_run(
+        phases,
+        omega=omegas,
+        knm=knm,
+        alpha=alpha,
+        zeta=0.0,
+        psi=0.0,
+        config=BayesianUPDEConfig(n_samples=8, seed=1, dt=0.01, n_steps=4),
+    )
+
+    assert result.r_sigma == pytest.approx(0.0, abs=1e-15)
+    assert result.r_lower == pytest.approx(result.r_mean)
+    assert result.r_upper == pytest.approx(result.r_mean)
+    assert result.omega_mean.shape == (4,)
+    assert result.knm_mean.shape == (4, 4)
+
+
+def test_bayesian_upde_audit_record_is_json_safe() -> None:
+    phases, omegas, knm, alpha = _base_problem()
+
+    result = bayesian_upde_run(
+        phases,
+        omega=GaussianArrayDistribution(omegas, np.full_like(omegas, 0.01)),
+        knm=knm,
+        alpha=alpha,
+        zeta=0.0,
+        psi=0.0,
+        config=BayesianUPDEConfig(n_samples=16, seed=22, dt=0.02, n_steps=5),
+    )
+    record = result.to_audit_record()
+    encoded = json.dumps(record, sort_keys=True)
+
+    assert "bayesian_upde" in encoded
+    assert record["sample_count"] == 16
+    assert record["r_summary"]["sigma"] == result.r_sigma
+    assert record["diagnostics"]["finite_samples"] is True
+
+
+def test_bayesian_upde_rejects_invalid_distributions_and_backends() -> None:
+    phases, omegas, knm, alpha = _base_problem()
+
+    with pytest.raises(ValueError, match="std must have shape"):
+        GaussianArrayDistribution(omegas, np.ones((2, 2)))
+    with pytest.raises(ValueError, match="n_samples"):
+        BayesianUPDEConfig(n_samples=1)
+    with pytest.raises(NotImplementedError, match="numpyro"):
+        bayesian_upde_run(
+            phases,
+            omega=omegas,
+            knm=knm,
+            alpha=alpha,
+            zeta=0.0,
+            psi=0.0,
+            config=BayesianUPDEConfig(backend="numpyro"),
+        )

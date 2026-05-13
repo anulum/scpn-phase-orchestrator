@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `auto-coupling-estimation` for transfer-entropy causal discovery of
   directed coupling matrices from phase time-series data, with CLI, audit
   records, tests, and API documentation.
+- Added Bayesian UPDE uncertainty propagation over sampled `omega` and `K_nm`
+  distributions, reporting posterior-predictive `R ± sigma`, credible
+  intervals, audit records, tests, and API documentation.
 
 ### Changed
 
