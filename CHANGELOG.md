@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   residual-scored SINDy library selection, correlation graph edges, lagged
   directed graph inference, clustering evidence, CLI zero-config support,
   tests, and documentation.
+- Added review-only extractor-parameter proposals and an `auto_initial_k`
+  binding template for time-series auto-binding, including per-family source
+  statistics, validator-accepted `cross_channel_couplings`, audit provenance,
+  CLI JSON exposure, tests, and documentation.
+- Added synthetic reference-suite benchmark coverage for auto-binding proposal
+  quality, measuring extractor coverage, validator acceptance, expected
+  initial-K support recall, generated edge count, and wall-clock throughput in
+  the dated benchmark snapshot.
 - Added crate-owned Kani formal safety harnesses and function contracts for
   supervisor action projection and regime classification invariants.
 - Added an adaptive fixed-point rate-limit contract for certifiable actuator

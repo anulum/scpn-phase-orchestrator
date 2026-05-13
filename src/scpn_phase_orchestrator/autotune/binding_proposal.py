@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import yaml
 
 from scpn_phase_orchestrator.autotune.discovery import (
     discover_time_series_structure,
@@ -86,10 +87,23 @@ def propose_binding_from_time_series_csv(
         columns=channels,
         sample_period_s=sample_period_s,
     )
+    family_specs = _families_for_time_series(
+        channels=channels,
+        inferred_channels=inferred_channels,
+        signal_table=signal_table,
+        sample_rate_hz=resolved_sample_rate_hz,
+        sample_period_s=sample_period_s,
+    )
+    extractor_parameter_proposals = _extractor_parameter_proposals(family_specs)
+    initial_coupling_proposal = _initial_coupling_proposal(
+        discovery=discovery.to_audit_record(),
+        inferred_channels=inferred_channels,
+    )
     yaml_text = _binding_yaml(
         project_name=project_name,
         sample_period_s=sample_period_s,
-        family_specs=_families_for_channels(inferred_channels),
+        family_specs=family_specs,
+        initial_coupling_proposal=initial_coupling_proposal,
     )
     validation_errors = _validation_errors(yaml_text)
     confidence: dict[str, float] = {
@@ -110,6 +124,8 @@ def propose_binding_from_time_series_csv(
         "sample_rate_hz": float(resolved_sample_rate_hz),
         "sample_rate_inference": sample_rate_inference,
         "source_columns": source_columns,
+        "extractor_parameter_proposals": extractor_parameter_proposals,
+        "initial_coupling_proposal": initial_coupling_proposal,
         "discovery_evidence": discovery.to_audit_record(),
         "validator": "load_binding_spec+validate_binding_spec",
     }
@@ -334,16 +350,197 @@ def _families_for_channels(channels: Sequence[str]) -> tuple[tuple[str, str, str
     return tuple(families)
 
 
+def _families_for_time_series(
+    *,
+    channels: Sequence[str],
+    inferred_channels: Sequence[str],
+    signal_table: np.ndarray,
+    sample_rate_hz: float,
+    sample_period_s: float,
+) -> tuple[tuple[str, str, str, dict[str, JsonValue]], ...]:
+    families = []
+    for index, (source_column, channel) in enumerate(
+        zip(channels, inferred_channels, strict=True)
+    ):
+        extractor = {"P": "physical", "I": "event", "S": "ring"}.get(
+            channel, "physical"
+        )
+        series = signal_table[:, index]
+        config: dict[str, JsonValue] = {
+            "source_column": str(source_column),
+            "source_column_index": index,
+            "sample_rate_hz": float(sample_rate_hz),
+            "sample_period_s": float(sample_period_s),
+            "normalisation": "zscore",
+            "finite_sample_count": int(series.size),
+            "mean": float(np.mean(series)),
+            "std": float(np.std(series)),
+            "min": float(np.min(series)),
+            "max": float(np.max(series)),
+            "proposal_status": "review_only",
+        }
+        families.append((f"auto_{channel.lower()}_{index}", channel, extractor, config))
+    return tuple(families)
+
+
+def _extractor_parameter_proposals(
+    family_specs: Sequence[tuple[str, str, str, Mapping[str, JsonValue]]],
+) -> list[JsonValue]:
+    return [
+        {
+            "family": family_name,
+            "channel": channel,
+            "extractor_type": extractor_type,
+            "parameters": dict(config),
+            "review_required": True,
+        }
+        for family_name, channel, extractor_type, config in family_specs
+    ]
+
+
+def _initial_coupling_proposal(
+    *,
+    discovery: Mapping[str, JsonValue],
+    inferred_channels: Sequence[str],
+) -> dict[str, JsonValue]:
+    columns = [str(column) for column in _sequence(discovery.get("columns"), "columns")]
+    size = len(columns)
+    raw = np.zeros((size, size), dtype=np.float64)
+    column_index = {column: index for index, column in enumerate(columns)}
+
+    _accumulate_directed_edges(
+        raw,
+        column_index=column_index,
+        edges=_edge_sequence(discovery, "learned_graph"),
+        weight_field="abs_coefficient",
+    )
+    _accumulate_directed_edges(
+        raw,
+        column_index=column_index,
+        edges=_edge_sequence(discovery, "phase_sindy", key="coupling_edges"),
+        weight_field="abs_coefficient",
+    )
+    _accumulate_correlation_edges(
+        raw,
+        column_index=column_index,
+        edges=_edge_sequence(discovery, "correlation_graph"),
+    )
+
+    np.fill_diagonal(raw, 0.0)
+    maximum = float(np.max(raw)) if raw.size else 0.0
+    matrix = raw if maximum <= 0.0 else 0.45 * raw / maximum
+    matrix = np.where(np.isfinite(matrix), matrix, 0.0)
+    np.fill_diagonal(matrix, 0.0)
+    rounded = [[round(float(value), 12) for value in row] for row in matrix.tolist()]
+    columns_json: list[JsonValue] = list(columns)
+    channels_json: list[JsonValue] = list(inferred_channels)
+    matrix_json: list[JsonValue] = [list(row) for row in rounded]
+    coupling_edges: list[JsonValue] = []
+    for target_index, row in enumerate(rounded):
+        for source_index, strength in enumerate(row):
+            if target_index == source_index or strength <= 0.0:
+                continue
+            coupling_edges.append(
+                {
+                    "source": columns[source_index],
+                    "target": columns[target_index],
+                    "source_channel": inferred_channels[source_index],
+                    "target_channel": inferred_channels[target_index],
+                    "strength": strength,
+                }
+            )
+
+    return {
+        "template": "auto_initial_k",
+        "orientation": "target_by_source",
+        "columns": columns_json,
+        "channels": channels_json,
+        "matrix": matrix_json,
+        "edge_count": len(coupling_edges),
+        "edges": coupling_edges,
+        "scale": "max_evidence_to_0.45",
+        "review_required": True,
+    }
+
+
+def _edge_sequence(
+    discovery: Mapping[str, JsonValue],
+    section: str,
+    *,
+    key: str = "edges",
+) -> tuple[Mapping[str, JsonValue], ...]:
+    payload = discovery.get(section)
+    if not isinstance(payload, Mapping):
+        return ()
+    edges = payload.get(key)
+    if not isinstance(edges, Sequence) or isinstance(edges, str | bytes | bytearray):
+        return ()
+    return tuple(edge for edge in edges if isinstance(edge, Mapping))
+
+
+def _accumulate_directed_edges(
+    matrix: np.ndarray,
+    *,
+    column_index: Mapping[str, int],
+    edges: Sequence[Mapping[str, JsonValue]],
+    weight_field: str,
+) -> None:
+    for edge in edges:
+        source = edge.get("source")
+        target = edge.get("target")
+        weight = edge.get(weight_field)
+        if not isinstance(source, str) or not isinstance(target, str):
+            continue
+        if source not in column_index or target not in column_index:
+            continue
+        if not isinstance(weight, int | float) or isinstance(weight, bool):
+            continue
+        value = abs(float(weight))
+        if not isfinite(value):
+            continue
+        matrix[column_index[target], column_index[source]] += value
+
+
+def _accumulate_correlation_edges(
+    matrix: np.ndarray,
+    *,
+    column_index: Mapping[str, int],
+    edges: Sequence[Mapping[str, JsonValue]],
+) -> None:
+    for edge in edges:
+        source = edge.get("source")
+        target = edge.get("target")
+        weight = edge.get("abs_correlation")
+        if not isinstance(source, str) or not isinstance(target, str):
+            continue
+        if source not in column_index or target not in column_index:
+            continue
+        if not isinstance(weight, int | float) or isinstance(weight, bool):
+            continue
+        value = 0.5 * abs(float(weight))
+        if not isfinite(value):
+            continue
+        source_index = column_index[source]
+        target_index = column_index[target]
+        matrix[target_index, source_index] += value
+        matrix[source_index, target_index] += value
+
+
 def _binding_yaml(
     *,
     project_name: str,
     sample_period_s: float,
-    family_specs: Sequence[tuple[str, str, str]],
+    family_specs: Sequence[tuple[str, str, str] | tuple[str, str, str, Mapping]],
+    initial_coupling_proposal: Mapping[str, JsonValue] | None = None,
 ) -> str:
     layer_lines = []
     family_lines = []
     good_layers = []
-    for index, (family_name, channel, extractor_type) in enumerate(family_specs):
+    cross_channel_lines = _cross_channel_coupling_lines(initial_coupling_proposal)
+    for index, raw_family_spec in enumerate(family_specs):
+        family_name, channel, extractor_type, config = _normalise_family_spec(
+            raw_family_spec
+        )
         oscillator_id = f"osc_{index}"
         good_layers.append(str(index))
         layer_lines.extend(
@@ -359,7 +556,7 @@ def _binding_yaml(
                 f"  {family_name}:",
                 f"    channel: {channel}",
                 f"    extractor_type: {extractor_type}",
-                "    config: {}",
+                *_yaml_mapping_lines("    config", config),
             ]
         )
 
@@ -381,7 +578,10 @@ def _binding_yaml(
             "coupling:",
             "  base_strength: 0.45",
             "  decay_alpha: 0.3",
-            "  templates: {}",
+            *_coupling_template_lines(initial_coupling_proposal),
+            "",
+            "cross_channel_couplings:",
+            *cross_channel_lines,
             "",
             "drivers:",
             "  physical:",
@@ -416,6 +616,93 @@ def _binding_yaml(
             "",
         ]
     )
+
+
+def _normalise_family_spec(
+    raw_family_spec: tuple[str, str, str] | tuple[str, str, str, Mapping],
+) -> tuple[str, str, str, Mapping]:
+    if len(raw_family_spec) == 3:
+        family_name, channel, extractor_type = raw_family_spec
+        return family_name, channel, extractor_type, {}
+    family_name, channel, extractor_type, config = raw_family_spec
+    return family_name, channel, extractor_type, config
+
+
+def _coupling_template_lines(
+    initial_coupling_proposal: Mapping[str, JsonValue] | None,
+) -> list[str]:
+    if not initial_coupling_proposal:
+        return ["  templates: {}"]
+    payload = {
+        "auto_initial_k": {
+            "orientation": initial_coupling_proposal["orientation"],
+            "columns": initial_coupling_proposal["columns"],
+            "channels": initial_coupling_proposal["channels"],
+            "matrix": initial_coupling_proposal["matrix"],
+            "scale": initial_coupling_proposal["scale"],
+            "review_required": True,
+        }
+    }
+    return _yaml_mapping_lines("  templates", payload)
+
+
+def _cross_channel_coupling_lines(
+    initial_coupling_proposal: Mapping[str, JsonValue] | None,
+) -> list[str]:
+    if not initial_coupling_proposal:
+        return ["  []"]
+    channel_strengths: dict[tuple[str, str], float] = {}
+    for edge in _sequence(initial_coupling_proposal.get("edges"), "initial K edges"):
+        if not isinstance(edge, Mapping):
+            continue
+        source = edge.get("source_channel")
+        target = edge.get("target_channel")
+        strength = edge.get("strength")
+        if not isinstance(source, str) or not isinstance(target, str):
+            continue
+        if source == target:
+            continue
+        if not isinstance(strength, int | float) or isinstance(strength, bool):
+            continue
+        value = float(strength)
+        if not isfinite(value) or value <= 0.0:
+            continue
+        key = (source, target)
+        channel_strengths[key] = max(value, channel_strengths.get(key, 0.0))
+    if not channel_strengths:
+        return ["  []"]
+    lines: list[str] = []
+    for (source, target), strength in sorted(channel_strengths.items()):
+        lines.extend(
+            [
+                f"  - source: {source}",
+                f"    target: {target}",
+                f"    strength: {strength:.12g}",
+                "    mode: directed",
+                "    template: auto_initial_k",
+            ]
+        )
+    return lines
+
+
+def _yaml_mapping_lines(key: str, value: Mapping) -> list[str]:
+    if not value:
+        return [f"{key}: {{}}"]
+    dumped = yaml.safe_dump(
+        {key.strip(): value},
+        sort_keys=False,
+        default_flow_style=False,
+    ).splitlines()
+    first = dumped[0]
+    indent = key[: len(key) - len(key.lstrip())]
+    label = key.strip()
+    lines = [f"{indent}{first}"]
+    lines.extend(f"{indent}{line}" for line in dumped[1:])
+    if lines[0] != f"{key}:":
+        lines[0] = f"{key}:"
+    if lines[0].strip() != f"{label}:":
+        lines[0] = f"{key}:"
+    return lines
 
 
 def _validation_errors(yaml_text: str) -> tuple[str, ...]:

@@ -41,6 +41,9 @@ def test_reference_benchmark_snapshot_doc_lists_all_benchmark_records() -> None:
 
     for record in benchmarks.values():
         assert str(record["suite"]) in doc
-        assert str(record["n_steps"]) in doc
+        if "n_steps" in record:
+            assert str(record["n_steps"]) in doc
+        if "fixture_count" in record:
+            assert str(record["fixture_count"]) in doc
         assert str(record["wall_time_s"]) in doc
         assert str(record["steps_per_second"]) in doc

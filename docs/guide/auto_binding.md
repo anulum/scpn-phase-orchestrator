@@ -26,6 +26,8 @@ Each proposal returns a `StudioProjectState` with:
 - deterministic source hash and counts,
 - proposed binding YAML,
 - inferred channels,
+- review-only extractor-parameter proposals,
+- review-only initial `K` template binding for time-series sources,
 - confidence factors,
 - provenance,
 - deterministic discovery evidence for time-series sources,
@@ -56,6 +58,27 @@ lagged directed graph inference record, connected-component clusters, and the
 sampling-rate inference path. Non-phase tables carry an explicit phase-SINDy
 skipped status instead of a fitted phase model. These records are audit evidence
 for operator review; they do not enable automatic actuation.
+
+Time-series proposals also bind each inferred oscillator family to concrete
+extractor parameters in the generated YAML. The family `config` records the
+source column, column index, sampling rate, sample period, finite sample count,
+basic distribution statistics, and the review-only status. The same records are
+available under `binding.provenance["extractor_parameter_proposals"]` for JSON
+audit export.
+
+The generated binding includes a coupling template named `auto_initial_k`.
+Its matrix is oriented as `target_by_source`, has a zero diagonal, is scaled
+from the combined lagged-graph, phase-SINDy, and correlation evidence, and is
+mirrored into validator-accepted `cross_channel_couplings`. This is an initial
+operator proposal only: downstream code must still validate the domainpack and
+explicitly accept the proposed matrix before using it for runtime actuation.
+
+The reference benchmark suite includes a deterministic
+`auto_binding_synthetic_quality` fixture set. It measures extractor coverage,
+binding-validator acceptance, expected initial-K support recall, generated edge
+count, wall-clock time, and fixtures per second. Treat that benchmark as a
+reproducible synthetic regression surface, not as a live-dataset acceptance
+claim.
 
 The output is suitable for human review in SPO Studio or for tests that need a
 deterministic proposal package.

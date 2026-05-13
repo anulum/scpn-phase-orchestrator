@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from benchmarks.reference_suite import (
     BENCHMARK_COMMAND,
+    benchmark_auto_binding_proposal_quality,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
     benchmark_stuart_landau_reference,
@@ -44,11 +45,23 @@ def test_petri_reachability_benchmark_shape() -> None:
     assert float(out["steps_per_second"]) > 0.0
 
 
+def test_auto_binding_proposal_quality_benchmark_shape() -> None:
+    out = benchmark_auto_binding_proposal_quality()
+
+    assert out["suite"] == "auto_binding_synthetic_quality"
+    assert out["fixture_count"] == 2
+    assert out["validation_error_count"] == 0
+    assert out["extractor_coverage"] == 1.0
+    assert float(out["expected_edge_recall"]) >= 0.5
+    assert float(out["steps_per_second"]) > 0.0
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
     assert out["metadata"]["snapshot_date"] == "2026-05-06"
     assert set(out["benchmarks"].keys()) == {
+        "auto_binding",
         "kuramoto",
         "stuart_landau",
         "petri_reachability",

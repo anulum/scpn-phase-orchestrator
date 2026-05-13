@@ -1,37 +1,47 @@
 {
   "metadata": {
     "suite_version": "reference_suite_v1",
-    "snapshot_date": "2026-05-06",
+    "snapshot_date": "2026-05-13",
     "command": "PYTHONPATH=src python benchmarks/reference_suite.py",
     "backend": "python_numpy",
     "python_version": "3.12.3",
     "python_implementation": "CPython",
     "numpy_version": "2.4.4",
-    "platform": "Linux-6.17.0-22-generic-x86_64-with-glibc2.39",
-    "executable": "/home/anulum/.local/bin/python"
+    "platform": "Linux-6.17.0-23-generic-x86_64-with-glibc2.39",
+    "executable": "/media/anulum/724AA8E84AA8AA75/aaa_God_of_the_Math_Collection/03_CODE/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python"
   },
   "benchmarks": {
+    "auto_binding": {
+      "suite": "auto_binding_synthetic_quality",
+      "fixture_count": 2,
+      "wall_time_s": 0.021209002996329218,
+      "steps_per_second": 94.29957647448836,
+      "validation_error_count": 0,
+      "extractor_coverage": 1.0,
+      "expected_edge_recall": 1.0,
+      "proposed_edge_count": 12
+    },
     "kuramoto": {
       "suite": "kuramoto_reference_strogatz_2000",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.1880298419855535,
-      "steps_per_second": 5318.304740567887,
-      "final_order_parameter": 1.0000000000000007
+      "wall_time_s": 0.11908225799561478,
+      "steps_per_second": 8397.556586782433,
+      "final_order_parameter": 1.0
     },
     "stuart_landau": {
       "suite": "stuart_landau_reference_pikovsky_2001",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.3452609858941287,
-      "steps_per_second": 2896.3596839946504,
+      "wall_time_s": 0.26880446799623314,
+      "steps_per_second": 3720.176258431885,
       "final_mean_amplitude": 3.6193922141707704
     },
     "petri_reachability": {
       "suite": "petri_net_reachability",
       "n_steps": 5000,
-      "wall_time_s": 0.009341930970549583,
-      "steps_per_second": 535221.2530538375,
+      "wall_time_s": 0.019305217996588908,
+      "steps_per_second": 258997.33434159943,
       "reachable_markings": 4
     }
   }

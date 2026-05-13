@@ -190,6 +190,10 @@ def test_auto_bind_json_out_emits_audit_record(runner, tmp_path):
     assert record["source"]["source_kind"] == "time_series_csv"
     assert record["binding"]["validation_errors"] == []
     assert record["binding"]["inferred_channels"] == ["P", "I"]
+    assert record["binding"]["provenance"]["extractor_parameter_proposals"]
+    assert record["binding"]["provenance"]["initial_coupling_proposal"]["template"] == (
+        "auto_initial_k"
+    )
     assert record["runtime"]["replay_status"] == "proposal_only"
 
 

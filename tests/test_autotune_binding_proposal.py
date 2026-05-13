@@ -153,6 +153,75 @@ def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
     assert spec.objectives.good_layers == [0, 1, 2]
 
 
+def test_time_series_csv_yaml_binds_extractor_parameter_proposals(
+    tmp_path: Path,
+) -> None:
+    csv_text = "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n"
+
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=100.0,
+        project_name="grid_replay",
+    )
+
+    spec = _load_proposal_yaml(tmp_path, proposal.binding.yaml_text)
+    family = spec.oscillator_families["auto_p_0"]
+    extractor_proposals = proposal.binding.provenance["extractor_parameter_proposals"]
+
+    assert family.config["source_column"] == "grid"
+    assert family.config["source_column_index"] == 0
+    assert family.config["sample_rate_hz"] == pytest.approx(100.0)
+    assert family.config["sample_period_s"] == pytest.approx(0.01)
+    assert family.config["normalisation"] == "zscore"
+    assert family.config["proposal_status"] == "review_only"
+    assert extractor_proposals[0]["family"] == "auto_p_0"
+    assert extractor_proposals[0]["parameters"]["source_column"] == "grid"
+
+
+def test_time_series_csv_yaml_binds_initial_k_template(
+    tmp_path: Path,
+) -> None:
+    csv_text = "\n".join(
+        [
+            "time,source,driven,independent",
+            "0.00,0.00,0.00,1.00",
+            "0.10,0.20,0.10,0.98",
+            "0.20,0.40,0.20,0.92",
+            "0.30,0.60,0.31,0.83",
+            "0.40,0.78,0.42,0.70",
+            "0.50,0.94,0.54,0.54",
+            "0.60,1.07,0.66,0.36",
+            "0.70,1.17,0.77,0.17",
+        ]
+    )
+
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=10.0,
+        project_name="k_replay",
+    )
+
+    spec = _load_proposal_yaml(tmp_path, proposal.binding.yaml_text)
+    initial_k = proposal.binding.provenance["initial_coupling_proposal"]
+
+    assert "auto_initial_k" in spec.coupling.templates
+    initial_k_matrix = [list(row) for row in initial_k["matrix"]]
+    assert spec.coupling.templates["auto_initial_k"]["matrix"] == initial_k_matrix
+    assert spec.coupling.templates["auto_initial_k"]["orientation"] == (
+        "target_by_source"
+    )
+    assert spec.cross_channel_couplings
+    assert {edge.template for edge in spec.cross_channel_couplings} == {
+        "auto_initial_k"
+    }
+    assert list(initial_k["columns"]) == ["source", "driven", "independent"]
+    matrix = initial_k_matrix
+    assert len(matrix) == 3
+    assert all(len(row) == 3 for row in matrix)
+    assert all(row[index] == 0.0 for index, row in enumerate(matrix))
+    assert max(value for row in matrix for value in row) > 0.0
+
+
 @pytest.mark.parametrize(
     ("csv_text", "sample_rate_hz", "expected_error"),
     [

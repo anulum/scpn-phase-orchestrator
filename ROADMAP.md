@@ -164,7 +164,7 @@
 ### v1.x differentiators
 
 - ML-driven auto-binding and oscillator discovery: ingest raw multimodal data, propose P/I/S or N-channel extractors, infer an initial coupling graph, and emit a reviewable binding spec.
-- Auto domain binding pipeline: turn raw time-series, event logs, and sensor streams into candidate oscillator families, extractor parameters, initial coupling matrices, and a scored `binding_spec.yaml` proposal. Start with SINDy-assisted feature discovery and leave graph-learning coupling inference behind an experimental flag until it has reproducible benchmarks.
+- Auto domain binding pipeline: turn raw time-series, event logs, and sensor streams into candidate oscillator families, extractor parameters, initial coupling matrices, and a scored `binding_spec.yaml` proposal. The deterministic review-only foundation is in place; graph-learning and initial-`K` evidence remain non-actuating until larger live-dataset benchmarks justify domain-specific acceptance thresholds.
   - Transfer-entropy causal coupling inference is in place as
     `auto-coupling-estimation`, returning source-to-target `K_nm` estimates,
     support masks, audit records, and UPDE-orientation conversion from phase
@@ -263,8 +263,17 @@ sessions do not treat them as abstract research labels.
   - Auto-coupling estimation is in place: `spo auto-coupling-estimation`
     ingests CSV or `.npy` phase tables and emits transfer-entropy coupling
     matrices with deterministic audit JSON for review before binding use.
-  - Remaining work: promote extractor-parameter proposals and initial `K`
-    binding only after reproducible benchmark evidence.
+  - Extractor-parameter proposals and initial `K` binding are in place:
+    time-series auto-binding writes per-family source-column, sampling, and
+    statistic configs into the generated YAML, exposes the same records in
+    JSON provenance, and emits a validator-accepted `auto_initial_k` template
+    plus `cross_channel_couplings` for operator review.
+  - Synthetic reference-suite proposal-quality benchmarking is in place:
+    `benchmarks/reference_suite.py` now records extractor coverage, validator
+    acceptance, expected initial-K support recall, proposed edge count, and
+    throughput for deterministic auto-binding fixtures.
+  - Remaining work: benchmark the proposal quality on larger live datasets and
+    add domain-specific acceptance thresholds before any automatic runtime use.
   - Acceptance: the five-minute new-dataset workflow is zero-config except for
     operator review, with validation diagnostics, deterministic replay, and
     benchmarked graph evidence.

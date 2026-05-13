@@ -16,23 +16,24 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Field | Value |
 |-------|-------|
-| Snapshot date | `2026-05-06` |
+| Snapshot date | `2026-05-13` |
 | Suite version | `reference_suite_v1` |
 | Command | `PYTHONPATH=src python benchmarks/reference_suite.py` |
 | Backend | `python_numpy` |
 | Python | `CPython 3.12.3` |
 | NumPy | `2.4.4` |
-| Platform | `Linux-6.17.0-22-generic-x86_64-with-glibc2.39` |
-| Executable | `/home/anulum/.local/bin/python` |
+| Platform | `Linux-6.17.0-23-generic-x86_64-with-glibc2.39` |
+| Executable | `/media/anulum/724AA8E84AA8AA75/aaa_God_of_the_Math_Collection/03_CODE/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python` |
 | JSON artefact | `benchmarks/results/reference_suite.json` |
 
 ## Historical Results
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.1880298419855535 | 5318.304740567887 | final `R` = 1.0000000000000007 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.3452609858941287 | 2896.3596839946504 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.009341930970549583 | 535221.2530538375 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 2 fixtures | 2 fixtures | 0.021209002996329218 | 94.29957647448836 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 12 |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.11908225799561478 | 8397.556586782433 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.26880446799623314 | 3720.176258431885 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.019305217996588908 | 258997.33434159943 | reachable markings = 4 |
 
 ## Use Policy
 
