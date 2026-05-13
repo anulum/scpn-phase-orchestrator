@@ -12,6 +12,8 @@
 pub mod boundaries;
 pub mod coherence;
 pub mod events;
+#[cfg(kani)]
+pub mod formal_safety;
 pub mod petri_net;
 pub mod policy;
 pub mod projector;

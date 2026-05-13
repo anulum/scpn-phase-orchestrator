@@ -100,24 +100,24 @@ such states produce safe control output depends on the domain.
 
 ### 3.1 Formally Verified Properties (Kani)
 
-The Rust kernel (`spo-kernel/`) contains Kani proof stubs for five
-safety properties. Kani is a model checker for Rust that explores all
-possible executions of a function up to a bounded depth.
+The Rust kernel (`spo-kernel/`) contains crate-owned Kani harnesses for
+supervisor safety properties. Kani is a model checker for Rust that explores
+all possible executions of a function up to a bounded depth. The harnesses live
+in `crates/spo-supervisor/src/formal_safety.rs` and call the same functions
+used at runtime.
 
 | Property | Kani Proof | Status |
 |----------|-----------|--------|
-| Control action value within [lo, hi] for all inputs | `action_projector_value_clipping_proof` | Compile-checked; unit tests pass |
-| Rate-limited: \|a(t) − a(t−1)\| ≤ rate_limit | `action_projector_rate_limit_proof` | Compile-checked; unit tests pass |
-| FSM never transitions Critical → Nominal directly | `regime_manager_no_critical_to_nominal_proof` | Compile-checked; unit tests pass |
-| Critical transition bypasses cooldown | `regime_manager_critical_bypass_proof` | Compile-checked; unit tests pass |
-| Transition log length ≤ MAX_LOG_LEN (100) | `regime_manager_log_bounded_proof` | Compile-checked; unit tests pass |
+| Control action value within [lo, hi] for all finite bounded inputs | `action_projector_value_clipping_contract` | Kani harness + function contract; unit tests pass |
+| Adaptive fixed-point rate-limited actuator command: `min_limit <= rate_limit(t) <= max_limit` and \|a(t) − a(t−1)\| ≤ rate_limit(t) | `adaptive_rate_limit_contract`, `action_projector_adaptive_fixed_point_rate_limit_contract` | Kani harness + function contract; unit tests pass |
+| Nominal safe envelope cannot classify as Critical when `mean_R >= R_CRITICAL` and no hard violations exist | `nominal_safe_summary_never_classifies_critical` | Kani harness + function contract; unit tests pass |
+| Critical evaluation never returns Nominal directly | `critical_never_evaluates_directly_to_nominal` | Kani harness + function contract; unit tests pass |
+| Nominal degraded-band envelope degrades instead of jumping to Critical | `degraded_band_from_nominal_is_not_critical` | Kani harness; unit tests pass |
 
-**Honest status.** These proofs are currently Kani proof *stubs* that
-compile and are checked at build time. Full Kani verification (exhaustive
-bounded model checking) requires Kani to support the project's MSRV
-(1.83.0) and to complete within CI time limits. The proofs have not yet
-been run to completion under Kani's model checker. They represent the
-intended proof obligations, not completed verification.
+**Honest status.** These are bounded formal proofs over the discrete
+supervisor contracts. They do not prove full continuous-time Lyapunov
+stability of every Kuramoto topology under bounded coupling; that remains a
+separate reachability/stability analysis item.
 
 ### 3.2 Lyapunov Stability Monitoring
 
@@ -157,7 +157,7 @@ Critical regime.
 
 **What this verifies.** Runtime violations are detected within one
 integration step of occurrence. The regime transition is immediate
-(Critical bypasses cooldown, per Kani proof stub).
+(Critical bypasses cooldown, covered by Rust regression tests).
 
 **What this does not verify.** STL monitoring is reactive, not
 predictive. It cannot guarantee that R will remain above 0.3 in the
@@ -209,13 +209,14 @@ requires:
 |-------------|-------|------------|
 | Formal specification of safety requirements | Required | Partially met (SR-1 through SR-7 documented) |
 | Semi-formal design methods | Highly recommended | Met (typed interfaces, FSM diagrams) |
-| Formal verification of critical modules | Recommended | Partially met (Kani proof stubs, not yet run to completion) |
+| Formal verification of critical modules | Recommended | Partially met (Kani harnesses for discrete supervisor contracts; continuous-time stability remains open) |
 | Diagnostic coverage ≥ 90% | Required | Met for regime FSM and ActionProjector; not measured system-wide |
 | Hardware fault tolerance (HFT ≥ 0) | Required | **Not applicable** (software component; relies on HW redundancy) |
 | Common-cause failure analysis | Required | **Not performed** |
 | Systematic capability ≥ SIL 2 | Required | **Not assessed** by accredited body |
 
-**Gaps.** (a) Kani proofs must run to completion, not just compile.
+**Gaps.** (a) Continuous-time oscillator stability still needs Lyapunov or
+reachability proof beyond the discrete supervisor contracts.
 (b) Common-cause failure analysis for coupled oscillator dynamics
 has no precedent — a methodology would need to be developed.
 (c) SIL-2 systematic capability assessment requires an accredited
@@ -238,11 +239,12 @@ For power grid deployments:
 
 | Property | Method | Confidence |
 |----------|--------|------------|
-| Control action bounding | Kani proof stub + tests | Medium (stub, not full proof) |
-| Rate limiting | Kani proof stub + tests | Medium |
-| FSM transition ordering | Kani proof stub + tests | Medium |
-| Cooldown bypass for Critical | Kani proof stub + tests | Medium |
-| Log boundedness | Kani proof stub + tests | Medium |
+| Control action bounding | Kani harness + function contract + tests | High for finite scalar projection contract |
+| Adaptive fixed-point rate limiting | Kani harness + function contract + tests | High for bounded integer actuator contract |
+| Nominal safe-envelope classification | Kani harness + function contract + tests | High for discrete classifier contract |
+| Critical does not evaluate directly to Nominal | Kani harness + function contract + tests | High for discrete classifier contract |
+| Cooldown bypass for Critical | Unit tests | Medium |
+| Log boundedness | Unit tests | Medium |
 | Runtime synchronization monitoring | STL + Lyapunov + tests | Medium (reactive only) |
 | Communication encryption | TLS implementation + tests | Medium (not pen-tested) |
 

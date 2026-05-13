@@ -78,11 +78,11 @@ w_3·sparsity + w_4·asymmetry is minimized by gradient descent on z,
 producing coupling topologies adapted to the current phase state.
 
 **Regime Supervisor.** A Rust-implemented FSM (spo-supervisor crate) with
-value clamping, rate limiting, and transition ordering (Critical never
-jumps directly to Nominal). Kani proof stubs are prepared for formal
-verification of these invariants (requires Linux CI runner). The
-ActionProjector maps coupling adjustments to bounded, rate-limited
-control outputs.
+value clamping, adaptive fixed-point rate limiting, and transition ordering
+(Critical never jumps directly to Nominal). Crate-owned Kani harnesses verify
+the discrete action-projection, adaptive actuator-envelope, and
+regime-classification contracts. The ActionProjector maps coupling adjustments
+to bounded, rate-limited control outputs.
 
 **Domainpack Compiler.** Reads a `binding_spec.yaml` and instantiates
 oscillators, sensors, knobs, and STL safety monitors. The compiler
@@ -105,9 +105,9 @@ configuration.
   cos(θ_i − θ_j) ≤ 0, with basin-of-attraction monitoring.
 - **STL runtime monitor.** Continuous checking of safety specifications
   (e.g., `always (R >= 0.3)`) via the rtamt library.
-- **Kani proof stubs.** Prepared for control bound correctness,
-  rate-limit enforcement, and FSM transition ordering in the Rust kernel
-  (requires Linux runner; CI workflow prepared but not yet executed).
+- **Kani formal safety harnesses.** Verify control bound correctness,
+  rate-limit enforcement, and supervisor classification invariants in the
+  Rust kernel.
 - **4 500+ tests** (3 945 Python + 567 Rust) across 120+ test files, 99%+ coverage.
 
 # Measured Evidence

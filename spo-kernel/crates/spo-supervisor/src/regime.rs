@@ -13,8 +13,8 @@ use spo_types::{Regime, UPDEState};
 use crate::boundaries::BoundaryState;
 use crate::events::{EventBus, EventKind, RegimeEvent};
 
-const R_CRITICAL: f64 = 0.3;
-const R_DEGRADED: f64 = 0.6;
+pub const R_CRITICAL: f64 = 0.3;
+pub const R_DEGRADED: f64 = 0.6;
 const MAX_LOG_LEN: usize = 100;
 
 fn regime_rank(r: Regime) -> u8 {
@@ -77,36 +77,12 @@ impl RegimeManager {
 
     #[must_use]
     pub fn evaluate(&self, upde_state: &UPDEState, boundary: &BoundaryState) -> Regime {
-        if !boundary.hard_violations.is_empty() {
-            return Regime::Critical;
-        }
-        let avg_r = upde_state.mean_r();
-
-        if avg_r < R_CRITICAL {
-            return Regime::Critical;
-        }
-
-        let is_recovering = matches!(self.current, Regime::Critical | Regime::Recovery);
-
-        if avg_r < R_DEGRADED {
-            if is_recovering {
-                return Regime::Recovery;
-            }
-            return Regime::Degraded;
-        }
-
-        if self.current == Regime::Degraded && avg_r < R_DEGRADED + self.hysteresis {
-            return Regime::Degraded;
-        }
-        if is_recovering && avg_r < R_DEGRADED + self.hysteresis {
-            return Regime::Recovery;
-        }
-
-        if self.current == Regime::Critical {
-            return Regime::Recovery;
-        }
-
-        Regime::Nominal
+        classify_regime_from_summary(
+            self.current,
+            upde_state.mean_r(),
+            boundary.hard_violations.len(),
+            self.hysteresis,
+        )
     }
 
     pub fn transition(&mut self, proposed: Regime) -> Regime {
@@ -170,6 +146,58 @@ impl RegimeManager {
     pub fn step_counter(&self) -> u64 {
         self.step_counter
     }
+}
+
+#[must_use]
+#[cfg_attr(kani, kani::requires(mean_r.is_finite()))]
+#[cfg_attr(kani, kani::requires(hysteresis.is_finite()))]
+#[cfg_attr(kani, kani::requires(hysteresis >= 0.0))]
+#[cfg_attr(
+    kani,
+    kani::ensures(|result| !(current == Regime::Nominal
+        && hard_violation_count == 0
+        && mean_r >= R_CRITICAL
+        && *result == Regime::Critical))
+)]
+#[cfg_attr(
+    kani,
+    kani::ensures(|result| !(current == Regime::Critical && *result == Regime::Nominal))
+)]
+pub fn classify_regime_from_summary(
+    current: Regime,
+    mean_r: f64,
+    hard_violation_count: usize,
+    hysteresis: f64,
+) -> Regime {
+    if hard_violation_count > 0 {
+        return Regime::Critical;
+    }
+
+    if mean_r < R_CRITICAL {
+        return Regime::Critical;
+    }
+
+    let is_recovering = matches!(current, Regime::Critical | Regime::Recovery);
+
+    if mean_r < R_DEGRADED {
+        if is_recovering {
+            return Regime::Recovery;
+        }
+        return Regime::Degraded;
+    }
+
+    if current == Regime::Degraded && mean_r < R_DEGRADED + hysteresis {
+        return Regime::Degraded;
+    }
+    if is_recovering && mean_r < R_DEGRADED + hysteresis {
+        return Regime::Recovery;
+    }
+
+    if current == Regime::Critical {
+        return Regime::Recovery;
+    }
+
+    Regime::Nominal
 }
 
 impl Default for RegimeManager {
@@ -291,6 +319,18 @@ mod tests {
         };
         let regime = rm.evaluate(&state, &empty_boundary());
         assert_eq!(regime, Regime::Critical);
+    }
+
+    #[test]
+    fn nominal_summary_above_critical_cannot_be_critical() {
+        let regime = classify_regime_from_summary(Regime::Nominal, R_CRITICAL, 0, 0.05);
+        assert_ne!(regime, Regime::Critical);
+    }
+
+    #[test]
+    fn critical_summary_above_degraded_recovers_before_nominal() {
+        let regime = classify_regime_from_summary(Regime::Critical, R_DEGRADED + 0.1, 0, 0.05);
+        assert_eq!(regime, Regime::Recovery);
     }
 
     #[test]

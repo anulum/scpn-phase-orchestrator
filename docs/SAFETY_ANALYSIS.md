@@ -45,7 +45,7 @@ Applicable standards:
 |--------|------------|----------------|
 | H-1 | STL runtime monitor: `always (R >= 0.3)` | `monitor/stl.py` with rtamt |
 | H-2 | ActionProjector value clamping | `spo-supervisor/projector.rs` |
-| H-2 | Kani formal proof of clamp correctness | `kani/proofs/action_projector.rs` |
+| H-2 | Kani formal proof of clamp correctness | `spo-supervisor/src/formal_safety.rs` |
 | H-3 | Hysteresis and hold-step filtering | `spo-supervisor/regime.rs` |
 | H-4 | Critical always bypasses cooldown | `RegimeManager::transition()` |
 | H-5 | Mutual TLS with certificate validation | `adapters/modbus_tls.py` |
@@ -62,10 +62,10 @@ All control actions output by the ActionProjector shall satisfy:
     lo <= action.value <= hi
 
 for the configured bounds `(lo, hi)` of each Knob. This is enforced by
-`f64::clamp()` in the Rust kernel and verified by Kani proof
-`action_projector_value_clipping_proof`.
+`project_value()` in the Rust kernel and verified by Kani proof
+`action_projector_value_clipping_contract`.
 
-**Status: Verified** (Kani proof stub, unit tests pass)
+**Status: Verified by crate-owned Kani harness** (unit tests pass; CI fails on proof failure)
 
 ### 3.2 Rate Limiting (SR-2)
 
@@ -74,10 +74,21 @@ not exceed the configured rate limit:
 
     |action(t) - action(t-1)| <= rate_limit
 
-Enforced in `ActionProjector::project()`. Kani proof:
-`action_projector_rate_limit_proof`.
+The floating supervisor path enforces this in `ActionProjector::project()`.
+Certification-oriented actuator paths use the exact fixed-point helpers
+`compute_adaptive_rate_limit_fixed()` and `project_fixed_point_value()`, where
+the adaptive limit is bounded by:
 
-**Status: Verified** (Kani proof stub, unit tests pass)
+    min_limit <= rate_limit(t) <= max_limit
+
+and the projected actuator movement satisfies:
+
+    |action(t) - action(t-1)| <= rate_limit(t)
+
+Kani proofs: `adaptive_rate_limit_contract` and
+`action_projector_adaptive_fixed_point_rate_limit_contract`.
+
+**Status: Verified for the adaptive fixed-point actuator contract** (floating path covered by unit tests; CI fails on proof failure)
 
 ### 3.3 Regime FSM Ordering (SR-3)
 
@@ -87,23 +98,39 @@ The path must pass through Recovery:
     Critical -> Recovery -> Nominal
 
 This prevents abrupt removal of safety interlocks. Kani proof:
-`regime_manager_no_critical_to_nominal_proof`.
+`critical_never_evaluates_directly_to_nominal`.
 
-**Status: Verified** (Kani proof stub, unit tests pass)
+**Status: Verified by crate-owned Kani harness** (unit tests pass; CI fails on proof failure)
+
+### 3.3.1 Nominal Safe Envelope (SR-3a)
+
+From a Nominal current regime with no hard boundary violations, a finite
+mean coherence summary satisfying:
+
+    R_CRITICAL <= mean_R <= 1.0
+
+shall not classify directly as Critical. The verified proof harness is
+`nominal_safe_summary_never_classifies_critical`.
+
+Coupling-bounds guarantees are enforced at the action-projection layer. A
+full continuous-time proof that bounded `K` preserves the coherence premise
+for every oscillator topology remains a separate Lyapunov/reachability task.
+
+**Status: Verified for the discrete supervisor classification contract**
 
 ### 3.4 Critical Bypass (SR-4)
 
 Transition to Critical regime shall always succeed, regardless of cooldown
 state. Safety-critical state changes must never be delayed.
 
-**Status: Verified** (Kani proof stub, unit tests pass)
+**Status: Verified by unit tests; Kani transition-state proof remains future work**
 
 ### 3.5 Transition Log Bounded (SR-5)
 
 The transition log shall never exceed `MAX_LOG_LEN` (100) entries. Unbounded
 growth would constitute a memory safety violation in long-running deployments.
 
-**Status: Verified** (Kani proof stub, unit tests pass)
+**Status: Verified by unit tests; Kani bounded-log proof remains future work**
 
 ### 3.6 TLS Authentication (SR-6)
 
@@ -128,11 +155,13 @@ robustness) shall trigger an immediate regime transition to Critical.
 
 | Property | Method | Location |
 |----------|--------|----------|
-| Value clipping correctness | Kani proof stub + unit tests | `kani/proofs/action_projector.rs`, `projector.rs` tests |
-| Rate limiting correctness | Kani proof stub + unit tests | `kani/proofs/action_projector.rs`, `projector.rs` tests |
-| FSM transition ordering | Kani proof stub + unit tests | `kani/proofs/action_projector.rs`, `regime.rs` tests |
-| Cooldown bypass for Critical | Kani proof stub + unit tests | `kani/proofs/action_projector.rs`, `regime.rs` tests |
-| Log boundedness | Kani proof stub + unit tests | `kani/proofs/action_projector.rs`, `regime.rs` tests |
+| Value clipping correctness | Kani harness + function contract + unit tests | `formal_safety.rs`, `projector.rs` tests |
+| Adaptive fixed-point rate limiting correctness | Kani harness + function contract + unit tests | `formal_safety.rs`, `projector.rs` tests |
+| Nominal safe-envelope classification | Kani harness + function contract + unit tests | `formal_safety.rs`, `regime.rs` tests |
+| Critical never evaluates directly to Nominal | Kani harness + function contract + unit tests | `formal_safety.rs`, `regime.rs` tests |
+| Degraded-band classification from Nominal | Kani harness + unit tests | `formal_safety.rs`, `regime.rs` tests |
+| Cooldown bypass for Critical | Unit tests | `regime.rs` tests |
+| Log boundedness | Unit tests | `regime.rs` tests |
 | Boundary observer triggers | Unit tests | `tests/test_supervisor_regimes.py` |
 | Hysteresis correctness | Unit tests + property tests | `tests/test_regime_hysteresis.py` |
 
@@ -140,24 +169,27 @@ robustness) shall trigger an immediate regime transition to Critical.
 
 | Property | Required Method | Estimated Effort |
 |----------|----------------|------------------|
-| Full Lyapunov stability of coupled Kuramoto | Mathematical proof + numerical validation | Major research effort |
+| Full Lyapunov stability of coupled Kuramoto under bounded `K` | Mathematical proof + numerical validation | Major research effort |
 | Nonlinear stability under parameter perturbation | Bifurcation analysis (continuation methods) | Medium |
 | Real-time deadline guarantees | WCET analysis on target hardware | Medium |
 | TLS implementation security | Penetration testing, certificate rotation testing | Medium |
 | STL monitor integration with supervisor | Integration tests with supervisor loop | Low |
 | Multi-domain coupling stability | Cross-domain Lyapunov analysis | Major research effort |
+| Kani proof for transition-log boundedness on actual `VecDeque` state | Kani harness over `RegimeManager::transition` | Low |
+| Kani proof for cooldown bypass on actual `RegimeManager` state | Kani harness over `RegimeManager::transition` | Low |
 
 ### 4.3 Kani Integration Plan
 
-The Kani proof stubs in `spo-kernel/kani/proofs/` are currently compile-checked
-only. To run them:
+The Kani proof harnesses live in `spo-kernel/crates/spo-supervisor/src/` and
+are compiled with `cfg(kani)`. To run them:
 
 ```bash
-cargo kani --manifest-path spo-kernel/Cargo.toml
+cd spo-kernel
+cargo kani -p spo-supervisor -Z function-contracts
 ```
 
-CI integration is planned once Kani supports the MSRV (1.83.0) and can run
-in the GitHub Actions environment without exceeding the 6-hour job limit.
+The GitHub Actions Kani workflow runs the same harnesses and no longer marks
+proof failures as allowed failures.
 
 ---
 

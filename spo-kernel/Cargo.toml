@@ -43,6 +43,7 @@ must_use_candidate = "warn"
 
 [workspace.lints.rust]
 unreachable_pub = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [profile.release]
 opt-level = 3

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added crate-owned Kani formal safety harnesses and function contracts for
+  supervisor action projection and regime classification invariants.
+- Added an adaptive fixed-point rate-limit contract for certifiable actuator
+  envelopes, including exact integer projection helpers and Rust regression
+  tests.
+
+### Changed
+
+- Replaced external Kani proof stubs with `spo-supervisor` harnesses that call
+  the same Rust functions used at runtime, and made the Kani workflow fail on
+  proof failures.
+
 ## [0.5.11] - 2026-05-13
 
 ### Added
