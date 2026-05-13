@@ -91,6 +91,7 @@ def is_webgpu_runtime_available() -> bool:
     """Detect browser WebGPU availability without importing JS on CPython."""
 
     try:
+        # type ignore: Pyodide exposes the browser JS namespace only at runtime.
         import js  # type: ignore[import-not-found]
     except ImportError:
         return False
