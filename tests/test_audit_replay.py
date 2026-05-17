@@ -480,6 +480,24 @@ def test_integrity_with_audit_key_rejects_signature_tampering(tmp_path, monkeypa
     assert n_verified == 0
 
 
+def test_integrity_with_audit_key_rejects_audit_mode_tampering(tmp_path, monkeypatch):
+    """Signed JSONL records must bind audit mode into HMAC verification."""
+    monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
+    log = tmp_path / "signed.jsonl"
+    with AuditLogger(log) as logger:
+        logger.log_step(0, _make_state(0.8, 1.0), [])
+
+    entries = ReplayEngine(log).load()
+    entries[0]["_audit_mode"] = "unsigned-development"
+    clean = {k: v for k, v in entries[0].items() if k != "_hash"}
+    json_line = json.dumps(clean, separators=(",", ":"), sort_keys=True)
+    entries[0]["_hash"] = hashlib.sha256(("0" * 64 + json_line).encode()).hexdigest()
+
+    ok, n_verified = ReplayEngine.verify_integrity(entries)
+    assert not ok
+    assert n_verified == 0
+
+
 def test_integrity_verifies_records_across_rotated_audit_keys(tmp_path, monkeypatch):
     """A JSON keyring verifies old and current records after key rotation."""
     old_key = "old-rotation-key"

@@ -279,6 +279,8 @@ def _verify_hmac_signature(
         return False
     if entry.get("_audit_schema_version") != _AUDIT_SCHEMA_VERSION:
         return False
+    if entry.get("_audit_mode") != "hmac-signed":
+        return False
     if entry.get("_audit_sequence") != expected_sequence:
         return False
     if entry.get("_previous_hash") != expected_previous_hash:
@@ -304,6 +306,7 @@ def _verify_hmac_signature(
         "key_id": key_id,
     }
     signing_material = {
+        "audit_mode": "hmac-signed",
         "metadata": signing_metadata,
         "payload_hash": payload_hash,
         "previous_event_hash": expected_previous_hash,

@@ -113,7 +113,9 @@ class AuditLogger:
             "algorithm": _SIGNATURE_ALGORITHM,
             "key_id": key_id,
         }
+        audit_mode = "hmac-signed"
         signing_material = {
+            "audit_mode": audit_mode,
             "metadata": signature_metadata,
             "payload_hash": payload_hash,
             "previous_event_hash": self._prev_hash,
@@ -132,7 +134,7 @@ class AuditLogger:
         return {
             **clean,
             "_audit_schema_version": _AUDIT_SCHEMA_VERSION,
-            "_audit_mode": "hmac-signed",
+            "_audit_mode": audit_mode,
             "_audit_sequence": self._sequence,
             "_audit_stream_id": self._stream_id,
             "_audit_timestamp_unix_ns": timestamp_ns,
