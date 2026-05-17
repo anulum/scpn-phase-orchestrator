@@ -117,6 +117,23 @@ def test_event_stream_integrity_verifies_hmac_signed_envelopes(
     assert verified == 1
 
 
+def test_event_stream_integrity_rejects_tampered_audit_mode(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
+    stream_path = tmp_path / "audit.spoa"
+
+    with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
+        logger.log_event("operator_note", {"step": 3, "detail": "signed"})
+
+    events = read_event_stream(stream_path)
+    events[0].audit_mode = "unsigned-development"
+
+    ok, verified = verify_event_stream_integrity(events)
+    assert ok is False
+    assert verified == 0
+
+
 def test_event_stream_integrity_requires_hmac_when_key_is_configured(
     tmp_path, monkeypatch
 ) -> None:

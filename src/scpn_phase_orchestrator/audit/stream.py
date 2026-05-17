@@ -183,6 +183,7 @@ def _event_hash(
 
 def _signature_material(
     *,
+    audit_mode: str,
     stream_id: str,
     sequence: int,
     event_type: str,
@@ -196,6 +197,7 @@ def _signature_material(
 ) -> str:
     return _canonical_json(
         {
+            "audit_mode": audit_mode,
             "event_hash": event_hash,
             "event_type": event_type,
             "key_id": key_id,
@@ -296,6 +298,7 @@ class EventStreamWriter:
             signature = hmac.new(
                 self._audit_key.encode(),
                 _signature_material(
+                    audit_mode=audit_mode,
                     stream_id=self._stream_id,
                     sequence=self._sequence,
                     event_type=resolved_type,
@@ -459,6 +462,8 @@ def _verify_event_signature(
     expected_hash: str,
     expected_previous_hash: str,
 ) -> bool:
+    if event.audit_mode != "hmac-signed":
+        return False
     if event.signature_algorithm != SIGNATURE_ALGORITHM:
         return False
     if len(event.signature) != 64:
@@ -471,6 +476,7 @@ def _verify_event_signature(
     expected_signature = hmac.new(
         audit_key.encode(),
         _signature_material(
+            audit_mode=event.audit_mode,
             stream_id=event.stream_id,
             sequence=event.sequence,
             event_type=event.event_type,
