@@ -1775,6 +1775,98 @@ def test_supervisor_baseline_experiment_records_existing_artifact_manifests(
     assert stdout_record["artifacts"]["plot_manifest_path"] == str(plot_manifest)
 
 
+def test_supervisor_baseline_experiment_loads_scenario_json(runner, tmp_path):
+    config_path = tmp_path / "supervisor_config.json"
+    metrics_path = tmp_path / "supervisor_metrics.jsonl"
+    summary_path = tmp_path / "supervisor_summary.json"
+    scenario_path = tmp_path / "scenario.json"
+    scenario_payload = {
+        "phases": [0.0, 0.2, 2.5, 3.0],
+        "omegas": [0.05, 0.02, -0.02, -0.05],
+        "base_coupling_off_diagonal": 0.02,
+        "good_mask": [1.0, 1.0, 0.0, 0.0],
+        "bad_mask": [0.0, 0.0, 1.0, 1.0],
+        "dt": 0.04,
+        "inner_steps": 3,
+        "horizon": 5,
+    }
+    scenario_path.write_text(json.dumps(scenario_payload), encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "supervisor-baseline-experiment",
+            "--scenario-json",
+            str(scenario_path),
+            "--config-json",
+            str(config_path),
+            "--metrics-jsonl",
+            str(metrics_path),
+            "--summary-json",
+            str(summary_path),
+            "--git-sha",
+            "abc1234",
+            "--seed",
+            "91",
+            "--dependency-lock",
+            "requirements-dev.txt:sha256:test",
+            "--json-out",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    config_record = json.loads(config_path.read_text(encoding="utf-8"))
+    assert config_record["scenario"] == {
+        "n_oscillators": 4,
+        **scenario_payload,
+    }
+
+
+def test_supervisor_baseline_experiment_rejects_malformed_scenario_json(
+    runner, tmp_path
+):
+    scenario_path = tmp_path / "bad_scenario.json"
+    scenario_path.write_text(
+        json.dumps(
+            {
+                "phases": [0.0, 0.2],
+                "omegas": [0.05],
+                "base_coupling_off_diagonal": 0.02,
+                "good_mask": [1.0, 1.0],
+                "bad_mask": [0.0, 0.0],
+                "dt": 0.04,
+                "inner_steps": 3,
+                "horizon": 5,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "supervisor-baseline-experiment",
+            "--scenario-json",
+            str(scenario_path),
+            "--config-json",
+            str(tmp_path / "supervisor_config.json"),
+            "--metrics-jsonl",
+            str(tmp_path / "supervisor_metrics.jsonl"),
+            "--summary-json",
+            str(tmp_path / "supervisor_summary.json"),
+            "--git-sha",
+            "abc1234",
+            "--seed",
+            "91",
+            "--dependency-lock",
+            "requirements-dev.txt:sha256:test",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "scenario omegas length must match phases length" in result.output
+
+
 def test_supervisor_baseline_experiment_rejects_missing_artifact_manifests(
     runner, tmp_path
 ):

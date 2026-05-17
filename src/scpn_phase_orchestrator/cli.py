@@ -518,7 +518,93 @@ def _write_json_file(path: Path, payload: object) -> None:
     )
 
 
+def _supervisor_default_scenario_config() -> dict[str, object]:
+    return {
+        "n_oscillators": 4,
+        "phases": [0.0, 0.1, 2.7, 3.1],
+        "omegas": [0.04, 0.03, -0.03, -0.04],
+        "base_coupling_off_diagonal": 0.03,
+        "good_mask": [1.0, 1.0, 0.0, 0.0],
+        "bad_mask": [0.0, 0.0, 1.0, 1.0],
+        "dt": 0.05,
+        "inner_steps": 4,
+        "horizon": 6,
+    }
+
+
+def _supervisor_float_list(record: dict[str, object], field: str) -> list[float]:
+    value = record.get(field)
+    if not isinstance(value, list) or not value:
+        raise click.ClickException(f"scenario {field} must be a non-empty list")
+    values: list[float] = []
+    for index, item in enumerate(value):
+        if isinstance(item, bool) or not isinstance(item, int | float):
+            raise click.ClickException(f"scenario {field}[{index}] must be numeric")
+        values.append(float(item))
+    return values
+
+
+def _supervisor_positive_float(record: dict[str, object], field: str) -> float:
+    value = record.get(field)
+    if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
+        raise click.ClickException(f"scenario {field} must be a positive number")
+    return float(value)
+
+
+def _supervisor_positive_int(record: dict[str, object], field: str) -> int:
+    value = record.get(field)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise click.ClickException(f"scenario {field} must be a positive integer")
+    return value
+
+
+def _supervisor_scenario_config_from_record(
+    record: dict[str, object],
+) -> dict[str, object]:
+    phases = _supervisor_float_list(record, "phases")
+    n_oscillators = len(phases)
+    normalized: dict[str, object] = {
+        "n_oscillators": n_oscillators,
+        "phases": phases,
+        "omegas": _supervisor_float_list(record, "omegas"),
+        "base_coupling_off_diagonal": _supervisor_positive_float(
+            record,
+            "base_coupling_off_diagonal",
+        ),
+        "good_mask": _supervisor_float_list(record, "good_mask"),
+        "bad_mask": _supervisor_float_list(record, "bad_mask"),
+        "dt": _supervisor_positive_float(record, "dt"),
+        "inner_steps": _supervisor_positive_int(record, "inner_steps"),
+        "horizon": _supervisor_positive_int(record, "horizon"),
+    }
+    for field in ("omegas", "good_mask", "bad_mask"):
+        values = normalized[field]
+        if not isinstance(values, list) or len(values) != n_oscillators:
+            raise click.ClickException(
+                f"scenario {field} length must match phases length"
+            )
+    return normalized
+
+
+def _load_supervisor_scenario_config(path: Path | None) -> dict[str, object]:
+    if path is None:
+        return _supervisor_default_scenario_config()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise click.ClickException(f"invalid scenario JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise click.ClickException("scenario JSON must be an object")
+    return _supervisor_scenario_config_from_record(payload)
+
+
 @main.command("supervisor-baseline-experiment")
+@click.option(
+    "--scenario-json",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Optional scenario JSON overriding the built-in deterministic fixture.",
+)
 @click.option(
     "--config-json",
     required=True,
@@ -575,6 +661,7 @@ def _write_json_file(path: Path, payload: object) -> None:
 @click.pass_context
 def supervisor_baseline_experiment(
     ctx: click.Context,
+    scenario_json: Path | None,
     config_json: Path,
     metrics_jsonl: Path,
     summary_json: Path,
@@ -610,21 +697,26 @@ def supervisor_baseline_experiment(
     if any(seed < 0 for seed in seeds):
         raise click.ClickException("--seed values must be non-negative")
 
-    phases = jnp.array([0.0, 0.1, 2.7, 3.1])
-    base_k = jnp.full((4, 4), 0.03)
-    base_k = base_k.at[jnp.diag_indices(4)].set(0.0)
+    scenario_config = _load_supervisor_scenario_config(scenario_json)
+    n_oscillators = cast(int, scenario_config["n_oscillators"])
+    phases = jnp.array(cast(list[float], scenario_config["phases"]))
+    base_k = jnp.full(
+        (n_oscillators, n_oscillators),
+        cast(float, scenario_config["base_coupling_off_diagonal"]),
+    )
+    base_k = base_k.at[jnp.diag_indices(n_oscillators)].set(0.0)
     scenario = KuramotoSupervisorScenario(
         phases=phases,
-        omegas=jnp.array([0.04, 0.03, -0.03, -0.04]),
+        omegas=jnp.array(cast(list[float], scenario_config["omegas"])),
         base_K=base_k,
-        good_mask=jnp.array([1.0, 1.0, 0.0, 0.0]),
-        bad_mask=jnp.array([0.0, 0.0, 1.0, 1.0]),
-        dt=0.05,
-        inner_steps=4,
-        horizon=6,
+        good_mask=jnp.array(cast(list[float], scenario_config["good_mask"])),
+        bad_mask=jnp.array(cast(list[float], scenario_config["bad_mask"])),
+        dt=cast(float, scenario_config["dt"]),
+        inner_steps=cast(int, scenario_config["inner_steps"]),
+        horizon=cast(int, scenario_config["horizon"]),
     )
     config = DifferentiableSupervisorConfig(
-        n_oscillators=4,
+        n_oscillators=n_oscillators,
         hidden_width=8,
         hidden_depth=1,
     )
@@ -670,17 +762,7 @@ def supervisor_baseline_experiment(
             "bad_sync_weight": config.bad_sync_weight,
             "smoothness_weight": config.smoothness_weight,
         },
-        "scenario": {
-            "n_oscillators": 4,
-            "phases": [0.0, 0.1, 2.7, 3.1],
-            "omegas": [0.04, 0.03, -0.03, -0.04],
-            "base_coupling_off_diagonal": 0.03,
-            "good_mask": [1.0, 1.0, 0.0, 0.0],
-            "bad_mask": [0.0, 0.0, 1.0, 1.0],
-            "dt": scenario.dt,
-            "inner_steps": scenario.inner_steps,
-            "horizon": scenario.horizon,
-        },
+        "scenario": scenario_config,
         "comparisons": [
             "cli_static_zero_action",
             "cli_bounded_random_action",
