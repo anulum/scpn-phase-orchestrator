@@ -51,6 +51,7 @@ __all__ = [
     "supervisor_action_log_prob",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
+    "ppo_supervisor_train_epochs",
     "collect_supervisor_rollouts",
     "control_actions_from_supervisor",
 ]
@@ -458,6 +459,7 @@ def ppo_supervisor_train_step(
     clip_epsilon: float = 0.2,
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
+    max_grad_norm: float | None = None,
 ) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array]:
     """Run one optax update using the clipped PPO supervisor objective."""
 
@@ -474,8 +476,100 @@ def ppo_supervisor_train_step(
     loss, grads = eqx.filter_value_and_grad(loss_fn)(policy)
     params = eqx.filter(policy, eqx.is_array)
     updates, opt_state = optimizer.update(grads, opt_state, params)
+    if max_grad_norm is not None:
+        max_grad_norm = _positive_float(max_grad_norm, "max_grad_norm")
+        updates = _clip_updates_by_global_norm(updates, max_grad_norm)
     updated = eqx.apply_updates(policy, updates)
     return updated, opt_state, loss
+
+
+def ppo_supervisor_train_epochs(
+    policy: DifferentiableSupervisorPolicy,
+    batch: SupervisorPPOBatch,
+    key: jax.Array,
+    opt_state: Any,
+    optimizer: optax.GradientTransformation,
+    *,
+    n_epochs: int,
+    minibatch_size: int = 32,
+    clip_epsilon: float = 0.2,
+    value_weight: float = 0.5,
+    entropy_weight: float = 0.01,
+    max_grad_norm: float | None = None,
+    kl_early_stop: float | None = None,
+) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array, int]:
+    """Run PPO training for multiple epochs with deterministic minibatching.
+
+    Args:
+        policy: Optimisable differentiable supervisor policy.
+        batch: Flattened PPO batch from rollout collection.
+        key: JAX PRNG key used only for shuffle ordering.
+        opt_state: Optimiser state.
+        optimizer: Optax optimiser transformation.
+        n_epochs: Number of passes over the dataset.
+        minibatch_size: Per-update minibatch size.
+        clip_epsilon: PPO clipping radius.
+        value_weight: Value-function loss coefficient.
+        entropy_weight: Entropy bonus coefficient.
+        max_grad_norm: Optional global gradient-norm clip radius.
+        kl_early_stop: Optional KL threshold for early stopping.
+
+    Returns:
+        (policy, opt_state, loss_history, n_updates)
+    """
+    n_epochs = _positive_int(n_epochs, "n_epochs")
+    batch_size = int(batch.phases.shape[0])
+    minibatch_size = _positive_int(minibatch_size, "minibatch_size")
+    if batch_size <= 0:
+        raise ValueError("batch.phases must contain at least one step")
+    if minibatch_size > batch_size:
+        raise ValueError("minibatch_size cannot exceed batch size")
+    if kl_early_stop is not None:
+        kl_early_stop = _positive_float(kl_early_stop, "kl_early_stop")
+    _validate_supervisor_ppo_batch_size(batch, batch_size)
+
+    updates: list[jax.Array] = []
+    n_updates = 0
+    current_key = key
+    for epoch in range(n_epochs):
+        epoch_key, current_key = jax.random.split(current_key)
+        indices = jax.random.permutation(epoch_key, batch_size)
+
+        for start in range(0, batch_size, minibatch_size):
+            end = min(start + minibatch_size, batch_size)
+            batch_idx = indices[start:end]
+            batch_slice = _take_batch_rows(batch, batch_idx)
+
+            policy, opt_state, loss = ppo_supervisor_train_step(
+                policy,
+                batch_slice,
+                opt_state,
+                optimizer,
+                clip_epsilon=clip_epsilon,
+                value_weight=value_weight,
+                entropy_weight=entropy_weight,
+                max_grad_norm=max_grad_norm,
+            )
+            updates.append(loss)
+            n_updates += 1
+
+            if kl_early_stop is not None:
+                _, aux = ppo_supervisor_loss(
+                    policy,
+                    batch_slice,
+                    clip_epsilon=clip_epsilon,
+                    value_weight=value_weight,
+                    entropy_weight=entropy_weight,
+                )
+                if float(jnp.abs(aux.approx_kl)) > kl_early_stop:
+                    return policy, opt_state, jnp.asarray(updates), n_updates
+
+    return (
+        policy,
+        opt_state,
+        jnp.asarray(updates),
+        n_updates,
+    )
 
 
 def collect_supervisor_rollouts(
@@ -712,10 +806,82 @@ def _positive_int(value: object, field: str) -> int:
     return value
 
 
+def _validate_supervisor_ppo_batch_size(
+    batch: SupervisorPPOBatch,
+    batch_size: int,
+) -> None:
+    fields = (
+        "phases",
+        "omegas",
+        "base_K",
+        "good_mask",
+        "bad_mask",
+        "actions",
+        "old_log_probs",
+        "advantages",
+        "returns",
+    )
+    for field_name in fields:
+        value = getattr(batch, field_name)
+        if value.shape[0] != batch_size:
+            raise ValueError(
+                f"{field_name} must have first dimension {batch_size}, got"
+                f" {value.shape[0]}"
+            )
+
+
+def _take_batch_rows(
+    batch: SupervisorPPOBatch, indices: jax.Array
+) -> SupervisorPPOBatch:
+    return SupervisorPPOBatch(
+        phases=batch.phases[indices],
+        omegas=batch.omegas[indices],
+        base_K=batch.base_K[indices],
+        good_mask=batch.good_mask[indices],
+        bad_mask=batch.bad_mask[indices],
+        actions=batch.actions[indices],
+        old_log_probs=batch.old_log_probs[indices],
+        advantages=batch.advantages[indices],
+        returns=batch.returns[indices],
+        dt=batch.dt,
+        inner_steps=batch.inner_steps,
+        horizon=batch.horizon,
+    )
+
+
+def _global_l2_norm(values: Any) -> jax.Array:
+    leaves = jax.tree.leaves(values)
+    if not leaves:
+        return jnp.array(0.0)
+    return jnp.sqrt(
+        jnp.sum(
+            jnp.array([jnp.sum(jnp.square(leaf)) for leaf in leaves], dtype=jnp.float64)
+        )
+    )
+
+
+def _clip_updates_by_global_norm(
+    updates: Any,
+    max_grad_norm: float,
+) -> Any:
+    norm = _global_l2_norm(updates)
+    clip_scale = jnp.minimum(1.0, max_grad_norm / (norm + 1.0e-12))
+    return jax.tree.map(lambda x: x * clip_scale, updates)
+
+
 def _bounded_unit_scalar(value: object, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{field} must be in [0, 1]")
     value_float = float(value)
     if not isfinite(value_float) or value_float < 0.0 or value_float > 1.0:
         raise ValueError(f"{field} must be in [0, 1]")
+    return value_float
+
+
+def _positive_float(value: object, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field} must be a finite positive scalar")
+    value_float = float(value)
+    if not isfinite(value_float) or value_float <= 0.0:
+        raise ValueError(f"{field} must be a finite positive scalar")
     return value_float

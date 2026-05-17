@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     closed_loop_supervisor_loss,
     control_actions_from_supervisor,
     pack_supervisor_action,
+    ppo_supervisor_train_epochs,
     ppo_supervisor_loss,
     ppo_supervisor_train_step,
     sample_supervisor_action,
@@ -180,6 +181,147 @@ def test_ppo_supervisor_loss_and_train_step_are_finite() -> None:
     before = jax.tree.leaves(eqx.filter(policy, eqx.is_array))
     after = jax.tree.leaves(eqx.filter(updated, eqx.is_array))
     assert any(not jnp.allclose(a, b) for a, b in zip(before, after, strict=True))
+
+
+def test_ppo_supervisor_train_epochs_minibatches_and_is_deterministic() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(30))
+    rollout = collect_supervisor_rollouts(
+        policy,
+        _scenario(),
+        key=jax.random.PRNGKey(31),
+        n_episodes=2,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.0,
+    )
+    batch = rollout.batch
+    optimizer = optax.adam(1e-3)
+    minibatch_size = 4
+    expected_updates = (
+        ((batch.phases.shape[0] + minibatch_size - 1) // minibatch_size) * 2
+    )
+
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+    first_policy, _, first_losses, first_updates = ppo_supervisor_train_epochs(
+        policy,
+        batch,
+        key=jax.random.PRNGKey(32),
+        opt_state=opt_state,
+        optimizer=optimizer,
+        n_epochs=2,
+        minibatch_size=minibatch_size,
+        max_grad_norm=1.0,
+    )
+
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+    second_policy, _, second_losses, second_updates = (
+        ppo_supervisor_train_epochs(
+            policy,
+            batch,
+            key=jax.random.PRNGKey(32),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=2,
+            minibatch_size=minibatch_size,
+            max_grad_norm=1.0,
+        )
+    )
+    assert first_updates == expected_updates
+    assert first_updates == second_updates
+    assert first_policy is not policy
+    assert second_policy is not policy
+    assert jnp.allclose(first_losses, second_losses)
+    first_before = eqx.filter(policy, eqx.is_array)
+    first_after = eqx.filter(first_policy, eqx.is_array)
+    second_after = eqx.filter(second_policy, eqx.is_array)
+    assert any(
+        not jnp.allclose(a, b)
+        for a, b in zip(first_before, first_after, strict=True)
+    )
+    assert any(
+        not jnp.allclose(a, b)
+        for a, b in zip(first_after, second_after, strict=True)
+    )
+
+
+def test_ppo_supervisor_train_step_supports_grad_clip() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(33))
+    batch = SupervisorPPOBatch(
+        phases=jnp.tile(_scenario().phases, (2, 1)),
+        omegas=jnp.tile(_scenario().omegas, (2, 1)),
+        base_K=jnp.tile(_scenario().base_K, (2, 1, 1)),
+        good_mask=jnp.tile(_scenario().good_mask, (2, 1)),
+        bad_mask=jnp.tile(_scenario().bad_mask, (2, 1)),
+        actions=jnp.stack(
+            [jnp.zeros(4)] * 2,
+        ),
+        old_log_probs=jnp.array([0.0, 0.0]),
+        advantages=jnp.array([1.0, -1.0]),
+        returns=jnp.array([0.1, 0.2]),
+        dt=_scenario().dt,
+        inner_steps=4,
+        horizon=3,
+    )
+    optimizer = optax.adam(1e-3)
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+
+    updated, _, loss = ppo_supervisor_train_step(
+        policy,
+        batch,
+        opt_state=opt_state,
+        optimizer=optimizer,
+        clip_epsilon=0.2,
+        max_grad_norm=0.1,
+    )
+
+    assert jnp.isfinite(loss)
+    updated_params = eqx.filter(updated, eqx.is_array)
+    baseline_params = eqx.filter(policy, eqx.is_array)
+    assert any(
+        not jnp.allclose(a, b)
+        for a, b in zip(baseline_params, updated_params, strict=True)
+    )
+
+
+def test_ppo_supervisor_train_epochs_rejects_invalid_minibatch_size() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy_model = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(34))
+    rollout = collect_supervisor_rollouts(
+        policy_model,
+        _scenario(),
+        key=jax.random.PRNGKey(35),
+        n_episodes=1,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.0,
+    )
+    batch = rollout.batch
+    optimizer = optax.adam(1e-3)
+    opt_state = optimizer.init(eqx.filter(policy_model, eqx.is_array))
+
+    with pytest.raises(ValueError, match="minibatch_size"):
+        ppo_supervisor_train_epochs(
+            policy_model,
+            batch,
+            key=jax.random.PRNGKey(36),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=2,
+            minibatch_size=0,
+        )
+
+    with pytest.raises(ValueError, match="minibatch_size cannot exceed batch size"):
+        ppo_supervisor_train_epochs(
+            policy_model,
+            batch,
+            key=jax.random.PRNGKey(36),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            minibatch_size=batch.phases.shape[0] + 1,
+        )
 
 
 def test_control_action_adapter_feeds_existing_mapper() -> None:
