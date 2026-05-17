@@ -480,6 +480,40 @@ def test_integrity_with_audit_key_rejects_signature_tampering(tmp_path, monkeypa
     assert n_verified == 0
 
 
+def test_integrity_verifies_records_across_rotated_audit_keys(tmp_path, monkeypatch):
+    """A JSON keyring verifies old and current records after key rotation."""
+    old_key = "old-rotation-key"
+    new_key = "new-rotation-key"
+    old_key_id = hashlib.sha256(old_key.encode()).hexdigest()[:16]
+    new_key_id = hashlib.sha256(new_key.encode()).hexdigest()[:16]
+    log = tmp_path / "rotated.jsonl"
+
+    monkeypatch.setenv("SPO_AUDIT_KEY", old_key)
+    with AuditLogger(log) as logger:
+        logger.log_header(n_oscillators=2, dt=0.01)
+
+    monkeypatch.setenv("SPO_AUDIT_KEY", new_key)
+    with AuditLogger(log) as logger:
+        logger.log_step(0, _make_state(0.8, 1.0), [])
+
+    entries = ReplayEngine(log).load()
+    assert [entry["_signature"]["key_id"] for entry in entries] == [
+        old_key_id,
+        new_key_id,
+    ]
+    ok, n_verified = ReplayEngine.verify_integrity(entries)
+    assert not ok
+    assert n_verified == 0
+
+    monkeypatch.setenv(
+        "SPO_AUDIT_KEYRING",
+        json.dumps({old_key_id: old_key, new_key_id: new_key}),
+    )
+    ok, n_verified = ReplayEngine.verify_integrity(entries)
+    assert ok
+    assert n_verified == 2
+
+
 def test_sl_chained_replay(tmp_path):
     """Stuart-Landau replay: engine output matches logged next state."""
     from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine

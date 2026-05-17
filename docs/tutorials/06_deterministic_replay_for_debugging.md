@@ -17,12 +17,37 @@ The verification pass is the core safety check:
 - same seed and binding config from the header must reproduce the logged trajectory
 - step-by-step phase/metric deltas must stay within SPO tolerances
 - hash chain mismatches are rejected immediately
+- when `SPO_AUDIT_KEY` is configured, unsigned or signature-invalid records are
+  rejected before deterministic replay starts
 
 You should see a pass line similar to:
 
 ```text
 Determinism verified: 180 transitions OK
 ```
+
+For signed operational logs, keep signing keys in the runtime environment only:
+
+```bash
+export SPO_AUDIT_KEY="current audit signing secret"
+spo run domainpacks/valve_tune/binding_spec.yaml --steps 180 --seed 7 --audit valve_tune_audit.jsonl
+spo replay valve_tune_audit.jsonl --verify
+```
+
+When rotating keys, verify historical records by supplying a keyring whose
+object keys are the stored key ids, computed as `sha256(secret)[:16]`:
+
+```bash
+export SPO_AUDIT_KEY="new audit signing secret"
+export SPO_AUDIT_KEYRING='{
+  "old_key_id": "old audit signing secret",
+  "new_key_id": "new audit signing secret"
+}'
+spo replay valve_tune_audit.jsonl --verify
+```
+
+Never commit `SPO_AUDIT_KEY` or `SPO_AUDIT_KEYRING`; they are verification
+inputs, not audit artefacts.
 
 ## 2. Generate a Machine-Readable Replay Report
 

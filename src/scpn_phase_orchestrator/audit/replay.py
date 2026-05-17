@@ -121,10 +121,11 @@ class ReplayEngine:
         Returns (all_valid, n_verified).  Legacy logs without ``_hash``
         fields return (True, 0) unless ``SPO_AUDIT_KEY`` is configured.
         """
-        audit_key = os.environ.get("SPO_AUDIT_KEY")
-        if audit_key == "":
+        try:
+            audit_keys = _audit_verification_keys()
+        except ValueError:
             return False, 0
-        require_signature = audit_key is not None
+        require_signature = bool(audit_keys)
         prev = _ZERO_HASH
         verified = 0
         expected_sequence = 1
@@ -139,16 +140,13 @@ class ReplayEngine:
             expected = hashlib.sha256((prev + json_line).encode()).hexdigest()
             if expected != stored:
                 return False, verified
-            if require_signature:
-                if audit_key is None:
-                    return False, verified
-                if not _verify_hmac_signature(
-                    entry,
-                    audit_key,
-                    expected_previous_hash=prev,
-                    expected_sequence=expected_sequence,
-                ):
-                    return False, verified
+            if require_signature and not _verify_hmac_signature(
+                entry,
+                audit_keys,
+                expected_previous_hash=prev,
+                expected_sequence=expected_sequence,
+            ):
+                return False, verified
             prev = stored
             verified += 1
             expected_sequence += 1
@@ -258,7 +256,7 @@ class ReplayEngine:
 
 def _verify_hmac_signature(
     entry: dict,
-    audit_key: str,
+    audit_keys: dict[str, str],
     *,
     expected_previous_hash: str,
     expected_sequence: int,
@@ -272,8 +270,12 @@ def _verify_hmac_signature(
     if not isinstance(signature_value, str) or len(signature_value) != 64:
         return False
     key_id = signature.get("key_id")
-    expected_key_id = hashlib.sha256(audit_key.encode()).hexdigest()[:16]
-    if key_id != expected_key_id:
+    if not isinstance(key_id, str):
+        return False
+    audit_key = audit_keys.get(key_id)
+    if audit_key is None:
+        return False
+    if key_id != hashlib.sha256(audit_key.encode()).hexdigest()[:16]:
         return False
     if entry.get("_audit_schema_version") != _AUDIT_SCHEMA_VERSION:
         return False
@@ -299,7 +301,7 @@ def _verify_hmac_signature(
 
     signing_metadata = {
         "algorithm": _SIGNATURE_ALGORITHM,
-        "key_id": expected_key_id,
+        "key_id": key_id,
     }
     signing_material = {
         "metadata": signing_metadata,
@@ -316,6 +318,36 @@ def _verify_hmac_signature(
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(signature_value, expected_signature)
+
+
+def _audit_verification_keys() -> dict[str, str]:
+    keys: dict[str, str] = {}
+    current_key = os.environ.get("SPO_AUDIT_KEY")
+    if current_key == "":
+        raise ValueError("SPO_AUDIT_KEY must not be empty")
+    if current_key is not None:
+        keys[hashlib.sha256(current_key.encode()).hexdigest()[:16]] = current_key
+
+    keyring_json = os.environ.get("SPO_AUDIT_KEYRING")
+    if keyring_json is None:
+        return keys
+    if keyring_json == "":
+        raise ValueError("SPO_AUDIT_KEYRING must not be empty")
+    try:
+        loaded = json.loads(keyring_json)
+    except json.JSONDecodeError as exc:
+        raise ValueError("SPO_AUDIT_KEYRING must be JSON") from exc
+    if not isinstance(loaded, dict):
+        raise ValueError("SPO_AUDIT_KEYRING must be a JSON object")
+    for key_id, key_value in loaded.items():
+        if not isinstance(key_id, str) or key_id == "":
+            raise ValueError("SPO_AUDIT_KEYRING key ids must be non-empty strings")
+        if not isinstance(key_value, str) or key_value == "":
+            raise ValueError("SPO_AUDIT_KEYRING keys must be non-empty strings")
+        if key_id != hashlib.sha256(key_value.encode()).hexdigest()[:16]:
+            raise ValueError("SPO_AUDIT_KEYRING key id does not match key material")
+        keys[key_id] = key_value
+    return keys
 
 
 def _payload_without_audit_metadata(record: dict) -> dict:

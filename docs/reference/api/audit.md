@@ -51,6 +51,47 @@ includes `channel_algebra`, covering required and optional channels, derived
 channels, runtime evidence channels, group membership, coupling participants,
 and missing required channel evidence.
 
+## Keyed Audit Signatures
+
+Set `SPO_AUDIT_KEY` to enable HMAC-SHA256 signatures on JSONL audit records.
+Signed records add audit metadata for replay verification:
+
+| Field | Description |
+|-------|-------------|
+| `_audit_schema_version` | Signature metadata schema version |
+| `_audit_stream_id` | Logical JSONL stream id |
+| `_audit_sequence` | Monotonic record sequence |
+| `_audit_timestamp_unix_ns` | Signing timestamp in Unix nanoseconds |
+| `_previous_hash` | Previous JSONL record hash used by the signature |
+| `_payload_hash` | SHA256 of the canonical payload without audit metadata |
+| `_signature` | HMAC algorithm, key id, and signature value |
+
+The raw key is never written to the audit file. The stored key id is
+`sha256(key)[:16]`, which lets replay choose the right verification key without
+logging secret material.
+
+When `SPO_AUDIT_KEY` is configured, `ReplayEngine.verify_integrity()` and
+`spo replay --verify` fail closed if a record is unsigned, malformed, signed by
+an unknown key, or modified after signing. Without `SPO_AUDIT_KEY`, legacy
+unsigned development logs remain readable and hash-chain verification keeps its
+previous behaviour.
+
+For key rotation, keep historical keys only in the operator environment and pass
+them as a JSON object through `SPO_AUDIT_KEYRING`:
+
+```bash
+export SPO_AUDIT_KEY="new secret"
+export SPO_AUDIT_KEYRING='{
+  "old_key_id": "old secret",
+  "new_key_id": "new secret"
+}'
+spo replay audit.jsonl --verify
+```
+
+Each keyring object key must match `sha256(secret)[:16]`; mismatches fail
+closed. Do not commit these environment values, include them in diagnostics, or
+store them in audit artefacts.
+
 ## Audit Logger
 
 Appends timestamped, SHA256-chained records to a JSONL audit trail. When
