@@ -211,8 +211,7 @@
   - Transport-neutral hierarchy sync envelopes are in place: `build_hierarchy_sync_envelope()` and `ingest_hierarchy_sync_envelopes()` provide deterministic JSON-safe edge/cloud summary exchange with protocol-version and sequence checks.
   - Strict non-socket `HierarchyTransportRuntime` validation and decoded
     JSONL/REST/frame adapter boundaries are in place for reviewable
-    live-adapter handoff. Remaining scope is owned live transports and broader
-    multi-domain demos.
+    live-adapter handoff. Power-grid, cardiac-rhythm, and edge-consensus domainpacks now include `hierarchy_transport_demo.py` transport-demos with JSONL/REST/frame smoke coverage. Remaining scope is owned live transports and deployment paths.
 - Distributed edge orchestration: multi-node phase consensus with gossip or local Kuramoto coupling, plus WASM/FPGA deployment paths for decentralised operation.
   - Offline hierarchy sync-envelope ingestion and two domainpack replay demos are in place for reduced summaries.
   - Deterministic offline gossip/local-consensus replay is in place via `simulate_hierarchy_gossip_consensus()`, using accepted sync envelopes and caller-supplied neighbour maps without sockets or live actuation. Live transport remains open.
