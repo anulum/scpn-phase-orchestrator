@@ -116,6 +116,7 @@ __all__ = [
     "SupervisorLossAux",
     "SupervisorPPOBatch",
     "SupervisorPPOAux",
+    "SupervisorPPOCheckpoint",
     "masked_order_parameter",
     "apply_supervisor_action",
     "closed_loop_supervisor_loss",
@@ -126,6 +127,10 @@ __all__ = [
     "supervisor_action_log_prob",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
+    "ppo_supervisor_train_epochs",
+    "collect_supervisor_rollouts",
+    "save_supervisor_ppo_checkpoint",
+    "load_supervisor_ppo_checkpoint",
     "control_actions_from_supervisor",
 ]
 
@@ -210,6 +215,7 @@ _SUPERVISOR = {
     "SupervisorLossAux",
     "SupervisorPPOBatch",
     "SupervisorPPOAux",
+    "SupervisorPPOCheckpoint",
     "masked_order_parameter",
     "apply_supervisor_action",
     "closed_loop_supervisor_loss",
@@ -220,6 +226,10 @@ _SUPERVISOR = {
     "supervisor_action_log_prob",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
+    "ppo_supervisor_train_epochs",
+    "collect_supervisor_rollouts",
+    "save_supervisor_ppo_checkpoint",
+    "load_supervisor_ppo_checkpoint",
     "control_actions_from_supervisor",
 }
 

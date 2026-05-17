@@ -22,17 +22,19 @@ from scpn_phase_orchestrator.nn.supervisor import (
     DifferentiableSupervisorConfig,
     DifferentiableSupervisorPolicy,
     KuramotoSupervisorScenario,
-    SupervisorPPORollout,
     SupervisorPPOBatch,
-    collect_supervisor_rollouts,
+    SupervisorPPORollout,
     apply_supervisor_action,
     closed_loop_supervisor_loss,
+    collect_supervisor_rollouts,
     control_actions_from_supervisor,
+    load_supervisor_ppo_checkpoint,
     pack_supervisor_action,
-    ppo_supervisor_train_epochs,
     ppo_supervisor_loss,
+    ppo_supervisor_train_epochs,
     ppo_supervisor_train_step,
     sample_supervisor_action,
+    save_supervisor_ppo_checkpoint,
     supervisor_train_step,
 )
 
@@ -200,8 +202,8 @@ def test_ppo_supervisor_train_epochs_minibatches_and_is_deterministic() -> None:
     optimizer = optax.adam(1e-3)
     minibatch_size = 4
     expected_updates = (
-        ((batch.phases.shape[0] + minibatch_size - 1) // minibatch_size) * 2
-    )
+        (batch.phases.shape[0] + minibatch_size - 1) // minibatch_size
+    ) * 2
 
     opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
     first_policy, _, first_losses, first_updates = ppo_supervisor_train_epochs(
@@ -216,17 +218,15 @@ def test_ppo_supervisor_train_epochs_minibatches_and_is_deterministic() -> None:
     )
 
     opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
-    second_policy, _, second_losses, second_updates = (
-        ppo_supervisor_train_epochs(
-            policy,
-            batch,
-            key=jax.random.PRNGKey(32),
-            opt_state=opt_state,
-            optimizer=optimizer,
-            n_epochs=2,
-            minibatch_size=minibatch_size,
-            max_grad_norm=1.0,
-        )
+    second_policy, _, second_losses, second_updates = ppo_supervisor_train_epochs(
+        policy,
+        batch,
+        key=jax.random.PRNGKey(32),
+        opt_state=opt_state,
+        optimizer=optimizer,
+        n_epochs=2,
+        minibatch_size=minibatch_size,
+        max_grad_norm=1.0,
     )
     assert first_updates == expected_updates
     assert first_updates == second_updates
@@ -238,11 +238,19 @@ def test_ppo_supervisor_train_epochs_minibatches_and_is_deterministic() -> None:
     second_after = eqx.filter(second_policy, eqx.is_array)
     assert any(
         not jnp.allclose(a, b)
-        for a, b in zip(first_before, first_after, strict=True)
+        for a, b in zip(
+            jax.tree.leaves(first_before),
+            jax.tree.leaves(first_after),
+            strict=True,
+        )
     )
-    assert any(
-        not jnp.allclose(a, b)
-        for a, b in zip(first_after, second_after, strict=True)
+    assert all(
+        jnp.allclose(a, b)
+        for a, b in zip(
+            jax.tree.leaves(first_after),
+            jax.tree.leaves(second_after),
+            strict=True,
+        )
     )
 
 
@@ -283,7 +291,11 @@ def test_ppo_supervisor_train_step_supports_grad_clip() -> None:
     baseline_params = eqx.filter(policy, eqx.is_array)
     assert any(
         not jnp.allclose(a, b)
-        for a, b in zip(baseline_params, updated_params, strict=True)
+        for a, b in zip(
+            jax.tree.leaves(baseline_params),
+            jax.tree.leaves(updated_params),
+            strict=True,
+        )
     )
 
 
@@ -323,6 +335,117 @@ def test_ppo_supervisor_train_epochs_rejects_invalid_minibatch_size() -> None:
             optimizer=optimizer,
             n_epochs=1,
             minibatch_size=batch.phases.shape[0] + 1,
+        )
+
+
+def test_supervisor_ppo_checkpoint_round_trip_preserves_next_update(tmp_path) -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(42))
+    rollout = collect_supervisor_rollouts(
+        policy,
+        _scenario(),
+        key=jax.random.PRNGKey(43),
+        n_episodes=2,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.0,
+    )
+    optimizer = optax.adam(1e-3)
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+
+    trained, trained_opt_state, losses, n_updates = ppo_supervisor_train_epochs(
+        policy,
+        rollout.batch,
+        key=jax.random.PRNGKey(44),
+        opt_state=opt_state,
+        optimizer=optimizer,
+        n_epochs=1,
+        minibatch_size=4,
+        max_grad_norm=1.0,
+    )
+    save_supervisor_ppo_checkpoint(
+        tmp_path / "checkpoint",
+        policy=trained,
+        opt_state=trained_opt_state,
+        key=jax.random.PRNGKey(45),
+        n_updates=n_updates,
+        loss_history=losses,
+        metadata={"experiment": "unit-round-trip"},
+    )
+
+    template_policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(46))
+    template_opt_state = optimizer.init(eqx.filter(template_policy, eqx.is_array))
+    restored = load_supervisor_ppo_checkpoint(
+        tmp_path / "checkpoint",
+        template_policy=template_policy,
+        template_opt_state=template_opt_state,
+    )
+
+    assert restored.n_updates == n_updates
+    assert restored.metadata == {"experiment": "unit-round-trip"}
+    assert jnp.array_equal(restored.key, jax.random.PRNGKey(45))
+    assert jnp.array_equal(restored.loss_history, losses)
+    for before, after in zip(
+        jax.tree.leaves(eqx.filter(trained, eqx.is_array)),
+        jax.tree.leaves(eqx.filter(restored.policy, eqx.is_array)),
+        strict=True,
+    ):
+        assert jnp.array_equal(before, after)
+    for before, after in zip(
+        jax.tree.leaves(trained_opt_state),
+        jax.tree.leaves(restored.opt_state),
+        strict=True,
+    ):
+        assert jnp.array_equal(before, after)
+
+    continued, continued_state, continued_loss = ppo_supervisor_train_step(
+        trained,
+        rollout.batch,
+        opt_state=trained_opt_state,
+        optimizer=optimizer,
+        max_grad_norm=1.0,
+    )
+    restored_continued, restored_state, restored_loss = ppo_supervisor_train_step(
+        restored.policy,
+        rollout.batch,
+        opt_state=restored.opt_state,
+        optimizer=optimizer,
+        max_grad_norm=1.0,
+    )
+
+    assert jnp.array_equal(continued_loss, restored_loss)
+    for before, after in zip(
+        jax.tree.leaves(eqx.filter(continued, eqx.is_array)),
+        jax.tree.leaves(eqx.filter(restored_continued, eqx.is_array)),
+        strict=True,
+    ):
+        assert jnp.array_equal(before, after)
+    for before, after in zip(
+        jax.tree.leaves(continued_state),
+        jax.tree.leaves(restored_state),
+        strict=True,
+    ):
+        assert jnp.array_equal(before, after)
+
+
+def test_supervisor_ppo_checkpoint_rejects_malformed_metadata(tmp_path) -> None:
+    checkpoint_dir = tmp_path / "checkpoint"
+    checkpoint_dir.mkdir()
+    (checkpoint_dir / "metadata.json").write_text(
+        '{"schema_version": 999, "format": "wrong"}',
+        encoding="utf-8",
+    )
+
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    template_policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(47))
+    optimizer = optax.adam(1e-3)
+    template_opt_state = optimizer.init(eqx.filter(template_policy, eqx.is_array))
+
+    with pytest.raises(ValueError, match="checkpoint schema"):
+        load_supervisor_ppo_checkpoint(
+            checkpoint_dir,
+            template_policy=template_policy,
+            template_opt_state=template_opt_state,
         )
 
 
@@ -378,26 +501,22 @@ def test_collect_supervisor_rollouts_is_deterministic_and_returns_valid_batch() 
 
     assert isinstance(rollout_a, SupervisorPPORollout)
     assert rollout_a.episode_returns.shape == (3,)
-    assert rollout_a.batch.phases.shape == (12, 4)
-    assert rollout_a.batch.omegas.shape == (12, 4)
-    assert rollout_a.batch.base_K.shape == (12, 4, 4)
-    assert rollout_a.batch.good_mask.shape == (12, 4)
-    assert rollout_a.batch.bad_mask.shape == (12, 4)
-    assert rollout_a.batch.actions.shape == (12, 4)
-    assert rollout_a.batch.old_log_probs.shape == (12,)
-    assert rollout_a.batch.advantages.shape == (12,)
-    assert rollout_a.batch.returns.shape == (12,)
-    assert rollout_a.batch.values.shape == (12,)
+    assert rollout_a.batch.phases.shape == (9, 4)
+    assert rollout_a.batch.omegas.shape == (9, 4)
+    assert rollout_a.batch.base_K.shape == (9, 4, 4)
+    assert rollout_a.batch.good_mask.shape == (9, 4)
+    assert rollout_a.batch.bad_mask.shape == (9, 4)
+    assert rollout_a.batch.actions.shape == (9, 4)
+    assert rollout_a.batch.old_log_probs.shape == (9,)
+    assert rollout_a.batch.advantages.shape == (9,)
+    assert rollout_a.batch.returns.shape == (9,)
+    assert rollout_a.batch.values.shape == (9,)
     assert jnp.isfinite(rollout_a.batch.phases).all()
     assert jnp.isfinite(rollout_a.batch.returns).all()
     assert jnp.isfinite(rollout_a.batch.values).all()
     assert float(rollout_a.episode_return_std) >= 0.0
-    assert jnp.array_equal(
-        rollout_a.batch.phases, rollout_b.batch.phases
-    )
-    assert jnp.array_equal(
-        rollout_a.episode_returns, rollout_b.episode_returns
-    )
+    assert jnp.array_equal(rollout_a.batch.phases, rollout_b.batch.phases)
+    assert jnp.array_equal(rollout_a.episode_returns, rollout_b.episode_returns)
 
 
 def test_collect_supervisor_rollouts_rejects_invalid_hyperparameters() -> None:

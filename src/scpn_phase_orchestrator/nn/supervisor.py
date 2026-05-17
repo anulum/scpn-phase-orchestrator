@@ -17,8 +17,10 @@ interlocks remain outside the gradient path.
 
 from __future__ import annotations
 
-from math import isfinite
+import json
 from dataclasses import dataclass
+from math import isfinite
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 import equinox as eqx
@@ -41,6 +43,7 @@ __all__ = [
     "SupervisorPPOBatch",
     "SupervisorPPORollout",
     "SupervisorPPOAux",
+    "SupervisorPPOCheckpoint",
     "masked_order_parameter",
     "apply_supervisor_action",
     "closed_loop_supervisor_loss",
@@ -53,8 +56,15 @@ __all__ = [
     "ppo_supervisor_train_step",
     "ppo_supervisor_train_epochs",
     "collect_supervisor_rollouts",
+    "save_supervisor_ppo_checkpoint",
+    "load_supervisor_ppo_checkpoint",
     "control_actions_from_supervisor",
 ]
+
+_SUPERVISOR_PPO_CHECKPOINT_FORMAT = (
+    "scpn_phase_orchestrator.nn.supervisor.ppo_checkpoint"
+)
+_SUPERVISOR_PPO_CHECKPOINT_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -162,6 +172,24 @@ class SupervisorPPOAux(NamedTuple):
     entropy: jax.Array
     approx_kl: jax.Array
     clip_fraction: jax.Array
+
+
+class SupervisorPPOCheckpoint(NamedTuple):
+    """Loaded PPO checkpoint state for deterministic supervisor training resume."""
+
+    policy: DifferentiableSupervisorPolicy
+    opt_state: Any
+    key: jax.Array
+    loss_history: jax.Array
+    n_updates: int
+    metadata: dict[str, Any]
+
+
+class _SupervisorPPOCheckpointPayload(NamedTuple):
+    policy: DifferentiableSupervisorPolicy
+    opt_state: Any
+    key: jax.Array
+    loss_history: jax.Array
 
 
 class DifferentiableSupervisorPolicy(eqx.Module):
@@ -548,7 +576,7 @@ def ppo_supervisor_train_epochs(
     updates: list[jax.Array] = []
     n_updates = 0
     current_key = key
-    for epoch in range(n_epochs):
+    for _epoch in range(n_epochs):
         epoch_key, current_key = jax.random.split(current_key)
         indices = jax.random.permutation(epoch_key, batch_size)
 
@@ -673,9 +701,9 @@ def collect_supervisor_rollouts(
             state = state._replace(phases=next_phases)
 
         terminal_value = _policy_mean_and_value(policy, state)[1]
-        all_values = jnp.stack(step_values + [terminal_value])
+        trajectory_values = jnp.stack(step_values + [terminal_value])
         rewards = jnp.stack(step_rewards)
-        deltas = rewards + gamma * all_values[1:] - all_values[:-1]
+        deltas = rewards + gamma * trajectory_values[1:] - trajectory_values[:-1]
 
         episode_advantages = [jnp.array(0.0)] * horizon
         running_advantage = jnp.array(0.0)
@@ -683,7 +711,7 @@ def collect_supervisor_rollouts(
             running_advantage = deltas[index] + gamma * gae_lambda * running_advantage
             episode_advantages[index] = running_advantage
         advantages = jnp.stack(episode_advantages)
-        returns = advantages + all_values[:-1]
+        returns = advantages + trajectory_values[:-1]
 
         episode_returns.append(jnp.sum(rewards))
         for index in range(horizon):
@@ -719,6 +747,99 @@ def collect_supervisor_rollouts(
         episode_returns=episode_returns_array,
         episode_return_mean=jnp.mean(episode_returns_array),
         episode_return_std=jnp.std(episode_returns_array),
+    )
+
+
+def save_supervisor_ppo_checkpoint(
+    checkpoint_dir: str | Path,
+    *,
+    policy: DifferentiableSupervisorPolicy,
+    opt_state: Any,
+    key: jax.Array,
+    n_updates: int,
+    loss_history: jax.Array,
+    metadata: dict[str, Any] | None = None,
+    overwrite: bool = False,
+) -> Path:
+    """Persist PPO supervisor trainer state for deterministic resume."""
+    checkpoint_path = Path(checkpoint_dir)
+    if checkpoint_path.exists() and not checkpoint_path.is_dir():
+        raise NotADirectoryError(f"{checkpoint_path} is not a checkpoint directory")
+    checkpoint_path.mkdir(parents=True, exist_ok=True)
+
+    state_path = checkpoint_path / "state.eqx"
+    metadata_path = checkpoint_path / "metadata.json"
+    if not overwrite and (state_path.exists() or metadata_path.exists()):
+        raise FileExistsError(
+            f"{checkpoint_path} already contains a supervisor PPO checkpoint"
+        )
+
+    n_updates = _non_negative_int(n_updates, "n_updates")
+    key = jnp.asarray(key)
+    loss_history = jnp.asarray(loss_history)
+    user_metadata = _json_object(metadata, "metadata")
+    payload = _SupervisorPPOCheckpointPayload(
+        policy=policy,
+        opt_state=opt_state,
+        key=key,
+        loss_history=loss_history,
+    )
+    checkpoint_metadata = {
+        "format": _SUPERVISOR_PPO_CHECKPOINT_FORMAT,
+        "schema_version": _SUPERVISOR_PPO_CHECKPOINT_SCHEMA_VERSION,
+        "n_updates": n_updates,
+        "key_shape": list(key.shape),
+        "key_dtype": str(key.dtype),
+        "loss_history_shape": list(loss_history.shape),
+        "loss_history_dtype": str(loss_history.dtype),
+        "metadata": user_metadata,
+    }
+
+    state_tmp = checkpoint_path / "state.eqx.tmp"
+    metadata_tmp = checkpoint_path / "metadata.json.tmp"
+    eqx.tree_serialise_leaves(state_tmp, payload)
+    metadata_tmp.write_text(
+        json.dumps(checkpoint_metadata, sort_keys=True, indent=2, allow_nan=False)
+        + "\n",
+        encoding="utf-8",
+    )
+    state_tmp.replace(state_path)
+    metadata_tmp.replace(metadata_path)
+    return checkpoint_path
+
+
+def load_supervisor_ppo_checkpoint(
+    checkpoint_dir: str | Path,
+    *,
+    template_policy: DifferentiableSupervisorPolicy,
+    template_opt_state: Any,
+) -> SupervisorPPOCheckpoint:
+    """Load a PPO supervisor checkpoint against explicit policy/state templates."""
+    checkpoint_path = Path(checkpoint_dir)
+    metadata_path = checkpoint_path / "metadata.json"
+    state_path = checkpoint_path / "state.eqx"
+    metadata = _load_checkpoint_metadata(metadata_path)
+    if not state_path.exists():
+        raise FileNotFoundError(f"missing checkpoint payload: {state_path}")
+
+    key_shape = _metadata_shape(metadata, "key_shape")
+    loss_history_shape = _metadata_shape(metadata, "loss_history_shape")
+    key_dtype = _metadata_dtype(metadata, "key_dtype")
+    loss_history_dtype = _metadata_dtype(metadata, "loss_history_dtype")
+    template_payload = _SupervisorPPOCheckpointPayload(
+        policy=template_policy,
+        opt_state=template_opt_state,
+        key=jnp.zeros(key_shape, dtype=key_dtype),
+        loss_history=jnp.zeros(loss_history_shape, dtype=loss_history_dtype),
+    )
+    loaded = eqx.tree_deserialise_leaves(state_path, template_payload)
+    return SupervisorPPOCheckpoint(
+        policy=loaded.policy,
+        opt_state=loaded.opt_state,
+        key=loaded.key,
+        loss_history=loaded.loss_history,
+        n_updates=_non_negative_int(metadata["n_updates"], "n_updates"),
+        metadata=_json_object(metadata.get("metadata"), "checkpoint metadata"),
     )
 
 
@@ -828,6 +949,14 @@ def _positive_int(value: object, field: str) -> int:
     return value
 
 
+def _non_negative_int(value: object, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{field} must be a non-negative integer")
+    if value < 0:
+        raise ValueError(f"{field} must be a non-negative integer")
+    return value
+
+
 def _validate_supervisor_ppo_batch_size(
     batch: SupervisorPPOBatch,
     batch_size: int,
@@ -879,7 +1008,7 @@ def _global_l2_norm(values: Any) -> jax.Array:
         return jnp.array(0.0)
     return jnp.sqrt(
         jnp.sum(
-            jnp.array([jnp.sum(jnp.square(leaf)) for leaf in leaves], dtype=jnp.float64)
+            jnp.array([jnp.sum(jnp.square(leaf)) for leaf in leaves], dtype=jnp.float32)
         )
     )
 
@@ -918,3 +1047,51 @@ def _non_negative_float(value: object, field: str) -> float:
     if not isfinite(value_float) or value_float < 0.0:
         raise ValueError(f"{field} must be a finite non-negative scalar")
     return value_float
+
+
+def _json_object(value: object, field: str) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be a JSON object")
+    json.dumps(value, sort_keys=True, allow_nan=False)
+    return dict(value)
+
+
+def _load_checkpoint_metadata(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"missing checkpoint metadata: {path}")
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("checkpoint metadata is not valid JSON") from exc
+    if not isinstance(raw, dict):
+        raise ValueError("checkpoint metadata must be a JSON object")
+    if (
+        raw.get("format") != _SUPERVISOR_PPO_CHECKPOINT_FORMAT
+        or raw.get("schema_version") != _SUPERVISOR_PPO_CHECKPOINT_SCHEMA_VERSION
+    ):
+        raise ValueError("checkpoint schema is not supported")
+    return raw
+
+
+def _metadata_shape(metadata: dict[str, Any], field: str) -> tuple[int, ...]:
+    raw = metadata.get(field)
+    if not isinstance(raw, list):
+        raise ValueError(f"{field} must be a shape list")
+    shape: list[int] = []
+    for index, value in enumerate(raw):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{field}[{index}] must be a non-negative integer")
+        shape.append(value)
+    return tuple(shape)
+
+
+def _metadata_dtype(metadata: dict[str, Any], field: str) -> jnp.dtype:
+    raw = metadata.get(field)
+    if not isinstance(raw, str):
+        raise ValueError(f"{field} must be a dtype string")
+    try:
+        return jnp.dtype(raw)
+    except TypeError as exc:
+        raise ValueError(f"{field} is not a supported dtype") from exc
