@@ -16,6 +16,7 @@ import pytest
 
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
@@ -366,6 +367,22 @@ class TestSwarmalatorEngineValidation:
 
     def test_order_parameter_rejects_non_finite_phases(self) -> None:
         engine = SwarmalatorEngine(n_agents=4, dim=2, dt=0.01)
+        phases = np.zeros(4, dtype=np.float64)
+        phases[0] = np.nan
+
+        with pytest.raises(ValueError, match="phases"):
+            engine.order_parameter(phases)
+
+
+class TestHypergraphEngineOrderParameterValidation:
+    def test_order_parameter_rejects_phase_shape_mismatch(self) -> None:
+        engine = HypergraphEngine(n_oscillators=4, dt=0.01)
+
+        with pytest.raises(ValueError, match="phases shape"):
+            engine.order_parameter(np.zeros(5, dtype=np.float64))
+
+    def test_order_parameter_rejects_non_finite_phases(self) -> None:
+        engine = HypergraphEngine(n_oscillators=4, dt=0.01)
         phases = np.zeros(4, dtype=np.float64)
         phases[0] = np.nan
 
