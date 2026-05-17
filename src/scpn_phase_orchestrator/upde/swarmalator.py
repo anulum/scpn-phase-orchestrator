@@ -371,4 +371,9 @@ class SwarmalatorEngine:
         return curr_pos, curr_phases, pos_traj, phase_traj
 
     def order_parameter(self, phases: FloatArray) -> float:
-        return float(np.abs(np.mean(np.exp(1j * phases))))
+        phases64 = _validate_state_array(
+            phases,
+            name="phases",
+            shape=(self._n,),
+        )
+        return float(np.abs(np.mean(np.exp(1j * phases64))))

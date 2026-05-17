@@ -358,6 +358,20 @@ class TestSwarmalatorEngineValidation:
         with pytest.raises(ValueError, match=coefficient):
             engine.step(pos, phases, omegas, **kwargs)
 
+    def test_order_parameter_rejects_phase_shape_mismatch(self) -> None:
+        engine = SwarmalatorEngine(n_agents=4, dim=2, dt=0.01)
+
+        with pytest.raises(ValueError, match="phases shape"):
+            engine.order_parameter(np.zeros(5, dtype=np.float64))
+
+    def test_order_parameter_rejects_non_finite_phases(self) -> None:
+        engine = SwarmalatorEngine(n_agents=4, dim=2, dt=0.01)
+        phases = np.zeros(4, dtype=np.float64)
+        phases[0] = np.nan
+
+        with pytest.raises(ValueError, match="phases"):
+            engine.order_parameter(phases)
+
 
 class TestSimplicialEngineValidation:
     def test_rejects_zero_oscillators(self) -> None:
