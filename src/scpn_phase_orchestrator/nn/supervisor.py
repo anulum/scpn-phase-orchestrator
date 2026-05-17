@@ -937,6 +937,7 @@ def build_supervisor_experiment_manifest(
     dependency_lock: Mapping[str, Any],
     device_info: Mapping[str, Any],
     seed_list: Iterable[int],
+    config_json_path: str | None = None,
     metrics_jsonl_path: str | None = None,
     summary_table_path: str | None = None,
     checkpoint_manifest_path: str | None = None,
@@ -967,6 +968,7 @@ def build_supervisor_experiment_manifest(
         raise ValueError("baseline_report must be non-actuating")
     artifacts = _json_object(
         {
+            "config_json_path": config_json_path,
             "metrics_jsonl_path": metrics_jsonl_path,
             "summary_table_path": summary_table_path,
             "checkpoint_manifest_path": checkpoint_manifest_path,

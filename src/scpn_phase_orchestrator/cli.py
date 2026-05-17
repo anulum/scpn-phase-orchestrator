@@ -520,6 +520,12 @@ def _write_json_file(path: Path, payload: object) -> None:
 
 @main.command("supervisor-baseline-experiment")
 @click.option(
+    "--config-json",
+    required=True,
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Write deterministic experiment configuration JSON.",
+)
+@click.option(
     "--metrics-jsonl",
     required=True,
     type=click.Path(dir_okay=False, path_type=Path),
@@ -569,6 +575,7 @@ def _write_json_file(path: Path, payload: object) -> None:
 @click.pass_context
 def supervisor_baseline_experiment(
     ctx: click.Context,
+    config_json: Path,
     metrics_jsonl: Path,
     summary_json: Path,
     manifest_json: Path | None,
@@ -648,6 +655,38 @@ def supervisor_baseline_experiment(
     comparison_records = [
         comparison.to_audit_record() for comparison in comparisons
     ]
+    config_payload = {
+        "proposal_type": "supervisor_baseline_experiment_config",
+        "actuation_permitted": False,
+        "policy_config": {
+            "n_oscillators": config.n_oscillators,
+            "hidden_width": config.hidden_width,
+            "hidden_depth": config.hidden_depth,
+            "n_layer_controls": config.n_layer_controls,
+            "max_global_delta_K": config.max_global_delta_K,
+            "max_global_delta_zeta": config.max_global_delta_zeta,
+            "max_layer_delta_K": config.max_layer_delta_K,
+            "control_energy_weight": config.control_energy_weight,
+            "bad_sync_weight": config.bad_sync_weight,
+            "smoothness_weight": config.smoothness_weight,
+        },
+        "scenario": {
+            "n_oscillators": 4,
+            "phases": [0.0, 0.1, 2.7, 3.1],
+            "omegas": [0.04, 0.03, -0.03, -0.04],
+            "base_coupling_off_diagonal": 0.03,
+            "good_mask": [1.0, 1.0, 0.0, 0.0],
+            "bad_mask": [0.0, 0.0, 1.0, 1.0],
+            "dt": scenario.dt,
+            "inner_steps": scenario.inner_steps,
+            "horizon": scenario.horizon,
+        },
+        "comparisons": [
+            "cli_static_zero_action",
+            "cli_bounded_random_action",
+            "cli_hand_tuned_supervisor_policy",
+        ],
+    }
     summary_payload = {
         "proposal_type": "supervisor_baseline_summary_table",
         "comparison_count": len(comparison_records),
@@ -666,6 +705,7 @@ def supervisor_baseline_experiment(
             "jax_enable_x64": str(getattr(jax.config, "jax_enable_x64", "unknown")),
         },
         seed_list=seeds,
+        config_json_path=str(config_json),
         metrics_jsonl_path=str(metrics_jsonl),
         summary_table_path=str(summary_json),
         checkpoint_manifest_path=(
@@ -683,12 +723,14 @@ def supervisor_baseline_experiment(
         + "\n",
         encoding="utf-8",
     )
+    _write_json_file(config_json, config_payload)
     _write_json_file(summary_json, summary_payload)
     if manifest_json is not None:
         _write_json_file(manifest_json, manifest_record)
     if json_out:
         click.echo(json.dumps(manifest_record, indent=2, sort_keys=True))
     else:
+        click.echo(f"Wrote supervisor config: {config_json}")
         click.echo(f"Wrote supervisor metrics: {metrics_jsonl}")
         click.echo(f"Wrote supervisor summary: {summary_json}")
         if manifest_json is not None:

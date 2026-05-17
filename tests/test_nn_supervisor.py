@@ -1697,6 +1697,7 @@ def test_supervisor_experiment_manifest_wraps_baseline_report_reproducibly() -> 
         dependency_lock={"pip-tools": "requirements-dev.txt:sha256:deadbeef"},
         device_info={"backend": "cpu", "jax_enable_x64": False},
         seed_list=(88, 89),
+        config_json_path="artifacts/config.json",
         metrics_jsonl_path="artifacts/metrics.jsonl",
         summary_table_path="artifacts/summary.json",
     )
@@ -1710,6 +1711,7 @@ def test_supervisor_experiment_manifest_wraps_baseline_report_reproducibly() -> 
     assert record["git_sha"] == "abc1234"
     assert record["seed_list"] == [88, 89]
     assert record["baseline_report"]["summary"]["comparison_count"] == 2
+    assert record["artifacts"]["config_json_path"] == "artifacts/config.json"
     assert record["artifacts"]["metrics_jsonl_path"] == "artifacts/metrics.jsonl"
     assert record["artifacts"]["summary_table_path"] == "artifacts/summary.json"
     json.dumps(record, sort_keys=True, allow_nan=False)

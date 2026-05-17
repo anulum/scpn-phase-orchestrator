@@ -1661,6 +1661,7 @@ thresholds:
 def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
     runner, tmp_path
 ):
+    config_path = tmp_path / "supervisor_config.json"
     metrics_path = tmp_path / "supervisor_metrics.jsonl"
     summary_path = tmp_path / "supervisor_summary.json"
     manifest_path = tmp_path / "supervisor_manifest.json"
@@ -1669,6 +1670,8 @@ def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
         main,
         [
             "supervisor-baseline-experiment",
+            "--config-json",
+            str(config_path),
             "--metrics-jsonl",
             str(metrics_path),
             "--summary-json",
@@ -1692,6 +1695,13 @@ def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
     )
     assert stdout_record["actuation_permitted"] is False
     assert stdout_record["seed_list"] == [91]
+    assert stdout_record["artifacts"]["config_json_path"] == str(config_path)
+
+    config_record = json.loads(config_path.read_text(encoding="utf-8"))
+    assert config_record["proposal_type"] == "supervisor_baseline_experiment_config"
+    assert config_record["actuation_permitted"] is False
+    assert config_record["policy_config"]["n_oscillators"] == 4
+    assert config_record["scenario"]["horizon"] == 6
 
     metric_records = [
         json.loads(line)
@@ -1719,6 +1729,7 @@ def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
 def test_supervisor_baseline_experiment_records_existing_artifact_manifests(
     runner, tmp_path
 ):
+    config_path = tmp_path / "supervisor_config.json"
     metrics_path = tmp_path / "supervisor_metrics.jsonl"
     summary_path = tmp_path / "supervisor_summary.json"
     checkpoint_manifest = tmp_path / "checkpoint_manifest.json"
@@ -1736,6 +1747,8 @@ def test_supervisor_baseline_experiment_records_existing_artifact_manifests(
         main,
         [
             "supervisor-baseline-experiment",
+            "--config-json",
+            str(config_path),
             "--metrics-jsonl",
             str(metrics_path),
             "--summary-json",
