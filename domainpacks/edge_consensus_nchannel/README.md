@@ -26,6 +26,22 @@ signal to track across the run.
 The binding spec includes a `value_alignment` template for review-time edge
 coupling and signed gateway-lag correction guards.
 
+## Hierarchy Transport Demo
+
+`hierarchy_transport_demo.py` validates the three hierarchy transport boundaries
+for this domainpack: REST payload, WebSocket-style frame, and JSONL replay.
+
+Run the transport replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/edge_consensus_nchannel/hierarchy_transport_demo.py
+```
+
+The payload is intentionally reduced and transport-focused. It includes:
+- `rest_boundary`, `websocket_frame`, and `jsonl_replay` audit records
+- reduced child summaries (no raw phases, coupling matrices, or actuators)
+- deterministic per-node source/sequence handling for transport replay
+
 ## Sheaf Obstruction Demo
 
 `sheaf_obstruction_demo.py` demonstrates the sheaf-coherence supervisor on this

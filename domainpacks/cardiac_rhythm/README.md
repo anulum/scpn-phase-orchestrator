@@ -74,6 +74,22 @@ sequence, protocol version, `R`, `Psi`, regime, confidence, and metadata, but no
 raw conduction phase series, coupling matrices, or actuator targets. It is a
 simulation/replay artefact, not a medical-device control path.
 
+## Hierarchy Transport Demo
+
+`hierarchy_transport_demo.py` validates the three hierarchy transport boundaries
+for this domainpack: REST payload, WebSocket-style frame, and JSONL replay.
+
+Run the transport replay with:
+
+```bash
+PYTHONPATH=src python domainpacks/cardiac_rhythm/hierarchy_transport_demo.py
+```
+
+The payload is intentionally reduced and transport-focused. It includes:
+- `rest_boundary`, `websocket_frame`, and `jsonl_replay` audit records
+- reduced child summaries (no raw phases, coupling matrices, or actuators)
+- deterministic source/sequence ordering for transport replay slices
+
 ## Causal Attribution Demo
 
 `causal_attribution_demo.py` runs a paired counterfactual for a deterministic
