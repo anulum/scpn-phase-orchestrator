@@ -45,6 +45,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorPPOBatch,
     SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
+    SupervisorRandomBaselineComparison,
     SupervisorReplayComparison,
     SupervisorReplayProposal,
     SupervisorScenarioCorpus,
@@ -56,6 +57,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     closed_loop_supervisor_loss,
     collect_supervisor_corpus_rollouts,
     collect_supervisor_rollouts,
+    compare_supervisor_random_baseline,
     compare_supervisor_replay_proposal,
     compare_supervisor_static_baseline,
     control_actions_from_supervisor,
@@ -1447,6 +1449,53 @@ def test_supervisor_static_baseline_comparison_rejects_empty_label() -> None:
 
     with pytest.raises(ValueError, match="comparison_label"):
         compare_supervisor_static_baseline(policy, _scenario(), comparison_label="")
+
+
+def test_supervisor_random_baseline_comparison_is_seeded_and_non_actuating() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(77))
+    key = jax.random.PRNGKey(78)
+
+    comparison_a = compare_supervisor_random_baseline(
+        policy,
+        _scenario(),
+        key=key,
+        comparison_label="unit-random-baseline",
+    )
+    comparison_b = compare_supervisor_random_baseline(
+        policy,
+        _scenario(),
+        key=key,
+        comparison_label="unit-random-baseline",
+    )
+    record_a = comparison_a.to_audit_record()
+    record_b = comparison_b.to_audit_record()
+
+    assert isinstance(comparison_a, SupervisorRandomBaselineComparison)
+    assert comparison_a.actuation_permitted is False
+    assert record_a["proposal_type"] == "differentiable_supervisor_random_baseline"
+    assert record_a["comparison_label"] == "unit-random-baseline"
+    assert record_a["actuation_permitted"] is False
+    assert record_a["baseline"]["name"] == "bounded_random_action"
+    assert record_a["baseline"]["seed"] == [0, 78]
+    assert record_a["baseline"]["action"] == record_b["baseline"]["action"]
+    assert record_a["metrics"]["baseline_safety_violations"] == 0.0
+    assert record_a["metrics"]["supervisor_safety_violations"] == 0.0
+    assert "delta_reward" in record_a["metrics"]
+    json.dumps(record_a, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_random_baseline_comparison_rejects_empty_label() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(79))
+
+    with pytest.raises(ValueError, match="comparison_label"):
+        compare_supervisor_random_baseline(
+            policy,
+            _scenario(),
+            key=jax.random.PRNGKey(80),
+            comparison_label="",
+        )
 
 
 def test_supervisor_replay_comparison_rejects_non_audit_replay_inputs() -> None:

@@ -50,6 +50,7 @@ __all__ = [
     "SupervisorPPOAux",
     "SupervisorPPOCheckpoint",
     "SupervisorPPOTrainResult",
+    "SupervisorRandomBaselineComparison",
     "SupervisorReplayComparison",
     "SupervisorReplayProposal",
     "SupervisorScenarioCorpus",
@@ -66,6 +67,7 @@ __all__ = [
     "project_supervisor_action_for_audit",
     "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
+    "compare_supervisor_random_baseline",
     "compare_supervisor_replay_proposal",
     "compare_supervisor_static_baseline",
     "ppo_supervisor_loss",
@@ -219,6 +221,32 @@ class SupervisorStaticBaselineComparison(NamedTuple):
                 "metrics": dict(self.metrics),
             },
             "supervisor_static_baseline_comparison",
+        )
+
+
+class SupervisorRandomBaselineComparison(NamedTuple):
+    """Audit-only comparison against a seeded bounded-random action baseline."""
+
+    baseline: dict[str, Any]
+    supervisor: dict[str, Any]
+    scenario_summary: dict[str, Any]
+    comparison_label: str
+    metrics: dict[str, float]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable random-baseline comparison record."""
+        return _json_object(
+            {
+                "proposal_type": "differentiable_supervisor_random_baseline",
+                "actuation_permitted": self.actuation_permitted,
+                "comparison_label": self.comparison_label,
+                "scenario_summary": dict(self.scenario_summary),
+                "baseline": dict(self.baseline),
+                "supervisor": dict(self.supervisor),
+                "metrics": dict(self.metrics),
+            },
+            "supervisor_random_baseline_comparison",
         )
 
 
@@ -835,6 +863,45 @@ def compare_supervisor_static_baseline(
     metrics.update(_prefixed_float_metrics("supervisor", supervisor_metrics))
     metrics["delta_reward"] = metrics["supervisor_reward"] - metrics["baseline_reward"]
     return SupervisorStaticBaselineComparison(
+        baseline=baseline_record,
+        supervisor=supervisor_record,
+        scenario_summary=_supervisor_scenario_summary(scenario),
+        comparison_label=comparison_label,
+        metrics=metrics,
+        actuation_permitted=False,
+    )
+
+
+def compare_supervisor_random_baseline(
+    policy: DifferentiableSupervisorPolicy,
+    scenario: KuramotoSupervisorScenario,
+    *,
+    key: jax.Array,
+    comparison_label: str = "bounded_random_action",
+) -> SupervisorRandomBaselineComparison:
+    """Compare one deterministic supervisor proposal against bounded randomness."""
+    if not comparison_label:
+        raise ValueError("comparison_label must not be empty")
+    random_action = _bounded_random_supervisor_action(policy.config, key)
+    baseline_record = _rollout_static_supervisor_action(
+        "bounded_random_action",
+        random_action,
+        scenario,
+        policy.config,
+    )
+    baseline_record["seed"] = _jax_key_record(key)
+    supervisor_record = _rollout_static_supervisor_action(
+        "differentiable_supervisor",
+        policy(scenario),
+        scenario,
+        policy.config,
+    )
+    baseline_metrics = _mapping_value(baseline_record, "metrics")
+    supervisor_metrics = _mapping_value(supervisor_record, "metrics")
+    metrics = _prefixed_float_metrics("baseline", baseline_metrics)
+    metrics.update(_prefixed_float_metrics("supervisor", supervisor_metrics))
+    metrics["delta_reward"] = metrics["supervisor_reward"] - metrics["baseline_reward"]
+    return SupervisorRandomBaselineComparison(
         baseline=baseline_record,
         supervisor=supervisor_record,
         scenario_summary=_supervisor_scenario_summary(scenario),
@@ -2116,6 +2183,30 @@ def _rollout_static_supervisor_action(
         },
         f"{name} baseline record",
     )
+
+
+def _bounded_random_supervisor_action(
+    config: DifferentiableSupervisorConfig,
+    key: jax.Array,
+) -> SupervisorAction:
+    values = jax.random.uniform(
+        key,
+        shape=(2 + config.n_layer_controls,),
+        minval=-1.0,
+        maxval=1.0,
+    ) * _action_bounds(config)
+    return unpack_supervisor_action(
+        values,
+        value_estimate=jnp.array(0.0),
+        config=config,
+    )
+
+
+def _jax_key_record(key: jax.Array) -> list[int]:
+    key_array = jnp.asarray(key)
+    if key_array.ndim != 1:
+        raise ValueError("key must be a one-dimensional JAX PRNG key")
+    return [int(value) for value in key_array.tolist()]
 
 
 def _supervisor_scenario_summary(
