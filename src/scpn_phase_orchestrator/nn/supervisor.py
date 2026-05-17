@@ -40,6 +40,7 @@ __all__ = [
     "DifferentiableSupervisorPolicy",
     "SupervisorAction",
     "SupervisorActionProjection",
+    "SupervisorCorpusReplayProposals",
     "KuramotoSupervisorScenario",
     "SupervisorLossAux",
     "SupervisorPPOBatch",
@@ -60,6 +61,7 @@ __all__ = [
     "supervisor_action_bound_penalty",
     "supervisor_action_log_prob",
     "project_supervisor_action_for_audit",
+    "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
@@ -146,6 +148,22 @@ class SupervisorReplayProposal(NamedTuple):
             "metrics": dict(self.metrics),
             "action": _supervisor_action_to_record(self.action),
             "projection": dict(self.projection.audit_record),
+        }
+
+
+class SupervisorCorpusReplayProposals(NamedTuple):
+    """Replay-only proposal set generated from a supervisor scenario corpus."""
+
+    proposals: tuple[SupervisorReplayProposal, ...]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable corpus proposal record."""
+        return {
+            "proposal_type": "differentiable_supervisor_corpus_replay",
+            "actuation_permitted": self.actuation_permitted,
+            "scenario_count": len(self.proposals),
+            "proposals": [proposal.to_audit_record() for proposal in self.proposals],
         }
 
 
@@ -607,6 +625,48 @@ def build_supervisor_replay_proposal(
         scenario_summary=scenario_summary,
         scenario_metadata=metadata,
         metrics=metrics,
+        actuation_permitted=False,
+    )
+
+
+def build_supervisor_corpus_replay_proposals(
+    policy: DifferentiableSupervisorPolicy,
+    corpus: SupervisorScenarioCorpus,
+    *,
+    previous_action: SupervisorAction | None = None,
+    ttl_s: float = 5.0,
+    max_ttl_s: float = 5.0,
+    rate_limit_fraction: float = 1.0,
+    include_layer_actions: bool = True,
+) -> SupervisorCorpusReplayProposals:
+    """Build deterministic replay-only proposals for every corpus scenario."""
+    if not corpus.scenarios:
+        raise ValueError("scenario corpus requires at least one scenario")
+    if len(corpus.metadata) != len(corpus.scenarios):
+        raise ValueError("scenario corpus metadata must match scenario count")
+
+    proposals = []
+    for index, (scenario, metadata) in enumerate(
+        zip(corpus.scenarios, corpus.metadata, strict=True)
+    ):
+        proposal_metadata = _json_object(
+            {**metadata, "corpus_index": index},
+            f"corpus metadata {index}",
+        )
+        proposals.append(
+            build_supervisor_replay_proposal(
+                policy,
+                scenario,
+                scenario_metadata=proposal_metadata,
+                previous_action=previous_action,
+                ttl_s=ttl_s,
+                max_ttl_s=max_ttl_s,
+                rate_limit_fraction=rate_limit_fraction,
+                include_layer_actions=include_layer_actions,
+            )
+        )
+    return SupervisorCorpusReplayProposals(
+        proposals=tuple(proposals),
         actuation_permitted=False,
     )
 

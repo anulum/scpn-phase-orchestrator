@@ -26,12 +26,14 @@ from scpn_phase_orchestrator.nn.supervisor import (
     KuramotoSupervisorScenario,
     SupervisorAction,
     SupervisorActionProjection,
+    SupervisorCorpusReplayProposals,
     SupervisorPPOBatch,
     SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
     SupervisorReplayProposal,
     SupervisorScenarioCorpus,
     apply_supervisor_action,
+    build_supervisor_corpus_replay_proposals,
     build_supervisor_replay_proposal,
     build_supervisor_scenario_corpus,
     closed_loop_supervisor_loss,
@@ -737,6 +739,99 @@ def test_build_supervisor_replay_proposal_rejects_unserialisable_metadata() -> N
             _scenario(),
             scenario_metadata={"bad": np.array([1.0])},
         )
+
+
+def test_build_supervisor_corpus_replay_proposals_preserves_provenance() -> None:
+    records = [
+        {
+            "phases": [0.0, 0.1, 2.7, 3.1],
+            "omegas": [0.04, 0.03, -0.03, -0.04],
+            "base_K": [
+                [0.0, 0.03, 0.03, 0.03],
+                [0.03, 0.0, 0.03, 0.03],
+                [0.03, 0.03, 0.0, 0.03],
+                [0.03, 0.03, 0.03, 0.0],
+            ],
+            "good_mask": [1.0, 1.0, 0.0, 0.0],
+            "bad_mask": [0.0, 0.0, 1.0, 1.0],
+            "dt": 0.02,
+            "inner_steps": 4,
+            "horizon": 3,
+            "metadata": {"stream_id": "fixture-a"},
+        },
+        {
+            "phases": [0.2, 0.0, 2.9, 3.0],
+            "omegas": [0.05, 0.02, -0.02, -0.05],
+            "base_K": np.full((4, 4), 0.02) - np.eye(4) * 0.02,
+            "good_mask": [1.0, 1.0, 0.0, 0.0],
+            "bad_mask": [0.0, 0.0, 1.0, 1.0],
+            "dt": 0.02,
+            "inner_steps": 4,
+            "horizon": 3,
+            "metadata": {"stream_id": "fixture-b"},
+        },
+    ]
+    corpus = build_supervisor_scenario_corpus(records)
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(72))
+
+    proposals_a = build_supervisor_corpus_replay_proposals(
+        policy,
+        corpus,
+        ttl_s=8.0,
+        max_ttl_s=5.0,
+        rate_limit_fraction=0.5,
+    )
+    proposals_b = build_supervisor_corpus_replay_proposals(
+        policy,
+        corpus,
+        ttl_s=8.0,
+        max_ttl_s=5.0,
+        rate_limit_fraction=0.5,
+    )
+
+    assert isinstance(proposals_a, SupervisorCorpusReplayProposals)
+    assert proposals_a.actuation_permitted is False
+    assert len(proposals_a.proposals) == 2
+    assert proposals_a.proposals[0].scenario_metadata == {
+        "corpus_index": 0,
+        "stream_id": "fixture-a",
+    }
+    assert proposals_a.proposals[1].scenario_metadata == {
+        "corpus_index": 1,
+        "stream_id": "fixture-b",
+    }
+    assert all(
+        proposal.projection.audit_record["non_actuating"]
+        and not proposal.actuation_permitted
+        for proposal in proposals_a.proposals
+    )
+    for left, right in zip(
+        proposals_a.proposals,
+        proposals_b.proposals,
+        strict=True,
+    ):
+        assert jnp.array_equal(
+            pack_supervisor_action(left.action),
+            pack_supervisor_action(right.action),
+        )
+    record = proposals_a.to_audit_record()
+    assert record["proposal_type"] == "differentiable_supervisor_corpus_replay"
+    assert record["actuation_permitted"] is False
+    assert record["scenario_count"] == 2
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_build_supervisor_corpus_replay_proposals_rejects_malformed_corpus() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(73))
+    malformed = SupervisorScenarioCorpus(
+        scenarios=(_scenario(),),
+        metadata=({}, {}),
+    )
+
+    with pytest.raises(ValueError, match="metadata must match scenario count"):
+        build_supervisor_corpus_replay_proposals(policy, malformed)
 
 
 def test_collect_supervisor_rollouts_is_deterministic_and_returns_valid_batch() -> None:
