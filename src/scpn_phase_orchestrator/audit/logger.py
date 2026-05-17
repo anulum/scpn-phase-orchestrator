@@ -90,6 +90,7 @@ class AuditLogger:
             clean = self._attach_signature_metadata(clean)
         else:
             clean["_audit_mode"] = "unsigned-development"
+            clean["_payload_hash"] = _payload_hash(clean)
         json_line = json.dumps(clean, separators=(",", ":"), sort_keys=True)
         digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()
         self._prev_hash = digest
@@ -101,8 +102,7 @@ class AuditLogger:
     def _attach_signature_metadata(self, clean: dict) -> dict:
         self._sequence += 1
         payload = _payload_without_audit_metadata(clean)
-        payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
-        payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+        payload_hash = _payload_hash(payload)
         timestamp_ns = time.time_ns()
         key = self._audit_key
         if key is None:
@@ -265,3 +265,9 @@ def _payload_without_audit_metadata(record: dict) -> dict:
         and not key.startswith("_audit_")
         and key not in {"_payload_hash", "_previous_hash"}
     }
+
+
+def _payload_hash(record: dict) -> str:
+    payload = _payload_without_audit_metadata(record)
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(payload_json.encode()).hexdigest()

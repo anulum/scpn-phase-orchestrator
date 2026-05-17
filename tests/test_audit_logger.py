@@ -114,6 +114,34 @@ class TestAuditHashChain:
         assert record["_audit_mode"] == "unsigned-development"
         assert "_signature" not in record
 
+    def test_unsigned_development_records_expose_canonical_payload_hash(
+        self, tmp_path, monkeypatch
+    ):
+        """Equivalent payloads must hash identically regardless of dict order."""
+        monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
+        monkeypatch.delenv("SPO_AUDIT_KEYRING", raising=False)
+        first_path = tmp_path / "first.jsonl"
+        second_path = tmp_path / "second.jsonl"
+
+        with AuditLogger(first_path) as logger:
+            logger.log_header(
+                n_oscillators=2,
+                dt=0.01,
+                binding_config={"b": {"z": 2, "a": 1}, "a": ["x", "y"]},
+            )
+        with AuditLogger(second_path) as logger:
+            logger.log_header(
+                n_oscillators=2,
+                dt=0.01,
+                binding_config={"a": ["x", "y"], "b": {"a": 1, "z": 2}},
+            )
+
+        first = json.loads(first_path.read_text(encoding="utf-8").strip())
+        second = json.loads(second_path.read_text(encoding="utf-8").strip())
+        assert first["_payload_hash"] == second["_payload_hash"]
+        assert first["_audit_mode"] == "unsigned-development"
+        assert second["_audit_mode"] == "unsigned-development"
+
     def test_hmac_signed_records_expose_only_key_fingerprint(
         self, tmp_path, monkeypatch
     ):
