@@ -16,6 +16,7 @@ import pytest
 
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.geometric import TorusEngine
 from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
@@ -385,6 +386,22 @@ class TestHypergraphEngineOrderParameterValidation:
         engine = HypergraphEngine(n_oscillators=4, dt=0.01)
         phases = np.zeros(4, dtype=np.float64)
         phases[0] = np.nan
+
+        with pytest.raises(ValueError, match="phases"):
+            engine.order_parameter(phases)
+
+
+class TestTorusEngineOrderParameterValidation:
+    def test_order_parameter_rejects_phase_shape_mismatch(self) -> None:
+        engine = TorusEngine(n_oscillators=4, dt=0.01)
+
+        with pytest.raises(ValueError, match="phases shape"):
+            engine.order_parameter(np.zeros(5, dtype=np.float64))
+
+    def test_order_parameter_rejects_non_finite_phases(self) -> None:
+        engine = TorusEngine(n_oscillators=4, dt=0.01)
+        phases = np.zeros(4, dtype=np.float64)
+        phases[0] = np.inf
 
         with pytest.raises(ValueError, match="phases"):
             engine.order_parameter(phases)

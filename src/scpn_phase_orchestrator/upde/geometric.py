@@ -316,7 +316,12 @@ class TorusEngine:
 
     def order_parameter(self, phases: NDArray[np.float64]) -> float:
         """Standard Kuramoto R = |<exp(iθ)>|."""
-        return float(np.abs(np.mean(np.exp(1j * phases))))
+        phases64 = _validate_state_array(
+            phases,
+            name="phases",
+            shape=(self._n,),
+        )
+        return float(np.abs(np.mean(np.exp(1j * phases64))))
 
     def _derivative(
         self,
