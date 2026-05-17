@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import numpy as np
@@ -73,6 +74,41 @@ def test_event_stream_integrity_detects_payload_tampering(tmp_path) -> None:
 
     events = read_event_stream(stream_path)
     events[0].payload["detail"] = "tampered"
+
+    ok, verified = verify_event_stream_integrity(events)
+    assert ok is False
+    assert verified == 0
+
+
+def test_event_stream_integrity_verifies_hmac_signed_envelopes(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
+    stream_path = tmp_path / "audit.spoa"
+
+    with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
+        logger.log_event("operator_note", {"step": 3, "detail": "signed"})
+
+    events = read_event_stream(stream_path)
+    key_id = hashlib.sha256(b"stream-signing-key").hexdigest()[:16]
+
+    assert events[0].signature_key_id == key_id
+    assert events[0].signature_algorithm == "HMAC-SHA256"
+    assert len(events[0].signature) == 64
+    ok, verified = verify_event_stream_integrity(events)
+    assert ok is True
+    assert verified == 1
+
+
+def test_event_stream_integrity_requires_hmac_when_key_is_configured(
+    tmp_path, monkeypatch
+) -> None:
+    stream_path = tmp_path / "audit.spoa"
+    with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
+        logger.log_event("operator_note", {"step": 3, "detail": "unsigned"})
+
+    monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
+    events = read_event_stream(stream_path)
 
     ok, verified = verify_event_stream_integrity(events)
     assert ok is False

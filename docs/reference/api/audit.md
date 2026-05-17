@@ -76,6 +76,13 @@ an unknown key, or modified after signing. Without `SPO_AUDIT_KEY`, legacy
 unsigned development logs remain readable and hash-chain verification keeps its
 previous behaviour.
 
+The protobuf event stream uses the same environment policy. When
+`event_stream` is enabled on `AuditLogger`, every envelope records its
+signature algorithm, key id, and HMAC value alongside the existing sequence,
+payload hash, previous hash, and event hash. `verify_event_stream_integrity()`
+and `spo watch` reject unsigned or signature-invalid envelopes whenever
+`SPO_AUDIT_KEY` or `SPO_AUDIT_KEYRING` is configured.
+
 For key rotation, keep historical keys only in the operator environment and pass
 them as a JSON object through `SPO_AUDIT_KEYRING`:
 

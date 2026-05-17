@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
+import os
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -27,6 +29,7 @@ Payload: TypeAlias = dict[str, Any]
 SCHEMA_VERSION = 1
 STREAM_MAGIC = b"SPOA1\n"
 ZERO_HASH = "0" * 64
+SIGNATURE_ALGORITHM = "HMAC-SHA256"
 
 __all__ = [
     "AuditStreamEvent",
@@ -52,6 +55,9 @@ class AuditStreamEvent:
     payload_json: str
     payload_sha256: str
     event_hash: str
+    signature_algorithm: str
+    signature_key_id: str
+    signature: str
     payload: Payload
 
 
@@ -99,6 +105,13 @@ def _audit_envelope_class() -> type[Message]:
         add_field("payload_json", 8, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
         add_field("payload_sha256", 9, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
         add_field("event_hash", 10, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+        add_field(
+            "signature_algorithm", 11, descriptor_pb2.FieldDescriptorProto.TYPE_STRING
+        )
+        add_field(
+            "signature_key_id", 12, descriptor_pb2.FieldDescriptorProto.TYPE_STRING
+        )
+        add_field("signature", 13, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
         pool.Add(file_proto)
         descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
     return message_factory.GetMessageClass(descriptor)
@@ -166,6 +179,35 @@ def _event_hash(
     return hashlib.sha256(material.encode()).hexdigest()
 
 
+def _signature_material(
+    *,
+    stream_id: str,
+    sequence: int,
+    event_type: str,
+    recorded_at_unix_ns: int,
+    source: str,
+    previous_hash: str,
+    payload_sha256: str,
+    event_hash: str,
+    schema_version: int,
+    key_id: str,
+) -> str:
+    return _canonical_json(
+        {
+            "event_hash": event_hash,
+            "event_type": event_type,
+            "key_id": key_id,
+            "payload_sha256": payload_sha256,
+            "previous_hash": previous_hash,
+            "recorded_at_unix_ns": recorded_at_unix_ns,
+            "schema_version": schema_version,
+            "sequence": sequence,
+            "source": source,
+            "stream_id": stream_id,
+        }
+    )
+
+
 def _event_type_for_payload(payload: Payload) -> str:
     if payload.get("header") is True:
         return "header"
@@ -195,6 +237,9 @@ def _message_to_event(message: Message) -> AuditStreamEvent:
         payload_json=payload_json,
         payload_sha256=str(envelope.payload_sha256),
         event_hash=str(envelope.event_hash),
+        signature_algorithm=str(envelope.signature_algorithm),
+        signature_key_id=str(envelope.signature_key_id),
+        signature=str(envelope.signature),
         payload=payload,
     )
 
@@ -207,6 +252,9 @@ class EventStreamWriter:
         self._stream_id = stream_id
         self._sequence = 0
         self._previous_hash = ZERO_HASH
+        self._audit_key = os.environ.get("SPO_AUDIT_KEY")
+        if self._audit_key == "":
+            raise ValueError("SPO_AUDIT_KEY must not be empty")
         is_new = not self._path.exists() or self._path.stat().st_size == 0
         self._fh = self._path.open("ab", buffering=0)
         if is_new:
@@ -234,6 +282,28 @@ class EventStreamWriter:
             payload_sha256=payload_sha256,
             schema_version=SCHEMA_VERSION,
         )
+        signature = ""
+        signature_key_id = ""
+        signature_algorithm = ""
+        if self._audit_key is not None:
+            signature_algorithm = SIGNATURE_ALGORITHM
+            signature_key_id = hashlib.sha256(self._audit_key.encode()).hexdigest()[:16]
+            signature = hmac.new(
+                self._audit_key.encode(),
+                _signature_material(
+                    stream_id=self._stream_id,
+                    sequence=self._sequence,
+                    event_type=resolved_type,
+                    recorded_at_unix_ns=now_ns,
+                    source="spo",
+                    previous_hash=self._previous_hash,
+                    payload_sha256=payload_sha256,
+                    event_hash=event_hash,
+                    schema_version=SCHEMA_VERSION,
+                    key_id=signature_key_id,
+                ).encode(),
+                hashlib.sha256,
+            ).hexdigest()
         message = cast("Any", _AuditEnvelope())
         message.schema_version = SCHEMA_VERSION
         message.stream_id = self._stream_id
@@ -247,6 +317,9 @@ class EventStreamWriter:
         message.payload_json = canonical_payload
         message.payload_sha256 = payload_sha256
         message.event_hash = event_hash
+        message.signature_algorithm = signature_algorithm
+        message.signature_key_id = signature_key_id
+        message.signature = signature
         raw = message.SerializeToString(deterministic=True)
         self._fh.write(_encode_varint(len(raw)))
         self._fh.write(raw)
@@ -331,6 +404,11 @@ def verify_event_stream_integrity(
 ) -> tuple[bool, int]:
     """Verify payload digests, sequence continuity, and event hash chaining."""
 
+    try:
+        audit_keys = _audit_verification_keys()
+    except ValueError:
+        return False, 0
+    require_signature = bool(audit_keys)
     previous_hash = ZERO_HASH
     expected_sequence = 1
     verified = 0
@@ -355,7 +433,79 @@ def verify_event_stream_integrity(
             return False, verified
         if event.event_hash != expected_hash:
             return False, verified
+        if require_signature and not _verify_event_signature(
+            event,
+            audit_keys,
+            expected_hash=expected_hash,
+            expected_previous_hash=previous_hash,
+        ):
+            return False, verified
         previous_hash = event.event_hash
         expected_sequence += 1
         verified += 1
     return True, verified
+
+
+def _verify_event_signature(
+    event: AuditStreamEvent,
+    audit_keys: dict[str, str],
+    *,
+    expected_hash: str,
+    expected_previous_hash: str,
+) -> bool:
+    if event.signature_algorithm != SIGNATURE_ALGORITHM:
+        return False
+    if len(event.signature) != 64:
+        return False
+    audit_key = audit_keys.get(event.signature_key_id)
+    if audit_key is None:
+        return False
+    if event.signature_key_id != hashlib.sha256(audit_key.encode()).hexdigest()[:16]:
+        return False
+    expected_signature = hmac.new(
+        audit_key.encode(),
+        _signature_material(
+            stream_id=event.stream_id,
+            sequence=event.sequence,
+            event_type=event.event_type,
+            recorded_at_unix_ns=event.recorded_at_unix_ns,
+            source=event.source,
+            previous_hash=expected_previous_hash,
+            payload_sha256=event.payload_sha256,
+            event_hash=expected_hash,
+            schema_version=event.schema_version,
+            key_id=event.signature_key_id,
+        ).encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(event.signature, expected_signature)
+
+
+def _audit_verification_keys() -> dict[str, str]:
+    keys: dict[str, str] = {}
+    current_key = os.environ.get("SPO_AUDIT_KEY")
+    if current_key == "":
+        raise ValueError("SPO_AUDIT_KEY must not be empty")
+    if current_key is not None:
+        keys[hashlib.sha256(current_key.encode()).hexdigest()[:16]] = current_key
+
+    keyring_json = os.environ.get("SPO_AUDIT_KEYRING")
+    if keyring_json is None:
+        return keys
+    if keyring_json == "":
+        raise ValueError("SPO_AUDIT_KEYRING must not be empty")
+    try:
+        loaded = json.loads(keyring_json)
+    except json.JSONDecodeError as exc:
+        raise ValueError("SPO_AUDIT_KEYRING must be JSON") from exc
+    if not isinstance(loaded, dict):
+        raise ValueError("SPO_AUDIT_KEYRING must be a JSON object")
+    for key_id, key_value in loaded.items():
+        if not isinstance(key_id, str) or key_id == "":
+            raise ValueError("SPO_AUDIT_KEYRING key ids must be non-empty strings")
+        if not isinstance(key_value, str) or key_value == "":
+            raise ValueError("SPO_AUDIT_KEYRING keys must be non-empty strings")
+        if key_id != hashlib.sha256(key_value.encode()).hexdigest()[:16]:
+            raise ValueError("SPO_AUDIT_KEYRING key id does not match key material")
+        keys[key_id] = key_value
+    return keys
