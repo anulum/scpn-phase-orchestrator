@@ -39,6 +39,7 @@ __all__ = [
     "DifferentiableSupervisorConfig",
     "DifferentiableSupervisorPolicy",
     "SupervisorAction",
+    "SupervisorActionProjection",
     "KuramotoSupervisorScenario",
     "SupervisorLossAux",
     "SupervisorPPOBatch",
@@ -55,7 +56,9 @@ __all__ = [
     "pack_supervisor_action",
     "unpack_supervisor_action",
     "sample_supervisor_action",
+    "supervisor_action_bound_penalty",
     "supervisor_action_log_prob",
+    "project_supervisor_action_for_audit",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
     "ppo_supervisor_train_epochs",
@@ -111,6 +114,14 @@ class SupervisorAction(NamedTuple):
     delta_zeta_global: jax.Array
     delta_K_layers: jax.Array
     value_estimate: jax.Array
+
+
+class SupervisorActionProjection(NamedTuple):
+    """Non-actuating safety projection record for a neural supervisor proposal."""
+
+    action: SupervisorAction
+    ttl_s: float
+    audit_record: dict[str, Any]
 
 
 class KuramotoSupervisorScenario(NamedTuple):
@@ -434,6 +445,89 @@ def supervisor_action_log_prob(
     log_prob = _squashed_gaussian_log_prob(mean, policy.log_std, pre_squash)
     entropy = 0.5 * jnp.sum(1.0 + jnp.log(2.0 * jnp.pi) + 2.0 * policy.log_std)
     return log_prob, entropy, value
+
+
+def supervisor_action_bound_penalty(
+    action: SupervisorAction,
+    config: DifferentiableSupervisorConfig,
+) -> jax.Array:
+    """Differentiable quadratic penalty for proposals outside action bounds."""
+    values = pack_supervisor_action(action)
+    bounds = _action_bounds(config)
+    excess = jnp.maximum(jnp.abs(values) - bounds, 0.0)
+    return jnp.sum(excess**2)
+
+
+def project_supervisor_action_for_audit(
+    action: SupervisorAction,
+    config: DifferentiableSupervisorConfig,
+    *,
+    previous_action: SupervisorAction | None = None,
+    ttl_s: float = 5.0,
+    max_ttl_s: float = 5.0,
+    rate_limit_fraction: float = 1.0,
+    include_layer_actions: bool = True,
+) -> SupervisorActionProjection:
+    """Project a neural proposal into replay-safe bounds with audit metadata.
+
+    This is intentionally non-actuating. It creates the explicit audit envelope
+    that callers can inspect before converting a proposal into ``ControlAction``
+    objects for any live adapter path.
+    """
+    ttl_s = _positive_float(ttl_s, "ttl_s")
+    max_ttl_s = _positive_float(max_ttl_s, "max_ttl_s")
+    rate_limit_fraction = _bounded_unit_scalar(
+        rate_limit_fraction,
+        "rate_limit_fraction",
+    )
+    projected_ttl = min(ttl_s, max_ttl_s)
+    bounds = _action_bounds(config)
+    proposed_values = pack_supervisor_action(action)
+    bounded_values = jnp.clip(proposed_values, -bounds, bounds)
+    rate_limited_values = bounded_values
+
+    if previous_action is not None:
+        previous_values = pack_supervisor_action(previous_action)
+        max_delta = bounds * rate_limit_fraction
+        lower = previous_values - max_delta
+        upper = previous_values + max_delta
+        rate_limited_values = jnp.clip(bounded_values, lower, upper)
+
+    if not include_layer_actions:
+        rate_limited_values = rate_limited_values.at[2:].set(0.0)
+
+    projected_action = unpack_supervisor_action(
+        rate_limited_values,
+        value_estimate=action.value_estimate,
+        config=config,
+    )
+    controls = _supervisor_projection_control_records(
+        proposed_values=proposed_values,
+        projected_values=rate_limited_values,
+        bounds=bounds,
+    )
+    clipped = projected_ttl != ttl_s or any(
+        bool(control["clipped"]) for control in controls
+    )
+    audit_record = {
+        "proposal_type": "differentiable_supervisor_action_projection",
+        "non_actuating": True,
+        "clipped": clipped,
+        "ttl_s": projected_ttl,
+        "requested_ttl_s": ttl_s,
+        "constraints": {
+            "max_ttl_s": max_ttl_s,
+            "rate_limit_fraction": rate_limit_fraction,
+            "include_layer_actions": include_layer_actions,
+            "previous_action": previous_action is not None,
+        },
+        "controls": controls,
+    }
+    return SupervisorActionProjection(
+        action=projected_action,
+        ttl_s=projected_ttl,
+        audit_record=audit_record,
+    )
 
 
 def ppo_supervisor_loss(
@@ -1236,6 +1330,33 @@ def _action_bounds(config: DifferentiableSupervisorConfig) -> jax.Array:
             jnp.full((config.n_layer_controls,), config.max_layer_delta_K),
         ]
     )
+
+
+def _supervisor_projection_control_records(
+    *,
+    proposed_values: jax.Array,
+    projected_values: jax.Array,
+    bounds: jax.Array,
+) -> list[dict[str, object]]:
+    controls: list[dict[str, object]] = []
+    names = [("K", "global"), ("zeta", "global")]
+    names.extend(("K", f"layer_{idx}") for idx in range(projected_values.shape[0] - 2))
+    for index, (knob, scope) in enumerate(names):
+        proposed = float(proposed_values[index])
+        projected = float(projected_values[index])
+        bound = float(bounds[index])
+        controls.append(
+            {
+                "knob": knob,
+                "scope": scope,
+                "proposed": proposed,
+                "projected": projected,
+                "lower_bound": -bound,
+                "upper_bound": bound,
+                "clipped": projected != proposed,
+            }
+        )
+    return controls
 
 
 def _squashed_gaussian_log_prob(

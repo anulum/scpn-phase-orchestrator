@@ -22,6 +22,8 @@ from scpn_phase_orchestrator.nn.supervisor import (
     DifferentiableSupervisorConfig,
     DifferentiableSupervisorPolicy,
     KuramotoSupervisorScenario,
+    SupervisorAction,
+    SupervisorActionProjection,
     SupervisorPPOBatch,
     SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
@@ -38,8 +40,10 @@ from scpn_phase_orchestrator.nn.supervisor import (
     ppo_supervisor_train_epochs,
     ppo_supervisor_train_step,
     ppo_supervisor_train_with_checkpoint,
+    project_supervisor_action_for_audit,
     sample_supervisor_action,
     save_supervisor_ppo_checkpoint,
+    supervisor_action_bound_penalty,
     supervisor_train_step,
 )
 
@@ -548,6 +552,112 @@ def test_control_action_adapter_feeds_existing_mapper() -> None:
 
     assert {command["knob"] for command in commands} == {"K", "zeta"}
     assert all(command["ttl_s"] == 7.0 for command in commands)
+
+
+def test_supervisor_action_bound_penalty_is_differentiable_and_zero_inside_bounds() -> (
+    None
+):
+    config = DifferentiableSupervisorConfig(
+        n_oscillators=4,
+        max_global_delta_K=0.05,
+        max_global_delta_zeta=0.1,
+        max_layer_delta_K=0.03,
+    )
+    bounded = SupervisorAction(
+        delta_K_global=jnp.array(0.04),
+        delta_zeta_global=jnp.array(-0.09),
+        delta_K_layers=jnp.array([0.02, -0.01]),
+        value_estimate=jnp.array(0.0),
+    )
+    excessive = SupervisorAction(
+        delta_K_global=jnp.array(0.08),
+        delta_zeta_global=jnp.array(-0.15),
+        delta_K_layers=jnp.array([0.05, -0.04]),
+        value_estimate=jnp.array(0.0),
+    )
+
+    zero_penalty = supervisor_action_bound_penalty(bounded, config)
+    excessive_penalty = supervisor_action_bound_penalty(excessive, config)
+    grad = jax.grad(
+        lambda value: supervisor_action_bound_penalty(
+            excessive._replace(delta_K_global=value),
+            config,
+        )
+    )(excessive.delta_K_global)
+
+    assert float(zero_penalty) == 0.0
+    assert float(excessive_penalty) > 0.0
+    assert jnp.isfinite(grad)
+    assert float(grad) > 0.0
+
+
+def test_project_supervisor_action_for_audit_clips_bounds_rate_ttl_and_layers() -> None:
+    config = DifferentiableSupervisorConfig(
+        n_oscillators=4,
+        max_global_delta_K=0.05,
+        max_global_delta_zeta=0.1,
+        max_layer_delta_K=0.03,
+    )
+    proposal = SupervisorAction(
+        delta_K_global=jnp.array(0.08),
+        delta_zeta_global=jnp.array(-0.15),
+        delta_K_layers=jnp.array([0.04, -0.04]),
+        value_estimate=jnp.array(1.25),
+    )
+    previous = SupervisorAction(
+        delta_K_global=jnp.array(0.0),
+        delta_zeta_global=jnp.array(0.0),
+        delta_K_layers=jnp.array([0.0, 0.0]),
+        value_estimate=jnp.array(-2.0),
+    )
+
+    projection = project_supervisor_action_for_audit(
+        proposal,
+        config,
+        previous_action=previous,
+        ttl_s=8.0,
+        max_ttl_s=5.0,
+        rate_limit_fraction=0.5,
+        include_layer_actions=False,
+    )
+
+    assert isinstance(projection, SupervisorActionProjection)
+    assert projection.ttl_s == 5.0
+    assert float(projection.action.delta_K_global) == pytest.approx(0.025)
+    assert float(projection.action.delta_zeta_global) == pytest.approx(-0.05)
+    np.testing.assert_allclose(projection.action.delta_K_layers, jnp.zeros(2))
+    assert float(projection.action.value_estimate) == pytest.approx(1.25)
+    assert projection.audit_record["non_actuating"] is True
+    assert projection.audit_record["clipped"] is True
+    assert projection.audit_record["constraints"]["rate_limit_fraction"] == 0.5
+    assert projection.audit_record["constraints"]["include_layer_actions"] is False
+    controls = projection.audit_record["controls"]
+    assert [control["scope"] for control in controls] == [
+        "global",
+        "global",
+        "layer_0",
+        "layer_1",
+    ]
+    assert all(control["clipped"] for control in controls)
+
+
+def test_project_supervisor_action_for_audit_rejects_invalid_constraints() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4)
+    action = SupervisorAction(
+        delta_K_global=jnp.array(0.0),
+        delta_zeta_global=jnp.array(0.0),
+        delta_K_layers=jnp.zeros(2),
+        value_estimate=jnp.array(0.0),
+    )
+
+    with pytest.raises(ValueError, match="ttl_s"):
+        project_supervisor_action_for_audit(action, config, ttl_s=0.0)
+
+    with pytest.raises(ValueError, match="max_ttl_s"):
+        project_supervisor_action_for_audit(action, config, max_ttl_s=0.0)
+
+    with pytest.raises(ValueError, match="rate_limit_fraction"):
+        project_supervisor_action_for_audit(action, config, rate_limit_fraction=-0.1)
 
 
 def test_collect_supervisor_rollouts_is_deterministic_and_returns_valid_batch() -> None:
