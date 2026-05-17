@@ -12,11 +12,15 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 from pathlib import Path
 
 import numpy as np
 
+from scpn_phase_orchestrator.audit.signing import (
+    SIGNATURE_ALGORITHM,
+    audit_verification_keys,
+    key_id_for_secret,
+)
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
@@ -26,7 +30,6 @@ _log = logging.getLogger(__name__)
 __all__ = ["ReplayEngine"]
 
 _AUDIT_SCHEMA_VERSION = 1
-_SIGNATURE_ALGORITHM = "HMAC-SHA256"
 _ZERO_HASH = "0" * 64
 
 
@@ -122,7 +125,7 @@ class ReplayEngine:
         fields return (True, 0) unless ``SPO_AUDIT_KEY`` is configured.
         """
         try:
-            audit_keys = _audit_verification_keys()
+            audit_keys = audit_verification_keys()
         except ValueError:
             return False, 0
         require_signature = bool(audit_keys)
@@ -264,7 +267,7 @@ def _verify_hmac_signature(
     signature = entry.get("_signature")
     if not isinstance(signature, dict):
         return False
-    if signature.get("algorithm") != _SIGNATURE_ALGORITHM:
+    if signature.get("algorithm") != SIGNATURE_ALGORITHM:
         return False
     signature_value = signature.get("value")
     if not isinstance(signature_value, str) or len(signature_value) != 64:
@@ -275,7 +278,7 @@ def _verify_hmac_signature(
     audit_key = audit_keys.get(key_id)
     if audit_key is None:
         return False
-    if key_id != hashlib.sha256(audit_key.encode()).hexdigest()[:16]:
+    if key_id != key_id_for_secret(audit_key):
         return False
     if entry.get("_audit_schema_version") != _AUDIT_SCHEMA_VERSION:
         return False
@@ -302,7 +305,7 @@ def _verify_hmac_signature(
         return False
 
     signing_metadata = {
-        "algorithm": _SIGNATURE_ALGORITHM,
+        "algorithm": SIGNATURE_ALGORITHM,
         "key_id": key_id,
     }
     signing_material = {
@@ -321,36 +324,6 @@ def _verify_hmac_signature(
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(signature_value, expected_signature)
-
-
-def _audit_verification_keys() -> dict[str, str]:
-    keys: dict[str, str] = {}
-    current_key = os.environ.get("SPO_AUDIT_KEY")
-    if current_key == "":
-        raise ValueError("SPO_AUDIT_KEY must not be empty")
-    if current_key is not None:
-        keys[hashlib.sha256(current_key.encode()).hexdigest()[:16]] = current_key
-
-    keyring_json = os.environ.get("SPO_AUDIT_KEYRING")
-    if keyring_json is None:
-        return keys
-    if keyring_json == "":
-        raise ValueError("SPO_AUDIT_KEYRING must not be empty")
-    try:
-        loaded = json.loads(keyring_json)
-    except json.JSONDecodeError as exc:
-        raise ValueError("SPO_AUDIT_KEYRING must be JSON") from exc
-    if not isinstance(loaded, dict):
-        raise ValueError("SPO_AUDIT_KEYRING must be a JSON object")
-    for key_id, key_value in loaded.items():
-        if not isinstance(key_id, str) or key_id == "":
-            raise ValueError("SPO_AUDIT_KEYRING key ids must be non-empty strings")
-        if not isinstance(key_value, str) or key_value == "":
-            raise ValueError("SPO_AUDIT_KEYRING keys must be non-empty strings")
-        if key_id != hashlib.sha256(key_value.encode()).hexdigest()[:16]:
-            raise ValueError("SPO_AUDIT_KEYRING key id does not match key material")
-        keys[key_id] = key_value
-    return keys
 
 
 def _payload_without_audit_metadata(record: dict) -> dict:

@@ -24,12 +24,17 @@ from google.protobuf import descriptor_pb2, descriptor_pool, message_factory
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.message import Message
 
+from scpn_phase_orchestrator.audit.signing import (
+    SIGNATURE_ALGORITHM,
+    audit_verification_keys,
+    key_id_for_secret,
+)
+
 Payload: TypeAlias = dict[str, Any]
 
 SCHEMA_VERSION = 1
 STREAM_MAGIC = b"SPOA1\n"
 ZERO_HASH = "0" * 64
-SIGNATURE_ALGORITHM = "HMAC-SHA256"
 
 __all__ = [
     "AuditStreamEvent",
@@ -294,7 +299,7 @@ class EventStreamWriter:
         if self._audit_key is not None:
             audit_mode = "hmac-signed"
             signature_algorithm = SIGNATURE_ALGORITHM
-            signature_key_id = hashlib.sha256(self._audit_key.encode()).hexdigest()[:16]
+            signature_key_id = key_id_for_secret(self._audit_key)
             signature = hmac.new(
                 self._audit_key.encode(),
                 _signature_material(
@@ -414,7 +419,7 @@ def verify_event_stream_integrity(
     """Verify payload digests, sequence continuity, and event hash chaining."""
 
     try:
-        audit_keys = _audit_verification_keys()
+        audit_keys = audit_verification_keys()
     except ValueError:
         return False, 0
     require_signature = bool(audit_keys)
@@ -471,7 +476,7 @@ def _verify_event_signature(
     audit_key = audit_keys.get(event.signature_key_id)
     if audit_key is None:
         return False
-    if event.signature_key_id != hashlib.sha256(audit_key.encode()).hexdigest()[:16]:
+    if event.signature_key_id != key_id_for_secret(audit_key):
         return False
     expected_signature = hmac.new(
         audit_key.encode(),
@@ -491,33 +496,3 @@ def _verify_event_signature(
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(event.signature, expected_signature)
-
-
-def _audit_verification_keys() -> dict[str, str]:
-    keys: dict[str, str] = {}
-    current_key = os.environ.get("SPO_AUDIT_KEY")
-    if current_key == "":
-        raise ValueError("SPO_AUDIT_KEY must not be empty")
-    if current_key is not None:
-        keys[hashlib.sha256(current_key.encode()).hexdigest()[:16]] = current_key
-
-    keyring_json = os.environ.get("SPO_AUDIT_KEYRING")
-    if keyring_json is None:
-        return keys
-    if keyring_json == "":
-        raise ValueError("SPO_AUDIT_KEYRING must not be empty")
-    try:
-        loaded = json.loads(keyring_json)
-    except json.JSONDecodeError as exc:
-        raise ValueError("SPO_AUDIT_KEYRING must be JSON") from exc
-    if not isinstance(loaded, dict):
-        raise ValueError("SPO_AUDIT_KEYRING must be a JSON object")
-    for key_id, key_value in loaded.items():
-        if not isinstance(key_id, str) or key_id == "":
-            raise ValueError("SPO_AUDIT_KEYRING key ids must be non-empty strings")
-        if not isinstance(key_value, str) or key_value == "":
-            raise ValueError("SPO_AUDIT_KEYRING keys must be non-empty strings")
-        if key_id != hashlib.sha256(key_value.encode()).hexdigest()[:16]:
-            raise ValueError("SPO_AUDIT_KEYRING key id does not match key material")
-        keys[key_id] = key_value
-    return keys

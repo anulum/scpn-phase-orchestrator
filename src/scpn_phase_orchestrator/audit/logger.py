@@ -19,6 +19,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.audit.signing import (
+    SIGNATURE_ALGORITHM,
+    key_id_for_secret,
+)
 from scpn_phase_orchestrator.audit.stream import EventStreamWriter
 from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.upde.metrics import UPDEState
@@ -28,7 +32,6 @@ __all__ = ["AuditLogger"]
 _AUDIT_SCHEMA_VERSION = 1
 _DEFAULT_STREAM_ID = "spo-audit-jsonl"
 _ZERO_HASH = "0" * 64
-_SIGNATURE_ALGORITHM = "HMAC-SHA256"
 
 
 class AuditLogger:
@@ -108,9 +111,9 @@ class AuditLogger:
         if key is None:
             msg = "audit key missing during signature construction"
             raise AuditError(msg)
-        key_id = hashlib.sha256(key.encode()).hexdigest()[:16]
+        key_id = key_id_for_secret(key)
         signature_metadata = {
-            "algorithm": _SIGNATURE_ALGORITHM,
+            "algorithm": SIGNATURE_ALGORITHM,
             "key_id": key_id,
         }
         audit_mode = "hmac-signed"
