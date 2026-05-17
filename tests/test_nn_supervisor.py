@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
@@ -27,8 +29,10 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorPPOBatch,
     SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
+    SupervisorReplayProposal,
     SupervisorScenarioCorpus,
     apply_supervisor_action,
+    build_supervisor_replay_proposal,
     build_supervisor_scenario_corpus,
     closed_loop_supervisor_loss,
     collect_supervisor_corpus_rollouts,
@@ -658,6 +662,81 @@ def test_project_supervisor_action_for_audit_rejects_invalid_constraints() -> No
 
     with pytest.raises(ValueError, match="rate_limit_fraction"):
         project_supervisor_action_for_audit(action, config, rate_limit_fraction=-0.1)
+
+
+def test_build_supervisor_replay_proposal_is_auditable_and_non_actuating() -> None:
+    config = DifferentiableSupervisorConfig(
+        n_oscillators=4,
+        hidden_width=8,
+        max_global_delta_K=0.05,
+        max_global_delta_zeta=0.1,
+        max_layer_delta_K=0.03,
+    )
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(70))
+    scenario = _scenario()
+
+    proposal_a = build_supervisor_replay_proposal(
+        policy,
+        scenario,
+        scenario_metadata={"stream_id": "fixture-replay", "scenario_index": 3},
+        ttl_s=8.0,
+        max_ttl_s=5.0,
+        rate_limit_fraction=0.5,
+        include_layer_actions=True,
+    )
+    proposal_b = build_supervisor_replay_proposal(
+        policy,
+        scenario,
+        scenario_metadata={"stream_id": "fixture-replay", "scenario_index": 3},
+        ttl_s=8.0,
+        max_ttl_s=5.0,
+        rate_limit_fraction=0.5,
+        include_layer_actions=True,
+    )
+
+    assert isinstance(proposal_a, SupervisorReplayProposal)
+    assert proposal_a.actuation_permitted is False
+    assert proposal_a.projection.audit_record["non_actuating"] is True
+    assert proposal_a.projection.ttl_s == 5.0
+    assert proposal_a.scenario_metadata == {
+        "stream_id": "fixture-replay",
+        "scenario_index": 3,
+    }
+    assert proposal_a.scenario_summary == {
+        "n_oscillators": 4,
+        "dt": 0.02,
+        "inner_steps": 4,
+        "horizon": 3,
+    }
+    assert set(proposal_a.metrics) == {
+        "current_R_global",
+        "current_R_good",
+        "current_R_bad",
+        "value_estimate",
+        "bound_penalty",
+    }
+    assert all(np.isfinite(value) for value in proposal_a.metrics.values())
+    assert jnp.array_equal(
+        pack_supervisor_action(proposal_a.action),
+        pack_supervisor_action(proposal_b.action),
+    )
+    record = proposal_a.to_audit_record()
+    assert record["proposal_type"] == "differentiable_supervisor_replay_proposal"
+    assert record["actuation_permitted"] is False
+    assert record["projection"]["non_actuating"] is True
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_build_supervisor_replay_proposal_rejects_unserialisable_metadata() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(71))
+
+    with pytest.raises(ValueError, match="scenario_metadata"):
+        build_supervisor_replay_proposal(
+            policy,
+            _scenario(),
+            scenario_metadata={"bad": np.array([1.0])},
+        )
 
 
 def test_collect_supervisor_rollouts_is_deterministic_and_returns_valid_batch() -> None:

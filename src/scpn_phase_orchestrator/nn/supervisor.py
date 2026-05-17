@@ -48,6 +48,7 @@ __all__ = [
     "SupervisorPPOAux",
     "SupervisorPPOCheckpoint",
     "SupervisorPPOTrainResult",
+    "SupervisorReplayProposal",
     "SupervisorScenarioCorpus",
     "masked_order_parameter",
     "apply_supervisor_action",
@@ -59,6 +60,7 @@ __all__ = [
     "supervisor_action_bound_penalty",
     "supervisor_action_log_prob",
     "project_supervisor_action_for_audit",
+    "build_supervisor_replay_proposal",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
     "ppo_supervisor_train_epochs",
@@ -122,6 +124,29 @@ class SupervisorActionProjection(NamedTuple):
     action: SupervisorAction
     ttl_s: float
     audit_record: dict[str, Any]
+
+
+class SupervisorReplayProposal(NamedTuple):
+    """Replay-only neural supervisor proposal record for audit review."""
+
+    action: SupervisorAction
+    projection: SupervisorActionProjection
+    scenario_summary: dict[str, Any]
+    scenario_metadata: dict[str, Any]
+    metrics: dict[str, float]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable replay proposal record."""
+        return {
+            "proposal_type": "differentiable_supervisor_replay_proposal",
+            "actuation_permitted": self.actuation_permitted,
+            "scenario_summary": dict(self.scenario_summary),
+            "scenario_metadata": dict(self.scenario_metadata),
+            "metrics": dict(self.metrics),
+            "action": _supervisor_action_to_record(self.action),
+            "projection": dict(self.projection.audit_record),
+        }
 
 
 class KuramotoSupervisorScenario(NamedTuple):
@@ -527,6 +552,62 @@ def project_supervisor_action_for_audit(
         action=projected_action,
         ttl_s=projected_ttl,
         audit_record=audit_record,
+    )
+
+
+def build_supervisor_replay_proposal(
+    policy: DifferentiableSupervisorPolicy,
+    scenario: KuramotoSupervisorScenario,
+    *,
+    scenario_metadata: dict[str, Any] | None = None,
+    previous_action: SupervisorAction | None = None,
+    ttl_s: float = 5.0,
+    max_ttl_s: float = 5.0,
+    rate_limit_fraction: float = 1.0,
+    include_layer_actions: bool = True,
+) -> SupervisorReplayProposal:
+    """Build a deterministic replay-only proposal from a neural supervisor.
+
+    The proposal is an audit artefact only. It does not return
+    ``ControlAction`` objects and carries ``actuation_permitted=False`` so that
+    downstream replay/autotune surfaces can review it without enabling live
+    actuation.
+    """
+    metadata = _json_object(scenario_metadata, "scenario_metadata")
+    action = policy(scenario)
+    projection = project_supervisor_action_for_audit(
+        action,
+        policy.config,
+        previous_action=previous_action,
+        ttl_s=ttl_s,
+        max_ttl_s=max_ttl_s,
+        rate_limit_fraction=rate_limit_fraction,
+        include_layer_actions=include_layer_actions,
+    )
+    metrics = {
+        "current_R_global": float(order_parameter(scenario.phases)),
+        "current_R_good": float(
+            masked_order_parameter(scenario.phases, scenario.good_mask)
+        ),
+        "current_R_bad": float(
+            masked_order_parameter(scenario.phases, scenario.bad_mask)
+        ),
+        "value_estimate": float(action.value_estimate),
+        "bound_penalty": float(supervisor_action_bound_penalty(action, policy.config)),
+    }
+    scenario_summary = {
+        "n_oscillators": int(scenario.phases.shape[0]),
+        "dt": float(scenario.dt),
+        "inner_steps": int(scenario.inner_steps),
+        "horizon": int(scenario.horizon),
+    }
+    return SupervisorReplayProposal(
+        action=action,
+        projection=projection,
+        scenario_summary=scenario_summary,
+        scenario_metadata=metadata,
+        metrics=metrics,
+        actuation_permitted=False,
     )
 
 
@@ -1357,6 +1438,15 @@ def _supervisor_projection_control_records(
             }
         )
     return controls
+
+
+def _supervisor_action_to_record(action: SupervisorAction) -> dict[str, object]:
+    return {
+        "delta_K_global": float(action.delta_K_global),
+        "delta_zeta_global": float(action.delta_zeta_global),
+        "delta_K_layers": [float(value) for value in action.delta_K_layers],
+        "value_estimate": float(action.value_estimate),
+    }
 
 
 def _squashed_gaussian_log_prob(
