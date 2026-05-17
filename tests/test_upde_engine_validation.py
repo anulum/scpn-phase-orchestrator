@@ -392,6 +392,20 @@ class TestSimplicialEngineValidation:
         with pytest.raises(ValueError, match="dt must be positive"):
             SimplicialEngine(n_oscillators=4, dt=dt)
 
+    def test_order_parameter_rejects_phase_shape_mismatch(self) -> None:
+        engine = SimplicialEngine(n_oscillators=4, dt=0.01)
+
+        with pytest.raises(ValueError, match="phases shape"):
+            engine.order_parameter(np.zeros(5, dtype=np.float64))
+
+    def test_order_parameter_rejects_non_finite_phases(self) -> None:
+        engine = SimplicialEngine(n_oscillators=4, dt=0.01)
+        phases = np.zeros(4, dtype=np.float64)
+        phases[0] = np.inf
+
+        with pytest.raises(ValueError, match="phases"):
+            engine.order_parameter(phases)
+
     def test_rejects_negative_sigma2(self) -> None:
         with pytest.raises(ValueError, match="sigma2 must be non-negative finite real"):
             SimplicialEngine(n_oscillators=4, dt=0.01, sigma2=-0.1)
