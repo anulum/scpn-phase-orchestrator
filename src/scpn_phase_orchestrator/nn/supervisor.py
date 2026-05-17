@@ -811,6 +811,7 @@ def ppo_supervisor_train_epochs(
     value_clip: float | None = None,
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
+    entropy_schedule: tuple[float, ...] | None = None,
     max_grad_norm: float | None = None,
     kl_early_stop: float | None = None,
 ) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array, int]:
@@ -827,6 +828,8 @@ def ppo_supervisor_train_epochs(
         clip_epsilon: PPO clipping radius.
         value_weight: Value-function loss coefficient.
         entropy_weight: Entropy bonus coefficient.
+        entropy_schedule: Optional non-negative per-update entropy weights. When
+            shorter than the number of updates, the final value is held.
         max_grad_norm: Optional global gradient-norm clip radius.
         kl_early_stop: Optional KL threshold for early stopping.
 
@@ -845,6 +848,7 @@ def ppo_supervisor_train_epochs(
         value_clip=value_clip,
         value_weight=value_weight,
         entropy_weight=entropy_weight,
+        entropy_schedule=entropy_schedule,
         max_grad_norm=max_grad_norm,
         kl_early_stop=kl_early_stop,
     )
@@ -866,6 +870,7 @@ def ppo_supervisor_train_with_checkpoint(
     value_clip: float | None = None,
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
+    entropy_schedule: tuple[float, ...] | None = None,
     max_grad_norm: float | None = None,
     kl_early_stop: float | None = None,
     metadata: dict[str, Any] | None = None,
@@ -904,8 +909,10 @@ def ppo_supervisor_train_with_checkpoint(
             value_clip=value_clip,
             value_weight=value_weight,
             entropy_weight=entropy_weight,
+            entropy_schedule=entropy_schedule,
             max_grad_norm=max_grad_norm,
             kl_early_stop=kl_early_stop,
+            initial_update_index=prior_updates,
         )
     )
     loss_history = (
@@ -950,12 +957,22 @@ def _ppo_supervisor_train_epochs_impl(
     value_clip: float | None = None,
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
+    entropy_schedule: tuple[float, ...] | None = None,
     max_grad_norm: float | None = None,
     kl_early_stop: float | None = None,
+    initial_update_index: int = 0,
 ) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array, int, jax.Array]:
     n_epochs = _positive_int(n_epochs, "n_epochs")
     batch_size = int(batch.phases.shape[0])
     minibatch_size = _positive_int(minibatch_size, "minibatch_size")
+    initial_update_index = _non_negative_int(
+        initial_update_index,
+        "initial_update_index",
+    )
+    entropy_schedule_values = _non_negative_float_sequence(
+        entropy_schedule,
+        "entropy_schedule",
+    )
     if batch_size <= 0:
         raise ValueError("batch.phases must contain at least one step")
     if minibatch_size > batch_size:
@@ -975,6 +992,12 @@ def _ppo_supervisor_train_epochs_impl(
             end = min(start + minibatch_size, batch_size)
             batch_idx = indices[start:end]
             batch_slice = _take_batch_rows(batch, batch_idx)
+            update_index = initial_update_index + n_updates
+            current_entropy_weight = _scheduled_scalar(
+                entropy_weight,
+                entropy_schedule_values,
+                update_index,
+            )
 
             policy, opt_state, loss = ppo_supervisor_train_step(
                 policy,
@@ -984,7 +1007,7 @@ def _ppo_supervisor_train_epochs_impl(
                 clip_epsilon=clip_epsilon,
                 value_clip=value_clip,
                 value_weight=value_weight,
-                entropy_weight=entropy_weight,
+                entropy_weight=current_entropy_weight,
                 max_grad_norm=max_grad_norm,
             )
             updates.append(loss)
@@ -997,7 +1020,7 @@ def _ppo_supervisor_train_epochs_impl(
                     clip_epsilon=clip_epsilon,
                     value_clip=value_clip,
                     value_weight=value_weight,
-                    entropy_weight=entropy_weight,
+                    entropy_weight=current_entropy_weight,
                 )
                 if float(jnp.abs(aux.approx_kl)) > kl_early_stop:
                     return (
@@ -1742,6 +1765,30 @@ def _bounded_unit_scalar(value: object, field: str) -> float:
     if not isfinite(value_float) or value_float < 0.0 or value_float > 1.0:
         raise ValueError(f"{field} must be in [0, 1]")
     return value_float
+
+
+def _non_negative_float_sequence(
+    values: tuple[float, ...] | None,
+    field: str,
+) -> tuple[float, ...] | None:
+    if values is None:
+        return None
+    if not values:
+        raise ValueError(f"{field} must contain at least one value")
+    return tuple(
+        _non_negative_float(value, f"{field}[{index}]")
+        for index, value in enumerate(values)
+    )
+
+
+def _scheduled_scalar(
+    default: float,
+    schedule: tuple[float, ...] | None,
+    update_index: int,
+) -> float:
+    if schedule is None:
+        return default
+    return schedule[min(update_index, len(schedule) - 1)]
 
 
 def _positive_float(value: object, field: str) -> float:

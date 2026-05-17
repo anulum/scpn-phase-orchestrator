@@ -269,6 +269,61 @@ def test_ppo_supervisor_train_epochs_minibatches_and_is_deterministic() -> None:
     )
 
 
+def test_ppo_supervisor_train_epochs_applies_entropy_schedule() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(74))
+    rollout = collect_supervisor_rollouts(
+        policy,
+        _scenario(),
+        key=jax.random.PRNGKey(75),
+        n_episodes=1,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.0,
+    )
+    batch = rollout.batch
+    optimizer = optax.adam(1e-3)
+    scheduled_entropy = 0.125
+
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+    direct_policy, direct_state, direct_loss = ppo_supervisor_train_step(
+        policy,
+        batch,
+        opt_state=opt_state,
+        optimizer=optimizer,
+        entropy_weight=scheduled_entropy,
+    )
+
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+    scheduled_policy, scheduled_state, scheduled_losses, scheduled_updates = (
+        ppo_supervisor_train_epochs(
+            policy,
+            batch,
+            key=jax.random.PRNGKey(76),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            minibatch_size=batch.phases.shape[0],
+            entropy_schedule=(scheduled_entropy,),
+        )
+    )
+
+    assert scheduled_updates == 1
+    assert jnp.allclose(scheduled_losses, jnp.asarray([direct_loss]), atol=1.0e-7)
+    for before, after in zip(
+        jax.tree.leaves(eqx.filter(direct_policy, eqx.is_array)),
+        jax.tree.leaves(eqx.filter(scheduled_policy, eqx.is_array)),
+        strict=True,
+    ):
+        assert jnp.allclose(before, after, atol=1.0e-7)
+    for before, after in zip(
+        jax.tree.leaves(direct_state),
+        jax.tree.leaves(scheduled_state),
+        strict=True,
+    ):
+        assert jnp.allclose(before, after, atol=1.0e-7)
+
+
 def test_ppo_supervisor_train_step_supports_grad_clip() -> None:
     config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
     policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(33))
@@ -350,6 +405,30 @@ def test_ppo_supervisor_train_epochs_rejects_invalid_minibatch_size() -> None:
             optimizer=optimizer,
             n_epochs=1,
             minibatch_size=batch.phases.shape[0] + 1,
+        )
+
+    with pytest.raises(ValueError, match="entropy_schedule"):
+        ppo_supervisor_train_epochs(
+            policy_model,
+            batch,
+            key=jax.random.PRNGKey(36),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            minibatch_size=batch.phases.shape[0],
+            entropy_schedule=(),
+        )
+
+    with pytest.raises(ValueError, match="entropy_schedule"):
+        ppo_supervisor_train_epochs(
+            policy_model,
+            batch,
+            key=jax.random.PRNGKey(36),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            minibatch_size=batch.phases.shape[0],
+            entropy_schedule=(0.01, -0.1),
         )
 
 
