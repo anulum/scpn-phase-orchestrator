@@ -139,6 +139,7 @@ class SupervisorPPOBatch(NamedTuple):
     old_log_probs: jax.Array
     advantages: jax.Array
     returns: jax.Array
+    values: jax.Array
     dt: float
     inner_steps: int
     horizon: int
@@ -376,10 +377,13 @@ def ppo_supervisor_loss(
     batch: SupervisorPPOBatch,
     *,
     clip_epsilon: float = 0.2,
+    value_clip: float | None = None,
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
 ) -> tuple[jax.Array, SupervisorPPOAux]:
     """Clipped PPO objective for bounded differentiable supervisor actions."""
+    if value_clip is not None:
+        value_clip = _non_negative_float(value_clip, "value_clip")
 
     def item_loss(
         phases: jax.Array,
@@ -391,6 +395,7 @@ def ppo_supervisor_loss(
         old_log_prob: jax.Array,
         advantage: jax.Array,
         ret: jax.Array,
+        old_value: jax.Array,
     ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
         scenario = KuramotoSupervisorScenario(
             phases=phases,
@@ -412,7 +417,15 @@ def ppo_supervisor_loss(
         unclipped = ratio * advantage
         clipped = jnp.clip(ratio, 1.0 - clip_epsilon, 1.0 + clip_epsilon) * advantage
         policy_loss = -jnp.minimum(unclipped, clipped)
-        value_loss = (value - ret) ** 2
+        unclipped_value_loss = (value - ret) ** 2
+        if value_clip is not None:
+            clipped_value = old_value + jnp.clip(
+                value - old_value, -value_clip, value_clip
+            )
+            clipped_value_loss = (clipped_value - ret) ** 2
+            value_loss = jnp.maximum(unclipped_value_loss, clipped_value_loss)
+        else:
+            value_loss = unclipped_value_loss
         approx_kl = old_log_prob - log_prob
         clipped_flag = jnp.abs(ratio - 1.0) > clip_epsilon
         return (
@@ -435,6 +448,7 @@ def ppo_supervisor_loss(
         batch.old_log_probs,
         batch.advantages,
         batch.returns,
+        batch.values,
     )
     policy_loss = jnp.mean(policy_losses)
     value_loss = jnp.mean(value_losses)
@@ -457,6 +471,7 @@ def ppo_supervisor_train_step(
     optimizer: optax.GradientTransformation,
     *,
     clip_epsilon: float = 0.2,
+    value_clip: float | None = None,
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
     max_grad_norm: float | None = None,
@@ -468,6 +483,7 @@ def ppo_supervisor_train_step(
             model,
             batch,
             clip_epsilon=clip_epsilon,
+            value_clip=value_clip,
             value_weight=value_weight,
             entropy_weight=entropy_weight,
         )
@@ -493,6 +509,7 @@ def ppo_supervisor_train_epochs(
     n_epochs: int,
     minibatch_size: int = 32,
     clip_epsilon: float = 0.2,
+    value_clip: float | None = None,
     value_weight: float = 0.5,
     entropy_weight: float = 0.01,
     max_grad_norm: float | None = None,
@@ -546,6 +563,7 @@ def ppo_supervisor_train_epochs(
                 opt_state,
                 optimizer,
                 clip_epsilon=clip_epsilon,
+                value_clip=value_clip,
                 value_weight=value_weight,
                 entropy_weight=entropy_weight,
                 max_grad_norm=max_grad_norm,
@@ -558,6 +576,7 @@ def ppo_supervisor_train_epochs(
                     policy,
                     batch_slice,
                     clip_epsilon=clip_epsilon,
+                    value_clip=value_clip,
                     value_weight=value_weight,
                     entropy_weight=entropy_weight,
                 )
@@ -606,6 +625,7 @@ def collect_supervisor_rollouts(
     all_old_log_probs: list[jax.Array] = []
     all_advantages: list[jax.Array] = []
     all_returns: list[jax.Array] = []
+    all_values: list[jax.Array] = []
     episode_returns: list[jax.Array] = []
 
     for episode_key in rollout_keys:
@@ -676,6 +696,7 @@ def collect_supervisor_rollouts(
             all_old_log_probs.append(step_log_probs[index])
             all_advantages.append(advantages[index])
             all_returns.append(returns[index])
+            all_values.append(step_values[index])
 
     episode_returns_array = jnp.stack(episode_returns)
     batch = SupervisorPPOBatch(
@@ -688,6 +709,7 @@ def collect_supervisor_rollouts(
         old_log_probs=jnp.stack(all_old_log_probs),
         advantages=jnp.stack(all_advantages),
         returns=jnp.stack(all_returns),
+        values=jnp.stack(all_values),
         dt=scenario.dt,
         inner_steps=inner_steps,
         horizon=horizon,
@@ -820,6 +842,7 @@ def _validate_supervisor_ppo_batch_size(
         "old_log_probs",
         "advantages",
         "returns",
+        "values",
     )
     for field_name in fields:
         value = getattr(batch, field_name)
@@ -843,6 +866,7 @@ def _take_batch_rows(
         old_log_probs=batch.old_log_probs[indices],
         advantages=batch.advantages[indices],
         returns=batch.returns[indices],
+        values=batch.values[indices],
         dt=batch.dt,
         inner_steps=batch.inner_steps,
         horizon=batch.horizon,
@@ -884,4 +908,13 @@ def _positive_float(value: object, field: str) -> float:
     value_float = float(value)
     if not isfinite(value_float) or value_float <= 0.0:
         raise ValueError(f"{field} must be a finite positive scalar")
+    return value_float
+
+
+def _non_negative_float(value: object, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field} must be a finite non-negative scalar")
+    value_float = float(value)
+    if not isfinite(value_float) or value_float < 0.0:
+        raise ValueError(f"{field} must be a finite non-negative scalar")
     return value_float

@@ -160,6 +160,7 @@ def test_ppo_supervisor_loss_and_train_step_are_finite() -> None:
         old_log_probs=jnp.stack([old_log_prob, old_log_prob]),
         advantages=jnp.array([1.0, 0.5]),
         returns=jnp.array([0.2, 0.1]),
+        values=jnp.stack([action.value_estimate, action.value_estimate]),
         dt=scenario.dt,
         inner_steps=scenario.inner_steps,
         horizon=scenario.horizon,
@@ -254,6 +255,7 @@ def test_ppo_supervisor_train_step_supports_grad_clip() -> None:
         base_K=jnp.tile(_scenario().base_K, (2, 1, 1)),
         good_mask=jnp.tile(_scenario().good_mask, (2, 1)),
         bad_mask=jnp.tile(_scenario().bad_mask, (2, 1)),
+        values=jnp.zeros(2),
         actions=jnp.stack(
             [jnp.zeros(4)] * 2,
         ),
@@ -385,8 +387,10 @@ def test_collect_supervisor_rollouts_is_deterministic_and_returns_valid_batch() 
     assert rollout_a.batch.old_log_probs.shape == (12,)
     assert rollout_a.batch.advantages.shape == (12,)
     assert rollout_a.batch.returns.shape == (12,)
+    assert rollout_a.batch.values.shape == (12,)
     assert jnp.isfinite(rollout_a.batch.phases).all()
     assert jnp.isfinite(rollout_a.batch.returns).all()
+    assert jnp.isfinite(rollout_a.batch.values).all()
     assert float(rollout_a.episode_return_std) >= 0.0
     assert jnp.array_equal(
         rollout_a.batch.phases, rollout_b.batch.phases
@@ -426,3 +430,45 @@ def test_collect_supervisor_rollouts_rejects_invalid_hyperparameters() -> None:
             n_episodes=1,
             gae_lambda=1.2,
         )
+
+
+def test_ppo_value_loss_uses_optional_value_clipping() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(40))
+    scenario = _scenario()
+    action, old_log_prob = sample_supervisor_action(
+        policy, scenario, key=jax.random.PRNGKey(41)
+    )
+
+    batch = SupervisorPPOBatch(
+        phases=jnp.tile(scenario.phases, (2, 1)),
+        omegas=jnp.tile(scenario.omegas, (2, 1)),
+        base_K=jnp.tile(scenario.base_K, (2, 1, 1)),
+        good_mask=jnp.tile(scenario.good_mask, (2, 1)),
+        bad_mask=jnp.tile(scenario.bad_mask, (2, 1)),
+        actions=jnp.tile(pack_supervisor_action(action), (2, 1)),
+        old_log_probs=jnp.array([old_log_prob, old_log_prob]),
+        advantages=jnp.zeros(2),
+        returns=jnp.array([action.value_estimate + 0.25, action.value_estimate - 0.25]),
+        values=jnp.array([action.value_estimate + 2.5, action.value_estimate - 2.5]),
+        dt=scenario.dt,
+        inner_steps=scenario.inner_steps,
+        horizon=scenario.horizon,
+    )
+
+    _, unclipped_aux = ppo_supervisor_loss(
+        policy,
+        batch,
+        clip_epsilon=0.2,
+        value_clip=None,
+    )
+    _, clipped_aux = ppo_supervisor_loss(
+        policy,
+        batch,
+        clip_epsilon=0.2,
+        value_clip=0.0,
+    )
+
+    assert jnp.isfinite(unclipped_aux.value_loss)
+    assert jnp.isfinite(clipped_aux.value_loss)
+    assert float(clipped_aux.value_loss) >= float(unclipped_aux.value_loss)
