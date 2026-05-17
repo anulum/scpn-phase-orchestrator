@@ -1974,7 +1974,29 @@ def _supervisor_replay_comparison_metrics(
                 "replay_selected_reward",
                 selected.get("reward"),
             )
+    rounds = replay_record.get("rounds")
+    if isinstance(rounds, list):
+        metrics["replay_round_count"] = float(len(rounds))
+        metrics["replay_candidate_count"] = float(
+            sum(_replay_round_candidate_count(round_record) for round_record in rounds)
+        )
+    config = replay_record.get("config")
+    if isinstance(config, dict):
+        _put_finite_metric(
+            metrics,
+            "replay_config_iterations",
+            config.get("iterations"),
+        )
     return metrics
+
+
+def _replay_round_candidate_count(round_record: object) -> int:
+    if not isinstance(round_record, dict):
+        raise ValueError("adaptive replay round must be a JSON object")
+    candidates = round_record.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("adaptive replay round candidates must be a list")
+    return len(candidates)
 
 
 def _mapping_value(value: Mapping[str, Any], key: str) -> Mapping[str, Any]:

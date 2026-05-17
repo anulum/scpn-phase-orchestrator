@@ -19,11 +19,17 @@ eqx = pytest.importorskip("equinox")
 optax = pytest.importorskip("optax")
 
 from scpn_phase_orchestrator.actuation.mapper import ActuationMapper
-from scpn_phase_orchestrator.autotune.policy_search import ReplayPolicySearchResult
+from scpn_phase_orchestrator.autotune.policy_search import (
+    AdaptiveReplayPolicySearchConfig,
+    AdaptiveReplayPolicySearchResult,
+    ReplayPolicySearchResult,
+    search_adaptive_replay_policy,
+)
 from scpn_phase_orchestrator.autotune.reward import (
     AutotunePolicyProposal,
     AutotuneRewardReport,
     KnobPolicyCandidate,
+    OfflinePolicySearchConfig,
     PolicyProposalConfig,
     RewardConfig,
     RewardObservation,
@@ -109,6 +115,37 @@ def _replay_search_result(reward: float = 0.42) -> ReplayPolicySearchResult:
         seed=candidate,
         candidates=(candidate,),
         proposal=proposal,
+    )
+
+
+def _adaptive_replay_search_result() -> AdaptiveReplayPolicySearchResult:
+    def evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
+        assert isinstance(candidate.K, float)
+        coherence = max(0.0, 1.0 - abs(candidate.K - 0.4))
+        return RewardObservation(
+            coherence=coherence,
+            previous_coherence=0.5,
+            unsafe=False,
+            regime_changed=False,
+        )
+
+    return search_adaptive_replay_policy(
+        KnobPolicyCandidate(K=0.0),
+        evaluator,
+        adaptive_config=AdaptiveReplayPolicySearchConfig(
+            base_search_config=OfflinePolicySearchConfig(
+                K_step=0.2,
+                alpha_step=0.0,
+                zeta_step=0.0,
+                Psi_step=0.0,
+                channel_weight_step=0.0,
+                cross_channel_gain_step=0.0,
+                max_abs_knob=1.0,
+            ),
+            iterations=2,
+            step_decay=1.0,
+        ),
+        proposal_config=PolicyProposalConfig(min_coherence=0.8),
     )
 
 
@@ -1350,6 +1387,28 @@ def test_supervisor_corpus_replay_comparison_summarises_supervisor_metrics() -> 
     assert record["metrics"]["supervisor_rejected_count"] == 1.0
     assert record["metrics"]["replay_selected_reward"] == pytest.approx(0.31)
     assert "supervisor_mean_value_estimate" in record["metrics"]
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_replay_comparison_records_adaptive_replay_refinement() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(73))
+    supervisor_proposal = build_supervisor_replay_proposal(policy, _scenario())
+
+    comparison = compare_supervisor_replay_proposal(
+        supervisor_proposal,
+        _adaptive_replay_search_result(),
+        comparison_label="adaptive-replay-policy-search",
+    )
+    record = comparison.to_audit_record()
+
+    assert record["actuation_permitted"] is False
+    assert record["comparison_label"] == "adaptive-replay-policy-search"
+    assert len(record["replay_policy_search"]["rounds"]) == 2
+    assert record["metrics"]["replay_round_count"] == 2.0
+    assert record["metrics"]["replay_candidate_count"] == 6.0
+    assert record["metrics"]["replay_config_iterations"] == 2.0
+    assert record["metrics"]["replay_selected_reward"] > 0.0
     json.dumps(record, sort_keys=True, allow_nan=False)
 
 
