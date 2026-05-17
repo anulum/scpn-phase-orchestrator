@@ -17,6 +17,7 @@ interlocks remain outside the gradient path.
 
 from __future__ import annotations
 
+from math import isfinite
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -38,6 +39,7 @@ __all__ = [
     "KuramotoSupervisorScenario",
     "SupervisorLossAux",
     "SupervisorPPOBatch",
+    "SupervisorPPORollout",
     "SupervisorPPOAux",
     "masked_order_parameter",
     "apply_supervisor_action",
@@ -49,6 +51,7 @@ __all__ = [
     "supervisor_action_log_prob",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
+    "collect_supervisor_rollouts",
     "control_actions_from_supervisor",
 ]
 
@@ -138,6 +141,15 @@ class SupervisorPPOBatch(NamedTuple):
     dt: float
     inner_steps: int
     horizon: int
+
+
+class SupervisorPPORollout(NamedTuple):
+    """Replay-only rollout outputs for PPO-style supervisor training."""
+
+    batch: SupervisorPPOBatch
+    episode_returns: jax.Array
+    episode_return_mean: jax.Array
+    episode_return_std: jax.Array
 
 
 class SupervisorPPOAux(NamedTuple):
@@ -466,6 +478,134 @@ def ppo_supervisor_train_step(
     return updated, opt_state, loss
 
 
+def collect_supervisor_rollouts(
+    policy: DifferentiableSupervisorPolicy,
+    scenario: KuramotoSupervisorScenario,
+    *,
+    key: jax.Array,
+    n_episodes: int,
+    gamma: float = 0.99,
+    gae_lambda: float = 0.95,
+    trajectory_jitter: float = 0.0,
+) -> SupervisorPPORollout:
+    """Collect deterministic, replay-only PPO rollouts from a starting scenario."""
+    n_episodes = _positive_int(n_episodes, "n_episodes")
+    horizon = _positive_int(scenario.horizon, "scenario.horizon")
+    inner_steps = _positive_int(scenario.inner_steps, "scenario.inner_steps")
+    gamma = _bounded_unit_scalar(gamma, "gamma")
+    gae_lambda = _bounded_unit_scalar(gae_lambda, "gae_lambda")
+    if isinstance(trajectory_jitter, bool) or not isinstance(
+        trajectory_jitter, int | float
+    ):
+        raise ValueError("trajectory_jitter must be a finite float")
+    trajectory_jitter = float(trajectory_jitter)
+    if not isfinite(trajectory_jitter) or trajectory_jitter < 0.0:
+        raise ValueError("trajectory_jitter must be non-negative")
+
+    rollout_keys = jax.random.split(key, n_episodes + 1)[1:]
+    all_phases: list[jax.Array] = []
+    all_omegas: list[jax.Array] = []
+    all_base_k: list[jax.Array] = []
+    all_good_masks: list[jax.Array] = []
+    all_bad_masks: list[jax.Array] = []
+    all_actions: list[jax.Array] = []
+    all_old_log_probs: list[jax.Array] = []
+    all_advantages: list[jax.Array] = []
+    all_returns: list[jax.Array] = []
+    episode_returns: list[jax.Array] = []
+
+    for episode_key in rollout_keys:
+        state = scenario
+        if trajectory_jitter > 0.0:
+            jitter_key, step_key = jax.random.split(episode_key)
+            state = state._replace(
+                phases=state.phases
+                + trajectory_jitter
+                * jax.random.normal(jitter_key, shape=state.phases.shape),
+            )
+            step_key = jax.random.fold_in(step_key, 1)
+        else:
+            step_key = episode_key
+
+        step_rewards: list[jax.Array] = []
+        step_values: list[jax.Array] = []
+        step_actions: list[jax.Array] = []
+        step_log_probs: list[jax.Array] = []
+        step_phases: list[jax.Array] = []
+
+        for _ in range(horizon):
+            current_key, step_key = jax.random.split(step_key)
+            action, action_log_prob = sample_supervisor_action(
+                policy, state, key=current_key
+            )
+            controlled_K = apply_supervisor_action(scenario.base_K, action, state)
+            next_phases, _ = kuramoto_forward(
+                state.phases,
+                state.omegas,
+                controlled_K,
+                state.dt,
+                inner_steps,
+            )
+            reward = masked_order_parameter(next_phases, state.good_mask) - (
+                policy.config.bad_sync_weight
+                * masked_order_parameter(next_phases, state.bad_mask)
+            )
+
+            step_phases.append(state.phases)
+            step_rewards.append(reward)
+            step_values.append(action.value_estimate)
+            step_actions.append(pack_supervisor_action(action))
+            step_log_probs.append(action_log_prob)
+            state = state._replace(phases=next_phases)
+
+        terminal_value = _policy_mean_and_value(policy, state)[1]
+        all_values = jnp.stack(step_values + [terminal_value])
+        rewards = jnp.stack(step_rewards)
+        deltas = rewards + gamma * all_values[1:] - all_values[:-1]
+
+        episode_advantages = [jnp.array(0.0)] * horizon
+        running_advantage = jnp.array(0.0)
+        for index in reversed(range(horizon)):
+            running_advantage = deltas[index] + gamma * gae_lambda * running_advantage
+            episode_advantages[index] = running_advantage
+        advantages = jnp.stack(episode_advantages)
+        returns = advantages + all_values[:-1]
+
+        episode_returns.append(jnp.sum(rewards))
+        for index in range(horizon):
+            all_phases.append(step_phases[index])
+            all_omegas.append(scenario.omegas)
+            all_base_k.append(scenario.base_K)
+            all_good_masks.append(scenario.good_mask)
+            all_bad_masks.append(scenario.bad_mask)
+            all_actions.append(step_actions[index])
+            all_old_log_probs.append(step_log_probs[index])
+            all_advantages.append(advantages[index])
+            all_returns.append(returns[index])
+
+    episode_returns_array = jnp.stack(episode_returns)
+    batch = SupervisorPPOBatch(
+        phases=jnp.stack(all_phases),
+        omegas=jnp.stack(all_omegas),
+        base_K=jnp.stack(all_base_k),
+        good_mask=jnp.stack(all_good_masks),
+        bad_mask=jnp.stack(all_bad_masks),
+        actions=jnp.stack(all_actions),
+        old_log_probs=jnp.stack(all_old_log_probs),
+        advantages=jnp.stack(all_advantages),
+        returns=jnp.stack(all_returns),
+        dt=scenario.dt,
+        inner_steps=inner_steps,
+        horizon=horizon,
+    )
+    return SupervisorPPORollout(
+        batch=batch,
+        episode_returns=episode_returns_array,
+        episode_return_mean=jnp.mean(episode_returns_array),
+        episode_return_std=jnp.std(episode_returns_array),
+    )
+
+
 def control_actions_from_supervisor(
     action: SupervisorAction,
     *,
@@ -562,3 +702,20 @@ def _action_distance(left: SupervisorAction, right: SupervisorAction) -> jax.Arr
         + (left.delta_zeta_global - right.delta_zeta_global) ** 2
         + jnp.mean((left.delta_K_layers - right.delta_K_layers) ** 2)
     )
+
+
+def _positive_int(value: object, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{field} must be a positive integer")
+    if value <= 0:
+        raise ValueError(f"{field} must be a positive integer")
+    return value
+
+
+def _bounded_unit_scalar(value: object, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field} must be in [0, 1]")
+    value_float = float(value)
+    if not isfinite(value_float) or value_float < 0.0 or value_float > 1.0:
+        raise ValueError(f"{field} must be in [0, 1]")
+    return value_float

@@ -22,7 +22,9 @@ from scpn_phase_orchestrator.nn.supervisor import (
     DifferentiableSupervisorConfig,
     DifferentiableSupervisorPolicy,
     KuramotoSupervisorScenario,
+    SupervisorPPORollout,
     SupervisorPPOBatch,
+    collect_supervisor_rollouts,
     apply_supervisor_action,
     closed_loop_supervisor_loss,
     control_actions_from_supervisor,
@@ -200,3 +202,85 @@ def test_control_action_adapter_feeds_existing_mapper() -> None:
 
     assert {command["knob"] for command in commands} == {"K", "zeta"}
     assert all(command["ttl_s"] == 7.0 for command in commands)
+
+
+def test_collect_supervisor_rollouts_is_deterministic_and_returns_valid_batch() -> None:
+    config = DifferentiableSupervisorConfig(
+        n_oscillators=4,
+        hidden_width=8,
+        hidden_depth=2,
+    )
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(21))
+    scenario = _scenario()
+
+    rollout_a = collect_supervisor_rollouts(
+        policy,
+        scenario,
+        key=jax.random.PRNGKey(31),
+        n_episodes=3,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.01,
+    )
+    rollout_b = collect_supervisor_rollouts(
+        policy,
+        scenario,
+        key=jax.random.PRNGKey(31),
+        n_episodes=3,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.01,
+    )
+
+    assert isinstance(rollout_a, SupervisorPPORollout)
+    assert rollout_a.episode_returns.shape == (3,)
+    assert rollout_a.batch.phases.shape == (12, 4)
+    assert rollout_a.batch.omegas.shape == (12, 4)
+    assert rollout_a.batch.base_K.shape == (12, 4, 4)
+    assert rollout_a.batch.good_mask.shape == (12, 4)
+    assert rollout_a.batch.bad_mask.shape == (12, 4)
+    assert rollout_a.batch.actions.shape == (12, 4)
+    assert rollout_a.batch.old_log_probs.shape == (12,)
+    assert rollout_a.batch.advantages.shape == (12,)
+    assert rollout_a.batch.returns.shape == (12,)
+    assert jnp.isfinite(rollout_a.batch.phases).all()
+    assert jnp.isfinite(rollout_a.batch.returns).all()
+    assert float(rollout_a.episode_return_std) >= 0.0
+    assert jnp.array_equal(
+        rollout_a.batch.phases, rollout_b.batch.phases
+    )
+    assert jnp.array_equal(
+        rollout_a.episode_returns, rollout_b.episode_returns
+    )
+
+
+def test_collect_supervisor_rollouts_rejects_invalid_hyperparameters() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(22))
+    scenario = _scenario()
+
+    with pytest.raises(ValueError, match="n_episodes"):
+        collect_supervisor_rollouts(
+            policy,
+            scenario,
+            key=jax.random.PRNGKey(33),
+            n_episodes=0,
+        )
+
+    with pytest.raises(ValueError, match="gamma"):
+        collect_supervisor_rollouts(
+            policy,
+            scenario,
+            key=jax.random.PRNGKey(33),
+            n_episodes=1,
+            gamma=-0.01,
+        )
+
+    with pytest.raises(ValueError, match="gae_lambda"):
+        collect_supervisor_rollouts(
+            policy,
+            scenario,
+            key=jax.random.PRNGKey(33),
+            n_episodes=1,
+            gae_lambda=1.2,
+        )
