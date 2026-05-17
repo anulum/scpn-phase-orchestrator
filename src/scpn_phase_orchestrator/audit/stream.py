@@ -58,6 +58,7 @@ class AuditStreamEvent:
     signature_algorithm: str
     signature_key_id: str
     signature: str
+    audit_mode: str
     payload: Payload
 
 
@@ -112,6 +113,7 @@ def _audit_envelope_class() -> type[Message]:
             "signature_key_id", 12, descriptor_pb2.FieldDescriptorProto.TYPE_STRING
         )
         add_field("signature", 13, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
+        add_field("audit_mode", 14, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
         pool.Add(file_proto)
         descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
     return message_factory.GetMessageClass(descriptor)
@@ -240,6 +242,7 @@ def _message_to_event(message: Message) -> AuditStreamEvent:
         signature_algorithm=str(envelope.signature_algorithm),
         signature_key_id=str(envelope.signature_key_id),
         signature=str(envelope.signature),
+        audit_mode=str(envelope.audit_mode),
         payload=payload,
     )
 
@@ -285,7 +288,9 @@ class EventStreamWriter:
         signature = ""
         signature_key_id = ""
         signature_algorithm = ""
+        audit_mode = "unsigned-development"
         if self._audit_key is not None:
+            audit_mode = "hmac-signed"
             signature_algorithm = SIGNATURE_ALGORITHM
             signature_key_id = hashlib.sha256(self._audit_key.encode()).hexdigest()[:16]
             signature = hmac.new(
@@ -320,6 +325,7 @@ class EventStreamWriter:
         message.signature_algorithm = signature_algorithm
         message.signature_key_id = signature_key_id
         message.signature = signature
+        message.audit_mode = audit_mode
         raw = message.SerializeToString(deterministic=True)
         self._fh.write(_encode_varint(len(raw)))
         self._fh.write(raw)

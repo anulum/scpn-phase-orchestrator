@@ -88,6 +88,8 @@ class AuditLogger:
         clean = {k: v for k, v in record.items() if k != "_hash"}
         if self._audit_key is not None:
             clean = self._attach_signature_metadata(clean)
+        else:
+            clean["_audit_mode"] = "unsigned-development"
         json_line = json.dumps(clean, separators=(",", ":"), sort_keys=True)
         digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()
         self._prev_hash = digest
@@ -130,6 +132,7 @@ class AuditLogger:
         return {
             **clean,
             "_audit_schema_version": _AUDIT_SCHEMA_VERSION,
+            "_audit_mode": "hmac-signed",
             "_audit_sequence": self._sequence,
             "_audit_stream_id": self._stream_id,
             "_audit_timestamp_unix_ns": timestamp_ns,

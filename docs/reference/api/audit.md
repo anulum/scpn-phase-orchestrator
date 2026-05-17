@@ -58,6 +58,7 @@ Signed records add audit metadata for replay verification:
 
 | Field | Description |
 |-------|-------------|
+| `_audit_mode` | `hmac-signed` or `unsigned-development` |
 | `_audit_schema_version` | Signature metadata schema version |
 | `_audit_stream_id` | Logical JSONL stream id |
 | `_audit_sequence` | Monotonic record sequence |
@@ -78,10 +79,15 @@ previous behaviour.
 
 The protobuf event stream uses the same environment policy. When
 `event_stream` is enabled on `AuditLogger`, every envelope records its
-signature algorithm, key id, and HMAC value alongside the existing sequence,
-payload hash, previous hash, and event hash. `verify_event_stream_integrity()`
-and `spo watch` reject unsigned or signature-invalid envelopes whenever
-`SPO_AUDIT_KEY` or `SPO_AUDIT_KEYRING` is configured.
+audit mode, signature algorithm, key id, and HMAC value alongside the existing
+sequence, payload hash, previous hash, and event hash.
+`verify_event_stream_integrity()` and `spo watch` reject unsigned or
+signature-invalid envelopes whenever `SPO_AUDIT_KEY` or `SPO_AUDIT_KEYRING` is
+configured.
+
+Unsigned logs and streams are allowed only when no audit key is configured.
+They are marked explicitly as `unsigned-development` so reviewers can
+distinguish local development traces from operational signed evidence.
 
 For key rotation, keep historical keys only in the operator environment and pass
 them as a JSON object through `SPO_AUDIT_KEYRING`:

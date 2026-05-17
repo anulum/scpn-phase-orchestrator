@@ -80,6 +80,23 @@ def test_event_stream_integrity_detects_payload_tampering(tmp_path) -> None:
     assert verified == 0
 
 
+def test_event_stream_unsigned_development_mode_is_explicit(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
+    monkeypatch.delenv("SPO_AUDIT_KEYRING", raising=False)
+    stream_path = tmp_path / "audit.spoa"
+
+    with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
+        logger.log_event("operator_note", {"step": 3, "detail": "unsigned"})
+
+    events = read_event_stream(stream_path)
+    assert events[0].audit_mode == "unsigned-development"
+    assert events[0].signature_algorithm == ""
+    assert events[0].signature_key_id == ""
+    assert events[0].signature == ""
+
+
 def test_event_stream_integrity_verifies_hmac_signed_envelopes(
     tmp_path, monkeypatch
 ) -> None:

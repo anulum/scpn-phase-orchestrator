@@ -101,6 +101,19 @@ class TestAuditHashChain:
             "Hash must exclude the _hash field — otherwise it's self-referential"
         )
 
+    def test_unsigned_development_mode_is_explicit(self, tmp_path, monkeypatch):
+        """Unsigned audit logs must make development mode visible in metadata."""
+        monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
+        monkeypatch.delenv("SPO_AUDIT_KEYRING", raising=False)
+        log_path = tmp_path / "unsigned.jsonl"
+
+        with AuditLogger(log_path) as logger:
+            logger.log_event("operator_note", {"step": 1, "detail": "local"})
+
+        record = json.loads(log_path.read_text(encoding="utf-8").strip())
+        assert record["_audit_mode"] == "unsigned-development"
+        assert "_signature" not in record
+
     def test_hmac_signed_records_expose_only_key_fingerprint(
         self, tmp_path, monkeypatch
     ):
