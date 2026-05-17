@@ -1332,6 +1332,13 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
         click.echo(f"Final regime: {last.get('regime', 'unknown')}")
         click.echo(f"Final stability: {last.get('stability', 0.0):.4f}")
     if verify:
+        integrity_ok, n_integrity = ReplayEngine.verify_integrity(entries)
+        if not integrity_ok:
+            click.echo(
+                f"ERROR: audit integrity FAILED after {n_integrity} records",
+                err=True,
+            )
+            raise SystemExit(1)
         header = replay_engine.load_header(entries)
         if header is None:
             click.echo("ERROR: no header record in log", err=True)

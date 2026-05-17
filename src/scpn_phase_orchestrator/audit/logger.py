@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
+import os
 import time
 from pathlib import Path
 
@@ -23,22 +25,35 @@ from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["AuditLogger"]
 
+_AUDIT_SCHEMA_VERSION = 1
+_DEFAULT_STREAM_ID = "spo-audit-jsonl"
+_ZERO_HASH = "0" * 64
+_SIGNATURE_ALGORITHM = "HMAC-SHA256"
+
 
 class AuditLogger:
     """Append-only JSONL audit log for UPDE simulation steps."""
 
     def __init__(self, path: str | Path, *, event_stream: str | Path | None = None):
         self._path = Path(path)
-        self._prev_hash = self._load_previous_hash()
+        self._prev_hash, self._sequence = self._load_previous_state()
+        self._audit_key = os.environ.get("SPO_AUDIT_KEY")
+        self._stream_id = _DEFAULT_STREAM_ID
+        if self._audit_key is not None and self._audit_key == "":
+            msg = "SPO_AUDIT_KEY must not be empty"
+            raise AuditError(msg)
+        if self._audit_key is not None and self._sequence > 0:
+            self._ensure_existing_stream_is_signed()
         self._fh = self._path.open("a", encoding="utf-8", buffering=1)
         self._event_stream = (
             EventStreamWriter(event_stream) if event_stream is not None else None
         )
 
-    def _load_previous_hash(self) -> str:
+    def _load_previous_state(self) -> tuple[str, int]:
         if not self._path.exists() or self._path.stat().st_size == 0:
-            return "0" * 64
-        previous = "0" * 64
+            return _ZERO_HASH, 0
+        previous = _ZERO_HASH
+        sequence = 0
         with self._path.open(encoding="utf-8") as fh:
             for line in fh:
                 stripped = line.strip()
@@ -48,10 +63,31 @@ class AuditLogger:
                 stored = record.get("_hash")
                 if isinstance(stored, str) and len(stored) == 64:
                     previous = stored
-        return previous
+                stored_sequence = record.get("_audit_sequence")
+                if isinstance(stored_sequence, int) and stored_sequence > sequence:
+                    sequence = stored_sequence
+                else:
+                    sequence += 1
+        return previous, sequence
+
+    def _ensure_existing_stream_is_signed(self) -> None:
+        with self._path.open(encoding="utf-8") as fh:
+            for line_number, line in enumerate(fh, start=1):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                record = json.loads(stripped)
+                if not isinstance(record.get("_signature"), dict):
+                    msg = (
+                        "SPO_AUDIT_KEY configured but existing audit log "
+                        f"contains unsigned record at line {line_number}"
+                    )
+                    raise AuditError(msg)
 
     def _write_record(self, record: dict) -> None:
         clean = {k: v for k, v in record.items() if k != "_hash"}
+        if self._audit_key is not None:
+            clean = self._attach_signature_metadata(clean)
         json_line = json.dumps(clean, separators=(",", ":"), sort_keys=True)
         digest = hashlib.sha256((self._prev_hash + json_line).encode()).hexdigest()
         self._prev_hash = digest
@@ -59,6 +95,51 @@ class AuditLogger:
         self._fh.write(json.dumps(stored, sort_keys=True) + "\n")
         if self._event_stream is not None:
             self._event_stream.write(stored)
+
+    def _attach_signature_metadata(self, clean: dict) -> dict:
+        self._sequence += 1
+        payload = _payload_without_audit_metadata(clean)
+        payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+        payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+        timestamp_ns = time.time_ns()
+        key = self._audit_key
+        if key is None:
+            msg = "audit key missing during signature construction"
+            raise AuditError(msg)
+        key_id = hashlib.sha256(key.encode()).hexdigest()[:16]
+        signature_metadata = {
+            "algorithm": _SIGNATURE_ALGORITHM,
+            "key_id": key_id,
+        }
+        signing_material = {
+            "metadata": signature_metadata,
+            "payload_hash": payload_hash,
+            "previous_event_hash": self._prev_hash,
+            "schema_version": _AUDIT_SCHEMA_VERSION,
+            "sequence": self._sequence,
+            "stream_id": self._stream_id,
+            "timestamp_unix_ns": timestamp_ns,
+        }
+        signature = hmac.new(
+            key.encode(),
+            json.dumps(
+                signing_material, separators=(",", ":"), sort_keys=True
+            ).encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        return {
+            **clean,
+            "_audit_schema_version": _AUDIT_SCHEMA_VERSION,
+            "_audit_sequence": self._sequence,
+            "_audit_stream_id": self._stream_id,
+            "_audit_timestamp_unix_ns": timestamp_ns,
+            "_payload_hash": payload_hash,
+            "_previous_hash": self._prev_hash,
+            "_signature": {
+                **signature_metadata,
+                "value": signature,
+            },
+        }
 
     def log_header(
         self,
@@ -171,3 +252,13 @@ class AuditLogger:
         exc_tb: object,
     ) -> None:
         self.close()
+
+
+def _payload_without_audit_metadata(record: dict) -> dict:
+    return {
+        key: value
+        for key, value in record.items()
+        if key not in {"_hash", "_signature"}
+        and not key.startswith("_audit_")
+        and key not in {"_payload_hash", "_previous_hash"}
+    }

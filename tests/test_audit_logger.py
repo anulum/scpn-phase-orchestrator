@@ -101,6 +101,31 @@ class TestAuditHashChain:
             "Hash must exclude the _hash field — otherwise it's self-referential"
         )
 
+    def test_hmac_signed_records_expose_only_key_fingerprint(
+        self, tmp_path, monkeypatch
+    ):
+        """Configured audit keys must sign every record without leaking the key."""
+        monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
+        log_path = tmp_path / "signed.jsonl"
+
+        with AuditLogger(log_path) as logger:
+            logger.log_header(n_oscillators=2, dt=0.01)
+            logger.log_step(0, _sample_state(), [])
+
+        records = [
+            json.loads(line)
+            for line in log_path.read_text(encoding="utf-8").strip().splitlines()
+        ]
+        assert [record["_audit_sequence"] for record in records] == [1, 2]
+        assert records[0]["_audit_stream_id"] == "spo-audit-jsonl"
+        assert records[1]["_previous_hash"] == records[0]["_hash"]
+        assert records[0]["_signature"]["algorithm"] == "HMAC-SHA256"
+        assert (
+            records[0]["_signature"]["key_id"]
+            == hashlib.sha256(b"unit-test-secret-key").hexdigest()[:16]
+        )
+        assert "unit-test-secret-key" not in log_path.read_text(encoding="utf-8")
+
 
 # ---------------------------------------------------------------------------
 # Data integrity and field preservation

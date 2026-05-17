@@ -9,8 +9,10 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import logging
+import os
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +24,10 @@ from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 _log = logging.getLogger(__name__)
 
 __all__ = ["ReplayEngine"]
+
+_AUDIT_SCHEMA_VERSION = 1
+_SIGNATURE_ALGORITHM = "HMAC-SHA256"
+_ZERO_HASH = "0" * 64
 
 
 class ReplayEngine:
@@ -113,21 +119,39 @@ class ReplayEngine:
         """Verify the SHA256 hash chain of audit log entries.
 
         Returns (all_valid, n_verified).  Legacy logs without ``_hash``
-        fields return (True, 0).
+        fields return (True, 0) unless ``SPO_AUDIT_KEY`` is configured.
         """
-        prev = "0" * 64
+        audit_key = os.environ.get("SPO_AUDIT_KEY")
+        if audit_key == "":
+            return False, 0
+        require_signature = audit_key is not None
+        prev = _ZERO_HASH
         verified = 0
+        expected_sequence = 1
         for entry in entries:
             stored = entry.get("_hash")
             if stored is None:
+                if require_signature:
+                    return False, verified
                 continue
             without_hash = {k: v for k, v in entry.items() if k != "_hash"}
-            json_line = json.dumps(without_hash, separators=(",", ":"))
+            json_line = json.dumps(without_hash, separators=(",", ":"), sort_keys=True)
             expected = hashlib.sha256((prev + json_line).encode()).hexdigest()
             if expected != stored:
                 return False, verified
+            if require_signature:
+                if audit_key is None:
+                    return False, verified
+                if not _verify_hmac_signature(
+                    entry,
+                    audit_key,
+                    expected_previous_hash=prev,
+                    expected_sequence=expected_sequence,
+                ):
+                    return False, verified
             prev = stored
             verified += 1
+            expected_sequence += 1
         return True, verified
 
     def verify_determinism_sl_chained(
@@ -230,3 +254,75 @@ class ReplayEngine:
             if r_logged is not None and abs(r_actual - r_logged) > 1e-6:
                 return False
         return True
+
+
+def _verify_hmac_signature(
+    entry: dict,
+    audit_key: str,
+    *,
+    expected_previous_hash: str,
+    expected_sequence: int,
+) -> bool:
+    signature = entry.get("_signature")
+    if not isinstance(signature, dict):
+        return False
+    if signature.get("algorithm") != _SIGNATURE_ALGORITHM:
+        return False
+    signature_value = signature.get("value")
+    if not isinstance(signature_value, str) or len(signature_value) != 64:
+        return False
+    key_id = signature.get("key_id")
+    expected_key_id = hashlib.sha256(audit_key.encode()).hexdigest()[:16]
+    if key_id != expected_key_id:
+        return False
+    if entry.get("_audit_schema_version") != _AUDIT_SCHEMA_VERSION:
+        return False
+    if entry.get("_audit_sequence") != expected_sequence:
+        return False
+    if entry.get("_previous_hash") != expected_previous_hash:
+        return False
+    stream_id = entry.get("_audit_stream_id")
+    timestamp_ns = entry.get("_audit_timestamp_unix_ns")
+    payload_hash = entry.get("_payload_hash")
+    if not isinstance(stream_id, str) or stream_id == "":
+        return False
+    if not isinstance(timestamp_ns, int) or timestamp_ns < 0:
+        return False
+    if not isinstance(payload_hash, str) or len(payload_hash) != 64:
+        return False
+
+    payload = _payload_without_audit_metadata(entry)
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    expected_payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+    if not hmac.compare_digest(payload_hash, expected_payload_hash):
+        return False
+
+    signing_metadata = {
+        "algorithm": _SIGNATURE_ALGORITHM,
+        "key_id": expected_key_id,
+    }
+    signing_material = {
+        "metadata": signing_metadata,
+        "payload_hash": payload_hash,
+        "previous_event_hash": expected_previous_hash,
+        "schema_version": _AUDIT_SCHEMA_VERSION,
+        "sequence": expected_sequence,
+        "stream_id": stream_id,
+        "timestamp_unix_ns": timestamp_ns,
+    }
+    expected_signature = hmac.new(
+        audit_key.encode(),
+        json.dumps(signing_material, separators=(",", ":"), sort_keys=True).encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(signature_value, expected_signature)
+
+
+def _payload_without_audit_metadata(record: dict) -> dict:
+    return {
+        key: value
+        for key, value in record.items()
+        if key not in {"_hash", "_signature"}
+        and not key.startswith("_audit_")
+        and key not in {"_payload_hash", "_previous_hash"}
+    }

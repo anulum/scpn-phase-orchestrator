@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import numpy as np
@@ -316,6 +317,32 @@ def test_cli_replay_verify_roundtrip(tmp_path):
     assert "9 transitions OK" in result.output
 
 
+def test_cli_replay_verify_with_audit_key_rejects_unsigned_log(tmp_path, monkeypatch):
+    """CLI replay verification must fail closed when signatures are required."""
+    monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
+    log = tmp_path / "unsigned.jsonl"
+    entries = [
+        {"header": True, "n_oscillators": 2, "dt": 0.01, "method": "euler"},
+        {
+            "step": 0,
+            "phases": [0.1, 0.2],
+            "omegas": [1.0, 1.0],
+            "knm": [[0.0, 0.3], [0.3, 0.0]],
+            "alpha": [[0.0, 0.0], [0.0, 0.0]],
+            "zeta": 0.0,
+            "psi_drive": 0.0,
+        },
+    ]
+    log.write_text(
+        "\n".join(json.dumps(entry) for entry in entries) + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(main, ["replay", str(log), "--verify"])
+    assert result.exit_code == 1
+    assert "audit integrity FAILED" in result.output
+
+
 def test_hash_chain_present(tmp_path):
     """Every record gets a _hash field."""
     log = tmp_path / "hash.jsonl"
@@ -418,6 +445,38 @@ def test_legacy_log_without_hashes(tmp_path):
     re = ReplayEngine(log)
     ok, n_verified = re.verify_integrity(re.load())
     assert ok
+    assert n_verified == 0
+
+
+def test_integrity_with_audit_key_rejects_unsigned_records(tmp_path, monkeypatch):
+    """Configured SPO_AUDIT_KEY makes unsigned development logs fail closed."""
+    monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
+    log = tmp_path / "unsigned.jsonl"
+    log.write_text(
+        json.dumps({"step": 0, "regime": "nominal", "stability": 0.85}) + "\n",
+        encoding="utf-8",
+    )
+
+    ok, n_verified = ReplayEngine.verify_integrity(ReplayEngine(log).load())
+    assert not ok
+    assert n_verified == 0
+
+
+def test_integrity_with_audit_key_rejects_signature_tampering(tmp_path, monkeypatch):
+    """Hash-preserving payload mutation must still fail HMAC verification."""
+    monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
+    log = tmp_path / "signed.jsonl"
+    with AuditLogger(log) as logger:
+        logger.log_step(0, _make_state(0.8, 1.0), [])
+
+    entries = ReplayEngine(log).load()
+    entries[0]["stability"] = 0.1
+    clean = {k: v for k, v in entries[0].items() if k != "_hash"}
+    json_line = json.dumps(clean, separators=(",", ":"), sort_keys=True)
+    entries[0]["_hash"] = hashlib.sha256(("0" * 64 + json_line).encode()).hexdigest()
+
+    ok, n_verified = ReplayEngine.verify_integrity(entries)
+    assert not ok
     assert n_verified == 0
 
 
