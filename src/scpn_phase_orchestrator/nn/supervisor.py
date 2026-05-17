@@ -47,6 +47,7 @@ __all__ = [
     "SupervisorActionProjection",
     "SupervisorBaselineReport",
     "SupervisorCorpusReplayProposals",
+    "SupervisorExperimentManifest",
     "KuramotoSupervisorScenario",
     "SupervisorLossAux",
     "SupervisorPPOBatch",
@@ -73,6 +74,7 @@ __all__ = [
     "supervisor_action_log_prob",
     "project_supervisor_action_for_audit",
     "build_supervisor_baseline_report",
+    "build_supervisor_experiment_manifest",
     "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
     "compare_supervisor_hand_tuned_baseline",
@@ -187,6 +189,36 @@ class SupervisorBaselineReport(NamedTuple):
                 "comparisons": [dict(record) for record in self.comparisons],
             },
             "supervisor_baseline_report",
+        )
+
+
+class SupervisorExperimentManifest(NamedTuple):
+    """Reproducibility manifest for supervisor baseline experiment artefacts."""
+
+    baseline_report: dict[str, Any]
+    command: str
+    git_sha: str
+    dependency_lock: dict[str, Any]
+    device_info: dict[str, Any]
+    seed_list: tuple[int, ...]
+    artifacts: dict[str, Any]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable reproducibility manifest."""
+        return _json_object(
+            {
+                "proposal_type": "differentiable_supervisor_experiment_manifest",
+                "actuation_permitted": self.actuation_permitted,
+                "command": self.command,
+                "git_sha": self.git_sha,
+                "dependency_lock": dict(self.dependency_lock),
+                "device_info": dict(self.device_info),
+                "seed_list": list(self.seed_list),
+                "artifacts": dict(self.artifacts),
+                "baseline_report": dict(self.baseline_report),
+            },
+            "supervisor_experiment_manifest",
         )
 
 
@@ -893,6 +925,63 @@ def build_supervisor_baseline_report(
         comparisons=records,
         summary=_baseline_report_summary(records),
         report_label=report_label,
+        actuation_permitted=False,
+    )
+
+
+def build_supervisor_experiment_manifest(
+    baseline_report: SupervisorBaselineReport,
+    *,
+    command: str,
+    git_sha: str,
+    dependency_lock: Mapping[str, Any],
+    device_info: Mapping[str, Any],
+    seed_list: Iterable[int],
+    metrics_jsonl_path: str | None = None,
+    summary_table_path: str | None = None,
+    checkpoint_manifest_path: str | None = None,
+    plot_manifest_path: str | None = None,
+) -> SupervisorExperimentManifest:
+    """Build a reproducibility manifest for a supervisor baseline report."""
+    if not command:
+        raise ValueError("command must not be empty")
+    if not git_sha:
+        raise ValueError("git_sha must not be empty")
+    seeds = tuple(
+        _non_negative_int(seed, f"seed_list[{index}]")
+        for index, seed in enumerate(seed_list)
+    )
+    if not seeds:
+        raise ValueError("seed_list must contain at least one seed")
+    lock_record = _json_object(dict(dependency_lock), "dependency_lock")
+    if not lock_record:
+        raise ValueError("dependency_lock must not be empty")
+    device_record = _json_object(dict(device_info), "device_info")
+    if not device_record:
+        raise ValueError("device_info must not be empty")
+    report_record = _json_object(
+        baseline_report.to_audit_record(),
+        "baseline_report",
+    )
+    if report_record.get("actuation_permitted") is not False:
+        raise ValueError("baseline_report must be non-actuating")
+    artifacts = _json_object(
+        {
+            "metrics_jsonl_path": metrics_jsonl_path,
+            "summary_table_path": summary_table_path,
+            "checkpoint_manifest_path": checkpoint_manifest_path,
+            "plot_manifest_path": plot_manifest_path,
+        },
+        "artifacts",
+    )
+    return SupervisorExperimentManifest(
+        baseline_report=report_record,
+        command=command,
+        git_sha=git_sha,
+        dependency_lock=lock_record,
+        device_info=device_record,
+        seed_list=seeds,
+        artifacts=artifacts,
         actuation_permitted=False,
     )
 

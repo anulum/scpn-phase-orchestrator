@@ -49,6 +49,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorActionProjection,
     SupervisorBaselineReport,
     SupervisorCorpusReplayProposals,
+    SupervisorExperimentManifest,
     SupervisorHandTunedBaselineComparison,
     SupervisorLearnerProposalComparison,
     SupervisorPPOBatch,
@@ -62,6 +63,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     apply_supervisor_action,
     build_supervisor_baseline_report,
     build_supervisor_corpus_replay_proposals,
+    build_supervisor_experiment_manifest,
     build_supervisor_replay_proposal,
     build_supervisor_scenario_corpus,
     closed_loop_supervisor_loss,
@@ -1669,6 +1671,75 @@ def test_supervisor_learner_proposal_comparison_rejects_empty_inputs() -> None:
             supervisor_proposal,
             (_replay_search_result(),),
             comparison_label="",
+        )
+
+
+def test_supervisor_experiment_manifest_wraps_baseline_report_reproducibly() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(88))
+    scenario = _scenario()
+    report = build_supervisor_baseline_report(
+        (
+            compare_supervisor_static_baseline(policy, scenario),
+            compare_supervisor_random_baseline(
+                policy,
+                scenario,
+                key=jax.random.PRNGKey(89),
+            ),
+        ),
+        report_label="unit-manifest-report",
+    )
+
+    manifest = build_supervisor_experiment_manifest(
+        report,
+        command="PYTHONPATH=src python -m pytest tests/test_nn_supervisor.py",
+        git_sha="abc1234",
+        dependency_lock={"pip-tools": "requirements-dev.txt:sha256:deadbeef"},
+        device_info={"backend": "cpu", "jax_enable_x64": False},
+        seed_list=(88, 89),
+        metrics_jsonl_path="artifacts/metrics.jsonl",
+        summary_table_path="artifacts/summary.json",
+    )
+    record = manifest.to_audit_record()
+
+    assert isinstance(manifest, SupervisorExperimentManifest)
+    assert manifest.actuation_permitted is False
+    assert record["proposal_type"] == "differentiable_supervisor_experiment_manifest"
+    assert record["actuation_permitted"] is False
+    assert record["command"].startswith("PYTHONPATH=src")
+    assert record["git_sha"] == "abc1234"
+    assert record["seed_list"] == [88, 89]
+    assert record["baseline_report"]["summary"]["comparison_count"] == 2
+    assert record["artifacts"]["metrics_jsonl_path"] == "artifacts/metrics.jsonl"
+    assert record["artifacts"]["summary_table_path"] == "artifacts/summary.json"
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_experiment_manifest_rejects_weak_reproducibility_metadata() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(90))
+    report = build_supervisor_baseline_report(
+        (compare_supervisor_static_baseline(policy, _scenario()),)
+    )
+
+    with pytest.raises(ValueError, match="seed_list"):
+        build_supervisor_experiment_manifest(
+            report,
+            command="cmd",
+            git_sha="abc1234",
+            dependency_lock={"lock": "sha"},
+            device_info={"backend": "cpu"},
+            seed_list=(),
+        )
+
+    with pytest.raises(ValueError, match="git_sha"):
+        build_supervisor_experiment_manifest(
+            report,
+            command="cmd",
+            git_sha="",
+            dependency_lock={"lock": "sha"},
+            device_info={"backend": "cpu"},
+            seed_list=(1,),
         )
 
 
