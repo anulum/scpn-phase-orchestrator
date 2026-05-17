@@ -43,8 +43,7 @@ def _assert_transport_payload(payload: dict[str, object], expected_domain: str) 
 
     # Assert stable JSON serialisation for artifact handoff.
     assert (
-        json.loads(json.dumps(payload, sort_keys=True))["domainpack"]
-        == expected_domain
+        json.loads(json.dumps(payload, sort_keys=True))["domainpack"] == expected_domain
     )
 
 

@@ -1721,9 +1721,7 @@ def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
 
     manifest_record = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest_record == stdout_record
-    assert manifest_record["dependency_lock"] == {
-        "requirements-dev.txt": "sha256:test"
-    }
+    assert manifest_record["dependency_lock"] == {"requirements-dev.txt": "sha256:test"}
 
 
 def test_supervisor_baseline_experiment_records_existing_artifact_manifests(

@@ -744,9 +744,7 @@ def supervisor_baseline_experiment(
         report_label="cli_supervisor_baseline_report",
     )
     baseline_record = baseline_report.to_audit_record()
-    comparison_records = [
-        comparison.to_audit_record() for comparison in comparisons
-    ]
+    comparison_records = [comparison.to_audit_record() for comparison in comparisons]
     config_payload = {
         "proposal_type": "supervisor_baseline_experiment_config",
         "actuation_permitted": False,
@@ -799,9 +797,7 @@ def supervisor_baseline_experiment(
 
     metrics_jsonl.parent.mkdir(parents=True, exist_ok=True)
     metrics_jsonl.write_text(
-        "\n".join(
-            json.dumps(record, sort_keys=True) for record in comparison_records
-        )
+        "\n".join(json.dumps(record, sort_keys=True) for record in comparison_records)
         + "\n",
         encoding="utf-8",
     )
