@@ -42,6 +42,7 @@ __all__ = [
     "KuramotoSupervisorScenario",
     "SupervisorLossAux",
     "SupervisorPPOBatch",
+    "SupervisorPPOCorpusRollout",
     "SupervisorPPORollout",
     "SupervisorPPOAux",
     "SupervisorPPOCheckpoint",
@@ -59,6 +60,7 @@ __all__ = [
     "ppo_supervisor_train_step",
     "ppo_supervisor_train_epochs",
     "ppo_supervisor_train_with_checkpoint",
+    "collect_supervisor_corpus_rollouts",
     "collect_supervisor_rollouts",
     "build_supervisor_scenario_corpus",
     "save_supervisor_ppo_checkpoint",
@@ -174,6 +176,17 @@ class SupervisorPPORollout(NamedTuple):
     episode_returns: jax.Array
     episode_return_mean: jax.Array
     episode_return_std: jax.Array
+
+
+class SupervisorPPOCorpusRollout(NamedTuple):
+    """Corpus-wide replay rollout with per-episode scenario provenance."""
+
+    batch: SupervisorPPOBatch
+    episode_returns: jax.Array
+    episode_return_mean: jax.Array
+    episode_return_std: jax.Array
+    scenario_indices: jax.Array
+    metadata: tuple[dict[str, Any], ...]
 
 
 class SupervisorPPOAux(NamedTuple):
@@ -900,6 +913,74 @@ def collect_supervisor_rollouts(
     )
 
 
+def collect_supervisor_corpus_rollouts(
+    policy: DifferentiableSupervisorPolicy,
+    corpus: SupervisorScenarioCorpus,
+    *,
+    key: jax.Array,
+    n_episodes_per_scenario: int,
+    gamma: float = 0.99,
+    gae_lambda: float = 0.95,
+    trajectory_jitter: float = 0.0,
+) -> SupervisorPPOCorpusRollout:
+    """Collect replay-only PPO rollouts across a validated scenario corpus.
+
+    The returned batch is a flat concatenation suitable for PPO epochs. All
+    corpus scenarios must share ``dt``, ``inner_steps``, ``horizon``, and
+    oscillator tensor shapes because ``SupervisorPPOBatch`` stores timing
+    fields once for the full batch.
+    """
+    n_episodes_per_scenario = _positive_int(
+        n_episodes_per_scenario,
+        "n_episodes_per_scenario",
+    )
+    if not corpus.scenarios:
+        raise ValueError("scenario corpus requires at least one scenario")
+    if len(corpus.metadata) != len(corpus.scenarios):
+        raise ValueError("scenario corpus metadata must match scenario count")
+    _validate_supervisor_corpus_rollout_compatibility(corpus.scenarios)
+
+    scenario_keys = jax.random.split(key, len(corpus.scenarios))
+    scenario_rollouts: list[SupervisorPPORollout] = []
+    scenario_indices: list[jax.Array] = []
+    for scenario_index, (scenario, scenario_key) in enumerate(
+        zip(corpus.scenarios, scenario_keys, strict=True)
+    ):
+        rollout = collect_supervisor_rollouts(
+            policy,
+            scenario,
+            key=scenario_key,
+            n_episodes=n_episodes_per_scenario,
+            gamma=gamma,
+            gae_lambda=gae_lambda,
+            trajectory_jitter=trajectory_jitter,
+        )
+        scenario_rollouts.append(rollout)
+        scenario_indices.append(
+            jnp.full(
+                (n_episodes_per_scenario,),
+                scenario_index,
+                dtype=jnp.int32,
+            )
+        )
+
+    batch = _concatenate_supervisor_ppo_batches(
+        tuple(rollout.batch for rollout in scenario_rollouts)
+    )
+    episode_returns = jnp.concatenate(
+        [rollout.episode_returns for rollout in scenario_rollouts],
+        axis=0,
+    )
+    return SupervisorPPOCorpusRollout(
+        batch=batch,
+        episode_returns=episode_returns,
+        episode_return_mean=jnp.mean(episode_returns),
+        episode_return_std=jnp.std(episode_returns),
+        scenario_indices=jnp.concatenate(scenario_indices, axis=0),
+        metadata=tuple(dict(item) for item in corpus.metadata),
+    )
+
+
 def build_supervisor_scenario_corpus(
     records: Iterable[Mapping[str, Any]],
     *,
@@ -923,6 +1004,74 @@ def build_supervisor_scenario_corpus(
     return SupervisorScenarioCorpus(
         scenarios=tuple(scenarios),
         metadata=tuple(metadata),
+    )
+
+
+def _validate_supervisor_corpus_rollout_compatibility(
+    scenarios: tuple[KuramotoSupervisorScenario, ...],
+) -> None:
+    reference = scenarios[0]
+    reference_shapes = (
+        reference.phases.shape,
+        reference.omegas.shape,
+        reference.base_K.shape,
+        reference.good_mask.shape,
+        reference.bad_mask.shape,
+    )
+    for index, scenario in enumerate(scenarios[1:], start=1):
+        if (
+            scenario.dt != reference.dt
+            or scenario.inner_steps != reference.inner_steps
+            or scenario.horizon != reference.horizon
+        ):
+            raise ValueError(
+                "all corpus scenarios must share the same dt, inner_steps, and horizon"
+            )
+        scenario_shapes = (
+            scenario.phases.shape,
+            scenario.omegas.shape,
+            scenario.base_K.shape,
+            scenario.good_mask.shape,
+            scenario.bad_mask.shape,
+        )
+        if scenario_shapes != reference_shapes:
+            raise ValueError(
+                "all corpus scenarios must share oscillator tensor shapes "
+                f"for batch concatenation; scenario {index} differs"
+            )
+
+
+def _concatenate_supervisor_ppo_batches(
+    batches: tuple[SupervisorPPOBatch, ...],
+) -> SupervisorPPOBatch:
+    reference = batches[0]
+    for index, batch in enumerate(batches[1:], start=1):
+        if (
+            batch.dt != reference.dt
+            or batch.inner_steps != reference.inner_steps
+            or batch.horizon != reference.horizon
+        ):
+            raise ValueError(
+                "all PPO batches must share the same dt, inner_steps, and horizon; "
+                f"batch {index} differs"
+            )
+    return SupervisorPPOBatch(
+        phases=jnp.concatenate([batch.phases for batch in batches], axis=0),
+        omegas=jnp.concatenate([batch.omegas for batch in batches], axis=0),
+        base_K=jnp.concatenate([batch.base_K for batch in batches], axis=0),
+        good_mask=jnp.concatenate([batch.good_mask for batch in batches], axis=0),
+        bad_mask=jnp.concatenate([batch.bad_mask for batch in batches], axis=0),
+        actions=jnp.concatenate([batch.actions for batch in batches], axis=0),
+        old_log_probs=jnp.concatenate(
+            [batch.old_log_probs for batch in batches],
+            axis=0,
+        ),
+        advantages=jnp.concatenate([batch.advantages for batch in batches], axis=0),
+        returns=jnp.concatenate([batch.returns for batch in batches], axis=0),
+        values=jnp.concatenate([batch.values for batch in batches], axis=0),
+        dt=reference.dt,
+        inner_steps=reference.inner_steps,
+        horizon=reference.horizon,
     )
 
 

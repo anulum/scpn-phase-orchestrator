@@ -23,11 +23,13 @@ from scpn_phase_orchestrator.nn.supervisor import (
     DifferentiableSupervisorPolicy,
     KuramotoSupervisorScenario,
     SupervisorPPOBatch,
+    SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
     SupervisorScenarioCorpus,
     apply_supervisor_action,
     build_supervisor_scenario_corpus,
     closed_loop_supervisor_loss,
+    collect_supervisor_corpus_rollouts,
     collect_supervisor_rollouts,
     control_actions_from_supervisor,
     load_supervisor_ppo_checkpoint,
@@ -721,6 +723,110 @@ def test_supervisor_scenario_corpus_converts_replay_records() -> None:
     assert jnp.issubdtype(scenario.phases.dtype, jnp.floating)
     assert jnp.all(jnp.isfinite(scenario.phases))
     assert jnp.all(jnp.isfinite(scenario.base_K))
+
+
+def test_collect_supervisor_corpus_rollouts_is_deterministic_and_traces_scenarios() -> (
+    None
+):
+    records = [
+        {
+            "phases": [0.0, 0.1, 2.7, 3.1],
+            "omegas": [0.04, 0.03, -0.03, -0.04],
+            "base_K": [
+                [0.0, 0.03, 0.03, 0.03],
+                [0.03, 0.0, 0.03, 0.03],
+                [0.03, 0.03, 0.0, 0.03],
+                [0.03, 0.03, 0.03, 0.0],
+            ],
+            "good_mask": [1.0, 1.0, 0.0, 0.0],
+            "bad_mask": [0.0, 0.0, 1.0, 1.0],
+            "dt": 0.02,
+            "inner_steps": 4,
+            "horizon": 3,
+            "metadata": {"source": "unit-replay", "stream_id": "fixture-a"},
+        },
+        {
+            "phases": [0.2, 0.0, 2.9, 3.0],
+            "omegas": [0.05, 0.02, -0.02, -0.05],
+            "base_K": np.full((4, 4), 0.02) - np.eye(4) * 0.02,
+            "good_mask": [1.0, 1.0, 0.0, 0.0],
+            "bad_mask": [0.0, 0.0, 1.0, 1.0],
+            "dt": 0.02,
+            "inner_steps": 4,
+            "horizon": 3,
+            "metadata": {"source": "unit-replay", "stream_id": "fixture-b"},
+        },
+    ]
+    corpus = build_supervisor_scenario_corpus(records)
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(60))
+
+    rollout_a = collect_supervisor_corpus_rollouts(
+        policy,
+        corpus,
+        key=jax.random.PRNGKey(61),
+        n_episodes_per_scenario=2,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.01,
+    )
+    rollout_b = collect_supervisor_corpus_rollouts(
+        policy,
+        corpus,
+        key=jax.random.PRNGKey(61),
+        n_episodes_per_scenario=2,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.01,
+    )
+
+    assert isinstance(rollout_a, SupervisorPPOCorpusRollout)
+    assert rollout_a.batch.phases.shape == (12, 4)
+    assert rollout_a.batch.actions.shape == (12, 4)
+    assert rollout_a.batch.returns.shape == (12,)
+    assert rollout_a.batch.dt == 0.02
+    assert rollout_a.batch.inner_steps == 4
+    assert rollout_a.batch.horizon == 3
+    assert rollout_a.episode_returns.shape == (4,)
+    assert rollout_a.scenario_indices.shape == (4,)
+    assert jnp.array_equal(rollout_a.scenario_indices, jnp.array([0, 0, 1, 1]))
+    assert rollout_a.metadata == (
+        {"source": "unit-replay", "stream_id": "fixture-a"},
+        {"source": "unit-replay", "stream_id": "fixture-b"},
+    )
+    assert jnp.isfinite(rollout_a.batch.phases).all()
+    assert jnp.isfinite(rollout_a.episode_return_mean)
+    assert float(rollout_a.episode_return_std) >= 0.0
+    assert jnp.array_equal(rollout_a.batch.phases, rollout_b.batch.phases)
+    assert jnp.array_equal(rollout_a.episode_returns, rollout_b.episode_returns)
+    assert jnp.array_equal(rollout_a.scenario_indices, rollout_b.scenario_indices)
+
+
+def test_collect_supervisor_corpus_rollouts_rejects_invalid_corpus_inputs() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(62))
+    scenario = _scenario()
+    mismatched = scenario._replace(horizon=scenario.horizon + 1)
+    corpus = SupervisorScenarioCorpus(
+        scenarios=(scenario, mismatched),
+        metadata=({}, {}),
+    )
+
+    with pytest.raises(ValueError, match="n_episodes_per_scenario"):
+        collect_supervisor_corpus_rollouts(
+            policy,
+            SupervisorScenarioCorpus(scenarios=(scenario,), metadata=({},)),
+            key=jax.random.PRNGKey(63),
+            n_episodes_per_scenario=0,
+        )
+
+    with pytest.raises(ValueError, match="same dt, inner_steps, and horizon"):
+        collect_supervisor_corpus_rollouts(
+            policy,
+            corpus,
+            key=jax.random.PRNGKey(63),
+            n_episodes_per_scenario=1,
+        )
 
 
 def test_supervisor_scenario_corpus_rejects_malformed_records() -> None:
