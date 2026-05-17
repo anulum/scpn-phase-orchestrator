@@ -496,6 +496,187 @@ def _count_dict(value: object) -> dict[str, int]:
     return counts
 
 
+def _parse_dependency_locks(values: tuple[str, ...]) -> dict[str, str]:
+    locks: dict[str, str] = {}
+    for raw_value in values:
+        label, separator, digest = raw_value.partition(":")
+        if not label or not separator or not digest:
+            raise click.ClickException(
+                "--dependency-lock values must use '<label>:<digest>' format"
+            )
+        locks[label] = digest
+    if not locks:
+        raise click.ClickException("at least one --dependency-lock is required")
+    return locks
+
+
+def _write_json_file(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+@main.command("supervisor-baseline-experiment")
+@click.option(
+    "--metrics-jsonl",
+    required=True,
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Write one baseline comparison audit record per JSONL line.",
+)
+@click.option(
+    "--summary-json",
+    required=True,
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Write reproducible baseline summary table as JSON.",
+)
+@click.option(
+    "--manifest-json",
+    default=None,
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Optional path for the reproducibility manifest JSON.",
+)
+@click.option("--git-sha", required=True, help="Git revision used for this run.")
+@click.option(
+    "--seed",
+    "seeds",
+    multiple=True,
+    type=int,
+    required=True,
+    help="Non-negative deterministic seed; may be passed more than once.",
+)
+@click.option(
+    "--dependency-lock",
+    "dependency_locks",
+    multiple=True,
+    required=True,
+    help="Dependency lock provenance as '<label>:<digest>'; may repeat.",
+)
+@click.option("--json-out", is_flag=True, help="Emit manifest JSON to stdout.")
+@click.pass_context
+def supervisor_baseline_experiment(
+    ctx: click.Context,
+    metrics_jsonl: Path,
+    summary_json: Path,
+    manifest_json: Path | None,
+    git_sha: str,
+    seeds: tuple[int, ...],
+    dependency_locks: tuple[str, ...],
+    json_out: bool,
+) -> None:
+    """Materialise deterministic neural-supervisor baseline audit artifacts."""
+    try:
+        import jax
+        import jax.numpy as jnp
+
+        from scpn_phase_orchestrator.nn.supervisor import (
+            DifferentiableSupervisorConfig,
+            DifferentiableSupervisorPolicy,
+            KuramotoSupervisorScenario,
+            build_supervisor_baseline_report,
+            build_supervisor_experiment_manifest,
+            compare_supervisor_hand_tuned_baseline,
+            compare_supervisor_random_baseline,
+            compare_supervisor_static_baseline,
+        )
+    except ImportError as exc:  # pragma: no cover - exercised only without NN deps
+        raise click.ClickException(
+            "supervisor baseline experiments require the optional NN/JAX stack"
+        ) from exc
+
+    dependency_lock = _parse_dependency_locks(dependency_locks)
+    if any(seed < 0 for seed in seeds):
+        raise click.ClickException("--seed values must be non-negative")
+
+    phases = jnp.array([0.0, 0.1, 2.7, 3.1])
+    base_k = jnp.full((4, 4), 0.03)
+    base_k = base_k.at[jnp.diag_indices(4)].set(0.0)
+    scenario = KuramotoSupervisorScenario(
+        phases=phases,
+        omegas=jnp.array([0.04, 0.03, -0.03, -0.04]),
+        base_K=base_k,
+        good_mask=jnp.array([1.0, 1.0, 0.0, 0.0]),
+        bad_mask=jnp.array([0.0, 0.0, 1.0, 1.0]),
+        dt=0.05,
+        inner_steps=4,
+        horizon=6,
+    )
+    config = DifferentiableSupervisorConfig(
+        n_oscillators=4,
+        hidden_width=8,
+        hidden_depth=1,
+    )
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(seeds[0]))
+    comparisons = (
+        compare_supervisor_static_baseline(
+            policy,
+            scenario,
+            comparison_label="cli_static_zero_action",
+        ),
+        compare_supervisor_random_baseline(
+            policy,
+            scenario,
+            key=jax.random.PRNGKey(seeds[0] + 1),
+            comparison_label="cli_bounded_random_action",
+        ),
+        compare_supervisor_hand_tuned_baseline(
+            policy,
+            scenario,
+            comparison_label="cli_hand_tuned_supervisor_policy",
+        ),
+    )
+    baseline_report = build_supervisor_baseline_report(
+        comparisons,
+        report_label="cli_supervisor_baseline_report",
+    )
+    baseline_record = baseline_report.to_audit_record()
+    comparison_records = [
+        comparison.to_audit_record() for comparison in comparisons
+    ]
+    summary_payload = {
+        "proposal_type": "supervisor_baseline_summary_table",
+        "comparison_count": len(comparison_records),
+        "actuation_permitted": False,
+        "metric_record_path": str(metrics_jsonl),
+        "summary": baseline_record["summary"],
+        "report_label": baseline_record["report_label"],
+    }
+    manifest = build_supervisor_experiment_manifest(
+        baseline_report,
+        command=ctx.command_path,
+        git_sha=git_sha,
+        dependency_lock=dependency_lock,
+        device_info={
+            "jax_default_backend": str(jax.default_backend()),
+            "jax_enable_x64": str(getattr(jax.config, "jax_enable_x64", "unknown")),
+        },
+        seed_list=seeds,
+        metrics_jsonl_path=str(metrics_jsonl),
+        summary_table_path=str(summary_json),
+    )
+    manifest_record = manifest.to_audit_record()
+
+    metrics_jsonl.parent.mkdir(parents=True, exist_ok=True)
+    metrics_jsonl.write_text(
+        "\n".join(
+            json.dumps(record, sort_keys=True) for record in comparison_records
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _write_json_file(summary_json, summary_payload)
+    if manifest_json is not None:
+        _write_json_file(manifest_json, manifest_record)
+    if json_out:
+        click.echo(json.dumps(manifest_record, indent=2, sort_keys=True))
+    else:
+        click.echo(f"Wrote supervisor metrics: {metrics_jsonl}")
+        click.echo(f"Wrote supervisor summary: {summary_json}")
+        if manifest_json is not None:
+            click.echo(f"Wrote supervisor manifest: {manifest_json}")
+
+
 @main.command("policy-dry-run")
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.argument("audit_log", type=click.Path(exists=True))

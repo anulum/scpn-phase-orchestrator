@@ -1658,6 +1658,64 @@ thresholds:
     assert "No anomalies detected." in result.output
 
 
+def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
+    runner, tmp_path
+):
+    metrics_path = tmp_path / "supervisor_metrics.jsonl"
+    summary_path = tmp_path / "supervisor_summary.json"
+    manifest_path = tmp_path / "supervisor_manifest.json"
+
+    result = runner.invoke(
+        main,
+        [
+            "supervisor-baseline-experiment",
+            "--metrics-jsonl",
+            str(metrics_path),
+            "--summary-json",
+            str(summary_path),
+            "--manifest-json",
+            str(manifest_path),
+            "--git-sha",
+            "abc1234",
+            "--seed",
+            "91",
+            "--dependency-lock",
+            "requirements-dev.txt:sha256:test",
+            "--json-out",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    stdout_record = json.loads(result.output)
+    assert stdout_record["proposal_type"] == (
+        "differentiable_supervisor_experiment_manifest"
+    )
+    assert stdout_record["actuation_permitted"] is False
+    assert stdout_record["seed_list"] == [91]
+
+    metric_records = [
+        json.loads(line)
+        for line in metrics_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert [record["proposal_type"] for record in metric_records] == [
+        "differentiable_supervisor_static_baseline",
+        "differentiable_supervisor_random_baseline",
+        "differentiable_supervisor_hand_tuned_baseline",
+    ]
+    assert all(record["actuation_permitted"] is False for record in metric_records)
+
+    summary_record = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary_record["comparison_count"] == 3
+    assert summary_record["actuation_permitted"] is False
+    assert summary_record["metric_record_path"] == str(metrics_path)
+
+    manifest_record = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest_record == stdout_record
+    assert manifest_record["dependency_lock"] == {
+        "requirements-dev.txt": "sha256:test"
+    }
+
+
 # Pipeline wiring: CLI tested via CliRunner invoking validate/run/replay/report/scaffold
 # commands which wrap SimulationState -> engine -> order_parameter -> policy.
 # TestCliCommands (above) proves full E2E.
