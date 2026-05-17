@@ -44,6 +44,7 @@ __all__ = [
     "SupervisorPPORollout",
     "SupervisorPPOAux",
     "SupervisorPPOCheckpoint",
+    "SupervisorPPOTrainResult",
     "masked_order_parameter",
     "apply_supervisor_action",
     "closed_loop_supervisor_loss",
@@ -55,6 +56,7 @@ __all__ = [
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
     "ppo_supervisor_train_epochs",
+    "ppo_supervisor_train_with_checkpoint",
     "collect_supervisor_rollouts",
     "save_supervisor_ppo_checkpoint",
     "load_supervisor_ppo_checkpoint",
@@ -183,6 +185,17 @@ class SupervisorPPOCheckpoint(NamedTuple):
     loss_history: jax.Array
     n_updates: int
     metadata: dict[str, Any]
+
+
+class SupervisorPPOTrainResult(NamedTuple):
+    """PPO training result with checkpoint-resume bookkeeping."""
+
+    policy: DifferentiableSupervisorPolicy
+    opt_state: Any
+    key: jax.Array
+    loss_history: jax.Array
+    n_updates: int
+    checkpoint_path: Path | None
 
 
 class _SupervisorPPOCheckpointPayload(NamedTuple):
@@ -562,6 +575,126 @@ def ppo_supervisor_train_epochs(
     Returns:
         (policy, opt_state, loss_history, n_updates)
     """
+    policy, opt_state, loss_history, n_updates, _ = _ppo_supervisor_train_epochs_impl(
+        policy,
+        batch,
+        key,
+        opt_state,
+        optimizer,
+        n_epochs=n_epochs,
+        minibatch_size=minibatch_size,
+        clip_epsilon=clip_epsilon,
+        value_clip=value_clip,
+        value_weight=value_weight,
+        entropy_weight=entropy_weight,
+        max_grad_norm=max_grad_norm,
+        kl_early_stop=kl_early_stop,
+    )
+    return policy, opt_state, loss_history, n_updates
+
+
+def ppo_supervisor_train_with_checkpoint(
+    policy: DifferentiableSupervisorPolicy,
+    batch: SupervisorPPOBatch,
+    key: jax.Array,
+    opt_state: Any,
+    optimizer: optax.GradientTransformation,
+    *,
+    n_epochs: int,
+    checkpoint_dir: str | Path | None = None,
+    resume: bool = False,
+    minibatch_size: int = 32,
+    clip_epsilon: float = 0.2,
+    value_clip: float | None = None,
+    value_weight: float = 0.5,
+    entropy_weight: float = 0.01,
+    max_grad_norm: float | None = None,
+    kl_early_stop: float | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> SupervisorPPOTrainResult:
+    """Run PPO epochs and optionally checkpoint a deterministic resume state."""
+    prior_losses = jnp.asarray([])
+    prior_updates = 0
+    checkpoint_path: Path | None = None
+    if checkpoint_dir is not None:
+        checkpoint_path = Path(checkpoint_dir)
+
+    if resume:
+        if checkpoint_path is None:
+            raise ValueError("checkpoint_dir is required when resume=True")
+        checkpoint = load_supervisor_ppo_checkpoint(
+            checkpoint_path,
+            template_policy=policy,
+            template_opt_state=opt_state,
+        )
+        policy = checkpoint.policy
+        opt_state = checkpoint.opt_state
+        key = checkpoint.key
+        prior_losses = checkpoint.loss_history
+        prior_updates = checkpoint.n_updates
+
+    policy, opt_state, new_losses, n_updates, next_key = (
+        _ppo_supervisor_train_epochs_impl(
+            policy,
+            batch,
+            key,
+            opt_state,
+            optimizer,
+            n_epochs=n_epochs,
+            minibatch_size=minibatch_size,
+            clip_epsilon=clip_epsilon,
+            value_clip=value_clip,
+            value_weight=value_weight,
+            entropy_weight=entropy_weight,
+            max_grad_norm=max_grad_norm,
+            kl_early_stop=kl_early_stop,
+        )
+    )
+    loss_history = (
+        new_losses
+        if prior_losses.size == 0
+        else jnp.concatenate([prior_losses, new_losses])
+    )
+    total_updates = prior_updates + n_updates
+
+    if checkpoint_path is not None:
+        save_supervisor_ppo_checkpoint(
+            checkpoint_path,
+            policy=policy,
+            opt_state=opt_state,
+            key=next_key,
+            n_updates=total_updates,
+            loss_history=loss_history,
+            metadata=metadata,
+            overwrite=True,
+        )
+
+    return SupervisorPPOTrainResult(
+        policy=policy,
+        opt_state=opt_state,
+        key=next_key,
+        loss_history=loss_history,
+        n_updates=total_updates,
+        checkpoint_path=checkpoint_path,
+    )
+
+
+def _ppo_supervisor_train_epochs_impl(
+    policy: DifferentiableSupervisorPolicy,
+    batch: SupervisorPPOBatch,
+    key: jax.Array,
+    opt_state: Any,
+    optimizer: optax.GradientTransformation,
+    *,
+    n_epochs: int,
+    minibatch_size: int = 32,
+    clip_epsilon: float = 0.2,
+    value_clip: float | None = None,
+    value_weight: float = 0.5,
+    entropy_weight: float = 0.01,
+    max_grad_norm: float | None = None,
+    kl_early_stop: float | None = None,
+) -> tuple[DifferentiableSupervisorPolicy, Any, jax.Array, int, jax.Array]:
     n_epochs = _positive_int(n_epochs, "n_epochs")
     batch_size = int(batch.phases.shape[0])
     minibatch_size = _positive_int(minibatch_size, "minibatch_size")
@@ -609,13 +742,20 @@ def ppo_supervisor_train_epochs(
                     entropy_weight=entropy_weight,
                 )
                 if float(jnp.abs(aux.approx_kl)) > kl_early_stop:
-                    return policy, opt_state, jnp.asarray(updates), n_updates
+                    return (
+                        policy,
+                        opt_state,
+                        jnp.asarray(updates),
+                        n_updates,
+                        current_key,
+                    )
 
     return (
         policy,
         opt_state,
         jnp.asarray(updates),
         n_updates,
+        current_key,
     )
 
 

@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     ppo_supervisor_loss,
     ppo_supervisor_train_epochs,
     ppo_supervisor_train_step,
+    ppo_supervisor_train_with_checkpoint,
     sample_supervisor_action,
     save_supervisor_ppo_checkpoint,
     supervisor_train_step,
@@ -447,6 +448,80 @@ def test_supervisor_ppo_checkpoint_rejects_malformed_metadata(tmp_path) -> None:
             template_policy=template_policy,
             template_opt_state=template_opt_state,
         )
+
+
+def test_supervisor_ppo_checkpoint_trainer_resume_matches_direct_epochs(
+    tmp_path,
+) -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(48))
+    rollout = collect_supervisor_rollouts(
+        policy,
+        _scenario(),
+        key=jax.random.PRNGKey(49),
+        n_episodes=2,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.0,
+    )
+    optimizer = optax.adam(1e-3)
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+
+    direct_policy, direct_state, direct_losses, direct_updates = (
+        ppo_supervisor_train_epochs(
+            policy,
+            rollout.batch,
+            key=jax.random.PRNGKey(50),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=2,
+            minibatch_size=4,
+            max_grad_norm=1.0,
+        )
+    )
+    checkpoint_dir = tmp_path / "resume-checkpoint"
+    first = ppo_supervisor_train_with_checkpoint(
+        policy,
+        rollout.batch,
+        key=jax.random.PRNGKey(50),
+        opt_state=opt_state,
+        optimizer=optimizer,
+        n_epochs=1,
+        minibatch_size=4,
+        max_grad_norm=1.0,
+        checkpoint_dir=checkpoint_dir,
+        metadata={"experiment": "resume-wrapper"},
+    )
+    second = ppo_supervisor_train_with_checkpoint(
+        policy,
+        rollout.batch,
+        key=jax.random.PRNGKey(999),
+        opt_state=opt_state,
+        optimizer=optimizer,
+        n_epochs=1,
+        minibatch_size=4,
+        max_grad_norm=1.0,
+        checkpoint_dir=checkpoint_dir,
+        resume=True,
+        metadata={"experiment": "resume-wrapper"},
+    )
+
+    assert first.checkpoint_path == checkpoint_dir
+    assert second.checkpoint_path == checkpoint_dir
+    assert second.n_updates == direct_updates
+    assert jnp.array_equal(second.loss_history, direct_losses)
+    for before, after in zip(
+        jax.tree.leaves(eqx.filter(direct_policy, eqx.is_array)),
+        jax.tree.leaves(eqx.filter(second.policy, eqx.is_array)),
+        strict=True,
+    ):
+        assert jnp.array_equal(before, after)
+    for before, after in zip(
+        jax.tree.leaves(direct_state),
+        jax.tree.leaves(second.opt_state),
+        strict=True,
+    ):
+        assert jnp.array_equal(before, after)
 
 
 def test_control_action_adapter_feeds_existing_mapper() -> None:
