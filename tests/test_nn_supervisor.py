@@ -42,6 +42,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     KuramotoSupervisorScenario,
     SupervisorAction,
     SupervisorActionProjection,
+    SupervisorBaselineReport,
     SupervisorCorpusReplayProposals,
     SupervisorHandTunedBaselineComparison,
     SupervisorPPOBatch,
@@ -53,6 +54,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorScenarioCorpus,
     SupervisorStaticBaselineComparison,
     apply_supervisor_action,
+    build_supervisor_baseline_report,
     build_supervisor_corpus_replay_proposals,
     build_supervisor_replay_proposal,
     build_supervisor_scenario_corpus,
@@ -1537,6 +1539,66 @@ def test_supervisor_hand_tuned_baseline_comparison_rejects_empty_label() -> None
             _scenario(),
             comparison_label="",
         )
+
+
+def test_supervisor_baseline_report_aggregates_comparison_records() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(83))
+    scenario = _scenario()
+    supervisor_proposal = build_supervisor_replay_proposal(policy, scenario)
+
+    report = build_supervisor_baseline_report(
+        (
+            compare_supervisor_static_baseline(policy, scenario),
+            compare_supervisor_random_baseline(
+                policy,
+                scenario,
+                key=jax.random.PRNGKey(84),
+            ),
+            compare_supervisor_hand_tuned_baseline(
+                policy,
+                scenario,
+                boundary_state=BoundaryState(hard_violations=["unit hard violation"]),
+            ),
+            compare_supervisor_replay_proposal(
+                supervisor_proposal,
+                _replay_search_result(reward=0.41),
+            ),
+        ),
+        report_label="unit-baseline-report",
+    )
+    record = report.to_audit_record()
+
+    assert isinstance(report, SupervisorBaselineReport)
+    assert report.actuation_permitted is False
+    assert record["proposal_type"] == "differentiable_supervisor_baseline_report"
+    assert record["report_label"] == "unit-baseline-report"
+    assert record["actuation_permitted"] is False
+    assert record["summary"]["comparison_count"] == 4
+    assert record["summary"]["baseline_comparison_count"] == 3
+    assert record["summary"]["replay_comparison_count"] == 1
+    assert (
+        record["summary"]["best_delta_reward"]
+        >= record["summary"]["worst_delta_reward"]
+    )
+    assert [item["proposal_type"] for item in record["comparisons"]] == [
+        "differentiable_supervisor_static_baseline",
+        "differentiable_supervisor_random_baseline",
+        "differentiable_supervisor_hand_tuned_baseline",
+        "differentiable_supervisor_replay_comparison",
+    ]
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_baseline_report_rejects_empty_inputs() -> None:
+    with pytest.raises(ValueError, match="at least one comparison"):
+        build_supervisor_baseline_report(())
+
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(85))
+    comparison = compare_supervisor_static_baseline(policy, _scenario())
+    with pytest.raises(ValueError, match="report_label"):
+        build_supervisor_baseline_report((comparison,), report_label="")
 
 
 def test_supervisor_replay_comparison_rejects_non_audit_replay_inputs() -> None:

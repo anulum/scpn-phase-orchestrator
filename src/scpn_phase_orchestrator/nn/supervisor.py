@@ -45,6 +45,7 @@ __all__ = [
     "DifferentiableSupervisorPolicy",
     "SupervisorAction",
     "SupervisorActionProjection",
+    "SupervisorBaselineReport",
     "SupervisorCorpusReplayProposals",
     "KuramotoSupervisorScenario",
     "SupervisorLossAux",
@@ -70,6 +71,7 @@ __all__ = [
     "supervisor_action_bound_penalty",
     "supervisor_action_log_prob",
     "project_supervisor_action_for_audit",
+    "build_supervisor_baseline_report",
     "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
     "compare_supervisor_hand_tuned_baseline",
@@ -162,6 +164,28 @@ class SupervisorReplayProposal(NamedTuple):
             "action": _supervisor_action_to_record(self.action),
             "projection": dict(self.projection.audit_record),
         }
+
+
+class SupervisorBaselineReport(NamedTuple):
+    """Aggregate audit report for supervisor baseline comparison records."""
+
+    comparisons: tuple[dict[str, Any], ...]
+    summary: dict[str, Any]
+    report_label: str
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable baseline aggregation report."""
+        return _json_object(
+            {
+                "proposal_type": "differentiable_supervisor_baseline_report",
+                "actuation_permitted": self.actuation_permitted,
+                "report_label": self.report_label,
+                "summary": dict(self.summary),
+                "comparisons": [dict(record) for record in self.comparisons],
+            },
+            "supervisor_baseline_report",
+        )
 
 
 class SupervisorCorpusReplayProposals(NamedTuple):
@@ -819,6 +843,28 @@ def build_supervisor_corpus_replay_proposals(
         )
     return SupervisorCorpusReplayProposals(
         proposals=tuple(proposals),
+        actuation_permitted=False,
+    )
+
+
+def build_supervisor_baseline_report(
+    comparisons: Iterable[Any],
+    *,
+    report_label: str = "supervisor_baseline_report",
+) -> SupervisorBaselineReport:
+    """Aggregate already-generated supervisor comparison records for review."""
+    if not report_label:
+        raise ValueError("report_label must not be empty")
+    records = tuple(
+        _comparison_record_from_object(comparison, f"comparison {index}")
+        for index, comparison in enumerate(comparisons)
+    )
+    if not records:
+        raise ValueError("baseline report requires at least one comparison")
+    return SupervisorBaselineReport(
+        comparisons=records,
+        summary=_baseline_report_summary(records),
+        report_label=report_label,
         actuation_permitted=False,
     )
 
@@ -2133,6 +2179,55 @@ def _audit_record_from_object(value: Any, field: str) -> dict[str, Any]:
     if not callable(to_audit_record):
         raise TypeError(f"{field} must provide to_audit_record()")
     return _json_safe_object(to_audit_record(), f"{field} audit record")
+
+
+def _comparison_record_from_object(value: Any, field: str) -> dict[str, Any]:
+    record = _audit_record_from_object(value, field)
+    if record.get("actuation_permitted") is not False:
+        raise ValueError(f"{field} must be non-actuating")
+    proposal_type = record.get("proposal_type")
+    if not isinstance(proposal_type, str):
+        raise ValueError(f"{field} must include proposal_type")
+    if not (
+        proposal_type.startswith("differentiable_supervisor_")
+        and (
+            proposal_type.endswith("_baseline") or proposal_type.endswith("_comparison")
+        )
+    ):
+        raise ValueError(f"{field} is not a supervisor comparison record")
+    return record
+
+
+def _baseline_report_summary(
+    records: tuple[dict[str, Any], ...],
+) -> dict[str, Any]:
+    delta_rewards = []
+    baseline_count = 0
+    replay_count = 0
+    proposal_types: list[str] = []
+    for record in records:
+        proposal_type = str(record["proposal_type"])
+        proposal_types.append(proposal_type)
+        if proposal_type.endswith("_baseline"):
+            baseline_count += 1
+        if proposal_type == "differentiable_supervisor_replay_comparison":
+            replay_count += 1
+        metrics = record.get("metrics")
+        if isinstance(metrics, dict):
+            delta_reward = metrics.get("delta_reward")
+            if _is_finite_number(delta_reward):
+                delta_rewards.append(float(delta_reward))
+    summary: dict[str, Any] = {
+        "comparison_count": len(records),
+        "baseline_comparison_count": baseline_count,
+        "replay_comparison_count": replay_count,
+        "proposal_types": proposal_types,
+    }
+    if delta_rewards:
+        summary["best_delta_reward"] = max(delta_rewards)
+        summary["worst_delta_reward"] = min(delta_rewards)
+        summary["mean_delta_reward"] = sum(delta_rewards) / len(delta_rewards)
+    return summary
 
 
 def _supervisor_replay_comparison_metrics(
