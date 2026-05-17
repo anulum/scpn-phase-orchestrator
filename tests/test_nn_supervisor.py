@@ -19,6 +19,15 @@ eqx = pytest.importorskip("equinox")
 optax = pytest.importorskip("optax")
 
 from scpn_phase_orchestrator.actuation.mapper import ActuationMapper
+from scpn_phase_orchestrator.autotune.policy_search import ReplayPolicySearchResult
+from scpn_phase_orchestrator.autotune.reward import (
+    AutotunePolicyProposal,
+    AutotuneRewardReport,
+    KnobPolicyCandidate,
+    PolicyProposalConfig,
+    RewardConfig,
+    RewardObservation,
+)
 from scpn_phase_orchestrator.binding.types import ActuatorMapping
 from scpn_phase_orchestrator.nn.supervisor import (
     DifferentiableSupervisorConfig,
@@ -30,6 +39,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorPPOBatch,
     SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
+    SupervisorReplayComparison,
     SupervisorReplayProposal,
     SupervisorScenarioCorpus,
     apply_supervisor_action,
@@ -39,6 +49,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     closed_loop_supervisor_loss,
     collect_supervisor_corpus_rollouts,
     collect_supervisor_rollouts,
+    compare_supervisor_replay_proposal,
     control_actions_from_supervisor,
     load_supervisor_ppo_checkpoint,
     pack_supervisor_action,
@@ -69,6 +80,35 @@ def _scenario() -> KuramotoSupervisorScenario:
         dt=0.02,
         inner_steps=4,
         horizon=3,
+    )
+
+
+def _replay_search_result(reward: float = 0.42) -> ReplayPolicySearchResult:
+    candidate = KnobPolicyCandidate(K=0.01, zeta=-0.02)
+    observation = RewardObservation(
+        coherence=0.8,
+        previous_coherence=0.6,
+        unsafe=False,
+        regime_changed=False,
+    )
+    report = AutotuneRewardReport(
+        reward=reward,
+        components={"coherence_gain": 0.2, "safety_penalty": 0.0},
+        candidate=candidate,
+        observation=observation,
+        config=RewardConfig(),
+    )
+    proposal = AutotunePolicyProposal(
+        accepted=True,
+        selected=report,
+        alternatives=(),
+        reasons=("accepted",),
+        config=PolicyProposalConfig(),
+    )
+    return ReplayPolicySearchResult(
+        seed=candidate,
+        candidates=(candidate,),
+        proposal=proposal,
     )
 
 
@@ -1252,3 +1292,71 @@ def test_supervisor_scenario_corpus_rejects_malformed_records() -> None:
     bad_metadata = dict(valid, metadata={"bad": np.array([1.0])})
     with pytest.raises(ValueError, match="metadata"):
         build_supervisor_scenario_corpus([bad_metadata])
+
+
+def test_supervisor_replay_comparison_records_replay_search_without_actuation() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(70))
+    supervisor_proposal = build_supervisor_replay_proposal(
+        policy,
+        _scenario(),
+        scenario_metadata={"source": "unit-replay"},
+    )
+
+    comparison = compare_supervisor_replay_proposal(
+        supervisor_proposal,
+        _replay_search_result(reward=0.42),
+        comparison_label="unit-replay-policy-search",
+    )
+    record = comparison.to_audit_record()
+
+    assert isinstance(comparison, SupervisorReplayComparison)
+    assert comparison.actuation_permitted is False
+    assert record["proposal_type"] == "differentiable_supervisor_replay_comparison"
+    assert record["actuation_permitted"] is False
+    assert record["comparison_label"] == "unit-replay-policy-search"
+    assert record["supervisor"]["actuation_permitted"] is False
+    assert record["supervisor"]["projection"]["non_actuating"] is True
+    assert record["replay_policy_search"]["proposal"]["accepted"] is True
+    assert record["metrics"]["replay_selected_reward"] == pytest.approx(0.42)
+    assert "supervisor_value_estimate" in record["metrics"]
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_corpus_replay_comparison_summarises_supervisor_metrics() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(71))
+    scenario = _scenario()
+    corpus = SupervisorScenarioCorpus(
+        scenarios=(scenario, scenario._replace(phases=scenario.phases + 0.01)),
+        metadata=({"stream_id": "a"}, {"stream_id": "b"}),
+    )
+    supervisor_proposals = build_supervisor_corpus_replay_proposals(
+        policy,
+        corpus,
+        regime_churn_scores=(0.1, 0.9),
+        max_regime_churn=0.5,
+    )
+
+    comparison = compare_supervisor_replay_proposal(
+        supervisor_proposals,
+        _replay_search_result(reward=0.31),
+    )
+    record = comparison.to_audit_record()
+
+    assert record["actuation_permitted"] is False
+    assert record["supervisor"]["scenario_count"] == 2
+    assert record["metrics"]["supervisor_scenario_count"] == 2.0
+    assert record["metrics"]["supervisor_rejected_count"] == 1.0
+    assert record["metrics"]["replay_selected_reward"] == pytest.approx(0.31)
+    assert "supervisor_mean_value_estimate" in record["metrics"]
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_replay_comparison_rejects_non_audit_replay_inputs() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(72))
+    supervisor_proposal = build_supervisor_replay_proposal(policy, _scenario())
+
+    with pytest.raises(TypeError, match="to_audit_record"):
+        compare_supervisor_replay_proposal(supervisor_proposal, object())

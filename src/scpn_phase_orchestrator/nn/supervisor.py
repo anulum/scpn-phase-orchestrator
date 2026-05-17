@@ -49,6 +49,7 @@ __all__ = [
     "SupervisorPPOAux",
     "SupervisorPPOCheckpoint",
     "SupervisorPPOTrainResult",
+    "SupervisorReplayComparison",
     "SupervisorReplayProposal",
     "SupervisorScenarioCorpus",
     "masked_order_parameter",
@@ -63,6 +64,7 @@ __all__ = [
     "project_supervisor_action_for_audit",
     "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
+    "compare_supervisor_replay_proposal",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
     "ppo_supervisor_train_epochs",
@@ -165,6 +167,30 @@ class SupervisorCorpusReplayProposals(NamedTuple):
             "scenario_count": len(self.proposals),
             "proposals": [proposal.to_audit_record() for proposal in self.proposals],
         }
+
+
+class SupervisorReplayComparison(NamedTuple):
+    """Audit-only comparison between neural supervisor and replay policy search."""
+
+    supervisor: dict[str, Any]
+    replay_policy_search: dict[str, Any]
+    comparison_label: str
+    metrics: dict[str, float]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable non-actuating comparison record."""
+        return _json_object(
+            {
+                "proposal_type": "differentiable_supervisor_replay_comparison",
+                "actuation_permitted": self.actuation_permitted,
+                "comparison_label": self.comparison_label,
+                "supervisor": dict(self.supervisor),
+                "replay_policy_search": dict(self.replay_policy_search),
+                "metrics": dict(self.metrics),
+            },
+            "supervisor_replay_comparison",
+        )
 
 
 class KuramotoSupervisorScenario(NamedTuple):
@@ -704,6 +730,40 @@ def build_supervisor_corpus_replay_proposals(
         )
     return SupervisorCorpusReplayProposals(
         proposals=tuple(proposals),
+        actuation_permitted=False,
+    )
+
+
+def compare_supervisor_replay_proposal(
+    supervisor_proposal: SupervisorReplayProposal | SupervisorCorpusReplayProposals,
+    replay_policy_search: Any,
+    *,
+    comparison_label: str = "replay_policy_search",
+) -> SupervisorReplayComparison:
+    """Compare supervisor replay proposals with a replay policy-search result.
+
+    The result is deliberately audit-only: it records both proposal surfaces and
+    scalar comparison metrics, but it never authorises live actuation.
+    """
+    if not comparison_label:
+        raise ValueError("comparison_label must not be empty")
+    supervisor_record = _json_object(
+        supervisor_proposal.to_audit_record(),
+        "supervisor proposal audit record",
+    )
+    replay_record = _audit_record_from_object(
+        replay_policy_search,
+        "replay_policy_search",
+    )
+    metrics = _supervisor_replay_comparison_metrics(
+        supervisor_record,
+        replay_record,
+    )
+    return SupervisorReplayComparison(
+        supervisor=supervisor_record,
+        replay_policy_search=replay_record,
+        comparison_label=comparison_label,
+        metrics=metrics,
         actuation_permitted=False,
     )
 
@@ -1844,6 +1904,121 @@ def _non_negative_float(value: object, field: str) -> float:
     if not isfinite(value_float) or value_float < 0.0:
         raise ValueError(f"{field} must be a finite non-negative scalar")
     return value_float
+
+
+def _audit_record_from_object(value: Any, field: str) -> dict[str, Any]:
+    to_audit_record = getattr(value, "to_audit_record", None)
+    if not callable(to_audit_record):
+        raise TypeError(f"{field} must provide to_audit_record()")
+    return _json_safe_object(to_audit_record(), f"{field} audit record")
+
+
+def _supervisor_replay_comparison_metrics(
+    supervisor_record: Mapping[str, Any],
+    replay_record: Mapping[str, Any],
+) -> dict[str, float]:
+    metrics: dict[str, float] = {}
+    supervisor_type = supervisor_record.get("proposal_type")
+    if supervisor_type == "differentiable_supervisor_replay_proposal":
+        supervisor_metrics = _mapping_value(supervisor_record, "metrics")
+        _put_finite_metric(
+            metrics,
+            "supervisor_value_estimate",
+            supervisor_metrics.get("value_estimate"),
+        )
+        _put_finite_metric(
+            metrics,
+            "supervisor_current_R_good",
+            supervisor_metrics.get("current_R_good"),
+        )
+        _put_finite_metric(
+            metrics,
+            "supervisor_current_R_bad",
+            supervisor_metrics.get("current_R_bad"),
+        )
+        projection = _mapping_value(supervisor_record, "projection")
+        metrics["supervisor_rejected_count"] = (
+            1.0 if bool(projection.get("rejected")) else 0.0
+        )
+    elif supervisor_type == "differentiable_supervisor_corpus_replay":
+        proposals = supervisor_record.get("proposals")
+        if not isinstance(proposals, list):
+            raise ValueError("supervisor corpus audit record proposals must be a list")
+        metrics["supervisor_scenario_count"] = float(len(proposals))
+        values = []
+        rejected_count = 0.0
+        for index, proposal in enumerate(proposals):
+            if not isinstance(proposal, dict):
+                raise ValueError(
+                    f"supervisor corpus proposal {index} must be a JSON object"
+                )
+            proposal_metrics = _mapping_value(proposal, "metrics")
+            value = proposal_metrics.get("value_estimate")
+            if _is_finite_number(value):
+                values.append(float(value))
+            projection = _mapping_value(proposal, "projection")
+            if bool(projection.get("rejected")):
+                rejected_count += 1.0
+        metrics["supervisor_rejected_count"] = rejected_count
+        if values:
+            metrics["supervisor_mean_value_estimate"] = sum(values) / len(values)
+    else:
+        raise ValueError("unsupported supervisor proposal audit record")
+
+    replay_proposal = replay_record.get("proposal")
+    if isinstance(replay_proposal, dict):
+        selected = replay_proposal.get("selected")
+        if isinstance(selected, dict):
+            _put_finite_metric(
+                metrics,
+                "replay_selected_reward",
+                selected.get("reward"),
+            )
+    return metrics
+
+
+def _mapping_value(value: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    child = value.get(key)
+    if not isinstance(child, dict):
+        raise ValueError(f"{key} must be a JSON object")
+    return child
+
+
+def _put_finite_metric(
+    metrics: dict[str, float],
+    key: str,
+    value: object,
+) -> None:
+    if _is_finite_number(value):
+        metrics[key] = float(value)
+
+
+def _is_finite_number(value: object) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, int | float)
+        and isfinite(value)
+    )
+
+
+def _json_safe_object(value: object, field: str) -> dict[str, Any]:
+    return _json_object(_json_safe_value(value), field)
+
+
+def _json_safe_value(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe_value(child) for key, child in value.items()}
+    if isinstance(value, list | tuple):
+        return [_json_safe_value(child) for child in value]
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if isfinite(value):
+            return value
+        return {"nonfinite_float": str(value)}
+    return value
 
 
 def _json_object(value: object, field: str) -> dict[str, Any]:
