@@ -131,7 +131,8 @@ def run_demo() -> dict[str, object]:
         "accepted_count": rest.accepted_count,
         "channels": ["P", "I"],
         "accepted_names": [
-            record["summary"]["name"] for record in rest.to_audit_record()["ledger"]["accepted"]
+            record["summary"]["name"]
+            for record in rest.to_audit_record()["ledger"]["accepted"]
         ],
         "rest_boundary": rest.to_audit_record(),
         "websocket_frame": frame.to_audit_record(),

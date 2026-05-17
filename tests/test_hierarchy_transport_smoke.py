@@ -42,7 +42,10 @@ def _assert_transport_payload(payload: dict[str, object], expected_domain: str) 
         assert isinstance(boundary["ledger"]["accepted"], list)
 
     # Assert stable JSON serialisation for artifact handoff.
-    assert json.loads(json.dumps(payload, sort_keys=True))["domainpack"] == expected_domain
+    assert (
+        json.loads(json.dumps(payload, sort_keys=True))["domainpack"]
+        == expected_domain
+    )
 
 
 def test_power_grid_hierarchy_transport_smoke() -> None:
