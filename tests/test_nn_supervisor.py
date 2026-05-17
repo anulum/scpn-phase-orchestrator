@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.autotune.reward import (
     RewardObservation,
 )
 from scpn_phase_orchestrator.binding.types import ActuatorMapping
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.nn.supervisor import (
     DifferentiableSupervisorConfig,
     DifferentiableSupervisorPolicy,
@@ -42,6 +43,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorAction,
     SupervisorActionProjection,
     SupervisorCorpusReplayProposals,
+    SupervisorHandTunedBaselineComparison,
     SupervisorPPOBatch,
     SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
@@ -57,6 +59,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     closed_loop_supervisor_loss,
     collect_supervisor_corpus_rollouts,
     collect_supervisor_rollouts,
+    compare_supervisor_hand_tuned_baseline,
     compare_supervisor_random_baseline,
     compare_supervisor_replay_proposal,
     compare_supervisor_static_baseline,
@@ -1494,6 +1497,44 @@ def test_supervisor_random_baseline_comparison_rejects_empty_label() -> None:
             policy,
             _scenario(),
             key=jax.random.PRNGKey(80),
+            comparison_label="",
+        )
+
+
+def test_supervisor_hand_tuned_baseline_comparison_uses_policy_actions() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(81))
+
+    comparison = compare_supervisor_hand_tuned_baseline(
+        policy,
+        _scenario(),
+        boundary_state=BoundaryState(hard_violations=["unit hard violation"]),
+        comparison_label="unit-hand-tuned-baseline",
+    )
+    record = comparison.to_audit_record()
+
+    assert isinstance(comparison, SupervisorHandTunedBaselineComparison)
+    assert comparison.actuation_permitted is False
+    assert record["proposal_type"] == "differentiable_supervisor_hand_tuned_baseline"
+    assert record["comparison_label"] == "unit-hand-tuned-baseline"
+    assert record["actuation_permitted"] is False
+    assert record["baseline"]["name"] == "hand_tuned_supervisor_policy"
+    assert record["baseline"]["policy_actions"][0]["knob"] == "zeta"
+    assert record["baseline"]["policy_actions"][0]["scope"] == "global"
+    assert record["metrics"]["baseline_safety_violations"] == 0.0
+    assert record["metrics"]["supervisor_safety_violations"] == 0.0
+    assert "delta_reward" in record["metrics"]
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_hand_tuned_baseline_comparison_rejects_empty_label() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(82))
+
+    with pytest.raises(ValueError, match="comparison_label"):
+        compare_supervisor_hand_tuned_baseline(
+            policy,
+            _scenario(),
             comparison_label="",
         )
 

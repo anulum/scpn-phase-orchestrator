@@ -30,6 +30,10 @@ import jax
 import jax.numpy as jnp
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 from .functional import kuramoto_forward, order_parameter
 
@@ -50,6 +54,7 @@ __all__ = [
     "SupervisorPPOAux",
     "SupervisorPPOCheckpoint",
     "SupervisorPPOTrainResult",
+    "SupervisorHandTunedBaselineComparison",
     "SupervisorRandomBaselineComparison",
     "SupervisorReplayComparison",
     "SupervisorReplayProposal",
@@ -67,6 +72,7 @@ __all__ = [
     "project_supervisor_action_for_audit",
     "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
+    "compare_supervisor_hand_tuned_baseline",
     "compare_supervisor_random_baseline",
     "compare_supervisor_replay_proposal",
     "compare_supervisor_static_baseline",
@@ -247,6 +253,32 @@ class SupervisorRandomBaselineComparison(NamedTuple):
                 "metrics": dict(self.metrics),
             },
             "supervisor_random_baseline_comparison",
+        )
+
+
+class SupervisorHandTunedBaselineComparison(NamedTuple):
+    """Audit-only comparison against the rule-based ``SupervisorPolicy``."""
+
+    baseline: dict[str, Any]
+    supervisor: dict[str, Any]
+    scenario_summary: dict[str, Any]
+    comparison_label: str
+    metrics: dict[str, float]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable hand-tuned-baseline comparison record."""
+        return _json_object(
+            {
+                "proposal_type": "differentiable_supervisor_hand_tuned_baseline",
+                "actuation_permitted": self.actuation_permitted,
+                "comparison_label": self.comparison_label,
+                "scenario_summary": dict(self.scenario_summary),
+                "baseline": dict(self.baseline),
+                "supervisor": dict(self.supervisor),
+                "metrics": dict(self.metrics),
+            },
+            "supervisor_hand_tuned_baseline_comparison",
         )
 
 
@@ -902,6 +934,53 @@ def compare_supervisor_random_baseline(
     metrics.update(_prefixed_float_metrics("supervisor", supervisor_metrics))
     metrics["delta_reward"] = metrics["supervisor_reward"] - metrics["baseline_reward"]
     return SupervisorRandomBaselineComparison(
+        baseline=baseline_record,
+        supervisor=supervisor_record,
+        scenario_summary=_supervisor_scenario_summary(scenario),
+        comparison_label=comparison_label,
+        metrics=metrics,
+        actuation_permitted=False,
+    )
+
+
+def compare_supervisor_hand_tuned_baseline(
+    policy: DifferentiableSupervisorPolicy,
+    scenario: KuramotoSupervisorScenario,
+    *,
+    boundary_state: BoundaryState | None = None,
+    comparison_label: str = "hand_tuned_supervisor_policy",
+) -> SupervisorHandTunedBaselineComparison:
+    """Compare a neural supervisor proposal against rule-based ``SupervisorPolicy``."""
+    if not comparison_label:
+        raise ValueError("comparison_label must not be empty")
+    active_boundary = boundary_state or BoundaryState()
+    upde_state = _upde_state_from_supervisor_scenario(scenario)
+    legacy_policy = SupervisorPolicy(RegimeManager(cooldown_steps=0))
+    policy_actions = legacy_policy.decide(upde_state, active_boundary)
+    baseline_action = _supervisor_action_from_control_actions(
+        policy_actions, policy.config
+    )
+    baseline_record = _rollout_static_supervisor_action(
+        "hand_tuned_supervisor_policy",
+        baseline_action,
+        scenario,
+        policy.config,
+    )
+    baseline_record["policy_actions"] = [
+        _control_action_record(action) for action in policy_actions
+    ]
+    supervisor_record = _rollout_static_supervisor_action(
+        "differentiable_supervisor",
+        policy(scenario),
+        scenario,
+        policy.config,
+    )
+    baseline_metrics = _mapping_value(baseline_record, "metrics")
+    supervisor_metrics = _mapping_value(supervisor_record, "metrics")
+    metrics = _prefixed_float_metrics("baseline", baseline_metrics)
+    metrics.update(_prefixed_float_metrics("supervisor", supervisor_metrics))
+    metrics["delta_reward"] = metrics["supervisor_reward"] - metrics["baseline_reward"]
+    return SupervisorHandTunedBaselineComparison(
         baseline=baseline_record,
         supervisor=supervisor_record,
         scenario_summary=_supervisor_scenario_summary(scenario),
@@ -2207,6 +2286,65 @@ def _jax_key_record(key: jax.Array) -> list[int]:
     if key_array.ndim != 1:
         raise ValueError("key must be a one-dimensional JAX PRNG key")
     return [int(value) for value in key_array.tolist()]
+
+
+def _upde_state_from_supervisor_scenario(
+    scenario: KuramotoSupervisorScenario,
+) -> UPDEState:
+    good_R = float(masked_order_parameter(scenario.phases, scenario.good_mask))
+    bad_R = float(masked_order_parameter(scenario.phases, scenario.bad_mask))
+    global_R = float(order_parameter(scenario.phases))
+    return UPDEState(
+        layers=[
+            LayerState(R=good_R, psi=0.0),
+            LayerState(R=bad_R, psi=0.0),
+        ],
+        cross_layer_alignment=jnp.asarray([[1.0, global_R], [global_R, 1.0]]),
+        stability_proxy=global_R,
+        regime_id="supervisor_baseline_comparison",
+    )
+
+
+def _supervisor_action_from_control_actions(
+    actions: Iterable[ControlAction],
+    config: DifferentiableSupervisorConfig,
+) -> SupervisorAction:
+    delta_K_global = 0.0
+    delta_zeta_global = 0.0
+    delta_K_layers = [0.0] * config.n_layer_controls
+    for action in actions:
+        if action.knob == "K" and action.scope == "global":
+            delta_K_global += float(action.value)
+        elif action.knob == "zeta" and action.scope == "global":
+            delta_zeta_global += float(action.value)
+        elif action.knob == "K" and action.scope.startswith("layer_"):
+            layer_index = _layer_scope_index(action.scope)
+            if layer_index < config.n_layer_controls:
+                delta_K_layers[layer_index] += float(action.value)
+    values = jnp.asarray([delta_K_global, delta_zeta_global, *delta_K_layers])
+    bounded = jnp.clip(values, -_action_bounds(config), _action_bounds(config))
+    return unpack_supervisor_action(
+        bounded,
+        value_estimate=jnp.array(0.0),
+        config=config,
+    )
+
+
+def _layer_scope_index(scope: str) -> int:
+    try:
+        return int(scope.removeprefix("layer_"))
+    except ValueError as exc:
+        raise ValueError(f"invalid layer scope: {scope}") from exc
+
+
+def _control_action_record(action: ControlAction) -> dict[str, Any]:
+    return {
+        "knob": action.knob,
+        "scope": action.scope,
+        "value": float(action.value),
+        "ttl_s": float(action.ttl_s),
+        "justification": action.justification,
+    }
 
 
 def _supervisor_scenario_summary(
