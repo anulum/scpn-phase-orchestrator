@@ -18,6 +18,7 @@ interlocks remain outside the gradient path.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path
@@ -45,6 +46,7 @@ __all__ = [
     "SupervisorPPOAux",
     "SupervisorPPOCheckpoint",
     "SupervisorPPOTrainResult",
+    "SupervisorScenarioCorpus",
     "masked_order_parameter",
     "apply_supervisor_action",
     "closed_loop_supervisor_loss",
@@ -58,6 +60,7 @@ __all__ = [
     "ppo_supervisor_train_epochs",
     "ppo_supervisor_train_with_checkpoint",
     "collect_supervisor_rollouts",
+    "build_supervisor_scenario_corpus",
     "save_supervisor_ppo_checkpoint",
     "load_supervisor_ppo_checkpoint",
     "control_actions_from_supervisor",
@@ -124,6 +127,13 @@ class KuramotoSupervisorScenario(NamedTuple):
     dt: float
     inner_steps: int
     horizon: int
+
+
+class SupervisorScenarioCorpus(NamedTuple):
+    """Validated replay scenario corpus for supervisor training."""
+
+    scenarios: tuple[KuramotoSupervisorScenario, ...]
+    metadata: tuple[dict[str, Any], ...]
 
 
 class SupervisorLossAux(NamedTuple):
@@ -890,6 +900,32 @@ def collect_supervisor_rollouts(
     )
 
 
+def build_supervisor_scenario_corpus(
+    records: Iterable[Mapping[str, Any]],
+    *,
+    dtype: Any = jnp.float32,
+) -> SupervisorScenarioCorpus:
+    """Convert replay/audit records into validated supervisor scenarios."""
+    scenarios: list[KuramotoSupervisorScenario] = []
+    metadata: list[dict[str, Any]] = []
+    for index, record in enumerate(records):
+        if not isinstance(record, Mapping):
+            raise ValueError(f"record {index} must be a mapping")
+        scenario, record_metadata = _supervisor_scenario_from_record(
+            record,
+            index=index,
+            dtype=dtype,
+        )
+        scenarios.append(scenario)
+        metadata.append(record_metadata)
+    if not scenarios:
+        raise ValueError("scenario corpus requires at least one record")
+    return SupervisorScenarioCorpus(
+        scenarios=tuple(scenarios),
+        metadata=tuple(metadata),
+    )
+
+
 def save_supervisor_ppo_checkpoint(
     checkpoint_dir: str | Path,
     *,
@@ -1142,6 +1178,123 @@ def _take_batch_rows(
     )
 
 
+def _supervisor_scenario_from_record(
+    record: Mapping[str, Any],
+    *,
+    index: int,
+    dtype: Any,
+) -> tuple[KuramotoSupervisorScenario, dict[str, Any]]:
+    phases = _record_vector(record, "phases", index=index, dtype=dtype)
+    omegas = _record_vector(record, "omegas", index=index, dtype=dtype)
+    good_mask = _record_vector(record, "good_mask", index=index, dtype=dtype)
+    bad_mask = _record_vector(record, "bad_mask", index=index, dtype=dtype)
+    n_oscillators = int(phases.shape[0])
+    for field_name, value in (
+        ("omegas", omegas),
+        ("good_mask", good_mask),
+        ("bad_mask", bad_mask),
+    ):
+        if value.shape != (n_oscillators,):
+            raise ValueError(
+                f"record {index} {field_name} must have shape "
+                f"({n_oscillators},), got {value.shape}"
+            )
+    if float(jnp.sum(good_mask)) <= 0.0:
+        raise ValueError(f"record {index} good_mask must contain positive mass")
+    if float(jnp.sum(bad_mask)) <= 0.0:
+        raise ValueError(f"record {index} bad_mask must contain positive mass")
+
+    base_k = _record_matrix(record, "base_K", index=index, dtype=dtype)
+    if base_k.shape != (n_oscillators, n_oscillators):
+        raise ValueError(
+            f"record {index} base_K must have shape "
+            f"({n_oscillators}, {n_oscillators}), got {base_k.shape}"
+        )
+
+    scenario = KuramotoSupervisorScenario(
+        phases=phases,
+        omegas=omegas,
+        base_K=base_k,
+        good_mask=good_mask,
+        bad_mask=bad_mask,
+        dt=_record_positive_float(record, "dt", index=index),
+        inner_steps=_record_positive_int(record, "inner_steps", index=index),
+        horizon=_record_positive_int(record, "horizon", index=index),
+    )
+    return scenario, _json_object(record.get("metadata"), "metadata")
+
+
+def _record_vector(
+    record: Mapping[str, Any],
+    field: str,
+    *,
+    index: int,
+    dtype: Any,
+) -> jax.Array:
+    value = _record_array(record, field, index=index, dtype=dtype)
+    if value.ndim != 1 or value.shape[0] <= 0:
+        raise ValueError(f"record {index} {field} must be a non-empty vector")
+    if field.endswith("_mask") and bool(jnp.any(value < 0.0)):
+        raise ValueError(f"record {index} {field} must be non-negative")
+    return value
+
+
+def _record_matrix(
+    record: Mapping[str, Any],
+    field: str,
+    *,
+    index: int,
+    dtype: Any,
+) -> jax.Array:
+    value = _record_array(record, field, index=index, dtype=dtype)
+    if value.ndim != 2:
+        raise ValueError(f"record {index} {field} must be a matrix")
+    return value
+
+
+def _record_array(
+    record: Mapping[str, Any],
+    field: str,
+    *,
+    index: int,
+    dtype: Any,
+) -> jax.Array:
+    if field not in record:
+        raise ValueError(f"record {index} missing required field {field}")
+    value = jnp.asarray(record[field], dtype=dtype)
+    if not bool(jnp.all(jnp.isfinite(value))):
+        raise ValueError(f"record {index} {field} must contain only finite values")
+    return value
+
+
+def _record_positive_float(
+    record: Mapping[str, Any],
+    field: str,
+    *,
+    index: int,
+) -> float:
+    if field not in record:
+        raise ValueError(f"record {index} missing required field {field}")
+    try:
+        return _positive_float(record[field], f"record {index} {field}")
+    except ValueError as exc:
+        raise ValueError(f"record {index} {field} must be finite and positive") from exc
+
+
+def _record_positive_int(
+    record: Mapping[str, Any],
+    field: str,
+    *,
+    index: int,
+) -> int:
+    if field not in record:
+        raise ValueError(f"record {index} missing required field {field}")
+    try:
+        return _positive_int(record[field], f"record {index} {field}")
+    except ValueError as exc:
+        raise ValueError(f"record {index} {field} must be a positive integer") from exc
+
+
 def _global_l2_norm(values: Any) -> jax.Array:
     leaves = jax.tree.leaves(values)
     if not leaves:
@@ -1194,7 +1347,10 @@ def _json_object(value: object, field: str) -> dict[str, Any]:
         return {}
     if not isinstance(value, dict):
         raise ValueError(f"{field} must be a JSON object")
-    json.dumps(value, sort_keys=True, allow_nan=False)
+    try:
+        json.dumps(value, sort_keys=True, allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} must be JSON serialisable") from exc
     return dict(value)
 
 

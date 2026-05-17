@@ -24,7 +24,9 @@ from scpn_phase_orchestrator.nn.supervisor import (
     KuramotoSupervisorScenario,
     SupervisorPPOBatch,
     SupervisorPPORollout,
+    SupervisorScenarioCorpus,
     apply_supervisor_action,
+    build_supervisor_scenario_corpus,
     closed_loop_supervisor_loss,
     collect_supervisor_rollouts,
     control_actions_from_supervisor,
@@ -666,3 +668,84 @@ def test_ppo_value_loss_uses_optional_value_clipping() -> None:
     assert jnp.isfinite(unclipped_aux.value_loss)
     assert jnp.isfinite(clipped_aux.value_loss)
     assert float(clipped_aux.value_loss) >= float(unclipped_aux.value_loss)
+
+
+def test_supervisor_scenario_corpus_converts_replay_records() -> None:
+    records = [
+        {
+            "phases": [0.0, 0.1, 2.7, 3.1],
+            "omegas": [0.04, 0.03, -0.03, -0.04],
+            "base_K": [
+                [0.0, 0.03, 0.03, 0.03],
+                [0.03, 0.0, 0.03, 0.03],
+                [0.03, 0.03, 0.0, 0.03],
+                [0.03, 0.03, 0.03, 0.0],
+            ],
+            "good_mask": [1.0, 1.0, 0.0, 0.0],
+            "bad_mask": [0.0, 0.0, 1.0, 1.0],
+            "dt": 0.02,
+            "inner_steps": 4,
+            "horizon": 3,
+            "metadata": {"source": "unit-replay", "stream_id": "fixture-1"},
+        },
+        {
+            "phases": np.array([0.2, 0.0, 2.9, 3.0]),
+            "omegas": np.array([0.05, 0.02, -0.02, -0.05]),
+            "base_K": np.full((4, 4), 0.02) - np.eye(4) * 0.02,
+            "good_mask": np.array([1.0, 1.0, 0.0, 0.0]),
+            "bad_mask": np.array([0.0, 0.0, 1.0, 1.0]),
+            "dt": 0.02,
+            "inner_steps": 4,
+            "horizon": 3,
+        },
+    ]
+
+    corpus = build_supervisor_scenario_corpus(records)
+
+    assert isinstance(corpus, SupervisorScenarioCorpus)
+    assert len(corpus.scenarios) == 2
+    assert corpus.metadata == (
+        {"source": "unit-replay", "stream_id": "fixture-1"},
+        {},
+    )
+    scenario = corpus.scenarios[0]
+    assert isinstance(scenario, KuramotoSupervisorScenario)
+    assert scenario.phases.shape == (4,)
+    assert scenario.omegas.shape == (4,)
+    assert scenario.base_K.shape == (4, 4)
+    assert scenario.good_mask.shape == (4,)
+    assert scenario.bad_mask.shape == (4,)
+    assert scenario.dt == 0.02
+    assert scenario.inner_steps == 4
+    assert scenario.horizon == 3
+    assert jnp.issubdtype(scenario.phases.dtype, jnp.floating)
+    assert jnp.all(jnp.isfinite(scenario.phases))
+    assert jnp.all(jnp.isfinite(scenario.base_K))
+
+
+def test_supervisor_scenario_corpus_rejects_malformed_records() -> None:
+    with pytest.raises(ValueError, match="at least one record"):
+        build_supervisor_scenario_corpus([])
+
+    valid = {
+        "phases": [0.0, 0.1],
+        "omegas": [0.04, 0.03],
+        "base_K": [[0.0, 0.03], [0.03, 0.0]],
+        "good_mask": [1.0, 0.0],
+        "bad_mask": [0.0, 1.0],
+        "dt": 0.02,
+        "inner_steps": 4,
+        "horizon": 3,
+    }
+
+    bad_shape = dict(valid, base_K=[[0.0, 0.03]])
+    with pytest.raises(ValueError, match="base_K"):
+        build_supervisor_scenario_corpus([bad_shape])
+
+    bad_mask = dict(valid, good_mask=[0.0, 0.0])
+    with pytest.raises(ValueError, match="good_mask"):
+        build_supervisor_scenario_corpus([bad_mask])
+
+    bad_metadata = dict(valid, metadata={"bad": np.array([1.0])})
+    with pytest.raises(ValueError, match="metadata"):
+        build_supervisor_scenario_corpus([bad_metadata])
