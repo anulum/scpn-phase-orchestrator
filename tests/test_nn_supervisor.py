@@ -48,6 +48,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorReplayComparison,
     SupervisorReplayProposal,
     SupervisorScenarioCorpus,
+    SupervisorStaticBaselineComparison,
     apply_supervisor_action,
     build_supervisor_corpus_replay_proposals,
     build_supervisor_replay_proposal,
@@ -56,6 +57,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     collect_supervisor_corpus_rollouts,
     collect_supervisor_rollouts,
     compare_supervisor_replay_proposal,
+    compare_supervisor_static_baseline,
     control_actions_from_supervisor,
     load_supervisor_ppo_checkpoint,
     pack_supervisor_action,
@@ -1410,6 +1412,41 @@ def test_supervisor_replay_comparison_records_adaptive_replay_refinement() -> No
     assert record["metrics"]["replay_config_iterations"] == 2.0
     assert record["metrics"]["replay_selected_reward"] > 0.0
     json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_static_baseline_comparison_is_auditable_and_non_actuating() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(75))
+
+    comparison = compare_supervisor_static_baseline(
+        policy,
+        _scenario(),
+        comparison_label="unit-static-baseline",
+    )
+    record = comparison.to_audit_record()
+
+    assert isinstance(comparison, SupervisorStaticBaselineComparison)
+    assert comparison.actuation_permitted is False
+    assert record["proposal_type"] == "differentiable_supervisor_static_baseline"
+    assert record["comparison_label"] == "unit-static-baseline"
+    assert record["actuation_permitted"] is False
+    assert record["scenario_summary"]["n_oscillators"] == 4
+    assert record["baseline"]["name"] == "static_zero_action"
+    assert record["supervisor"]["name"] == "differentiable_supervisor"
+    assert record["metrics"]["baseline_safety_violations"] == 0.0
+    assert record["metrics"]["supervisor_safety_violations"] == 0.0
+    assert record["metrics"]["baseline_wall_time_s"] >= 0.0
+    assert record["metrics"]["supervisor_wall_time_s"] >= 0.0
+    assert "delta_reward" in record["metrics"]
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_static_baseline_comparison_rejects_empty_label() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(76))
+
+    with pytest.raises(ValueError, match="comparison_label"):
+        compare_supervisor_static_baseline(policy, _scenario(), comparison_label="")
 
 
 def test_supervisor_replay_comparison_rejects_non_audit_replay_inputs() -> None:

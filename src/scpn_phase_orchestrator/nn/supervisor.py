@@ -18,6 +18,7 @@ interlocks remain outside the gradient path.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from math import isfinite
@@ -52,6 +53,7 @@ __all__ = [
     "SupervisorReplayComparison",
     "SupervisorReplayProposal",
     "SupervisorScenarioCorpus",
+    "SupervisorStaticBaselineComparison",
     "masked_order_parameter",
     "apply_supervisor_action",
     "closed_loop_supervisor_loss",
@@ -65,6 +67,7 @@ __all__ = [
     "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
     "compare_supervisor_replay_proposal",
+    "compare_supervisor_static_baseline",
     "ppo_supervisor_loss",
     "ppo_supervisor_train_step",
     "ppo_supervisor_train_epochs",
@@ -190,6 +193,32 @@ class SupervisorReplayComparison(NamedTuple):
                 "metrics": dict(self.metrics),
             },
             "supervisor_replay_comparison",
+        )
+
+
+class SupervisorStaticBaselineComparison(NamedTuple):
+    """Audit-only comparison against a static zero-action supervisor baseline."""
+
+    baseline: dict[str, Any]
+    supervisor: dict[str, Any]
+    scenario_summary: dict[str, Any]
+    comparison_label: str
+    metrics: dict[str, float]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable static-baseline comparison record."""
+        return _json_object(
+            {
+                "proposal_type": "differentiable_supervisor_static_baseline",
+                "actuation_permitted": self.actuation_permitted,
+                "comparison_label": self.comparison_label,
+                "scenario_summary": dict(self.scenario_summary),
+                "baseline": dict(self.baseline),
+                "supervisor": dict(self.supervisor),
+                "metrics": dict(self.metrics),
+            },
+            "supervisor_static_baseline_comparison",
         )
 
 
@@ -762,6 +791,53 @@ def compare_supervisor_replay_proposal(
     return SupervisorReplayComparison(
         supervisor=supervisor_record,
         replay_policy_search=replay_record,
+        comparison_label=comparison_label,
+        metrics=metrics,
+        actuation_permitted=False,
+    )
+
+
+def compare_supervisor_static_baseline(
+    policy: DifferentiableSupervisorPolicy,
+    scenario: KuramotoSupervisorScenario,
+    *,
+    comparison_label: str = "static_zero_action",
+) -> SupervisorStaticBaselineComparison:
+    """Compare one deterministic supervisor proposal against zero-action control.
+
+    This is a benchmark/audit primitive only. It runs both candidates on the
+    same scenario and records scalar metrics without returning actuation
+    objects or enabling any live adapter handoff.
+    """
+    if not comparison_label:
+        raise ValueError("comparison_label must not be empty")
+    zero_action = SupervisorAction(
+        delta_K_global=jnp.array(0.0),
+        delta_zeta_global=jnp.array(0.0),
+        delta_K_layers=jnp.zeros(policy.config.n_layer_controls),
+        value_estimate=jnp.array(0.0),
+    )
+    baseline_record = _rollout_static_supervisor_action(
+        "static_zero_action",
+        zero_action,
+        scenario,
+        policy.config,
+    )
+    supervisor_record = _rollout_static_supervisor_action(
+        "differentiable_supervisor",
+        policy(scenario),
+        scenario,
+        policy.config,
+    )
+    baseline_metrics = _mapping_value(baseline_record, "metrics")
+    supervisor_metrics = _mapping_value(supervisor_record, "metrics")
+    metrics = _prefixed_float_metrics("baseline", baseline_metrics)
+    metrics.update(_prefixed_float_metrics("supervisor", supervisor_metrics))
+    metrics["delta_reward"] = metrics["supervisor_reward"] - metrics["baseline_reward"]
+    return SupervisorStaticBaselineComparison(
+        baseline=baseline_record,
+        supervisor=supervisor_record,
+        scenario_summary=_supervisor_scenario_summary(scenario),
         comparison_label=comparison_label,
         metrics=metrics,
         actuation_permitted=False,
@@ -1997,6 +2073,72 @@ def _replay_round_candidate_count(round_record: object) -> int:
     if not isinstance(candidates, list):
         raise ValueError("adaptive replay round candidates must be a list")
     return len(candidates)
+
+
+def _rollout_static_supervisor_action(
+    name: str,
+    action: SupervisorAction,
+    scenario: KuramotoSupervisorScenario,
+    config: DifferentiableSupervisorConfig,
+) -> dict[str, Any]:
+    started = time.perf_counter()
+    controlled_K = apply_supervisor_action(scenario.base_K, action, scenario)
+    final_phases, _ = kuramoto_forward(
+        scenario.phases,
+        scenario.omegas,
+        controlled_K,
+        scenario.dt,
+        scenario.inner_steps * scenario.horizon,
+    )
+    elapsed = time.perf_counter() - started
+    final_R_good = float(masked_order_parameter(final_phases, scenario.good_mask))
+    final_R_bad = float(masked_order_parameter(final_phases, scenario.bad_mask))
+    control_energy = float(_control_energy(action))
+    reward = (
+        final_R_good
+        - config.bad_sync_weight * final_R_bad
+        - config.control_energy_weight * control_energy
+    )
+    bound_penalty = float(supervisor_action_bound_penalty(action, config))
+    return _json_object(
+        {
+            "name": name,
+            "action": _supervisor_action_to_record(action),
+            "metrics": {
+                "final_R_good": final_R_good,
+                "final_R_bad": final_R_bad,
+                "reward": reward,
+                "control_energy": control_energy,
+                "smoothness": 0.0,
+                "safety_violations": 1.0 if bound_penalty > 0.0 else 0.0,
+                "wall_time_s": elapsed,
+            },
+        },
+        f"{name} baseline record",
+    )
+
+
+def _supervisor_scenario_summary(
+    scenario: KuramotoSupervisorScenario,
+) -> dict[str, Any]:
+    return {
+        "n_oscillators": int(scenario.phases.shape[0]),
+        "dt": float(scenario.dt),
+        "inner_steps": int(scenario.inner_steps),
+        "horizon": int(scenario.horizon),
+    }
+
+
+def _prefixed_float_metrics(
+    prefix: str,
+    metrics: Mapping[str, Any],
+) -> dict[str, float]:
+    prefixed: dict[str, float] = {}
+    for key, value in metrics.items():
+        if not _is_finite_number(value):
+            raise ValueError(f"{prefix} metric {key} must be finite")
+        prefixed[f"{prefix}_{key}"] = float(value)
+    return prefixed
 
 
 def _mapping_value(value: Mapping[str, Any], key: str) -> Mapping[str, Any]:
