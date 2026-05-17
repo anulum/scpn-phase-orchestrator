@@ -1716,6 +1716,78 @@ def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
     }
 
 
+def test_supervisor_baseline_experiment_records_existing_artifact_manifests(
+    runner, tmp_path
+):
+    metrics_path = tmp_path / "supervisor_metrics.jsonl"
+    summary_path = tmp_path / "supervisor_summary.json"
+    checkpoint_manifest = tmp_path / "checkpoint_manifest.json"
+    plot_manifest = tmp_path / "plot_manifest.json"
+    checkpoint_manifest.write_text(
+        json.dumps({"proposal_type": "checkpoint_manifest", "checkpoints": []}),
+        encoding="utf-8",
+    )
+    plot_manifest.write_text(
+        json.dumps({"proposal_type": "plot_manifest", "plots": []}),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "supervisor-baseline-experiment",
+            "--metrics-jsonl",
+            str(metrics_path),
+            "--summary-json",
+            str(summary_path),
+            "--checkpoint-manifest",
+            str(checkpoint_manifest),
+            "--plot-manifest",
+            str(plot_manifest),
+            "--git-sha",
+            "abc1234",
+            "--seed",
+            "91",
+            "--dependency-lock",
+            "requirements-dev.txt:sha256:test",
+            "--json-out",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    stdout_record = json.loads(result.output)
+    assert stdout_record["artifacts"]["checkpoint_manifest_path"] == str(
+        checkpoint_manifest
+    )
+    assert stdout_record["artifacts"]["plot_manifest_path"] == str(plot_manifest)
+
+
+def test_supervisor_baseline_experiment_rejects_missing_artifact_manifests(
+    runner, tmp_path
+):
+    result = runner.invoke(
+        main,
+        [
+            "supervisor-baseline-experiment",
+            "--metrics-jsonl",
+            str(tmp_path / "supervisor_metrics.jsonl"),
+            "--summary-json",
+            str(tmp_path / "supervisor_summary.json"),
+            "--checkpoint-manifest",
+            str(tmp_path / "missing_checkpoint_manifest.json"),
+            "--git-sha",
+            "abc1234",
+            "--seed",
+            "91",
+            "--dependency-lock",
+            "requirements-dev.txt:sha256:test",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid value for '--checkpoint-manifest'" in result.output
+
+
 # Pipeline wiring: CLI tested via CliRunner invoking validate/run/replay/report/scaffold
 # commands which wrap SimulationState -> engine -> order_parameter -> policy.
 # TestCliCommands (above) proves full E2E.

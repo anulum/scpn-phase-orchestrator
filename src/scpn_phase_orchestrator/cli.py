@@ -537,6 +537,18 @@ def _write_json_file(path: Path, payload: object) -> None:
     type=click.Path(dir_okay=False, path_type=Path),
     help="Optional path for the reproducibility manifest JSON.",
 )
+@click.option(
+    "--checkpoint-manifest",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Existing checkpoint manifest JSON to reference in reproducibility output.",
+)
+@click.option(
+    "--plot-manifest",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Existing plot manifest JSON to reference in reproducibility output.",
+)
 @click.option("--git-sha", required=True, help="Git revision used for this run.")
 @click.option(
     "--seed",
@@ -560,6 +572,8 @@ def supervisor_baseline_experiment(
     metrics_jsonl: Path,
     summary_json: Path,
     manifest_json: Path | None,
+    checkpoint_manifest: Path | None,
+    plot_manifest: Path | None,
     git_sha: str,
     seeds: tuple[int, ...],
     dependency_locks: tuple[str, ...],
@@ -654,6 +668,10 @@ def supervisor_baseline_experiment(
         seed_list=seeds,
         metrics_jsonl_path=str(metrics_jsonl),
         summary_table_path=str(summary_json),
+        checkpoint_manifest_path=(
+            str(checkpoint_manifest) if checkpoint_manifest is not None else None
+        ),
+        plot_manifest_path=str(plot_manifest) if plot_manifest is not None else None,
     )
     manifest_record = manifest.to_audit_record()
 
