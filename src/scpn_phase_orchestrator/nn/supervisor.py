@@ -56,6 +56,7 @@ __all__ = [
     "SupervisorPPOCheckpoint",
     "SupervisorPPOTrainResult",
     "SupervisorHandTunedBaselineComparison",
+    "SupervisorLearnerProposalComparison",
     "SupervisorRandomBaselineComparison",
     "SupervisorReplayComparison",
     "SupervisorReplayProposal",
@@ -75,6 +76,7 @@ __all__ = [
     "build_supervisor_corpus_replay_proposals",
     "build_supervisor_replay_proposal",
     "compare_supervisor_hand_tuned_baseline",
+    "compare_supervisor_learner_proposals",
     "compare_supervisor_random_baseline",
     "compare_supervisor_replay_proposal",
     "compare_supervisor_static_baseline",
@@ -225,6 +227,32 @@ class SupervisorReplayComparison(NamedTuple):
                 "metrics": dict(self.metrics),
             },
             "supervisor_replay_comparison",
+        )
+
+
+class SupervisorLearnerProposalComparison(NamedTuple):
+    """Audit-only comparison against learner-shaped autotune proposal records."""
+
+    supervisor: dict[str, Any]
+    learner_proposals: tuple[dict[str, Any], ...]
+    comparison_label: str
+    metrics: dict[str, float]
+    actuation_permitted: bool = False
+
+    def to_audit_record(self) -> dict[str, Any]:
+        """Return a JSON-serialisable learner-proposal comparison record."""
+        return _json_object(
+            {
+                "proposal_type": "differentiable_supervisor_learner_comparison",
+                "actuation_permitted": self.actuation_permitted,
+                "comparison_label": self.comparison_label,
+                "supervisor": dict(self.supervisor),
+                "learner_proposals": [
+                    dict(proposal) for proposal in self.learner_proposals
+                ],
+                "metrics": dict(self.metrics),
+            },
+            "supervisor_learner_proposal_comparison",
         )
 
 
@@ -899,6 +927,34 @@ def compare_supervisor_replay_proposal(
         replay_policy_search=replay_record,
         comparison_label=comparison_label,
         metrics=metrics,
+        actuation_permitted=False,
+    )
+
+
+def compare_supervisor_learner_proposals(
+    supervisor_proposal: SupervisorReplayProposal | SupervisorCorpusReplayProposals,
+    learner_proposals: Iterable[Any],
+    *,
+    comparison_label: str = "learner_proposal_generators",
+) -> SupervisorLearnerProposalComparison:
+    """Compare supervisor replay output with replay-only autotune learner proposals."""
+    if not comparison_label:
+        raise ValueError("comparison_label must not be empty")
+    supervisor_record = _json_object(
+        supervisor_proposal.to_audit_record(),
+        "supervisor proposal audit record",
+    )
+    learner_records = tuple(
+        _learner_proposal_record_from_object(proposal, f"learner proposal {index}")
+        for index, proposal in enumerate(learner_proposals)
+    )
+    if not learner_records:
+        raise ValueError("learner comparison requires at least one learner proposal")
+    return SupervisorLearnerProposalComparison(
+        supervisor=supervisor_record,
+        learner_proposals=learner_records,
+        comparison_label=comparison_label,
+        metrics=_learner_proposal_comparison_metrics(learner_records),
         actuation_permitted=False,
     )
 
@@ -2196,6 +2252,47 @@ def _comparison_record_from_object(value: Any, field: str) -> dict[str, Any]:
     ):
         raise ValueError(f"{field} is not a supervisor comparison record")
     return record
+
+
+def _learner_proposal_record_from_object(value: Any, field: str) -> dict[str, Any]:
+    record = _audit_record_from_object(value, field)
+    if record.get("actuation_permitted") is not False:
+        raise ValueError(f"{field} must be non-actuating")
+    learner_kind = record.get("learner_kind")
+    if not isinstance(learner_kind, str) or not learner_kind.endswith("_replay"):
+        raise ValueError(f"{field} must be a replay learner proposal")
+    if not isinstance(record.get("policy_search"), dict):
+        raise ValueError(f"{field} must include policy_search")
+    return record
+
+
+def _learner_proposal_comparison_metrics(
+    records: tuple[dict[str, Any], ...],
+) -> dict[str, float]:
+    accepted_count = 0.0
+    selected_rewards = []
+    for record in records:
+        policy_search = _mapping_value(record, "policy_search")
+        proposal = policy_search.get("proposal")
+        if isinstance(proposal, dict):
+            if proposal.get("accepted") is True:
+                accepted_count += 1.0
+            selected = proposal.get("selected")
+            if isinstance(selected, dict):
+                reward = selected.get("reward")
+                if _is_finite_number(reward):
+                    selected_rewards.append(float(reward))
+    metrics = {
+        "learner_proposal_count": float(len(records)),
+        "accepted_learner_count": accepted_count,
+        "rejected_learner_count": float(len(records)) - accepted_count,
+    }
+    if selected_rewards:
+        metrics["best_learner_selected_reward"] = max(selected_rewards)
+        metrics["mean_learner_selected_reward"] = sum(selected_rewards) / len(
+            selected_rewards
+        )
+    return metrics
 
 
 def _baseline_report_summary(

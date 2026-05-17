@@ -19,6 +19,11 @@ eqx = pytest.importorskip("equinox")
 optax = pytest.importorskip("optax")
 
 from scpn_phase_orchestrator.actuation.mapper import ActuationMapper
+from scpn_phase_orchestrator.autotune.learners import (
+    generate_hybrid_physics_proposal,
+    generate_ppo_like_proposal,
+    generate_sac_like_proposal,
+)
 from scpn_phase_orchestrator.autotune.policy_search import (
     AdaptiveReplayPolicySearchConfig,
     AdaptiveReplayPolicySearchResult,
@@ -45,6 +50,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     SupervisorBaselineReport,
     SupervisorCorpusReplayProposals,
     SupervisorHandTunedBaselineComparison,
+    SupervisorLearnerProposalComparison,
     SupervisorPPOBatch,
     SupervisorPPOCorpusRollout,
     SupervisorPPORollout,
@@ -62,6 +68,7 @@ from scpn_phase_orchestrator.nn.supervisor import (
     collect_supervisor_corpus_rollouts,
     collect_supervisor_rollouts,
     compare_supervisor_hand_tuned_baseline,
+    compare_supervisor_learner_proposals,
     compare_supervisor_random_baseline,
     compare_supervisor_replay_proposal,
     compare_supervisor_static_baseline,
@@ -1599,6 +1606,70 @@ def test_supervisor_baseline_report_rejects_empty_inputs() -> None:
     comparison = compare_supervisor_static_baseline(policy, _scenario())
     with pytest.raises(ValueError, match="report_label"):
         build_supervisor_baseline_report((comparison,), report_label="")
+
+
+def _learner_observation(candidate: KnobPolicyCandidate) -> RewardObservation:
+    return RewardObservation(
+        coherence=0.84,
+        previous_coherence=0.72,
+        unsafe=False,
+        regime_changed=False,
+    )
+
+
+def test_supervisor_learner_proposal_comparison_aggregates_generators() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(86))
+    supervisor_proposal = build_supervisor_replay_proposal(policy, _scenario())
+    seed = KnobPolicyCandidate(K=0.1, alpha=0.0, zeta=0.0, Psi=0.0)
+
+    comparison = compare_supervisor_learner_proposals(
+        supervisor_proposal,
+        (
+            generate_ppo_like_proposal(seed, _learner_observation, seed_value=1),
+            generate_sac_like_proposal(seed, _learner_observation, seed_value=2),
+            generate_hybrid_physics_proposal(
+                seed,
+                _learner_observation,
+                critical_coupling_estimate=1.2,
+                seed_value=3,
+            ),
+        ),
+        comparison_label="unit-learner-generators",
+    )
+    record = comparison.to_audit_record()
+
+    assert isinstance(comparison, SupervisorLearnerProposalComparison)
+    assert comparison.actuation_permitted is False
+    assert record["proposal_type"] == "differentiable_supervisor_learner_comparison"
+    assert record["comparison_label"] == "unit-learner-generators"
+    assert record["supervisor"]["actuation_permitted"] is False
+    assert [item["learner_kind"] for item in record["learner_proposals"]] == [
+        "ppo_like_replay",
+        "sac_like_replay",
+        "hybrid_physics_replay",
+    ]
+    assert record["metrics"]["learner_proposal_count"] == 3.0
+    assert record["metrics"]["accepted_learner_count"] == 3.0
+    assert record["metrics"]["rejected_learner_count"] == 0.0
+    assert "best_learner_selected_reward" in record["metrics"]
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_supervisor_learner_proposal_comparison_rejects_empty_inputs() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(87))
+    supervisor_proposal = build_supervisor_replay_proposal(policy, _scenario())
+
+    with pytest.raises(ValueError, match="at least one learner"):
+        compare_supervisor_learner_proposals(supervisor_proposal, ())
+
+    with pytest.raises(ValueError, match="comparison_label"):
+        compare_supervisor_learner_proposals(
+            supervisor_proposal,
+            (_replay_search_result(),),
+            comparison_label="",
+        )
 
 
 def test_supervisor_replay_comparison_rejects_non_audit_replay_inputs() -> None:
