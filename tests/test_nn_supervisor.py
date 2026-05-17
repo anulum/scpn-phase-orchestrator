@@ -726,6 +726,34 @@ def test_project_supervisor_action_for_audit_clips_bounds_rate_ttl_and_layers() 
     assert all(control["clipped"] for control in controls)
 
 
+def test_project_supervisor_action_for_audit_rejects_regime_churn() -> None:
+    config = DifferentiableSupervisorConfig(n_oscillators=4)
+    proposal = SupervisorAction(
+        delta_K_global=jnp.array(0.02),
+        delta_zeta_global=jnp.array(-0.03),
+        delta_K_layers=jnp.array([0.01, -0.01]),
+        value_estimate=jnp.array(0.5),
+    )
+
+    projection = project_supervisor_action_for_audit(
+        proposal,
+        config,
+        regime_churn_score=0.75,
+        max_regime_churn=0.25,
+    )
+
+    assert projection.audit_record["rejected"] is True
+    assert projection.audit_record["rejection_reasons"] == ["regime_churn"]
+    assert projection.audit_record["constraints"]["regime_churn_score"] == 0.75
+    assert projection.audit_record["constraints"]["max_regime_churn"] == 0.25
+    assert float(projection.action.delta_K_global) == 0.0
+    assert float(projection.action.delta_zeta_global) == 0.0
+    np.testing.assert_allclose(projection.action.delta_K_layers, jnp.zeros(2))
+    assert all(
+        control["projected"] == 0.0 for control in projection.audit_record["controls"]
+    )
+
+
 def test_project_supervisor_action_for_audit_rejects_invalid_constraints() -> None:
     config = DifferentiableSupervisorConfig(n_oscillators=4)
     action = SupervisorAction(
@@ -743,6 +771,12 @@ def test_project_supervisor_action_for_audit_rejects_invalid_constraints() -> No
 
     with pytest.raises(ValueError, match="rate_limit_fraction"):
         project_supervisor_action_for_audit(action, config, rate_limit_fraction=-0.1)
+
+    with pytest.raises(ValueError, match="regime_churn_score"):
+        project_supervisor_action_for_audit(action, config, regime_churn_score=-0.1)
+
+    with pytest.raises(ValueError, match="max_regime_churn"):
+        project_supervisor_action_for_audit(action, config, max_regime_churn=0.0)
 
 
 def test_build_supervisor_replay_proposal_is_auditable_and_non_actuating() -> None:

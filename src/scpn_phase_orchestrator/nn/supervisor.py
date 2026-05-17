@@ -510,6 +510,8 @@ def project_supervisor_action_for_audit(
     max_ttl_s: float = 5.0,
     rate_limit_fraction: float = 1.0,
     include_layer_actions: bool = True,
+    regime_churn_score: float | None = None,
+    max_regime_churn: float | None = None,
 ) -> SupervisorActionProjection:
     """Project a neural proposal into replay-safe bounds with audit metadata.
 
@@ -523,6 +525,13 @@ def project_supervisor_action_for_audit(
         rate_limit_fraction,
         "rate_limit_fraction",
     )
+    if regime_churn_score is not None:
+        regime_churn_score = _non_negative_float(
+            regime_churn_score,
+            "regime_churn_score",
+        )
+    if max_regime_churn is not None:
+        max_regime_churn = _positive_float(max_regime_churn, "max_regime_churn")
     projected_ttl = min(ttl_s, max_ttl_s)
     bounds = _action_bounds(config)
     proposed_values = pack_supervisor_action(action)
@@ -538,6 +547,15 @@ def project_supervisor_action_for_audit(
 
     if not include_layer_actions:
         rate_limited_values = rate_limited_values.at[2:].set(0.0)
+
+    rejection_reasons: list[str] = []
+    if (
+        regime_churn_score is not None
+        and max_regime_churn is not None
+        and regime_churn_score > max_regime_churn
+    ):
+        rejection_reasons.append("regime_churn")
+        rate_limited_values = jnp.zeros_like(rate_limited_values)
 
     projected_action = unpack_supervisor_action(
         rate_limited_values,
@@ -555,6 +573,8 @@ def project_supervisor_action_for_audit(
     audit_record = {
         "proposal_type": "differentiable_supervisor_action_projection",
         "non_actuating": True,
+        "rejected": bool(rejection_reasons),
+        "rejection_reasons": rejection_reasons,
         "clipped": clipped,
         "ttl_s": projected_ttl,
         "requested_ttl_s": ttl_s,
@@ -563,6 +583,8 @@ def project_supervisor_action_for_audit(
             "rate_limit_fraction": rate_limit_fraction,
             "include_layer_actions": include_layer_actions,
             "previous_action": previous_action is not None,
+            "regime_churn_score": regime_churn_score,
+            "max_regime_churn": max_regime_churn,
         },
         "controls": controls,
     }
@@ -583,6 +605,8 @@ def build_supervisor_replay_proposal(
     max_ttl_s: float = 5.0,
     rate_limit_fraction: float = 1.0,
     include_layer_actions: bool = True,
+    regime_churn_score: float | None = None,
+    max_regime_churn: float | None = None,
 ) -> SupervisorReplayProposal:
     """Build a deterministic replay-only proposal from a neural supervisor.
 
@@ -601,6 +625,8 @@ def build_supervisor_replay_proposal(
         max_ttl_s=max_ttl_s,
         rate_limit_fraction=rate_limit_fraction,
         include_layer_actions=include_layer_actions,
+        regime_churn_score=regime_churn_score,
+        max_regime_churn=max_regime_churn,
     )
     metrics = {
         "current_R_global": float(order_parameter(scenario.phases)),
@@ -638,17 +664,26 @@ def build_supervisor_corpus_replay_proposals(
     max_ttl_s: float = 5.0,
     rate_limit_fraction: float = 1.0,
     include_layer_actions: bool = True,
+    regime_churn_scores: tuple[float, ...] | None = None,
+    max_regime_churn: float | None = None,
 ) -> SupervisorCorpusReplayProposals:
     """Build deterministic replay-only proposals for every corpus scenario."""
     if not corpus.scenarios:
         raise ValueError("scenario corpus requires at least one scenario")
     if len(corpus.metadata) != len(corpus.scenarios):
         raise ValueError("scenario corpus metadata must match scenario count")
+    if regime_churn_scores is not None and len(regime_churn_scores) != len(
+        corpus.scenarios
+    ):
+        raise ValueError("regime_churn_scores must match scenario count")
 
     proposals = []
     for index, (scenario, metadata) in enumerate(
         zip(corpus.scenarios, corpus.metadata, strict=True)
     ):
+        regime_churn_score = (
+            None if regime_churn_scores is None else regime_churn_scores[index]
+        )
         proposal_metadata = _json_object(
             {**metadata, "corpus_index": index},
             f"corpus metadata {index}",
@@ -663,6 +698,8 @@ def build_supervisor_corpus_replay_proposals(
                 max_ttl_s=max_ttl_s,
                 rate_limit_fraction=rate_limit_fraction,
                 include_layer_actions=include_layer_actions,
+                regime_churn_score=regime_churn_score,
+                max_regime_churn=max_regime_churn,
             )
         )
     return SupervisorCorpusReplayProposals(
