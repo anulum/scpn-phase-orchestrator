@@ -102,6 +102,26 @@ class TestUpdateLocalState:
         assert node._local_R == 0.9
         assert node._local_psi == 1.23
 
+    @pytest.mark.parametrize(
+        ("r_value", "psi"),
+        [
+            (-0.1, 0.0),
+            (1.1, 0.0),
+            (np.nan, 0.0),
+            (True, 0.0),
+            (0.5, np.inf),
+            (0.5, True),
+        ],
+    )
+    def test_rejects_invalid_local_state(
+        self,
+        node: GaianMeshNode,
+        r_value: object,
+        psi: object,
+    ) -> None:
+        with pytest.raises(ValueError, match="R|psi"):
+            node.update_local_state(R=r_value, psi=psi)  # type: ignore[arg-type]
+
 
 class TestComputeMeshDrive:
     def test_no_peers_returns_zero(self, node: GaianMeshNode) -> None:
@@ -152,6 +172,29 @@ class TestComputeMeshDrive:
         )
         _, psi = node.compute_mesh_drive()
         assert psi >= 0.0
+
+    @pytest.mark.parametrize(
+        "peer",
+        [
+            PeerState(node_id="", R=1.0, psi=0.0, timestamp=0.0),
+            PeerState(node_id="bad-r", R=np.nan, psi=0.0, timestamp=0.0),
+            PeerState(node_id="bad-r-high", R=1.1, psi=0.0, timestamp=0.0),
+            PeerState(node_id="bad-psi", R=1.0, psi=np.inf, timestamp=0.0),
+            PeerState(node_id="bad-time", R=1.0, psi=0.0, timestamp=np.nan),
+        ],
+    )
+    def test_invalid_peer_state_is_ignored(
+        self,
+        node: GaianMeshNode,
+        peer: PeerState,
+    ) -> None:
+        peer.timestamp = time.time() if np.isfinite(peer.timestamp) else peer.timestamp
+        node._peers["bad"] = peer
+
+        zeta, psi = node.compute_mesh_drive()
+
+        assert zeta == 0.0
+        assert psi == 0.0
 
 
 class TestStartStop:

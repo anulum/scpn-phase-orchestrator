@@ -57,6 +57,36 @@ def _require_finite_real(
     return result
 
 
+def _require_unit_interval(value: object, *, field: str) -> float:
+    result = _require_finite_real(value, field=field, positive=False)
+    if result > 1.0:
+        raise ValueError(f"{field} must be in [0, 1]")
+    return result
+
+
+def _require_phase(value: object, *, field: str) -> float:
+    result = _require_finite_real(value, field=field, positive=False)
+    return result % (2.0 * np.pi)
+
+
+def _valid_peer_state(peer: PeerState, *, now: float, timeout_s: float) -> bool:
+    if not isinstance(peer.node_id, str) or not peer.node_id:
+        return False
+    if not isinstance(peer.R, Real) or isinstance(peer.R, bool):
+        return False
+    if not isinstance(peer.psi, Real) or isinstance(peer.psi, bool):
+        return False
+    if not isinstance(peer.timestamp, Real) or isinstance(peer.timestamp, bool):
+        return False
+    return (
+        isfinite(float(peer.R))
+        and 0.0 <= float(peer.R) <= 1.0
+        and isfinite(float(peer.psi))
+        and isfinite(float(peer.timestamp))
+        and (now - float(peer.timestamp)) < timeout_s
+    )
+
+
 def _validated_peer_addresses(
     peer_addresses: list[tuple[str, int]] | None,
 ) -> list[tuple[str, int]]:
@@ -160,8 +190,8 @@ class GaianMeshNode:
 
     def update_local_state(self, R: float, psi: float) -> None:
         """Update the local macro state to be broadcasted to peers."""
-        self._local_R = R
-        self._local_psi = psi
+        self._local_R = _require_unit_interval(R, field="R")
+        self._local_psi = _require_phase(psi, field="psi")
 
     def compute_mesh_drive(self) -> tuple[float, float]:
         """Compute the effective external drive (zeta, psi) from the mesh.
@@ -174,7 +204,9 @@ class GaianMeshNode:
 
         # Filter out stale peers
         active_peers = [
-            p for p in self._peers.values() if (now - p.timestamp) < self.peer_timeout_s
+            p
+            for p in self._peers.values()
+            if _valid_peer_state(p, now=now, timeout_s=self.peer_timeout_s)
         ]
 
         if not active_peers:
