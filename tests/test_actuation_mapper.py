@@ -144,6 +144,10 @@ class TestActionValidation:
 class TestActuationMapperEdgeCases:
     """Verify behaviour with empty or degenerate configurations."""
 
+    def test_rejects_malformed_actuator_mapping_entries(self):
+        with pytest.raises(ValueError, match="actuator_mappings"):
+            ActuationMapper([object()])
+
     def test_empty_mapper_produces_empty(self):
         mapper = ActuationMapper([])
         cmds = mapper.map_actions([_action("K", "global", 0.5)])

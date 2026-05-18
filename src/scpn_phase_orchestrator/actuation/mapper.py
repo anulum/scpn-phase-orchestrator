@@ -32,6 +32,8 @@ class ActuationMapper:
     def __init__(self, actuator_mappings: list[ActuatorMapping]):
         self._by_knob: dict[str, list[ActuatorMapping]] = {}
         for am in actuator_mappings:
+            if not isinstance(am, ActuatorMapping):
+                raise ValueError("actuator_mappings entries must be ActuatorMapping")
             self._by_knob.setdefault(am.knob, []).append(am)
 
     def map_actions(self, actions: list[ControlAction]) -> list[dict]:
