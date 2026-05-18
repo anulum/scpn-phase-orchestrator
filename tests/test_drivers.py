@@ -170,6 +170,20 @@ class TestInformationalDriver:
         with pytest.raises(ValueError, match="cadence_hz"):
             InformationalDriver(cadence_hz=cast(Any, cadence_hz))
 
+    @pytest.mark.parametrize(
+        "t_array",
+        [
+            np.array([0.0, float("nan")]),
+            np.array([0.0, float("inf")]),
+            np.array([True, False]),
+            np.array(["0.25"], dtype=object),
+        ],
+    )
+    def test_compute_batch_rejects_invalid_time_array(self, t_array: object):
+        drv = InformationalDriver(cadence_hz=1.0)
+        with pytest.raises(ValueError, match="t_array must be finite"):
+            drv.compute_batch(cast(Any, t_array))
+
     @pytest.mark.parametrize("t", [True, float("nan"), float("inf"), "0.25"])
     def test_compute_rejects_invalid_scalar_time(self, t: object):
         drv = InformationalDriver(cadence_hz=1.0)
