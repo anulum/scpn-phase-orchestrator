@@ -254,6 +254,18 @@ class TestPhaseWheel:
         data = json.loads(phase_wheel_json(phases, layer_names=["A", "B"]))
         assert data["oscillators"][0]["name"] == "A"
 
+    @pytest.mark.parametrize("layer_names", [["A"], ["A", "B", "C"]])
+    def test_rejects_layer_names_length_mismatch(self, layer_names: object):
+        phases = np.array([0.0, 1.0])
+        with pytest.raises(ValueError, match="layer_names length"):
+            phase_wheel_json(phases, layer_names=layer_names)
+
+    @pytest.mark.parametrize("layer_names", [["", "B"], ["A", True]])
+    def test_rejects_invalid_layer_names(self, layer_names: object):
+        phases = np.array([0.0, 1.0])
+        with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
+            phase_wheel_json(phases, layer_names=layer_names)
+
     @pytest.mark.parametrize(
         "phases",
         [

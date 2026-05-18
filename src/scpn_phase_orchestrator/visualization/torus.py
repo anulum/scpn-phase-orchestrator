@@ -51,6 +51,23 @@ def _validate_metric_values(
     return values
 
 
+def _validate_layer_names(
+    value: object,
+    *,
+    expected_length: int,
+) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError("layer_names must be a list of non-empty strings")
+    if len(value) != expected_length:
+        raise ValueError(
+            f"layer_names length must match phases length {expected_length}, "
+            f"got {len(value)}"
+        )
+    if any(not isinstance(item, str) or not item.strip() for item in value):
+        raise ValueError("layer_names must be non-empty strings")
+    return value
+
+
 def torus_points_json(
     phases: FloatArray,
     R_values: list[float] | None = None,
@@ -110,6 +127,8 @@ def phase_wheel_json(phases: FloatArray, layer_names: list[str] | None = None) -
     n = len(phases)
     if layer_names is None:
         layer_names = [f"L{i}" for i in range(n)]
+    else:
+        layer_names = _validate_layer_names(layer_names, expected_length=n)
 
     entries = []
     for i in range(n):
