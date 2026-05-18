@@ -33,6 +33,21 @@ class TestInit:
         assert bridge.target_channel == 3
         assert bridge.buffer_size_s == 5.0
 
+    @pytest.mark.parametrize("stream_name", ["", "bad\nstream", object()])
+    def test_rejects_invalid_stream_name(self, stream_name: object) -> None:
+        with pytest.raises(ValueError, match="stream_name"):
+            LSLBCIBridge(stream_name=stream_name)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("target_channel", [-1, True, 1.5, "0"])
+    def test_rejects_invalid_target_channel(self, target_channel: object) -> None:
+        with pytest.raises(ValueError, match="target_channel"):
+            LSLBCIBridge(target_channel=target_channel)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("buffer_size_s", [0.0, -1.0, True, float("nan"), "2.0"])
+    def test_rejects_invalid_buffer_size_s(self, buffer_size_s: object) -> None:
+        with pytest.raises(ValueError, match="buffer_size_s"):
+            LSLBCIBridge(buffer_size_s=buffer_size_s)  # type: ignore[arg-type]
+
     def test_initial_state(self) -> None:
         bridge = LSLBCIBridge()
         assert bridge._running is False

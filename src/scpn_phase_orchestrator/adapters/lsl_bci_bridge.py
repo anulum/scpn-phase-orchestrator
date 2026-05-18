@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import threading
+from math import isfinite
+from numbers import Integral, Real
 from typing import Any
 
 import numpy as np
@@ -23,6 +25,34 @@ except ImportError:
     HAS_LSL = False
 
 __all__ = ["LSLBCIBridge", "HAS_LSL"]
+
+
+def _validate_stream_name(stream_name: str) -> str:
+    if not isinstance(stream_name, str) or not stream_name:
+        raise ValueError("stream_name must be a non-empty string")
+    if any(ord(char) < 32 for char in stream_name):
+        raise ValueError("stream_name must not contain control characters")
+    return stream_name
+
+
+def _validate_target_channel(target_channel: int) -> int:
+    if isinstance(target_channel, bool) or not isinstance(target_channel, Integral):
+        raise ValueError("target_channel must be a non-negative integer")
+    channel = int(target_channel)
+    if channel < 0:
+        raise ValueError("target_channel must be a non-negative integer")
+    return channel
+
+
+def _validate_buffer_size_s(buffer_size_s: float) -> float:
+    if (
+        isinstance(buffer_size_s, bool)
+        or not isinstance(buffer_size_s, Real)
+        or not isfinite(float(buffer_size_s))
+        or float(buffer_size_s) <= 0.0
+    ):
+        raise ValueError("buffer_size_s must be a finite positive real value")
+    return float(buffer_size_s)
 
 
 class LSLBCIBridge:
@@ -45,9 +75,9 @@ class LSLBCIBridge:
         target_channel: int = 0,
         buffer_size_s: float = 2.0,
     ):
-        self.stream_name = stream_name
-        self.target_channel = target_channel
-        self.buffer_size_s = buffer_size_s
+        self.stream_name = _validate_stream_name(stream_name)
+        self.target_channel = _validate_target_channel(target_channel)
+        self.buffer_size_s = _validate_buffer_size_s(buffer_size_s)
 
         self._running = False
         self._inlet: Any = None
