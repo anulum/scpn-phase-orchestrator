@@ -26,6 +26,8 @@ slow external wrappers do not displace the faster local path.
 from __future__ import annotations
 
 from collections.abc import Callable
+from math import isfinite
+from numbers import Integral, Real
 from time import perf_counter
 from typing import cast
 
@@ -101,6 +103,57 @@ _LOADERS: dict[str, Callable[[], dict[str, object]]] = {
     "go": _load_go_fns,
 }
 _BACKEND_CACHE: dict[str, dict[str, object]] = {}
+
+
+def _validate_n_bins(n_bins: object) -> int:
+    if isinstance(n_bins, bool) or not isinstance(n_bins, Integral):
+        raise ValueError("n_bins must be an integer >= 2")
+    bins = int(n_bins)
+    if bins < 2:
+        return bins
+    return bins
+
+
+def _validate_signal(name: str, value: NDArray[np.float64]) -> NDArray[np.float64]:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
+    try:
+        array = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if array.ndim != 1:
+        raise ValueError(f"{name} must be a one-dimensional vector")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return array
+
+
+def _validate_history(
+    name: str,
+    value: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
+    try:
+        array = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if array.ndim != 2:
+        raise ValueError("phases_history and amplitudes_history must be 2-D")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return array
+
+
+def _validate_finite_real(name: str, value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number")
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    return parsed
 
 
 def _load_backend(name: str) -> dict[str, object]:
@@ -196,6 +249,9 @@ def modulation_index(
     returns the modulation index normalised to ``[0, 1]`` by
     ``log(n_bins)``.
     """
+    n_bins = _validate_n_bins(n_bins)
+    theta_low = _validate_signal("theta_low", theta_low)
+    amp_high = _validate_signal("amp_high", amp_high)
     if n_bins < 2:
         return 0.0
     if theta_low.size == 0 or amp_high.size == 0:
@@ -231,8 +287,9 @@ def pac_matrix(
         amplitudes_history: ``(T, N)`` amplitude time series.
         n_bins: number of phase bins.
     """
-    if phases_history.ndim != 2 or amplitudes_history.ndim != 2:
-        raise ValueError("phases_history and amplitudes_history must be 2-D")
+    n_bins = _validate_n_bins(n_bins)
+    phases_history = _validate_history("phases_history", phases_history)
+    amplitudes_history = _validate_history("amplitudes_history", amplitudes_history)
     t, n = phases_history.shape
     if amplitudes_history.shape != (t, n):
         raise ValueError("phases and amplitudes must have the same shape")
@@ -269,4 +326,6 @@ def pac_gate(pac_value: float, threshold: float = 0.3) -> bool:
 
     Pure-Python helper; no dispatcher — the comparison is trivial.
     """
+    pac_value = _validate_finite_real("pac_value", pac_value)
+    threshold = _validate_finite_real("threshold", threshold)
     return pac_value >= threshold

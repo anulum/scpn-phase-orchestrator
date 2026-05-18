@@ -66,6 +66,28 @@ class TestModulationIndex:
         assert mi_18 > 0.05
         assert mi_36 > 0.05
 
+    @pytest.mark.parametrize(
+        ("theta", "amp", "n_bins", "match"),
+        [
+            (np.zeros((2, 2)), np.ones(4), 18, "theta_low"),
+            (np.array([0.0, np.nan]), np.ones(2), 18, "theta_low"),
+            (np.zeros(2), np.array([1.0, np.inf]), 18, "amp_high"),
+            (np.array([True, False]), np.ones(2), 18, "theta_low"),
+            (np.zeros(2), np.array([True, False]), 18, "amp_high"),
+            (np.zeros(2), np.ones(2), True, "n_bins"),
+            (np.zeros(2), np.ones(2), 1.5, "n_bins"),
+        ],
+    )
+    def test_rejects_invalid_modulation_inputs(
+        self,
+        theta: np.ndarray,
+        amp: np.ndarray,
+        n_bins: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            modulation_index(theta, amp, n_bins=n_bins)  # type: ignore[arg-type]
+
     def test_degenerate_private_histogram_resolution_returns_zero(self) -> None:
         theta = np.linspace(0.0, TWO_PI, 64, endpoint=False)
         amp = 1.0 + 0.25 * np.cos(theta)
@@ -94,6 +116,26 @@ class TestPACMatrix:
         with pytest.raises(ValueError, match="same shape"):
             pac_matrix(np.zeros((10, 3)), np.zeros((10, 4)))
 
+    @pytest.mark.parametrize(
+        ("phases", "amps", "n_bins", "match"),
+        [
+            (np.array([[0.0, np.nan]]), np.ones((1, 2)), 18, "phases_history"),
+            (np.zeros((1, 2)), np.array([[1.0, np.inf]]), 18, "amplitudes_history"),
+            (np.array([[True, False]]), np.ones((1, 2)), 18, "phases_history"),
+            (np.zeros((1, 2)), np.array([[True, False]]), 18, "amplitudes_history"),
+            (np.zeros((1, 2)), np.ones((1, 2)), True, "n_bins"),
+        ],
+    )
+    def test_rejects_invalid_matrix_inputs(
+        self,
+        phases: np.ndarray,
+        amps: np.ndarray,
+        n_bins: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            pac_matrix(phases, amps, n_bins=n_bins)  # type: ignore[arg-type]
+
 
 class TestPACGate:
     def test_gate_open(self) -> None:
@@ -104,6 +146,24 @@ class TestPACGate:
 
     def test_gate_at_threshold(self) -> None:
         assert pac_gate(0.3, threshold=0.3) is True
+
+    @pytest.mark.parametrize(
+        ("pac_value", "threshold", "match"),
+        [
+            (np.nan, 0.3, "pac_value"),
+            (0.2, np.inf, "threshold"),
+            (True, 0.3, "pac_value"),
+            (0.2, True, "threshold"),
+        ],
+    )
+    def test_rejects_invalid_gate_inputs(
+        self,
+        pac_value: object,
+        threshold: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            pac_gate(pac_value, threshold=threshold)  # type: ignore[arg-type]
 
 
 class TestPACPipelineWiring:
