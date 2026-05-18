@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from numbers import Integral
+from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -35,6 +36,53 @@ def _validate_positive_int(value: object, *, name: str) -> int:
     return int(value)
 
 
+def _finite_array(value: object, *, name: str) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain finite values")
+    return array
+
+
+def _finite_real(value: object, *, name: str) -> float:
+    if not isinstance(value, Real) or isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite real value")
+    result = float(value)
+    if not isfinite(result):
+        raise ValueError(f"{name} must be a finite real value")
+    return result
+
+
+def _unit_interval(value: object, *, name: str) -> float:
+    result = _finite_real(value, name=name)
+    if result < 0.0 or result > 1.0:
+        raise ValueError(f"{name} must be in [0, 1]")
+    return result
+
+
+def _label(value: object, *, name: str) -> str:
+    if not isinstance(value, str) or not value or any(ord(ch) < 32 for ch in value):
+        raise ValueError(f"{name} must be a non-empty string")
+    return value
+
+
+def _validate_layer_sizes(value: object, *, n_phases: int, n_layers: int) -> list[int]:
+    if not isinstance(value, list) or len(value) != n_layers:
+        raise ValueError("layer_sizes must contain one size per configured layer")
+    sizes = [_validate_positive_or_zero_int(size, name="layer_sizes") for size in value]
+    if sum(sizes) != n_phases:
+        raise ValueError("layer_sizes must sum to phase count")
+    return sizes
+
+
+def _validate_positive_or_zero_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must contain non-negative integers")
+    return int(value)
+
+
 class PlasmaControlBridge:
     """Adapter between scpn-control plasma telemetry and phase-orchestrator types.
 
@@ -58,17 +106,22 @@ class PlasmaControlBridge:
         'n_osc_per_layer' (int, default 2), or a raw ndarray of shape (L, L).
         """
         if isinstance(knm_spec_or_dict, dict):
-            layer_knm = np.asarray(knm_spec_or_dict["matrix"], dtype=np.float64)
+            layer_knm = _finite_array(knm_spec_or_dict["matrix"], name="Layer Knm")
             n_per = _validate_positive_int(
                 knm_spec_or_dict.get("n_osc_per_layer", 2),
                 name="n_osc_per_layer",
             )
         else:
-            layer_knm = np.asarray(knm_spec_or_dict, dtype=np.float64)
+            layer_knm = _finite_array(knm_spec_or_dict, name="Layer Knm")
             n_per = 2
 
         if layer_knm.ndim != 2 or layer_knm.shape[0] != layer_knm.shape[1]:
             raise ValueError(f"Layer Knm must be square, got shape {layer_knm.shape}")
+        if layer_knm.shape != (self._n_layers, self._n_layers):
+            raise ValueError(
+                f"Layer Knm shape {layer_knm.shape} must match "
+                f"n_layers={self._n_layers}"
+            )
 
         # Kronecker expansion: each layer block shares the inter-layer coupling
         n_total = layer_knm.shape[0] * n_per
@@ -116,13 +169,24 @@ class PlasmaControlBridge:
 
         Expected keys: 'phases' (1-D array), optional 'regime', 'layer_sizes'.
         """
-        phases = np.asarray(tick_result["phases"], dtype=np.float64) % TWO_PI
-        regime = str(tick_result.get("regime", "NOMINAL"))
+        if not isinstance(tick_result, dict):
+            raise ValueError("tick_result must be a dict")
+        phases = _finite_array(tick_result["phases"], name="phases")
+        if phases.ndim != 1:
+            raise ValueError("phases must be a 1-D array")
+        phases = phases % TWO_PI
+        regime = _label(tick_result.get("regime", "NOMINAL"), name="regime")
         layer_sizes = tick_result.get("layer_sizes")
 
         if layer_sizes is None:
             n_per = max(1, len(phases) // self._n_layers)
             layer_sizes = [n_per] * self._n_layers
+        else:
+            layer_sizes = _validate_layer_sizes(
+                layer_sizes,
+                n_phases=len(phases),
+                n_layers=self._n_layers,
+            )
 
         layers: list[LayerState] = []
         offset = 0
@@ -140,7 +204,7 @@ class PlasmaControlBridge:
 
         n_l = len(layers)
         cross = np.eye(n_l, dtype=np.float64)
-        stability = float(tick_result.get("stability", 0.5))
+        stability = _unit_interval(tick_result.get("stability", 0.5), name="stability")
 
         return UPDEState(
             layers=layers,
@@ -155,9 +219,9 @@ class PlasmaControlBridge:
         Accepts dict with 'score' (float in [0,1]).
         """
         if isinstance(verdict_or_dict, dict):
-            score = float(verdict_or_dict.get("score", 0.0))
+            score = _unit_interval(verdict_or_dict.get("score", 0.0), name="score")
         else:
-            score = float(getattr(verdict_or_dict, "score", 0.0))
+            score = _unit_interval(getattr(verdict_or_dict, "score", 0.0), name="score")
         return {
             "lyapunov_score": score,
             "stable": score > 0.3,
@@ -165,15 +229,18 @@ class PlasmaControlBridge:
 
     def export_control_actions(self, actions: list) -> dict:
         """Package a list of control action dicts for scpn-control consumption."""
+        if not isinstance(actions, list):
+            raise ValueError("actions must be a list of dicts")
+        exported: list[dict[str, object]] = []
+        for action in actions:
+            if not isinstance(action, dict):
+                raise ValueError("actions must contain dict entries")
+            knob = _label(action.get("knob", "K"), name="knob")
+            scope = _label(action.get("scope", "global"), name="scope")
+            value = _finite_real(action.get("value", 0.0), name="value")
+            exported.append({"knob": knob, "scope": scope, "value": value})
         return {
-            "actions": [
-                {
-                    "knob": a.get("knob", "K"),
-                    "scope": a.get("scope", "global"),
-                    "value": float(a.get("value", 0.0)),
-                }
-                for a in actions
-            ],
+            "actions": exported,
         }
 
     def check_physics_invariants(self, values: dict) -> list[dict]:
@@ -181,8 +248,12 @@ class PlasmaControlBridge:
 
         Returns a list of violation dicts (empty if all invariants hold).
         """
+        if not isinstance(values, dict):
+            raise ValueError("physics invariant values must be a dict")
         violations: list[dict] = []
         q_min = values.get("q_min")
+        if q_min is not None:
+            q_min = _finite_real(q_min, name="physics invariant q_min")
         if q_min is not None and q_min < Q_MIN_STABLE:
             violations.append(
                 {
@@ -194,6 +265,8 @@ class PlasmaControlBridge:
                 }
             )
         beta_n = values.get("beta_n")
+        if beta_n is not None:
+            beta_n = _finite_real(beta_n, name="physics invariant beta_n")
         if beta_n is not None and beta_n > BETA_N_LIMIT:
             violations.append(
                 {
@@ -205,6 +278,8 @@ class PlasmaControlBridge:
                 }
             )
         greenwald = values.get("greenwald")
+        if greenwald is not None:
+            greenwald = _finite_real(greenwald, name="physics invariant greenwald")
         if greenwald is not None and greenwald > GREENWALD_LIMIT:
             violations.append(
                 {

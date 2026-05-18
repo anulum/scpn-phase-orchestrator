@@ -61,6 +61,24 @@ class TestKnmSpecImport:
         with pytest.raises(ValueError, match="square"):
             bridge.import_knm_spec(np.zeros((3, 4)))
 
+    def test_rejects_wrong_layer_knm_size(self):
+        bridge = PlasmaControlBridge(n_layers=4)
+        with pytest.raises(ValueError, match="n_layers"):
+            bridge.import_knm_spec(np.zeros((3, 3)))
+
+    def test_rejects_nonfinite_layer_knm(self):
+        bridge = PlasmaControlBridge(n_layers=2)
+        with pytest.raises(ValueError, match="finite"):
+            bridge.import_knm_spec(np.array([[0.0, np.nan], [0.0, 0.0]]))
+
+    def test_import_knm_spec_copies_input_matrix(self):
+        bridge = PlasmaControlBridge(n_layers=2)
+        layer_knm = np.array([[0.0, 0.8], [0.8, 0.0]])
+        coupling = bridge.import_knm_spec(layer_knm)
+        layer_knm[0, 1] = 99.0
+
+        assert coupling.knm[0, 2] == pytest.approx(0.8)
+
     @pytest.mark.parametrize("n_osc_per_layer", [True, 0, -1, 1.5, "2"])
     def test_rejects_invalid_n_osc_per_layer(self, n_osc_per_layer: object):
         bridge = PlasmaControlBridge(n_layers=2)
@@ -100,6 +118,23 @@ class TestSnapshotImport:
         assert len(state.layers) == 3
         assert pytest.approx(0.0) == state.layers[2].R
 
+    @pytest.mark.parametrize(
+        ("snapshot", "field"),
+        [
+            ({"phases": [0.0, np.nan]}, "phases"),
+            ({"phases": [[0.0, 1.0]]}, "phases"),
+            ({"phases": [0.0, 1.0], "layer_sizes": [1]}, "layer_sizes"),
+            ({"phases": [0.0, 1.0], "layer_sizes": [1, True]}, "layer_sizes"),
+            ({"phases": [0.0, 1.0], "layer_sizes": [1, 2]}, "layer_sizes"),
+            ({"phases": [0.0, 1.0], "stability": np.inf}, "stability"),
+            ({"phases": [0.0, 1.0], "regime": ""}, "regime"),
+        ],
+    )
+    def test_snapshot_rejects_invalid_payload(self, snapshot: dict, field: str):
+        bridge = PlasmaControlBridge(n_layers=2)
+        with pytest.raises(ValueError, match=field):
+            bridge.import_snapshot(snapshot)
+
 
 class TestLyapunovVerdict:
     def test_stable_verdict(self):
@@ -121,6 +156,12 @@ class TestLyapunovVerdict:
         result = bridge.import_lyapunov_verdict(verdict)
         assert result["lyapunov_score"] == pytest.approx(0.6)
         assert result["stable"] is True
+
+    @pytest.mark.parametrize("score", [-0.1, 1.1, np.nan, True])
+    def test_rejects_invalid_lyapunov_score(self, score: object):
+        bridge = PlasmaControlBridge()
+        with pytest.raises(ValueError, match="score"):
+            bridge.import_lyapunov_verdict({"score": score})
 
 
 class TestPhysicsInvariants:
@@ -176,6 +217,38 @@ class TestExportActions:
         )
         assert len(result["actions"]) == 2
         assert result["actions"][0]["knob"] == "K"
+
+    @pytest.mark.parametrize(
+        "actions",
+        [
+            [{"knob": "", "scope": "global", "value": 0.5}],
+            [{"knob": "K", "scope": "", "value": 0.5}],
+            [{"knob": "K", "scope": "global", "value": np.nan}],
+            [{"knob": True, "scope": "global", "value": 0.5}],
+            ["not-a-dict"],
+            "not-a-list",
+        ],
+    )
+    def test_export_actions_rejects_invalid_payload(self, actions: object):
+        bridge = PlasmaControlBridge()
+        with pytest.raises(ValueError, match="actions|knob|scope|value"):
+            bridge.export_control_actions(actions)  # type: ignore[arg-type]
+
+
+class TestPhysicsInvariantValidation:
+    @pytest.mark.parametrize(
+        "values",
+        [
+            {"q_min": np.nan},
+            {"beta_n": "high"},
+            {"greenwald": True},
+            "not-a-dict",
+        ],
+    )
+    def test_physics_invariants_reject_invalid_values(self, values: object):
+        bridge = PlasmaControlBridge()
+        with pytest.raises(ValueError, match="physics invariant"):
+            bridge.check_physics_invariants(values)  # type: ignore[arg-type]
 
 
 class TestPlasmaOmega:
