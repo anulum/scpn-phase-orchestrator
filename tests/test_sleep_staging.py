@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import sleep_staging as sleep_staging_module
 from scpn_phase_orchestrator.monitor.sleep_staging import (
     classify_sleep_stage,
     ultradian_phase,
@@ -123,6 +124,50 @@ def test_ultradian_empty_input():
 def test_ultradian_rejects_invalid_history_contract(timestamps, stages, match):
     with pytest.raises(ValueError, match=match):
         ultradian_phase(timestamps, stages)
+
+
+def test_optional_rust_classification_path_maps_stage_codes(monkeypatch):
+    calls = []
+
+    def fake_rust_classify(r_value, functional_desync):
+        calls.append((r_value, functional_desync))
+        return 4
+
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sleep_staging_module,
+        "_rust_classify",
+        fake_rust_classify,
+        raising=False,
+    )
+
+    assert classify_sleep_stage(0.21, functional_desync=True) == "REM"
+    assert calls == [(0.21, True)]
+
+
+def test_optional_rust_ultradian_path_translates_stage_codes(monkeypatch):
+    calls = []
+
+    def fake_rust_ultradian(timestamps, codes):
+        calls.append((timestamps.copy(), codes.copy()))
+        return 0.625
+
+    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sleep_staging_module,
+        "_rust_ultradian",
+        fake_rust_ultradian,
+        raising=False,
+    )
+
+    timestamps = np.array([10.0, 70.0, 130.0], dtype=np.float64)
+    phase = ultradian_phase(timestamps, ["Wake", "N3", "REM"])
+
+    assert phase == 0.625
+    assert len(calls) == 1
+    np.testing.assert_array_equal(calls[0][0], timestamps)
+    assert calls[0][0].dtype == np.float64
+    np.testing.assert_array_equal(calls[0][1], np.array([0, 3, 4], dtype=np.uint8))
 
 
 class TestSleepStagingPipelineWiring:
