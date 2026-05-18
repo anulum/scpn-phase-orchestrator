@@ -192,6 +192,26 @@ class TestTorusPoints:
         p = data["points"][0]
         assert abs(p["x"] - 6.0) < 0.01  # (5+1)·cos(0)
 
+    @pytest.mark.parametrize(
+        "major_radius",
+        [True, 0.0, -2.0, float("nan"), float("inf"), "2.0"],
+    )
+    def test_rejects_invalid_major_radius(self, major_radius: object):
+        with pytest.raises(
+            ValueError, match="major_radius must be finite and positive"
+        ):
+            torus_points_json(np.array([0.0]), major_radius=major_radius)
+
+    @pytest.mark.parametrize(
+        "minor_radius",
+        [True, 0.0, -0.5, float("nan"), float("inf"), "0.5"],
+    )
+    def test_rejects_invalid_minor_radius(self, minor_radius: object):
+        with pytest.raises(
+            ValueError, match="minor_radius must be finite and positive"
+        ):
+            torus_points_json(np.array([0.0]), minor_radius=minor_radius)
+
     def test_R_values(self):
         phases = np.array([0.0, 1.0])
         data = json.loads(torus_points_json(phases, R_values=[0.5, 0.9]))

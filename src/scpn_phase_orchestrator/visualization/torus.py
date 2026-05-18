@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -68,6 +70,15 @@ def _validate_layer_names(
     return value
 
 
+def _validate_positive_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and positive")
+    parsed = float(value)
+    if not isfinite(parsed) or parsed <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
+    return parsed
+
+
 def torus_points_json(
     phases: FloatArray,
     R_values: list[float] | None = None,
@@ -94,8 +105,8 @@ def torus_points_json(
         )
 
     phi = np.linspace(0, 2 * np.pi, n, endpoint=False)
-    R = major_radius
-    r = minor_radius
+    R = _validate_positive_real(major_radius, name="major_radius")
+    r = _validate_positive_real(minor_radius, name="minor_radius")
 
     points = []
     for i in range(n):
