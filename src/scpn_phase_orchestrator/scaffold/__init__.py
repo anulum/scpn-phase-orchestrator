@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — domainpack scaffold helpers
 
+"""Public facade for review-only domainpack scaffold proposal helpers.
+
+The scaffold package exposes provider configuration, offline/static provider
+support, local HTTP provider support, and the natural-language-to-domainpack
+proposal path. Exports generate validated proposal artifacts and audit records
+only; they do not activate bindings, write runtime configuration, or contact a
+provider unless the caller explicitly invokes the live provider path.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.scaffold.llm import (

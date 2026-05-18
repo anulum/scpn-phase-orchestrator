@@ -6,6 +6,17 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — LLM-guided domainpack scaffolding
 
+"""LLM-guided domainpack scaffolding with strict validation and provenance.
+
+This module converts natural-language intent into a reviewable binding-spec
+proposal through a JSON-only provider contract. Live providers fail closed
+unless endpoint and model configuration are present, responses must parse as one
+strict JSON object, and normalized oscillators, coupling, boundaries, actuators,
+periods, and safety tiers are validated before YAML is returned. The generated
+proposal records source and response hashes for audit; it never installs or
+activates the proposed domainpack.
+"""
+
 from __future__ import annotations
 
 import hashlib
