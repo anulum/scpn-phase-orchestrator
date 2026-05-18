@@ -70,7 +70,7 @@ Connect to your existing monitoring stack.
 
 ```python
 # OpenTelemetry integration
-from scpn_phase_orchestrator.adapters import OTelExporter
+from scpn_phase_orchestrator.runtime.observability import OTelExporter
 exporter = OTelExporter(service_name="spo-production")
 ```
 

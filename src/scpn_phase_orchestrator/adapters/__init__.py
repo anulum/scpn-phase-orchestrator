@@ -10,9 +10,9 @@
 
 The adapters package re-exports bridges for fusion, plasma, quantum, SNN,
 Prometheus, Redis, hardware I/O, NeuroCore, Remanentia, Synapse, and related
-integration points. Runtime metrics and OpenTelemetry compatibility exports are
-re-exported here for historical callers; their canonical implementation lives
-under ``scpn_phase_orchestrator.runtime.observability``.
+integration points. Runtime metrics and OpenTelemetry exporters live in
+``scpn_phase_orchestrator.runtime.observability`` so the integration boundary
+does not depend on runtime serving code.
 """
 
 from __future__ import annotations
@@ -31,13 +31,11 @@ from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
     build_hybrid_cocompiler_manifest,
 )
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import LSLBCIBridge
-from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
 from scpn_phase_orchestrator.adapters.modbus_tls import (
     HAS_PYMODBUS,
     SecureModbusAdapter,
 )
 from scpn_phase_orchestrator.adapters.neurocore_bridge import NeurocoreBridge
-from scpn_phase_orchestrator.adapters.opentelemetry import OTelExporter
 from scpn_phase_orchestrator.adapters.plasma_control_bridge import PlasmaControlBridge
 from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
@@ -67,10 +65,8 @@ __all__ = [
     "HAS_MODBUS",
     "HAS_PYMODBUS",
     "LSLBCIBridge",
-    "MetricsExporter",
     "ModbusAdapter",
     "NeurocoreBridge",
-    "OTelExporter",
     "PlasmaControlBridge",
     "PrometheusAdapter",
     "QuantumControlBridge",

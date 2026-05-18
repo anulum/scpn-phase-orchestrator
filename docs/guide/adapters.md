@@ -178,7 +178,7 @@ for UPDE steps and regime transitions. Falls back to no-op when
 `opentelemetry-api` is not installed.
 
 ```python
-from scpn_phase_orchestrator.adapters import OTelExporter
+from scpn_phase_orchestrator.runtime.observability import OTelExporter
 
 exporter = OTelExporter(service_name="spo")
 with exporter.span("upde_step", {"spo.n": 64}):

@@ -90,7 +90,7 @@ trace.get_tracer_provider().add_span_processor(
 )
 metrics.set_meter_provider(MeterProvider())
 
-from scpn_phase_orchestrator.adapters import OTelExporter
+from scpn_phase_orchestrator.runtime.observability import OTelExporter
 exporter = OTelExporter(service_name="spo-production")
 ```
 

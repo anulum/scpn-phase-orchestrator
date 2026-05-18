@@ -90,11 +90,15 @@ def _validated_latency_ms(latency_ms: object) -> float:
     return float(latency_ms)
 
 
-def _validated_regime(regime: object) -> str:
+def _validated_regime(regime: object, *, allow_control: bool = False) -> str:
     if not isinstance(regime, str) or not regime:
         raise ValueError("regime must be a non-empty string")
-    if "\x00" in regime:
-        raise ValueError("regime must not contain NUL characters")
+    allowed_controls = {"\n", "\r", "\t"} if allow_control else set()
+    if any(
+        (ord(char) < 32 or ord(char) == 127) and char not in allowed_controls
+        for char in regime
+    ):
+        raise ValueError("regime must not contain control characters")
     return regime
 
 
@@ -162,7 +166,9 @@ class MetricsExporter:
     ) -> list[str]:
         """Build individual metric lines in Prometheus text format."""
         p = self._prefix
-        regime_label = _escape_label_value(_validated_regime(regime))
+        regime_label = _escape_label_value(
+            _validated_regime(regime, allow_control=True)
+        )
         latency_ms = _validated_latency_ms(latency_ms)
         lines: list[str] = []
 
