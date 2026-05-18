@@ -131,9 +131,11 @@ class StaticJSONScaffoldProvider:
 
     @property
     def name(self) -> str:
+        """Stable provider name recorded in scaffold provenance."""
         return self.provider_name
 
     def complete(self, prompt: str) -> str:
+        """Return the configured JSON response after checking prompt presence."""
         if not prompt:
             raise ValueError("prompt must be non-empty")
         return self.response_json
@@ -151,9 +153,11 @@ class LocalHTTPScaffoldProvider:
 
     @property
     def name(self) -> str:
+        """Stable provider name recorded in scaffold provenance."""
         return self.provider_name
 
     def complete(self, prompt: str) -> str:
+        """Request one JSON-only scaffold completion from the configured endpoint."""
         if not self.endpoint:
             raise ValueError("endpoint must be non-empty")
         if not self.model:
