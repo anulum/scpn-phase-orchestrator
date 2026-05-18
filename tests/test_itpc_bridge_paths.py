@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.monitor import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _itpc_go,
     _itpc_mojo,
 )
