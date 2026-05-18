@@ -17,6 +17,7 @@ SCADA: Modbus TCP via pymodbus. Install: pip install pymodbus
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from numbers import Integral
 from typing import Any, TypeAlias
 
 import numpy as np
@@ -37,6 +38,45 @@ __all__ = [
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _positive_int(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
+        if field == "count":
+            raise ValueError("count must be > 0")
+        raise ValueError(f"{field} must be a positive integer")
+    return int(value)
+
+
+def _non_negative_int(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        if field == "address":
+            raise ValueError("address must be >= 0")
+        raise ValueError(f"{field} must be a non-negative integer")
+    return int(value)
+
+
+def _channel_index(value: object, *, n_channels: int) -> int:
+    idx = _non_negative_int(value, field="channel_idx")
+    if idx >= n_channels:
+        raise ValueError("channel_idx must be within configured channel range")
+    return idx
+
+
+def _validated_frequencies(
+    frequencies: FloatArray | None,
+    *,
+    n_channels: int,
+) -> FloatArray:
+    if frequencies is None:
+        return np.linspace(1.0, 40.0, n_channels)
+    array = np.asarray(frequencies, dtype=np.float64)
+    if array.shape != (n_channels,):
+        raise ValueError(f"frequencies must have shape ({n_channels},)")
+    if not np.all(np.isfinite(array)) or np.any(array <= 0.0):
+        raise ValueError("frequencies must contain finite positive values")
+    return array.copy()
+
 
 try:
     # type ignore: BrainFlow is optional and lacks complete typing metadata.
@@ -73,6 +113,8 @@ class SampleBuffer:
     count: int = field(init=False, default=0)
 
     def __post_init__(self) -> None:
+        self.capacity = _positive_int(self.capacity, field="capacity")
+        self.n_channels = _positive_int(self.n_channels, field="n_channels")
         self.buffer = np.zeros((self.n_channels, self.capacity))
 
     def push(self, samples: FloatArray) -> None:
@@ -97,6 +139,7 @@ class SampleBuffer:
 
     def get_recent(self, n: int) -> FloatArray:
         """Get the last n samples as (n_channels, n)."""
+        n = _positive_int(n, field="n")
         n = min(n, self.count)
         if n == 0:
             return np.zeros((self.n_channels, 0))
@@ -190,13 +233,9 @@ class SimulatedBoardAdapter:
         sample_rate: int = 256,
         frequencies: FloatArray | None = None,
     ) -> None:
-        self._n_channels = n_channels
-        self._sample_rate = sample_rate
-        self._freqs = (
-            frequencies
-            if frequencies is not None
-            else np.linspace(1.0, 40.0, n_channels)
-        )
+        self._n_channels = _positive_int(n_channels, field="n_channels")
+        self._sample_rate = _positive_int(sample_rate, field="sample_rate")
+        self._freqs = _validated_frequencies(frequencies, n_channels=self._n_channels)
         self._t = 0.0
         self._running = False
 
@@ -221,6 +260,8 @@ class SimulatedBoardAdapter:
 
     def get_channel_data(self, channel_idx: int, n_samples: int = 256) -> FloatArray:
         """Return synthetic sinusoidal samples for one channel."""
+        channel_idx = _channel_index(channel_idx, n_channels=self._n_channels)
+        n_samples = _positive_int(n_samples, field="n_samples")
         sr = self._sample_rate
         t = np.arange(n_samples) / sr + self._t
         self._t += n_samples / sr
@@ -228,6 +269,7 @@ class SimulatedBoardAdapter:
 
     def get_all_eeg(self, n_samples: int = 256) -> FloatArray:
         """Return synthetic (n_channels, n_samples) sinusoidal data."""
+        n_samples = _positive_int(n_samples, field="n_samples")
         sr = self._sample_rate
         t = np.arange(n_samples) / sr + self._t
         self._t += n_samples / sr
@@ -267,10 +309,8 @@ class ModbusAdapter:  # pragma: no cover
 
     def read_holding_registers(self, address: int, count: int = 1) -> FloatArray:
         """Read holding registers, return as float64 array."""
-        if address < 0:
-            raise ValueError("address must be >= 0")
-        if count <= 0:
-            raise ValueError("count must be > 0")
+        address = _non_negative_int(address, field="address")
+        count = _positive_int(count, field="count")
         result = self._client.read_holding_registers(address, count=count)
         if result.isError():
             return np.zeros(count)
@@ -278,9 +318,8 @@ class ModbusAdapter:  # pragma: no cover
 
     def write_register(self, address: int, value: int) -> bool:
         """Write a single holding register."""
-        if address < 0:
-            raise ValueError("address must be >= 0")
-        if not isinstance(value, int):
+        address = _non_negative_int(address, field="address")
+        if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError("value must be an integer")
         result = self._client.write_register(address, value)
         return not result.isError()

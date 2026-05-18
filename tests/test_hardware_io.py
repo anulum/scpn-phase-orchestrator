@@ -33,6 +33,18 @@ class TestSampleBuffer:
     """Verify the ring buffer preserves data ordering, wraps correctly,
     and handles edge cases."""
 
+    @pytest.mark.parametrize(
+        ("capacity", "n_channels"),
+        [(0, 1), (1, 0), (True, 1), (1, 1.5)],
+    )
+    def test_constructor_rejects_invalid_shape_config(
+        self,
+        capacity: object,
+        n_channels: object,
+    ):
+        with pytest.raises(ValueError, match="capacity|n_channels"):
+            SampleBuffer(capacity=capacity, n_channels=n_channels)  # type: ignore[arg-type]
+
     def test_push_and_get_exact(self):
         buf = SampleBuffer(capacity=10, n_channels=2)
         samples = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
@@ -53,6 +65,12 @@ class TestSampleBuffer:
         buf = SampleBuffer(capacity=10, n_channels=2)
         recent = buf.get_recent(5)
         assert recent.shape == (2, 0)
+
+    @pytest.mark.parametrize("n", [-1, 1.5, True])
+    def test_get_recent_rejects_invalid_count(self, n: object):
+        buf = SampleBuffer(capacity=10, n_channels=2)
+        with pytest.raises(ValueError, match="n"):
+            buf.get_recent(n)  # type: ignore[arg-type]
 
     def test_partial_fill_returns_available(self):
         buf = SampleBuffer(capacity=10, n_channels=1)
@@ -118,6 +136,30 @@ class TestSimulatedBoard:
     """Verify that SimulatedBoardAdapter produces physically plausible
     sinusoidal signals for testing without real hardware."""
 
+    @pytest.mark.parametrize(
+        ("n_channels", "sample_rate", "frequencies"),
+        [
+            (0, 256, None),
+            (1, 0, None),
+            (True, 256, None),
+            (2, 256, np.array([10.0])),
+            (1, 256, np.array([np.nan])),
+            (1, 256, np.array([-1.0])),
+        ],
+    )
+    def test_constructor_rejects_invalid_config(
+        self,
+        n_channels: object,
+        sample_rate: object,
+        frequencies: object,
+    ):
+        with pytest.raises(ValueError, match="n_channels|sample_rate|frequencies"):
+            SimulatedBoardAdapter(
+                n_channels=n_channels,  # type: ignore[arg-type]
+                sample_rate=sample_rate,  # type: ignore[arg-type]
+                frequencies=frequencies,  # type: ignore[arg-type]
+            )
+
     def test_properties_match_constructor(self):
         board = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
         assert board.n_channels == 4
@@ -130,6 +172,25 @@ class TestSimulatedBoard:
         data = board.get_channel_data(0, n_samples=512)
         assert np.all(np.abs(data) <= 1.0 + 1e-10)
         board.stop()
+
+    @pytest.mark.parametrize(
+        ("channel_idx", "n_samples"),
+        [(-1, 10), (4, 10), (0, 0), (0, 1.5), (True, 10)],
+    )
+    def test_channel_data_rejects_invalid_request(
+        self,
+        channel_idx: object,
+        n_samples: object,
+    ):
+        board = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
+        with pytest.raises(ValueError, match="channel_idx|n_samples"):
+            board.get_channel_data(channel_idx, n_samples=n_samples)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("n_samples", [0, -1, 1.5, True])
+    def test_all_eeg_rejects_invalid_sample_count(self, n_samples: object):
+        board = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
+        with pytest.raises(ValueError, match="n_samples"):
+            board.get_all_eeg(n_samples=n_samples)  # type: ignore[arg-type]
 
     def test_all_eeg_shape_and_finiteness(self):
         board = SimulatedBoardAdapter(n_channels=8, sample_rate=256)
@@ -315,6 +376,10 @@ class TestModbusAdapter:
             adapter.read_holding_registers(-1, count=1)
         with pytest.raises(ValueError, match="count must be > 0"):
             adapter.read_holding_registers(0, count=0)
+        with pytest.raises(ValueError, match="address"):
+            adapter.read_holding_registers(True, count=1)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="count"):
+            adapter.read_holding_registers(0, count=True)  # type: ignore[arg-type]
 
     def test_write_rejects_invalid_address_and_non_int_value(self, monkeypatch):
         import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
@@ -332,3 +397,7 @@ class TestModbusAdapter:
             adapter.write_register(-1, 1)
         with pytest.raises(ValueError, match="value must be an integer"):
             adapter.write_register(0, 1.5)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="address"):
+            adapter.write_register(True, 1)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="value"):
+            adapter.write_register(0, True)  # type: ignore[arg-type]
