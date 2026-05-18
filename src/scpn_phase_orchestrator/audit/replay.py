@@ -254,44 +254,51 @@ class ReplayEngine:
             if not _has_fields(curr, _SL_REPLAY_FIELDS) or "phases" not in nxt:
                 return False, verified
 
-            omegas = np.asarray(curr["omegas"])
-            n = len(omegas)
+            try:
+                omegas = np.asarray(curr["omegas"])
+                n = len(omegas)
 
-            if "amplitudes" in curr:
-                state = np.concatenate(
-                    [np.asarray(curr["phases"]), np.asarray(curr["amplitudes"])]
+                if "amplitudes" in curr:
+                    state = np.concatenate(
+                        [np.asarray(curr["phases"]), np.asarray(curr["amplitudes"])]
+                    )
+                elif "mu" in curr:
+                    # Legacy: full SL state [theta; r] stored in 'phases'
+                    state = np.asarray(curr["phases"])
+                else:
+                    _log.warning(
+                        "SL replay step %d: amplitude fields missing, skipping", i
+                    )
+                    continue
+
+                knm_flat = np.asarray(curr["knm"])
+                alpha_flat = np.asarray(curr["alpha"])
+                zeta = curr.get("zeta", 0.0)
+                psi_drive = curr.get("psi_drive", 0.0)
+
+                knm_arr = knm_flat.reshape(n, n) if knm_flat.ndim == 1 else knm_flat
+                alpha_arr = (
+                    alpha_flat.reshape(n, n) if alpha_flat.ndim == 1 else alpha_flat
                 )
-            elif "mu" in curr:
-                # Legacy: full SL state [theta; r] stored in 'phases'
-                state = np.asarray(curr["phases"])
-            else:
-                _log.warning("SL replay step %d: amplitude fields missing, skipping", i)
-                continue
 
-            knm_flat = np.asarray(curr["knm"])
-            alpha_flat = np.asarray(curr["alpha"])
-            zeta = curr.get("zeta", 0.0)
-            psi_drive = curr.get("psi_drive", 0.0)
+                mu = np.asarray(curr.get("mu", np.zeros(n)))
+                knm_r_flat = np.asarray(curr.get("knm_r", np.zeros(n * n)))
+                knm_r = knm_r_flat.reshape(n, n) if knm_r_flat.ndim == 1 else knm_r_flat
+                epsilon = curr.get("epsilon", 1.0)
 
-            knm_arr = knm_flat.reshape(n, n) if knm_flat.ndim == 1 else knm_flat
-            alpha_arr = alpha_flat.reshape(n, n) if alpha_flat.ndim == 1 else alpha_flat
-
-            mu = np.asarray(curr.get("mu", np.zeros(n)))
-            knm_r_flat = np.asarray(curr.get("knm_r", np.zeros(n * n)))
-            knm_r = knm_r_flat.reshape(n, n) if knm_r_flat.ndim == 1 else knm_r_flat
-            epsilon = curr.get("epsilon", 1.0)
-
-            computed = engine.step(
-                state,
-                omegas,
-                mu,
-                knm_arr,
-                knm_r,
-                zeta,
-                psi_drive,
-                alpha_arr,
-                epsilon=epsilon,
-            )
+                computed = engine.step(
+                    state,
+                    omegas,
+                    mu,
+                    knm_arr,
+                    knm_r,
+                    zeta,
+                    psi_drive,
+                    alpha_arr,
+                    epsilon=epsilon,
+                )
+            except (TypeError, ValueError):
+                return False, verified
 
             if "amplitudes" in nxt:
                 logged_next = np.concatenate(
