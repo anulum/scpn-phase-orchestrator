@@ -201,7 +201,7 @@ def _dispatch(fn_name: str) -> object:
         return None
     try:
         return _load_backend(ACTIVE_BACKEND)[fn_name]
-    except (ImportError, RuntimeError, OSError):
+    except (ImportError, RuntimeError, OSError, KeyError):
         return None
 
 

@@ -245,6 +245,18 @@ def test_time_series_csv_rejects_invalid_replay_shapes(
         )
 
 
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+def test_time_series_csv_rejects_non_finite_samples(value: str) -> None:
+    csv_text = f"time,grid,load\n0.0,{value},1.0\n0.1,2.0,3.0\n"
+
+    with pytest.raises(ValueError, match="non-finite sample"):
+        propose_binding_from_time_series_csv(
+            csv_text,
+            sample_rate_hz=10.0,
+            project_name="invalid_non_finite_replay",
+        )
+
+
 def test_time_series_csv_rejects_missing_rate_without_time_column() -> None:
     with pytest.raises(ValueError, match="sample_rate_hz"):
         propose_binding_from_time_series_csv(
@@ -252,6 +264,69 @@ def test_time_series_csv_rejects_missing_rate_without_time_column() -> None:
             sample_rate_hz=None,
             project_name="missing_rate_replay",
         )
+
+
+def test_time_series_csv_deterministic_candidate_ordering_and_output(
+    tmp_path: Path,
+) -> None:
+    csv_text = "\n".join(
+        [
+            "time,grid,load,event,ring,sensor",
+            "0.0,0.0,1.0,0.0,1.0,2.0",
+            "0.1,0.2,0.9,0.1,0.9,1.8",
+            "0.2,0.4,0.8,0.2,0.8,1.6",
+        ]
+    )
+
+    first = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=10.0,
+        project_name="candidate_order_replay",
+    )
+    second = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=10.0,
+        project_name="candidate_order_replay",
+    )
+
+    assert first.binding.yaml_sha256 == second.binding.yaml_sha256
+    assert first.binding.inferred_channels == ("P", "I", "S", "P", "I")
+    assert tuple(
+        proposal_channel["channel"]
+        for proposal_channel in first.binding.provenance[
+            "extractor_parameter_proposals"
+        ]
+    ) == ("P", "I", "S", "P", "I")
+
+    spec = _load_proposal_yaml(tmp_path, first.binding.yaml_text)
+    layer_family_order = tuple(
+        spec.oscillator_families[layer.family].channel
+        for layer in sorted(spec.layers, key=lambda item: item.index)
+    )
+    assert layer_family_order == first.binding.inferred_channels
+
+
+def test_event_log_scoring_reflects_diversity_and_span() -> None:
+    events = [
+        {"time": 0.0, "source": "sensor_b", "event": "open"},
+        {"time": 0.5, "source": "sensor_a", "event": "close"},
+        {"time": 1.0, "source": "sensor_c", "event": "trip"},
+        {"time": 1.25, "source": "sensor_b", "event": "reset"},
+    ]
+
+    proposal = propose_binding_from_event_log(
+        json.dumps(events),
+        project_name="event_scoring_replay",
+    )
+
+    assert proposal.binding.confidence_factors["event_density"] == pytest.approx(0.4)
+    assert proposal.binding.confidence_factors["source_diversity"] == pytest.approx(1.0)
+    assert proposal.binding.provenance["source_names"] == (
+        "sensor_a",
+        "sensor_b",
+        "sensor_c",
+    )
+    assert proposal.binding.provenance["time_span_s"] == pytest.approx(1.25)
 
 
 def test_event_log_proposal_records_low_confidence_for_sparse_sources() -> None:
@@ -308,6 +383,49 @@ def test_event_log_rejects_non_reviewable_event_streams(
         )
 
 
+@pytest.mark.parametrize("mode", ["time_series", "event_log", "graph"])
+def test_proposal_output_is_review_only_and_non_actuating(mode: str) -> None:
+    if mode == "time_series":
+        proposal = propose_binding_from_time_series_csv(
+            "time,grid,load\n0.0,0.0,1.0\n0.01,0.2,0.9\n",
+            sample_rate_hz=100.0,
+            project_name="review_only_ts",
+        )
+    elif mode == "event_log":
+        proposal = propose_binding_from_event_log(
+            json.dumps([{"time": 0.0, "source": "breaker", "event": "open"}]),
+            project_name="review_only_events",
+        )
+    else:
+        proposal = propose_binding_from_graph(
+            json.dumps({"nodes": [{"id": "a"}], "edges": []}),
+            project_name="review_only_graph",
+        )
+
+    assert proposal.runtime.regime == "proposal_only"
+    assert proposal.runtime.replay_status == "proposal_only"
+    assert proposal.runtime.K == 0.45
+    assert proposal.metadata["proposal_mode"] == "review_only"
+
+
+def test_validate_binding_spec_rejection_is_recorded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        binding_proposal,
+        "validate_binding_spec",
+        lambda _spec: ("synthetic validator finding",),
+    )
+
+    proposal = propose_binding_from_graph(
+        json.dumps({"nodes": [{"id": "a"}], "edges": []}),
+        project_name="synthetic_validation_replay",
+    )
+
+    assert proposal.binding.validation_errors == ("synthetic validator finding",)
+    assert proposal.binding.confidence_factors["validator_acceptance"] == 0.0
+
+
 def test_graph_proposal_rejects_edges_with_unknown_nodes() -> None:
     graph = {
         "nodes": [{"id": "a"}],
@@ -334,6 +452,29 @@ def test_graph_yaml_binds_graph_family_to_layer(tmp_path: Path) -> None:
 
     assert layer.family is not None
     assert spec.oscillator_families[layer.family].channel == "S"
+
+
+def test_graph_proposal_edge_density_is_clamped_to_one() -> None:
+    graph = {
+        "nodes": [{"id": "a"}, {"id": "b"}, {"id": "c"}],
+        "edges": [
+            {"source": "a", "target": "b"},
+            {"source": "b", "target": "c"},
+            {"source": "c", "target": "a"},
+            {"source": "a", "target": "c"},
+            {"source": "b", "target": "a"},
+        ],
+    }
+
+    proposal = propose_binding_from_graph(
+        json.dumps(graph),
+        project_name="dense_graph_replay",
+    )
+
+    assert proposal.binding.confidence_factors["edge_density"] == 1.0
+    assert proposal.binding.confidence_factors["topology_integrity"] == 1.0
+    assert proposal.binding.provenance["node_count"] == 3
+    assert proposal.binding.provenance["edge_count"] == 5
 
 
 @pytest.mark.parametrize(

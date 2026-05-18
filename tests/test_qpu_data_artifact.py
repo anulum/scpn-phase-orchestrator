@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -146,6 +147,105 @@ def test_hashes_are_stable_and_verified() -> None:
         validate_qpu_data_artifact(tampered)
 
 
+def test_hash_mismatch_in_manifest_is_rejected_with_precise_message() -> None:
+    payload = _base_payload()
+    checks = [
+        ("K_nm_sha256", "not-a-real-hash"),
+        ("omega_sha256", "wrong"),
+    ]
+    for key, bad_value in checks:
+        tampered = _base_payload(
+            hashes={"K_nm_sha256": payload["hashes"]["K_nm_sha256"]}
+        )
+        tampered["hashes"][key] = bad_value
+        with pytest.raises(ValueError, match=f"{key} does not match artifact data"):
+            validate_qpu_data_artifact(tampered)
+
+
+def test_metadata_and_provenance_are_normalised_and_layer_ids_strified() -> None:
+    payload = emit_qpu_data_artifact(
+        domain="  unit ",
+        source_name="\tunit-fixture\n",
+        source_mode="recorded",
+        K_nm=np.array([[0.0, 0.6], [0.6, 0.0]]),
+        omega=np.array([1.0, 1.2]),
+        theta0=np.array([0.0, 0.5]),
+        layer_assignments=[1, " two "],
+        normalization=" normalized ",
+        extraction_method=" test-extractor ",
+        replay_id="unit:replay:normalised",
+        metadata={"phase": 1},
+    )
+
+    artifact = validate_qpu_data_artifact(payload)
+
+    assert artifact.domain == "unit"
+    assert artifact.source_name == "unit-fixture"
+    assert artifact.normalization == "normalized"
+    assert artifact.extraction_method == "test-extractor"
+    assert artifact.layer_assignments == ["1", " two "]
+
+
+def test_manifest_metadata_matches_domainpack_and_manifest_shape() -> None:
+    payload = compile_domain_to_qpu_artifact(
+        REPO_ROOT / "domainpacks" / "minimal_domain",
+        source_mode="recorded",
+        source_timestamp="2026-01-01T00:00:00Z",
+    )
+    metadata = payload["metadata"]
+
+    assert metadata["source_project"] == "scpn-phase-orchestrator"
+    assert metadata["binding_spec"] == "binding_spec.yaml"
+    assert metadata["n_oscillators"] == len(payload["layer_assignments"])
+    assert metadata["coupling"]["base_strength"] >= 0.0
+    assert payload["source_timestamp"] == "2026-01-01T00:00:00Z"
+    assert metadata["n_layers"] == 2
+
+
+def test_optional_publication_fields_are_enforced_and_skipped_when_requested() -> None:
+    with_record = emit_qpu_data_artifact(
+        domain="unit",
+        source_name="unit-fixture",
+        source_mode="recorded",
+        K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+        omega=np.array([1.0, 1.2]),
+        normalization="unit canonical scaling",
+        extraction_method="unit-test",
+        source_timestamp="2026-01-01T00:00:00Z",
+    )
+    with_replay_only = emit_qpu_data_artifact(
+        domain="unit",
+        source_name="unit-fixture",
+        source_mode="recorded",
+        K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+        omega=np.array([1.0, 1.2]),
+        normalization="unit canonical scaling",
+        extraction_method="unit-test",
+        replay_id="unit:replay:2",
+    )
+    assert validate_qpu_data_artifact(with_record).source_timestamp is not None
+    assert validate_qpu_data_artifact(with_replay_only).replay_id == "unit:replay:2"
+
+    missing_both = emit_qpu_data_artifact(
+        domain="unit",
+        source_name="unit-fixture",
+        source_mode="recorded",
+        K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+        omega=np.array([1.0, 1.2]),
+        normalization="unit canonical scaling",
+        extraction_method="unit-test",
+    )
+    with pytest.raises(ValueError, match="source_timestamp or replay_id"):
+        validate_qpu_data_artifact(missing_both)
+    assert (
+        validate_qpu_data_artifact(
+            missing_both,
+            require_publication_safe=False,
+        ).source_mode
+        == "recorded"
+    )
+
+
 def test_artifact_sha256_is_verified() -> None:
     payload = _base_payload(artifact_sha256="bad")
     with pytest.raises(ValueError, match="artifact_sha256"):
@@ -245,3 +345,13 @@ def test_qpu_artifact_file_io_writes_newline_and_reads_validated_payload(tmp_pat
 
     assert raw.endswith("\n")
     assert loaded.to_dict() == payload
+
+
+def test_reading_tampered_json_file_reports_digest_mismatch(tmp_path: Path) -> None:
+    payload = _base_payload()
+    payload["artifact_sha256"] = "not-real"
+    path = tmp_path / "broken-qpu-data-artifact.json"
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="artifact_sha256"):
+        read_qpu_data_artifact(path)

@@ -290,6 +290,56 @@ class TestDispatcher:
         indices = [canonical.index(b) for b in AVAILABLE_BACKENDS]
         assert indices == sorted(indices)
 
+    def test_order_parameter_probe_uses_python_path(self, monkeypatch) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        observed: dict[str, int] = {}
+
+        def fake_python_order_parameter(phases: np.ndarray) -> tuple[float, float]:
+            observed["n"] = phases.size
+            return 0.0, 0.0
+
+        monkeypatch.setattr(
+            op_mod, "_python_order_parameter", fake_python_order_parameter
+        )
+
+        elapsed = op_mod._order_parameter_probe_seconds("python")
+
+        assert elapsed != float("inf")
+        assert observed["n"] == 256
+
+    def test_resolve_backends_falls_back_to_python_if_optional_backends_fail(
+        self, monkeypatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        def broken_loader(name: str) -> dict[str, object]:
+            raise ImportError(f"{name} unavailable")
+
+        monkeypatch.setattr(op_mod, "_load_backend", broken_loader)
+        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(
+            op_mod,
+            "_order_parameter_probe_seconds",
+            lambda name: float("inf"),
+        )
+
+        active, available = op_mod._resolve_backends()
+
+        assert active == "python"
+        assert available == ["python"]
+
+    def test_dispatch_returns_none_when_active_backend_symbol_missing(
+        self, monkeypatch
+    ) -> None:
+        import scpn_phase_orchestrator.upde.order_params as op_mod
+
+        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
+        monkeypatch.setattr(op_mod, "_load_backend", lambda name: {})
+
+        assert op_mod._dispatch("plv") is None
+
     def test_probe_marks_faulty_backend_unusable(self, monkeypatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
