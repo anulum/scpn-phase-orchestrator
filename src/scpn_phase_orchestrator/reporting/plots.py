@@ -95,6 +95,14 @@ class CoherencePlot:
         return int(cls._numeric_value(value))
 
     @staticmethod
+    def _dimension_value(value: object) -> int | None:
+        if isinstance(value, Real) and not isinstance(value, bool):
+            parsed = float(value)
+            if isfinite(parsed) and parsed.is_integer() and parsed > 0.0:
+                return int(parsed)
+        return None
+
+    @staticmethod
     def _actions(step: dict) -> list[dict]:
         actions = step.get("actions", [])
         if not isinstance(actions, list):
@@ -169,7 +177,14 @@ class CoherencePlot:
         if pac_record is None:
             raise ValueError("No pac_matrix record in log data")
         flat = pac_record["pac_matrix"]
-        n = pac_record.get("n", int(np.sqrt(len(flat))))
+        raw_n = pac_record.get("n")
+        if raw_n is None:
+            n = int(np.sqrt(len(flat)))
+        else:
+            parsed_n = self._dimension_value(raw_n)
+            if parsed_n is None:
+                raise ValueError("pac_matrix n must be a positive integer")
+            n = parsed_n
         if len(flat) != n * n:
             raise ValueError(
                 f"pac_matrix length {len(flat)} does not match n*n dimensions {n * n}"

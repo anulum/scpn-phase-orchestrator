@@ -284,6 +284,18 @@ class TestExtractors:
         assert n_out == 2
         assert mat.tolist() == [[0.0, 0.0], [0.0, 0.25]]
 
+    @pytest.mark.parametrize("n_value", [True, float("nan"), float("inf"), 2.5, "2"])
+    def test_extract_pac_matrix_rejects_malformed_n_metadata(
+        self, n_value: object
+    ) -> None:
+        log = _make_log()
+        log.append(
+            {"event": "pac_snapshot", "pac_matrix": [0.1, 0.2, 0.3, 0.4], "n": n_value}
+        )
+        plot = CoherencePlot(log)
+        with pytest.raises(ValueError, match="pac_matrix n"):
+            plot._extract_pac_matrix()
+
     def test_extract_pac_matrix_missing_raises(self) -> None:
         plot = CoherencePlot(_make_log())
         with pytest.raises(ValueError, match="No pac_matrix"):
