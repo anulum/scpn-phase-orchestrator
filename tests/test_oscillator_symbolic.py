@@ -215,6 +215,15 @@ class TestSymbolicExtractorMetadata:
         with pytest.raises(ValueError, match="signal must be integer"):
             ext.extract(signal, sample_rate=1.0)
 
+    @pytest.mark.parametrize(
+        "sample_rate",
+        [True, 0.0, -1.0, float("nan"), float("inf"), "1.0"],
+    )
+    def test_extract_rejects_invalid_sample_rate(self, sample_rate: object):
+        ext = SymbolicExtractor(n_states=4, mode="ring")
+        with pytest.raises(ValueError, match="sample_rate must be finite and positive"):
+            ext.extract(np.array([0, 1]), sample_rate=sample_rate)
+
 
 class TestSymbolicPipelineEndToEnd:
     """Full pipeline: SymbolicExtractor → theta/omega → Engine → R.

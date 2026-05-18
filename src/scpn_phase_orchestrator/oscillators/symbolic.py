@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from numbers import Integral
+from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -50,6 +51,15 @@ def _validate_signal(value: object) -> IntArray:
     return signal.astype(np.int64, copy=False)
 
 
+def _validate_sample_rate(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("sample_rate must be finite and positive")
+    sample_rate = float(value)
+    if not isfinite(sample_rate) or sample_rate <= 0.0:
+        raise ValueError("sample_rate must be finite and positive")
+    return sample_rate
+
+
 class SymbolicExtractor(PhaseExtractor):
     """Phase extraction from discrete symbolic state sequences.
 
@@ -74,6 +84,7 @@ class SymbolicExtractor(PhaseExtractor):
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Map discrete state indices to phases on the unit circle."""
         indices = _validate_signal(signal)
+        sample_rate = _validate_sample_rate(sample_rate)
         if self._mode == "ring":
             thetas = TWO_PI * indices / self._n_states
         else:
@@ -88,7 +99,7 @@ class SymbolicExtractor(PhaseExtractor):
                 thetas = TWO_PI * cumulative / total
 
         thetas = thetas % TWO_PI
-        dt = 1.0 / sample_rate if sample_rate > 0 else 1.0
+        dt = 1.0 / sample_rate
         omegas = np.zeros_like(thetas)
         if len(thetas) > 1:
             dtheta = np.diff(thetas)
