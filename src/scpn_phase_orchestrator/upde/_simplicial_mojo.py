@@ -45,6 +45,11 @@ def simplicial_run_mojo(
     dt: float,
     n_steps: int,
 ) -> FloatArray:
+    """Integrate pairwise-plus-simplicial Kuramoto dynamics.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     exe = _ensure_exe()
     tokens: list[str] = [
         "SIMP",

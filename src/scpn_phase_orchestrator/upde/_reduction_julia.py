@@ -41,6 +41,11 @@ def oa_run_julia(
     dt: float,
     n_steps: int,
 ) -> tuple[float, float, float, float]:
+    """Integrate the Ott-Antonsen reduced dynamics.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     result = jl.oa_run(
         float(z_re),

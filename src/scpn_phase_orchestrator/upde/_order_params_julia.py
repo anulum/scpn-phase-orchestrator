@@ -45,12 +45,22 @@ def _ensure_julia_loaded() -> Any:
 
 
 def order_parameter_julia(phases: NDArray[np.float64]) -> tuple[float, float]:
+    """Compute the Kuramoto order parameter.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure_julia_loaded()
     r, psi = jl.order_parameter(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
     return float(r), float(psi)
 
 
 def plv_julia(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
+    """Compute phase-locking value.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure_julia_loaded()
     return float(
         jl.plv(
@@ -63,6 +73,11 @@ def plv_julia(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> f
 def layer_coherence_julia(
     phases: NDArray[np.float64], indices: NDArray[np.int64]
 ) -> float:
+    """Compute layer-wise phase coherence.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure_julia_loaded()
     return float(
         jl.layer_coherence(

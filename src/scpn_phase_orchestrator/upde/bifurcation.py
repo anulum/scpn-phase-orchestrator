@@ -70,6 +70,8 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 @dataclass
 class BifurcationPoint:
+    """One sampled point on a Kuramoto synchronisation branch."""
+
     K: float
     R: float
     stable: bool
@@ -77,6 +79,8 @@ class BifurcationPoint:
 
 @dataclass
 class BifurcationDiagram:
+    """Ordered bifurcation samples plus optional critical coupling."""
+
     points: list[BifurcationPoint] = field(default_factory=list)
     K_critical: float | None = None
 

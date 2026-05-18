@@ -57,6 +57,11 @@ def oa_run_go(
     dt: float,
     n_steps: int,
 ) -> tuple[float, float, float, float]:
+    """Integrate the Ott-Antonsen reduced dynamics.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     re = ctypes.c_double(0.0)
     im = ctypes.c_double(0.0)

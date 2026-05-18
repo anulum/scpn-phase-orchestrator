@@ -69,6 +69,11 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def order_parameter_go(phases: NDArray[np.float64]) -> tuple[float, float]:
+    """Compute the Kuramoto order parameter.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     phases64 = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     out_r = ctypes.c_double(0.0)
@@ -85,6 +90,11 @@ def order_parameter_go(phases: NDArray[np.float64]) -> tuple[float, float]:
 
 
 def plv_go(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
+    """Compute phase-locking value.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     if phases_a.size != phases_b.size:
         raise ValueError(
@@ -107,6 +117,11 @@ def plv_go(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> floa
 def layer_coherence_go(
     phases: NDArray[np.float64], indices: NDArray[np.int64]
 ) -> float:
+    """Compute layer-wise phase coherence.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     p64 = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     i64 = np.ascontiguousarray(indices.ravel(), dtype=np.int64)

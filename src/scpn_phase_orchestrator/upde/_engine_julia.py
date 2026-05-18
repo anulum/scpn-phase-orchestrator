@@ -50,6 +50,11 @@ def upde_run_julia(
     atol: float,
     rtol: float,
 ) -> FloatArray:
+    """Run the core UPDE phase integrator.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     n = int(phases.size)
     return np.asarray(

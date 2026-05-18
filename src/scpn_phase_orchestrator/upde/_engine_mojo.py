@@ -64,6 +64,11 @@ def upde_run_mojo(
     atol: float,
     rtol: float,
 ) -> FloatArray:
+    """Run the core UPDE phase integrator.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     if method not in _METHOD_IDS:
         raise ValueError(
             f"unknown method {method!r}; expected one of {list(_METHOD_IDS)}"

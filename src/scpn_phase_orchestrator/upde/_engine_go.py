@@ -71,6 +71,11 @@ def upde_run_go(
     atol: float,
     rtol: float,
 ) -> FloatArray:
+    """Run the core UPDE phase integrator.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     if method not in _METHOD_IDS:
         raise ValueError(

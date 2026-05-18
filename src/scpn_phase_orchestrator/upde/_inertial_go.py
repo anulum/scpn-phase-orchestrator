@@ -60,6 +60,11 @@ def inertial_step_go(
     n: int,
     dt: float,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Advance one inertial Kuramoto step.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     th = np.ascontiguousarray(theta, dtype=np.float64)
     od = np.ascontiguousarray(omega_dot, dtype=np.float64)

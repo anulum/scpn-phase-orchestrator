@@ -42,6 +42,11 @@ def steady_state_r_mojo(
     n_transient: int,
     n_measure: int,
 ) -> float:
+    """Compute steady-state order parameter for basin-stability trials.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     exe = _ensure_exe()
     tokens: list[str] = [
         "STEADY",

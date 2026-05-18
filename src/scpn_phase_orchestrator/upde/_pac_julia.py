@@ -38,6 +38,11 @@ def _ensure_julia_loaded() -> Any:
 def modulation_index_julia(
     theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int
 ) -> float:
+    """Compute phase-amplitude coupling modulation index.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure_julia_loaded()
     return float(
         jl.modulation_index(
@@ -55,6 +60,11 @@ def pac_matrix_julia(
     n: int,
     n_bins: int,
 ) -> NDArray[np.float64]:
+    """Compute the phase-amplitude coupling matrix.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure_julia_loaded()
     return np.asarray(
         jl.pac_matrix(

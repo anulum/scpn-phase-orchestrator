@@ -55,6 +55,11 @@ def _run(payload: str) -> list[float]:
 
 
 def order_parameter_mojo(phases: NDArray[np.float64]) -> tuple[float, float]:
+    """Compute the Kuramoto order parameter.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     if phases.size == 0:
         return (0.0, 0.0)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
@@ -67,6 +72,11 @@ def order_parameter_mojo(phases: NDArray[np.float64]) -> tuple[float, float]:
 
 
 def plv_mojo(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
+    """Compute phase-locking value.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     if phases_a.size == 0 or phases_b.size == 0:
         return 0.0
     if phases_a.size != phases_b.size:
@@ -85,6 +95,11 @@ def plv_mojo(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> fl
 def layer_coherence_mojo(
     phases: NDArray[np.float64], indices: NDArray[np.int64]
 ) -> float:
+    """Compute layer-wise phase coherence.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     if indices.size == 0:
         return 0.0
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

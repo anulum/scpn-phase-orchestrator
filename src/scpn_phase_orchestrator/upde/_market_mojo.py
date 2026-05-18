@@ -56,6 +56,11 @@ def market_order_parameter_mojo(
     t: int,
     n: int,
 ) -> NDArray[np.float64]:
+    """Compute market phase order parameter.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     tokens = ["ORDER", str(int(t)), str(int(n))]
     tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())
     lines = _run_mojo(tokens, expected_lines=int(t))
@@ -68,6 +73,11 @@ def market_plv_mojo(
     n: int,
     window: int,
 ) -> NDArray[np.float64]:
+    """Compute market phase-locking value.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     n_windows = int(t) - int(window) + 1
     tokens = ["PLV", str(int(t)), str(int(n)), str(int(window))]
     tokens.extend(repr(float(x)) for x in np.asarray(phases_flat).ravel().tolist())

@@ -49,6 +49,11 @@ def hypergraph_run_julia(
     dt: float,
     n_steps: int,
 ) -> NDArray[np.float64]:
+    """Integrate hypergraph Kuramoto dynamics.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     result = jl.hypergraph_run(
         np.ascontiguousarray(phases, dtype=np.float64),

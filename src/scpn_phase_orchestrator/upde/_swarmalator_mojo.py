@@ -45,6 +45,11 @@ def swarmalator_step_mojo(
     k: float,
     dt: float,
 ) -> tuple[FloatArray, FloatArray]:
+    """Advance one swarmalator position-phase step.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     exe = _ensure_exe()
     tokens: list[str] = [
         "STEP",

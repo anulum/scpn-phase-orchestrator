@@ -60,6 +60,11 @@ def steady_state_r_go(
     n_transient: int,
     n_measure: int,
 ) -> float:
+    """Compute steady-state order parameter for basin-stability trials.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases_init, dtype=np.float64)
     o = np.ascontiguousarray(omegas, dtype=np.float64)

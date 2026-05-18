@@ -51,6 +51,11 @@ def _run(payload: str) -> list[str]:
 
 
 def extract_envelope_mojo(amps: FloatArray, window: int) -> FloatArray:
+    """Extract the analytic phase envelope.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     a = np.ascontiguousarray(amps.ravel(), dtype=np.float64)
     if a.size == 0:
         return np.zeros(0, dtype=np.float64)
@@ -65,6 +70,11 @@ def extract_envelope_mojo(amps: FloatArray, window: int) -> FloatArray:
 
 
 def envelope_modulation_depth_mojo(env: FloatArray) -> float:
+    """Compute envelope modulation depth.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     e = np.ascontiguousarray(env.ravel(), dtype=np.float64)
     if e.size == 0:
         return 0.0

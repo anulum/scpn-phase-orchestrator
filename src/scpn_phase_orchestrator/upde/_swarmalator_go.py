@@ -67,6 +67,11 @@ def swarmalator_step_go(
     k: float,
     dt: float,
 ) -> tuple[FloatArray, FloatArray]:
+    """Advance one swarmalator position-phase step.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     p = np.ascontiguousarray(pos.ravel(), dtype=np.float64)
     ph = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

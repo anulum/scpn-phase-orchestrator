@@ -49,6 +49,11 @@ def _run(payload: str) -> list[float]:
 def modulation_index_mojo(
     theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int
 ) -> float:
+    """Compute phase-amplitude coupling modulation index.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     t = np.ascontiguousarray(theta_low.ravel(), dtype=np.float64)
     a = np.ascontiguousarray(amp_high.ravel(), dtype=np.float64)
     n = int(min(t.size, a.size))
@@ -68,6 +73,11 @@ def pac_matrix_mojo(
     n: int,
     n_bins: int,
 ) -> NDArray[np.float64]:
+    """Compute the phase-amplitude coupling matrix.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     p = np.ascontiguousarray(phases_flat, dtype=np.float64)
     a = np.ascontiguousarray(amplitudes_flat, dtype=np.float64)
     tokens = ["MAT", str(t), str(n), str(n_bins)]

@@ -37,6 +37,11 @@ def _ensure() -> Any:
 
 
 def extract_envelope_julia(amps: FloatArray, window: int) -> FloatArray:
+    """Extract the analytic phase envelope.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     return np.asarray(
         jl.extract_envelope(
@@ -48,6 +53,11 @@ def extract_envelope_julia(amps: FloatArray, window: int) -> FloatArray:
 
 
 def envelope_modulation_depth_julia(env: FloatArray) -> float:
+    """Compute envelope modulation depth.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     return float(
         jl.envelope_modulation_depth(

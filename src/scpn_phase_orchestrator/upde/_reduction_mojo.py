@@ -36,6 +36,11 @@ def oa_run_mojo(
     dt: float,
     n_steps: int,
 ) -> tuple[float, float, float, float]:
+    """Integrate the Ott-Antonsen reduced dynamics.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     exe = _ensure_exe()
     tokens = [
         "OARUN",

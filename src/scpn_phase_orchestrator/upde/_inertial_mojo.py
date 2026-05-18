@@ -40,6 +40,11 @@ def inertial_step_mojo(
     n: int,
     dt: float,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Advance one inertial Kuramoto step.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     exe = _ensure_exe()
     tokens: list[str] = ["INERT", str(int(n)), repr(float(dt))]
     for arr in (theta, omega_dot, power):

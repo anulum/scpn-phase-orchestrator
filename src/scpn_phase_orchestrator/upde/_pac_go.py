@@ -56,6 +56,11 @@ def _load_lib() -> ctypes.CDLL:
 def modulation_index_go(
     theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int
 ) -> float:
+    """Compute phase-amplitude coupling modulation index.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     t = np.ascontiguousarray(theta_low.ravel(), dtype=np.float64)
     a = np.ascontiguousarray(amp_high.ravel(), dtype=np.float64)
@@ -80,6 +85,11 @@ def pac_matrix_go(
     n: int,
     n_bins: int,
 ) -> NDArray[np.float64]:
+    """Compute the phase-amplitude coupling matrix.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat, dtype=np.float64)
     a = np.ascontiguousarray(amplitudes_flat, dtype=np.float64)

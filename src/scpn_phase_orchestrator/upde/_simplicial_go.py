@@ -66,6 +66,11 @@ def simplicial_run_go(
     dt: float,
     n_steps: int,
 ) -> FloatArray:
+    """Integrate pairwise-plus-simplicial Kuramoto dynamics.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases, dtype=np.float64)
     o = np.ascontiguousarray(omegas, dtype=np.float64)

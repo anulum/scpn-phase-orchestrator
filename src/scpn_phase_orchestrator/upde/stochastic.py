@@ -40,6 +40,8 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 @dataclass
 class NoiseProfile:
+    """Noise-sweep result linking diffusion strength to observed order."""
+
     D: float
     R_achieved: float
     R_deterministic: float

@@ -44,6 +44,11 @@ def splitting_run_mojo(
     dt: float,
     n_steps: int,
 ) -> FloatArray:
+    """Integrate Strang-split phase dynamics.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     exe = _ensure_exe()
     tokens: list[str] = [
         "SPLIT",

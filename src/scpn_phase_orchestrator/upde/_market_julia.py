@@ -40,6 +40,11 @@ def market_order_parameter_julia(
     t: int,
     n: int,
 ) -> NDArray[np.float64]:
+    """Compute market phase order parameter.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     result = jl.market_order_parameter(
         np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -55,6 +60,11 @@ def market_plv_julia(
     n: int,
     window: int,
 ) -> NDArray[np.float64]:
+    """Compute market phase-locking value.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     result = jl.market_plv(
         np.ascontiguousarray(phases_flat, dtype=np.float64),

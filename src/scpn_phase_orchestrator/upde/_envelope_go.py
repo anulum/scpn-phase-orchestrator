@@ -53,6 +53,11 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def extract_envelope_go(amps: FloatArray, window: int) -> FloatArray:
+    """Extract the analytic phase envelope.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     a = np.ascontiguousarray(amps.ravel(), dtype=np.float64)
     if a.size == 0:
@@ -70,6 +75,11 @@ def extract_envelope_go(amps: FloatArray, window: int) -> FloatArray:
 
 
 def envelope_modulation_depth_go(env: FloatArray) -> float:
+    """Compute envelope modulation depth.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     e = np.ascontiguousarray(env.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

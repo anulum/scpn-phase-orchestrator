@@ -46,6 +46,11 @@ def torus_run_julia(
     dt: float,
     n_steps: int,
 ) -> NDArray[np.float64]:
+    """Integrate torus phase dynamics.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     result = jl.torus_run(
         np.ascontiguousarray(phases, dtype=np.float64),

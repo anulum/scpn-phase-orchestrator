@@ -45,6 +45,11 @@ def inertial_step_julia(
     n: int,
     dt: float,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Advance one inertial Kuramoto step.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     new_theta, new_omega_dot = jl.inertial_step(
         np.ascontiguousarray(theta, dtype=np.float64),

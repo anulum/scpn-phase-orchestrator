@@ -46,6 +46,11 @@ def steady_state_r_julia(
     n_transient: int,
     n_measure: int,
 ) -> float:
+    """Compute steady-state order parameter for basin-stability trials.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     r = jl.steady_state_r(
         np.ascontiguousarray(phases_init, dtype=np.float64),

@@ -49,6 +49,11 @@ def simplicial_run_julia(
     dt: float,
     n_steps: int,
 ) -> FloatArray:
+    """Integrate pairwise-plus-simplicial Kuramoto dynamics.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     result = jl.simplicial_run(
         np.ascontiguousarray(phases, dtype=np.float64),

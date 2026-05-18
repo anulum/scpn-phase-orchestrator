@@ -44,6 +44,11 @@ def hypergraph_run_mojo(
     dt: float,
     n_steps: int,
 ) -> NDArray[np.float64]:
+    """Integrate hypergraph Kuramoto dynamics.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     exe = _ensure_exe()
     en = np.asarray(edge_nodes).ravel()
     eo = np.asarray(edge_offsets).ravel()

@@ -48,6 +48,11 @@ def splitting_run_julia(
     dt: float,
     n_steps: int,
 ) -> FloatArray:
+    """Integrate Strang-split phase dynamics.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     result = jl.splitting_run(
         np.ascontiguousarray(phases, dtype=np.float64),

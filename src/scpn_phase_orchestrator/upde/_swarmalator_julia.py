@@ -49,6 +49,11 @@ def swarmalator_step_julia(
     k: float,
     dt: float,
 ) -> tuple[FloatArray, FloatArray]:
+    """Advance one swarmalator position-phase step.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     new_pos_flat, new_phases = jl.swarmalator_step(
         np.ascontiguousarray(pos.ravel(), dtype=np.float64),
