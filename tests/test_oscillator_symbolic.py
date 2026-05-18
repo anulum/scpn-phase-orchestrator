@@ -158,6 +158,11 @@ class TestSymbolicExtractorMetadata:
         assert all(s.channel == "S" for s in states)
         assert all(s.node_id == "sym_q" for s in states)
 
+    @pytest.mark.parametrize("node_id", ["", "   ", 42, True])
+    def test_invalid_node_id_rejected(self, node_id: Any):
+        with pytest.raises(ValueError, match="node_id must be a non-empty string"):
+            SymbolicExtractor(n_states=4, node_id=node_id)
+
     def test_n_states_below_2_rejected(self):
         with pytest.raises(ValueError, match="n_states must be >= 2"):
             SymbolicExtractor(n_states=1)

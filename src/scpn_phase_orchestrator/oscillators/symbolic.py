@@ -32,6 +32,12 @@ def _validate_n_states(value: object) -> int:
     return n_states
 
 
+def _validate_node_id(value: object) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("node_id must be a non-empty string")
+    return value
+
+
 class SymbolicExtractor(PhaseExtractor):
     """Phase extraction from discrete symbolic state sequences.
 
@@ -50,7 +56,7 @@ class SymbolicExtractor(PhaseExtractor):
         if mode not in ("ring", "graph"):
             raise ValueError(f"mode must be 'ring' or 'graph', got {mode!r}")
         self._n_states = n_states
-        self._node_id = node_id
+        self._node_id = _validate_node_id(node_id)
         self._mode = mode
 
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
