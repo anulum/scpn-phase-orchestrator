@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from hashlib import sha256
-from numbers import Integral
+from numbers import Integral, Real
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -34,6 +34,54 @@ def _require_positive_integer(value: object, *, name: str) -> int:
     return parsed
 
 
+def _require_positive_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and positive")
+    parsed = float(value)
+    if not np.isfinite(parsed) or parsed <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
+    return parsed
+
+
+def _finite_array(value: object, *, name: str) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain finite values")
+    return array
+
+
+def _validate_layer_assignments(
+    layer_assignments: object,
+    *,
+    n_phases: int,
+) -> list[list[int]]:
+    if not isinstance(layer_assignments, list):
+        raise ValueError("layer_assignments must be a list of index groups")
+
+    seen: set[int] = set()
+    validated: list[list[int]] = []
+    for group in layer_assignments:
+        if not isinstance(group, list):
+            raise ValueError("layer_assignments must contain list groups")
+        validated_group: list[int] = []
+        for index in group:
+            if isinstance(index, bool) or not isinstance(index, Integral):
+                raise ValueError("layer_assignments must contain integer indexes")
+            parsed = int(index)
+            if parsed < 0 or parsed >= n_phases:
+                raise ValueError("layer_assignments index out of phase range")
+            if parsed in seen:
+                raise ValueError("layer_assignments must not repeat phase indexes")
+            seen.add(parsed)
+            validated_group.append(parsed)
+        validated.append(validated_group)
+
+    return validated
+
+
 class QuantumControlBridge:
     """Adapter between scpn-quantum-control artifacts and phase-orchestrator types.
 
@@ -54,13 +102,24 @@ class QuantumControlBridge:
 
     def import_artifact(self, artifact_dict: dict) -> UPDEState:
         """Convert a scpn-quantum-control result dict into UPDEState."""
-        phases = np.asarray(artifact_dict["phases"], dtype=np.float64) % TWO_PI
+        phases = _finite_array(artifact_dict["phases"], name="phases")
+        if phases.shape != (self._n,):
+            raise ValueError(
+                f"phases shape {phases.shape} does not match n_oscillators={self._n}"
+            )
+        phases = phases % TWO_PI
         fidelity = float(artifact_dict.get("fidelity", 0.0))
+        if not np.isfinite(fidelity):
+            raise ValueError("fidelity must be finite")
 
         layer_assignments = artifact_dict.get("layer_assignments")
         if layer_assignments is None:
             mid = len(phases) // 2
             layer_assignments = [list(range(mid)), list(range(mid, len(phases)))]
+        layer_assignments = _validate_layer_assignments(
+            layer_assignments,
+            n_phases=len(phases),
+        )
 
         layers: list[LayerState] = []
         for group in layer_assignments:
@@ -95,12 +154,16 @@ class QuantumControlBridge:
 
     def import_knm(self, knm_array: FloatArray) -> CouplingState:
         """Wrap a coupling matrix from quantum calibration into CouplingState."""
-        knm = np.asarray(knm_array, dtype=np.float64)
+        knm = _finite_array(knm_array, name="Knm")
         if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
             raise ValueError(f"Knm must be square, got shape {knm.shape}")
+        if knm.shape != (self._n, self._n):
+            raise ValueError(
+                f"Knm shape {knm.shape} does not match n_oscillators={self._n}"
+            )
         n = knm.shape[0]
         return CouplingState(
-            knm=knm,
+            knm=knm.copy(),
             alpha=np.zeros((n, n), dtype=np.float64),
             active_template="quantum_import",
         )
@@ -170,6 +233,7 @@ class QuantumControlBridge:
 
         Requires scpn-quantum-control.
         """
+        knm, omegas = self._validate_knm_omegas(knm, omegas)
         from scpn_quantum_control.bridge.knm_hamiltonian import knm_to_hamiltonian
 
         return knm_to_hamiltonian(knm, omegas)
@@ -190,6 +254,13 @@ class QuantumControlBridge:
 
         Requires scpn-quantum-control.
         """
+        knm, omegas = self._validate_knm_omegas(knm, omegas)
+        t_max = _require_positive_real(t_max, name="t_max")
+        dt = _require_positive_real(dt, name="dt")
+        trotter_per_step = _require_positive_integer(
+            trotter_per_step,
+            name="trotter_per_step",
+        )
         from scpn_quantum_control.phase.xy_kuramoto import QuantumKuramotoSolver
 
         solver = QuantumKuramotoSolver(
@@ -236,8 +307,17 @@ class QuantumControlBridge:
         *,
         dt: float,
     ) -> tuple[FloatArray, FloatArray]:
-        knm_array = np.asarray(knm, dtype=np.float64)
-        omega_array = np.asarray(omegas, dtype=np.float64)
+        knm_array, omega_array = self._validate_knm_omegas(knm, omegas)
+        _require_positive_real(dt, name="dt")
+        return knm_array, omega_array
+
+    def _validate_knm_omegas(
+        self,
+        knm: FloatArray,
+        omegas: FloatArray,
+    ) -> tuple[FloatArray, FloatArray]:
+        knm_array = _finite_array(knm, name="knm")
+        omega_array = _finite_array(omegas, name="omegas")
         if knm_array.shape != (self._n, self._n):
             raise ValueError(
                 f"knm shape {knm_array.shape} does not match n_oscillators={self._n}"
@@ -247,13 +327,7 @@ class QuantumControlBridge:
                 f"omegas shape {omega_array.shape} does not match "
                 f"n_oscillators={self._n}"
             )
-        if not np.all(np.isfinite(knm_array)):
-            raise ValueError("knm must contain finite values")
-        if not np.all(np.isfinite(omega_array)):
-            raise ValueError("omegas must contain finite values")
-        if not np.isfinite(dt) or dt <= 0.0:
-            raise ValueError("dt must be finite and positive")
-        return knm_array, omega_array
+        return knm_array.copy(), omega_array.copy()
 
     def _quantum_coupling_terms(
         self,

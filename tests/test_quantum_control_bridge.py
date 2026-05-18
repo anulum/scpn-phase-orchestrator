@@ -41,7 +41,12 @@ class TestConstructorValidation:
         with pytest.raises(ValueError, match="n_oscillators"):
             QuantumControlBridge(n_oscillators=0)
 
-    @pytest.mark.parametrize("trotter_order", [True, 0])
+    @pytest.mark.parametrize("n_oscillators", [True, 1.5])
+    def test_n_oscillators_must_be_positive_integer(self, n_oscillators):
+        with pytest.raises(ValueError, match="n_oscillators"):
+            QuantumControlBridge(n_oscillators=n_oscillators)
+
+    @pytest.mark.parametrize("trotter_order", [True, 0, 1.5])
     def test_trotter_order_must_be_positive_integer(self, trotter_order):
         with pytest.raises(ValueError, match="trotter_order must be an integer >= 1"):
             QuantumControlBridge(n_oscillators=2, trotter_order=trotter_order)
@@ -51,13 +56,51 @@ class TestQuantumControlBridge:
     def test_import_artifact_empty_layer_group(self):
         bridge = QuantumControlBridge(n_oscillators=4)
         artifact = {
-            "phases": [0.1, 0.2],
+            "phases": [0.1, 0.2, 0.3, 0.4],
             "fidelity": 0.7,
-            "layer_assignments": [[0, 1], []],
+            "layer_assignments": [[0, 1, 2, 3], []],
         }
         state = bridge.import_artifact(artifact)
         assert len(state.layers) == 2
         assert pytest.approx(0.0) == state.layers[1].R
+
+    @pytest.mark.parametrize(
+        ("artifact", "field"),
+        [
+            ({"phases": [0.0, np.nan], "fidelity": 0.7}, "phases"),
+            ({"phases": [[0.0, 0.1]], "fidelity": 0.7}, "phases"),
+            ({"phases": [0.0], "fidelity": 0.7}, "phases"),
+            ({"phases": [0.0, 0.1], "fidelity": np.inf}, "fidelity"),
+            (
+                {
+                    "phases": [0.0, 0.1],
+                    "fidelity": 0.7,
+                    "layer_assignments": [[0, 2]],
+                },
+                "layer_assignments",
+            ),
+            (
+                {
+                    "phases": [0.0, 0.1],
+                    "fidelity": 0.7,
+                    "layer_assignments": [[True]],
+                },
+                "layer_assignments",
+            ),
+            (
+                {
+                    "phases": [0.0, 0.1],
+                    "fidelity": 0.7,
+                    "layer_assignments": [[0], [0]],
+                },
+                "layer_assignments",
+            ),
+        ],
+    )
+    def test_import_artifact_rejects_invalid_payload(self, artifact, field):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match=field):
+            bridge.import_artifact(artifact)
 
     def test_import_export_roundtrip(self):
         bridge = QuantumControlBridge(n_oscillators=8)
@@ -99,6 +142,21 @@ class TestQuantumControlBridge:
         bridge = QuantumControlBridge(n_oscillators=4)
         with pytest.raises(ValueError, match="square"):
             bridge.import_knm(np.zeros((3, 4)))
+
+    def test_import_knm_rejects_size_mismatch_and_nonfinite_values(self):
+        bridge = QuantumControlBridge(n_oscillators=4)
+        with pytest.raises(ValueError, match="n_oscillators"):
+            bridge.import_knm(np.zeros((3, 3)))
+        with pytest.raises(ValueError, match="finite"):
+            bridge.import_knm(np.array([[0.0, np.nan], [0.0, 0.0]]))
+
+    def test_import_knm_copies_input_matrix(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        knm = np.array([[0.0, 0.5], [0.5, 0.0]])
+        coupling = bridge.import_knm(knm)
+        knm[0, 1] = 99.0
+
+        assert coupling.knm[0, 1] == 0.5
 
     def test_phases_wrapped_to_two_pi(self):
         bridge = QuantumControlBridge(n_oscillators=4)
@@ -192,6 +250,29 @@ class TestQuantumControlBridge:
                 np.array([1.0, np.inf]),
                 dt=0.1,
             )
+
+    def test_build_hamiltonian_rejects_invalid_inputs_before_backend_import(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="knm shape"):
+            bridge.build_hamiltonian(np.zeros((3, 3)), np.ones(2))
+
+    @pytest.mark.parametrize(
+        ("kwargs", "field"),
+        [
+            ({"t_max": 0.0, "dt": 0.1, "trotter_per_step": 1}, "t_max"),
+            ({"t_max": 1.0, "dt": 0.0, "trotter_per_step": 1}, "dt"),
+            ({"t_max": 1.0, "dt": 0.1, "trotter_per_step": 0}, "trotter_per_step"),
+            ({"t_max": 1.0, "dt": 0.1, "trotter_per_step": True}, "trotter_per_step"),
+        ],
+    )
+    def test_solve_q_upde_rejects_invalid_runtime_config_before_backend_import(
+        self,
+        kwargs,
+        field,
+    ):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match=field):
+            bridge.solve_q_upde(np.zeros((2, 2)), np.ones(2), **kwargs)
 
     def test_quantum_compiler_manifest_omits_zero_and_cancelling_couplings(self):
         bridge = QuantumControlBridge(n_oscillators=3)
