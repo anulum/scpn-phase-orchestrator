@@ -20,12 +20,14 @@ import functools
 import math
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor import psychedelic as py_mod
 from scpn_phase_orchestrator.monitor.psychedelic import (
     entropy_from_phases,
+    reduce_coupling,
 )
 
 TWO_PI = 2.0 * math.pi
@@ -91,6 +93,17 @@ class TestEntropy:
         h128 = entropy_from_phases(phases, 128)
         # More bins → higher entropy ceiling, so H should rise.
         assert h128 > h36
+
+    @_python
+    def test_rejects_boolean_phases(self):
+        with pytest.raises(ValueError, match="phases"):
+            entropy_from_phases(np.array([True, False, True]), 36)
+
+
+class TestCouplingReduction:
+    def test_rejects_boolean_coupling_matrix(self):
+        with pytest.raises(ValueError, match="knm"):
+            reduce_coupling(np.array([[True, False], [False, True]]), 0.5)
 
 
 class TestHypothesis:

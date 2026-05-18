@@ -118,8 +118,11 @@ def _dispatch() -> Callable[..., float] | None:
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        phases = np.asarray(value, dtype=np.float64)
+        phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
     if phases.ndim != 1:
@@ -132,8 +135,11 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 def _validate_coupling_matrix(
     value: object, *, name: str, expected_n: int | None = None
 ) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        matrix = np.asarray(value, dtype=np.float64)
+        matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 2-D matrix") from exc
     if matrix.ndim != 2:
