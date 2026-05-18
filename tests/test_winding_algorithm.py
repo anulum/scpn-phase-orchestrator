@@ -20,6 +20,7 @@ import functools
 import math
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -106,6 +107,11 @@ class TestEdgeCases:
         omegas = np.array([1.0, -1.0])
         traj = _rotator(omegas, 150, 0.05)
         assert np.array_equal(winding_vector(traj), winding_numbers(traj))
+
+    @_python
+    def test_rejects_boolean_phase_history(self):
+        with pytest.raises(ValueError, match="phases_history"):
+            winding_numbers(np.array([[True, False], [False, True]]))
 
 
 class TestHypothesis:

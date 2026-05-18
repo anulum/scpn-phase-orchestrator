@@ -108,8 +108,11 @@ def _dispatch() -> Callable[..., IntArray] | None:
 
 
 def _validate_phase_history(phases_history: object) -> FloatArray:
+    raw = np.asarray(phases_history)
+    if raw.dtype == np.bool_:
+        raise ValueError("phases_history must not contain boolean values")
     try:
-        array = np.asarray(phases_history, dtype=np.float64)
+        array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases_history must be a numeric array") from exc
     if not np.all(np.isfinite(array)):
