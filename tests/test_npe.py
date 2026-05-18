@@ -54,6 +54,7 @@ class TestPhaseDistanceMatrix:
             (np.zeros((3, 1), dtype=np.float64), "phases shape"),
             (np.array([0.0, np.nan], dtype=np.float64), "phases"),
             (np.array([0.0, np.inf], dtype=np.float64), "phases"),
+            (np.array([True, False]), "phases"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -118,6 +119,7 @@ class TestNPE:
             (np.zeros((3, 1), dtype=np.float64), "phases shape"),
             (np.array([0.0, np.nan], dtype=np.float64), "phases"),
             (np.array([0.0, np.inf], dtype=np.float64), "phases"),
+            (np.array([True, False]), "phases"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
