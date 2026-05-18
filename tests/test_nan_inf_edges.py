@@ -218,23 +218,22 @@ class TestImprintNanInf:
         model = ImprintModel(decay_rate=0.1, saturation=5.0)
         state = ImprintState(m_k=np.zeros(3), last_update=0.0)
         exposure = np.array([1.0, np.nan, 1.0])
-        new = model.update(state, exposure, dt=1.0)
-        assert np.isnan(new.m_k[1])
+        with pytest.raises(ValueError, match="exposure"):
+            model.update(state, exposure, dt=1.0)
 
     def test_inf_exposure(self) -> None:
         model = ImprintModel(decay_rate=0.1, saturation=5.0)
         state = ImprintState(m_k=np.zeros(3), last_update=0.0)
         exposure = np.array([1.0, np.inf, 1.0])
-        new = model.update(state, exposure, dt=1.0)
-        # clip to saturation
-        assert new.m_k[1] == pytest.approx(5.0)
+        with pytest.raises(ValueError, match="exposure"):
+            model.update(state, exposure, dt=1.0)
 
     def test_nan_dt(self) -> None:
         model = ImprintModel(decay_rate=0.1, saturation=5.0)
         state = ImprintState(m_k=np.ones(3), last_update=0.0)
         exposure = np.ones(3)
-        new = model.update(state, exposure, dt=float("nan"))
-        assert np.any(np.isnan(new.m_k))
+        with pytest.raises(ValueError, match="dt"):
+            model.update(state, exposure, dt=float("nan"))
 
     def test_negative_decay_rate_rejected(self) -> None:
         with pytest.raises(ValueError, match="non-negative"):
