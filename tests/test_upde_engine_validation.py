@@ -143,6 +143,20 @@ class TestStuartLandauEngineValidation:
         with pytest.raises(ValueError, match="state"):
             engine.compute_order_parameter(state)
 
+    def test_compute_mean_amplitude_rejects_state_shape_mismatch(self) -> None:
+        engine = StuartLandauEngine(n_oscillators=4, dt=0.01)
+
+        with pytest.raises(ValueError, match="state.shape"):
+            engine.compute_mean_amplitude(np.ones(7, dtype=np.float64))
+
+    def test_compute_mean_amplitude_rejects_non_finite_state(self) -> None:
+        engine = StuartLandauEngine(n_oscillators=4, dt=0.01)
+        state = np.ones(8, dtype=np.float64)
+        state[4] = np.nan
+
+        with pytest.raises(ValueError, match="state"):
+            engine.compute_mean_amplitude(state)
+
     @pytest.mark.parametrize(
         ("field", "bad_value"),
         [

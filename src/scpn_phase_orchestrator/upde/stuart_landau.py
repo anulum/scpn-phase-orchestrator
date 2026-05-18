@@ -245,6 +245,12 @@ class StuartLandauEngine:
 
     def compute_mean_amplitude(self, state: FloatArray) -> float:
         """Mean amplitude across all oscillators."""
+        state = _validate_state_array(
+            state,
+            name="state",
+            shape=(2 * self._n,),
+            finite_message="state contains NaN or Inf",
+        )
         return float(np.mean(state[self._n :]))
 
     def _validate(
