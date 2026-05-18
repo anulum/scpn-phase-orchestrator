@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.coupling.plasticity import (
     compute_eligibility,
@@ -101,6 +102,80 @@ def test_eligibility_symmetry():
     phases = rng.uniform(0, 2 * np.pi, 10)
     elig = compute_eligibility(phases)
     np.testing.assert_allclose(elig, elig.T, atol=1e-12)
+
+
+@pytest.mark.parametrize(
+    ("phases", "match"),
+    [
+        (np.array([[0.0, 1.0]]), "phases"),
+        (np.array([0.0, np.nan]), "phases"),
+        (np.array([True, False]), "phases"),
+    ],
+)
+def test_eligibility_rejects_invalid_phases(phases, match):
+    with pytest.raises(ValueError, match=match):
+        compute_eligibility(phases)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        (
+            {
+                "knm": np.array([[True, False], [False, True]]),
+                "eligibility": np.ones((2, 2)),
+            },
+            "knm",
+        ),
+        (
+            {
+                "knm": np.ones((2, 2)),
+                "eligibility": np.array([[True, False], [False, True]]),
+            },
+            "eligibility",
+        ),
+        (
+            {"knm": np.ones((2, 2)), "eligibility": np.ones((2, 3))},
+            "eligibility",
+        ),
+        (
+            {
+                "knm": np.array([[1.0, np.inf], [0.0, 1.0]]),
+                "eligibility": np.ones((2, 2)),
+            },
+            "knm",
+        ),
+    ],
+)
+def test_three_factor_rejects_invalid_arrays(kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        three_factor_update(
+            kwargs["knm"],
+            kwargs["eligibility"],
+            modulator=1.0,
+            phase_gate=True,
+        )
+
+
+@pytest.mark.parametrize(
+    ("modulator", "phase_gate", "lr", "error"),
+    [
+        (True, True, 0.01, TypeError),
+        (1.0, 1, 0.01, TypeError),
+        (1.0, True, True, TypeError),
+        (np.nan, True, 0.01, ValueError),
+        (1.0, True, -0.01, ValueError),
+    ],
+)
+def test_three_factor_rejects_invalid_scalars(modulator, phase_gate, lr, error):
+    with pytest.raises(error):
+        three_factor_update(
+            np.ones((2, 2)),
+            np.ones((2, 2)),
+            modulator=modulator,
+            phase_gate=phase_gate,
+            lr=lr,
+        )
 
 
 class TestPlasticityPipelineWiring:
