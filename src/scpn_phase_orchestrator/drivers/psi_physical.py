@@ -24,7 +24,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 def _require_finite_real(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError("frequency and amplitude must be finite numbers")
+        raise ValueError(f"{name} must be finite")
     parsed = float(value)
     if not isfinite(parsed):
         raise ValueError(f"{name} must be finite, got {value}")
@@ -48,6 +48,7 @@ class PhysicalDriver:
 
     def compute(self, t: float) -> float:
         """Return Psi_P at time *t*."""
+        t = _require_finite_real(t, name="t")
         return float(self._amplitude * np.sin(TWO_PI * self._frequency * t))
 
     def compute_batch(self, t_array: FloatArray) -> FloatArray:
