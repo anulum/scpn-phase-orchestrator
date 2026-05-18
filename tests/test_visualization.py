@@ -42,6 +42,18 @@ class TestNetworkGraph:
         data = json.loads(network_graph_json(knm, threshold=0.01))
         assert len(data["links"]) == 1
 
+    @pytest.mark.parametrize(
+        "threshold",
+        [True, -0.01, float("nan"), float("inf"), "0.01"],
+    )
+    def test_rejects_invalid_threshold(self, threshold: object):
+        knm = np.array([[0.0, 0.5], [0.5, 0.0]])
+        with pytest.raises(
+            ValueError,
+            match="threshold must be finite and non-negative",
+        ):
+            network_graph_json(knm, threshold=threshold)
+
     def test_custom_names(self):
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)

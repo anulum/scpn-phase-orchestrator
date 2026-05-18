@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -79,6 +81,15 @@ def _validate_layer_names(
     return value
 
 
+def _validate_non_negative_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and non-negative")
+    parsed = float(value)
+    if not isfinite(parsed) or parsed < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return parsed
+
+
 def network_graph_json(
     knm: FloatArray,
     layer_names: list[str] | None = None,
@@ -91,6 +102,7 @@ def network_graph_json(
     Edges below threshold are omitted.
     """
     knm = _validate_coupling_matrix(knm, name="knm")
+    threshold = _validate_non_negative_real(threshold, name="threshold")
     n = knm.shape[0]
     if layer_names is None:
         layer_names = [f"L{i}" for i in range(n)]
