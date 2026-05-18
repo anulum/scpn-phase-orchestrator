@@ -170,6 +170,10 @@ class CoherencePlot:
             raise ValueError("No pac_matrix record in log data")
         flat = pac_record["pac_matrix"]
         n = pac_record.get("n", int(np.sqrt(len(flat))))
+        if len(flat) != n * n:
+            raise ValueError(
+                f"pac_matrix length {len(flat)} does not match n*n dimensions {n * n}"
+            )
         return n, np.array(flat).reshape(n, n)
 
     def plot_r_timeline(self, output_path: str | Path) -> Path:

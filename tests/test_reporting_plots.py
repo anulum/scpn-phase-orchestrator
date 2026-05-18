@@ -263,6 +263,13 @@ class TestExtractors:
         assert n_out == 4
         assert mat.shape == (4, 4)
 
+    def test_extract_pac_matrix_rejects_malformed_dimensions(self) -> None:
+        log = _make_log()
+        log.append({"event": "pac_snapshot", "pac_matrix": [0.1, 0.2, 0.3], "n": 2})
+        plot = CoherencePlot(log)
+        with pytest.raises(ValueError, match="pac_matrix length"):
+            plot._extract_pac_matrix()
+
     def test_extract_pac_matrix_missing_raises(self) -> None:
         plot = CoherencePlot(_make_log())
         with pytest.raises(ValueError, match="No pac_matrix"):
