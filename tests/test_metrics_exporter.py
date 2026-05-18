@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -60,6 +62,25 @@ def test_export_contains_regime_label():
     state = _make_state([0.9])
     result = exp.export(state, "critical", 0.1)
     assert 'regime="critical"' in result
+
+
+def test_export_escapes_regime_label_value():
+    exp = MetricsExporter()
+    state = _make_state([0.9])
+
+    result = exp.export(state, 'critical"phase\\shift\nline', 0.1)
+
+    assert 'regime="critical\\"phase\\\\shift\\nline"' in result
+    assert 'critical"phase\\shift\nline' not in result
+
+
+@pytest.mark.parametrize("latency_ms", [float("nan"), float("inf"), -0.1, True])
+def test_export_rejects_malformed_latency(latency_ms: object):
+    exp = MetricsExporter()
+    state = _make_state([0.9])
+
+    with pytest.raises(ValueError, match="latency_ms"):
+        exp.export(state, "nominal", cast(float, latency_ms))
 
 
 def test_exposition_lines_count():

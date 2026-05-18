@@ -9,12 +9,29 @@
 from __future__ import annotations
 
 import re
+from math import isfinite
+from numbers import Real
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["MetricsExporter"]
 
 _PROMETHEUS_PREFIX_RE = re.compile(r"^[A-Za-z_:][A-Za-z0-9_:]*$")
+
+
+def _escape_label_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+
+
+def _validated_latency_ms(latency_ms: float) -> float:
+    if (
+        not isinstance(latency_ms, Real)
+        or isinstance(latency_ms, bool)
+        or not isfinite(float(latency_ms))
+        or latency_ms < 0.0
+    ):
+        raise ValueError("latency_ms must be a finite non-negative real value")
+    return float(latency_ms)
 
 
 class MetricsExporter:
@@ -33,6 +50,8 @@ class MetricsExporter:
     ) -> list[str]:
         """Build individual metric lines in Prometheus text format."""
         p = self._prefix
+        regime_label = _escape_label_value(str(regime))
+        latency_ms = _validated_latency_ms(latency_ms)
         lines: list[str] = []
 
         r_values = [layer.R for layer in upde_state.layers]
@@ -40,28 +59,31 @@ class MetricsExporter:
 
         lines.append(f"# HELP {p}_r_global Global Kuramoto order parameter R")
         lines.append(f"# TYPE {p}_r_global gauge")
-        lines.append(f'{p}_r_global{{regime="{regime}"}} {r_global:.6f}')
+        lines.append(f'{p}_r_global{{regime="{regime_label}"}} {r_global:.6f}')
 
         lines.append(f"# HELP {p}_stability_proxy Mean R across layers")
         lines.append(f"# TYPE {p}_stability_proxy gauge")
         lines.append(
-            f'{p}_stability_proxy{{regime="{regime}"}} {upde_state.stability_proxy:.6f}'
+            f'{p}_stability_proxy{{regime="{regime_label}"}} '
+            f"{upde_state.stability_proxy:.6f}"
         )
 
         lines.append(f"# HELP {p}_pac_max Maximum phase-amplitude coupling")
         lines.append(f"# TYPE {p}_pac_max gauge")
-        lines.append(f'{p}_pac_max{{regime="{regime}"}} {upde_state.pac_max:.6f}')
+        lines.append(f'{p}_pac_max{{regime="{regime_label}"}} {upde_state.pac_max:.6f}')
 
         lines.append(f"# HELP {p}_latency_ms UPDE step latency in milliseconds")
         lines.append(f"# TYPE {p}_latency_ms gauge")
-        lines.append(f'{p}_latency_ms{{regime="{regime}"}} {latency_ms:.3f}')
+        lines.append(f'{p}_latency_ms{{regime="{regime_label}"}} {latency_ms:.3f}')
 
         lines.append(f"# HELP {p}_layer_count Number of active UPDE layers")
         lines.append(f"# TYPE {p}_layer_count gauge")
         lines.append(f"{p}_layer_count {len(upde_state.layers)}")
 
         for i, layer in enumerate(upde_state.layers):
-            lines.append(f'{p}_layer_r{{layer="{i}",regime="{regime}"}} {layer.R:.6f}')
+            lines.append(
+                f'{p}_layer_r{{layer="{i}",regime="{regime_label}"}} {layer.R:.6f}'
+            )
 
         return lines
 
