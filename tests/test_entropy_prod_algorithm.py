@@ -216,6 +216,44 @@ class TestInputValidation:
     @pytest.mark.parametrize(
         ("field", "bad_value"),
         [
+            ("phases", np.array([True, False, True])),
+            ("omegas", np.array([True, True, False])),
+            (
+                "knm",
+                np.array(
+                    [
+                        [False, True, False],
+                        [True, False, True],
+                        [False, True, False],
+                    ]
+                ),
+            ),
+        ],
+    )
+    def test_rejects_boolean_arrays(
+        self,
+        field: str,
+        bad_value: np.ndarray,
+    ) -> None:
+        values = {
+            "phases": np.zeros(3, dtype=np.float64),
+            "omegas": np.ones(3, dtype=np.float64),
+            "knm": np.zeros((3, 3), dtype=np.float64),
+        }
+        values[field] = bad_value
+
+        with pytest.raises(ValueError, match=field):
+            entropy_production_rate(
+                values["phases"],
+                values["omegas"],
+                values["knm"],
+                alpha=1.0,
+                dt=0.01,
+            )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value"),
+        [
             ("alpha", False),
             ("alpha", np.nan),
             ("alpha", np.inf),
