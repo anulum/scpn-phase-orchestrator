@@ -156,6 +156,12 @@ class TestInformationalDriver:
         with pytest.raises(ValueError, match="cadence_hz"):
             InformationalDriver(cadence_hz=cast(Any, cadence_hz))
 
+    @pytest.mark.parametrize("t", [True, float("nan"), float("inf"), "0.25"])
+    def test_compute_rejects_invalid_scalar_time(self, t: object):
+        drv = InformationalDriver(cadence_hz=1.0)
+        with pytest.raises(ValueError, match="t must be finite"):
+            drv.compute(cast(Any, t))
+
 
 # ---------------------------------------------------------------------------
 # SymbolicDriver: periodic sequence
