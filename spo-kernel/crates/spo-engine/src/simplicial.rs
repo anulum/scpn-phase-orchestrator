@@ -10,6 +10,7 @@ use rayon::prelude::*;
 use spo_types::{IntegrationConfig, SpoError, SpoResult};
 use std::f64::consts::TAU;
 
+/// Kuramoto stepper with pairwise and all-to-all triadic coupling terms.
 pub struct SimplicialStepper {
     n: usize,
     dt: f64,
@@ -27,6 +28,11 @@ impl std::fmt::Debug for SimplicialStepper {
 }
 
 impl SimplicialStepper {
+    /// Create a simplicial Kuramoto stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -41,6 +47,11 @@ impl SimplicialStepper {
         })
     }
 
+    /// Advance one pairwise-plus-simplicial Kuramoto timestep in place.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -59,6 +70,11 @@ impl SimplicialStepper {
         Ok(())
     }
 
+    /// Advance the simplicial Kuramoto system for `n_steps` in-place timesteps.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -80,6 +96,7 @@ impl SimplicialStepper {
         Ok(())
     }
 
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
@@ -170,6 +187,7 @@ impl SimplicialStepper {
     }
 }
 
+/// Run pairwise-plus-simplicial Kuramoto dynamics from initial phases.
 pub fn simplicial_run(
     phases: &[f64],
     omegas: &[f64],
@@ -194,4 +212,49 @@ pub fn simplicial_run(
     s.run(&mut p, omegas, knm, alpha, zeta, psi, sigma2, n_steps)
         .expect("stepper init failed");
     p
+}
+
+#[cfg(test)]
+mod simplicial_run_tests {
+    use super::*;
+
+    #[test]
+    fn simplicial_run_zero_steps_returns_initial_phases() {
+        let phases = vec![0.1, 0.9, 1.7];
+        let omegas = vec![0.0; 3];
+        let knm = vec![0.0; 9];
+        let alpha = vec![0.0; 9];
+
+        let result = simplicial_run(&phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.0, 0.01, 0);
+
+        assert_eq!(result, phases);
+    }
+
+    #[test]
+    fn simplicial_run_advances_uncoupled_natural_frequency() {
+        let phases = vec![0.2, TAU - 0.05];
+        let omegas = vec![1.0, 1.0];
+        let knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        let result = simplicial_run(&phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.0, 0.1, 1);
+
+        assert!((result[0] - 0.3).abs() < 1e-12);
+        assert!((result[1] - 0.05).abs() < 1e-12);
+    }
+
+    #[test]
+    fn simplicial_run_triadic_term_changes_phases() {
+        let phases = vec![0.0, 0.5, 1.0];
+        let omegas = vec![0.0; 3];
+        let knm = vec![0.0; 9];
+        let alpha = vec![0.0; 9];
+
+        let result = simplicial_run(&phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.5, 0.1, 1);
+
+        assert!(result
+            .iter()
+            .zip(phases)
+            .any(|(new, old)| (new - old).abs() > 1e-12));
+    }
 }
