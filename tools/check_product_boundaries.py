@@ -52,6 +52,7 @@ RUNTIME_PACKAGES = frozenset(
         "network_security",
         "plugins",
         "reporting",
+        "runtime",
         "scaffold",
         "server",
         "server_grpc",

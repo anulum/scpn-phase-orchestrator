@@ -16,7 +16,7 @@ behaviour before production or benchmark runs.
 
 | Profile | Install command | Preflight command | Expected fallback |
 | --- | --- | --- | --- |
-| Python-only | `pip install scpn-phase-orchestrator` | `python -m scpn_phase_orchestrator.cli --help` | Rust/JAX unavailable paths fall back to Python where implemented. |
+| Python-only | `pip install scpn-phase-orchestrator` | `python -m scpn_phase_orchestrator.runtime.cli --help` | Rust/JAX unavailable paths fall back to Python where implemented. |
 | Rust FFI | `pip install scpn-phase-orchestrator` + built `spo_kernel` | `python -c "import spo_kernel; print('spo_kernel OK')"` | If `spo_kernel` missing, modules use Python fallback (same public API). |
 | JAX | `pip install scpn-phase-orchestrator[nn]` | `python -c "from scpn_phase_orchestrator.nn import HAS_JAX; print(HAS_JAX)"` | JAX-specific modules require JAX; they do not silently switch semantics. |
 | QueueWaves | `pip install scpn-phase-orchestrator[queuewaves]` | `python -c "import httpx; print('httpx OK')"` | Collector/server components requiring `httpx` stay unavailable if missing. |

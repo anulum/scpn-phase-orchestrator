@@ -212,7 +212,7 @@ authentication, and offline transports that cannot replay payloads.
 
 ```python
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.server import SimulationState
+from scpn_phase_orchestrator.runtime.server import SimulationState
 
 # 1. Load domain binding
 spec = load_binding_spec("domainpacks/power_grid/binding_spec.yaml")

@@ -52,11 +52,11 @@ conditional imports for optional dependencies:
 
 ## CLI entry point
 
-The public Click command tree lives in `scpn_phase_orchestrator.cli`. Use the
+The public Click command tree lives in `scpn_phase_orchestrator.runtime.cli`. Use the
 [CLI Reference](../cli.md) for command-oriented examples; this API section
 keeps the callable entry points visible to mkdocstrings.
 
-::: scpn_phase_orchestrator.cli
+::: scpn_phase_orchestrator.runtime.cli
 
 ## Network security helpers
 
@@ -71,9 +71,9 @@ The service modules expose the FastAPI dashboard state container and the gRPC
 servicer. Optional web or gRPC dependencies are handled at import time so
 documentation builds can inspect the public surface without launching servers.
 
-::: scpn_phase_orchestrator.server
+::: scpn_phase_orchestrator.runtime.server
 
-::: scpn_phase_orchestrator.server_grpc
+::: scpn_phase_orchestrator.runtime.server_grpc
 
 ## Optional dependency detection
 

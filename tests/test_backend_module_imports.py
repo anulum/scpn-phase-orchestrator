@@ -114,6 +114,31 @@ BACKEND_MODULES = (
 )
 
 
+RUNTIME_MODULES = (
+    "scpn_phase_orchestrator.cli",
+    "scpn_phase_orchestrator.server",
+    "scpn_phase_orchestrator.server_grpc",
+    "scpn_phase_orchestrator.runtime.cli",
+    "scpn_phase_orchestrator.runtime.server",
+    "scpn_phase_orchestrator.runtime.server_grpc",
+)
+
+
+@pytest.mark.parametrize("module_name", RUNTIME_MODULES)
+def test_runtime_module_import_surface(module_name: str) -> None:
+    module = importlib.import_module(module_name)
+    expected_name = (
+        module_name
+        if ".runtime." in module_name
+        else module_name.replace(
+            "scpn_phase_orchestrator.",
+            "scpn_phase_orchestrator.runtime.",
+            1,
+        )
+    )
+    assert module.__name__ == expected_name
+
+
 @pytest.mark.parametrize("module_name", BACKEND_MODULES)
 def test_optional_backend_module_import_surface(module_name: str) -> None:
     module = importlib.import_module(module_name)

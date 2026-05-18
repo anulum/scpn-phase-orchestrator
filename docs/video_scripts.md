@@ -86,7 +86,7 @@ Voiceover points:
 **Screen:** Terminal + docs page
 
 ```bash
-python -m scpn_phase_orchestrator.cli --help
+python -m scpn_phase_orchestrator.runtime.cli --help
 python -c "import spo_kernel; print('spo_kernel OK')"
 python -c "from scpn_phase_orchestrator.nn import HAS_JAX; print(HAS_JAX)"
 python -m pytest -q tests/test_backend_module_imports.py

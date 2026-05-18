@@ -88,6 +88,14 @@ def test_package_init_relative_import_stays_inside_package(tmp_path: Path) -> No
     assert imports == [(1, "scpn_phase_orchestrator.nn.runtime")]
 
 
+def test_runtime_namespace_is_runtime_boundary() -> None:
+    assert mod.classify_module("scpn_phase_orchestrator.runtime.cli") == "runtime"
+    assert mod.classify_module("scpn_phase_orchestrator.runtime.server") == "runtime"
+    assert mod.classify_module("scpn_phase_orchestrator.runtime.server_grpc") == (
+        "runtime"
+    )
+
+
 def test_core_package_cannot_import_integration_surface(tmp_path: Path) -> None:
     core = _write_module(
         tmp_path,

@@ -35,7 +35,7 @@ from scpn_phase_orchestrator.binding.digital_twin import (
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingState
-from scpn_phase_orchestrator.server import SimulationState
+from scpn_phase_orchestrator.runtime.server import SimulationState
 from scpn_phase_orchestrator.studio.workflow import (
     BindingProposal,
     ExportManifest,

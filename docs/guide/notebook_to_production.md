@@ -10,7 +10,7 @@ Start with a Jupyter notebook. Load data, extract phases, run the engine.
 ```python
 # notebooks/explore_my_domain.ipynb
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.server import SimulationState
+from scpn_phase_orchestrator.runtime.server import SimulationState
 
 spec = load_binding_spec("domainpacks/my_domain/binding_spec.yaml")
 sim = SimulationState(spec)
