@@ -92,6 +92,22 @@ class TestPoincareSection:
             poincare_section(traj, normal, direction="sideways")
 
     @_python
+    def test_rejects_boolean_trajectory(self):
+        with pytest.raises(ValueError, match="trajectory"):
+            poincare_section(
+                np.array([[True, False], [False, True]]),
+                np.array([1.0, 0.0]),
+            )
+
+    @_python
+    def test_rejects_boolean_normal(self):
+        with pytest.raises(ValueError, match="normal"):
+            poincare_section(
+                np.zeros((3, 2)),
+                np.array([True, False]),
+            )
+
+    @_python
     def test_return_times_shortcut(self):
         t = np.linspace(0, 8 * math.pi, 800)
         traj = np.column_stack([t, np.sin(t)])
@@ -135,6 +151,11 @@ class TestPhasePoincare:
         phases = np.full((50, 4), 0.5)
         res = phase_poincare(phases, oscillator_idx=0, section_phase=0.0)
         assert len(res.crossings) == 0
+
+    @_python
+    def test_rejects_boolean_phases(self):
+        with pytest.raises(ValueError, match="phases"):
+            phase_poincare(np.array([[True, False], [False, True]]))
 
 
 class TestHypothesis:
