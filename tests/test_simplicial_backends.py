@@ -189,7 +189,9 @@ class TestOptionalLoaderSuccessPaths:
         assert calls[0][9] == 2
 
     def test_mojo_loader_runs_availability_probe(self, monkeypatch):
-        fake_mojo = types.ModuleType("scpn_phase_orchestrator.upde._simplicial_mojo")
+        fake_mojo = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_mojo"
+        )
         probe_calls = []
 
         def _ensure_exe():
@@ -202,7 +204,7 @@ class TestOptionalLoaderSuccessPaths:
         fake_mojo.simplicial_run_mojo = simplicial_run_mojo
         monkeypatch.setitem(
             sys.modules,
-            "scpn_phase_orchestrator.upde._simplicial_mojo",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_mojo",
             fake_mojo,
         )
 
@@ -212,7 +214,9 @@ class TestOptionalLoaderSuccessPaths:
 
     def test_julia_loader_requires_juliacall_and_returns_runner(self, monkeypatch):
         fake_juliacall = types.ModuleType("juliacall")
-        fake_julia = types.ModuleType("scpn_phase_orchestrator.upde._simplicial_julia")
+        fake_julia = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_julia"
+        )
 
         def simplicial_run_julia(*args):
             return np.array([0.6, 0.7], dtype=np.float64)
@@ -221,7 +225,7 @@ class TestOptionalLoaderSuccessPaths:
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         monkeypatch.setitem(
             sys.modules,
-            "scpn_phase_orchestrator.upde._simplicial_julia",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_julia",
             fake_julia,
         )
 
@@ -229,7 +233,9 @@ class TestOptionalLoaderSuccessPaths:
         np.testing.assert_allclose(run(), [0.6, 0.7], atol=1e-12)
 
     def test_go_loader_runs_shared_library_probe(self, monkeypatch):
-        fake_go = types.ModuleType("scpn_phase_orchestrator.upde._simplicial_go")
+        fake_go = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_go"
+        )
         probe_calls = []
 
         def _load_lib():
@@ -242,7 +248,7 @@ class TestOptionalLoaderSuccessPaths:
         fake_go.simplicial_run_go = simplicial_run_go
         monkeypatch.setitem(
             sys.modules,
-            "scpn_phase_orchestrator.upde._simplicial_go",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_go",
             fake_go,
         )
 

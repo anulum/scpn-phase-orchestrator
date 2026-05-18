@@ -26,14 +26,20 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _swarmalator_go,
+    _swarmalator_julia,
+    _swarmalator_mojo,
+)
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod
-from scpn_phase_orchestrator.upde._swarmalator_go import swarmalator_step_go
-from scpn_phase_orchestrator.upde._swarmalator_julia import swarmalator_step_julia
-from scpn_phase_orchestrator.upde._swarmalator_mojo import swarmalator_step_mojo
 from scpn_phase_orchestrator.upde.swarmalator import (
     AVAILABLE_BACKENDS,
     SwarmalatorEngine,
 )
+
+swarmalator_step_go = _swarmalator_go.swarmalator_step_go
+swarmalator_step_julia = _swarmalator_julia.swarmalator_step_julia
+swarmalator_step_mojo = _swarmalator_mojo.swarmalator_step_mojo
 
 TWO_PI = 2.0 * np.pi
 
@@ -264,17 +270,17 @@ class TestBackendLoaderContracts:
 
         monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
         install_backend(
-            "scpn_phase_orchestrator.upde._swarmalator_mojo",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_mojo",
             "swarmalator_step_mojo",
             0.10,
         )
         install_backend(
-            "scpn_phase_orchestrator.upde._swarmalator_julia",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_julia",
             "swarmalator_step_julia",
             0.20,
         )
         install_backend(
-            "scpn_phase_orchestrator.upde._swarmalator_go",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_go",
             "swarmalator_step_go",
             0.30,
         )

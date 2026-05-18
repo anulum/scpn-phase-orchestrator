@@ -21,11 +21,17 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _splitting_go,
+    _splitting_julia,
+    _splitting_mojo,
+)
 from scpn_phase_orchestrator.upde import splitting as sp_mod
-from scpn_phase_orchestrator.upde._splitting_go import splitting_run_go
-from scpn_phase_orchestrator.upde._splitting_julia import splitting_run_julia
-from scpn_phase_orchestrator.upde._splitting_mojo import splitting_run_mojo
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
+
+splitting_run_go = _splitting_go.splitting_run_go
+splitting_run_julia = _splitting_julia.splitting_run_julia
+splitting_run_mojo = _splitting_mojo.splitting_run_mojo
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
@@ -209,11 +215,17 @@ class TestBackendLoaderDispatch:
         monkeypatch.setitem(sys.modules, "juliacall", types.SimpleNamespace())
         monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(
-            "scpn_phase_orchestrator.upde._splitting_mojo._ensure_exe",
+            (
+                "scpn_phase_orchestrator.experimental.accelerators.upde"
+                "._splitting_mojo._ensure_exe"
+            ),
             lambda: object(),
         )
         monkeypatch.setattr(
-            "scpn_phase_orchestrator.upde._splitting_go._load_lib",
+            (
+                "scpn_phase_orchestrator.experimental.accelerators.upde"
+                "._splitting_go._load_lib"
+            ),
             lambda: object(),
         )
 

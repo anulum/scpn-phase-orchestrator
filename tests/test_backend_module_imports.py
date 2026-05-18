@@ -13,15 +13,27 @@ from typing import get_type_hints
 
 import pytest
 
-from scpn_phase_orchestrator.upde._simplicial_go import simplicial_run_go
-from scpn_phase_orchestrator.upde._simplicial_julia import simplicial_run_julia
-from scpn_phase_orchestrator.upde._simplicial_mojo import simplicial_run_mojo
-from scpn_phase_orchestrator.upde._splitting_go import splitting_run_go
-from scpn_phase_orchestrator.upde._splitting_julia import splitting_run_julia
-from scpn_phase_orchestrator.upde._splitting_mojo import splitting_run_mojo
-from scpn_phase_orchestrator.upde._swarmalator_go import swarmalator_step_go
-from scpn_phase_orchestrator.upde._swarmalator_julia import swarmalator_step_julia
-from scpn_phase_orchestrator.upde._swarmalator_mojo import swarmalator_step_mojo
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _simplicial_go,
+    _simplicial_julia,
+    _simplicial_mojo,
+    _splitting_go,
+    _splitting_julia,
+    _splitting_mojo,
+    _swarmalator_go,
+    _swarmalator_julia,
+    _swarmalator_mojo,
+)
+
+simplicial_run_go = _simplicial_go.simplicial_run_go
+simplicial_run_julia = _simplicial_julia.simplicial_run_julia
+simplicial_run_mojo = _simplicial_mojo.simplicial_run_mojo
+splitting_run_go = _splitting_go.splitting_run_go
+splitting_run_julia = _splitting_julia.splitting_run_julia
+splitting_run_mojo = _splitting_mojo.splitting_run_mojo
+swarmalator_step_go = _swarmalator_go.swarmalator_step_go
+swarmalator_step_julia = _swarmalator_julia.swarmalator_step_julia
+swarmalator_step_mojo = _swarmalator_mojo.swarmalator_step_mojo
 
 BACKEND_MODULES = (
     "scpn_phase_orchestrator.coupling._attnres_go",
@@ -99,9 +111,94 @@ BACKEND_MODULES = (
     "scpn_phase_orchestrator.upde._pac_mojo",
     "scpn_phase_orchestrator.upde._reduction_go",
     "scpn_phase_orchestrator.upde._reduction_julia",
-    "scpn_phase_orchestrator.upde._reduction_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_mojo",
     "scpn_phase_orchestrator.upde._ref_kernel",
     "scpn_phase_orchestrator.upde._run",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._splitting_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._splitting_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._splitting_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._embedding_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._embedding_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._embedding_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._entropy_prod_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._entropy_prod_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._entropy_prod_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._npe_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._npe_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._npe_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._psychedelic_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._psychedelic_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._psychedelic_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._recurrence_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._recurrence_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._recurrence_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._te_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._te_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._te_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._winding_go",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._winding_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.monitor._winding_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._basin_stability_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._basin_stability_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._basin_stability_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._engine_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._engine_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._engine_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._engine_webgpu",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._envelope_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._envelope_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._envelope_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._market_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._market_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._market_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._order_params_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._order_params_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._order_params_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pac_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pac_julia",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._pac_mojo",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_go",
+    "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_julia",
+    "scpn_phase_orchestrator.upde._reduction_mojo",
     "scpn_phase_orchestrator.upde._simplicial_go",
     "scpn_phase_orchestrator.upde._simplicial_julia",
     "scpn_phase_orchestrator.upde._simplicial_mojo",
