@@ -67,6 +67,34 @@ class TestNodeInit:
         assert n.peer_timeout_s == 3.0
         n._sock.close()
 
+    @pytest.mark.parametrize(
+        ("field", "kwargs"),
+        [
+            ("node_id", {"node_id": ""}),
+            ("host", {"host": " "}),
+            ("port", {"port": 0}),
+            ("mesh_coupling_strength", {"mesh_coupling_strength": -0.1}),
+            ("heartbeat_interval_s", {"heartbeat_interval_s": 0.0}),
+            ("peer_timeout_s", {"peer_timeout_s": float("nan")}),
+        ],
+    )
+    def test_rejects_malformed_constructor_config(
+        self,
+        field: str,
+        kwargs: dict[str, object],
+    ) -> None:
+        config: dict[str, object] = {"node_id": "valid-node"}
+        config.update(kwargs)
+        with pytest.raises(ValueError, match=field):
+            GaianMeshNode(**config)
+
+    def test_rejects_malformed_peer_address(self) -> None:
+        with pytest.raises(ValueError, match="peer_addresses"):
+            GaianMeshNode(
+                node_id="valid-node",
+                peer_addresses=[("127.0.0.1", 0)],
+            )
+
 
 class TestUpdateLocalState:
     def test_updates(self, node: GaianMeshNode) -> None:

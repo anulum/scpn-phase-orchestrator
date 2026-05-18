@@ -14,8 +14,15 @@ import socket
 import threading
 import time
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 
 import numpy as np
+
+from scpn_phase_orchestrator.adapters._schema import (
+    require_non_empty_str,
+    require_tcp_port,
+)
 
 __all__ = ["GaianMeshNode", "PeerState"]
 
@@ -28,6 +35,48 @@ class PeerState:
     R: float
     psi: float
     timestamp: float
+
+
+def _require_finite_real(
+    value: object,
+    *,
+    field: str,
+    positive: bool,
+) -> float:
+    if (
+        not isinstance(value, Real)
+        or isinstance(value, bool)
+        or not isfinite(float(value))
+    ):
+        raise ValueError(f"{field} must be finite")
+    result = float(value)
+    if positive and result <= 0.0:
+        raise ValueError(f"{field} must be positive")
+    if not positive and result < 0.0:
+        raise ValueError(f"{field} must be non-negative")
+    return result
+
+
+def _validated_peer_addresses(
+    peer_addresses: list[tuple[str, int]] | None,
+) -> list[tuple[str, int]]:
+    if peer_addresses is None:
+        return []
+    if not isinstance(peer_addresses, list):
+        raise ValueError("peer_addresses must be a list of (host, port) tuples")
+
+    validated: list[tuple[str, int]] = []
+    for peer in peer_addresses:
+        if not isinstance(peer, tuple) or len(peer) != 2:
+            raise ValueError("peer_addresses must contain (host, port) tuples")
+        host, port = peer
+        validated.append(
+            (
+                require_non_empty_str(host, field="peer_addresses host"),
+                require_tcp_port(port, field="peer_addresses port"),
+            )
+        )
+    return validated
 
 
 class GaianMeshNode:
@@ -53,13 +102,25 @@ class GaianMeshNode:
         heartbeat_interval_s: float = 0.05,
         peer_timeout_s: float = 1.0,
     ):
-        self.node_id = node_id
-        self.host = host
-        self.port = port
-        self.peer_addresses = peer_addresses or []
-        self.mesh_coupling_strength = mesh_coupling_strength
-        self.heartbeat_interval_s = heartbeat_interval_s
-        self.peer_timeout_s = peer_timeout_s
+        self.node_id = require_non_empty_str(node_id, field="node_id")
+        self.host = require_non_empty_str(host, field="host")
+        self.port = require_tcp_port(port, field="port")
+        self.peer_addresses = _validated_peer_addresses(peer_addresses)
+        self.mesh_coupling_strength = _require_finite_real(
+            mesh_coupling_strength,
+            field="mesh_coupling_strength",
+            positive=False,
+        )
+        self.heartbeat_interval_s = _require_finite_real(
+            heartbeat_interval_s,
+            field="heartbeat_interval_s",
+            positive=True,
+        )
+        self.peer_timeout_s = _require_finite_real(
+            peer_timeout_s,
+            field="peer_timeout_s",
+            positive=True,
+        )
 
         self._peers: dict[str, PeerState] = {}
         self._running = False
