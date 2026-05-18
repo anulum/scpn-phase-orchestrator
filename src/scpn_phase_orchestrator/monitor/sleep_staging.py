@@ -147,8 +147,11 @@ def _validate_functional_desync(value: object) -> bool:
 
 
 def _validate_timestamps(value: object) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError("timestamps must not contain boolean values")
     try:
-        timestamps = np.asarray(value, dtype=np.float64)
+        timestamps = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("timestamps must be a finite 1-D array") from exc
     if timestamps.ndim != 1:

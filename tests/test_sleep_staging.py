@@ -114,6 +114,7 @@ def test_ultradian_empty_input():
     [
         (np.array([[0.0, 1.0]]), ["N3", "REM"], "timestamps"),
         (np.array([0.0, np.nan]), ["N3", "REM"], "timestamps"),
+        (np.array([False, True]), ["N3", "REM"], "timestamps"),
         (np.array([60.0, 30.0]), ["N3", "REM"], "monotonic"),
         (np.array([0.0, 30.0]), ["N3"], "same length"),
         (np.array([0.0, 30.0]), ["N3", "Invalid"], "stage_history"),
