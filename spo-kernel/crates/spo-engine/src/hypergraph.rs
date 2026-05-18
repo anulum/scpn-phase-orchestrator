@@ -10,11 +10,13 @@ use rayon::prelude::*;
 use spo_types::{IntegrationConfig, SpoError, SpoResult};
 use std::f64::consts::TAU;
 
+/// Weighted k-body oscillator interaction.
 pub struct Hyperedge {
     pub nodes: Vec<usize>,
     pub strength: f64,
 }
 
+/// Kuramoto stepper with optional pairwise coupling and k-body hyperedges.
 pub struct HypergraphStepper {
     n: usize,
     dt: f64,
@@ -32,6 +34,11 @@ impl std::fmt::Debug for HypergraphStepper {
 }
 
 impl HypergraphStepper {
+    /// Create a hypergraph Kuramoto stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -46,6 +53,11 @@ impl HypergraphStepper {
         })
     }
 
+    /// Advance one hypergraph Kuramoto timestep in place.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -63,6 +75,11 @@ impl HypergraphStepper {
         Ok(())
     }
 
+    /// Advance the hypergraph Kuramoto system for `n_steps` in-place timesteps.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -83,6 +100,7 @@ impl HypergraphStepper {
         Ok(())
     }
 
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
@@ -173,6 +191,7 @@ impl HypergraphStepper {
     }
 }
 
+/// Run hypergraph Kuramoto dynamics from an initial phase snapshot.
 pub fn hypergraph_run(
     phases: &[f64],
     omegas: &[f64],
@@ -199,6 +218,56 @@ pub fn hypergraph_run(
     p
 }
 
+/// Compute the scalar Kuramoto order parameter `R` for a phase vector.
 pub fn order_parameter(phases: &[f64]) -> f64 {
     crate::order_params::compute_order_parameter(phases).0
+}
+
+#[cfg(test)]
+mod hypergraph_run_tests {
+    use super::*;
+
+    #[test]
+    fn hypergraph_run_zero_steps_returns_initial_phases() {
+        let phases = vec![0.1, 0.9, 1.7];
+        let omegas = vec![0.0; 3];
+        let knm = vec![0.0; 9];
+        let alpha = vec![0.0; 9];
+
+        let result = hypergraph_run(&phases, &omegas, 3, &[], &knm, &alpha, 0.0, 0.0, 0.01, 0);
+
+        assert_eq!(result, phases);
+    }
+
+    #[test]
+    fn hypergraph_run_advances_uncoupled_natural_frequency() {
+        let phases = vec![0.2, TAU - 0.05];
+        let omegas = vec![1.0, 1.0];
+        let knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        let result = hypergraph_run(&phases, &omegas, 2, &[], &knm, &alpha, 0.0, 0.0, 0.1, 1);
+
+        assert!((result[0] - 0.3).abs() < 1e-12);
+        assert!((result[1] - 0.05).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hypergraph_run_triadic_edge_changes_participating_phases() {
+        let phases = vec![0.0, 0.5, 1.0];
+        let omegas = vec![0.0; 3];
+        let knm = vec![0.0; 9];
+        let alpha = vec![0.0; 9];
+        let edges = vec![Hyperedge {
+            nodes: vec![0, 1, 2],
+            strength: 0.5,
+        }];
+
+        let result = hypergraph_run(&phases, &omegas, 3, &edges, &knm, &alpha, 0.0, 0.0, 0.1, 1);
+
+        assert!(result
+            .iter()
+            .zip(phases)
+            .any(|(new, old)| (new - old).abs() > 1e-12));
+    }
 }
