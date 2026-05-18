@@ -29,6 +29,8 @@ Install sc-neurocore: pip install sc-neurocore
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -59,6 +61,43 @@ _RESISTANCE = 1.0
 _REFRACTORY_PERIOD = 0
 
 
+def _require_positive_int(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{field} must be a positive integer")
+    result = int(value)
+    if result <= 0:
+        raise ValueError(f"{field} must be a positive integer")
+    return result
+
+
+def _require_finite_real(
+    value: object,
+    *,
+    field: str,
+    positive: bool,
+) -> float:
+    if (
+        not isinstance(value, Real)
+        or isinstance(value, bool)
+        or not isfinite(float(value))
+    ):
+        raise ValueError(f"{field} must be finite")
+    result = float(value)
+    if positive and result <= 0.0:
+        raise ValueError(f"{field} must be positive")
+    if not positive and result < 0.0:
+        raise ValueError(f"{field} must be non-negative")
+    return result
+
+
+def _require_seed(value: int | None) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("seed must be an integer or None")
+    return int(value)
+
+
 class NeurocoreBridge:
     """Live integration with sc-neurocore StochasticLIFNeuron ensemble.
 
@@ -85,6 +124,30 @@ class NeurocoreBridge:
         backend: str = "auto",
         seed: int | None = None,
     ) -> None:
+        n_layers = _require_positive_int(n_layers, field="n_layers")
+        neurons_per_layer = _require_positive_int(
+            neurons_per_layer,
+            field="neurons_per_layer",
+        )
+        current_scale = _require_finite_real(
+            current_scale,
+            field="current_scale",
+            positive=True,
+        )
+        spike_threshold_hz = _require_finite_real(
+            spike_threshold_hz,
+            field="spike_threshold_hz",
+            positive=True,
+        )
+        noise_std = _require_finite_real(
+            noise_std,
+            field="noise_std",
+            positive=False,
+        )
+        if not isinstance(backend, str):
+            raise ValueError("backend must be a string")
+        seed = _require_seed(seed)
+
         self._n_layers = n_layers
         self._n_per = neurons_per_layer
         self._n_total = n_layers * neurons_per_layer

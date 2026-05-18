@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import time
+from typing import cast
 
 import numpy as np
 import pytest
@@ -91,6 +92,34 @@ class TestNeurocoreBridge:
     def test_invalid_backend(self):
         with pytest.raises(ValueError, match="Unknown backend"):
             NeurocoreBridge(n_layers=2, backend="nonexistent")
+
+    @pytest.mark.parametrize(
+        ("field", "kwargs"),
+        [
+            ("n_layers", {"n_layers": 0}),
+            ("n_layers", {"n_layers": True}),
+            ("neurons_per_layer", {"neurons_per_layer": 0}),
+            ("current_scale", {"current_scale": float("nan")}),
+            ("spike_threshold_hz", {"spike_threshold_hz": 0.0}),
+            ("noise_std", {"noise_std": -0.1}),
+            ("backend", {"backend": True}),
+            ("seed", {"seed": True}),
+        ],
+    )
+    def test_rejects_malformed_constructor_config(
+        self,
+        field: str,
+        kwargs: dict[str, object],
+    ):
+        config: dict[str, object] = {
+            "n_layers": 2,
+            "neurons_per_layer": 4,
+            "backend": "numpy",
+        }
+        config.update(kwargs)
+
+        with pytest.raises(ValueError, match=field):
+            NeurocoreBridge(**cast(dict, config))
 
 
 class TestNeurocoreBridgeNumpy:
