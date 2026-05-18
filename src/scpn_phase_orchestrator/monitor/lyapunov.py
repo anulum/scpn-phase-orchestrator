@@ -146,8 +146,11 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        array = np.asarray(value, dtype=np.float64)
+        array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite one-dimensional array") from exc
     if array.ndim != 1:
@@ -163,8 +166,11 @@ def _validate_matrix(
     name: str,
     expected_shape: tuple[int, int],
 ) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        array = np.asarray(value, dtype=np.float64)
+        array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite matrix") from exc
     if array.shape != expected_shape:

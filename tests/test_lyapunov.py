@@ -114,8 +114,10 @@ class TestLyapunovFunction:
             (np.array([0.0, np.nan]), np.zeros((2, 2)), "phases"),
             (np.array([0.0, np.inf]), np.zeros((2, 2)), "phases"),
             ([["not-a-phase"]], np.zeros((1, 1)), "phases"),
+            (np.array([True, False]), np.zeros((2, 2)), "phases"),
             (np.zeros(2), np.zeros((2, 1)), "knm shape"),
             (np.zeros(2), np.array([[0.0, np.nan], [0.0, 0.0]]), "knm"),
+            (np.zeros(2), np.array([[False, True], [True, False]]), "knm"),
         ],
     )
     def test_evaluate_rejects_invalid_inputs(
