@@ -194,6 +194,10 @@ class TestSymbolicDriver:
         with pytest.raises(ValueError, match="finite"):
             SymbolicDriver(sequence=sequence)
 
+    def test_boolean_sequence_values_rejected(self):
+        with pytest.raises(ValueError, match="finite real"):
+            SymbolicDriver(sequence=cast(Any, [0.0, True]))
+
     def test_multidimensional_sequence_rejected(self):
         with pytest.raises(ValueError, match="one-dimensional"):
             SymbolicDriver(sequence=cast(Any, [[0.0], [1.0]]))

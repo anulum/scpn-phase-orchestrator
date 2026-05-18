@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TypeAlias
 
 import numpy as np
@@ -19,17 +20,29 @@ FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
 
+def _contains_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, (str, bytes)):
+        return False
+    if isinstance(value, Iterable):
+        return any(_contains_bool(item) for item in value)
+    return False
+
+
 class SymbolicDriver:
     """Deterministic phase sequence driver for symbolic/semiotic channels."""
 
     def __init__(self, sequence: list[float]):
         if not sequence:
             raise ValueError("sequence must be non-empty")
+        if _contains_bool(sequence):
+            raise ValueError("sequence values must be finite real numbers")
         parsed_sequence = np.asarray(sequence, dtype=np.float64)
         if parsed_sequence.ndim != 1:
             raise ValueError("sequence must be one-dimensional")
         if not np.all(np.isfinite(parsed_sequence)):
-            raise ValueError("sequence values must be finite")
+            raise ValueError("sequence values must be finite real numbers")
         self._sequence = parsed_sequence
         self._n = len(parsed_sequence)
 
