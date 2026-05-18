@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 
 from scpn_phase_orchestrator.binding.types import VALID_KNOBS, ActuatorMapping
 
@@ -34,6 +36,7 @@ class ActuationMapper:
         for am in actuator_mappings:
             if not isinstance(am, ActuatorMapping):
                 raise ValueError("actuator_mappings entries must be ActuatorMapping")
+            _validate_mapping(am)
             self._by_knob.setdefault(am.knob, []).append(am)
 
     def map_actions(self, actions: list[ControlAction]) -> list[dict]:
@@ -65,3 +68,19 @@ class ActuationMapper:
                 if lo <= action.value <= hi:
                     return True
         return False
+
+
+def _validate_mapping(mapping: ActuatorMapping) -> None:
+    if mapping.knob not in VALID_KNOBS:
+        raise ValueError("actuator mapping knob must be a valid control knob")
+    if not isinstance(mapping.scope, str) or not mapping.scope.strip():
+        raise ValueError("actuator mapping scope must be a non-empty string")
+    if len(mapping.limits) != 2:
+        raise ValueError("actuator mapping limits must contain two values")
+    lo, hi = mapping.limits
+    if not _finite_real(lo) or not _finite_real(hi) or lo >= hi:
+        raise ValueError("actuator mapping limits must be finite and increasing")
+
+
+def _finite_real(value: object) -> bool:
+    return isinstance(value, Real) and not isinstance(value, bool) and isfinite(value)
