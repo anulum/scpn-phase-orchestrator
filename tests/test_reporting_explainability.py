@@ -54,3 +54,36 @@ def test_explainability_report_ignores_non_finite_layer_and_stability_values() -
         "L2 R=0.000",
         "L3 R=0.500",
     )
+
+
+def test_explainability_report_ignores_malformed_action_numeric_fields() -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 0,
+                "regime": "nominal",
+                "stability": 0.75,
+                "layers": [{"R": 0.5}],
+                "actions": [
+                    {
+                        "knob": "K",
+                        "scope": "global",
+                        "value": float("nan"),
+                        "ttl_s": float("inf"),
+                    },
+                    {
+                        "knob": "B",
+                        "scope": "local",
+                        "value": True,
+                        "ttl_s": 2.0,
+                    },
+                ],
+            },
+        ],
+    )
+
+    first, second = report.action_explanations
+    assert first.value == 0.0
+    assert first.ttl_s == 0.0
+    assert second.value == 0.0
+    assert second.ttl_s == 2.0

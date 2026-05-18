@@ -174,8 +174,8 @@ def _action_explanations(
                 continue
             knob = str(action.get("knob", "?"))
             scope = str(action.get("scope", "?"))
-            value = float(action.get("value", 0.0))
-            ttl_s = float(action.get("ttl_s", 0.0))
+            value = _numeric_value(action.get("value", 0.0))
+            ttl_s = _numeric_value(action.get("ttl_s", 0.0))
             justification = str(action.get("justification", "")).strip()
             reason = (
                 justification
