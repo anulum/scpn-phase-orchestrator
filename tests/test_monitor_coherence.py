@@ -108,6 +108,15 @@ def test_detect_phase_lock_cla_below_threshold():
     assert locked == []
 
 
+@pytest.mark.parametrize("threshold", [False, -0.1, 1.1, np.nan, np.inf, "0.9"])
+def test_detect_phase_lock_rejects_invalid_threshold(threshold):
+    state = _make_state([0.9, 0.8])
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    with pytest.raises(ValueError, match="threshold"):
+        monitor.detect_phase_lock(state, threshold=threshold)
+
+
 class TestCoherenceMonitorPipelineWiring:
     """Pipeline: engine → per-layer R → CoherenceMonitor → R_good/R_bad."""
 

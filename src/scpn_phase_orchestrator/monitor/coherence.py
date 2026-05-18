@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from numbers import Integral
+from numbers import Integral, Real
 
 import numpy as np
 
@@ -26,6 +26,15 @@ def _validate_layer_indices(values: list[int], *, name: str) -> list[int]:
             )
         indices.append(int(value))
     return indices
+
+
+def _validate_plv_threshold(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"threshold must be finite real in [0, 1], got {value!r}")
+    threshold = float(value)
+    if not np.isfinite(threshold) or threshold < 0.0 or threshold > 1.0:
+        raise ValueError(f"threshold must be finite real in [0, 1], got {value!r}")
+    return threshold
 
 
 class CoherenceMonitor:
@@ -53,6 +62,7 @@ class CoherenceMonitor:
         (matches Rust implementation). Falls back to lock_signatures
         if CLA entry is below threshold but a signature overrides it.
         """
+        threshold = _validate_plv_threshold(threshold)
         n = len(upde_state.layers)
         cla = upde_state.cross_layer_alignment
         locked = []
