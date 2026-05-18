@@ -55,7 +55,9 @@ inside some Core Engine directories for legacy import compatibility; the product
 boundary checker classifies them as experimental by module suffix and keeps the
 existing Core-to-shim imports on an explicit frozen allowlist until the
 Research and Experimental migration batch moves those shims behind stable
-adapter dispatch points.
+adapter dispatch points. The allowlist is self-auditing: full-tree runs fail if
+an entry becomes stale, forcing migrated shims to be removed from the exception
+set instead of leaving dead architecture debt behind.
 
 ## Enforcement
 

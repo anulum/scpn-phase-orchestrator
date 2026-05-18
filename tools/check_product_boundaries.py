@@ -271,6 +271,20 @@ def find_violations(paths: Iterable[Path]) -> list[ImportViolation]:
     return violations
 
 
+def find_legacy_accelerator_imports(paths: Iterable[Path]) -> set[str]:
+    """Return legacy accelerator imports still used by Core Engine modules."""
+    used: set[str] = set()
+    for path in paths:
+        source_module = module_name(path)
+        source_boundary = classify_module(source_module)
+        if source_boundary != "core":
+            continue
+        for _, imported_module in imported_modules(path):
+            if imported_module in LEGACY_CORE_ACCELERATOR_IMPORTS:
+                used.add(imported_module)
+    return used
+
+
 def _format_path(path: Path) -> str:
     return str(path.relative_to(ROOT) if path.is_relative_to(ROOT) else path)
 
@@ -279,6 +293,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     paths = [Path(arg) for arg in args] if args else iter_python_files()
     violations = find_violations(paths)
+    stale_legacy_imports = (
+        LEGACY_CORE_ACCELERATOR_IMPORTS - find_legacy_accelerator_imports(paths)
+        if not args
+        else frozenset()
+    )
     if violations:
         print("ERROR: product-boundary import violations detected")
         for violation in violations:
@@ -287,6 +306,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"{violation.source_boundary} must not import "
                 f"{violation.target_boundary}: {violation.imported_module}"
             )
+        return 1
+
+    if stale_legacy_imports:
+        print("ERROR: stale legacy accelerator allowlist entries detected")
+        for imported_module in sorted(stale_legacy_imports):
+            print(f"  {imported_module}")
         return 1
 
     print(f"OK: product boundaries hold for {len(paths)} Python files")

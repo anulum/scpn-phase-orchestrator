@@ -117,8 +117,28 @@ def test_new_core_to_experimental_imports_fail_without_legacy_allowlist(
     assert violations[0].target_boundary == "experimental"
 
 
+def test_legacy_allowlist_usage_is_measured(tmp_path: Path) -> None:
+    core = _write_module(
+        tmp_path,
+        "upde/engine.py",
+        "from scpn_phase_orchestrator.upde._engine_mojo import upde_run_mojo\n",
+    )
+
+    used = mod.find_legacy_accelerator_imports([core])
+
+    assert used == {"scpn_phase_orchestrator.upde._engine_mojo"}
+    assert mod.find_violations([core]) == []
+
+
 def test_current_source_tree_respects_core_boundary_contract() -> None:
     mod.SRC_ROOT = ORIGINAL_SRC_ROOT
     violations = mod.find_violations(mod.iter_python_files())
 
     assert violations == []
+
+
+def test_current_legacy_allowlist_has_no_stale_entries() -> None:
+    mod.SRC_ROOT = ORIGINAL_SRC_ROOT
+    used = mod.find_legacy_accelerator_imports(mod.iter_python_files())
+
+    assert mod.LEGACY_CORE_ACCELERATOR_IMPORTS - used == set()
