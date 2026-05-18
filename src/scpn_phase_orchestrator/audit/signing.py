@@ -21,12 +21,12 @@ __all__ = [
 ]
 
 
-def key_id_for_secret(secret: str) -> str:
+def key_id_for_secret(key_material: str) -> str:
     """Return the audit key identifier stored in signed audit metadata."""
 
-    if secret == "":
+    if key_material == "":
         raise ValueError("audit signing key must not be empty")
-    return hashlib.sha256(secret.encode()).hexdigest()[:16]
+    return hashlib.sha256(key_material.encode()).hexdigest()[:16]
 
 
 def audit_verification_keys() -> dict[str, str]:
