@@ -28,13 +28,6 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
-from scpn_phase_orchestrator.audit.logger import AuditLogger
-from scpn_phase_orchestrator.audit.stream import (
-    AuditStreamEvent,
-    iter_event_stream,
-    read_event_stream,
-    verify_event_stream_integrity,
-)
 from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_event_log,
     propose_binding_from_graph,
@@ -69,6 +62,13 @@ from scpn_phase_orchestrator.plugins import (
     discover_plugin_manifests,
 )
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
+from scpn_phase_orchestrator.runtime.audit_stream import (
+    AuditStreamEvent,
+    iter_event_stream,
+    read_event_stream,
+    verify_event_stream_integrity,
+)
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.scaffold.llm import (
     LLMScaffoldProvider,

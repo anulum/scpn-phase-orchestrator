@@ -16,14 +16,7 @@ development logs for local reproducibility workflows.
 
 from __future__ import annotations
 
-from scpn_phase_orchestrator.audit.logger import AuditLogger
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
-from scpn_phase_orchestrator.audit.stream import (
-    AuditStreamEvent,
-    EventStreamWriter,
-    read_event_stream,
-    verify_event_stream_integrity,
-)
+from typing import Any
 
 __all__ = [
     "AuditLogger",
@@ -33,3 +26,25 @@ __all__ = [
     "read_event_stream",
     "verify_event_stream_integrity",
 ]
+
+_EXPORT_MODULES = {
+    "AuditLogger": "scpn_phase_orchestrator.runtime.audit_logger",
+    "ReplayEngine": "scpn_phase_orchestrator.runtime.replay",
+    "AuditStreamEvent": "scpn_phase_orchestrator.runtime.audit_stream",
+    "EventStreamWriter": "scpn_phase_orchestrator.runtime.audit_stream",
+    "read_event_stream": "scpn_phase_orchestrator.runtime.audit_stream",
+    "verify_event_stream_integrity": "scpn_phase_orchestrator.runtime.audit_stream",
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily expose historical audit package exports without import cycles."""
+    module_name = _EXPORT_MODULES.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    from importlib import import_module
+
+    value = getattr(import_module(module_name), name)
+    globals()[name] = value
+    return value

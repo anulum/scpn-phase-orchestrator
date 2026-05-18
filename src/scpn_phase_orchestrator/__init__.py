@@ -29,13 +29,13 @@ from scpn_phase_orchestrator.artifacts.qpu_data import (
     emit_qpu_data_artifact,
     validate_qpu_data_artifact,
 )
-from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.exceptions import SPOError
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.supervisor import ControlAction
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager

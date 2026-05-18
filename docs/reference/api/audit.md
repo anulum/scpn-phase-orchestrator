@@ -114,14 +114,14 @@ Appends timestamped, SHA256-chained records to a JSONL audit trail. When
 length-delimited protobuf stream.
 
 ```python
-from scpn_phase_orchestrator.audit.logger import AuditLogger
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 
 logger = AuditLogger("audit.jsonl", event_stream="audit.spoa")
 logger.log_event("regime_transition", {"from": "nominal", "to": "degraded"})
 logger.close()
 ```
 
-::: scpn_phase_orchestrator.audit.logger
+::: scpn_phase_orchestrator.runtime.audit_logger
 
 ## Audit Signing Helpers
 
@@ -160,12 +160,12 @@ if divergences:
 
 ## Protobuf Event Stream
 
-`scpn_phase_orchestrator.audit.stream` provides the event-sourced stream layer.
+`scpn_phase_orchestrator.runtime.audit_stream` provides the event-sourced stream layer.
 The schema is tracked in `proto/audit.proto` and packaged as
 `scpn_phase_orchestrator/audit/audit.proto`.
 
 ```python
-from scpn_phase_orchestrator.audit.stream import (
+from scpn_phase_orchestrator.runtime.audit_stream import (
     read_event_stream,
     verify_event_stream_integrity,
 )
@@ -178,7 +178,7 @@ The stream is not a replacement for deterministic replay; it is the live
 transport for the same audit records. The JSONL file remains the compatibility
 format for existing reports and replay tooling.
 
-::: scpn_phase_orchestrator.audit.stream
+::: scpn_phase_orchestrator.runtime.audit_stream
 
 ## Pipeline integration
 

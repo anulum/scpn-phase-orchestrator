@@ -15,9 +15,15 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
-from scpn_phase_orchestrator.audit.logger import AuditLogger
+from scpn_phase_orchestrator.audit import logger as legacy_logger
 from scpn_phase_orchestrator.exceptions import AuditError
+from scpn_phase_orchestrator.runtime import audit_logger as runtime_logger
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+
+def test_legacy_audit_logger_alias_targets_runtime_module() -> None:
+    assert legacy_logger is runtime_logger
 
 
 def _sample_state(r0=0.8, r1=0.6, regime="nominal"):
