@@ -10,9 +10,8 @@ import numpy as np
 import pytest
 
 pytest.importorskip("websockets", reason="websockets not installed")
-from scpn_phase_orchestrator.visualization import streamer as streamer_module
-
-VisualizerStreamer = streamer_module.VisualizerStreamer
+import scpn_phase_orchestrator.visualization.streamer as streamer_module
+from scpn_phase_orchestrator.visualization.streamer import VisualizerStreamer
 
 
 def test_viz_streamer_initialization():
