@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
+from typing import cast
 
 import numpy as np
 import pytest
@@ -77,6 +78,16 @@ class TestRemanentiaBridge:
         bad = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         assert bad.health_check() is False
 
+    @pytest.mark.parametrize("url", ["", " ", "file:///etc/passwd", True])
+    def test_constructor_rejects_malformed_url(self, url: object) -> None:
+        with pytest.raises(ValueError, match="remanentia_url"):
+            RemanentiaBridge(remanentia_url=cast(str, url))
+
+    @pytest.mark.parametrize("timeout", [0.0, -1.0, float("nan"), True])
+    def test_constructor_rejects_malformed_timeout(self, timeout: object) -> None:
+        with pytest.raises(ValueError, match="timeout"):
+            RemanentiaBridge(timeout=cast(float, timeout))
+
     def test_get_entity_count(self, bridge: RemanentiaBridge) -> None:
         assert bridge.get_entity_count() == 42
 
@@ -109,12 +120,10 @@ class TestRemanentiaBridge:
         assert snap.consolidation_suggested is True
         assert snap.n_entities == 42
 
-    def test_url_scheme_validation(self) -> None:
-        bad = RemanentiaBridge(remanentia_url="file:///etc/passwd")
+    def test_url_scheme_validation_message_is_scrubbed(self) -> None:
         with pytest.raises(ValueError) as excinfo:
-            bad._get("/health")
+            RemanentiaBridge(remanentia_url="file:///etc/passwd")
         msg = str(excinfo.value)
-        assert "Refusing" in msg
         # Offending URL must not be echoed in the error (may contain a
         # malicious scheme or caller payload).
         assert "/etc/passwd" not in msg

@@ -27,7 +27,10 @@ from __future__ import annotations
 import json
 import urllib.request
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
+from urllib.parse import urlparse
 
 import numpy as np
 from numpy.typing import NDArray
@@ -46,6 +49,29 @@ class CoherenceMemorySnapshot:
     n_memories: int
     novelty_score: float
     consolidation_suggested: bool
+
+
+def _validated_remanentia_url(remanentia_url: object) -> str:
+    if not isinstance(remanentia_url, str) or not remanentia_url.strip():
+        raise ValueError("remanentia_url must be a non-empty http(s) URL")
+    url = remanentia_url.strip().rstrip("/")
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("remanentia_url must be a non-empty http(s) URL")
+    return url
+
+
+def _validated_timeout(timeout: object) -> float:
+    if (
+        not isinstance(timeout, Real)
+        or isinstance(timeout, bool)
+        or not isfinite(float(timeout))
+    ):
+        raise ValueError("timeout must be a finite positive real value")
+    value = float(timeout)
+    if value <= 0.0:
+        raise ValueError("timeout must be a finite positive real value")
+    return value
 
 
 class RemanentiaBridge:
@@ -72,8 +98,8 @@ class RemanentiaBridge:
         remanentia_url: str = "http://localhost:8002",
         timeout: float = 5.0,
     ):
-        self._url = remanentia_url.rstrip("/")
-        self._timeout = timeout
+        self._url = _validated_remanentia_url(remanentia_url)
+        self._timeout = _validated_timeout(timeout)
         self._last_R = 0.0
         self._last_regime = "unknown"
 
