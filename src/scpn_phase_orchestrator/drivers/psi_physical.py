@@ -50,6 +50,8 @@ class PhysicalDriver:
     """Sinusoidal external drive: Psi_P(t) = amplitude * sin(2*pi*frequency*t)."""
 
     def __init__(self, frequency: float, amplitude: float = 1.0):
+        if isinstance(frequency, bool) or isinstance(amplitude, bool):
+            raise ValueError("frequency and amplitude must be finite real values")
         parsed_frequency = _require_finite_real(frequency, name="frequency")
         parsed_amplitude = _require_finite_real(amplitude, name="amplitude")
         if parsed_frequency <= 0.0:
