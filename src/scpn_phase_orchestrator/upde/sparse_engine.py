@@ -33,6 +33,38 @@ FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
 
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    return coerced
+
+
+def _validate_integer_ndarray(value: object, *, name: str) -> IntArray:
+    if not isinstance(value, np.ndarray):
+        raise ValueError(f"{name} must be a NumPy ndarray, got {type(value).__name__}")
+    if value.dtype == np.bool_ or not np.issubdtype(value.dtype, np.integer):
+        raise ValueError(f"{name} must be an integer ndarray, got {value.dtype}")
+    if value.ndim != 1:
+        raise ValueError(f"{name} must be one-dimensional, got shape {value.shape}")
+    return value
+
+
+def _validate_real_ndarray(value: object, *, name: str) -> FloatArray:
+    if not isinstance(value, np.ndarray):
+        raise ValueError(f"{name} must be a NumPy ndarray, got {type(value).__name__}")
+    if value.dtype == np.bool_ or not (
+        np.issubdtype(value.dtype, np.integer)
+        or np.issubdtype(value.dtype, np.floating)
+    ):
+        raise ValueError(f"{name} must be a real numeric ndarray, got {value.dtype}")
+    if value.ndim != 1:
+        raise ValueError(f"{name} must be one-dimensional, got shape {value.shape}")
+    return value
+
+
 def _validate_positive_int(value: object, *, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
@@ -171,6 +203,8 @@ class SparseUPDEEngine:
         Returns:
             New phase vector [theta_1(t+dt), ..., theta_N(t+dt)], shape (N,).
         """
+        zeta = _validate_finite_real(zeta, name="zeta")
+        psi = _validate_finite_real(psi, name="psi")
         self._validate_inputs(
             phases,
             omegas,
@@ -183,18 +217,17 @@ class SparseUPDEEngine:
         )
         with self._lock:
             if self._rust is not None:
-                return np.asarray(
-                    self._rust.step(
-                        np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                        np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                        np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
-                        np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
-                        np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
-                        float(zeta),
-                        float(psi),
-                        np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
-                    )
+                result = self._rust.step(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
+                    np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
+                    np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
+                    zeta,
+                    psi,
+                    np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
                 )
+                return self._validate_rust_output(result)
 
             if self._method == "euler":
                 return self._euler_step(
@@ -258,6 +291,8 @@ class SparseUPDEEngine:
             Final phase vector after n_steps.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
+        zeta = _validate_finite_real(zeta, name="zeta")
+        psi = _validate_finite_real(psi, name="psi")
         self._validate_inputs(
             phases,
             omegas,
@@ -268,27 +303,51 @@ class SparseUPDEEngine:
             zeta,
             psi,
         )
+        if n_steps == 0:
+            return phases.copy()
         with self._lock:
             if self._rust is not None:
-                return np.asarray(
-                    self._rust.run(
-                        np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                        np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                        np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
-                        np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
-                        np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
-                        float(zeta),
-                        float(psi),
-                        np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
-                        n_steps,
-                    )
+                result = self._rust.run(
+                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                    np.ascontiguousarray(row_ptr.ravel(), dtype=np.uint64),
+                    np.ascontiguousarray(col_indices.ravel(), dtype=np.uint64),
+                    np.ascontiguousarray(knm_values.ravel(), dtype=np.float64),
+                    zeta,
+                    psi,
+                    np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
+                    n_steps,
                 )
+                return self._validate_rust_output(result)
+
             p = phases.copy()
             for _ in range(n_steps):
                 p = self.step(
                     p, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
                 )
             return p
+
+    def _validate_rust_output(self, result: object) -> FloatArray:
+        out = np.asarray(result)
+        if out.shape != (self._n,):
+            shape_expected = (self._n,)
+            raise ValueError(
+                f"Rust output has malformed shape {out.shape},"
+                f" expected {shape_expected}"
+            )
+        if out.dtype == np.bool_ or not (
+            np.issubdtype(out.dtype, np.integer)
+            or np.issubdtype(out.dtype, np.floating)
+        ):
+            raise ValueError(
+                f"Rust output must be a real numeric array, got {out.dtype}"
+            )
+        try:
+            if not np.all(np.isfinite(out)):
+                raise ValueError("Rust output contains NaN/Inf")
+        except TypeError as exc:
+            raise ValueError("Rust output must be a finite real numeric array") from exc
+        return np.asarray(out, dtype=np.float64)
 
     def _validate_inputs(
         self,
@@ -301,16 +360,33 @@ class SparseUPDEEngine:
         zeta: float,
         psi: float,
     ) -> None:
+        phases = _validate_real_ndarray(phases, name="phases")
+        omegas = _validate_real_ndarray(omegas, name="omegas")
+        row_ptr = _validate_integer_ndarray(row_ptr, name="row_ptr")
+        col_indices = _validate_integer_ndarray(col_indices, name="col_indices")
+        knm_values = _validate_real_ndarray(knm_values, name="knm_values")
+        alpha_values = _validate_real_ndarray(alpha_values, name="alpha_values")
+
         n = self._n
-        if not (np.isfinite(zeta) and np.isfinite(psi)):
-            raise ValueError("zeta and psi must be finite")
+        if row_ptr.shape != (n + 1,):
+            raise ValueError(f"row_ptr.shape={row_ptr.shape}, expected {(n + 1,)}")
+
         if phases.shape != (n,):
             raise ValueError(f"phases.shape={phases.shape}, expected {(n,)}")
         if omegas.shape != (n,):
             raise ValueError(f"omegas.shape={omegas.shape}, expected {(n,)}")
-        if row_ptr.shape != (n + 1,):
-            raise ValueError(f"row_ptr.shape={row_ptr.shape}, expected {(n + 1,)}")
-        edge_count = int(row_ptr[-1]) if row_ptr.size else 0
+
+        if np.any(row_ptr < 0):
+            raise ValueError("row_ptr entries must be non-negative")
+        if row_ptr[0] != 0:
+            raise ValueError("row_ptr must start at 0")
+        if np.any(row_ptr[1:] < row_ptr[:-1]):
+            raise ValueError("row_ptr must be monotonic")
+
+        edge_count = int(row_ptr[-1])
+        if edge_count < 0:
+            raise ValueError("row_ptr final entry must be non-negative")
+
         if col_indices.shape != (edge_count,):
             raise ValueError(
                 f"col_indices.shape={col_indices.shape}, expected {(edge_count,)}"
@@ -323,26 +399,24 @@ class SparseUPDEEngine:
             raise ValueError(
                 f"alpha_values.shape={alpha_values.shape}, expected {(edge_count,)}"
             )
+        if knm_values.shape != alpha_values.shape:
+            raise ValueError("knm_values and alpha_values must have matching shapes")
+
+        if np.any(col_indices < 0) or np.any(col_indices >= self._n):
+            raise ValueError("col_indices entries must be valid oscillator indices")
+
         for name, arr in (
             ("phases", phases),
             ("omegas", omegas),
-            ("row_ptr", row_ptr),
-            ("col_indices", col_indices),
             ("knm_values", knm_values),
             ("alpha_values", alpha_values),
         ):
-            if not np.all(np.isfinite(arr)):
+            try:
+                finite = np.isfinite(arr)
+            except TypeError as exc:
+                raise ValueError(f"{name} contains NaN/Inf") from exc
+            if not np.all(finite):
                 raise ValueError(f"{name} contains NaN/Inf")
-        if row_ptr[0] != 0:
-            raise ValueError("row_ptr must start at 0")
-        if np.any(row_ptr[1:] < row_ptr[:-1]):
-            raise ValueError("row_ptr must be monotonic non-decreasing")
-        if edge_count < 0:
-            raise ValueError("row_ptr final entry must be non-negative")
-        if col_indices.size and (
-            np.any(col_indices < 0) or np.any(col_indices >= self._n)
-        ):
-            raise ValueError("col_indices entries must be valid oscillator indices")
 
     def _derivative(
         self,

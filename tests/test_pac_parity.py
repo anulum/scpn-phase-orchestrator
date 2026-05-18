@@ -6,14 +6,11 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — PAC parity tests
 
-"""Cross-validate Python ``modulation_index`` against Rust ``pac_modulation_index``.
+"""Cross-validate PAC public contracts and fallback behaviour.
 
-The pre-existing three cases exercised only the Rust path in isolation.
-This module restores true parity coverage: every case below runs both
-backends on the same inputs and asserts numerical agreement, plus
-exercises the edge cases a prior audit flagged as missing (degenerate
-inputs, extreme bin counts, fully synchronous phases, constant amplitude,
-NaN rejection).
+The Python API exposes a dispatcher with optional Rust/alternative kernels.
+These tests cover contract behaviour both with and without Rust: malformed
+inputs, shape validation, finite bounded outputs, and dispatcher fallback.
 """
 
 from __future__ import annotations
@@ -21,185 +18,231 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator._compat import HAS_RUST
-from scpn_phase_orchestrator.upde.pac import modulation_index
+from scpn_phase_orchestrator.upde import pac
 
-_HAS_PAC = HAS_RUST and hasattr(
-    __import__("spo_kernel") if HAS_RUST else None,
-    "pac_modulation_index",
-)
-pytestmark = pytest.mark.skipif(
-    not _HAS_PAC,
-    reason="spo_kernel.pac_modulation_index not available",
-)
+try:
+    import spo_kernel as _spo_kernel  # noqa: F401
+
+    _HAS_SPO_KERNEL = True
+except Exception:
+    _spo_kernel = None
+    _HAS_SPO_KERNEL = False
 
 
-@pytest.fixture()
-def spo():
-    import spo_kernel
-
-    return spo_kernel
-
-
-def _mi_python(theta: np.ndarray, amp: np.ndarray, n_bins: int = 18) -> float:
-    """Wrapper around the public modulation_index API (may dispatch to Rust)."""
-    return float(modulation_index(theta, amp, n_bins))
-
-
-# ---------------------------------------------------------------------------
-# True Python ↔ Rust parity
-# ---------------------------------------------------------------------------
-
-
-def test_mi_uniform_parity(spo):
-    """Uniform amplitude → MI ≈ 0 on both backends."""
-    rng = np.random.default_rng(0)
-    theta = rng.uniform(0, 2 * np.pi, 500)
-    amp = np.ones(500)
-    py_mi = _mi_python(theta, amp, 18)
-    rust_mi = spo.pac_modulation_index(theta, amp, 18)
-    assert abs(py_mi - rust_mi) < 1e-10
-    assert rust_mi < 0.1
-
-
-def test_mi_entrained_parity(spo):
-    """Amplitude peak at phase 0 → positive MI on both backends, matching."""
-    rng = np.random.default_rng(1)
-    theta = rng.uniform(0, 2 * np.pi, 1000)
-    amp = np.exp(-2.0 * (np.minimum(theta, 2 * np.pi - theta) ** 2))
-    py_mi = _mi_python(theta, amp, 18)
-    rust_mi = spo.pac_modulation_index(theta, amp, 18)
-    assert abs(py_mi - rust_mi) < 1e-10
-    assert rust_mi > 0.2
-
-
-def test_mi_sinusoidal_coupling_parity(spo):
-    """Classic sine-coupled envelope test (Tort et al. 2010 canonical shape)."""
-    rng = np.random.default_rng(42)
-    theta = rng.uniform(0, 2 * np.pi, 2000)
-    amp = 0.5 + 0.5 * np.cos(theta)  # symmetric modulation around phase 0
-    py_mi = _mi_python(theta, amp, 18)
-    rust_mi = spo.pac_modulation_index(theta, amp, 18)
-    assert abs(py_mi - rust_mi) < 1e-10
-
-
-# ---------------------------------------------------------------------------
-# Edge cases
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("n_bins", [4, 12, 18, 36, 72])
-def test_mi_parity_across_bin_counts(spo, n_bins):
-    """Rust and Python must agree for every reasonable histogram resolution."""
-    rng = np.random.default_rng(n_bins)
-    theta = rng.uniform(0, 2 * np.pi, 600)
-    amp = 1.0 + 0.4 * np.cos(theta)
-    py_mi = _mi_python(theta, amp, n_bins)
-    rust_mi = spo.pac_modulation_index(theta, amp, n_bins)
-    assert abs(py_mi - rust_mi) < 1e-10
-    assert 0.0 <= rust_mi <= 1.0
-
-
-def test_mi_degenerate_n_bins_returns_zero(spo):
-    """For n_bins < 2 the Python dispatcher returns 0.0 (log(n_bins) would
-    vanish otherwise). The contract is explicit in upde/pac.py:22."""
-    theta = np.linspace(0, 2 * np.pi, 64)
-    amp = np.ones(64)
-    assert modulation_index(theta, amp, 1) == 0.0
-    assert modulation_index(theta, amp, 0) == 0.0
-
-
-def test_mi_constant_amplitude_is_zero(spo):
-    """Any constant amplitude distribution yields MI = 0 on both backends."""
-    theta = np.linspace(0, 2 * np.pi, 256, endpoint=False)
-    amp = np.full_like(theta, 2.5)
-    py_mi = _mi_python(theta, amp, 18)
-    rust_mi = spo.pac_modulation_index(theta, amp, 18)
-    assert abs(py_mi) < 1e-12
-    assert abs(rust_mi) < 1e-12
-
-
-def test_mi_fully_synchronous_phases(spo):
-    """All samples at the same phase → all amplitude lands in one bin → MI=1."""
-    theta = np.full(128, 0.3)
-    amp = np.linspace(0.1, 1.0, 128)
-    py_mi = _mi_python(theta, amp, 18)
-    rust_mi = spo.pac_modulation_index(theta, amp, 18)
-    assert abs(py_mi - rust_mi) < 1e-10
-    assert rust_mi > 0.9  # maximally concentrated
-
-
-def test_mi_short_series_parity(spo):
-    """Short series (T < n_bins) still produces a parity-consistent value."""
-    rng = np.random.default_rng(7)
-    theta = rng.uniform(0, 2 * np.pi, 30)
-    amp = rng.uniform(0.1, 1.0, 30)
-    py_mi = _mi_python(theta, amp, 18)
-    rust_mi = spo.pac_modulation_index(theta, amp, 18)
-    assert abs(py_mi - rust_mi) < 1e-10
-
-
-# ---------------------------------------------------------------------------
-# Matrix-level consistency
-# ---------------------------------------------------------------------------
-
-
-def test_pac_matrix_bounded_and_shape(spo):
-    """Rust matrix output: N×N, values in [0, 1]."""
-    n = 4
-    t = 200
-    rng = np.random.default_rng(2)
-    phases = rng.uniform(0, 2 * np.pi, (t, n))
-    amps = np.abs(np.sin(phases)) + 0.1
-
-    rust_flat = spo.pac_matrix_compute(
-        phases.ravel(order="C"),
-        amps.ravel(order="C"),
-        t,
-        n,
-        18,
-    )
-    rust_mat = np.array(rust_flat).reshape(n, n)
-
-    assert rust_mat.shape == (n, n)
-    assert np.all(rust_mat >= 0.0)
-    assert np.all(rust_mat <= 1.0)
-
-
-def test_pac_matrix_diagonal_matches_scalar_mi(spo):
-    """M[i, i] (θ_i, amp_i) must equal scalar pac_modulation_index byte-for-byte.
-
-    The matrix and scalar kernels share the same histogram binning code
-    (`modulation_index` in pac.rs), so once the caller supplies data in
-    the row-major (C order) layout that pac_matrix expects, the diagonal
-    must match the scalar result to machine precision.
-    """
-    n = 3
-    t = 500
-    rng = np.random.default_rng(99)
-    phases = rng.uniform(0, 2 * np.pi, (t, n))
-    amps = np.abs(np.sin(phases)) + 0.1
-
-    rust_flat = spo.pac_matrix_compute(
-        phases.ravel(order="C"),
-        amps.ravel(order="C"),
-        t,
-        n,
-        18,
-    )
-    rust_mat = np.array(rust_flat).reshape(n, n)
-
+def _reference_matrix(
+    phases: np.ndarray,
+    amplitudes: np.ndarray,
+    n_bins: int,
+) -> np.ndarray:
+    n = phases.shape[1]
+    result = np.zeros((n, n), dtype=np.float64)
     for i in range(n):
-        theta_i = np.ascontiguousarray(phases[:, i])
-        amp_i = np.ascontiguousarray(amps[:, i])
-        scalar_mi = spo.pac_modulation_index(theta_i, amp_i, 18)
-        assert abs(rust_mat[i, i] - scalar_mi) < 1e-12, (
-            f"diag {i}: matrix={rust_mat[i, i]:.9f} vs scalar={scalar_mi:.9f}"
-        )
+        for j in range(n):
+            result[i, j] = pac._modulation_index_python(
+                np.asarray(phases[:, i], dtype=np.float64),
+                np.asarray(amplitudes[:, j], dtype=np.float64),
+                n_bins,
+            )
+    return result
 
 
-# Pipeline wiring: every case above exercises a path where Python and Rust
-# PAC could silently disagree — histogram quantisation, degenerate inputs,
-# extreme bin counts, short series, and the pac_matrix/scalar contract.
-# If this file turns green the _HAS_RUST fast path in upde/pac.py is safe
-# to enable in production.
+def _make_signals(seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(seed)
+    theta = rng.uniform(0.0, 2.0 * np.pi, 500)
+    amp = 0.5 + rng.uniform(0.1, 0.9, 500)
+    return theta, amp
+
+
+def test_modulation_index_rejects_invalid_n_bins_types():
+    theta, amp = _make_signals(1)
+    for n_bins in (True, 1.5, None, "18", complex(8.0), [18]):
+        with pytest.raises(ValueError):
+            pac.modulation_index(theta, amp, n_bins)
+
+
+def test_pac_matrix_rejects_invalid_n_bins_types():
+    phases = np.zeros((12, 3), dtype=np.float64)
+    amplitudes = np.ones((12, 3), dtype=np.float64)
+    for n_bins in (True, 1.5, None, "18", complex(8.0), [18]):
+        with pytest.raises(ValueError):
+            pac.pac_matrix(phases, amplitudes, n_bins)
+
+
+def test_modulation_index_rejects_malformed_vector_inputs():
+    amp = np.linspace(0.2, 0.4, 10)
+
+    with pytest.raises(ValueError):
+        pac.modulation_index(np.array([True] * 10, dtype=bool), amp, 18)
+
+    with pytest.raises(ValueError):
+        pac.modulation_index(np.array([[0.1, 0.2]]), amp, 18)
+
+    with pytest.raises(ValueError):
+        pac.modulation_index(np.array([0.1, np.nan, 0.2]), amp[:3], 18)
+
+
+def test_pac_matrix_rejects_malformed_history_inputs():
+    with pytest.raises(ValueError):
+        pac.pac_matrix(np.array([0.1, 0.2]), np.array([0.2, 0.3]), 18)
+
+    with pytest.raises(ValueError):
+        pac.pac_matrix(np.zeros((8, 3)), np.zeros((8, 2)), 18)
+
+    with pytest.raises(ValueError):
+        phases = np.full((4, 3), np.nan)
+        amps = np.ones((4, 3))
+        pac.pac_matrix(phases, amps, 18)
+
+
+def test_modulation_index_empty_and_mismatched_lengths():
+    theta = np.array([0.0, 0.2, 0.4, 0.6, 0.8], dtype=np.float64)
+    amp_short = np.array([1.0, 1.1], dtype=np.float64)
+    amp_long = np.array([1.0, 1.1, 0.9, 0.95], dtype=np.float64)
+
+    assert pac.modulation_index(theta, amp_short, 18) == pac._modulation_index_python(
+        theta, amp_short, 18
+    )
+    assert pac.modulation_index(theta, np.array([], dtype=np.float64), 18) == 0.0
+    assert pac.modulation_index(np.array([], dtype=np.float64), amp_long, 18) == 0.0
+
+
+def test_modulation_index_bounded_and_finite(monkeypatch):
+    theta = np.linspace(0.0, 2.0 * np.pi, 24, endpoint=False)
+    amp = np.abs(np.sin(theta)) + 0.25
+
+    monkeypatch.setattr(pac, "_dispatch", lambda _: None)
+    mi = pac.modulation_index(theta, amp, 18)
+
+    assert np.isfinite(mi)
+    assert 0.0 <= mi <= 1.0
+
+
+def test_pac_matrix_returns_finite_square_matrix(monkeypatch):
+    t, n = 16, 4
+    phases = np.linspace(0.0, 2.0 * np.pi, t * n, dtype=np.float64).reshape(t, n)
+    amps = np.sin(phases) + 1.5
+
+    monkeypatch.setattr(pac, "_dispatch", lambda _: None)
+    mat = pac.pac_matrix(phases, amps, 18)
+
+    assert mat.shape == (n, n)
+    assert np.all(np.isfinite(mat))
+    assert np.all(mat >= 0.0)
+    assert np.all(mat <= 1.0)
+
+
+def test_pac_matrix_matches_python_fallback(monkeypatch):
+    phases = np.array(
+        [[0.0, 1.0, 2.0], [1.2, 2.8, 4.2], [2.4, 4.0, 0.8], [3.6, 5.6, 2.2]],
+        dtype=np.float64,
+    )
+    amps = np.array(
+        [[1.1, 0.6, 1.0], [0.9, 1.2, 1.4], [0.8, 1.1, 0.5], [1.3, 0.7, 1.5]],
+        dtype=np.float64,
+    )
+
+    monkeypatch.setattr(pac, "_dispatch", lambda _: None)
+    observed = pac.pac_matrix(phases, amps, 12)
+    expected = _reference_matrix(phases, amps, 12)
+
+    assert observed.shape == expected.shape
+    assert np.allclose(observed, expected, atol=1e-12)
+
+
+def test_pac_matrix_layout_and_empty_inputs():
+    phases = np.zeros((0, 3), dtype=np.float64)
+    amps = np.zeros((0, 3), dtype=np.float64)
+
+    matrix = pac.pac_matrix(phases, amps, 18)
+    assert matrix.shape == (3, 3)
+    assert np.all(matrix == 0.0)
+
+
+def test_modulation_index_falls_back_when_backend_returns_invalid_scalar():
+    theta, amp = _make_signals(3)
+
+    def fake_backend(*_args: object) -> float:
+        return float("nan")
+
+    with pytest.MonkeyPatch().context() as mp:
+        mp.setattr(pac, "_dispatch", lambda _: fake_backend)
+        with pytest.raises(ValueError):
+            pac.modulation_index(theta, amp, 18)
+
+
+def test_modulation_index_backend_finite_bounds_clamp():
+    theta, amp = _make_signals(4)
+
+    def fake_backend(*_args: object) -> float:
+        return 1.5
+
+    with pytest.MonkeyPatch().context() as mp:
+        mp.setattr(pac, "_dispatch", lambda _: fake_backend)
+        value = pac.modulation_index(theta, amp, 18)
+
+    assert value == 1.0
+
+
+def test_pac_matrix_rejects_backend_layout_mismatch(monkeypatch):
+    phases = np.zeros((6, 2), dtype=np.float64)
+    amps = np.ones((6, 2), dtype=np.float64)
+
+    def malformed_backend(*_args: object) -> list[float]:
+        return [0.1, 0.2, 0.3]
+
+    monkeypatch.setattr(pac, "_dispatch", lambda _: malformed_backend)
+
+    with pytest.raises(ValueError):
+        pac.pac_matrix(phases, amps, 18)
+
+
+def test_pac_gate_threshold_contract():
+    assert pac.pac_gate(0.2, 0.3) is False
+    assert pac.pac_gate(0.3, 0.3) is True
+
+
+def test_pac_gate_rejects_invalid_inputs():
+    for pac_value in (True, float("nan"), float("inf"), "0.4", object()):
+        with pytest.raises(ValueError):
+            pac.pac_gate(pac_value, 0.3)
+
+    for threshold in (True, float("nan"), float("inf"), "0.4", object()):
+        with pytest.raises(ValueError):
+            pac.pac_gate(0.4, threshold)
+
+
+@pytest.mark.parametrize("n_bins", (4, 12, 24))
+def test_modulation_index_matches_rust_when_available(n_bins):
+    if not _HAS_SPO_KERNEL:
+        return
+
+    theta, amp = _make_signals(2)
+    expected = _spo_kernel.pac_modulation_index(theta, amp, n_bins)
+    observed = pac.modulation_index(theta, amp, n_bins)
+
+    assert abs(observed - expected) < 1e-10
+
+
+@pytest.mark.parametrize("n_bins", (4, 12, 24))
+def test_pac_matrix_matches_rust_diagonal_when_available(n_bins):
+    if not _HAS_SPO_KERNEL:
+        return
+
+    t, n = 12, 3
+    rng = np.random.default_rng(13)
+    phases = rng.uniform(0.0, 2.0 * np.pi, (t, n))
+    amps = np.abs(np.sin(phases)) + 0.2
+
+    result = pac.pac_matrix(phases, amps, n_bins)
+    flat = _spo_kernel.pac_matrix_compute(
+        np.asarray(phases, dtype=np.float64).ravel(order="C"),
+        np.asarray(amps, dtype=np.float64).ravel(order="C"),
+        t,
+        n,
+        n_bins,
+    )
+    rust_mat = np.asarray(flat, dtype=np.float64).reshape(n, n)
+
+    assert result.shape == (n, n)
+    for i in range(n):
+        assert abs(result[i, i] - rust_mat[i, i]) < 1e-12

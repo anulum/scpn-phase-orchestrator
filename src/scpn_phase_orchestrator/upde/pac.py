@@ -159,6 +159,15 @@ def _validate_finite_real(name: str, value: object) -> float:
     return parsed
 
 
+def _validate_mi_value(name: str, value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number")
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    return float(np.clip(parsed, 0.0, 1.0))
+
+
 def _load_backend(name: str) -> dict[str, object]:
     cached = _BACKEND_CACHE.get(name)
     if cached is not None:
@@ -266,15 +275,19 @@ def modulation_index(
             "Callable[[FloatArray, FloatArray, int], float]",
             backend_fn,
         )
-        return float(
+        return _validate_mi_value(
+            "modulation_index backend",
             fn(
                 np.ascontiguousarray(theta_low, dtype=np.float64),
                 np.ascontiguousarray(amp_high, dtype=np.float64),
                 n_bins,
-            )
+            ),
         )
 
-    return _modulation_index_python(theta_low, amp_high, n_bins)
+    return _validate_mi_value(
+        "modulation_index",
+        _modulation_index_python(theta_low, amp_high, n_bins),
+    )
 
 
 def pac_matrix(
@@ -294,6 +307,10 @@ def pac_matrix(
     phases_history = _validate_history("phases_history", phases_history)
     amplitudes_history = _validate_history("amplitudes_history", amplitudes_history)
     t, n = phases_history.shape
+    if n_bins < 2:
+        return np.zeros((n, n), dtype=np.float64)
+    if t == 0 or n == 0:
+        return np.zeros((n, n), dtype=np.float64)
     if amplitudes_history.shape != (t, n):
         raise ValueError("phases and amplitudes must have the same shape")
 
@@ -304,13 +321,20 @@ def pac_matrix(
             backend_fn,
         )
         flat = fn(
-            np.ascontiguousarray(phases_history.ravel(), dtype=np.float64),
-            np.ascontiguousarray(amplitudes_history.ravel(), dtype=np.float64),
+            np.ascontiguousarray(phases_history.ravel(order="C"), dtype=np.float64),
+            np.ascontiguousarray(amplitudes_history.ravel(order="C"), dtype=np.float64),
             t,
             n,
             n_bins,
         )
-        return np.asarray(flat, dtype=np.float64).reshape(n, n)
+        matrix = np.asarray(flat, dtype=np.float64).ravel(order="C")
+        if matrix.size != n * n:
+            raise ValueError(
+                "pac_matrix backend must return n*n values in C-order layout"
+            )
+        if not np.all(np.isfinite(matrix)):
+            raise ValueError("pac_matrix backend must return finite values")
+        return np.clip(matrix.reshape((n, n), order="C"), 0.0, 1.0)
 
     result = np.zeros((n, n), dtype=np.float64)
     for i in range(n):

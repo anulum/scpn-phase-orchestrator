@@ -17,20 +17,172 @@ from scpn_phase_orchestrator._compat import HAS_RUST
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-_HAS_STEPPER = HAS_RUST and hasattr(
-    __import__("spo_kernel") if HAS_RUST else None, "PyUPDEStepper"
-)
-pytestmark = pytest.mark.skipif(
-    not _HAS_STEPPER,
-    reason="spo_kernel.PyUPDEStepper not available",
-)
+
+def _import_spo_kernel():
+    if not HAS_RUST:
+        pytest.skip("spo_kernel support is not enabled in this environment")
+
+    module = pytest.importorskip(
+        "spo_kernel", reason="spo_kernel package is required for FFI parity checks"
+    )
+    if not hasattr(module, "PyUPDEStepper"):
+        pytest.skip("spo_kernel.PyUPDEStepper is unavailable")
+    return module
 
 
 @pytest.fixture()
 def spo():
-    import spo_kernel
+    return _import_spo_kernel()
 
-    return spo_kernel
+
+def _boundary_state(n: int = 4):
+    phases = np.array([0.0, 0.4, 1.2, 2.0][:n], dtype=float)
+    omegas = np.ones(n)
+    knm = np.full((n, n), 0.3, dtype=float)
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n), dtype=float)
+    return phases, omegas, knm, alpha
+
+
+def test_constructor_validation():
+    with pytest.raises(ValueError, match="n_oscillators"):
+        UPDEEngine(0, dt=0.1)
+    with pytest.raises(ValueError, match="n_oscillators"):
+        UPDEEngine(True, dt=0.1)
+    with pytest.raises(ValueError, match="dt must be positive"):
+        UPDEEngine(4, dt=0.0)
+    with pytest.raises(ValueError, match="dt must be positive"):
+        UPDEEngine(4, dt=float("nan"))
+    with pytest.raises(ValueError, match="Unknown method"):
+        UPDEEngine(4, dt=0.1, method="bad")
+
+
+def test_input_shape_validation_for_step_and_run():
+    phases, omegas, knm, alpha = _boundary_state()
+    engine = UPDEEngine(len(phases), dt=0.1)
+
+    with pytest.raises(ValueError, match="phases.shape"):
+        engine.step(phases[:-1], omegas, knm, 0.0, 0.0, alpha)
+    with pytest.raises(ValueError, match="omegas.shape"):
+        engine.step(phases, np.ones(2), knm, 0.0, 0.0, alpha)
+    with pytest.raises(ValueError, match="knm.shape"):
+        engine.step(phases, omegas, knm[:-1], 0.0, 0.0, alpha)
+    with pytest.raises(ValueError, match="alpha.shape"):
+        engine.step(phases, omegas, knm, 0.0, 0.0, np.zeros((3, 3)))
+    with pytest.raises(ValueError, match="contains NaN/Inf"):
+        bad_phases = phases.copy()
+        bad_phases[0] = np.inf
+        engine.step(bad_phases, omegas, knm, 0.0, 0.0, alpha)
+
+    with pytest.raises(ValueError, match="phases.shape"):
+        engine.run(phases[:-1], omegas, knm, 0.0, 0.0, alpha, n_steps=1)
+    with pytest.raises(ValueError, match="knm.shape"):
+        engine.run(phases, omegas, knm[:-1], 0.0, 0.0, alpha, n_steps=1)
+
+
+@pytest.mark.parametrize("zeta", [True, 1.0 + 2.0j])
+def test_scalar_control_rejects_bool_or_non_real_for_step(zeta):
+    phases, omegas, knm, alpha = _boundary_state()
+    engine = UPDEEngine(len(phases), dt=0.1)
+    with pytest.raises(ValueError, match="zeta must be finite real"):
+        engine.step(phases, omegas, knm, zeta=zeta, psi=0.0, alpha=alpha)
+
+
+@pytest.mark.parametrize("psi", [True, 1.0 + 2.0j])
+def test_scalar_control_rejects_bool_or_non_real_for_run(psi):
+    phases, omegas, knm, alpha = _boundary_state()
+    engine = UPDEEngine(len(phases), dt=0.1)
+    with pytest.raises(ValueError, match="psi must be finite real"):
+        engine.run(phases, omegas, knm, zeta=0.0, psi=psi, alpha=alpha, n_steps=1)
+
+
+def test_run_zero_step_returns_copy():
+    phases = np.array([0.25, 0.5, 1.0, 1.5], dtype=float)
+    omegas = np.ones_like(phases)
+    knm = np.zeros((len(phases), len(phases)), dtype=float)
+    alpha = np.zeros_like(knm)
+
+    engine = UPDEEngine(len(phases), dt=0.01)
+    out = engine.run(phases, omegas, knm, zeta=0.0, psi=0.0, alpha=alpha, n_steps=0)
+
+    assert isinstance(out, np.ndarray)
+    assert out.shape == phases.shape
+    assert out is not phases
+    assert not np.shares_memory(out, phases)
+    np.testing.assert_allclose(out, phases)
+
+
+def test_fake_rust_output_validation():
+    class _BadRust:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def step(self, *_args, **_kwargs):  # pragma: no cover
+            return np.array([0.0, np.inf])
+
+        def run(self, *_args, **_kwargs):  # pragma: no cover
+            return np.array([0.0, 1.0])
+
+    phases, omegas, knm, alpha = _boundary_state(3)
+    engine = UPDEEngine(3, dt=0.1)
+    engine._rust = _BadRust()
+
+    with pytest.raises(ValueError, match="malformed shape"):
+        engine.step(phases, omegas, knm[:3, :3], 0.0, 0.0, alpha)
+    with pytest.raises(ValueError, match="malformed shape"):
+        engine.run(phases, omegas, knm[:3, :3], 0.0, 0.0, alpha, n_steps=1)
+
+
+def test_fake_rust_output_validation_nonfinite_shape_correct():
+    class _BadRust:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def step(self, *_args, **_kwargs):  # pragma: no cover
+            return np.array([0.0, np.nan, 0.5])
+
+        def run(self, *_args, **_kwargs):  # pragma: no cover
+            return np.array([0.0, 1.0, np.nan])
+
+    phases, omegas, knm, alpha = _boundary_state(3)
+    engine = UPDEEngine(3, dt=0.1)
+    engine._rust = _BadRust()
+
+    with pytest.raises(ValueError, match="contains NaN/Inf"):
+        engine.step(phases, omegas, knm[:3, :3], 0.0, 0.0, alpha)
+    with pytest.raises(ValueError, match="contains NaN/Inf"):
+        engine.run(phases, omegas, knm[:3, :3], 0.0, 0.0, alpha, n_steps=1)
+
+
+class _DeterministicFakeRust:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def step(self, phases, omegas, knm, zeta, psi, alpha):
+        return np.asarray(phases, dtype=np.float64)
+
+    def run(self, phases, omegas, knm, zeta, psi, alpha, n_steps):
+        return np.asarray(phases, dtype=np.float64) + 1.0e-6 * float(n_steps)
+
+
+def test_parity_helper_without_real_spo_kernel_is_deterministic():
+    def run_once() -> np.ndarray:
+        phases, omegas, knm, alpha = _boundary_state(4)
+        engine = UPDEEngine(4, dt=0.05)
+        engine._rust = _DeterministicFakeRust()
+        return engine.run(
+            phases,
+            omegas,
+            knm,
+            zeta=0.0,
+            psi=0.0,
+            alpha=alpha,
+            n_steps=11,
+        )
+
+    first = run_once()
+    second = run_once()
+    np.testing.assert_array_equal(first, second)
 
 
 def test_euler_parity(spo):

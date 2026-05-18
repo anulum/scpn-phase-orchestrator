@@ -88,6 +88,12 @@ def _validate_positive_int(value: object, *, name: str) -> int:
     return int(value)
 
 
+def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
 def _validate_positive_float(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
@@ -95,6 +101,25 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     if not np.isfinite(coerced) or coerced <= 0.0:
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     return coerced
+
+
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    return coerced
+
+
+def _validate_real_array(value: object, *, name: str) -> FloatArray:
+    array = value if isinstance(value, np.ndarray) else np.asarray(value)
+    if array.dtype == np.bool_ or not (
+        np.issubdtype(array.dtype, np.integer)
+        or np.issubdtype(array.dtype, np.floating)
+    ):
+        raise ValueError(f"{name} must be a real ndarray, got {array.dtype}")
+    return array
 
 
 class UPDEEngine:
@@ -218,7 +243,7 @@ class UPDEEngine:
         self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
         with self._lock:
             if self._rust is not None:  # pragma: no cover
-                return np.asarray(
+                return self._validate_rust_output(
                     self._rust.step(
                         np.ascontiguousarray(phases.ravel()),
                         np.ascontiguousarray(omegas.ravel()),
@@ -246,8 +271,24 @@ class UPDEEngine:
     ) -> FloatArray:
         """Run n_steps, return final phases. Dispatches to the fastest
         available backend via the module-level ``upde_run``."""
-        n_steps = _validate_positive_int(n_steps, name="n_steps")
+        n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
+        self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
+        if n_steps == 0:
+            return np.asarray(phases, dtype=np.float64).copy()
         with self._lock:
+            if self._rust is not None:  # pragma: no cover
+                return self._validate_rust_output(
+                    self._rust.run(
+                        np.ascontiguousarray(phases.ravel()),
+                        np.ascontiguousarray(omegas.ravel()),
+                        np.ascontiguousarray(knm.ravel()),
+                        float(zeta),
+                        float(psi),
+                        np.ascontiguousarray(alpha.ravel()),
+                        int(n_steps),
+                    )
+                )
+
             return upde_run(
                 phases,
                 omegas,
@@ -283,9 +324,13 @@ class UPDEEngine:
         psi: float,
     ) -> None:
         """Shape and NaN/Inf guards shared by :meth:`step`."""
-        if not (np.isfinite(zeta) and np.isfinite(psi)):
-            raise ValueError("zeta and psi must be finite")
+        zeta = _validate_finite_real(zeta, name="zeta")
+        psi = _validate_finite_real(psi, name="psi")
         n = self._n
+        phases = _validate_real_array(phases, name="phases")
+        omegas = _validate_real_array(omegas, name="omegas")
+        knm = _validate_real_array(knm, name="knm")
+        alpha = _validate_real_array(alpha, name="alpha")
         checks = (
             ("phases", phases, (n,)),
             ("omegas", omegas, (n,)),
@@ -297,6 +342,26 @@ class UPDEEngine:
                 raise ValueError(f"{name}.shape={arr.shape}, expected {shape}")
             if not np.all(np.isfinite(arr)):
                 raise ValueError(f"{name} contains NaN/Inf")
+
+    def _validate_rust_output(self, result: object) -> FloatArray:
+        output = np.asarray(result)
+        if output.shape != (self._n,):
+            raise ValueError(
+                f"Rust output has malformed shape {output.shape}, expected {(self._n,)}"
+            )
+        if output.dtype == np.bool_ or not (
+            np.issubdtype(output.dtype, np.integer)
+            or np.issubdtype(output.dtype, np.floating)
+        ):
+            raise ValueError(
+                f"Rust output must be a real numeric array, got {output.dtype}"
+            )
+        try:
+            if not np.all(np.isfinite(output)):
+                raise ValueError("Rust output contains NaN/Inf")
+        except TypeError as exc:
+            raise ValueError("Rust output must be finite") from exc
+        return np.asarray(output, dtype=np.float64)
 
     def _derivative(
         self,

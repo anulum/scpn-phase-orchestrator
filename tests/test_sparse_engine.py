@@ -232,6 +232,220 @@ class TestSparseEngineEdgeCases:
         p_sparse = sparse.step(phases.copy(), omegas, row_ptr, col, kv, 0.0, 0.0, av)
         np.testing.assert_allclose(p_dense, p_sparse, atol=1e-8)
 
+    def test_constructor_rejects_invalid_scalar_parameters(self):
+        for value in (0, -1, 0.0, float("nan"), float("inf"), "4", False):
+            with pytest.raises(ValueError):
+                SparseUPDEEngine(n_oscillators=4, dt=value)
+        for value in (0.0, -1e-6, float("nan"), float("inf"), "1e-6", False):
+            with pytest.raises(ValueError):
+                SparseUPDEEngine(n_oscillators=4, dt=0.01, atol=value)
+            with pytest.raises(ValueError):
+                SparseUPDEEngine(n_oscillators=4, dt=0.01, rtol=value)
+
+    def test_step_rejects_non_real_zeta_psi(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = np.zeros(3, dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError):
+            engine.step(phases, omegas, row_ptr, col, kv, True, 0.0, av)
+        with pytest.raises(ValueError):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 1j, av)
+
+    def test_step_rejects_array_like_inputs_not_strict_numpy_arrays(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = [0.1, 0.2, 0.3]
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = [0, 0, 0, 0]
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
+
+    def test_rejects_bool_object_and_nonfinite_csr_arrays(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        base_row_ptr = np.array([0, 1, 2, 3], dtype=np.uint64)
+
+        with pytest.raises(ValueError):
+            engine.step(
+                phases,
+                omegas,
+                np.array([False, False, False, False]),
+                np.array([0, 1, 2], dtype=np.uint64),
+                np.array([0.1, 0.2, 0.3], dtype=np.float64),
+                0.0,
+                0.0,
+                np.array([0.0, 0.1, 0.2], dtype=np.float64),
+            )
+        with pytest.raises(ValueError):
+            engine.step(
+                phases,
+                omegas,
+                base_row_ptr,
+                np.array([0, 1, "2"], dtype=object),
+                np.array([0.1, 0.2, 0.3], dtype=np.float64),
+                0.0,
+                0.0,
+                np.array([0.0, 0.1, 0.2], dtype=np.float64),
+            )
+        with pytest.raises(ValueError):
+            engine.step(
+                phases,
+                omegas,
+                base_row_ptr,
+                np.array([0, 1, 2], dtype=np.uint64),
+                np.array([0.1, float("nan"), 0.3], dtype=np.float64),
+                0.0,
+                0.0,
+                np.array([0.0, 0.1, 0.2], dtype=np.float64),
+            )
+
+    def test_step_rejects_row_ptr_invariants(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        knm = np.array([0.2], dtype=np.float64)
+        av = np.array([0.0], dtype=np.float64)
+
+        with pytest.raises(ValueError):
+            engine.step(
+                phases,
+                omegas,
+                np.array([0.0, 1.0, 1.0, 1.0], dtype=np.float64),
+                np.array([0], dtype=np.uint64),
+                knm,
+                0.0,
+                0.0,
+                av,
+            )
+        with pytest.raises(ValueError):
+            engine.step(
+                phases,
+                omegas,
+                np.array([0, 2, 1, 1], dtype=np.uint64),
+                np.array([0], dtype=np.uint64),
+                knm,
+                0.0,
+                0.0,
+                av,
+            )
+        with pytest.raises(ValueError):
+            engine.step(
+                phases,
+                omegas,
+                np.array([0, 3, 3, 3], dtype=np.uint64),
+                np.array([0, 1, 2], dtype=np.uint64),
+                knm,
+                0.0,
+                0.0,
+                av,
+            )
+
+    def test_step_rejects_col_indices_out_of_bounds(self):
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        kv = np.array([0.1], dtype=np.float64)
+        av = np.array([0.0], dtype=np.float64)
+
+        with pytest.raises(ValueError):
+            engine.step(
+                phases,
+                omegas,
+                np.array([0, 2, 2, 2], dtype=np.uint64),
+                np.array([3], dtype=np.uint64),
+                kv,
+                0.0,
+                0.0,
+                av,
+            )
+
+    def test_run_zero_steps_returns_copy(self, monkeypatch):
+        class FakeSparseStepper:
+            def __init__(self, n, dt, method, *, atol, rtol):
+                assert (n, dt, method, atol, rtol) == (3, 0.01, "euler", 1e-6, 1e-3)
+
+            def run(
+                self,
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+                n_steps,
+            ):
+                raise AssertionError("Rust run should not be called for n_steps=0")
+
+            def step(
+                self,
+                phases,
+                omegas,
+                row_ptr,
+                col_indices,
+                knm_values,
+                zeta,
+                psi,
+                alpha_values,
+            ):
+                return np.array([0.0, 0.0, 0.0], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySparseUPDEStepper = FakeSparseStepper
+        monkeypatch.setattr(sparse_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SparseUPDEEngine(3, dt=0.01)
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        out = engine.run(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av, 0)
+        np.testing.assert_allclose(out, phases)
+        assert out is not phases
+
+    def test_rust_output_shape_and_finite_validation(self, monkeypatch):
+        class FakeSparseStepper:
+            def __init__(self, n, dt, method, *, atol, rtol):
+                assert (n, dt, method, atol, rtol) == (3, 0.01, "rk4", 1e-6, 1e-3)
+
+            def step(self, *args):
+                return np.array([0.1, 0.2], dtype=np.float64)
+
+            def run(self, *args):
+                return np.array([0.1, 0.2, float("nan")], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySparseUPDEStepper = FakeSparseStepper
+        monkeypatch.setattr(sparse_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SparseUPDEEngine(3, dt=0.01, method="rk4")
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="Rust output has malformed shape"):
+            engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av)
+        with pytest.raises(ValueError, match="Rust output contains NaN/Inf"):
+            engine.run(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av, 3)
+
     def test_invalid_method_rejected(self):
         """Unknown integration method must raise, mirroring UPDEEngine."""
         with pytest.raises((ValueError, Exception)):  # noqa: BLE001
@@ -355,7 +569,7 @@ class TestSparseEngineEdgeCases:
         kv = np.array([], dtype=np.float64)
         alpha = np.array([], dtype=np.float64)
 
-        with pytest.raises(ValueError, match="phases.shape"):
+        with pytest.raises(ValueError, match="phases.*shape|one-dimensional"):
             engine.step(phases, omegas, row_ptr, col, kv, 0.0, 0.0, alpha)
 
     def test_rk45_sparse_fallback_uses_error_control(self, monkeypatch):
