@@ -204,6 +204,30 @@ class TestExtractors:
         assert all(a >= 0.0 for a in amps)
         assert all(0.0 <= sf <= 1.0 for sf in sub_frac)
 
+    def test_extract_amplitude_ignores_malformed_numeric_values(self) -> None:
+        plot = CoherencePlot(
+            [
+                {
+                    "step": 0,
+                    "regime": "NOMINAL",
+                    "layers": [{"R": 0.2}],
+                    "mean_amplitude": True,
+                    "subcritical_fraction": float("nan"),
+                },
+                {
+                    "step": 1,
+                    "regime": "DEGRADED",
+                    "layers": [{"R": 0.4}],
+                    "mean_amplitude": float("inf"),
+                    "subcritical_fraction": 0.25,
+                },
+            ]
+        )
+        x, amps, sub_frac = plot._extract_amplitude()
+        assert x == [0, 1]
+        assert amps == [0.0, 0.0]
+        assert sub_frac == [0.0, 0.25]
+
     def test_extract_pac_matrix(self) -> None:
         n = 4
         matrix = [0.1 * (i * n + j) / (n * n) for i in range(n) for j in range(n)]

@@ -147,8 +147,10 @@ class CoherencePlot:
     def _extract_amplitude(self) -> tuple[list[int], list[float], list[float]]:
         steps = self._require_steps()
         x = [s["step"] for s in steps]
-        amps = [s.get("mean_amplitude", 0.0) for s in steps]
-        sub_frac = [s.get("subcritical_fraction", 0.0) for s in steps]
+        amps = [self._numeric_value(s.get("mean_amplitude", 0.0)) for s in steps]
+        sub_frac = [
+            self._numeric_value(s.get("subcritical_fraction", 0.0)) for s in steps
+        ]
         return x, amps, sub_frac
 
     def _extract_pac_matrix(self) -> tuple[int, FloatArray]:
