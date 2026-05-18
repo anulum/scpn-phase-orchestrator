@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -56,6 +58,17 @@ class TestPhysicalDriver:
     def test_zero_freq_raises(self) -> None:
         with pytest.raises(ValueError):
             PhysicalDriver(frequency=0.0)
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"frequency": True, "amplitude": 1.0},
+            {"frequency": 1.0, "amplitude": False},
+        ],
+    )
+    def test_rejects_boolean_drive_parameters(self, kwargs: dict[str, Any]) -> None:
+        with pytest.raises(ValueError, match="frequency and amplitude"):
+            PhysicalDriver(**kwargs)
 
     def test_batch(self) -> None:
         d = PhysicalDriver(frequency=2.0, amplitude=3.0)

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -21,18 +22,24 @@ __all__ = ["PhysicalDriver"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _require_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("frequency and amplitude must be finite numbers")
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite, got {value}")
+    return parsed
+
+
 class PhysicalDriver:
     """Sinusoidal external drive: Psi_P(t) = amplitude * sin(2*pi*frequency*t)."""
 
     def __init__(self, frequency: float, amplitude: float = 1.0):
-        try:
-            parsed_frequency = float(frequency)
-            parsed_amplitude = float(amplitude)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("frequency and amplitude must be finite numbers") from exc
-        if not isfinite(parsed_frequency) or parsed_frequency <= 0.0:
+        parsed_frequency = _require_finite_real(frequency, name="frequency")
+        parsed_amplitude = _require_finite_real(amplitude, name="amplitude")
+        if parsed_frequency <= 0.0:
             raise ValueError(f"frequency must be finite and positive, got {frequency}")
-        if not isfinite(parsed_amplitude) or parsed_amplitude < 0.0:
+        if parsed_amplitude < 0.0:
             raise ValueError(
                 f"amplitude must be finite and non-negative, got {amplitude}"
             )
