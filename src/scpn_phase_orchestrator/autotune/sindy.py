@@ -66,7 +66,24 @@ class PhaseSINDy:
 
     def fit(self, phases: FloatArray, dt: float) -> list[FloatArray]:
         """Discover equations node-by-node to handle independent coupling."""
-        T, N = phases.shape
+        if isinstance(dt, bool) or not isinstance(dt, Real):
+            raise ValueError("dt must be a finite and positive scalar")
+        parsed_dt = float(dt)
+        if not isfinite(parsed_dt) or parsed_dt <= 0.0:
+            raise ValueError("dt must be a finite and positive scalar")
+
+        try:
+            phases_array = np.asarray(phases, dtype=np.float64)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("phases must be a finite 2D numeric array") from exc
+
+        if phases_array.ndim != 2:
+            raise ValueError("phases must be a 2D array [T, N]")
+
+        if not np.isfinite(phases_array).all():
+            raise ValueError("phases must be finite and numeric")
+
+        T, N = phases_array.shape
 
         if T < 2:
             self.coefficients = []
@@ -79,15 +96,22 @@ class PhaseSINDy:
             return self.coefficients
 
         if _HAS_RUST:
-            p_flat = np.ascontiguousarray(phases, dtype=np.float64).ravel()
+            p_flat = np.ascontiguousarray(phases_array, dtype=np.float64).ravel()
             result_flat = _rust_sindy_fit(
                 p_flat,
                 N,
                 T,
-                dt,
+                parsed_dt,
                 self.threshold,
                 self.max_iter,
             )
+            result_flat = np.asarray(result_flat, dtype=np.float64).ravel()
+            expected = N * N
+            if result_flat.size != expected:
+                raise ValueError(
+                    "Rust SINDy returned wrong number of coefficients: "
+                    f"{result_flat.size} != {expected}"
+                )
             result = result_flat.reshape(N, N)
             # Remap: Rust stores [ω at diagonal, K_ij off-diagonal]
             # Python expects [ω, K_j1, K_j2, ...] (constant first, then j≠i)
@@ -104,9 +128,9 @@ class PhaseSINDy:
                 self.feature_names.append(names)
             return self.coefficients
 
-        unwrapped = np.unwrap(phases, axis=0)
-        theta_dot = np.diff(unwrapped, axis=0) / dt
-        X = phases[:-1, :]
+        unwrapped = np.unwrap(phases_array, axis=0)
+        theta_dot = np.diff(unwrapped, axis=0) / parsed_dt
+        X = phases_array[:-1, :]
 
         self.coefficients = []
         self.feature_names = []

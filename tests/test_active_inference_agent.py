@@ -18,6 +18,10 @@ PyActiveInferenceAgent = spo_kernel.PyActiveInferenceAgent
 
 
 class TestActiveInferenceAgent:
+    def test_invalid_hidden_size_raises(self):
+        with pytest.raises(ValueError, match="n_hidden"):
+            PyActiveInferenceAgent(n_hidden=0)
+
     def test_agent_adjusts_zeta(self):
         # Target R = 0.5 (metastability)
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
@@ -42,6 +46,14 @@ class TestActiveInferenceAgent:
         assert agent.target_r == 0.8
         agent.target_r = 0.3
         assert agent.target_r == 0.3
+
+    def test_target_r_allows_out_of_range_but_remains_finite(self):
+        """`target_r` currently accepts out-of-domain values; control remains finite."""
+        for target_r in (-1.0, 0.0, 1.0, 2.0):
+            agent = PyActiveInferenceAgent(target_r=target_r, lr=1.0)
+            zeta, psi = agent.control(r_obs=0.5, psi_obs=0.0, dt=0.01)
+            assert np.isfinite(zeta), f"zeta became non-finite for target_r={target_r}"
+            assert np.isfinite(psi), f"psi became non-finite for target_r={target_r}"
 
 
 class TestControlDirectionality:
@@ -74,6 +86,34 @@ class TestControlDirectionality:
             assert abs((psi - expected + np.pi) % (2.0 * np.pi) - np.pi) < 1e-10
 
 
+class TestControlBoundaryEdges:
+    def test_r_obs_out_of_range_stays_finite(self):
+        """Accept out-of-band order-parameter observations without NaN/Inf output."""
+        agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
+        for r_obs in (-1.0, 0.0, 0.5, 1.0, 2.0):
+            zeta, psi = agent.control(r_obs=r_obs, psi_obs=0.0, dt=0.01)
+            assert np.isfinite(zeta)
+            assert np.isfinite(psi)
+
+    def test_psi_tracks_observed_phase_beyond_2pi(self):
+        agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
+        for psi_obs in (-2.75, -1.0, 0.0, 1.0, 2 * np.pi, 2.5 * np.pi, 6.0 * np.pi):
+            _, psi = agent.control(r_obs=0.1, psi_obs=psi_obs, dt=0.01)
+            assert np.isfinite(psi)
+            expected = psi_obs
+            diff = psi - expected
+            assert abs(diff) < 1e-10
+
+    def test_psi_antiphase_wrapping_invariant(self):
+        agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
+        for psi_obs in (-2.75, -1.0, 0.0, 1.0, 2 * np.pi, 2.5 * np.pi, 6.0 * np.pi):
+            _, psi = agent.control(r_obs=0.9, psi_obs=psi_obs, dt=0.01)
+            expected = (np.mod(psi_obs, 2.0 * np.pi) + np.pi) % (2.0 * np.pi)
+            assert 0.0 <= psi < 2.0 * np.pi
+            diff = (psi - expected + np.pi) % (2.0 * np.pi) - np.pi
+            assert abs(diff) < 1e-10
+
+
 class TestTargetRProperty:
     def test_target_r_accepts_zero(self):
         agent = PyActiveInferenceAgent(target_r=0.0)
@@ -98,6 +138,21 @@ class TestLearningRateBehaviour:
         zeta_high, _ = high.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
         assert abs(zeta_high) >= abs(zeta_low)
 
+    def test_lr_extremes_are_stable(self):
+        """Negative and zero learning rates should not produce non-finite output."""
+        zero = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=0.0)
+        negative = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=-1.0)
+        huge = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=50.0)
+        zeta_zero, psi_zero = zero.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
+        zeta_negative, psi_negative = negative.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
+        zeta_huge, psi_huge = huge.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
+        assert zeta_zero == pytest.approx(0.0)
+        assert zeta_negative == pytest.approx(0.0)
+        assert zeta_huge == pytest.approx(5.0)
+        assert np.isfinite(psi_zero)
+        assert np.isfinite(psi_negative)
+        assert np.isfinite(psi_huge)
+
 
 class TestStepwiseAdaptation:
     def test_repeated_calls_produce_finite_output(self):
@@ -115,6 +170,14 @@ class TestStepwiseAdaptation:
         """dt = 0 must not produce NaN/Inf (degenerate integration step)."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
         zeta, psi = agent.control(r_obs=0.1, psi_obs=0.0, dt=0.0)
+        assert np.isfinite(zeta)
+        assert np.isfinite(psi)
+
+    @pytest.mark.parametrize("dt", [-0.1, 0.0, 0.01, 10.0, float("inf"), float("nan")])
+    def test_invalid_dt_values_do_not_break_control(self, dt):
+        """Non-physical dt values should not break the control contract."""
+        agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
+        zeta, psi = agent.control(r_obs=0.5, psi_obs=0.0, dt=dt)
         assert np.isfinite(zeta)
         assert np.isfinite(psi)
 

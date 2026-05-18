@@ -145,6 +145,43 @@ def test_sindy_rejects_non_integer_max_iter(max_iter: object):
         PhaseSINDy(max_iter=cast(Any, max_iter))
 
 
+@pytest.mark.parametrize("dt", [float("nan"), float("inf"), 0.0, -0.05, True, "0.05"])
+def test_sindy_rejects_malformed_dt(dt: object):
+    """PhaseSINDy requires a finite positive timestep."""
+    sindy = PhaseSINDy()
+    with pytest.raises(ValueError, match="dt"):
+        sindy.fit(np.zeros((4, 2)), cast(Any, dt))
+
+
+@pytest.mark.parametrize(
+    "phases",
+    [
+        np.array([0.0, 1.0]),
+        np.zeros((2, 2, 1)),
+        np.array([[0.0, 1.0], [1.0, 2.0, 3.0]], dtype=object),
+    ],
+)
+def test_sindy_rejects_malformed_phase_shapes(phases: Any):
+    """Phase trajectories must be a numeric 2D array."""
+    sindy = PhaseSINDy()
+    with pytest.raises(ValueError, match="2D|finite"):
+        sindy.fit(phases, 0.05)
+
+
+@pytest.mark.parametrize(
+    "phases",
+    [
+        np.array([[0.0, 1.0], [np.nan, 1.5]], dtype=float),
+        np.array([[0.0, 1.0], [np.inf, 1.5]], dtype=float),
+    ],
+)
+def test_sindy_rejects_non_finite_phases(phases: np.ndarray):
+    """Finite-input precondition must hold for finite-difference regression."""
+    sindy = PhaseSINDy()
+    with pytest.raises(ValueError, match="finite"):
+        sindy.fit(phases, 0.05)
+
+
 def test_sindy_threshold_sparsifies_weak_terms():
     """High threshold wipes small coupling coefficients below it."""
     dt = 0.05
@@ -285,6 +322,41 @@ def test_sindy_rust_backend_remaps_matrix_coefficients(
     ]
 
 
+def test_sindy_rust_backend_rejects_malformed_output_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Malformed Rust payloads must fail with a clear validation error."""
+    phases = np.array(
+        [
+            [0.0, 0.1, 0.2],
+            [0.3, 0.4, 0.5],
+        ],
+        dtype=np.float64,
+    )
+
+    def fake_rust_sindy_fit(
+        _p_flat: np.ndarray,
+        _n_oscillators: int,
+        _n_steps: int,
+        _dt: float,
+        _threshold: float,
+        _max_iter: int,
+    ) -> np.ndarray:
+        return np.array([1.1, 0.2, 2.2, 0.4], dtype=np.float64)
+
+    monkeypatch.setattr(sindy_module, "_HAS_RUST", True)
+    monkeypatch.setattr(
+        sindy_module,
+        "_rust_sindy_fit",
+        fake_rust_sindy_fit,
+        raising=False,
+    )
+    sindy = PhaseSINDy(threshold=0.125, max_iter=7)
+
+    with pytest.raises(ValueError, match="expected|Rust SINDy"):
+        sindy.fit(phases, dt=0.05)
+
+
 def test_sindy_get_equations_requires_fit_first():
     """Equation export must fail closed until coefficients are fitted."""
     with pytest.raises(RuntimeError, match="called before fit"):
@@ -304,6 +376,18 @@ def test_sindy_empty_phases_does_not_crash():
     assert len(coeffs) == 2
     for c in coeffs:
         assert np.all(np.isfinite(c))
+
+
+def test_sindy_single_timestep_returns_zero_coefficients():
+    """Single-step trajectories are structurally valid but lack regression data."""
+    sindy = PhaseSINDy()
+    coeffs = sindy.fit(np.array([[0.0, 0.3]]), 0.05)
+
+    assert len(coeffs) == 2
+    assert len(coeffs[0]) == 2
+    assert len(coeffs[1]) == 2
+    assert np.allclose(coeffs[0], 0.0)
+    assert np.allclose(coeffs[1], 0.0)
 
 
 # Pipeline wiring: PhaseSINDy feeds the auto-tune pipeline (see
