@@ -90,6 +90,17 @@ class CoherencePlot:
                 return parsed
         return 0.0
 
+    @staticmethod
+    def _actions(step: dict) -> list[dict]:
+        actions = step.get("actions", [])
+        if not isinstance(actions, list):
+            return []
+        return [
+            action
+            for action in actions
+            if isinstance(action, dict) and str(action.get("knob", "")).strip()
+        ]
+
     def _extract_r_series(self) -> tuple[list[int], int, list[list[float]]]:
         steps = self._require_steps()
         x = [s["step"] for s in steps]
@@ -129,8 +140,8 @@ class CoherencePlot:
             r_global.append(float(np.mean(rs)) if rs else 0.0)
         knob_steps: dict[str, list[int]] = {}
         for s in steps:
-            for a in s.get("actions", []):
-                knob_steps.setdefault(a["knob"], []).append(s["step"])
+            for a in self._actions(s):
+                knob_steps.setdefault(str(a["knob"]), []).append(s["step"])
         return x, r_global, knob_steps
 
     def _extract_amplitude(self) -> tuple[list[int], list[float], list[float]]:
