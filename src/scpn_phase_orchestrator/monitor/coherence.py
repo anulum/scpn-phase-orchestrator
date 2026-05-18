@@ -37,11 +37,11 @@ class CoherenceMonitor:
 
     def compute_r_good(self, upde_state: UPDEState) -> float:
         """Mean order parameter R across good (synchronise) layers."""
-        return float(self._mean_r(upde_state, self._good))
+        return float(self._mean_r(upde_state, self._good, name="good_layers"))
 
     def compute_r_bad(self, upde_state: UPDEState) -> float:
         """Mean order parameter R across bad (desynchronise) layers."""
-        return float(self._mean_r(upde_state, self._bad))
+        return float(self._mean_r(upde_state, self._bad, name="bad_layers"))
 
     # PLV lock threshold: Lachaux et al. 1999; see docs/ASSUMPTIONS.md § Quality Gating
     def detect_phase_lock(
@@ -69,8 +69,15 @@ class CoherenceMonitor:
                     locked.append((i, j))
         return locked
 
-    def _mean_r(self, upde_state: UPDEState, indices: list[int]) -> float:
-        vals = [upde_state.layers[i].R for i in indices if i < len(upde_state.layers)]
+    def _mean_r(self, upde_state: UPDEState, indices: list[int], *, name: str) -> float:
+        n_layers = len(upde_state.layers)
+        invalid = [index for index in indices if index >= n_layers]
+        if invalid:
+            raise ValueError(
+                f"{name} references layer indices outside state with "
+                f"{n_layers} layers: {invalid!r}"
+            )
+        vals = [upde_state.layers[i].R for i in indices]
         if not vals:
             return 0.0
         return float(np.mean(vals))

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
@@ -72,6 +73,22 @@ def test_empty_good_layers_returns_zero():
     monitor = CoherenceMonitor(good_layers=[], bad_layers=[0])
     state = _make_state([0.5])
     assert monitor.compute_r_good(state) == 0.0
+
+
+def test_r_good_rejects_layer_index_outside_state():
+    monitor = CoherenceMonitor(good_layers=[0, 2], bad_layers=[])
+    state = _make_state([0.7, 0.8])
+
+    with pytest.raises(ValueError, match="good_layers"):
+        monitor.compute_r_good(state)
+
+
+def test_r_bad_rejects_layer_index_outside_state():
+    monitor = CoherenceMonitor(good_layers=[], bad_layers=[1])
+    state = _make_state([0.7])
+
+    with pytest.raises(ValueError, match="bad_layers"):
+        monitor.compute_r_bad(state)
 
 
 def test_detect_phase_lock_via_cla_matrix():
