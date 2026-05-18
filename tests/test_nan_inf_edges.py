@@ -109,31 +109,31 @@ class TestUPDENanInf:
 class TestOrderParamsNanInf:
     def test_nan_phases(self) -> None:
         phases = np.array([0.0, np.nan, 1.0])
-        r, psi = compute_order_parameter(phases)
-        assert np.isnan(r) or np.isnan(psi), "NaN input should produce NaN output"
+        with pytest.raises(ValueError, match="phases"):
+            compute_order_parameter(phases)
 
     def test_inf_phases(self) -> None:
         phases = np.array([0.0, np.inf, 1.0])
-        r, psi = compute_order_parameter(phases)
-        assert np.isnan(r) or np.isnan(psi), "Inf input should produce NaN output"
+        with pytest.raises(ValueError, match="phases"):
+            compute_order_parameter(phases)
 
     def test_plv_nan_input(self) -> None:
         a = np.array([0.0, np.nan, 1.0])
         b = np.array([0.0, 1.0, 2.0])
-        plv = compute_plv(a, b)
-        assert np.isnan(plv), "NaN in PLV input should produce NaN"
+        with pytest.raises(ValueError, match="phases_a"):
+            compute_plv(a, b)
 
     def test_plv_inf_input(self) -> None:
         a = np.array([0.0, np.inf, 1.0])
         b = np.array([0.0, 1.0, 2.0])
-        plv = compute_plv(a, b)
-        assert np.isnan(plv), "Inf in PLV input should produce NaN"
+        with pytest.raises(ValueError, match="phases_a"):
+            compute_plv(a, b)
 
     def test_layer_coherence_nan(self) -> None:
         phases = np.array([0.0, np.nan, 1.0, 2.0])
         mask = np.array([True, True, False, False])
-        r = compute_layer_coherence(phases, mask)
-        assert np.isnan(r), "NaN in masked phases should produce NaN coherence"
+        with pytest.raises(ValueError, match="phases"):
+            compute_layer_coherence(phases, mask)
 
 
 # -- BoundaryObserver --
