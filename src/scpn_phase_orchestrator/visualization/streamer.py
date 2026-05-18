@@ -120,7 +120,9 @@ class VisualizerStreamer:
                     send_coro.close()
                 self._clients.discard(client)
                 continue
-            send_task.add_done_callback(self._make_send_cleanup_callback(client))
+            add_done_callback = getattr(send_task, "add_done_callback", None)
+            if callable(add_done_callback):
+                add_done_callback(self._make_send_cleanup_callback(client))
 
     def _make_send_cleanup_callback(self, client: Any) -> Callable[[Any], None]:
         def _cleanup_send_result(send_result: Any) -> None:
