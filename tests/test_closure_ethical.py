@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
+from scpn_phase_orchestrator.ssgf import ethical as ethical_module
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 from scpn_phase_orchestrator.ssgf.closure import ClosureState, CyberneticClosure
 from scpn_phase_orchestrator.ssgf.ethical import EthicalCost, compute_ethical_cost
@@ -103,6 +105,111 @@ class TestEthicalCost:
         cost = compute_ethical_cost(phases, knm)
         expected = (1.0 - cost.J_sec) + cost.phi_ethics
         assert abs(cost.c15_sec - expected) < 1e-10
+
+    def test_single_phase_exact_decomposition(self):
+        """Single-node input has no possible coupling but still scores coherence."""
+        cost = compute_ethical_cost(
+            np.array([0.25]),
+            np.zeros((1, 1)),
+            alpha_R=0.4,
+            beta_K=0.3,
+            gamma_Q=0.2,
+            nu_S=0.1,
+            kappa=2.0,
+            R_min=0.2,
+            connectivity_min=0.1,
+        )
+
+        assert cost.J_sec == pytest.approx(0.4)
+        assert cost.phi_ethics == pytest.approx(2.0 * 0.1**2)
+        assert cost.c15_sec == pytest.approx((1.0 - 0.4) + 2.0 * 0.1**2)
+        assert cost.constraints_violated == 1
+
+    def test_cbf_penalty_counts_all_independent_violations(self):
+        """Low coherence, no connectivity, and excessive coupling add separately."""
+        phases = np.array([0.0, np.pi])
+        knm = np.array([[0.0, 7.0], [7.0, 0.0]])
+
+        cost = compute_ethical_cost(
+            phases,
+            knm,
+            kappa=0.5,
+            R_min=0.5,
+            connectivity_min=20.0,
+            max_coupling=5.0,
+        )
+
+        assert cost.constraints_violated == 3
+        assert cost.phi_ethics == pytest.approx(
+            0.5 * (0.5**2 + (20.0 - 14.0) ** 2 + 2.0**2)
+        )
+        assert cost.c15_sec == pytest.approx((1.0 - cost.J_sec) + cost.phi_ethics)
+
+    def test_optional_rust_path_preserves_return_contract(self, monkeypatch):
+        """Rust acceleration path must flatten K_nm and preserve field ordering."""
+        calls = []
+
+        def fake_rust_ethical_cost(
+            phases,
+            flattened_knm,
+            n,
+            alpha_R,
+            beta_K,
+            gamma_Q,
+            nu_S,
+            kappa,
+            R_min,
+            connectivity_min,
+            max_coupling,
+        ):
+            calls.append(
+                (
+                    phases.copy(),
+                    flattened_knm.copy(),
+                    n,
+                    alpha_R,
+                    beta_K,
+                    gamma_Q,
+                    nu_S,
+                    kappa,
+                    R_min,
+                    connectivity_min,
+                    max_coupling,
+                )
+            )
+            return 0.1, 0.2, 1.1, 2
+
+        monkeypatch.setattr(ethical_module, "_HAS_RUST", True)
+        monkeypatch.setattr(
+            ethical_module, "_rust_ethical_cost", fake_rust_ethical_cost
+        )
+
+        phases = np.array([0.0, 0.5], dtype=np.float64)
+        knm = np.array([[0.0, 0.25], [0.75, 0.0]], dtype=np.float64)
+        cost = compute_ethical_cost(
+            phases,
+            knm,
+            alpha_R=0.11,
+            beta_K=0.22,
+            gamma_Q=0.33,
+            nu_S=0.44,
+            kappa=0.55,
+            R_min=0.66,
+            connectivity_min=0.77,
+            max_coupling=0.88,
+        )
+
+        assert cost == EthicalCost(
+            J_sec=0.1,
+            phi_ethics=0.2,
+            c15_sec=1.1,
+            constraints_violated=2,
+        )
+        assert len(calls) == 1
+        call = calls[0]
+        np.testing.assert_array_equal(call[0], phases)
+        np.testing.assert_array_equal(call[1], np.array([0.0, 0.25, 0.75, 0.0]))
+        assert call[2:] == (2, 0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88)
 
 
 class TestClosureEthicalPipelineWiring:
