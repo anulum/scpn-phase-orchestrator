@@ -271,10 +271,14 @@ class SimplicialEngine:
 
     @property
     def sigma2(self) -> float:
+        """Return the configured all-to-all triadic coupling strength."""
+
         return self._sigma2
 
     @sigma2.setter
     def sigma2(self, value: float) -> None:
+        """Update triadic coupling strength after finite non-negative validation."""
+
         self._sigma2 = _validate_nonnegative_float(value, name="sigma2")
 
     def step(
@@ -286,6 +290,8 @@ class SimplicialEngine:
         psi: float,
         alpha: NDArray[np.float64],
     ) -> NDArray[np.float64]:
+        """Advance one pairwise-plus-simplicial Kuramoto timestep."""
+
         return self.run(phases, omegas, knm, zeta, psi, alpha, n_steps=1)
 
     def run(
@@ -298,6 +304,8 @@ class SimplicialEngine:
         alpha: NDArray[np.float64],
         n_steps: int,
     ) -> NDArray[np.float64]:
+        """Integrate pairwise-plus-simplicial Kuramoto dynamics."""
+
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))

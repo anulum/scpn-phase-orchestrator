@@ -255,6 +255,8 @@ class InertialKuramotoEngine:
         inertia: NDArray[np.float64],
         damping: NDArray[np.float64],
     ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Advance one second-order inertial Kuramoto timestep."""
+
         theta64 = _validate_state_array(theta, name="theta", shape=(self._n,))
         omega_dot64 = _validate_state_array(
             omega_dot,
@@ -312,6 +314,8 @@ class InertialKuramotoEngine:
         NDArray[np.float64],
         NDArray[np.float64],
     ]:
+        """Integrate inertial Kuramoto dynamics and return final state plus traces."""
+
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         theta_traj = np.empty((n_steps, self._n))
         omega_traj = np.empty((n_steps, self._n))
@@ -328,7 +332,11 @@ class InertialKuramotoEngine:
         return th, od, theta_traj, omega_traj
 
     def frequency_deviation(self, omega_dot: NDArray[np.float64]) -> float:
+        """Return maximum absolute frequency deviation in cycles per unit time."""
+
         return float(np.max(np.abs(omega_dot)) / TWO_PI)
 
     def coherence(self, theta: NDArray[np.float64]) -> float:
+        """Return the Kuramoto order parameter for the supplied phases."""
+
         return float(np.abs(np.mean(np.exp(1j * theta))))

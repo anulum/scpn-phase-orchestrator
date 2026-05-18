@@ -373,6 +373,8 @@ class SplittingEngine:
         alpha: FloatArray,
         n_steps: int,
     ) -> FloatArray:
+        """Apply repeated Strang-split phase integration steps."""
+
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
         knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))

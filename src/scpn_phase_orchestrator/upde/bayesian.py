@@ -72,9 +72,13 @@ class GaussianArrayDistribution:
 
     @property
     def shape(self) -> tuple[int, ...]:
+        """Return the event shape sampled by this Gaussian distribution."""
+
         return tuple(np.asarray(self.mean).shape)
 
     def sample(self, rng: np.random.Generator, n_samples: int) -> FloatArray:
+        """Draw finite Gaussian samples with optional support guards applied."""
+
         draws = rng.normal(
             loc=np.asarray(self.mean, dtype=np.float64),
             scale=np.asarray(self.std, dtype=np.float64),

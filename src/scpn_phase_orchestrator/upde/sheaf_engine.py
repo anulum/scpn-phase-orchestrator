@@ -136,6 +136,8 @@ class SheafUPDEEngine:
 
     @property
     def last_dt(self) -> float:
+        """Return the most recent timestep used by the sheaf engine."""
+
         return self._last_dt
 
     def step(

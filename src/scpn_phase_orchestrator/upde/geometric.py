@@ -276,6 +276,8 @@ class TorusEngine:
         alpha: NDArray[np.float64],
         n_steps: int,
     ) -> NDArray[np.float64]:
+        """Integrate torus phase dynamics for the requested number of steps."""
+
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))

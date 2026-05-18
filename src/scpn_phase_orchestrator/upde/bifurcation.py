@@ -82,10 +82,14 @@ class BifurcationDiagram:
 
     @property
     def K_values(self) -> FloatArray:
+        """Return continuation coupling strengths in diagram order."""
+
         return np.array([p.K for p in self.points])
 
     @property
     def R_values(self) -> FloatArray:
+        """Return continuation order parameters in diagram order."""
+
         return np.array([p.R for p in self.points])
 
 

@@ -75,6 +75,8 @@ class Hyperedge:
 
     @property
     def order(self) -> int:
+        """Return the number of oscillators participating in the hyperedge."""
+
         return len(self.nodes)
 
 
@@ -342,6 +344,8 @@ class HypergraphEngine:
         ]
 
     def add_edge(self, nodes: tuple[int, ...], strength: float = 1.0) -> None:
+        """Validate and append one explicit k-body hyperedge."""
+
         edge = _validate_hyperedge(
             Hyperedge(nodes=nodes, strength=strength),
             n_oscillators=self._n,
@@ -366,6 +370,8 @@ class HypergraphEngine:
 
     @property
     def n_edges(self) -> int:
+        """Return the number of configured hyperedges."""
+
         return len(self._hyperedges)
 
     def _encode_edges(

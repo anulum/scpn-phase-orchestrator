@@ -338,6 +338,8 @@ class SwarmalatorEngine:
         k: float = 1.0,
         n_steps: int = 100,
     ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
+        """Integrate swarmalator positions and phases with trajectory capture."""
+
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         curr_pos = _validate_state_array(
             pos,
@@ -371,6 +373,8 @@ class SwarmalatorEngine:
         return curr_pos, curr_phases, pos_traj, phase_traj
 
     def order_parameter(self, phases: FloatArray) -> float:
+        """Return the Kuramoto order parameter for swarmalator phases."""
+
         phases64 = _validate_state_array(
             phases,
             name="phases",
