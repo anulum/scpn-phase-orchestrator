@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from numbers import Integral
 from typing import TypeAlias
 
 import numpy as np
@@ -20,6 +21,15 @@ __all__ = ["SymbolicExtractor"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
+
+
+def _validate_n_states(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("n_states must be an integer >= 2")
+    n_states = int(value)
+    if n_states < 2:
+        raise ValueError(f"n_states must be >= 2, got {n_states}")
+    return n_states
 
 
 class SymbolicExtractor(PhaseExtractor):
@@ -36,8 +46,7 @@ class SymbolicExtractor(PhaseExtractor):
             node_id: identifier for generated PhaseState objects
             mode: "ring" for ring-phase, "graph" for graph-walk phase
         """
-        if n_states < 2:
-            raise ValueError(f"n_states must be >= 2, got {n_states}")
+        n_states = _validate_n_states(n_states)
         if mode not in ("ring", "graph"):
             raise ValueError(f"mode must be 'ring' or 'graph', got {mode!r}")
         self._n_states = n_states

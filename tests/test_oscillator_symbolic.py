@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import numpy as np
 import pytest
@@ -160,6 +161,16 @@ class TestSymbolicExtractorMetadata:
     def test_n_states_below_2_rejected(self):
         with pytest.raises(ValueError, match="n_states must be >= 2"):
             SymbolicExtractor(n_states=1)
+
+    @pytest.mark.parametrize("n_states", [True, 4.0, "4"])
+    def test_non_integer_n_states_rejected(self, n_states: Any):
+        with pytest.raises(ValueError, match="n_states must be an integer"):
+            SymbolicExtractor(n_states=n_states)
+
+    def test_numpy_integer_n_states_normalised(self):
+        ext = SymbolicExtractor(n_states=np.int64(4))
+        states = ext.extract(np.array([0, 1]), sample_rate=1.0)
+        assert states[1].theta == pytest.approx(np.pi / 2)
 
     def test_invalid_mode_rejected(self):
         with pytest.raises(ValueError, match="mode must be"):
