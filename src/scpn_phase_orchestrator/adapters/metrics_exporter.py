@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Prometheus text exposition exporter
 
+"""Prometheus text exposition formatter for reduced UPDE metrics.
+
+``MetricsExporter`` validates metric prefix syntax, regime labels, latency, and
+finite UPDE metric values before producing deterministic Prometheus text lines.
+It performs no HTTP serving, scraping, registry mutation, or background export;
+callers decide where the generated text is published.
+"""
+
 from __future__ import annotations
 
 import re

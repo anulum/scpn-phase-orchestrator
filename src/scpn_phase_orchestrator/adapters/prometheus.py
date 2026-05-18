@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Prometheus metrics adapter
 
+"""Prometheus HTTP adapter for validated instant and range metric queries.
+
+``PrometheusAdapter`` validates endpoint URLs, timeouts, query text, range
+bounds, and step size before issuing standard Prometheus API requests. Network
+failures are reported as ``ConnectionError`` and malformed responses as
+``ValueError``. The adapter fetches metric values only; it does not run a server
+or mutate orchestration state.
+"""
+
 from __future__ import annotations
 
 import json

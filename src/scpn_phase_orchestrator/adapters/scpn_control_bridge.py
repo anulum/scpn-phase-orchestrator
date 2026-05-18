@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — SCPN-control bridge adapter
 
+"""SCPN-control bridge for validated coupling, frequency, and telemetry exchange.
+
+The bridge accepts JSON-compatible configuration, imports finite dense coupling
+matrices and positive natural-frequency vectors, and exports reduced UPDE state
+telemetry with layer locks and cross-alignment. It is a data-shape adapter only;
+it does not invoke an external control engine or apply actions.
+"""
+
 from __future__ import annotations
 
 from math import isfinite

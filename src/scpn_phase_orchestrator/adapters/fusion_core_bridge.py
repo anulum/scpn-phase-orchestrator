@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Fusion-Core bridge adapter
 
+"""Fusion-Core bridge for phase encoding and stability-review diagnostics.
+
+The bridge maps fusion equilibrium observables into bounded phase vectors,
+returns aggregate phase feedback summaries, normalizes q-profile/equilibrium
+payloads, and checks local fusion stability invariants. It is pure NumPy/dict
+code and does not require or call a live fusion solver; outputs are review
+signals and feedback dictionaries for explicit downstream handoff.
+"""
+
 from __future__ import annotations
 
 from math import isfinite

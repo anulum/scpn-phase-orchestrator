@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - LSL BCI Entrainment Bridge
 
+"""Lab Streaming Layer BCI bridge for buffered phase extraction.
+
+The bridge optionally connects to a configured LSL stream, captures one target
+channel into a bounded background buffer, and extracts the current Hilbert phase
+from recent samples. Configuration rejects invalid stream names, channels, and
+buffer durations. When LSL is unavailable or disconnected, it fails without
+leaking stream identifiers in shared error messages.
+"""
+
 from __future__ import annotations
 
 import threading

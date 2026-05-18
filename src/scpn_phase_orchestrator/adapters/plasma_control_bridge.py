@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Plasma-control bridge adapter
 
+"""Plasma-control bridge for telemetry import, coupling expansion, and review.
+
+The bridge converts plasma-layer coupling matrices, phase snapshots, natural
+frequencies, Lyapunov verdicts, and proposed control action dictionaries into
+SPO-compatible data structures under strict finite-shape validation. It also
+checks local plasma invariants for review. The adapter performs no live plasma
+actuation and does not require ``scpn-control`` to be installed.
+"""
+
 from __future__ import annotations
 
 from math import isfinite

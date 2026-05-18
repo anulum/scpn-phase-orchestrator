@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Redis persistent state store
 
+"""Redis-backed JSON state persistence adapter with explicit dependency checks.
+
+``RedisStateStore`` validates host, port, database, and key parameters before
+using an injected client or constructing a Redis client when the optional
+package is installed. Stored payloads must be JSON objects, and missing keys
+return ``None``. The adapter persists caller-provided state only; it does not
+manage simulation lifecycle or background synchronization.
+"""
+
 from __future__ import annotations
 
 import json

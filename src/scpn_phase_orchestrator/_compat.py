@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Rust/Python compatibility shim
 
+"""Shared compatibility constants for Python and optional Rust execution paths.
+
+The module exposes ``TWO_PI`` and a process-local ``HAS_RUST`` capability flag
+computed from the presence of the optional ``spo_kernel`` package. Importing it
+does not load the Rust extension or change backend selection by itself; concrete
+modules decide when to dispatch to accelerated kernels.
+"""
+
 from __future__ import annotations
 
 import importlib.util

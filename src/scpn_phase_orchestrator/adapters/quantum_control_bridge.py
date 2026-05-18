@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Quantum-control bridge adapter
 
+"""Quantum-control bridge for reviewable Hamiltonian and phase handoffs.
+
+The bridge imports quantum phase artifacts into UPDE diagnostics, exports UPDE
+state summaries, validates coupling/frequency arrays, and can build deterministic
+OpenQASM manifest handoffs with parity hashes and actuation disabled. Live
+Hamiltonian or Q-UPDE execution is delegated only when external quantum-control
+packages are explicitly imported by the called method.
+"""
+
 from __future__ import annotations
 
 import json

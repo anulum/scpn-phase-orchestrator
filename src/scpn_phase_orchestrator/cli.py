@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — CLI entry point
 
+"""Command-line entry point for validation, replay, export, and review workflows.
+
+The CLI wraps public SPO APIs behind explicit commands for binding validation,
+inspection, auto-binding proposals, coupling estimation, formal export, replay,
+plugin catalogs, scaffolding, and selected runtime utilities. Commands validate
+local inputs and emit text or JSON review artifacts; they do not push commits,
+start network services, or perform live actuation unless an explicit subcommand
+is invoked for that runtime path.
+"""
+
 from __future__ import annotations
 
 import json

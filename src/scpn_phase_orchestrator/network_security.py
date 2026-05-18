@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Network service security helpers
 
+"""Small network-service security helpers shared by optional HTTP surfaces.
+
+The module provides production-mode environment detection, validated
+non-negative integer environment parsing, and a thread-safe per-identity
+fixed-window rate limiter. Helpers are intentionally local and dependency-free:
+they do not configure servers, store credentials, or perform authentication by
+themselves.
+"""
+
 from __future__ import annotations
 
 import os

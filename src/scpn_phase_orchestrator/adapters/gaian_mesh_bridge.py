@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - Layer 12 Distributed Gaian Mesh Bridge
 
+"""UDP Gaian mesh bridge for exchanging reduced macroscopic order parameters.
+
+``GaianMeshNode`` validates peer addresses and local order-parameter updates,
+then uses background UDP loops to broadcast and receive reduced ``R``/``psi``
+heartbeats. Mesh drive computation filters stale or malformed peer state and
+returns an external drive proposal only. The bridge exchanges no raw phases,
+coupling matrices, credentials, or actuation commands.
+"""
+
 from __future__ import annotations
 
 import contextlib

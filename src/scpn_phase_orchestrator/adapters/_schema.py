@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Shared adapter input validators
 
+"""Shared primitive validators used by adapter constructors and endpoints.
+
+The helpers normalize common adapter inputs such as non-empty strings,
+non-negative integers, and TCP ports before clients, sockets, or stores are
+created. They raise ``ValueError`` with field-specific messages and perform no
+I/O or dependency imports.
+"""
+
 from __future__ import annotations
 
 __all__ = [

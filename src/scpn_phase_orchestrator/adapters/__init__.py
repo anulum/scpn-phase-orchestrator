@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Adapter registry
 
+"""Public adapter registry for optional external-system bridge surfaces.
+
+The adapters package re-exports bridges for fusion, plasma, quantum, SNN,
+Prometheus, Redis, hardware I/O, OpenTelemetry, NeuroCore, Remanentia, Synapse,
+and related integration points. Importing the registry only exposes classes,
+flags, and builders; concrete adapters own dependency checks, socket or client
+creation, validation, persistence, and any explicit runtime side effects.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.adapters.fusion_core_bridge import FusionCoreBridge

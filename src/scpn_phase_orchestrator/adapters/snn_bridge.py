@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — SNN bridge adapter
 
+"""Spiking-neural-network bridge for NumPy LIF estimates and review manifests.
+
+``SNNControllerBridge`` maps UPDE layer coherence to input currents, estimates
+steady-state LIF rates, proposes control actions from rate thresholds, and
+builds deterministic Lava/PyNN schedule manifests with hardware writes disabled.
+Optional Lava process construction is isolated to its explicit method. The core
+bridge remains pure NumPy and does not perform neuromorphic actuation.
+"""
+
 from __future__ import annotations
 
 import json
