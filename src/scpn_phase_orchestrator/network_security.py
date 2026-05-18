@@ -41,6 +41,8 @@ class FixedWindowRateLimiter:
     """Thread-safe per-identity fixed-window rate limiter."""
 
     def __init__(self, limit_per_minute: int) -> None:
+        if not isinstance(limit_per_minute, int) or isinstance(limit_per_minute, bool):
+            raise ValueError("limit_per_minute must be an integer >= 1")
         if limit_per_minute < 1:
             raise ValueError("limit_per_minute must be >= 1")
         self._limit = limit_per_minute

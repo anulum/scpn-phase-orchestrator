@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from scpn_phase_orchestrator.network_security import (
@@ -89,3 +91,9 @@ def test_rate_limiter_resets_on_new_window() -> None:
 def test_rate_limiter_rejects_non_positive_limit() -> None:
     with pytest.raises(ValueError, match=">= 1"):
         FixedWindowRateLimiter(limit_per_minute=0)
+
+
+@pytest.mark.parametrize("limit", [True, 1.5, "10"])
+def test_rate_limiter_rejects_malformed_limit(limit: object) -> None:
+    with pytest.raises(ValueError, match="limit_per_minute"):
+        FixedWindowRateLimiter(limit_per_minute=cast(int, limit))
