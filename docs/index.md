@@ -21,7 +21,7 @@ hide:
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
 [![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
 
-**3 945 Python tests | 567 Rust tests | 99%+ coverage | 53 Rust engine modules | 36 domainpacks | 27 examples**
+**4,100+ Python tests in local pre-push | 567 Rust tests | 99%+ coverage | 53 Rust engine modules | 36 domainpacks | 28 examples**
 
 </div>
 
@@ -169,6 +169,9 @@ print("OK")
 | [Tutorials](tutorials/01_new_domain_checklist.md) | New domain checklist, oscillator hunt sheet, Knm templates |
 | [API Reference](reference/api/index.md) | Full Python API docs (mkdocstrings) |
 | [Gallery](galleries/domainpack_gallery.md) | All 36 domainpacks, notebooks, examples, and demos |
+
+The current documentation inventory and API-reference guardrails are tracked in
+[Documentation Coverage](reference/documentation_coverage.md).
 
 ---
 

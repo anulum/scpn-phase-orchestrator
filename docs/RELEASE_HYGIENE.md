@@ -16,6 +16,11 @@ The action-reference guard checks every remote `owner/repo@ref` action in the
 workflow, requires full 40-character commit SHAs, and verifies each ref resolves
 through the GitHub API. Local actions and `docker://` actions are ignored.
 
+Download-and-run installer steps must also be pinned to explicit tool versions.
+For example, the Kani workflow installs `kani-verifier` with a fixed
+`--version` before running `cargo kani setup`; do not reintroduce an unbounded
+`cargo install <tool>` path in CI.
+
 If a tag-triggered publish run fails before uploading, delete the failed tag,
 bump the release metadata, fix the workflow on a pull request, and tag the new
 version only after CI and the local release guards pass.

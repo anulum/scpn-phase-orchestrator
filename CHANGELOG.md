@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated the public documentation inventory and contributor documentation
+  duties to reflect the current API-page, example, and module-docstring
+  coverage state.
 - Replaced external Kani proof stubs with `spo-supervisor` harnesses that call
   the same Rust functions used at runtime, and made the Kani workflow fail on
   proof failures.

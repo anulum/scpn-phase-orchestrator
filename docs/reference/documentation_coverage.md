@@ -23,22 +23,30 @@ searching the source tree.
 | Tutorials | Six task-oriented tutorials | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) |
 | Guides | Runtime, production, testing, adapters, backend, notebooks | [Guides](../guide/production.md) |
 | Contributor onboarding | setup, repository map, checks, documentation duties | [Contributor Onboarding](../guide/contributor_onboarding.md) |
-| API reference | 58 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |
+| API reference | 67 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |
 | Domainpacks | 36 domainpacks documented in the gallery | [Domainpack Gallery](../galleries/domainpack_gallery.md) |
 | Notebooks | 19 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Notebook CI matrix | per-notebook extras and execution expectations | [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) |
-| Examples | 27 terminal-first Python examples | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
+| Examples | 28 terminal-first Python examples | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Interactive demos | Streamlit tools, browser WASM demo, CLI demo | [Interactive Tools](../guide/interactive_tools.md) |
 | Validation | V&V report, study protocol, testing guide | [V&V Report](../VALIDATION_REPORT.md) |
 | Roadmap | public stable, active, deferred, and research tracks | [Public Roadmap](../roadmap.md) |
 
 Counts above are derived from the repository tree at the time this page
-was updated: `36` domainpack directories, `27` `examples/*.py` scripts,
-`19` notebooks, and `58` files under `docs/reference/api/`.
+was updated: `36` domainpack directories, `28` `examples/*.py` scripts,
+`19` notebooks, and `67` files under `docs/reference/api/`.
 `tests/test_api_docs_navigation.py` guards that every API reference page is
 listed in `mkdocs.yml` and that every maintained public source module has a
 mkdocstrings directive in the API reference. Generated protobuf stubs are
 covered through the gRPC facade rather than direct autodoc.
+
+The current source inventory contains `204` maintained public Python modules
+under `src/scpn_phase_orchestrator/`. API-reference coverage is complete for
+those modules through package-level or detailed mkdocstrings pages, excluding
+generated protobuf stubs. Module-level docstrings are still being tightened:
+the root package now documents the frozen top-level import surface, and new or
+touched public modules should carry a module docstring that states the stable
+contract, backend assumptions, and failure-mode policy.
 
 ## API Documentation Policy
 
@@ -54,6 +62,12 @@ Private backend probes and experimental auxiliary-backend shim modules
 are not listed as user-facing APIs unless they expose a stable public
 contract. They are covered through the owning package page and backend
 strategy guides.
+
+Module docstrings are required for new public modules. Existing public modules
+without module-level docstrings are treated as documentation debt, not as a
+reason to weaken the mkdocstrings coverage gate. When touching such a module,
+add the module docstring in the same change instead of spreading generic
+one-line docstrings across unrelated code.
 
 ## API Coverage Summary
 
@@ -90,6 +104,7 @@ The current notebook/demo inventory is listed in
 When adding a module, domainpack, notebook, or demo:
 
 - Add or update the relevant API reference page.
+- Add or update the module docstring for public modules.
 - Add a guide, tutorial, notebook, or example that shows the user path.
 - Add the page to `mkdocs.yml`.
 - Update this matrix if counts or coverage categories change.

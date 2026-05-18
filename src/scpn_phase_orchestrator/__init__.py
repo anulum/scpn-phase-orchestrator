@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Public API
 
+"""Stable public import surface for SCPN Phase Orchestrator.
+
+The package root intentionally exports the compatibility-reviewed API listed
+in ``docs/specs/public_api_manifest.txt``. Subpackages expose the wider
+research and operator surfaces, but additions to ``__all__`` are release
+managed because downstream code imports these names directly.
+"""
+
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version

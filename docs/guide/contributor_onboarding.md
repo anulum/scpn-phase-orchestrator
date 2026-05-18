@@ -103,7 +103,7 @@ look for it:
 
 | Change | Documentation target |
 |--------|----------------------|
-| public class, function, or module | API reference page under `docs/reference/api/` |
+| public class, function, or module | module docstring plus API reference page under `docs/reference/api/` |
 | new domainpack | `domainpacks/<name>/README.md` and gallery entry when appropriate |
 | new notebook | [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) |
 | new demo command | [Notebooks & Demos](../galleries/notebooks_and_demos.md) or the owning guide |
@@ -112,6 +112,10 @@ look for it:
 
 Keep benchmark numbers tied to a command and environment. If a value is a
 historical snapshot, label it as a snapshot rather than current validation.
+For public modules, prefer a precise module docstring over a generic label:
+state what contract the module owns, which backend or transport assumptions it
+makes, and whether invalid inputs fail closed or propagate to an owning
+validator.
 
 ## Domainpack Contribution Checklist
 
