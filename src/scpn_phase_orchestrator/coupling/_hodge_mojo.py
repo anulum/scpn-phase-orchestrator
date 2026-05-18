@@ -45,7 +45,7 @@ def hodge_decomposition_mojo(
     tokens: list[str] = ["HODGE", str(int(n))]
     tokens.extend(repr(float(x)) for x in k.tolist())
     tokens.extend(repr(float(x)) for x in p.tolist())
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,

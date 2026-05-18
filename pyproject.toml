@@ -126,10 +126,20 @@ exclude = ["src/scpn_phase_orchestrator/grpc_gen/spo_pb2.py", "src/scpn_phase_or
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
-ignore = ["S101", "S104", "S310", "S603", "N802", "N803", "N806", "N815", "N816"]
+ignore = ["S101", "N802", "N803", "N806", "N815", "N816"]
 
 [tool.ruff.lint.per-file-ignores]
+"experiments/seizure_detection_chbmit.py" = ["S310"]
+"src/scpn_phase_orchestrator/adapters/prometheus.py" = ["S310"]
+"src/scpn_phase_orchestrator/adapters/remanentia_bridge.py" = ["S310"]
+"src/scpn_phase_orchestrator/coupling/_*_mojo.py" = ["S603"]
+"src/scpn_phase_orchestrator/monitor/_*_mojo.py" = ["S603"]
+"src/scpn_phase_orchestrator/scaffold/llm.py" = ["S310"]
+"src/scpn_phase_orchestrator/upde/_*_mojo.py" = ["S603"]
 "tools/kaggle_*.py" = ["S607", "PTH110", "PTH112", "PTH208"]
+"tools/*.py" = ["S603"]
+"tests/**/*.py" = ["S104", "S603"]
+"tests/*.py" = ["S104", "S603"]
 "tests/test_exceptions.py" = ["S301"]  # pickle round-trip is the test subject
 "tests/test_kuramoto_layer.py" = ["E402"]
 "tests/test_stuart_landau_nn.py" = ["E402"]
@@ -291,4 +301,4 @@ fail_under = 85  # TEMP 2026-05-01: user-approved lower gate while restoring cov
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B404", "B603"]
+skips = ["B404"]

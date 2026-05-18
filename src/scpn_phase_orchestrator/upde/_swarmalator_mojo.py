@@ -64,7 +64,7 @@ def swarmalator_step_mojo(
     tokens.extend(repr(float(x)) for x in pos.ravel().tolist())
     tokens.extend(repr(float(x)) for x in phases.ravel().tolist())
     tokens.extend(repr(float(x)) for x in omegas.ravel().tolist())
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,

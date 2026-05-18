@@ -75,7 +75,7 @@ def attnres_modulate_mojo(
     tokens.extend(repr(float(x)) for x in np.asarray(w_o).ravel().tolist())
     payload = " ".join(tokens) + "\n"
 
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=payload,
         capture_output=True,

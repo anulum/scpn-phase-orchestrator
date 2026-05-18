@@ -35,7 +35,7 @@ def _ensure_exe() -> Path:
 
 def _run(payload: str) -> float:
     exe = _ensure_exe()
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=payload,
         capture_output=True,

@@ -52,7 +52,7 @@ def oa_run_mojo(
         repr(float(dt)),
         str(int(n_steps)),
     ]
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,

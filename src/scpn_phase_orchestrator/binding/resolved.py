@@ -206,9 +206,9 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
 def format_resolved_binding_config(summary: dict[str, object]) -> list[str]:
     """Render a compact, human-readable summary for CLI output."""
     channels = summary["channels"]
-    assert isinstance(channels, dict)  # nosec B101 — internal summary shape
+    assert isinstance(channels, dict)  # nosec B101
     features = summary["features"]
-    assert isinstance(features, dict)  # nosec B101 — internal summary shape
+    assert isinstance(features, dict)  # nosec B101
     enabled_features = sorted(name for name, enabled in features.items() if enabled)
     feature_text = ", ".join(enabled_features) if enabled_features else "none"
     channel_names = ", ".join(sorted(str(channel) for channel in channels)) or "none"
@@ -232,7 +232,7 @@ def format_resolved_binding_config(summary: dict[str, object]) -> list[str]:
     ]
 
     for channel, raw_info in sorted(channels.items(), key=lambda item: str(item[0])):
-        assert isinstance(raw_info, dict)  # nosec B101 — internal summary shape
+        assert isinstance(raw_info, dict)  # nosec B101
         families = _string_list(raw_info.get("families")) or ["none"]
         extractors = _string_list(raw_info.get("extractors")) or ["none"]
         driver_keys = _string_list(raw_info.get("driver_keys")) or ["none"]

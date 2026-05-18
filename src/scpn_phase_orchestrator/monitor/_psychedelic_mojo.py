@@ -40,7 +40,7 @@ def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     tokens: list[str] = ["ENT", str(int(p.size)), str(int(n_bins))]
     tokens.extend(repr(float(x)) for x in p.tolist())
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,

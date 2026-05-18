@@ -74,7 +74,7 @@ def hypergraph_run_mojo(
     tokens.extend(repr(float(x)) for x in es.tolist())
     tokens.extend(repr(float(x)) for x in kn.tolist())
     tokens.extend(repr(float(x)) for x in al.tolist())
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,

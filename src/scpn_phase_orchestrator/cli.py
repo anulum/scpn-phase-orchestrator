@@ -947,7 +947,7 @@ def run(
 
     if amplitude_mode:
         amp = spec.amplitude
-        assert amp is not None  # nosec B101 — narrowing for mypy
+        assert amp is not None  # nosec B101
         coupling = builder.build_with_amplitude(
             n_osc,
             spec.coupling.base_strength,

@@ -52,7 +52,7 @@ def inertial_step_mojo(
     tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
     for arr in (inertia, damping):
         tokens.extend(repr(float(x)) for x in np.asarray(arr).ravel().tolist())
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,

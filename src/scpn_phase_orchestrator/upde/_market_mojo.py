@@ -36,7 +36,7 @@ def _ensure_exe() -> Path:
 
 def _run_mojo(tokens: list[str], expected_lines: int) -> list[str]:
     exe = _ensure_exe()
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,

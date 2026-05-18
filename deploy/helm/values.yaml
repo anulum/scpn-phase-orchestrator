@@ -32,6 +32,16 @@ probes:
   timeoutSeconds: 3
   failureThreshold: 3
 
+podSecurityContext:
+  runAsNonRoot: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
 nodeSelector: {}
 tolerations: []
 affinity: {}

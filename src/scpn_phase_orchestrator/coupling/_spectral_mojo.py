@@ -41,7 +41,7 @@ def spectral_eig_mojo(
     exe = _ensure_exe()
     tokens: list[str] = ["EIG", str(int(n))]
     tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603
         [str(exe)],
         input=" ".join(tokens) + "\n",
         capture_output=True,
