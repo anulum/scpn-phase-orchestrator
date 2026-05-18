@@ -102,6 +102,22 @@ def test_replay_step_sanitizes_malformed_layer_numeric_values(tmp_path):
     ]
 
 
+@pytest.mark.parametrize("value", [True, float("nan"), float("inf"), "0.5"])
+def test_replay_step_sanitizes_malformed_stability_proxy(tmp_path, value):
+    re = ReplayEngine(tmp_path / "unused.jsonl")
+
+    state = re.replay_step(
+        {
+            "step": 0,
+            "regime": "nominal",
+            "stability": value,
+            "layers": [{"R": 0.5, "psi": 0.75}],
+        }
+    )
+
+    assert state.stability_proxy == 0.0
+
+
 def test_verify_determinism_with_matching_data(tmp_path):
     n = 4
     engine = UPDEEngine(n, dt=0.01)

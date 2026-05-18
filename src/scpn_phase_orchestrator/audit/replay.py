@@ -78,7 +78,7 @@ class ReplayEngine:
         return UPDEState(
             layers=layers,
             cross_layer_alignment=np.zeros((len(layers), len(layers))),
-            stability_proxy=step_data.get("stability", 0.0),
+            stability_proxy=_numeric_value(step_data.get("stability", 0.0)),
             regime_id=step_data.get("regime", "unknown"),
         )
 
