@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+import sys
 
 import numpy as np
 import pytest
@@ -433,7 +434,7 @@ class TestEmptyInputs:
 
 class TestPerformance:
     def test_kuramoto_step_budget_n64(self):
-        """Single kuramoto_step(N=64) must complete in <10ms (JAX per-call overhead)."""
+        """Single kuramoto_step(N=64) must stay inside the per-platform budget."""
         import time
 
         n = 64
@@ -449,7 +450,11 @@ class TestPerformance:
         for _ in range(100):
             kuramoto_step(phases, omegas, K, 0.01)
         elapsed = (time.perf_counter() - t0) / 100
-        assert elapsed < 0.01, f"kuramoto_step(N=64) = {elapsed * 1000:.2f}ms > 10ms"
+        budget = 0.02 if sys.platform == "win32" else 0.01
+        assert elapsed < budget, (
+            f"kuramoto_step(N=64) = {elapsed * 1000:.2f}ms "
+            f"> {budget * 1000:.0f}ms on {sys.platform}"
+        )
 
     def test_order_parameter_budget(self):
         """order_parameter(N=64) must complete in <5ms (JAX per-call overhead)."""
