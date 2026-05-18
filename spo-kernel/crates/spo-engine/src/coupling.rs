@@ -19,6 +19,7 @@ pub struct CouplingState {
     pub n: usize,
 }
 
+/// Factory for validated coupling matrices and zero phase-lag state.
 pub struct CouplingBuilder;
 
 impl CouplingBuilder {
