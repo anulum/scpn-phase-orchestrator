@@ -10,6 +10,7 @@ use rayon::prelude::*;
 use spo_types::{IntegrationConfig, SpoError, SpoResult};
 use std::f64::consts::TAU;
 
+/// Time-delayed Kuramoto stepper with ring-buffered sine/cosine history.
 pub struct DelayedStepper {
     n: usize,
     dt: f64,
@@ -31,6 +32,11 @@ impl std::fmt::Debug for DelayedStepper {
 }
 
 impl DelayedStepper {
+    /// Create a delayed Kuramoto stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, delay_steps: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -49,6 +55,14 @@ impl DelayedStepper {
         })
     }
 
+    /// Advance one delayed-coupling timestep in place.
+    ///
+    /// `step_idx` selects whether the configured delay is available yet; early
+    /// steps use the current phase snapshot as the delayed state.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -163,6 +177,10 @@ impl DelayedStepper {
         Ok(())
     }
 
+    /// Advance the delayed Kuramoto system for `n_steps` in-place timesteps.
+    ///
+    /// # Errors
+    /// Propagates any error returned by [`Self::step`].
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -179,11 +197,13 @@ impl DelayedStepper {
         Ok(())
     }
 
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
 }
 
+/// Run delayed Kuramoto dynamics from an initial phase snapshot.
 pub fn delayed_kuramoto_run(
     phases_init: &[f64],
     omegas: &[f64],
