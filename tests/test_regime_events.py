@@ -98,6 +98,28 @@ def test_bus_multiple_subscribers():
     assert b == [e]
 
 
+def test_bus_dispatch_uses_subscriber_snapshot():
+    bus = EventBus()
+    first: list[RegimeEvent] = []
+    late: list[RegimeEvent] = []
+
+    def subscribe_late(event: RegimeEvent) -> None:
+        first.append(event)
+        bus.subscribe(late.append)
+
+    initial = RegimeEvent(kind="manual", step=0)
+    next_event = RegimeEvent(kind="manual", step=1)
+    bus.subscribe(subscribe_late)
+
+    bus.post(initial)
+    assert first == [initial]
+    assert late == []
+
+    bus.post(next_event)
+    assert first == [initial, next_event]
+    assert late == [next_event]
+
+
 def test_bus_history_bounded():
     bus = EventBus(maxlen=3)
     for i in range(5):

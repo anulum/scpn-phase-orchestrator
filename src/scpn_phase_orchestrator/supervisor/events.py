@@ -80,7 +80,7 @@ class EventBus:
         if not isinstance(event, RegimeEvent):
             raise ValueError(f"event must be a RegimeEvent, got {event!r}")
         self._history.append(event)
-        for cb in self._subscribers:
+        for cb in tuple(self._subscribers):
             cb(event)
 
     @property
