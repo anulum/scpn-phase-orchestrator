@@ -62,6 +62,23 @@ def _validate_metric_values(
     return parsed
 
 
+def _validate_layer_names(
+    value: object,
+    *,
+    expected_length: int,
+) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError("layer_names must be a list of non-empty strings")
+    if len(value) != expected_length:
+        raise ValueError(
+            f"layer_names length must match node count {expected_length}, "
+            f"got {len(value)}"
+        )
+    if any(not isinstance(item, str) or not item.strip() for item in value):
+        raise ValueError("layer_names must be non-empty strings")
+    return value
+
+
 def network_graph_json(
     knm: FloatArray,
     layer_names: list[str] | None = None,
@@ -77,6 +94,8 @@ def network_graph_json(
     n = knm.shape[0]
     if layer_names is None:
         layer_names = [f"L{i}" for i in range(n)]
+    else:
+        layer_names = _validate_layer_names(layer_names, expected_length=n)
     if R_values is None:
         r_values = np.zeros(n, dtype=np.float64)
     else:
