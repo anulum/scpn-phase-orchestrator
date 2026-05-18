@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - Visualizer Streamer tests
 
+import asyncio
+
 import numpy as np
 import pytest
 
@@ -66,6 +68,19 @@ def test_json_safe_passes_through_primitives():
     assert streamer._json_safe(True) is True
 
 
+def test_json_safe_rejects_non_serializable_objects():
+    streamer = VisualizerStreamer()
+    with pytest.raises(TypeError, match="not JSON serializable"):
+        streamer._json_safe(object())
+
+
+def test_json_safe_converts_tuples():
+    """Tuples are treated as ordered lists in JSON payload conversion."""
+    streamer = VisualizerStreamer()
+    safe = streamer._json_safe((1, np.float32(2.0), np.int64(3)))
+    assert safe == [1, 2.0, 3]
+
+
 def test_json_safe_handles_empty_containers():
     """Empty dict/list survive conversion with identical empty shape."""
     streamer = VisualizerStreamer()
@@ -114,6 +129,95 @@ def test_broadcast_without_clients_is_noop():
     streamer.broadcast({"R": 0.5, "phases": np.array([0.1, 0.2])})
 
 
+def test_broadcast_ignores_non_json_safe_payload():
+    """Malformed payloads must be swallowed per stream tick and leave clients intact."""
+    streamer = VisualizerStreamer()
+    stream_loop = object()
+
+    class Client:
+        async def send(self, message: str) -> None:
+            raise AssertionError(f"unexpected send call: {message}")
+
+    streamer._loop = stream_loop
+    client = Client()
+    streamer._clients.add(client)
+
+    streamer.broadcast({"bad": object()})
+
+    assert client in streamer._clients
+
+
+def test_broadcast_discards_clients_on_send_failure(monkeypatch):
+    """Clients that fail send submission are removed from the live client set."""
+
+    class FailingFuture:
+        def __init__(self, error: Exception | None = None):
+            self._error = error
+            self._callbacks: list[object] = []
+
+        def add_done_callback(self, callback):
+            callback(self)
+            self._callbacks.append(callback)
+
+        def exception(self, timeout: float | None = None):
+            return self._error
+
+        def cancelled(self) -> bool:
+            return False
+
+    def fake_submit(
+        _coro: object,
+        _loop: object,
+    ) -> FailingFuture:
+        if hasattr(_coro, "close"):
+            _coro.close()
+        return FailingFuture(RuntimeError("send failed"))
+
+    class Client:
+        async def send(self, message: str) -> None:  # pylint: disable=unused-argument
+            raise RuntimeError("should not be called directly")
+
+    client = Client()
+
+    streamer = VisualizerStreamer()
+    streamer._loop = object()
+    streamer._clients.add(client)
+
+    monkeypatch.setattr(
+        streamer_module.asyncio,
+        "run_coroutine_threadsafe",
+        fake_submit,
+    )
+
+    streamer.broadcast({"step": 1})
+
+    assert client not in streamer._clients
+
+
+def test_handler_removes_client_after_wait_closed_error():
+    """A connection handler must clear the client entry even if wait_closed fails."""
+
+    class FailingWebSocket:
+        def __init__(self) -> None:
+            self.closed = False
+
+        async def wait_closed(self) -> None:
+            self.closed = True
+            raise RuntimeError("websocket failure")
+
+    async def exercise() -> None:
+        streamer = VisualizerStreamer()
+        websocket = FailingWebSocket()
+
+        with pytest.raises(RuntimeError):
+            await streamer._handler(websocket)
+
+        assert websocket.closed is True
+        assert websocket not in streamer._clients
+
+    asyncio.run(exercise())
+
+
 def test_broadcast_before_start_does_not_raise():
     """Calling broadcast() before start() must be a safe no-op."""
     streamer = VisualizerStreamer()
@@ -122,23 +226,38 @@ def test_broadcast_before_start_does_not_raise():
     streamer.broadcast({"any": "data"})  # should not throw
 
 
-def test_start_delegates_to_background_thread():
-    """start() must delegate socket ownership to the configured daemon thread."""
+def test_start_is_idempotent_and_restarts_after_thread_stops(monkeypatch):
+    """start() is safe to call repeatedly and can restart after a dead thread."""
+
+    threads = []
 
     class ThreadProbe:
-        def __init__(self):
-            self.started = False
+        def __init__(self, *args, **kwargs):
+            self.started = 0
+            self.alive = False
+            threads.append(self)
 
         def start(self):
-            self.started = True
+            self.started += 1
+            self.alive = True
 
-    thread = ThreadProbe()
+        def is_alive(self) -> bool:
+            return self.alive
+
+    monkeypatch.setattr(streamer_module.threading, "Thread", ThreadProbe)
+
     streamer = VisualizerStreamer()
-    streamer._thread = thread
-
+    streamer.start()
     streamer.start()
 
-    assert thread.started is True
+    assert len(threads) == 1
+    assert threads[0].started == 1
+
+    threads[0].alive = False
+    streamer.start()
+
+    assert len(threads) == 2
+    assert threads[1].started == 1
 
 
 def test_stop_signals_existing_event_loop_threadsafe():

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,7 +17,7 @@ import pytest
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.runtime.grpc_gen import StateResponse, StreamRequest
 from scpn_phase_orchestrator.runtime.server import SimulationState
-from scpn_phase_orchestrator.runtime.server_grpc import PhaseStreamServicer
+from scpn_phase_orchestrator.runtime.server_grpc import HAS_GRPC, PhaseStreamServicer
 
 DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
 
@@ -25,7 +26,7 @@ class _FakeContext:
     def __init__(
         self,
         active: bool = True,
-        metadata: tuple[tuple[str, str], ...] = (),
+        metadata: tuple[tuple[Any, Any], ...] = (),
     ) -> None:
         self._active = active
         self._metadata = metadata
@@ -33,10 +34,24 @@ class _FakeContext:
     def is_active(self) -> bool:
         return self._active
 
-    def invocation_metadata(self) -> tuple[tuple[str, str], ...]:
+    def invocation_metadata(self) -> tuple[tuple[Any, Any], ...]:
         return self._metadata
 
     def abort(self, _code, detail: str) -> None:
+        raise PermissionError(detail)
+
+
+class _RecordingContext(_FakeContext):
+    def __init__(
+        self,
+        active: bool = True,
+        metadata: tuple[tuple[Any, Any], ...] = (),
+    ) -> None:
+        super().__init__(active=active, metadata=metadata)
+        self.abort_calls: list[tuple[Any, str]] = []
+
+    def abort(self, code: Any, detail: str) -> None:
+        self.abort_calls.append((code, detail))
         raise PermissionError(detail)
 
 
@@ -80,6 +95,20 @@ def test_stream_with_none_context():
     req = StreamRequest(max_steps=2, interval_s=0.0)
     results = list(svc.StreamPhases(req, None))
     assert len(results) == 2
+
+
+def test_stream_rejects_invalid_max_steps():
+    svc = _make_servicer()
+    req = StreamRequest(max_steps=-1, interval_s=0.0)
+    with pytest.raises(PermissionError, match="max_steps"):
+        list(svc.StreamPhases(req, _FakeContext()))
+
+
+def test_stream_rejects_invalid_interval():
+    svc = _make_servicer()
+    req = StreamRequest(max_steps=1, interval_s=float("nan"))
+    with pytest.raises(PermissionError, match="interval_s"):
+        list(svc.StreamPhases(req, _FakeContext()))
 
 
 def test_servicer_reuses_simulation_state_lock():
@@ -147,10 +176,54 @@ def test_grpc_production_rate_limits_metadata_identity(monkeypatch):
     monkeypatch.setenv("SPO_GRPC_RATE_LIMIT_PER_MINUTE", "1")
     svc = PhaseStreamServicer(sim)
     ctx = _FakeContext(metadata=(("x-api-key", "test-key"),))
+    ctx2 = _FakeContext(metadata=(("x-api-key", "other-key"),))
 
     assert isinstance(svc.GetState(None, ctx), StateResponse)
+    with pytest.raises(PermissionError, match="Invalid or missing x-api-key"):
+        svc.GetState(None, ctx2)
     with pytest.raises(PermissionError, match="Rate limit"):
         svc.GetState(None, ctx)
+
+
+def test_grpc_production_accepts_metadata_variants(monkeypatch):
+    spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+    sim = SimulationState(spec)
+    monkeypatch.setenv("SPO_GRPC_ENV", "production")
+    monkeypatch.setenv("SPO_API_KEY", "test-key")
+
+    svc = PhaseStreamServicer(sim)
+    variants: list[tuple[tuple[Any, Any], ...]] = [
+        (("X-API-KEY", "test-key"),),
+        ((b"x-api-key", b"test-key"),),
+    ]
+    for metadata in variants:
+        assert isinstance(
+            svc.GetState(None, _FakeContext(metadata=metadata)), StateResponse
+        )
+
+
+def test_grpc_context_abort_recorded_code(monkeypatch):
+    spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+    sim = SimulationState(spec)
+    monkeypatch.setenv("SPO_GRPC_ENV", "production")
+    monkeypatch.setenv("SPO_GRPC_API_KEY", "test-key")
+
+    svc = PhaseStreamServicer(sim)
+    ctx = _RecordingContext(metadata=(("x-api-key", "wrong-key"),))
+    with pytest.raises(PermissionError, match="Invalid or missing x-api-key"):
+        svc.GetState(None, ctx)
+    code, _detail = ctx.abort_calls[0]
+    if HAS_GRPC:
+        assert code is not None
+    else:
+        assert code is None
+
+
+def test_step_rejects_negative_n_steps():
+    svc = _make_servicer()
+    req = type("StepRequest", (), {"n_steps": -1})()
+    with pytest.raises(PermissionError, match="n_steps"):
+        svc.Step(req, _FakeContext())
 
 
 # Pipeline wiring: StreamPhases streams SimulationState.step() which

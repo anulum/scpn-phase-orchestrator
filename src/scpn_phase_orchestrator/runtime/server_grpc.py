@@ -22,6 +22,7 @@ import logging
 import os
 import time
 from collections.abc import Iterator
+from math import isfinite
 from typing import Any
 
 from scpn_phase_orchestrator.runtime.grpc_gen import (
@@ -69,6 +70,38 @@ def _snap_to_response(snap: dict) -> StateResponse:
         mean_amplitude=snap.get("mean_amplitude", 0.0),
         layers=layers,
     )
+
+
+def _normalise_metadata(raw_metadata: Any) -> dict[str, str]:
+    metadata: dict[str, str] = {}
+    if raw_metadata is None:
+        return metadata
+    iterable = raw_metadata.items() if isinstance(raw_metadata, dict) else raw_metadata
+    for pair in iterable:
+        if not isinstance(pair, tuple) or len(pair) != 2:
+            continue
+        key, value = pair
+        if isinstance(key, bytes):
+            key = key.decode("utf-8", errors="strict")
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="strict")
+        metadata[str(key).lower()] = str(value)
+    return metadata
+
+
+def _validate_positive_int(value: Any, field: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f"{field} must be a positive integer")
+    return value
+
+
+def _validate_non_negative_real(value: Any, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field} must be a non-negative real")
+    value_f = float(value)
+    if not isfinite(value_f) or value_f < 0.0:
+        raise ValueError(f"{field} must be a non-negative real")
+    return value_f
 
 
 def _log_state_rpc(
@@ -132,7 +165,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
     def _authorise(self, context: Any) -> None:
         metadata = {}
         if context is not None and hasattr(context, "invocation_metadata"):
-            metadata = dict(context.invocation_metadata())
+            metadata = _normalise_metadata(context.invocation_metadata())
         supplied = metadata.get("x-api-key")
         if self._api_key is not None and supplied != self._api_key:
             code = grpc.StatusCode.UNAUTHENTICATED if grpc is not None else None
@@ -155,7 +188,14 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
     def Step(self, request: Any, context: Any) -> StateResponse:
         """gRPC unary RPC: advance simulation by n_steps and return state."""
         self._authorise(context)
-        n = getattr(request, "n_steps", 1) or 1
+        raw_n_steps = getattr(request, "n_steps", 1)
+        if raw_n_steps == 0:
+            raw_n_steps = 1
+        try:
+            n = _validate_positive_int(raw_n_steps, "n_steps")
+        except ValueError as exc:
+            code = grpc.StatusCode.INVALID_ARGUMENT if grpc is not None else None
+            self._abort(context, code, str(exc))
         with self._lock:
             for _ in range(n):
                 self._sim.step()
@@ -205,7 +245,17 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         """Read-only observer: streams snapshots without advancing simulation."""
         self._authorise(context)
         max_steps = getattr(request, "max_steps", 100) or 100
-        interval = getattr(request, "interval_s", 0.05) or 0.05
+        interval = getattr(request, "interval_s", 0.05)
+        try:
+            max_steps = _validate_positive_int(max_steps, "max_steps")
+        except ValueError as exc:
+            code = grpc.StatusCode.INVALID_ARGUMENT if grpc is not None else None
+            self._abort(context, code, str(exc))
+        try:
+            interval = _validate_non_negative_real(interval, "interval_s")
+        except ValueError as exc:
+            code = grpc.StatusCode.INVALID_ARGUMENT if grpc is not None else None
+            self._abort(context, code, str(exc))
         emitted = 0
         logger.info(
             "grpc.StreamPhases.start: max_steps=%d interval_s=%.4f",

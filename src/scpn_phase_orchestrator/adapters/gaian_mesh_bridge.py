@@ -170,23 +170,47 @@ class GaianMeshNode:
         self._local_R = 0.0
         self._local_psi = 0.0
 
-        self._listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
-        self._broadcast_thread = threading.Thread(
-            target=self._broadcast_loop, daemon=True
-        )
+        self._listen_thread: threading.Thread | None = None
+        self._broadcast_thread: threading.Thread | None = None
 
     def start(self) -> None:
         """Start the mesh networking threads."""
+        if self._running:
+            return
+
         self._running = True
-        self._listen_thread.start()
-        self._broadcast_thread.start()
+        if self._listen_thread is None:
+            self._listen_thread = threading.Thread(
+                target=self._listen_loop,
+                daemon=True,
+            )
+            self._broadcast_thread = threading.Thread(
+                target=self._broadcast_loop,
+                daemon=True,
+            )
+
+        listen_thread = self._listen_thread
+        broadcast_thread = self._broadcast_thread
+        if listen_thread is None or broadcast_thread is None:
+            raise RuntimeError("mesh threads were not initialised")
+
+        if listen_thread.is_alive() or broadcast_thread.is_alive():
+            return
+
+        listen_thread.start()
+        broadcast_thread.start()
 
     def stop(self) -> None:
         """Stop the mesh networking threads."""
         self._running = False
-        self._sock.close()
-        self._listen_thread.join(timeout=1.0)
-        self._broadcast_thread.join(timeout=1.0)
+        if self._sock.fileno() != -1:
+            with contextlib.suppress(OSError):
+                self._sock.close()
+
+        if self._listen_thread is not None and self._listen_thread.is_alive():
+            self._listen_thread.join(timeout=1.0)
+        if self._broadcast_thread is not None and self._broadcast_thread.is_alive():
+            self._broadcast_thread.join(timeout=1.0)
 
     def __enter__(self) -> GaianMeshNode:
         """Start networking threads on ``with GaianMeshNode(...) as node:``."""
@@ -244,15 +268,25 @@ class GaianMeshNode:
                 data, addr = self._sock.recvfrom(1024)
                 msg = json.loads(data.decode("utf-8"))
 
+                if not isinstance(msg, dict):
+                    continue
+
                 peer_id = msg.get("node_id")
-                if peer_id and peer_id != self.node_id:
+                if isinstance(peer_id, str) and peer_id and peer_id != self.node_id:
                     self._peers[peer_id] = PeerState(
                         node_id=peer_id,
                         R=float(msg.get("R", 0.0)),
                         psi=float(msg.get("psi", 0.0)),
                         timestamp=time.time(),
                     )
-            except (TimeoutError, OSError):
+            except (
+                TimeoutError,
+                OSError,
+                TypeError,
+                ValueError,
+                json.JSONDecodeError,
+                UnicodeDecodeError,
+            ):
                 continue
 
     def _broadcast_loop(self) -> None:

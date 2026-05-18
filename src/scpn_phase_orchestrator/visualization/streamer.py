@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -66,13 +67,16 @@ class VisualizerStreamer:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._server: Any = None
         self._clients: set[Any] = set()
-        self._thread = threading.Thread(target=self._run_server, daemon=True)
+        self._thread: threading.Thread | None = None
 
     def start(self) -> None:
         """Start the WebSocket server in a background thread."""
         if not HAS_WEBSOCKETS:
             msg = "websockets required: pip install scpn-phase-orchestrator[queuewaves]"
             raise RuntimeError(msg)
+        if self._thread is not None and self._thread.is_alive():
+            return
+        self._thread = threading.Thread(target=self._run_server, daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
@@ -85,7 +89,7 @@ class VisualizerStreamer:
         try:
             await websocket.wait_closed()
         finally:
-            self._clients.remove(websocket)
+            self._clients.discard(websocket)
 
     def _run_server(self) -> None:
         self._loop = asyncio.new_event_loop()
@@ -100,22 +104,42 @@ class VisualizerStreamer:
         if not self._clients or not self._loop:
             return
 
-        # Convert numpy arrays to lists for JSON serialization
-        serializable_data = self._json_safe(data)
-        message = json.dumps(serializable_data)
+        # Convert numpy arrays to lists for JSON serialization.
+        try:
+            serializable_data = self._json_safe(data)
+            message = json.dumps(serializable_data)
+        except (TypeError, ValueError):
+            return
 
-        for client in self._clients:
-            asyncio.run_coroutine_threadsafe(client.send(message), self._loop)
+        for client in tuple(self._clients):
+            send_coro = client.send(message)
+            try:
+                send_task = asyncio.run_coroutine_threadsafe(send_coro, self._loop)
+            except Exception:
+                if hasattr(send_coro, "close"):
+                    send_coro.close()
+                self._clients.discard(client)
+                continue
+            send_task.add_done_callback(self._make_send_cleanup_callback(client))
+
+    def _make_send_cleanup_callback(self, client: Any) -> Callable[[Any], None]:
+        def _cleanup_send_result(send_result: Any) -> None:
+            if send_result.cancelled() or send_result.exception() is not None:
+                self._clients.discard(client)
+
+        return _cleanup_send_result
 
     def _json_safe(self, data: Any) -> Any:
         if isinstance(data, dict):
             return {k: self._json_safe(v) for k, v in data.items()}
         if isinstance(data, list):
             return [self._json_safe(v) for v in data]
+        if isinstance(data, tuple):
+            return [self._json_safe(v) for v in data]
         if isinstance(data, np.ndarray):
             return data.tolist()
-        if isinstance(data, (np.float64, np.float32)):
-            return float(data)
-        if isinstance(data, (np.int64, np.int32)):
-            return int(data)
-        return data
+        if isinstance(data, np.generic):
+            return self._json_safe(data.item())
+        if isinstance(data, (str, int, float, bool)) or data is None:
+            return data
+        raise TypeError(f"Object of type {type(data)!r} is not JSON serializable")
