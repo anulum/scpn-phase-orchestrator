@@ -71,6 +71,8 @@ class RegimeManager:
             cooldown_steps,
             name="cooldown_steps",
         )
+        if event_bus is not None and not isinstance(event_bus, EventBus):
+            raise ValueError(f"event_bus must be an EventBus, got {event_bus!r}")
         self._current = Regime.NOMINAL
         self._step_counter = 0
         self._last_transition_step = -self._cooldown_steps

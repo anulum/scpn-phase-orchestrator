@@ -173,6 +173,11 @@ class TestRegimeManager:
         assert bus.count == 1
         assert "nominal->critical" in bus.history[0].detail
 
+    @pytest.mark.parametrize("event_bus", [object(), "bus", True])
+    def test_rejects_invalid_event_bus(self, event_bus: object) -> None:
+        with pytest.raises(ValueError, match="event_bus"):
+            RegimeManager(event_bus=event_bus)  # type: ignore[arg-type]
+
     def test_same_regime_no_transition(self) -> None:
         rm = RegimeManager()
         result = rm.transition(Regime.NOMINAL)
