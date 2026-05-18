@@ -15,6 +15,7 @@ connections to SCADA endpoints per IEC 62443 zone/conduit requirements.
 from __future__ import annotations
 
 import ssl
+from numbers import Integral
 from pathlib import Path
 
 from scpn_phase_orchestrator.adapters._schema import (
@@ -33,6 +34,18 @@ except ImportError:
     # type ignore: None sentinel mirrors the optional pymodbus import boundary.
     ModbusTlsClient = None  # type: ignore[assignment,misc]
     HAS_PYMODBUS = False
+
+
+def _non_negative_int(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{field} must be a non-negative integer")
+    return int(value)
+
+
+def _int_value(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{field} must be an integer")
+    return int(value)
 
 
 class SecureModbusAdapter:
@@ -110,6 +123,7 @@ class SecureModbusAdapter:
 
         Raises ConnectionError if the read fails or returns an error frame.
         """
+        address = _non_negative_int(address, field="address")
         # type ignore: optional pymodbus client is stored as object after runtime guard.
         result = self._client.read_holding_registers(  # type: ignore[attr-defined]
             address, count=1
@@ -123,6 +137,8 @@ class SecureModbusAdapter:
 
         Raises ConnectionError if the write fails.
         """
+        address = _non_negative_int(address, field="address")
+        value = _int_value(value, field="value")
         # type ignore: optional pymodbus client is stored as object after runtime guard.
         result = self._client.write_register(address, value)  # type: ignore[attr-defined]
         if result.isError():
