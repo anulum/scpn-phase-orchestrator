@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from math import isnan
 from typing import cast, get_type_hints
 
 import pytest
@@ -92,6 +93,30 @@ def test_audit_report_summary_ignores_malformed_layers_actions_and_r_values() ->
     assert summary["hash_chain_ok"] is False
 
 
+def test_audit_report_summary_ignores_non_finite_layer_r_values() -> None:
+    entries: list[dict[str, object]] = [
+        {
+            "step": 0,
+            "regime": "nominal",
+            "layers": [
+                {"R": True},
+                {"R": float("nan")},
+                {"R": float("inf")},
+                {"R": 0.5},
+            ],
+        },
+    ]
+
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=True,
+        hash_chain_verified=1,
+    )
+
+    assert summary["layer_r_mean"] == [0.0, 0.0, 0.0, 0.5]
+    assert summary["layer_r_final"] == [0.0, 0.0, 0.0, 0.5]
+
+
 def test_audit_report_summary_preserves_binding_channel_algebra() -> None:
     channel_algebra = {
         "channels": ["P", "Risk"],
@@ -156,6 +181,35 @@ def test_audit_report_summary_includes_integrated_information_records() -> None:
     assert phi_summary["phi_series"] == [0.12, 0.18]
 
 
+def test_audit_report_summary_skips_non_finite_integrated_information_records() -> None:
+    entries: list[dict[str, object]] = [
+        {"step": 0, "layers": [{"R": 0.8}], "regime": "nominal"},
+        {
+            "monitor": "integrated_information",
+            "phi": float("nan"),
+            "normalised_phi": 0.1,
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": 0.25,
+            "normalised_phi": float("inf"),
+        },
+        {
+            "monitor": "integrated_information",
+            "phi": True,
+            "normalised_phi": 0.5,
+        },
+    ]
+
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=True,
+        hash_chain_verified=4,
+    )
+
+    assert "integrated_information" not in summary
+
+
 def test_audit_report_summary_rejects_logs_without_steps() -> None:
     with pytest.raises(ValueError, match="at least one step"):
         build_audit_report_summary(
@@ -169,3 +223,18 @@ def test_non_numeric_private_summary_value_defaults_to_zero() -> None:
     record: dict[str, object] = {"phi": "not-numeric"}
 
     assert summary_module._numeric_value(record, "phi") == 0.0
+
+
+@pytest.mark.parametrize("value", [True, float("inf"), float("-inf")])
+def test_invalid_private_summary_value_defaults_to_zero(value: object) -> None:
+    record: dict[str, object] = {"phi": value}
+
+    assert summary_module._numeric_value(record, "phi") == 0.0
+
+
+def test_nan_private_summary_value_defaults_to_zero() -> None:
+    record: dict[str, object] = {"phi": float("nan")}
+
+    value = summary_module._numeric_value(record, "phi")
+    assert value == 0.0
+    assert not isnan(value)

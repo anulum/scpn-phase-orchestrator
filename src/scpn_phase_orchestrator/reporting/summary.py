@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Real
+
 __all__ = ["build_audit_report_summary"]
 
 
@@ -88,10 +91,7 @@ def _layers(step: dict[str, object]) -> list[dict[str, object]]:
 
 
 def _layer_r(layer: dict[str, object]) -> float:
-    value = layer.get("R", 0.0)
-    if isinstance(value, int | float):
-        return float(value)
-    return 0.0
+    return _numeric_value(layer, "R")
 
 
 def _actions(step: dict[str, object]) -> list[dict[str, object]]:
@@ -108,8 +108,8 @@ def _integrated_information_summary(
         entry
         for entry in entries
         if entry.get("monitor") == "integrated_information"
-        and isinstance(entry.get("phi"), int | float)
-        and isinstance(entry.get("normalised_phi"), int | float)
+        and _is_finite_real(entry.get("phi"))
+        and _is_finite_real(entry.get("normalised_phi"))
     ]
     if not records:
         return None
@@ -120,7 +120,7 @@ def _integrated_information_summary(
     total_series = [
         _numeric_value(record, "total_integration")
         for record in records
-        if isinstance(record.get("total_integration"), int | float)
+        if _is_finite_real(record.get("total_integration"))
     ]
     summary: dict[str, object] = {
         "records": len(records),
@@ -149,6 +149,12 @@ def _integrated_information_summary(
 
 def _numeric_value(record: dict[str, object], key: str) -> float:
     value = record.get(key, 0.0)
-    if isinstance(value, int | float):
-        return float(value)
+    if isinstance(value, Real) and not isinstance(value, bool):
+        parsed = float(value)
+        if isfinite(parsed):
+            return parsed
     return 0.0
+
+
+def _is_finite_real(value: object) -> bool:
+    return isinstance(value, Real) and not isinstance(value, bool) and isfinite(value)
