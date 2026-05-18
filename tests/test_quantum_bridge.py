@@ -48,12 +48,21 @@ def test_quantum_solve():
 
 class TestConstructorValidation:
     def test_rejects_zero_oscillators(self):
-        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+        with pytest.raises(ValueError, match="n_oscillators"):
             QuantumControlBridge(n_oscillators=0)
 
     def test_rejects_negative_oscillators(self):
-        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+        with pytest.raises(ValueError, match="n_oscillators"):
             QuantumControlBridge(n_oscillators=-3)
+
+    @pytest.mark.parametrize("n_oscillators", [True, 2.0, "2"])
+    def test_rejects_non_integer_oscillator_count(self, n_oscillators: object):
+        with pytest.raises(ValueError, match="n_oscillators must be an integer"):
+            QuantumControlBridge(n_oscillators=cast("Any", n_oscillators))
+
+    def test_normalises_integer_oscillator_count(self):
+        b = QuantumControlBridge(n_oscillators=np.int64(2))
+        assert b._n == 2
 
     def test_default_trotter_order_is_one(self):
         b = QuantumControlBridge(n_oscillators=2)

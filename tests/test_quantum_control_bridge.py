@@ -38,7 +38,7 @@ TWO_PI = 2.0 * np.pi
 
 class TestConstructorValidation:
     def test_n_oscillators_zero_raises(self):
-        with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
+        with pytest.raises(ValueError, match="n_oscillators"):
             QuantumControlBridge(n_oscillators=0)
 
     @pytest.mark.parametrize("trotter_order", [True, 0])

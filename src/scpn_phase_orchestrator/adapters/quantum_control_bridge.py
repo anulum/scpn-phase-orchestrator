@@ -25,6 +25,15 @@ TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _require_positive_integer(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be an integer >= 1")
+    parsed = int(value)
+    if parsed < 1:
+        raise ValueError(f"{name} must be an integer >= 1")
+    return parsed
+
+
 class QuantumControlBridge:
     """Adapter between scpn-quantum-control artifacts and phase-orchestrator types.
 
@@ -35,8 +44,7 @@ class QuantumControlBridge:
     """
 
     def __init__(self, n_oscillators: int, trotter_order: int = 1):
-        if n_oscillators < 1:
-            raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
+        n_oscillators = _require_positive_integer(n_oscillators, name="n_oscillators")
         if isinstance(trotter_order, bool) or not isinstance(trotter_order, Integral):
             raise ValueError("trotter_order must be an integer >= 1")
         if trotter_order < 1:
