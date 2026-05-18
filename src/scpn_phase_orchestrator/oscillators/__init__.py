@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Oscillator registry
 
+"""Public registry for Physical, Informational, and Symbolic phase extractors.
+
+The oscillator package owns conversion from raw domain observations into
+`PhaseState` records with channel, phase, frequency, amplitude, and quality
+metadata. Extractors validate their input shape and numeric domain before
+returning phases for binding initialisation, UPDE runs, or quality gating.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState

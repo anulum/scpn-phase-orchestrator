@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Informational oscillator
 
+"""Informational-channel phase extraction from event timestamp streams.
+
+`InformationalExtractor` treats sorted event timestamps as a cadence signal,
+deriving phase from inter-event intervals and reporting interval-regularity
+quality. Non-numeric, boolean, complex, non-finite, or unsorted timestamp
+inputs fail before they can seed runtime phase state.
+"""
+
 from __future__ import annotations
 
 from typing import TypeAlias

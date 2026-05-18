@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Binding-channel phase initialization
 
+"""Synthetic binding-aware initial phase generation.
+
+`extract_initial_phases` uses the binding's oscillator families to generate
+small deterministic synthetic signals per P/I/S channel, extract their phases,
+and produce a finite initial phase vector for UPDE startup. It validates omega
+length, seed, symbolic state counts, and extractor families before falling back
+to seeded random phases for unsupported channel families.
+"""
+
 from __future__ import annotations
 
 from numbers import Integral

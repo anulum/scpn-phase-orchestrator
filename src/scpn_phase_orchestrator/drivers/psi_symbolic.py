@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Symbolic Psi driver
 
+"""Symbolic-channel cyclic sequence reference driver.
+
+`SymbolicDriver` exposes deterministic cyclic lookup over finite real symbolic
+phase values. It rejects empty, boolean-containing, multi-dimensional,
+non-finite, or non-integer step inputs before returning drive values for
+symbolic or semiotic simulations.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Iterable

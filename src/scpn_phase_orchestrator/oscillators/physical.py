@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Physical oscillator
 
+"""Physical-channel phase extraction from continuous numeric waveforms.
+
+`PhysicalExtractor` validates finite one-dimensional real signals and positive
+sample rates, then derives instantaneous phase, angular frequency, amplitude,
+and envelope-quality metadata via the Hilbert transform. Optional Rust
+acceleration preserves the same `PhaseState` contract as the NumPy/SciPy path.
+"""
+
 from __future__ import annotations
 
 from math import isfinite

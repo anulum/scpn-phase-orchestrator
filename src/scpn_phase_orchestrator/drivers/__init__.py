@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — External driver registry
 
+"""Public registry for external reference-phase drivers.
+
+Drivers provide deterministic `Psi` reference signals for Physical,
+Informational, and Symbolic channels. They validate construction parameters and
+compute-time inputs before returning scalar or vector phase-drive values to
+engine or CLI paths.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.drivers.psi_informational import InformationalDriver

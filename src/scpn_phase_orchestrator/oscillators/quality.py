@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Phase quality scorer
 
+"""Quality aggregation and collapse detection for extracted phase states.
+
+The scorer turns per-oscillator extraction quality into weighted aggregate
+signals for runtime gating and diagnostics. Empty state sets collapse to safe
+defaults, low-quality states can be masked, and amplitude weighting prevents
+near-zero signals from dominating quality summaries.
+"""
+
 from __future__ import annotations
 
 from typing import TypeAlias

@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Oscillator base class
 
+"""Shared phase-state contract and extractor interface.
+
+`PhaseState` is the typed handoff record from channel-specific extractors into
+binding, quality scoring, and UPDE initialisation. `PhaseExtractor` defines the
+minimal extraction/quality interface implemented by physical waveform,
+informational event, and symbolic state-sequence extractors.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

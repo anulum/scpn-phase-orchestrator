@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Symbolic oscillator
 
+"""Symbolic-channel phase extraction from discrete state sequences.
+
+`SymbolicExtractor` maps integer state indices onto ring or graph-walk phases
+for semiotic and finite-state systems. It rejects invalid state counts,
+non-integer signals, boolean arrays, complex arrays, and invalid sample rates
+so symbolic phases remain explicit and deterministic.
+"""
+
 from __future__ import annotations
 
 from math import isfinite

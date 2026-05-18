@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Physical Psi driver
 
+"""Physical-channel sinusoidal reference-phase driver.
+
+`PhysicalDriver` generates finite sinusoidal drive values from a positive
+frequency and non-negative amplitude. Scalar and vector compute paths reject
+boolean, complex, non-numeric, and non-finite time inputs so external forcing
+cannot inject invalid values into UPDE integration.
+"""
+
 from __future__ import annotations
 
 from math import isfinite

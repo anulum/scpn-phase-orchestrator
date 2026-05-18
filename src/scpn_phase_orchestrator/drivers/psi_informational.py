@@ -6,6 +6,13 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Informational Psi driver
 
+"""Informational-channel cadence reference-phase driver.
+
+`InformationalDriver` maps a positive event cadence to wrapped phase-drive
+values in `[0, 2*pi)`. Constructor and compute paths reject invalid numeric
+inputs so cadence-driven forcing remains bounded and deterministic.
+"""
+
 from __future__ import annotations
 
 from math import isfinite
