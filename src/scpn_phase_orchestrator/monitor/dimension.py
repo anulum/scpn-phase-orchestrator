@@ -125,8 +125,11 @@ def _dispatch(fn_name: str) -> object | None:
 
 
 def _validate_trajectory(trajectory: object) -> FloatArray:
+    raw = np.asarray(trajectory)
+    if raw.dtype == np.bool_:
+        raise ValueError("trajectory must not contain boolean values")
     try:
-        traj = np.asarray(trajectory, dtype=np.float64)
+        traj = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("trajectory must be a finite 1D or 2D float array") from exc
     if traj.ndim == 1:
@@ -139,8 +142,11 @@ def _validate_trajectory(trajectory: object) -> FloatArray:
 
 
 def _validate_epsilons(epsilons: object) -> FloatArray:
+    raw = np.asarray(epsilons)
+    if raw.dtype == np.bool_:
+        raise ValueError("epsilons must not contain boolean values")
     try:
-        eps = np.asarray(epsilons, dtype=np.float64)
+        eps = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("epsilons must be a finite one-dimensional array") from exc
     if eps.ndim != 1:
@@ -160,8 +166,11 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
+    raw = np.asarray(lyapunov_exponents)
+    if raw.dtype == np.bool_:
+        raise ValueError("lyapunov_exponents must not contain boolean values")
     try:
-        le = np.asarray(lyapunov_exponents, dtype=np.float64)
+        le = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("lyapunov_exponents must be a finite 1D float array") from exc
     if le.ndim != 1:

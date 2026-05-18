@@ -21,6 +21,7 @@ from __future__ import annotations
 import functools
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -85,6 +86,18 @@ class TestCorrelationIntegral:
         assert c[0] == 0.0
 
     @_python
+    @pytest.mark.parametrize(
+        ("trajectory", "epsilons", "match"),
+        [
+            (np.array([[True, False], [False, True]]), np.array([1.0]), "trajectory"),
+            (np.zeros((2, 2)), np.array([True, False]), "epsilons"),
+        ],
+    )
+    def test_boolean_inputs_rejected(self, trajectory, epsilons, match):
+        with pytest.raises(ValueError, match=match):
+            correlation_integral(trajectory, epsilons)
+
+    @_python
     def test_slope_close_to_embedding_dim(self):
         """Gaussian cloud in 2-D should have a slope ≈ 2 across the
         mid-range of ε."""
@@ -114,6 +127,11 @@ class TestKaplanYorke:
     @_python
     def test_empty_input_returns_zero(self):
         assert kaplan_yorke_dimension(np.array([])) == 0.0
+
+    @_python
+    def test_boolean_spectrum_rejected(self):
+        with pytest.raises(ValueError, match="lyapunov_exponents"):
+            kaplan_yorke_dimension(np.array([True, False, True]))
 
     @_python
     def test_classical_lorenz_like(self):
