@@ -49,6 +49,10 @@ fn assemble_r_psi(sum_sin: f64, sum_cos: f64, n: f64) -> (f64, f64) {
     (r, psi)
 }
 
+/// Compute phase-locking value between equal-length phase arrays.
+///
+/// # Errors
+/// Returns `InvalidDimension` when the two phase arrays have different lengths.
 pub fn compute_plv(phases_a: &[f64], phases_b: &[f64]) -> SpoResult<f64> {
     if phases_a.len() != phases_b.len() {
         return Err(SpoError::InvalidDimension(format!(
@@ -71,6 +75,10 @@ pub fn compute_plv(phases_a: &[f64], phases_b: &[f64]) -> SpoResult<f64> {
     Ok(assemble_r_psi(sum_sin, sum_cos, n as f64).0)
 }
 
+/// Compute Kuramoto coherence over selected phase indices.
+///
+/// Indices outside the phase slice are ignored; an empty or fully invalid
+/// selection returns zero coherence.
 #[must_use]
 pub fn compute_layer_coherence(phases: &[f64], indices: &[usize]) -> f64 {
     let mut sum_sin = 0.0;
@@ -105,5 +113,21 @@ mod tests {
         let phases: Vec<f64> = (0..n).map(|i| i as f64 * TAU / n as f64).collect();
         let (r, _) = compute_order_parameter(&phases);
         assert!(r < 0.15);
+    }
+
+    #[test]
+    fn plv_rejects_mismatched_lengths() {
+        assert!(matches!(
+            compute_plv(&[0.0, 0.1], &[0.0]),
+            Err(SpoError::InvalidDimension(_))
+        ));
+    }
+
+    #[test]
+    fn layer_coherence_ignores_out_of_bounds_indices() {
+        let phases = vec![0.0, 0.0, TAU / 2.0];
+        let coherence = compute_layer_coherence(&phases, &[0, 1, 99]);
+        assert!((coherence - 1.0).abs() < 1e-12);
+        assert_eq!(compute_layer_coherence(&phases, &[99]), 0.0);
     }
 }

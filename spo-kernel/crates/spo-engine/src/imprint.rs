@@ -97,6 +97,7 @@ impl ImprintModel {
         Ok(())
     }
 
+    /// Clear all imprint magnitudes without changing decay or saturation parameters.
     pub fn reset(&mut self) {
         self.m.fill(0.0);
     }

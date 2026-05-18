@@ -17,6 +17,10 @@ pub struct PlasticityModel {
 }
 
 impl PlasticityModel {
+    /// Create a non-negative Hebbian learning and decay rule.
+    ///
+    /// # Errors
+    /// Returns `InvalidConfig` when either rate is negative.
     pub fn new(lr: f64, decay: f64) -> SpoResult<Self> {
         if lr < 0.0 || decay < 0.0 {
             return Err(SpoError::InvalidConfig(
@@ -26,6 +30,10 @@ impl PlasticityModel {
         Ok(Self { lr, decay })
     }
 
+    /// Update a dense row-major coupling matrix in place.
+    ///
+    /// The eligibility trace is `cos(theta_j - theta_i)`, implemented from
+    /// precomputed sine and cosine buffers. Self-couplings are preserved.
     pub fn update(
         &self,
         sin_theta: &[f64],
@@ -54,6 +62,10 @@ impl PlasticityModel {
         }
     }
 
+    /// Update sparse CSR coupling values in place.
+    ///
+    /// The sparse structure is interpreted as `row_ptr` plus `col_indices`;
+    /// entries where source and target are the same neuron are preserved.
     pub fn update_sparse(
         &self,
         sin_theta: &[f64],
@@ -81,5 +93,55 @@ impl PlasticityModel {
                 knm_values[idx] = (knm_values[idx] * decay_factor + delta).max(0.0);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn negative_rates_are_rejected() {
+        assert!(PlasticityModel::new(-0.1, 0.0).is_err());
+        assert!(PlasticityModel::new(0.0, -0.1).is_err());
+    }
+
+    #[test]
+    fn dense_update_preserves_self_edges_and_clamps_non_negative() {
+        let model = PlasticityModel::new(1.0, 0.0).expect("model init failed");
+        let phases = [0.0_f64, std::f64::consts::PI];
+        let sin_theta: Vec<f64> = phases.iter().map(|p| p.sin()).collect();
+        let cos_theta: Vec<f64> = phases.iter().map(|p| p.cos()).collect();
+        let mut knm = vec![7.0, 0.0, 0.0, 9.0];
+
+        model.update(&sin_theta, &cos_theta, &mut knm, 1.0, 1.0);
+
+        assert_eq!(knm[0], 7.0);
+        assert_eq!(knm[3], 9.0);
+        assert_eq!(knm[1], 0.0);
+        assert_eq!(knm[2], 0.0);
+    }
+
+    #[test]
+    fn sparse_update_matches_positive_eligibility() {
+        let model = PlasticityModel::new(0.5, 0.0).expect("model init failed");
+        let phases = [0.0_f64, 0.0];
+        let sin_theta: Vec<f64> = phases.iter().map(|p| p.sin()).collect();
+        let cos_theta: Vec<f64> = phases.iter().map(|p| p.cos()).collect();
+        let row_ptr = vec![0, 1, 1];
+        let col_indices = vec![1];
+        let mut values = vec![0.25];
+
+        model.update_sparse(
+            &sin_theta,
+            &cos_theta,
+            &row_ptr,
+            &col_indices,
+            &mut values,
+            2.0,
+            0.1,
+        );
+
+        assert!((values[0] - 0.35).abs() < 1e-12);
     }
 }

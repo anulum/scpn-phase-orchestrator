@@ -10,14 +10,23 @@ use rayon::prelude::*;
 use spo_types::SpoError;
 
 #[derive(Debug, Clone)]
+/// Parameter set for the vectorised leaky integrate-and-fire ensemble.
 pub struct LIFParams {
+    /// Resting membrane potential used for initialisation and refractory hold.
     pub v_rest: f64,
+    /// Reset potential assigned after a threshold crossing.
     pub v_reset: f64,
+    /// Spike threshold for each neuron's membrane potential.
     pub v_threshold: f64,
+    /// Membrane time constant in milliseconds.
     pub tau_mem: f64,
+    /// Integration timestep in milliseconds.
     pub dt: f64,
+    /// Input resistance scaling applied to layer currents.
     pub resistance: f64,
+    /// Number of simulation substeps spent in refractory reset after a spike.
     pub refractory_period: i32,
+    /// Reserved noise scale for stochastic extensions; deterministic path keeps it at zero.
     pub noise_std: f64,
 }
 
@@ -36,6 +45,7 @@ impl Default for LIFParams {
     }
 }
 
+/// Layered leaky integrate-and-fire ensemble with vectorised per-neuron state.
 pub struct LIFEnsemble {
     n_layers: usize,
     neurons_per_layer: usize,
@@ -51,6 +61,11 @@ pub struct LIFEnsemble {
 }
 
 impl LIFEnsemble {
+    /// Create a layered LIF ensemble with homogeneous parameters.
+    ///
+    /// # Errors
+    /// Returns `InvalidConfig` when the layer geometry is empty or the membrane
+    /// time constant is non-positive.
     pub fn new(
         n_layers: usize,
         neurons_per_layer: usize,
@@ -80,6 +95,14 @@ impl LIFEnsemble {
         })
     }
 
+    /// Advance the ensemble for `n_substeps` using one current value per layer.
+    ///
+    /// Returns layer firing rates in hertz over the accumulated simulation
+    /// duration.
+    ///
+    /// # Errors
+    /// Returns `InvalidConfig` when the current vector length does not match
+    /// the configured layer count.
     pub fn step(&mut self, currents: &[f64], n_substeps: usize) -> Result<Vec<f64>, SpoError> {
         if currents.len() != self.n_layers {
             return Err(SpoError::InvalidConfig(format!(
@@ -143,6 +166,7 @@ impl LIFEnsemble {
         Ok(rates)
     }
 
+    /// Return membrane voltage and refractory counter for neuron `i`.
     pub fn neuron_state(&self, i: usize) -> Option<(f64, i32)> {
         if i < self.n_total {
             Some((self.v[i], self.refractory[i]))
@@ -150,28 +174,36 @@ impl LIFEnsemble {
             None
         }
     }
+    /// Return the total neuron count across all layers.
     pub fn n_total(&self) -> usize {
         self.n_total
     }
+    /// Return the configured layer count.
     pub fn n_layers(&self) -> usize {
         self.n_layers
     }
+    /// Return the configured number of neurons per layer.
     pub fn neurons_per_layer(&self) -> usize {
         self.neurons_per_layer
     }
+    /// Return the number of integration substeps already executed.
     pub fn step_count(&self) -> u64 {
         self.step_count
     }
+    /// Return the current membrane-voltage buffer.
     pub fn voltages(&self) -> &[f64] {
         &self.v
     }
+    /// Return the current refractory counters.
     pub fn refractory_counters(&self) -> &[i32] {
         &self.refractory
     }
+    /// Return cumulative spike counts for each neuron.
     pub fn spike_counts_slice(&self) -> &[u64] {
         &self.spike_counts
     }
 
+    /// Restore voltages, refractory counters, spike counts, and elapsed steps.
     pub fn reset(&mut self) {
         self.v.fill(self.params.v_rest);
         self.refractory.fill(0);
@@ -193,5 +225,31 @@ mod tests {
         let mut e = LIFEnsemble::new(2, 8, LIFParams::default()).unwrap();
         let rates = e.step(&[2.0, 0.5], 100).expect("ok");
         assert!(rates[0] > 0.0);
+    }
+
+    #[test]
+    fn mismatched_current_count_rejected() {
+        let mut e = LIFEnsemble::new(2, 4, LIFParams::default()).unwrap();
+        assert!(matches!(e.step(&[1.0], 1), Err(SpoError::InvalidConfig(_))));
+    }
+
+    #[test]
+    fn reset_restores_initial_state() {
+        let params = LIFParams {
+            v_rest: -0.25,
+            v_reset: -0.5,
+            v_threshold: 0.5,
+            refractory_period: 2,
+            ..Default::default()
+        };
+        let mut e = LIFEnsemble::new(1, 3, params).unwrap();
+        let _ = e.step(&[2.0], 3).expect("step failed");
+
+        e.reset();
+
+        assert_eq!(e.step_count(), 0);
+        assert!(e.voltages().iter().all(|&v| (v + 0.25).abs() < 1e-12));
+        assert!(e.refractory_counters().iter().all(|&r| r == 0));
+        assert!(e.spike_counts_slice().iter().all(|&c| c == 0));
     }
 }

@@ -67,16 +67,19 @@ impl SheafUPDEStepper {
         })
     }
 
+    /// Return the configured oscillator count.
     #[must_use]
     pub fn n(&self) -> usize {
         self.n
     }
 
+    /// Return the phase-vector dimension per oscillator.
     #[must_use]
     pub fn d(&self) -> usize {
         self.d
     }
 
+    /// Return the latest adaptive timestep used by RK45, or configured `dt` otherwise.
     #[must_use]
     pub fn last_dt(&self) -> f64 {
         self.last_dt
@@ -500,5 +503,43 @@ fn wrap_phases(phases: &mut [f64]) {
         if *p < 0.0 {
             *p += two_pi;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sheaf_stepper_reports_geometry_and_timestep() {
+        let stepper = SheafUPDEStepper::new(
+            2,
+            3,
+            IntegrationConfig {
+                dt: 0.05,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+
+        assert_eq!(stepper.n(), 2);
+        assert_eq!(stepper.d(), 3);
+        assert_eq!(stepper.last_dt(), 0.05);
+    }
+
+    #[test]
+    fn sheaf_stepper_rejects_mismatched_state_vectors() {
+        let mut stepper =
+            SheafUPDEStepper::new(2, 2, IntegrationConfig::default()).expect("stepper init failed");
+        let mut phases = vec![0.0; 3];
+        let omegas = vec![0.0; 4];
+        let restriction_maps = vec![0.0; 16];
+        let psi = vec![0.0; 2];
+
+        assert!(matches!(
+            stepper.step(&mut phases, &omegas, &restriction_maps, 0.0, &psi),
+            Err(SpoError::InvalidDimension(_))
+        ));
     }
 }
