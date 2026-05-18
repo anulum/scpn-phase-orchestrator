@@ -15,8 +15,8 @@ import pytest
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.runtime.grpc_gen import StateResponse, StreamRequest
-from scpn_phase_orchestrator.server import SimulationState
-from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
+from scpn_phase_orchestrator.runtime.server import SimulationState
+from scpn_phase_orchestrator.runtime.server_grpc import PhaseStreamServicer
 
 DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
 

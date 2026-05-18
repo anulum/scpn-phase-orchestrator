@@ -14,8 +14,8 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.exceptions import PolicyError
+from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor import (
     CompoundCondition,
     PolicyAction,

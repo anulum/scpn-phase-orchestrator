@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.server import SimulationState
+from scpn_phase_orchestrator.runtime.server import SimulationState
 
 DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
 
@@ -129,7 +129,7 @@ except ImportError:
 class TestFastAPIEndpoints:
     @pytest.fixture()
     def client(self):
-        from scpn_phase_orchestrator.server import create_app
+        from scpn_phase_orchestrator.runtime.server import create_app
 
         app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
         return TestClient(app)
@@ -165,7 +165,7 @@ class TestFastAPIEndpoints:
         assert "n_oscillators" in data
 
     def test_health_reports_known_runtime_error(self, monkeypatch):
-        from scpn_phase_orchestrator.server import create_app
+        from scpn_phase_orchestrator.runtime.server import create_app
 
         def fail_snapshot(self):
             raise RuntimeError("engine unavailable")
@@ -182,7 +182,7 @@ class TestFastAPIEndpoints:
         assert data["checks"]["engine"] == "error: engine unavailable"
 
     def test_health_does_not_swallow_unexpected_fault(self, monkeypatch):
-        from scpn_phase_orchestrator.server import create_app
+        from scpn_phase_orchestrator.runtime.server import create_app
 
         def fail_snapshot(self):
             raise AssertionError("programming fault")
@@ -195,7 +195,7 @@ class TestFastAPIEndpoints:
             client.get("/api/health")
 
     def test_production_requires_api_key_env(self, monkeypatch):
-        from scpn_phase_orchestrator.server import create_app
+        from scpn_phase_orchestrator.runtime.server import create_app
 
         monkeypatch.setenv("SPO_ENV", "production")
         monkeypatch.delenv("SPO_API_KEY", raising=False)
@@ -203,7 +203,7 @@ class TestFastAPIEndpoints:
             create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
 
     def test_production_rejects_missing_api_key(self, monkeypatch):
-        from scpn_phase_orchestrator.server import create_app
+        from scpn_phase_orchestrator.runtime.server import create_app
 
         monkeypatch.setenv("SPO_ENV", "production")
         monkeypatch.setenv("SPO_API_KEY", "test-key")
@@ -215,7 +215,7 @@ class TestFastAPIEndpoints:
         assert r.status_code == 401
 
     def test_production_rate_limits_mutations(self, monkeypatch):
-        from scpn_phase_orchestrator.server import create_app
+        from scpn_phase_orchestrator.runtime.server import create_app
 
         monkeypatch.setenv("SPO_ENV", "production")
         monkeypatch.setenv("SPO_API_KEY", "test-key")
@@ -239,7 +239,7 @@ class TestFastAPIEndpoints:
 def test_metrics_endpoint_is_default_runtime_observability_surface():
     from fastapi.testclient import TestClient
 
-    from scpn_phase_orchestrator.server import create_app
+    from scpn_phase_orchestrator.runtime.server import create_app
 
     client = TestClient(
         create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")

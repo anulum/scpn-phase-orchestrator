@@ -14,7 +14,6 @@ from typing import Any
 
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.reporting.explainability import (
     _make_pdf_bytes,
     _metric_summary,
@@ -24,6 +23,7 @@ from scpn_phase_orchestrator.reporting.explainability import (
     write_markdown,
     write_pdf,
 )
+from scpn_phase_orchestrator.runtime.cli import main
 
 
 def _entries() -> list[dict[str, Any]]:

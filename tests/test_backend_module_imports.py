@@ -115,11 +115,11 @@ BACKEND_MODULES = (
 
 
 RUNTIME_MODULES = (
-    "scpn_phase_orchestrator.cli",
+    "scpn_phase_orchestrator.runtime.cli",
     "scpn_phase_orchestrator.grpc_gen",
     "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback",
-    "scpn_phase_orchestrator.server",
-    "scpn_phase_orchestrator.server_grpc",
+    "scpn_phase_orchestrator.runtime.server",
+    "scpn_phase_orchestrator.runtime.server_grpc",
     "scpn_phase_orchestrator.runtime.cli",
     "scpn_phase_orchestrator.runtime.distributed",
     "scpn_phase_orchestrator.runtime.distributed.sync",
@@ -148,11 +148,14 @@ def test_runtime_module_import_surface(module_name: str) -> None:
 @pytest.mark.parametrize(
     "module_name",
     (
+        "scpn_phase_orchestrator.cli",
         "scpn_phase_orchestrator.distributed",
         "scpn_phase_orchestrator.distributed.sync",
+        "scpn_phase_orchestrator.server",
+        "scpn_phase_orchestrator.server_grpc",
     ),
 )
-def test_presplit_distributed_import_surface_is_removed(module_name: str) -> None:
+def test_presplit_runtime_import_surface_is_removed(module_name: str) -> None:
     try:
         spec = importlib.util.find_spec(module_name)
     except ModuleNotFoundError:

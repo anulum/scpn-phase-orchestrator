@@ -16,7 +16,7 @@ import yaml
 from click.testing import CliRunner
 
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
-from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 _MINIMAL_AMPLITUDE_SPEC = {

@@ -103,7 +103,7 @@ dev = [
 ]
 
 [project.scripts]
-spo = "scpn_phase_orchestrator.cli:main"
+spo = "scpn_phase_orchestrator.runtime.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/anulum/scpn-phase-orchestrator"

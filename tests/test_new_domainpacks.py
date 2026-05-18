@@ -14,7 +14,7 @@ import pytest
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
-from scpn_phase_orchestrator.server import SimulationState
+from scpn_phase_orchestrator.runtime.server import SimulationState
 from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
 
 DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"

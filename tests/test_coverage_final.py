@@ -276,7 +276,7 @@ class TestServerResetWithImprint:
         from pathlib import Path
 
         from scpn_phase_orchestrator.binding.loader import load_binding_spec
-        from scpn_phase_orchestrator.server import SimulationState
+        from scpn_phase_orchestrator.runtime.server import SimulationState
 
         spec = load_binding_spec(
             Path(__file__).parent.parent
@@ -296,7 +296,7 @@ class TestServerResetWithImprint:
         from pathlib import Path
 
         from scpn_phase_orchestrator.binding.loader import load_binding_spec
-        from scpn_phase_orchestrator.server import SimulationState
+        from scpn_phase_orchestrator.runtime.server import SimulationState
 
         spec = load_binding_spec(
             Path(__file__).parent.parent

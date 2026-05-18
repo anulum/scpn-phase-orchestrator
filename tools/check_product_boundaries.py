@@ -46,7 +46,6 @@ RUNTIME_PACKAGES = frozenset(
         "apps",
         "artifacts",
         "audit",
-        "cli",
         "grpc_gen",
         "meta",
         "network_security",
@@ -54,8 +53,6 @@ RUNTIME_PACKAGES = frozenset(
         "reporting",
         "runtime",
         "scaffold",
-        "server",
-        "server_grpc",
         "studio",
     }
 )

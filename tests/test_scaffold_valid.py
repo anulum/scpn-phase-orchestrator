@@ -13,7 +13,7 @@ import yaml
 from click.testing import CliRunner
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
-from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.runtime.cli import main
 
 
 class TestScaffoldSpecValid:

@@ -17,7 +17,7 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
-from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 

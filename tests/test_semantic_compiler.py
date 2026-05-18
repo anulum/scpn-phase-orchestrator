@@ -21,8 +21,8 @@ from scpn_phase_orchestrator.binding.semantic import (
     SemanticDomainCompiler,
     compile_symbolic_binding,
 )
-from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter

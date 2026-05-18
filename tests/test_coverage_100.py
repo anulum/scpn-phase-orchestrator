@@ -486,7 +486,7 @@ class TestSimulationStateKuramotoStep:
 
     @pytest.fixture()
     def sim(self):
-        from scpn_phase_orchestrator.server import SimulationState
+        from scpn_phase_orchestrator.runtime.server import SimulationState
 
         spec = BindingSpec(
             name="test",

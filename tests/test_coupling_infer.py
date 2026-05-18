@@ -14,12 +14,12 @@ import numpy as np
 import pytest
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.coupling import (
     CouplingInferenceConfig,
     auto_coupling_estimation,
     infer_coupling_from_timeseries,
 )
+from scpn_phase_orchestrator.runtime.cli import main
 
 
 def _directed_phase_series(n_steps: int = 240) -> np.ndarray:

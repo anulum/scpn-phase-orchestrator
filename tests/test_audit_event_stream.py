@@ -16,13 +16,13 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.audit import stream as legacy_stream
 from scpn_phase_orchestrator.audit.replay import ReplayEngine
-from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.runtime import audit_stream as runtime_stream
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
     read_event_stream,
     verify_event_stream_integrity,
 )
+from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 

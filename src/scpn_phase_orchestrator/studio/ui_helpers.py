@@ -1685,7 +1685,7 @@ def _owned_runtime_blocked_reasons(
 
 def _studio_service_processes() -> list[dict[str, object]]:
     validate_binding_command = (
-        "python -m scpn_phase_orchestrator.cli validate binding_spec.yaml"
+        "python -m scpn_phase_orchestrator.runtime.cli validate binding_spec.yaml"
     )
     return [
         {

@@ -30,9 +30,9 @@ from scpn_phase_orchestrator.binding.types import (
     ImprintSpec,
 )
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
-from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor.petri_net import Guard, Marking, PetriNet, Place
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (

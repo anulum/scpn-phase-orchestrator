@@ -16,7 +16,7 @@ import yaml
 from click.testing import CliRunner
 
 import scpn_phase_orchestrator.supervisor.policy_diagnostics as diagnostics_module
-from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor.policy_diagnostics import (
     dry_run_policy_rules,
 )

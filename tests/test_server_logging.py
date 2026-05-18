@@ -18,8 +18,8 @@ import pytest
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
-from scpn_phase_orchestrator.server import SimulationState
-from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
+from scpn_phase_orchestrator.runtime.server import SimulationState
+from scpn_phase_orchestrator.runtime.server_grpc import PhaseStreamServicer
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -102,7 +102,10 @@ class TestServerGrpcLogging:
         )
         sim = SimulationState(spec)
         servicer = PhaseStreamServicer(sim)
-        caplog.set_level(logging.INFO, logger="scpn_phase_orchestrator.server_grpc")
+        caplog.set_level(
+            logging.INFO,
+            logger="scpn_phase_orchestrator.runtime.server_grpc",
+        )
 
         response = servicer.GetState(request=None, context=None)
 
@@ -123,7 +126,10 @@ class TestServerGrpcLogging:
         )
         sim = SimulationState(spec)
         servicer = PhaseStreamServicer(sim)
-        caplog.set_level(logging.INFO, logger="scpn_phase_orchestrator.server_grpc")
+        caplog.set_level(
+            logging.INFO,
+            logger="scpn_phase_orchestrator.runtime.server_grpc",
+        )
 
         servicer.Reset(request=None, context=None)
 
@@ -143,7 +149,10 @@ class TestServerGrpcLogging:
         sim = SimulationState(spec)
         servicer = PhaseStreamServicer(sim)
         request = type("StepRequest", (), {"n_steps": 3})()
-        caplog.set_level(logging.INFO, logger="scpn_phase_orchestrator.server_grpc")
+        caplog.set_level(
+            logging.INFO,
+            logger="scpn_phase_orchestrator.runtime.server_grpc",
+        )
 
         response = servicer.Step(request=request, context=None)
 
@@ -164,11 +173,11 @@ class TestServerHttpLogging:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         testclient = pytest.importorskip("fastapi.testclient")
-        from scpn_phase_orchestrator.server import create_app
+        from scpn_phase_orchestrator.runtime.server import create_app
 
         app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
         client = testclient.TestClient(app)
-        caplog.set_level(logging.INFO, logger="scpn_phase_orchestrator.server")
+        caplog.set_level(logging.INFO, logger="scpn_phase_orchestrator.runtime.server")
 
         response = client.get("/api/config?token=sensitive-value")
 

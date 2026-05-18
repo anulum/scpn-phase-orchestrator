@@ -31,8 +31,8 @@ from scpn_phase_orchestrator.runtime.grpc_gen._spo_pb2_fallback import (
 from scpn_phase_orchestrator.runtime.grpc_gen._spo_pb2_grpc_fallback import (
     PhaseOrchestratorServicer as _FBServicer,
 )
-from scpn_phase_orchestrator.server import SimulationState
-from scpn_phase_orchestrator.server_grpc import PhaseStreamServicer
+from scpn_phase_orchestrator.runtime.server import SimulationState
+from scpn_phase_orchestrator.runtime.server_grpc import PhaseStreamServicer
 
 DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
 

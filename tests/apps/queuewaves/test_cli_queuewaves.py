@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.cli import main
+from scpn_phase_orchestrator.runtime.cli import main
 
 
 @pytest.fixture()

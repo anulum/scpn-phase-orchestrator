@@ -15,10 +15,10 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-import scpn_phase_orchestrator.cli as cli_module
+import scpn_phase_orchestrator.runtime.cli as cli_module
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
-from scpn_phase_orchestrator.cli import main
 from scpn_phase_orchestrator.plugins import PluginCapability, PluginManifest
+from scpn_phase_orchestrator.runtime.cli import main
 
 
 @pytest.fixture

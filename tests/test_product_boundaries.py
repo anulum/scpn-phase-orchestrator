@@ -54,14 +54,14 @@ def test_core_package_cannot_import_runtime_surface(tmp_path: Path) -> None:
     core = _write_module(
         tmp_path,
         "upde/engine.py",
-        "from scpn_phase_orchestrator.server import SimulationState\n",
+        "from scpn_phase_orchestrator.runtime.server import SimulationState\n",
     )
 
     violations = mod.find_violations([core])
 
     assert len(violations) == 1
     assert violations[0].target_boundary == "runtime"
-    assert violations[0].imported_module == "scpn_phase_orchestrator.server"
+    assert violations[0].imported_module == "scpn_phase_orchestrator.runtime.server"
 
 
 def test_core_package_relative_import_cannot_target_runtime_surface(
@@ -70,14 +70,14 @@ def test_core_package_relative_import_cannot_target_runtime_surface(
     core = _write_module(
         tmp_path,
         "upde/engine.py",
-        "from ..server import create_app\n",
+        "from ..runtime.server import create_app\n",
     )
 
     violations = mod.find_violations([core])
 
     assert len(violations) == 1
     assert violations[0].target_boundary == "runtime"
-    assert violations[0].imported_module == "scpn_phase_orchestrator.server"
+    assert violations[0].imported_module == "scpn_phase_orchestrator.runtime.server"
 
 
 def test_package_init_relative_import_stays_inside_package(tmp_path: Path) -> None:
@@ -152,7 +152,7 @@ def test_integration_package_cannot_import_runtime_surface(tmp_path: Path) -> No
     adapter = _write_module(
         tmp_path,
         "adapters/prometheus.py",
-        "from scpn_phase_orchestrator.server import SimulationState\n",
+        "from scpn_phase_orchestrator.runtime.server import SimulationState\n",
     )
 
     violations = mod.find_violations([adapter])
@@ -227,13 +227,13 @@ def test_unclassified_first_party_source_module_is_rejected(tmp_path: Path) -> N
 
 
 def test_unclassified_first_party_import_is_rejected(tmp_path: Path) -> None:
-    runtime = _write_module(
+    runtime_module = _write_module(
         tmp_path,
-        "server.py",
+        "runtime/app_surface.py",
         "from scpn_phase_orchestrator.new_surface.tool import VALUE\n",
     )
 
-    assert mod.find_unclassified_modules([runtime]) == {
+    assert mod.find_unclassified_modules([runtime_module]) == {
         "scpn_phase_orchestrator.new_surface.tool"
     }
 
