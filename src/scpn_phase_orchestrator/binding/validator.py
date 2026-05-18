@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Binding spec validator
 
+"""Cross-field validation for loaded binding specifications.
+
+`validate_binding_spec` returns every actionable configuration error it can
+find instead of failing at the first issue. It checks version shape, safety
+tier, timing, layer/objective references, N-channel declarations, extractor
+aliases, boundary and actuator scopes, imprint, amplitude, geometry, and
+protocol-net consistency before a binding is used by runtime code.
+"""
+
 from __future__ import annotations
 
 import math

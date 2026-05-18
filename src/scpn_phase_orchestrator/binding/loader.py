@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Binding spec loader
 
+"""Fail-closed YAML/JSON loader for domain binding specifications.
+
+The loader converts untrusted mapping/list/scalar input into the typed
+`BindingSpec` dataclass graph. Every required field, optional field type,
+number pair, channel identifier, and nested section is checked during parsing
+so later runtime code receives structured values rather than raw YAML objects.
+"""
+
 from __future__ import annotations
 
 import json

@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Digital-twin binding contract
 
+"""Transport-neutral digital-twin contracts derived from bindings.
+
+This module turns a validated `BindingSpec` into deterministic contract hashes,
+adapter manifests, sync capabilities, and envelope validation records for
+simulators, services, and hardware twins. REST, gRPC, Kafka, JSONL, hardware,
+and in-memory helpers validate decoded payloads only; they do not open sockets,
+spawn servers, or apply live control actions.
+"""
+
 from __future__ import annotations
 
 import hashlib

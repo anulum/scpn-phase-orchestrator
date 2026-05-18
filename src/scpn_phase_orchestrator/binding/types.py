@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Binding type definitions
 
+"""Typed dataclass model for SPO domain binding specifications.
+
+These dataclasses are the in-memory contract produced by the YAML loader and
+consumed by validators, CLIs, engines, supervisors, audit summaries, and
+digital-twin exporters. Constructors keep lightweight invariant checks where
+local consistency is unambiguous; cross-field and deployment-policy checks live
+in `binding.validator` so error reporting can stay complete and actionable.
+"""
+
 from __future__ import annotations
 
 import re

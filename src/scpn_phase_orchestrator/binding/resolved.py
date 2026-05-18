@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Resolved binding configuration summary
 
+"""Deterministic summaries of binding runtime choices.
+
+Resolved binding records expose timing, engine mode, layers, families,
+channels, driver key names, objectives, actuators, and optional feature flags
+for CLI output and audit headers. Raw driver configuration values are
+deliberately omitted because production bindings may include endpoints or
+deployment-local identifiers that should not be copied into public logs.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.binding.channel_algebra import (

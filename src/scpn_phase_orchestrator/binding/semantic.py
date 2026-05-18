@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - LLM Semantic Domain Compiler
 
+"""Review-only symbolic compiler from natural-language intent to bindings.
+
+The semantic compiler produces a candidate `BindingSpec`, policy YAML, review
+notebook, retrieval evidence, and audit record from local heuristics and
+domainpack/docs evidence. Generated artefacts are intentionally reviewable and
+fail validation before use; this module does not auto-accept live deployment
+bindings or actuate a system.
+"""
+
 from __future__ import annotations
 
 import json

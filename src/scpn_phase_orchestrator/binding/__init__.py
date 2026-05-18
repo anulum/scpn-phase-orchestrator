@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Binding subsystem
 
+"""Public binding-spec contract and runtime handoff helpers.
+
+The binding package owns domain YAML parsing, typed dataclass contracts,
+validation, resolved runtime summaries, N-channel algebra, symbolic generation,
+and digital-twin handoff records. Loader and validator paths fail closed on
+malformed structure while resolved summaries intentionally expose only
+structural choices and configuration key names, not deployment-local secrets.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.binding.channel_algebra import (
