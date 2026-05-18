@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Strange-loop supervisor monitor
 
+"""Self-monitoring supervisor action-history diagnostics.
+
+``StrangeLoopSupervisor`` embeds recent control-action bundles into native
+control-knob space and measures drift, oscillation, coherence, and over-control
+from the bounded history. Recommendations are conservative damping proposals
+for an outer policy gate to approve. The monitor records diagnostics only and
+does not apply actions or alter the underlying supervisor.
+"""
+
 from __future__ import annotations
 
 from collections import deque

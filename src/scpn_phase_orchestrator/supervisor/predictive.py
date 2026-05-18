@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Predictive (MPC) supervisor
 
+"""Predictive and free-energy supervisor diagnostics for bounded action proposals.
+
+The module provides Ott-Antonsen horizon prediction, variational free-energy
+assessment, and hierarchy-level FEP assessments over validated phase/frequency
+state. Predictive supervisors emit conservative ``ControlAction`` proposals for
+degradation, critical forecasts, hard boundaries, or high surprise. They do not
+apply actuation or mutate caller-owned phase/coupling arrays.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

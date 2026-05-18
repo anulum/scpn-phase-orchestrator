@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Policy rule dry-run diagnostics
 
+"""Offline policy-rule dry-run diagnostics over audit-log style entries.
+
+The dry-run path reconstructs reduced ``UPDEState`` snapshots, evaluates policy
+rules without applying actions, tracks rule/action fire counts, and reports
+unreachable rules, overlapping rule firings, and action collisions. It mutates
+only the local ``PolicyEngine`` clock used for cooldown simulation and never
+touches runtime supervisor or actuation state.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

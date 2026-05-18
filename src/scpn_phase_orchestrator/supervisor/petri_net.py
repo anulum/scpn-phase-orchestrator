@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Petri net engine
 
+"""Guarded Petri-net primitives for deterministic regime transition modeling.
+
+The module defines validated places, weighted arcs, guards, transitions,
+markings, and a first-match-priority Petri net. Marking updates are local and
+non-negative, guard metrics must be finite, and net construction rejects arcs to
+unknown places. The engine performs no event emission or policy action mapping;
+adapter modules own those boundaries.
+"""
+
 from __future__ import annotations
 
 import operator

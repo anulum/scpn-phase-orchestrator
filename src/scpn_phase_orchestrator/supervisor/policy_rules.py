@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Policy rule definitions
 
+"""Policy DSL records, loaders, STL monitors, and bounded rule evaluation.
+
+This module validates policy conditions, compound logic, action declarations,
+cooldowns, max-fire limits, and STL monitor specifications before evaluation.
+``PolicyEngine`` returns ``ControlAction`` proposals when regime and metric
+conditions match, while loaders cap rule, condition, and action counts. Policy
+evaluation is local and does not apply actuation.
+"""
+
 from __future__ import annotations
 
 import operator

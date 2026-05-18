@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Policy engine
 
+"""Reactive supervisor policy that maps regimes and state into control proposals.
+
+``SupervisorPolicy`` derives a proposed regime from direct metrics or an
+optional Petri adapter, commits it through ``RegimeManager``, and emits bounded
+``ControlAction`` proposals for degraded, critical, or recovery states. Petri
+failures fall back to direct regime logic. The policy only proposes actions; it
+does not apply actuation or mutate coupling matrices.
+"""
+
 from __future__ import annotations
 
 import logging

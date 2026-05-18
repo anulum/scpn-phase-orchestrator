@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Petri net adapter
 
+"""Adapter from guarded Petri-net markings into supervisor regime decisions.
+
+``PetriNetAdapter`` validates the Petri net, initial marking, place-to-regime
+mapping, optional event bus, and finite metric context before stepping. It fires
+at most one transition through the underlying net, emits a transition event when
+configured, and maps active places to the highest-severity regime. It does not
+emit control actions directly.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Regime classifier
 
+"""Regime classification with hysteresis, cooldown, and optional event emission.
+
+``RegimeManager`` classifies reduced UPDE and boundary state into nominal,
+degraded, critical, or recovery regimes, then applies cooldown and hysteresis
+rules before committing transitions. Transition history is bounded and optional
+events are posted through an injected in-process bus. The manager emits regime
+state only; policy modules decide any control proposals.
+"""
+
 from __future__ import annotations
 
 from collections import deque

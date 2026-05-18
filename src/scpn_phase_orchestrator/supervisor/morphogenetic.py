@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Morphogenetic topology field supervisor
 
+"""Morphogenetic topology-field diagnostics for bounded coupling proposals.
+
+The supervisor evolves a persistent normalized field from phase alignment,
+diffusion, and coherence-target reactions, then returns a clipped coupling
+proposal plus audit summaries of grown and shrunk edges. Snapshot and SVG
+helpers render review artifacts from computed fields. The module does not apply
+coupling updates to external systems or perform actuation.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

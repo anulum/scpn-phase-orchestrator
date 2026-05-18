@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Causal counterfactual supervisor rollouts
 
+"""Causal graph learning and counterfactual supervisor rollout diagnostics.
+
+The module estimates directed influence from traces and compares baseline UPDE
+trajectories against parameter-intervention rollouts derived from proposed
+control actions. Inputs are validated for finite dimensions before simulation;
+action application mutates local copies of coupling and phase-lag matrices only.
+Outputs are audit-ready records and attribution summaries, not live actuation.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Formal supervisor exporters
 
+"""Formal-model exporters for Petri nets, policy rules, and STL monitors.
+
+The exporter functions convert already-validated supervisor structures into
+PRISM or TLA+ text plus identifier maps, sanitizing names and preserving metric,
+transition, rule, action, and STL mappings for auditability. Export routines are
+pure text generation; they do not invoke model checkers, write files, or change
+the source policy/Petri structures.
+"""
+
 from __future__ import annotations
 
 import re

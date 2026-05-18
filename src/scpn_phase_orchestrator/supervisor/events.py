@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Supervisor event types
 
+"""Validated supervisor event records and an in-process bounded event bus.
+
+``RegimeEvent`` restricts event kinds and step/detail fields before publication,
+and ``EventBus`` records a bounded chronological history while notifying
+callable subscribers synchronously. The bus is process-local and passive: it
+does not spawn threads, persist logs, retry subscriber failures, or emit network
+traffic.
+"""
+
 from __future__ import annotations
 
 from collections import deque

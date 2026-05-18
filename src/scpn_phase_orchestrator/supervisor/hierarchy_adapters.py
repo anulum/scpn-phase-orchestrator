@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Hierarchy adapter boundaries
 
+"""Decoded REST, WebSocket-frame, and JSONL hierarchy adapter boundaries.
+
+The adapter helpers validate already-decoded payloads, content-type headers,
+frame kinds, and envelope batches before passing records into a socket-free
+``HierarchyTransportRuntime``. They return audit-safe result records with
+watermarks and ledgers. The module deliberately owns no HTTP server, WebSocket,
+filesystem tailer, or retry loop.
+"""
+
 from __future__ import annotations
 
 import json

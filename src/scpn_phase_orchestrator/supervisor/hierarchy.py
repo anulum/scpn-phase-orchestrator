@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Hierarchical supervisor summaries
 
+"""Reduced-evidence hierarchy summaries, envelopes, ledgers, and consensus.
+
+The hierarchy module enforces a boundary where parent supervisors receive only
+bounded child summaries: coherence, phase, regime, confidence, channel, and
+metadata. Raw phases, time series, coupling matrices, event payloads, and
+actuator targets are rejected from metadata and transport envelopes. Builders
+and runtimes are socket-free and return audit-ready plans or ledgers.
+"""
+
 from __future__ import annotations
 
 import json

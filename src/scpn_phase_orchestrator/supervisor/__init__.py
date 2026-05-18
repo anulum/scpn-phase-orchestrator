@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Supervisor subsystem
 
+"""Public supervisor facade for policy, topology, hierarchy, and audit helpers.
+
+The supervisor package gathers regime management, event buses, causal and
+predictive rollouts, Petri nets, formal exporters, hierarchy transports,
+morphogenetic topology diagnostics, value-alignment guards, sheaf/topology
+supervisors, and policy-rule engines. Importing the facade exposes types and
+functions only; concrete modules own validation, state mutation, export text,
+runtime transport boundaries, and any emitted control proposals.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
