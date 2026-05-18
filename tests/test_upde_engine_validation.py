@@ -129,6 +129,20 @@ class TestStuartLandauEngineValidation:
         assert pytest.approx(1e-6) == engine._atol
         assert pytest.approx(1e-3) == engine._rtol
 
+    def test_compute_order_parameter_rejects_state_shape_mismatch(self) -> None:
+        engine = StuartLandauEngine(n_oscillators=4, dt=0.01)
+
+        with pytest.raises(ValueError, match="state.shape"):
+            engine.compute_order_parameter(np.zeros(7, dtype=np.float64))
+
+    def test_compute_order_parameter_rejects_non_finite_state(self) -> None:
+        engine = StuartLandauEngine(n_oscillators=4, dt=0.01)
+        state = np.ones(8, dtype=np.float64)
+        state[0] = np.inf
+
+        with pytest.raises(ValueError, match="state"):
+            engine.compute_order_parameter(state)
+
     @pytest.mark.parametrize(
         ("field", "bad_value"),
         [

@@ -234,6 +234,12 @@ class StuartLandauEngine:
     def compute_order_parameter(self, state: FloatArray) -> tuple[float, float]:
         """Amplitude-weighted Kuramoto: Z = mean(r_i · exp(i·θ_i))."""
         n = self._n
+        state = _validate_state_array(
+            state,
+            name="state",
+            shape=(2 * n,),
+            finite_message="state contains NaN or Inf",
+        )
         z = np.mean(state[n:] * np.exp(1j * state[:n]))
         return float(np.abs(z)), float(np.angle(z) % TWO_PI)
 
