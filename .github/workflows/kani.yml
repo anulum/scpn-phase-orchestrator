@@ -37,7 +37,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
 
       - name: Install Kani
-        run: cargo install --locked kani-verifier && cargo kani setup
+        run: cargo install --locked --version 0.67.0 kani-verifier && cargo kani setup
 
       - name: Proof — action projector value clipping contract
         run: cargo kani -p spo-supervisor -Z function-contracts --harness action_projector_value_clipping_contract
