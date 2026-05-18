@@ -10,6 +10,7 @@ use crate::dp_tableau as dp;
 use crate::plasticity::PlasticityModel;
 use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 
+/// Sparse Kuramoto UPDE stepper over CSR coupling rows.
 pub struct SparseUPDEStepper {
     n: usize,
     dt: f64,
@@ -43,6 +44,11 @@ impl std::fmt::Debug for SparseUPDEStepper {
 }
 
 impl SparseUPDEStepper {
+    /// Create a sparse Kuramoto UPDE stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -73,6 +79,11 @@ impl SparseUPDEStepper {
         })
     }
 
+    /// Advance one sparse UPDE timestep in place.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with the dense stepper.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -153,6 +164,10 @@ impl SparseUPDEStepper {
         Ok(())
     }
 
+    /// Advance the sparse UPDE system for `n_steps` in-place timesteps.
+    ///
+    /// # Errors
+    /// Propagates any error returned by [`Self::step`].
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -180,13 +195,16 @@ impl SparseUPDEStepper {
         Ok(())
     }
 
+    /// Return the configured oscillator count.
     pub fn n(&self) -> usize {
         self.n
     }
+    /// Return the most recent timestep used by the integrator.
     pub fn last_dt(&self) -> f64 {
         self.last_dt
     }
 
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
@@ -499,6 +517,70 @@ impl SparseUPDEStepper {
         }
         self.last_dt = dt;
         phases.copy_from_slice(&self.y5[..n]);
+    }
+}
+
+#[cfg(test)]
+mod sparse_upde_stepper_tests {
+    use super::*;
+
+    #[test]
+    fn sparse_upde_stepper_rejects_zero_oscillators() {
+        assert!(matches!(
+            SparseUPDEStepper::new(0, IntegrationConfig::default()),
+            Err(SpoError::InvalidDimension(_))
+        ));
+    }
+
+    #[test]
+    fn sparse_upde_stepper_reports_geometry_and_timestep() {
+        let stepper = SparseUPDEStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+
+        assert_eq!(stepper.n(), 2);
+        assert_eq!(stepper.last_dt(), 0.1);
+    }
+
+    #[test]
+    fn sparse_upde_stepper_advances_uncoupled_natural_frequency() {
+        let mut stepper = SparseUPDEStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+        let mut phases = vec![0.2, std::f64::consts::TAU - 0.05];
+        let omegas = vec![1.0, 1.0];
+        let row_ptr = vec![0, 0, 0];
+        let col_indices = Vec::new();
+        let mut knm_values = Vec::new();
+        let alpha_values = Vec::new();
+
+        stepper
+            .step(
+                &mut phases,
+                &omegas,
+                &row_ptr,
+                &col_indices,
+                &mut knm_values,
+                0.0,
+                0.0,
+                &alpha_values,
+            )
+            .expect("step failed");
+
+        assert!((phases[0] - 0.3).abs() < 1e-12);
+        assert!((phases[1] - 0.05).abs() < 1e-12);
     }
 }
 

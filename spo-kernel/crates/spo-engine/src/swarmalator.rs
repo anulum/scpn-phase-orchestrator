@@ -10,6 +10,7 @@ use rayon::prelude::*;
 use spo_types::{IntegrationConfig, SpoError, SpoResult};
 use std::f64::consts::TAU;
 
+/// Spatial phase oscillator stepper for swarmalator dynamics.
 pub struct SwarmalatorStepper {
     n: usize,
     dim: usize,
@@ -30,6 +31,11 @@ impl std::fmt::Debug for SwarmalatorStepper {
 }
 
 impl SwarmalatorStepper {
+    /// Create a swarmalator stepper for `n` agents in `dim` spatial dimensions.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, dim: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -46,6 +52,11 @@ impl SwarmalatorStepper {
         })
     }
 
+    /// Advance one coupled position/phase swarmalator timestep in place.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn step(
         &mut self,
         pos: &mut [f64],
@@ -117,6 +128,7 @@ impl SwarmalatorStepper {
         Ok(())
     }
 
+    /// Run swarmalator dynamics and return flattened position/phase traces.
     pub fn run(
         &mut self,
         pos: &mut [f64],
@@ -141,12 +153,14 @@ impl SwarmalatorStepper {
         (pt, pht)
     }
 
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Run swarmalator dynamics from initial positions and phases.
 pub fn swarmalator_run(
     pos_init: &[f64],
     phases_init: &[f64],
@@ -173,4 +187,39 @@ pub fn swarmalator_run(
     let mut ph = phases_init.to_vec();
     let (pt, pht) = s.run(&mut p, &mut ph, omegas, a, b, j, k, n_steps);
     (p, ph, pt, pht)
+}
+
+#[cfg(test)]
+mod swarmalator_run_tests {
+    use super::*;
+
+    #[test]
+    fn swarmalator_run_zero_steps_returns_initial_state_and_empty_traces() {
+        let pos = vec![0.0, 1.0];
+        let phases = vec![0.2, 0.4];
+        let omegas = vec![0.0, 0.0];
+
+        let (new_pos, new_phases, pos_trace, phase_trace) =
+            swarmalator_run(&pos, &phases, &omegas, 2, 1, 0.1, 1.0, 1.0, 1.0, 1.0, 0);
+
+        assert_eq!(new_pos, pos);
+        assert_eq!(new_phases, phases);
+        assert!(pos_trace.is_empty());
+        assert!(phase_trace.is_empty());
+    }
+
+    #[test]
+    fn swarmalator_run_advances_uncoupled_phase_frequency() {
+        let pos = vec![0.0, 1.0];
+        let phases = vec![0.2, std::f64::consts::TAU - 0.05];
+        let omegas = vec![1.0, 1.0];
+
+        let (_new_pos, new_phases, pos_trace, phase_trace) =
+            swarmalator_run(&pos, &phases, &omegas, 2, 1, 0.1, 0.0, 0.0, 0.0, 0.0, 1);
+
+        assert!((new_phases[0] - 0.3).abs() < 1e-12);
+        assert!((new_phases[1] - 0.05).abs() < 1e-12);
+        assert_eq!(pos_trace.len(), 2);
+        assert_eq!(phase_trace.len(), 2);
+    }
 }

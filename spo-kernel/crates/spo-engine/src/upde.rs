@@ -50,6 +50,11 @@ impl std::fmt::Debug for UPDEStepper {
 }
 
 impl UPDEStepper {
+    /// Create a dense Kuramoto UPDE stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -80,6 +85,11 @@ impl UPDEStepper {
         })
     }
 
+    /// Advance one dense UPDE timestep in place.
+    ///
+    /// # Errors
+    /// Returns dimension errors for mismatched state/coupling inputs and
+    /// divergence errors for non-finite phase or drive values.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -162,6 +172,10 @@ impl UPDEStepper {
         Ok(())
     }
 
+    /// Advance the dense UPDE system for `n_steps` in-place timesteps.
+    ///
+    /// # Errors
+    /// Propagates any error returned by [`Self::step`].
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -178,13 +192,16 @@ impl UPDEStepper {
         Ok(())
     }
 
+    /// Return the configured oscillator count.
     pub fn n(&self) -> usize {
         self.n
     }
+    /// Return the most recent timestep used by the integrator.
     pub fn last_dt(&self) -> f64 {
         self.last_dt
     }
 
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
@@ -467,6 +484,50 @@ impl UPDEStepper {
         }
         self.last_dt = dt;
         phases.copy_from_slice(&self.y5[..n]);
+    }
+}
+
+#[cfg(test)]
+mod upde_stepper_tests {
+    use super::*;
+
+    #[test]
+    fn upde_stepper_rejects_zero_oscillators() {
+        assert!(matches!(
+            UPDEStepper::new(0, IntegrationConfig::default()),
+            Err(SpoError::InvalidDimension(_))
+        ));
+    }
+
+    #[test]
+    fn upde_stepper_reports_geometry_and_timestep() {
+        let stepper = UPDEStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+
+        assert_eq!(stepper.n(), 2);
+        assert_eq!(stepper.last_dt(), 0.1);
+    }
+
+    #[test]
+    fn upde_stepper_rejects_mismatched_dense_inputs() {
+        let mut stepper =
+            UPDEStepper::new(2, IntegrationConfig::default()).expect("stepper init failed");
+        let mut phases = vec![0.0, 0.1];
+        let omegas = vec![0.0];
+        let mut knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        assert!(matches!(
+            stepper.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha),
+            Err(SpoError::InvalidDimension(_))
+        ));
     }
 }
 

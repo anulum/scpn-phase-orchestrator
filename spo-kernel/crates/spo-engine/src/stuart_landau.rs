@@ -10,6 +10,7 @@ use crate::dp_tableau as dp;
 use rayon::prelude::*;
 use spo_types::{IntegrationConfig, Method, SpoError, SpoResult};
 
+/// Stuart-Landau oscillator network stepper with dense coupling matrices.
 pub struct StuartLandauStepper {
     n: usize,
     dt: f64,
@@ -41,6 +42,11 @@ impl std::fmt::Debug for StuartLandauStepper {
 }
 
 impl StuartLandauStepper {
+    /// Create a Stuart-Landau stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -70,6 +76,11 @@ impl StuartLandauStepper {
         })
     }
 
+    /// Advance one Stuart-Landau timestep in place.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn step(
         &mut self,
         state: &mut [f64],
@@ -112,6 +123,10 @@ impl StuartLandauStepper {
         Ok(())
     }
 
+    /// Advance the Stuart-Landau system for `n_steps` in-place timesteps.
+    ///
+    /// # Errors
+    /// Propagates any error returned by [`Self::step`].
     pub fn run(
         &mut self,
         state: &mut [f64],
@@ -131,12 +146,15 @@ impl StuartLandauStepper {
         Ok(())
     }
 
+    /// Return the configured oscillator count.
     pub fn n(&self) -> usize {
         self.n
     }
+    /// Return the most recent timestep used by the integrator.
     pub fn last_dt(&self) -> f64 {
         self.last_dt
     }
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
@@ -463,6 +481,56 @@ impl StuartLandauStepper {
         }
         self.last_dt = dt;
         state.copy_from_slice(&self.y5[..dim]);
+    }
+}
+
+#[cfg(test)]
+mod stuart_landau_stepper_tests {
+    use super::*;
+
+    #[test]
+    fn stuart_landau_stepper_rejects_zero_oscillators() {
+        assert!(matches!(
+            StuartLandauStepper::new(0, IntegrationConfig::default()),
+            Err(SpoError::InvalidDimension(_))
+        ));
+    }
+
+    #[test]
+    fn stuart_landau_stepper_reports_geometry_and_timestep() {
+        let stepper = StuartLandauStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+
+        assert_eq!(stepper.n(), 2);
+        assert_eq!(stepper.last_dt(), 0.1);
+    }
+
+    #[test]
+    fn stuart_landau_run_zero_steps_keeps_state() {
+        let mut stepper =
+            StuartLandauStepper::new(1, IntegrationConfig::default()).expect("stepper init failed");
+        let mut state = vec![1.0, 0.0];
+        let original = state.clone();
+        let omegas = vec![0.0];
+        let mu = vec![0.0];
+        let knm = vec![0.0];
+        let knm_r = vec![0.0];
+        let alpha = vec![0.0];
+
+        stepper
+            .run(
+                &mut state, &omegas, &mu, &knm, &knm_r, 0.0, 0.0, &alpha, 0.0, 0,
+            )
+            .expect("run failed");
+
+        assert_eq!(state, original);
     }
 }
 
