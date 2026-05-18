@@ -274,6 +274,23 @@ def test_build_engine_rejects_missing_required_header_fields(tmp_path, missing):
         re.build_engine(header)
 
 
+@pytest.mark.parametrize("n_oscillators", [0, -1])
+def test_build_engine_rejects_non_positive_oscillator_counts(tmp_path, n_oscillators):
+    re = ReplayEngine(tmp_path / "unused.jsonl")
+
+    with pytest.raises(
+        ValueError, match="audit header n_oscillators must be a positive integer"
+    ):
+        re.build_engine(
+            {
+                "header": True,
+                "n_oscillators": n_oscillators,
+                "dt": 0.01,
+                "method": "euler",
+            }
+        )
+
+
 def test_chained_verification_detects_divergence(tmp_path):
     """Tampered phases are caught by chained verification."""
     n = 4

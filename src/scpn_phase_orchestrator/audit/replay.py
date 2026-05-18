@@ -58,9 +58,9 @@ def _required_header_value(header: dict, field: str) -> object:
 
 def _required_header_int(header: dict, field: str) -> int:
     value = _required_header_value(header, field)
-    if isinstance(value, int) and not isinstance(value, bool):
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
         return value
-    raise ValueError(f"audit header {field} must be an integer")
+    raise ValueError(f"audit header {field} must be a positive integer")
 
 
 def _required_header_float(header: dict, field: str) -> float:
