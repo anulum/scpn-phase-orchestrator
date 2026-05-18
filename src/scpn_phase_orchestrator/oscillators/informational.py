@@ -21,6 +21,12 @@ __all__ = ["InformationalExtractor"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _validate_node_id(value: object) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("node_id must be a non-empty string")
+    return value
+
+
 class InformationalExtractor(PhaseExtractor):
     """Extracts phase from event timestamps (spike trains, discrete events).
 
@@ -29,7 +35,7 @@ class InformationalExtractor(PhaseExtractor):
     """
 
     def __init__(self, node_id: str = "info_0"):
-        self._node_id = node_id
+        self._node_id = _validate_node_id(node_id)
 
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Args:

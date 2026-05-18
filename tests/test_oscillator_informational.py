@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -147,6 +149,11 @@ class TestInformationalMetadata:
         states = ext.extract(np.arange(0.0, 1.0, 0.1), sample_rate=0.0)
         assert states[0].channel == "I"
         assert states[0].node_id == "info_x"
+
+    @pytest.mark.parametrize("node_id", ["", "   ", 42, True])
+    def test_invalid_node_id_rejected(self, node_id: Any):
+        with pytest.raises(ValueError, match="node_id must be a non-empty string"):
+            InformationalExtractor(node_id=node_id)
 
     def test_quality_score_empty(self):
         assert InformationalExtractor().quality_score([]) == 0.0
