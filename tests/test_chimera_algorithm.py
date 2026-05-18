@@ -108,8 +108,10 @@ class TestLocalOrderParameter:
         [
             (np.zeros((2, 2), dtype=np.float64), np.zeros((4, 4)), "phases"),
             (np.array([0.0, np.nan]), np.zeros((2, 2)), "phases"),
+            (np.array([True, False]), np.zeros((2, 2)), "phases"),
             (np.zeros(3), np.zeros((2, 2)), "knm shape"),
             (np.zeros(2), np.array([[0.0, np.inf], [0.0, 0.0]]), "knm"),
+            (np.zeros(2), np.array([[True, False], [False, True]]), "knm"),
         ],
     )
     def test_rejects_invalid_inputs(

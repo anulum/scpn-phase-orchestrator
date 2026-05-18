@@ -136,8 +136,11 @@ def _validate_chimera_inputs(
     phases: object,
     knm: object,
 ) -> tuple[FloatArray, FloatArray]:
+    raw_phases = np.asarray(phases)
+    if raw_phases.dtype == np.bool_:
+        raise ValueError("phases must not contain boolean values")
     try:
-        phases_array = np.asarray(phases, dtype=np.float64)
+        phases_array = raw_phases.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a finite one-dimensional array") from exc
     if phases_array.ndim != 1:
@@ -146,8 +149,11 @@ def _validate_chimera_inputs(
         raise ValueError("phases must contain only finite values")
 
     n = int(phases_array.size)
+    raw_knm = np.asarray(knm)
+    if raw_knm.dtype == np.bool_:
+        raise ValueError("knm must not contain boolean values")
     try:
-        knm_array = np.asarray(knm, dtype=np.float64)
+        knm_array = raw_knm.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("knm must be a finite square coupling matrix") from exc
     if knm_array.shape != (n, n):
