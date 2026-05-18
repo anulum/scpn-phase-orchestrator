@@ -236,6 +236,7 @@ class TestFastAPIEndpoints:
 # via FastAPI client. TestServerDomainpacks verifies all registered domainpacks.
 
 
+@pytest.mark.skipif(not HAS_FASTAPI, reason="fastapi not installed")
 def test_metrics_endpoint_is_default_runtime_observability_surface():
     from fastapi.testclient import TestClient
 

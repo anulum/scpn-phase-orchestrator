@@ -16,8 +16,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.server import SimulationState
+
+from scpn_phase_orchestrator.binding.loader import load_binding_spec
 
 DOMAINS = [
     "plasma_control",
