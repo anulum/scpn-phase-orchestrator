@@ -44,6 +44,7 @@ Dörfler & Bullo 2013, *IEEE Proc.* 102(10):1539-1564.
 from __future__ import annotations
 
 from collections.abc import Callable
+from numbers import Real
 from typing import Any, TypeAlias, cast
 
 import numpy as np
@@ -67,9 +68,51 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _validate_coupling_matrix(knm: object) -> FloatArray:
+    raw = np.asarray(knm)
+    if raw.dtype == np.bool_:
+        raise ValueError("knm must not contain boolean values")
+    try:
+        matrix = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("knm must be a finite square matrix") from exc
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError("knm must be a finite square matrix")
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("knm must contain only finite values")
+    return matrix
+
+
+def _validate_omegas(omegas: object, *, expected_n: int) -> FloatArray:
+    raw = np.asarray(omegas)
+    if raw.dtype == np.bool_:
+        raise ValueError("omegas must not contain boolean values")
+    try:
+        values = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("omegas must be a finite 1-D frequency vector") from exc
+    if values.ndim != 1:
+        raise ValueError("omegas must be a finite 1-D frequency vector")
+    if values.shape != (expected_n,):
+        raise ValueError(f"omegas shape {values.shape} does not match ({expected_n},)")
+    if not np.all(np.isfinite(values)):
+        raise ValueError("omegas must contain only finite values")
+    return values
+
+
+def _validate_gamma_max(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError("gamma_max must be a finite real value")
+    gamma = float(value)
+    if not np.isfinite(gamma):
+        raise ValueError("gamma_max must be finite")
+    return gamma
+
+
 def graph_laplacian(knm: FloatArray) -> FloatArray:
     """Combinatorial graph Laplacian ``L = D − |W|`` with zero
     diagonal on ``W``."""
+    knm = _validate_coupling_matrix(knm)
     w = np.abs(knm)
     np.fill_diagonal(w, 0.0)
     degrees = w.sum(axis=1)
@@ -195,7 +238,7 @@ def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:
     over the dispatched backend primitive; ``python`` reference
     is a direct ``np.linalg.eigh``.
     """
-    knm = np.asarray(knm, dtype=np.float64)
+    knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     return _primitive()(flat, n)
@@ -204,7 +247,7 @@ def spectral_eig(knm: FloatArray) -> tuple[FloatArray, FloatArray]:
 def fiedler_value(knm: FloatArray) -> float:
     """Algebraic connectivity ``λ₂(L)`` — second smallest
     eigenvalue (Dörfler-Bullo 2014)."""
-    knm = np.asarray(knm, dtype=np.float64)
+    knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
@@ -216,7 +259,7 @@ def fiedler_value(knm: FloatArray) -> float:
 def fiedler_vector(knm: FloatArray) -> FloatArray:
     """Eigenvector for ``λ₂`` — partitions the graph into
     synchronisation clusters."""
-    knm = np.asarray(knm, dtype=np.float64)
+    knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
@@ -230,9 +273,9 @@ def critical_coupling(omegas: FloatArray, knm: FloatArray) -> float:
 
     Returns ``+inf`` if the graph is disconnected
     (``λ₂ ≈ 0``)."""
-    knm = np.asarray(knm, dtype=np.float64)
-    omegas = np.asarray(omegas, dtype=np.float64)
+    knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
+    omegas = _validate_omegas(omegas, expected_n=n)
     if ACTIVE_BACKEND == "rust":
         flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         o = np.ascontiguousarray(omegas, dtype=np.float64)
@@ -259,7 +302,7 @@ def fiedler_partition(knm: FloatArray) -> tuple[list[int], list[int]]:
 def spectral_gap(knm: FloatArray) -> float:
     """Gap between ``λ₂`` and ``λ₃`` — larger gap means cleaner
     two-cluster structure."""
-    knm = np.asarray(knm, dtype=np.float64)
+    knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
     if n < 3:
         return 0.0
@@ -281,9 +324,10 @@ def sync_convergence_rate(
     """Estimated convergence rate
     ``μ = K_eff · λ₂ · cos(γ_max) / N``
     (Dörfler-Bullo 2014 §III.B)."""
-    knm = np.asarray(knm, dtype=np.float64)
-    omegas = np.asarray(omegas, dtype=np.float64)
-    n = len(omegas)
+    knm = _validate_coupling_matrix(knm)
+    n = knm.shape[0]
+    omegas = _validate_omegas(omegas, expected_n=n)
+    gamma_max = _validate_gamma_max(gamma_max)
     if n == 0:
         return 0.0
     if ACTIVE_BACKEND == "rust":

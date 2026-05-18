@@ -74,6 +74,18 @@ class TestGraphLaplacian:
         L = graph_laplacian(W)
         assert L[0, 0] == 1.0  # |−1| contributes to degree
 
+    @pytest.mark.parametrize(
+        ("knm", "match"),
+        [
+            (np.array([[True, False], [False, True]]), "knm"),
+            (np.array([[0.0, np.nan], [1.0, 0.0]]), "knm"),
+            (np.zeros((2, 3)), "knm"),
+        ],
+    )
+    def test_rejects_invalid_coupling_matrix(self, knm, match):
+        with pytest.raises(ValueError, match=match):
+            graph_laplacian(knm)
+
 
 class TestFiedlerValue:
     @_python
@@ -156,6 +168,20 @@ class TestCriticalCoupling:
         kc = critical_coupling(omegas, W)
         assert kc == float("inf")
 
+    @_python
+    @pytest.mark.parametrize(
+        ("omegas", "knm", "match"),
+        [
+            (np.array([True, False]), np.ones((2, 2)), "omegas"),
+            (np.array([0.0, np.inf]), np.ones((2, 2)), "omegas"),
+            (np.zeros(3), np.ones((2, 2)), "omegas"),
+            (np.zeros(2), np.array([[True, False], [False, True]]), "knm"),
+        ],
+    )
+    def test_rejects_invalid_frequency_or_coupling_inputs(self, omegas, knm, match):
+        with pytest.raises(ValueError, match=match):
+            critical_coupling(omegas, knm)
+
 
 class TestFiedlerPartition:
     @_python
@@ -210,6 +236,21 @@ class TestSyncConvergenceRate:
         omegas = np.arange(n, dtype=np.float64)
         mu = sync_convergence_rate(W, omegas, gamma_max=0.0)
         assert mu > 0.0
+
+    @_python
+    @pytest.mark.parametrize(
+        ("knm", "omegas", "gamma_max", "match"),
+        [
+            (np.array([[True, False], [False, True]]), np.zeros(2), 0.0, "knm"),
+            (np.ones((2, 2)), np.array([True, False]), 0.0, "omegas"),
+            (np.ones((2, 2)), np.zeros(3), 0.0, "omegas"),
+            (np.ones((2, 2)), np.zeros(2), True, "gamma_max"),
+            (np.ones((2, 2)), np.zeros(2), np.nan, "gamma_max"),
+        ],
+    )
+    def test_rejects_invalid_convergence_inputs(self, knm, omegas, gamma_max, match):
+        with pytest.raises((TypeError, ValueError), match=match):
+            sync_convergence_rate(knm, omegas, gamma_max=gamma_max)
 
 
 class TestHypothesis:
