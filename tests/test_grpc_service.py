@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.grpc_gen import (
+from scpn_phase_orchestrator.runtime.grpc_gen import (
     ConfigRequest,
     ConfigResponse,
     LayerState,
@@ -25,10 +25,10 @@ from scpn_phase_orchestrator.grpc_gen import (
     StepRequest,
     StreamRequest,
 )
-from scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback import (
+from scpn_phase_orchestrator.runtime.grpc_gen._spo_pb2_fallback import (
     StateRequest as _FBStateRequest,
 )
-from scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback import (
+from scpn_phase_orchestrator.runtime.grpc_gen._spo_pb2_grpc_fallback import (
     PhaseOrchestratorServicer as _FBServicer,
 )
 from scpn_phase_orchestrator.server import SimulationState

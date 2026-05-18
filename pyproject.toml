@@ -122,7 +122,7 @@ scpn_phase_orchestrator = ["py.typed", "apps/queuewaves/static/*", "audit/*.prot
 [tool.ruff]
 line-length = 88
 target-version = "py310"
-exclude = ["src/scpn_phase_orchestrator/grpc_gen/spo_pb2.py", "src/scpn_phase_orchestrator/grpc_gen/spo_pb2_grpc.py"]
+exclude = ["src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2.py", "src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2_grpc.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "S", "C4", "RET", "PTH"]
@@ -170,7 +170,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-module = ["scpn_phase_orchestrator.grpc_gen.spo_pb2", "scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc"]
+module = ["scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2", "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
@@ -269,7 +269,7 @@ markers = [
 source = ["scpn_phase_orchestrator"]
 concurrency = ["thread"]
 omit = [
-    "*/grpc_gen/*",
+    "*/runtime/grpc_gen/*",
     # External-dependency adapters: require packages not in standard CI
     # (Redis, Modbus, BrainFlow, neurolib, scpn-fusion-core, sc-neurocore,
     # scpn-control, rtamt/Python 3.11 only).

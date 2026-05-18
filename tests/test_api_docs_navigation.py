@@ -19,8 +19,21 @@ API_ROOT = DOCS_ROOT / "reference" / "api"
 MKDOCS_CONFIG = Path("mkdocs.yml")
 SOURCE_ROOT = Path("src") / "scpn_phase_orchestrator"
 AUTODOC_EXCLUSIONS = {
+    "scpn_phase_orchestrator.audit.logger",
+    "scpn_phase_orchestrator.audit.replay",
+    "scpn_phase_orchestrator.audit.signing",
+    "scpn_phase_orchestrator.audit.stream",
+    "scpn_phase_orchestrator.cli",
+    "scpn_phase_orchestrator.grpc_gen",
+    "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback",
+    "scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback",
+    "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2",
+    "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc",
     "scpn_phase_orchestrator.grpc_gen.spo_pb2",
     "scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc",
+    "scpn_phase_orchestrator.network_security",
+    "scpn_phase_orchestrator.server",
+    "scpn_phase_orchestrator.server_grpc",
 }
 
 

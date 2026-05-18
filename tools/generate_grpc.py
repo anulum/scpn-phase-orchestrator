@@ -8,16 +8,15 @@
 
 """Cross-platform replacement for tools/generate_grpc.sh.
 
-Runs grpc_tools.protoc against proto/spo.proto and writes the generated
-modules into src/scpn_phase_orchestrator/grpc_gen/. Works identically on
-Linux, macOS and Windows — the shell script previously excluded Windows
-developers who did not have WSL or Git Bash installed.
+Runs grpc_tools.protoc against proto/spo.proto and writes the generated modules
+into src/scpn_phase_orchestrator/runtime/grpc_gen/. Works identically on Linux,
+macOS and Windows — the shell script previously excluded Windows developers who
+did not have WSL or Git Bash installed.
 
-Note: the committed stubs in grpc_gen/ are post-processed by ruff (quote
-style, line wrapping) and patched to use relative imports. After running
-this script, run ``ruff format src/scpn_phase_orchestrator/grpc_gen/``
-and convert any ``import spo_pb2`` to ``from . import spo_pb2`` before
-committing.
+Note: the committed stubs in runtime/grpc_gen/ are post-processed by ruff
+(quote style, line wrapping) and patched to use relative imports. After running
+this script, run ``ruff format src/scpn_phase_orchestrator/runtime/grpc_gen/``
+and convert any ``import spo_pb2`` to ``from . import spo_pb2`` before committing.
 
 Usage::
 
@@ -36,7 +35,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PROTO_DIR = REPO / "proto"
-OUT_DIR = REPO / "src" / "scpn_phase_orchestrator" / "grpc_gen"
+OUT_DIR = REPO / "src" / "scpn_phase_orchestrator" / "runtime" / "grpc_gen"
 PROTO_FILE = PROTO_DIR / "spo.proto"
 
 

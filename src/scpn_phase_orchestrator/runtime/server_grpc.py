@@ -24,7 +24,7 @@ import time
 from collections.abc import Iterator
 from typing import Any
 
-from scpn_phase_orchestrator.grpc_gen import (
+from scpn_phase_orchestrator.runtime.grpc_gen import (
     ConfigResponse,
     LayerState,
     PhaseOrchestratorServicer,
