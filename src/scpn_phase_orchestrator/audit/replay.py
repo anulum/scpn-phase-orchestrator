@@ -33,6 +33,7 @@ __all__ = ["ReplayEngine"]
 
 _AUDIT_SCHEMA_VERSION = 1
 _ZERO_HASH = "0" * 64
+_ENGINE_METHODS = frozenset(("euler", "rk4", "rk45"))
 
 
 def _layer_records(step_data: dict) -> list[dict]:
@@ -69,6 +70,14 @@ def _required_header_float(header: dict, field: str) -> float:
     if parsed > 0.0:
         return parsed
     raise ValueError(f"audit header {field} must be a positive finite number")
+
+
+def _header_method(header: dict) -> str:
+    value = header.get("method", "euler")
+    if isinstance(value, str) and value in _ENGINE_METHODS:
+        return value
+    allowed = ", ".join(sorted(_ENGINE_METHODS))
+    raise ValueError(f"audit header method must be one of: {allowed}")
 
 
 class ReplayEngine:
@@ -118,16 +127,17 @@ class ReplayEngine:
         """Construct engine from header (UPDE or Stuart-Landau)."""
         n_oscillators = _required_header_int(header, "n_oscillators")
         dt = _required_header_float(header, "dt")
+        method = _header_method(header)
         if header.get("amplitude_mode"):
             return StuartLandauEngine(
                 n_oscillators=n_oscillators,
                 dt=dt,
-                method=header.get("method", "euler"),
+                method=method,
             )
         return UPDEEngine(
             n_oscillators=n_oscillators,
             dt=dt,
-            method=header.get("method", "euler"),
+            method=method,
         )
 
     def verify_determinism_chained(
