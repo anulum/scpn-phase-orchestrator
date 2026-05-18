@@ -6,6 +6,17 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — SSGF geometry carrier W(t)
 
+"""Latent SSGF geometry carrier for decoding and updating coupling matrices.
+
+``GeometryCarrier`` owns the mutable latent vector ``z``, fixed decoder
+projection, deterministic random generator, and step counter for the outer
+SSGF loop. Decoding maps latent vectors to non-negative square coupling
+matrices with zero diagonal, using the Rust kernel when available and the
+Python softplus decoder otherwise. Updates mutate only the carrier state and
+return snapshots with copied arrays so downstream callers cannot alias the
+internal latent geometry.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable

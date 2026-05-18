@@ -12,6 +12,16 @@
 # Requires ripser for full Vietoris-Rips persistence. Falls back to
 # phase-locking value (PLV) based approximation without ripser.
 
+"""Topological Consciousness Boundary Observable over phase-history windows.
+
+The observer accumulates copied phase snapshots, delay-embeds recent history,
+and computes H1 persistence through ``ripser`` when available. Without ripser
+it falls back to a PLV approximation that preserves the same public state shape
+but not the same topological guarantee. The module is a diagnostic gate over
+numeric phase history only; it does not assert phenomenology, perform actuation,
+or make safety-critical decisions by itself.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

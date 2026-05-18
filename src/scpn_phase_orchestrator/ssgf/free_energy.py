@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — SSGF free energy and Langevin dynamics
 
+"""Free-energy helpers for SSGF stochastic geometry diagnostics.
+
+This module provides Langevin perturbation, Boltzmann weighting, and effective
+temperature estimation for latent geometry cost histories. It preserves stable
+edge semantics: non-positive temperature or time step returns an unchanged copy
+for Langevin noise, zero-temperature Boltzmann evaluation is explicit, and short
+or near-zero cost histories report zero effective temperature. Optional Rust
+kernels mirror those public contracts.
+"""
+
 from __future__ import annotations
 
 from typing import TypeAlias

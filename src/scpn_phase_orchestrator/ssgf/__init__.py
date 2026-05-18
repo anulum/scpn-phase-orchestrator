@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Stochastic Synthesis of Geometric Fields
 
+"""Public SSGF facade for geometry carriers, closure loops, and observers.
+
+The SSGF package exposes deterministic Python implementations, with optional
+Rust acceleration in selected numeric kernels, for latent geometry decoding,
+cybernetic closure, total-cost evaluation, ethical cost diagnostics, stochastic
+free-energy helpers, PGBO alignment observation, and TCBO boundary observation.
+The package-level surface is import-only: validation, fallback parity, and
+mutation boundaries are owned by the concrete modules.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier, SSGFState

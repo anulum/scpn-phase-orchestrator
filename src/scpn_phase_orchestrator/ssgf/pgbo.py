@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - Phase-Geometry Bidirectional Observer
 
+"""Phase-Geometry Bidirectional Observer for validated alignment snapshots.
+
+``PGBO`` records coherence, SSGF costs, phase-geometry alignment, and a scalar
+gauge-curvature proxy for each observed phase/coupling pair. Cost weights,
+phase vectors, and coupling matrices are validated before observation so
+history contains only dimensionally consistent snapshots. The observer stores
+diagnostics and step counters only; it does not mutate the supplied phase or
+geometry arrays.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

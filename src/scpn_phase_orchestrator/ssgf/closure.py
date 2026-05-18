@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — L16 cybernetic closure
 
+"""Cybernetic closure loop connecting observed phases to SSGF geometry updates.
+
+The closure observes the current phase vector, evaluates total SSGF costs,
+asks the carrier to descend through a cost callback, then decodes the next
+coupling matrix for feedback into phase dynamics. The module mutates only the
+injected ``GeometryCarrier`` and its local convergence bookkeeping; phase inputs
+are passed through to the cost layer where dimensional and finite-value checks
+are enforced.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

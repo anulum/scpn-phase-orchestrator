@@ -16,6 +16,16 @@
 # Grounded in: Harsanyi aggregation, MacAskill ECW,
 # Lyapunov/CBF safety, Wiener cybernetic ethics.
 
+"""Ethical-cost diagnostic term for SEC and CBF-style constraint penalties.
+
+The module computes the C15_sec term from coherence, spectral connectivity,
+coupling density, phase dispersion, and squared control-barrier violations.
+It is a numeric diagnostic used by the SSGF cost surface, not an autonomous
+policy authority or clinical decision surface. Rust and Python paths expose the
+same result fields so callers can audit SEC score, ethics penalty, total term,
+and violation count independently.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — SSGF cost terms
 
+"""Validated SSGF total-cost terms for phase and coupling geometry states.
+
+``compute_ssgf_costs`` combines synchronization deficit, spectral gap,
+sparsity, and symmetry terms into a weighted objective. The public entry point
+rejects boolean, non-numeric, non-finite, non-vector phase inputs, non-square
+or non-finite coupling matrices, and invalid weight tuples before dispatching
+to Rust or Python. This keeps accelerated and fallback paths aligned on the
+same physical dimensions and cost semantics.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
