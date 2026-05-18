@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — QueueWaves configuration
 
+"""Validated QueueWaves configuration and BindingSpec compilation.
+
+The module parses YAML configuration into typed service, threshold, coupling,
+alert, server, and security records, rejecting malformed URLs, invalid channel
+or extractor identifiers, unsafe threshold ordering, and missing services
+before runtime use. ``ConfigCompiler`` converts a validated deployment config
+into an SPO ``BindingSpec`` for local analysis only; it does not start scraping,
+open sockets, or install alert sinks.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — QueueWaves cascade failure detector
 
+"""Lazy public facade for the QueueWaves cascade-failure detector app.
+
+QueueWaves wires Prometheus metric collection into phase extraction, SPO
+pipeline diagnostics, anomaly detection, and optional webhook/HTTP presentation
+surfaces. Public symbols are lazily imported so FastAPI, httpx, and related
+optional dependencies are loaded only when the caller requests runtime pieces.
+The facade itself does not scrape metrics, send alerts, or start servers.
+"""
+
 from __future__ import annotations
 
 from typing import Any

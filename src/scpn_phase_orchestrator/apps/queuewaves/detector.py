@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — QueueWaves anomaly detector
 
+"""Pure anomaly detection over QueueWaves pipeline snapshots.
+
+The detector classifies retry-storm formation, cascade propagation, and chronic
+degradation from an immutable snapshot and validated thresholds. It returns
+structured anomaly records with severity, service, value, threshold, tick, and
+message fields only; dispatch, suppression, operator notification, and runtime
+control decisions are handled by separate modules.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

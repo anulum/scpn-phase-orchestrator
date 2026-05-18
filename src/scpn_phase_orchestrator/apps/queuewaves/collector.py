@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — QueueWaves Prometheus collector
 
+"""Prometheus metric collection into per-service finite ring buffers.
+
+``MetricBuffer`` stores timestamp/value samples for one monitored service, and
+``PrometheusCollector`` scrapes configured PromQL instant queries into those
+buffers through an optional httpx client. Scrape failures are logged per service
+and do not mutate unrelated buffers. The collector only returns ready signal
+arrays for downstream phase extraction; it does not infer anomalies or send
+alerts.
+"""
+
 from __future__ import annotations
 
 import logging

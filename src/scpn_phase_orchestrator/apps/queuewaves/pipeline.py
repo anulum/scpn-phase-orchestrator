@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — QueueWaves phase compute pipeline
 
+"""QueueWaves phase-compute pipeline for one-tick diagnostic snapshots.
+
+``PhaseComputePipeline`` compiles QueueWaves configuration into an SPO binding,
+extracts phases from ready service buffers, advances the local UPDE state,
+updates imprint memory, evaluates boundary/supervisor diagnostics, and returns
+a JSON-compatible snapshot. The pipeline mutates only its owned in-memory
+simulation state; it does not scrape Prometheus, send alerts, open network
+sockets, or apply actions to external systems.
+"""
+
 from __future__ import annotations
 
 import time

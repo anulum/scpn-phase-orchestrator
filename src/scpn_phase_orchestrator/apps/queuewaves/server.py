@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — QueueWaves FastAPI server
 
+"""FastAPI assembly for QueueWaves read-only monitoring surfaces.
+
+``create_app`` wires configured collection, phase computation, anomaly
+detection, alert dispatch, REST endpoints, and a read-only WebSocket stream into
+one ASGI app. Production mode requires an API key and rate limits requests
+before exposing state. Incoming WebSocket messages are ignored except for size
+and keepalive handling; the server does not accept remote actuation commands.
+"""
+
 import asyncio
 import contextlib
 import json

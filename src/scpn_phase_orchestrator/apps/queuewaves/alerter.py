@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — QueueWaves webhook alerter
 
+"""Webhook alert dispatch with cooldown-based anomaly deduplication.
+
+The alerter formats QueueWaves anomalies for generic JSON or Slack-style sinks,
+tracks per-anomaly cooldown state, and reports only anomalies that pass
+deduplication. HTTP delivery is best-effort and logs configured sink failures
+without raising control-plane exceptions; the synchronous path exercises the
+same cooldown bookkeeping without network I/O for tests and dry runs.
+"""
+
 from __future__ import annotations
 
 import logging
