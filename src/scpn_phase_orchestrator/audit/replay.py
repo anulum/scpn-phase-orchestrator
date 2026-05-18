@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Deterministic replay engine
 
+"""Replay and integrity verification for SPO audit logs.
+
+The replay engine reconstructs UPDE or Stuart-Landau state from audit JSONL,
+checks hash-chain and optional HMAC integrity, and reruns chained state
+transitions against logged next-step phases. Malformed headers, unsupported
+methods, invalid signatures, and non-replayable records fail closed instead of
+silently accepting unverifiable provenance.
+"""
+
 from __future__ import annotations
 
 import hashlib

@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Audit explainability reports
 
+"""Human-readable explanations derived from audit records.
+
+Explainability reports summarise regimes, transitions, layer coherence,
+stability metrics, action justifications, events, and hash-chain integrity.
+Inputs are parsed audit entries; missing step records or invalid report
+parameters fail explicitly instead of producing misleading empty reports.
+"""
+
 from __future__ import annotations
 
 import textwrap

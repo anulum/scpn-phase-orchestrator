@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Reporting subsystem
 
+"""Public reporting helpers for audit-derived operator artefacts.
+
+The reporting package converts parsed audit records into explainability
+summaries, markdown/PDF reports, compact JSON-safe summaries, and optional
+diagnostic plots. It reads supplied records only; report generation does not
+rerun controllers or perform live actuation.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.reporting.explainability import (

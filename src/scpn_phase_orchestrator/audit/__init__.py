@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Audit subsystem
 
+"""Audit logging, event streaming, and deterministic replay entry points.
+
+The audit package owns append-only JSONL records, optional hash-chained event
+streams, replay reconstruction, and integrity verification. Public helpers
+fail closed on malformed signatures or key material while preserving unsigned
+development logs for local reproducibility workflows.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.audit.logger import AuditLogger

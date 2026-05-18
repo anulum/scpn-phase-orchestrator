@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Diagnostic plotting
 
+"""Optional matplotlib diagnostics for audit logs.
+
+`CoherencePlot` renders coherence, regime, action, amplitude, and PAC views
+from already-recorded audit data. Matplotlib is imported lazily and a
+non-interactive backend is selected for production/headless use; malformed or
+missing plot inputs raise `ValueError` rather than emitting partial figures.
+"""
+
 from __future__ import annotations
 
 import importlib.util

@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Audit event logger
 
+"""Append-only JSONL logger for replayable SPO runs.
+
+`AuditLogger` records headers, simulation steps, supervisor actions, and named
+events with a SHA-256 hash chain. When `SPO_AUDIT_KEY` is configured, existing
+unsigned streams are rejected and new records carry HMAC metadata so downstream
+replay and reporting can verify provenance before trusting an audit trail.
+"""
+
 from __future__ import annotations
 
 import hashlib

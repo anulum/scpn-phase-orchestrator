@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Audit signing helpers
 
+"""HMAC key discovery helpers for signed audit verification.
+
+The module derives stable non-secret key identifiers and loads current or
+historical verification keys from `SPO_AUDIT_KEY` and `SPO_AUDIT_KEYRING`.
+Empty, malformed, or mismatched key material raises `ValueError` so signed
+audit verification never falls back to an ambiguous trust state.
+"""
+
 from __future__ import annotations
 
 import hashlib
