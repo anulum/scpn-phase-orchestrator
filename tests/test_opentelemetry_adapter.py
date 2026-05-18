@@ -73,9 +73,47 @@ class TestOTelExporter:
         with exp.span("test", attributes={"k": "v"}) as s:
             s.set_attribute("extra", 42)
 
+    @pytest.mark.parametrize("name", ["", "bad\nspan", True])
+    def test_span_rejects_invalid_name(self, name: object) -> None:
+        exp = OTelExporter()
+        with pytest.raises(ValueError, match="span name"), exp.span(name):  # type: ignore[arg-type]
+            pass
+
+    @pytest.mark.parametrize(
+        "attributes",
+        [{"": "v"}, {"bad\nkey": "v"}, {"ok": object()}, []],
+    )
+    def test_span_rejects_invalid_attributes(self, attributes: object) -> None:
+        exp = OTelExporter()
+        with (
+            pytest.raises(ValueError, match="attributes"),
+            exp.span(
+                "test",
+                attributes=attributes,  # type: ignore[arg-type]
+            ),
+        ):
+            pass
+
     def test_record_step_no_error(self) -> None:
         exp = OTelExporter()
         exp.record_step(_make_state(), step_idx=0)
+
+    @pytest.mark.parametrize("step_idx", [-1, 1.5, True])
+    def test_record_step_rejects_invalid_step_index(self, step_idx: object) -> None:
+        exp = OTelExporter()
+        with pytest.raises(ValueError, match="step_idx"):
+            exp.record_step(_make_state(), step_idx=step_idx)  # type: ignore[arg-type]
+
+    def test_record_step_rejects_nonfinite_stability_proxy(self) -> None:
+        exp = OTelExporter()
+        state = UPDEState(
+            layers=[LayerState(R=0.9, psi=0.5)],
+            regime_id="coherent",
+            stability_proxy=float("nan"),
+            cross_layer_alignment=np.eye(1),
+        )
+        with pytest.raises(ValueError, match="stability_proxy"):
+            exp.record_step(state, step_idx=0)
 
     def test_record_step_repeated(self) -> None:
         exp = OTelExporter()
@@ -86,6 +124,19 @@ class TestOTelExporter:
     def test_record_regime_change_no_error(self) -> None:
         exp = OTelExporter()
         exp.record_regime_change("coherent", "incoherent")
+
+    @pytest.mark.parametrize(
+        ("old", "new"),
+        [("", "next"), ("old", ""), ("bad\nold", "new"), ("old", True)],
+    )
+    def test_record_regime_change_rejects_invalid_labels(
+        self,
+        old: object,
+        new: object,
+    ) -> None:
+        exp = OTelExporter()
+        with pytest.raises(ValueError, match="regime"):
+            exp.record_regime_change(old, new)  # type: ignore[arg-type]
 
     def test_custom_service_name(self) -> None:
         exp = OTelExporter(service_name="custom_spo")
