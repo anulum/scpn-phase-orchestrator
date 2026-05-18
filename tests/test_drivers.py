@@ -98,6 +98,20 @@ class TestPhysicalDriver:
         out = drv.compute_batch(t)
         assert np.all(out >= -2.5 - 1e-12) and np.all(out <= 2.5 + 1e-12)
 
+    @pytest.mark.parametrize(
+        "t_array",
+        [
+            np.array([0.0, float("nan")]),
+            np.array([0.0, float("inf")]),
+            np.array([True, False]),
+            np.array(["0.25"], dtype=object),
+        ],
+    )
+    def test_compute_batch_rejects_invalid_time_array(self, t_array: object):
+        drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
+        with pytest.raises(ValueError, match="t_array must be finite"):
+            drv.compute_batch(cast(Any, t_array))
+
     @pytest.mark.parametrize("t", [True, float("nan"), float("inf"), "0.25"])
     def test_compute_rejects_invalid_scalar_time(self, t: object):
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)

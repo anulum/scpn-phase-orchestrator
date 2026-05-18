@@ -31,6 +31,21 @@ def _require_finite_real(value: object, *, name: str) -> float:
     return parsed
 
 
+def _require_finite_real_array(value: object, *, name: str) -> FloatArray:
+    array = np.asarray(value)
+    dtype = array.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.number)
+    ):
+        raise ValueError(f"{name} must be finite")
+    parsed = array.astype(np.float64, copy=False)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
 class PhysicalDriver:
     """Sinusoidal external drive: Psi_P(t) = amplitude * sin(2*pi*frequency*t)."""
 
@@ -53,6 +68,7 @@ class PhysicalDriver:
 
     def compute_batch(self, t_array: FloatArray) -> FloatArray:
         """Vectorised Psi_P over an array of time values."""
+        t_array = _require_finite_real_array(t_array, name="t_array")
         result: FloatArray = self._amplitude * np.sin(
             TWO_PI * self._frequency * t_array
         )
