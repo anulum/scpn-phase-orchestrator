@@ -158,6 +158,23 @@ class TestExtractors:
         assert "K" in knob_steps
         assert all(0.0 <= r <= 1.5 for r in r_global)
 
+    def test_extract_actions_ignores_malformed_layer_containers(self) -> None:
+        plot = CoherencePlot(
+            [
+                {"step": 0, "regime": "NOMINAL", "layers": None, "actions": []},
+                {
+                    "step": 1,
+                    "regime": "DEGRADED",
+                    "layers": ["not-a-layer", {"R": 0.4}],
+                    "actions": [{"knob": "K"}],
+                },
+            ]
+        )
+        x, r_global, knob_steps = plot._extract_actions()
+        assert x == [0, 1]
+        assert r_global == [0.0, 0.4]
+        assert knob_steps == {"K": [1]}
+
     def test_extract_amplitude(self) -> None:
         plot = CoherencePlot(_make_log())
         x, amps, sub_frac = plot._extract_amplitude()

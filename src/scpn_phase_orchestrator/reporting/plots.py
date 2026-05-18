@@ -125,7 +125,7 @@ class CoherencePlot:
         x = [s["step"] for s in steps]
         r_global = []
         for s in steps:
-            rs = [la["R"] for la in s["layers"]]
+            rs = [self._numeric_value(layer.get("R", 0.0)) for layer in self._layers(s)]
             r_global.append(float(np.mean(rs)) if rs else 0.0)
         knob_steps: dict[str, list[int]] = {}
         for s in steps:
