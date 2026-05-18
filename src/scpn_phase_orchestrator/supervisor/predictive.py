@@ -213,6 +213,12 @@ class PredictiveSupervisor:
         boundary_state: BoundaryState,
     ) -> list[ControlAction]:
         """Predictive control: act before degradation, not after."""
+        if not isinstance(upde_state, UPDEState):
+            raise ValueError(f"upde_state must be a UPDEState, got {upde_state!r}")
+        if not isinstance(boundary_state, BoundaryState):
+            raise ValueError(
+                f"boundary_state must be a BoundaryState, got {boundary_state!r}"
+            )
         if boundary_state.hard_violations:
             return [
                 ControlAction(

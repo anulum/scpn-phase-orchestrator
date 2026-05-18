@@ -152,6 +152,32 @@ class TestDecide:
         assert len(actions) == 1
         assert actions[0].knob == "zeta"
 
+    @pytest.mark.parametrize(
+        ("upde_state", "boundary_state", "match"),
+        [
+            (object(), BoundaryState(), "upde_state"),
+            (_make_state(0.9), object(), "boundary_state"),
+            (_make_state(0.9), True, "boundary_state"),
+        ],
+    )
+    def test_decide_rejects_malformed_state_objects(
+        self,
+        upde_state: object,
+        boundary_state: object,
+        match: str,
+    ):
+        ps = PredictiveSupervisor(4, dt=0.01)
+
+        with pytest.raises(ValueError, match=match):
+            ps.decide(
+                np.zeros(4),
+                np.ones(4),
+                np.eye(4),
+                np.zeros((4, 4)),
+                upde_state,  # type: ignore[arg-type]
+                boundary_state,  # type: ignore[arg-type]
+            )
+
     def test_preemptive_action_on_predicted_degradation(self):
         ps = PredictiveSupervisor(8, dt=0.01, horizon=50)
         rng = np.random.default_rng(42)
