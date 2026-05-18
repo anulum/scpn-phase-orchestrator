@@ -18,6 +18,8 @@ from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "steady_state_r_mojo"]
 
+FloatArray = NDArray[np.float64]
+
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "basin_stability_mojo"
 
 
@@ -32,10 +34,10 @@ def _ensure_exe() -> Path:
 
 
 def steady_state_r_mojo(
-    phases_init: NDArray[np.float64],
-    omegas: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     k_scale: float,
     dt: float,

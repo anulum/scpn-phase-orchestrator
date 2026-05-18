@@ -18,6 +18,8 @@ from numpy.typing import NDArray
 
 __all__ = ["steady_state_r_go"]
 
+FloatArray = NDArray[np.float64]
+
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libbasin_stability.so"
 _LIB: ctypes.CDLL | None = None
 
@@ -50,10 +52,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def steady_state_r_go(
-    phases_init: NDArray[np.float64],
-    omegas: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     k_scale: float,
     dt: float,

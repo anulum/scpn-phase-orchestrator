@@ -16,9 +16,13 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "order_parameter_go",
@@ -68,7 +72,7 @@ def _load_lib() -> ctypes.CDLL:
     return lib
 
 
-def order_parameter_go(phases: NDArray[np.float64]) -> tuple[float, float]:
+def order_parameter_go(phases: FloatArray) -> tuple[float, float]:
     """Compute the Kuramoto order parameter.
 
     The calculation is delegated to the Go backend.
@@ -89,7 +93,7 @@ def order_parameter_go(phases: NDArray[np.float64]) -> tuple[float, float]:
     return float(out_r.value), float(out_psi.value)
 
 
-def plv_go(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
+def plv_go(phases_a: FloatArray, phases_b: FloatArray) -> float:
     """Compute phase-locking value.
 
     The calculation is delegated to the Go backend.
@@ -114,9 +118,7 @@ def plv_go(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> floa
     return float(out.value)
 
 
-def layer_coherence_go(
-    phases: NDArray[np.float64], indices: NDArray[np.int64]
-) -> float:
+def layer_coherence_go(phases: FloatArray, indices: IntArray) -> float:
     """Compute layer-wise phase coherence.
 
     The calculation is delegated to the Go backend.

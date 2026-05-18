@@ -16,9 +16,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "order_parameter_mojo",
@@ -54,7 +58,7 @@ def _run(payload: str) -> list[float]:
     return [float(line) for line in proc.stdout.strip().splitlines() if line]
 
 
-def order_parameter_mojo(phases: NDArray[np.float64]) -> tuple[float, float]:
+def order_parameter_mojo(phases: FloatArray) -> tuple[float, float]:
     """Compute the Kuramoto order parameter.
 
     The calculation is delegated to the Mojo backend.
@@ -71,7 +75,7 @@ def order_parameter_mojo(phases: NDArray[np.float64]) -> tuple[float, float]:
     return float(result[0]), float(result[1])
 
 
-def plv_mojo(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
+def plv_mojo(phases_a: FloatArray, phases_b: FloatArray) -> float:
     """Compute phase-locking value.
 
     The calculation is delegated to the Mojo backend.
@@ -92,9 +96,7 @@ def plv_mojo(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> fl
     return float(result[0])
 
 
-def layer_coherence_mojo(
-    phases: NDArray[np.float64], indices: NDArray[np.int64]
-) -> float:
+def layer_coherence_mojo(phases: FloatArray, indices: IntArray) -> float:
     """Compute layer-wise phase coherence.
 
     The calculation is delegated to the Mojo backend.

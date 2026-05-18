@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,6 +20,8 @@ __all__ = ["hypergraph_run_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "hypergraph.jl"
 _JULIA_MODULE: Any | None = None
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _ensure() -> Any:
@@ -36,19 +38,19 @@ def _ensure() -> Any:
 
 
 def hypergraph_run_julia(
-    phases: NDArray[np.float64],
-    omegas: NDArray[np.float64],
+    phases: FloatArray,
+    omegas: FloatArray,
     n: int,
-    edge_nodes: NDArray[np.int64],
-    edge_offsets: NDArray[np.int64],
-    edge_strengths: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    edge_nodes: IntArray,
+    edge_offsets: IntArray,
+    edge_strengths: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Integrate hypergraph Kuramoto dynamics.
 
     The calculation is delegated to the Julia backend.

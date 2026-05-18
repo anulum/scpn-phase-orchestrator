@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["modulation_index_mojo", "pac_matrix_mojo"]
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "pac_mojo"
 
@@ -47,7 +49,7 @@ def _run(payload: str) -> list[float]:
 
 
 def modulation_index_mojo(
-    theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int
+    theta_low: FloatArray, amp_high: FloatArray, n_bins: int
 ) -> float:
     """Compute phase-amplitude coupling modulation index.
 
@@ -67,12 +69,12 @@ def modulation_index_mojo(
 
 
 def pac_matrix_mojo(
-    phases_flat: NDArray[np.float64],
-    amplitudes_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
+    amplitudes_flat: FloatArray,
     t: int,
     n: int,
     n_bins: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute the phase-amplitude coupling matrix.
 
     The calculation is delegated to the Mojo backend.

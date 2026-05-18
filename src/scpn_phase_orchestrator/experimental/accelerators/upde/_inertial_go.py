@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,6 +21,7 @@ __all__ = ["inertial_step_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libinertial.so"
 _LIB: ctypes.CDLL | None = None
+Float64Array: TypeAlias = NDArray[np.float64]
 
 
 def _load_lib() -> ctypes.CDLL:
@@ -51,15 +53,15 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def inertial_step_go(
-    theta: NDArray[np.float64],
-    omega_dot: NDArray[np.float64],
-    power: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    inertia: NDArray[np.float64],
-    damping: NDArray[np.float64],
+    theta: Float64Array,
+    omega_dot: Float64Array,
+    power: Float64Array,
+    knm_flat: Float64Array,
+    inertia: Float64Array,
+    damping: Float64Array,
     n: int,
     dt: float,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[Float64Array, Float64Array]:
     """Advance one inertial Kuramoto step.
 
     The calculation is delegated to the Go backend.

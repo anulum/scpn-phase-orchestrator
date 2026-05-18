@@ -11,12 +11,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["inertial_step_julia"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "inertial.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,15 +38,15 @@ def _ensure() -> Any:
 
 
 def inertial_step_julia(
-    theta: NDArray[np.float64],
-    omega_dot: NDArray[np.float64],
-    power: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    inertia: NDArray[np.float64],
-    damping: NDArray[np.float64],
+    theta: FloatArray,
+    omega_dot: FloatArray,
+    power: FloatArray,
+    knm_flat: FloatArray,
+    inertia: FloatArray,
+    damping: FloatArray,
     n: int,
     dt: float,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[FloatArray, FloatArray]:
     """Advance one inertial Kuramoto step.
 
     The calculation is delegated to the Julia backend.

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -21,6 +22,8 @@ __all__ = [
     "market_order_parameter_mojo",
     "market_plv_mojo",
 ]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "market_mojo"
 
@@ -52,10 +55,10 @@ def _run_mojo(tokens: list[str], expected_lines: int) -> list[str]:
 
 
 def market_order_parameter_mojo(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute market phase order parameter.
 
     The calculation is delegated to the Mojo backend.
@@ -68,11 +71,11 @@ def market_order_parameter_mojo(
 
 
 def market_plv_mojo(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
     window: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute market phase-locking value.
 
     The calculation is delegated to the Mojo backend.

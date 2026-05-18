@@ -18,6 +18,8 @@ from numpy.typing import NDArray
 
 __all__ = ["steady_state_r_julia"]
 
+FloatArray = NDArray[np.float64]
+
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "basin_stability.jl"
 _JULIA_MODULE: Any | None = None
 
@@ -36,10 +38,10 @@ def _ensure() -> Any:
 
 
 def steady_state_r_julia(
-    phases_init: NDArray[np.float64],
-    omegas: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    phases_init: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     k_scale: float,
     dt: float,

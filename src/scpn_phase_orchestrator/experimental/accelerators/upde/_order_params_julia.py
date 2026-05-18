@@ -16,10 +16,13 @@ the toolchain is absent.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "order_parameter_julia",
@@ -44,7 +47,7 @@ def _ensure_julia_loaded() -> Any:
     return _JULIA_MODULE
 
 
-def order_parameter_julia(phases: NDArray[np.float64]) -> tuple[float, float]:
+def order_parameter_julia(phases: FloatArray) -> tuple[float, float]:
     """Compute the Kuramoto order parameter.
 
     The calculation is delegated to the Julia backend.
@@ -55,7 +58,7 @@ def order_parameter_julia(phases: NDArray[np.float64]) -> tuple[float, float]:
     return float(r), float(psi)
 
 
-def plv_julia(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
+def plv_julia(phases_a: FloatArray, phases_b: FloatArray) -> float:
     """Compute phase-locking value.
 
     The calculation is delegated to the Julia backend.
@@ -70,9 +73,7 @@ def plv_julia(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> f
     )
 
 
-def layer_coherence_julia(
-    phases: NDArray[np.float64], indices: NDArray[np.int64]
-) -> float:
+def layer_coherence_julia(phases: FloatArray, indices: IntArray) -> float:
     """Compute layer-wise phase coherence.
 
     The calculation is delegated to the Julia backend.

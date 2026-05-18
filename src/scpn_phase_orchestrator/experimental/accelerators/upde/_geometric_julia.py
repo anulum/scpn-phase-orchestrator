@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,6 +20,7 @@ __all__ = ["torus_run_julia"]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "geometric.jl"
 _JULIA_MODULE: Any | None = None
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _ensure() -> Any:
@@ -36,16 +37,16 @@ def _ensure() -> Any:
 
 
 def torus_run_julia(
-    phases: NDArray[np.float64],
-    omegas: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Integrate torus phase dynamics.
 
     The calculation is delegated to the Julia backend.

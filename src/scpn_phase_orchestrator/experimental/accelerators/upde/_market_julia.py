@@ -11,12 +11,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["market_order_parameter_julia", "market_plv_julia"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _JULIA_FILE = Path(__file__).resolve().parents[5] / "julia" / "market.jl"
 _JULIA_MODULE: Any | None = None
@@ -36,10 +38,10 @@ def _ensure() -> Any:
 
 
 def market_order_parameter_julia(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute market phase order parameter.
 
     The calculation is delegated to the Julia backend.
@@ -55,11 +57,11 @@ def market_order_parameter_julia(
 
 
 def market_plv_julia(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
     window: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute market phase-locking value.
 
     The calculation is delegated to the Julia backend.

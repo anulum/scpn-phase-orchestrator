@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["_ensure_exe", "inertial_step_mojo"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "inertial_mojo"
 
@@ -31,15 +34,15 @@ def _ensure_exe() -> Path:
 
 
 def inertial_step_mojo(
-    theta: NDArray[np.float64],
-    omega_dot: NDArray[np.float64],
-    power: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    inertia: NDArray[np.float64],
-    damping: NDArray[np.float64],
+    theta: FloatArray,
+    omega_dot: FloatArray,
+    power: FloatArray,
+    knm_flat: FloatArray,
+    inertia: FloatArray,
+    damping: FloatArray,
     n: int,
     dt: float,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[FloatArray, FloatArray]:
     """Advance one inertial Kuramoto step.
 
     The calculation is delegated to the Mojo backend.

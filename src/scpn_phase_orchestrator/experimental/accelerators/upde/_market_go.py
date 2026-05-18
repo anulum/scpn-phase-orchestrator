@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 __all__ = ["market_order_parameter_go", "market_plv_go"]
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libmarket.so"
 _LIB: ctypes.CDLL | None = None
@@ -53,10 +56,10 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def market_order_parameter_go(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute market phase order parameter.
 
     The calculation is delegated to the Go backend.
@@ -77,11 +80,11 @@ def market_order_parameter_go(
 
 
 def market_plv_go(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
     window: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute market phase-locking value.
 
     The calculation is delegated to the Go backend.

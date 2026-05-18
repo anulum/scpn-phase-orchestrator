@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -19,6 +20,8 @@ from numpy.typing import NDArray
 __all__ = ["_ensure_exe", "hypergraph_run_mojo"]
 
 _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "hypergraph_mojo"
+Float64Array: TypeAlias = NDArray[np.float64]
+Int64Array: TypeAlias = NDArray[np.int64]
 
 
 def _ensure_exe() -> Path:
@@ -31,19 +34,19 @@ def _ensure_exe() -> Path:
 
 
 def hypergraph_run_mojo(
-    phases: NDArray[np.float64],
-    omegas: NDArray[np.float64],
+    phases: Float64Array,
+    omegas: Float64Array,
     n: int,
-    edge_nodes: NDArray[np.int64],
-    edge_offsets: NDArray[np.int64],
-    edge_strengths: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    edge_nodes: Int64Array,
+    edge_offsets: Int64Array,
+    edge_strengths: Float64Array,
+    knm_flat: Float64Array,
+    alpha_flat: Float64Array,
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray[np.float64]:
+) -> Float64Array:
     """Integrate hypergraph Kuramoto dynamics.
 
     The calculation is delegated to the Mojo backend.

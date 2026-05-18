@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,6 +21,8 @@ __all__ = ["modulation_index_go", "pac_matrix_go"]
 
 _LIB_PATH = Path(__file__).resolve().parents[5] / "go" / "libpac.so"
 _LIB: ctypes.CDLL | None = None
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _load_lib() -> ctypes.CDLL:
@@ -54,7 +57,7 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def modulation_index_go(
-    theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int
+    theta_low: FloatArray, amp_high: FloatArray, n_bins: int
 ) -> float:
     """Compute phase-amplitude coupling modulation index.
 
@@ -79,12 +82,12 @@ def modulation_index_go(
 
 
 def pac_matrix_go(
-    phases_flat: NDArray[np.float64],
-    amplitudes_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
+    amplitudes_flat: FloatArray,
     t: int,
     n: int,
     n_bins: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Compute the phase-amplitude coupling matrix.
 
     The calculation is delegated to the Go backend.
