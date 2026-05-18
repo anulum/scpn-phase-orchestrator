@@ -59,7 +59,17 @@ RUNTIME_PACKAGES = frozenset(
     }
 )
 INTEGRATION_PACKAGES = frozenset({"adapters", "drivers"})
-EXPERIMENTAL_PACKAGES = frozenset({"nn", "visualization"})
+EXPERIMENTAL_PACKAGES = frozenset(
+    {
+        "autotune",
+        "kuramoto_layer",
+        "nn",
+        "simplicial_layer",
+        "stuart_landau_layer",
+        "ude",
+        "visualization",
+    }
+)
 EXPERIMENTAL_SUFFIXES = ("_go", "_julia", "_mojo", "_webgpu")
 FORBIDDEN_CORE_TARGETS = frozenset({"runtime", "integrations", "experimental"})
 LEGACY_CORE_ACCELERATOR_IMPORTS = frozenset(
@@ -224,7 +234,11 @@ def imported_modules(path: Path) -> list[tuple[int, str]]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     imports: list[tuple[int, str]] = []
     current_module = module_name(path)
-    current_package = current_module.rsplit(".", 1)[0]
+    current_package = (
+        current_module
+        if path.name == "__init__.py"
+        else current_module.rsplit(".", 1)[0]
+    )
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -285,6 +299,19 @@ def find_legacy_accelerator_imports(paths: Iterable[Path]) -> set[str]:
     return used
 
 
+def find_unclassified_modules(paths: Iterable[Path]) -> set[str]:
+    """Return first-party modules that are not assigned to a product boundary."""
+    unclassified: set[str] = set()
+    for path in paths:
+        source_module = module_name(path)
+        if classify_module(source_module) == "unclassified":
+            unclassified.add(source_module)
+        for _, imported_module in imported_modules(path):
+            if classify_module(imported_module) == "unclassified":
+                unclassified.add(imported_module)
+    return unclassified
+
+
 def _format_path(path: Path) -> str:
     return str(path.relative_to(ROOT) if path.is_relative_to(ROOT) else path)
 
@@ -298,6 +325,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not args
         else frozenset()
     )
+    unclassified_modules = find_unclassified_modules(paths)
     if violations:
         print("ERROR: product-boundary import violations detected")
         for violation in violations:
@@ -306,6 +334,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"{violation.source_boundary} must not import "
                 f"{violation.target_boundary}: {violation.imported_module}"
             )
+        return 1
+
+    if unclassified_modules:
+        print("ERROR: unclassified first-party modules detected")
+        for module in sorted(unclassified_modules):
+            print(f"  {module}")
         return 1
 
     if stale_legacy_imports:

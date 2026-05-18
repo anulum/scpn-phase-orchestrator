@@ -80,6 +80,14 @@ def test_core_package_relative_import_cannot_target_runtime_surface(
     assert violations[0].imported_module == "scpn_phase_orchestrator.server"
 
 
+def test_package_init_relative_import_stays_inside_package(tmp_path: Path) -> None:
+    init_file = _write_module(tmp_path, "nn/__init__.py", "from .runtime import x\n")
+
+    imports = mod.imported_modules(init_file)
+
+    assert imports == [(1, "scpn_phase_orchestrator.nn.runtime")]
+
+
 def test_core_package_cannot_import_integration_surface(tmp_path: Path) -> None:
     core = _write_module(
         tmp_path,
@@ -130,11 +138,38 @@ def test_legacy_allowlist_usage_is_measured(tmp_path: Path) -> None:
     assert mod.find_violations([core]) == []
 
 
+def test_unclassified_first_party_source_module_is_rejected(tmp_path: Path) -> None:
+    unknown = _write_module(tmp_path, "new_surface/tool.py", "VALUE = 1\n")
+
+    assert mod.find_unclassified_modules([unknown]) == {
+        "scpn_phase_orchestrator.new_surface.tool"
+    }
+
+
+def test_unclassified_first_party_import_is_rejected(tmp_path: Path) -> None:
+    runtime = _write_module(
+        tmp_path,
+        "server.py",
+        "from scpn_phase_orchestrator.new_surface.tool import VALUE\n",
+    )
+
+    assert mod.find_unclassified_modules([runtime]) == {
+        "scpn_phase_orchestrator.new_surface.tool"
+    }
+
+
 def test_current_source_tree_respects_core_boundary_contract() -> None:
     mod.SRC_ROOT = ORIGINAL_SRC_ROOT
     violations = mod.find_violations(mod.iter_python_files())
 
     assert violations == []
+
+
+def test_current_source_tree_has_no_unclassified_modules() -> None:
+    mod.SRC_ROOT = ORIGINAL_SRC_ROOT
+    unclassified = mod.find_unclassified_modules(mod.iter_python_files())
+
+    assert unclassified == set()
 
 
 def test_current_legacy_allowlist_has_no_stale_entries() -> None:

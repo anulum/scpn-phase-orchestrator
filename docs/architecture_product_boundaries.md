@@ -47,7 +47,9 @@ into Core Engine import time.
 
 Research and Experimental contains neural-network research modules, notebooks,
 experiments, Go/Julia/Mojo/WebGPU shims, visualisation helpers, and special
-domain packs that are not required for the production Runtime surface.
+domain packs that are not required for the production Runtime surface. It also
+contains autotuning pipelines and legacy public neural-network compatibility
+aliases until those surfaces are split behind explicit optional package extras.
 
 Experimental modules may depend on Core Engine for parity and validation, but
 Core Engine must not import Experimental modules. Language shims currently live
@@ -64,6 +66,11 @@ set instead of leaving dead architecture debt behind.
 `tools/check_product_boundaries.py` is the first enforcement rail. It parses
 Python imports and fails when Core Engine imports Runtime, Integrations, or
 Research/Experimental modules.
+
+Every first-party top-level package must be assigned to one of the four
+boundaries. The checker fails on unclassified source modules and unclassified
+first-party imports, so new surfaces cannot bypass the architecture contract by
+landing outside the boundary map.
 
 This guard deliberately starts with the highest-value invariant: Core Engine is
 the stable lower layer. Later migration batches should add stricter rules for
