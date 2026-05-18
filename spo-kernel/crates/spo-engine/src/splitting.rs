@@ -9,6 +9,7 @@
 use spo_types::{IntegrationConfig, SpoError, SpoResult};
 use std::f64::consts::TAU;
 
+/// Strang-split Kuramoto stepper with RK4 coupling substep.
 pub struct SplittingStepper {
     n: usize,
     dt: f64,
@@ -30,6 +31,11 @@ impl std::fmt::Debug for SplittingStepper {
 }
 
 impl SplittingStepper {
+    /// Create a Strang-splitting Kuramoto stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -48,6 +54,11 @@ impl SplittingStepper {
         })
     }
 
+    /// Advance one Strang-split Kuramoto timestep in place.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -72,6 +83,11 @@ impl SplittingStepper {
         Ok(())
     }
 
+    /// Advance the Strang-split Kuramoto system for `n_steps` timesteps.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -112,6 +128,7 @@ impl SplittingStepper {
         Ok(())
     }
 
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
@@ -236,6 +253,7 @@ fn compute_coupling_deriv(
     }
 }
 
+/// Run Strang-split Kuramoto dynamics from an initial phase snapshot.
 pub fn splitting_run(
     phases: &[f64],
     omegas: &[f64],
@@ -259,4 +277,49 @@ pub fn splitting_run(
     s.run(&mut p, omegas, knm, alpha, zeta, psi, n_steps)
         .expect("stepper init failed");
     p
+}
+
+#[cfg(test)]
+mod splitting_run_tests {
+    use super::*;
+
+    #[test]
+    fn splitting_run_zero_steps_returns_initial_phases() {
+        let phases = vec![0.1, 0.9];
+        let omegas = vec![0.0, 0.0];
+        let knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        let result = splitting_run(&phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.01, 0);
+
+        assert_eq!(result, phases);
+    }
+
+    #[test]
+    fn splitting_run_advances_uncoupled_natural_frequency() {
+        let phases = vec![0.2, TAU - 0.05];
+        let omegas = vec![1.0, 1.0];
+        let knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        let result = splitting_run(&phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.1, 1);
+
+        assert!((result[0] - 0.3).abs() < 1e-12);
+        assert!((result[1] - 0.05).abs() < 1e-12);
+    }
+
+    #[test]
+    fn splitting_run_pairwise_coupling_changes_phases() {
+        let phases = vec![0.0, 1.0];
+        let omegas = vec![0.0, 0.0];
+        let knm = vec![0.0, 0.5, 0.5, 0.0];
+        let alpha = vec![0.0; 4];
+
+        let result = splitting_run(&phases, &omegas, &knm, &alpha, 0.0, 0.0, 0.1, 1);
+
+        assert!(result
+            .iter()
+            .zip(phases)
+            .any(|(new, old)| (new - old).abs() > 1e-12));
+    }
 }
