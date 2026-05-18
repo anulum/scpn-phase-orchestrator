@@ -117,6 +117,22 @@ def test_detect_phase_lock_rejects_invalid_threshold(threshold):
         monitor.detect_phase_lock(state, threshold=threshold)
 
 
+@pytest.mark.parametrize(
+    ("cla", "match"),
+    [
+        (np.ones(2, dtype=np.float64), "cross_layer_alignment"),
+        (np.ones((2, 3), dtype=np.float64), "cross_layer_alignment"),
+        (np.array([[1.0, np.nan], [1.0, 1.0]], dtype=np.float64), "finite"),
+    ],
+)
+def test_detect_phase_lock_rejects_invalid_cross_layer_alignment(cla, match):
+    state = _make_state([0.9, 0.8], cla=cla)
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    with pytest.raises(ValueError, match=match):
+        monitor.detect_phase_lock(state, threshold=0.9)
+
+
 class TestCoherenceMonitorPipelineWiring:
     """Pipeline: engine → per-layer R → CoherenceMonitor → R_good/R_bad."""
 

@@ -37,6 +37,24 @@ def _validate_plv_threshold(value: object) -> float:
     return threshold
 
 
+def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> np.ndarray:
+    try:
+        cla = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "cross_layer_alignment must be convertible to a finite float matrix"
+        ) from exc
+
+    expected_shape = (n_layers, n_layers)
+    if cla.shape != expected_shape:
+        raise ValueError(
+            f"cross_layer_alignment shape {cla.shape} does not match {expected_shape}"
+        )
+    if not np.all(np.isfinite(cla)):
+        raise ValueError("cross_layer_alignment must contain only finite values")
+    return np.ascontiguousarray(cla, dtype=np.float64)
+
+
 class CoherenceMonitor:
     """Track coherence partitioned into good vs bad layer subsets."""
 
@@ -64,7 +82,9 @@ class CoherenceMonitor:
         """
         threshold = _validate_plv_threshold(threshold)
         n = len(upde_state.layers)
-        cla = upde_state.cross_layer_alignment
+        cla = _validate_cross_layer_alignment(
+            upde_state.cross_layer_alignment, n_layers=n
+        )
         locked = []
         for i in range(n):
             for j in range(i + 1, n):
