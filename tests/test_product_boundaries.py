@@ -101,6 +101,46 @@ def test_core_package_cannot_import_integration_surface(tmp_path: Path) -> None:
     assert violations[0].target_boundary == "integrations"
 
 
+def test_integration_package_can_import_core_surface(tmp_path: Path) -> None:
+    adapter = _write_module(
+        tmp_path,
+        "adapters/prometheus.py",
+        "from scpn_phase_orchestrator.upde.metrics import UPDEState\n",
+    )
+
+    assert mod.find_violations([adapter]) == []
+
+
+def test_integration_package_cannot_import_runtime_surface(tmp_path: Path) -> None:
+    adapter = _write_module(
+        tmp_path,
+        "adapters/prometheus.py",
+        "from scpn_phase_orchestrator.server import SimulationState\n",
+    )
+
+    violations = mod.find_violations([adapter])
+
+    assert len(violations) == 1
+    assert violations[0].source_boundary == "integrations"
+    assert violations[0].target_boundary == "runtime"
+
+
+def test_integration_package_cannot_import_experimental_surface(
+    tmp_path: Path,
+) -> None:
+    adapter = _write_module(
+        tmp_path,
+        "drivers/psi_physical.py",
+        "from scpn_phase_orchestrator.nn.ude import UDEKuramotoLayer\n",
+    )
+
+    violations = mod.find_violations([adapter])
+
+    assert len(violations) == 1
+    assert violations[0].source_boundary == "integrations"
+    assert violations[0].target_boundary == "experimental"
+
+
 def test_language_shims_are_experimental_even_inside_core_dirs() -> None:
     assert mod.classify_module("scpn_phase_orchestrator.upde._engine_mojo") == (
         "experimental"

@@ -41,7 +41,8 @@ Control, and related bridge adapters.
 
 Integrations must stay optional where their dependencies are optional. Missing
 external dependencies must fail with explicit, local errors instead of leaking
-into Core Engine import time.
+into Core Engine import time. Integrations may depend on Core Engine contracts,
+but must not import Runtime/Serving or Research/Experimental modules.
 
 ## Research and Experimental
 
@@ -65,7 +66,9 @@ set instead of leaving dead architecture debt behind.
 
 `tools/check_product_boundaries.py` is the first enforcement rail. It parses
 Python imports and fails when Core Engine imports Runtime, Integrations, or
-Research/Experimental modules.
+Research/Experimental modules. It also fails when Integrations import
+Runtime/Serving or Research/Experimental modules, preserving the adapter layer
+as an optional boundary around external systems.
 
 Every first-party top-level package must be assigned to one of the four
 boundaries. The checker fails on unclassified source modules and unclassified

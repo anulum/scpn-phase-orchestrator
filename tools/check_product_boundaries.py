@@ -72,6 +72,7 @@ EXPERIMENTAL_PACKAGES = frozenset(
 )
 EXPERIMENTAL_SUFFIXES = ("_go", "_julia", "_mojo", "_webgpu")
 FORBIDDEN_CORE_TARGETS = frozenset({"runtime", "integrations", "experimental"})
+FORBIDDEN_INTEGRATION_TARGETS = frozenset({"runtime", "experimental"})
 LEGACY_CORE_ACCELERATOR_IMPORTS = frozenset(
     {
         "scpn_phase_orchestrator.coupling._attnres_go",
@@ -265,11 +266,16 @@ def find_violations(paths: Iterable[Path]) -> list[ImportViolation]:
     for path in paths:
         source_module = module_name(path)
         source_boundary = classify_module(source_module)
-        if source_boundary != "core":
+        if source_boundary not in {"core", "integrations"}:
             continue
         for line, imported_module in imported_modules(path):
             target_boundary = classify_module(imported_module)
-            if target_boundary not in FORBIDDEN_CORE_TARGETS:
+            forbidden_targets = (
+                FORBIDDEN_CORE_TARGETS
+                if source_boundary == "core"
+                else FORBIDDEN_INTEGRATION_TARGETS
+            )
+            if target_boundary not in forbidden_targets:
                 continue
             if imported_module in LEGACY_CORE_ACCELERATOR_IMPORTS:
                 continue
