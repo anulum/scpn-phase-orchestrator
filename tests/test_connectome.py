@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.coupling import connectome as connectome_module
 from scpn_phase_orchestrator.coupling.connectome import (
     load_hcp_connectome,
     load_neurolib_hcp,
@@ -116,6 +117,33 @@ def test_dmn_hubs_present():
     assert dmn_coupling > non_dmn_coupling
 
 
+def test_optional_rust_loader_returns_matrix_contract(monkeypatch):
+    """Optional Rust loader must receive parameters and return matrix shape."""
+    calls = []
+
+    def fake_rust_load_hcp(n_regions, seed):
+        calls.append((n_regions, seed))
+        return np.arange(n_regions * n_regions, dtype=np.float64)
+
+    monkeypatch.setattr(connectome_module, "_HAS_RUST", True)
+    monkeypatch.setattr(connectome_module, "_rust_load_hcp", fake_rust_load_hcp)
+
+    knm = load_hcp_connectome(3, seed=17)
+
+    assert calls == [(3, 17)]
+    np.testing.assert_array_equal(
+        knm,
+        np.array(
+            [
+                [0.0, 1.0, 2.0],
+                [3.0, 4.0, 5.0],
+                [6.0, 7.0, 8.0],
+            ],
+            dtype=np.float64,
+        ),
+    )
+
+
 def test_neurolib_import_error():
     try:
         import neurolib  # noqa: F401
@@ -128,10 +156,9 @@ def test_neurolib_import_error():
 
 # --- neurolib real HCP ---
 
-neurolib = pytest.importorskip("neurolib")
-
 
 def test_neurolib_hcp_loads():
+    pytest.importorskip("neurolib")
     sc = load_neurolib_hcp(80)
     assert sc.shape == (80, 80)
     np.testing.assert_allclose(sc, sc.T, atol=1e-12)
@@ -140,6 +167,7 @@ def test_neurolib_hcp_loads():
 
 
 def test_neurolib_hcp_subsample():
+    pytest.importorskip("neurolib")
     sc = load_neurolib_hcp(20)
     assert sc.shape == (20, 20)
     full = load_neurolib_hcp(80)
@@ -147,11 +175,13 @@ def test_neurolib_hcp_subsample():
 
 
 def test_neurolib_hcp_too_large():
+    pytest.importorskip("neurolib")
     with pytest.raises(ValueError, match="n_regions must be <= 80"):
         load_neurolib_hcp(100)
 
 
 def test_neurolib_hcp_too_small():
+    pytest.importorskip("neurolib")
     with pytest.raises(ValueError, match="n_regions must be >= 2"):
         load_neurolib_hcp(1)
 
@@ -194,6 +224,7 @@ class TestConnectomePipelineEndToEnd:
 
     def test_neurolib_hcp_drives_engine(self):
         """Neurolib HCP connectome → engine → R."""
+        pytest.importorskip("neurolib")
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
