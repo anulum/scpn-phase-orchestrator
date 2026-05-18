@@ -35,6 +35,7 @@ _AUDIT_SCHEMA_VERSION = 1
 _ZERO_HASH = "0" * 64
 _ENGINE_METHODS = frozenset(("euler", "rk4", "rk45"))
 _UPDE_REPLAY_FIELDS = frozenset(("phases", "omegas", "knm", "alpha"))
+_SL_REPLAY_FIELDS = frozenset(("phases", "omegas", "knm", "alpha"))
 
 
 def _layer_records(step_data: dict) -> list[dict]:
@@ -250,6 +251,8 @@ class ReplayEngine:
         for i in range(len(replayable) - 1):
             curr = replayable[i]
             nxt = replayable[i + 1]
+            if not _has_fields(curr, _SL_REPLAY_FIELDS) or "phases" not in nxt:
+                return False, verified
 
             omegas = np.asarray(curr["omegas"])
             n = len(omegas)
