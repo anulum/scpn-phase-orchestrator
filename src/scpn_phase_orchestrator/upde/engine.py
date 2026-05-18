@@ -271,8 +271,10 @@ class UPDEEngine:
     ) -> FloatArray:
         """Run n_steps, return final phases. Dispatches to the fastest
         available backend via the module-level ``upde_run``."""
-        n_steps = _validate_positive_int(n_steps, name="n_steps")
+        n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         self._validate_inputs(phases, omegas, knm, alpha, zeta, psi)
+        if n_steps == 0:
+            return np.asarray(phases, dtype=np.float64).copy()
         with self._lock:
             if self._rust is not None:  # pragma: no cover
                 return self._validate_rust_output(
