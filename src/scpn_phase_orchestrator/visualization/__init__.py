@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Visualization components
 
+"""Public visualization facade for JSON encoders and streaming helpers.
+
+The package exports deterministic JSON builders for coupling graphs, heatmaps,
+phase wheels, torus coordinates, and an optional WebSocket streamer for live
+visual clients. Visualization helpers validate presentation inputs and serialize
+state for external renderers only; they do not mutate solver state, activate
+control paths, or perform scientific inference.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.visualization.network import (

@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — D3 network graph visualization
 
+"""D3-compatible JSON encoders for validated coupling network views.
+
+The module turns finite square coupling matrices into force-graph and heatmap
+payloads with optional layer names and per-node coherence metrics. Inputs reject
+boolean, complex, non-numeric, non-finite, non-square, and length-mismatched
+values before serialization. The functions are pure presentation encoders:
+they return JSON strings and do not change coupling matrices or runtime state.
+"""
+
 from __future__ import annotations
 
 import json

@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - WebXR Manifold Streamer
 
+"""Optional WebSocket streamer for visualization-only manifold broadcasts.
+
+``VisualizerStreamer`` owns its event loop, background thread, client set, and
+host/port validation for WebXR or Three.js consumers. Broadcast payloads are
+converted into JSON-safe Python values before being sent to connected clients.
+The streamer is an outbound visualization adapter only; it does not ingest
+commands, mutate simulation state, or provide a control-plane API.
+"""
+
 from __future__ import annotations
 
 import asyncio

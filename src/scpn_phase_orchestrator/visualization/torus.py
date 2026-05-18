@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Three.js torus visualization data
 
+"""Three.js-ready JSON encoders for phase-wheel and torus coordinate views.
+
+The module maps finite one-dimensional phase vectors into unit-circle and torus
+coordinates, optionally carrying validated layer names and per-oscillator
+metrics. Radius parameters must be positive finite reals, and all payloads are
+rounded into deterministic JSON strings for presentation. The encoders perform
+no integration, coupling updates, actuation, or safety decisions.
+"""
+
 from __future__ import annotations
 
 import json
