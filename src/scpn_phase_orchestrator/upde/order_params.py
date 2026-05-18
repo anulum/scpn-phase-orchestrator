@@ -137,6 +137,19 @@ def _unit_interval(value: float) -> float:
     return float(np.clip(value, 0.0, 1.0))
 
 
+def _validate_phases(name: str, phases: NDArray[np.float64]) -> NDArray[np.float64]:
+    raw = np.asarray(phases)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
+    try:
+        values = raw.astype(np.float64, copy=True).ravel()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if not np.all(np.isfinite(values)):
+        raise ValueError(f"{name} must contain only finite values")
+    return values
+
+
 def _python_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
     with np.errstate(invalid="ignore"):
         z = np.mean(np.exp(1j * phases))
@@ -197,6 +210,7 @@ def compute_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
     ``R = |mean(exp(i · θ))|``;
     ``ψ = arg(mean(exp(i · θ))) mod 2π``.
     """
+    phases = _validate_phases("phases", phases)
     if phases.size == 0:
         return (0.0, 0.0)
     backend_fn = _dispatch("order_parameter")
@@ -214,6 +228,8 @@ def compute_plv(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) ->
 
     PLV = ``|mean(exp(i · (φ_a − φ_b)))|`` over samples.
     """
+    phases_a = _validate_phases("phases_a", phases_a)
+    phases_b = _validate_phases("phases_b", phases_b)
     if phases_a.size == 0 or phases_b.size == 0:
         return 0.0
     if phases_a.size != phases_b.size:
@@ -238,6 +254,9 @@ def compute_layer_coherence(
 ) -> float:
     """Order parameter R for the subset of oscillators selected by
     ``layer_mask`` (boolean mask *or* integer index array)."""
+    phases = _validate_phases("phases", phases)
+    if phases.size == 0:
+        return 0.0
     mask = np.asarray(layer_mask)
     if mask.dtype == bool:
         indices = np.flatnonzero(mask).astype(np.int64)

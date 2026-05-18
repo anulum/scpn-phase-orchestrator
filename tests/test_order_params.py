@@ -87,6 +87,14 @@ class TestOrderParameter:
         assert r == pytest.approx(1.0, abs=1e-12)
         assert psi == pytest.approx(0.7, abs=1e-12)
 
+    @pytest.mark.parametrize(
+        "phases",
+        [np.array([0.0, np.nan]), np.array([0.0, np.inf]), np.array([True, False])],
+    )
+    def test_rejects_invalid_phase_values(self, phases: np.ndarray) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            compute_order_parameter(phases)
+
     def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -144,6 +152,21 @@ class TestPLV:
         with pytest.raises(ValueError, match="equal-length"):
             compute_plv(np.zeros(5), np.zeros(6))
 
+    @pytest.mark.parametrize(
+        ("a", "b", "match"),
+        [
+            (np.array([0.0, np.nan]), np.zeros(2), "phases_a"),
+            (np.zeros(2), np.array([0.0, np.inf]), "phases_b"),
+            (np.array([True, False]), np.zeros(2), "phases_a"),
+            (np.zeros(2), np.array([True, False]), "phases_b"),
+        ],
+    )
+    def test_rejects_invalid_plv_values(
+        self, a: np.ndarray, b: np.ndarray, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            compute_plv(a, b)
+
     def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -190,6 +213,14 @@ class TestLayerCoherence:
         phases = np.array([0.7, 1.0, 2.0])
         r = compute_layer_coherence(phases, np.array([0], dtype=np.int64))
         assert r == pytest.approx(1.0, abs=1e-12)
+
+    @pytest.mark.parametrize(
+        "phases",
+        [np.array([0.0, np.nan]), np.array([0.0, np.inf]), np.array([True, False])],
+    )
+    def test_rejects_invalid_layer_phase_values(self, phases: np.ndarray) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            compute_layer_coherence(phases, np.array([0], dtype=np.int64))
 
     def test_backend_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
