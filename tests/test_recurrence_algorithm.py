@@ -94,6 +94,18 @@ class TestRecurrenceMatrix:
         with pytest.raises(ValueError, match="trajectory must be 1D or 2D"):
             recurrence_matrix(np.zeros((2, 3, 4)), 0.1)
 
+    @_python
+    @pytest.mark.parametrize(
+        "trajectory",
+        [
+            np.array([True, False, True]),
+            np.array([[True, False], [False, True]]),
+        ],
+    )
+    def test_rejects_boolean_trajectory(self, trajectory):
+        with pytest.raises(ValueError, match="trajectory"):
+            recurrence_matrix(trajectory, 0.1)
+
 
 class TestAngularMetric:
     @_python
@@ -143,6 +155,18 @@ class TestCrossRecurrence:
             cross_recurrence_matrix(np.zeros((2, 3, 4)), good, 0.1)
         with pytest.raises(ValueError, match="traj_b must be 1D or 2D"):
             cross_recurrence_matrix(good, np.zeros((2, 3, 4)), 0.1)
+
+    @_python
+    @pytest.mark.parametrize(
+        ("traj_a", "traj_b", "match"),
+        [
+            (np.array([True, False]), np.zeros(2), "traj_a"),
+            (np.zeros(2), np.array([True, False]), "traj_b"),
+        ],
+    )
+    def test_rejects_boolean_cross_trajectories(self, traj_a, traj_b, match):
+        with pytest.raises(ValueError, match=match):
+            cross_recurrence_matrix(traj_a, traj_b, 0.1)
 
     @_python
     def test_cross_angular_wraps_phase_boundary(self):

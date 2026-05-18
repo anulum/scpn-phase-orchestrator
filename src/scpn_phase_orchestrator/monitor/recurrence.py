@@ -164,8 +164,11 @@ def _dispatch(fn_name: str) -> object | None:
 
 
 def _validate_trajectory(value: object, *, name: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        trajectory = np.asarray(value, dtype=np.float64)
+        trajectory = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 1D or 2D float array") from exc
     if trajectory.ndim == 1:
