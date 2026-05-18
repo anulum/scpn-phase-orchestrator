@@ -64,6 +64,17 @@ def test_env_int_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None
         env_int("SPO_RATE_LIMIT_PER_MINUTE", 120)
 
 
+@pytest.mark.parametrize("default", [True, -1, "5"])
+def test_env_int_rejects_malformed_default(
+    monkeypatch: pytest.MonkeyPatch,
+    default: object,
+) -> None:
+    monkeypatch.delenv("SPO_RATE_LIMIT_PER_MINUTE", raising=False)
+
+    with pytest.raises(ValueError, match="default"):
+        env_int("SPO_RATE_LIMIT_PER_MINUTE", cast(int, default))
+
+
 def test_rate_limiter_allows_until_limit_then_blocks() -> None:
     limiter = FixedWindowRateLimiter(limit_per_minute=2)
 

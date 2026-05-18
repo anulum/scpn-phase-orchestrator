@@ -25,6 +25,8 @@ def is_production_mode(prefix: str) -> bool:
 
 def env_int(name: str, default: int) -> int:
     """Read a non-negative integer from the environment."""
+    if not isinstance(default, int) or isinstance(default, bool) or default < 0:
+        raise ValueError(f"{name} default must be a non-negative integer")
     raw = os.environ.get(name)
     if raw is None or raw == "":
         return default
