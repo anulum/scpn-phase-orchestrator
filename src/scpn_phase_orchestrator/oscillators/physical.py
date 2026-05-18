@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -48,6 +50,15 @@ def _validate_signal(value: object) -> FloatArray:
     return parsed
 
 
+def _validate_sample_rate(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("sample_rate must be finite and positive")
+    sample_rate = float(value)
+    if not isfinite(sample_rate) or sample_rate <= 0.0:
+        raise ValueError("sample_rate must be finite and positive")
+    return sample_rate
+
+
 class PhysicalExtractor(PhaseExtractor):
     """Extracts instantaneous phase from continuous waveforms via Hilbert transform."""
 
@@ -57,6 +68,7 @@ class PhysicalExtractor(PhaseExtractor):
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Extract instantaneous phase from a 1-D waveform via Hilbert transform."""
         signal = _validate_signal(signal)
+        sample_rate = _validate_sample_rate(sample_rate)
         from scipy.signal import hilbert  # noqa: PLC0415
 
         analytic = hilbert(signal)

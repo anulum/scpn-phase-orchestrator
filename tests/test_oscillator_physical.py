@@ -97,6 +97,17 @@ def test_extract_rejects_invalid_signal(signal: object):
         extractor.extract(signal, sample_rate=1000.0)
 
 
+@pytest.mark.parametrize(
+    "sample_rate",
+    [True, 0.0, -1000.0, float("nan"), float("inf"), "1000.0"],
+)
+def test_extract_rejects_invalid_sample_rate(sample_rate: object):
+    signal = np.sin(TWO_PI * 10.0 * np.arange(0, 0.1, 0.001))
+    extractor = PhysicalExtractor()
+    with pytest.raises(ValueError, match="sample_rate must be finite and positive"):
+        extractor.extract(signal, sample_rate=sample_rate)
+
+
 def test_envelope_quality_clean_sinusoid():
     """Clean sinusoid has near-constant envelope → quality well above 0.5."""
     from scipy.signal import hilbert
