@@ -12,14 +12,20 @@ FROM python:3.13-slim@sha256:a0779d7c12fc20be6ec6b4ddc901a4fd7657b8a6bc9def9d3fd
 
 ENV CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
-    PATH=/usr/local/cargo/bin:$PATH
+    PATH=/usr/local/cargo/bin:$PATH \
+    RUSTUP_INIT_SHA256=4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
-RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs | \
-    sh -s -- -y --profile minimal --default-toolchain 1.95.0
+RUN curl --proto '=https' --tlsv1.2 -fsSL \
+        https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init \
+        -o /tmp/rustup-init && \
+    echo "${RUSTUP_INIT_SHA256}  /tmp/rustup-init" | sha256sum -c - && \
+    chmod +x /tmp/rustup-init && \
+    /tmp/rustup-init -y --profile minimal --default-toolchain 1.95.0 && \
+    rm /tmp/rustup-init
 
 COPY requirements/ci-tools.txt /tmp/ci-tools.txt
 RUN python -m pip install --no-cache-dir \

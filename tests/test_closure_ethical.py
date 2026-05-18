@@ -181,7 +181,10 @@ class TestEthicalCost:
 
         monkeypatch.setattr(ethical_module, "_HAS_RUST", True)
         monkeypatch.setattr(
-            ethical_module, "_rust_ethical_cost", fake_rust_ethical_cost
+            ethical_module,
+            "_rust_ethical_cost",
+            fake_rust_ethical_cost,
+            raising=False,
         )
 
         phases = np.array([0.0, 0.5], dtype=np.float64)

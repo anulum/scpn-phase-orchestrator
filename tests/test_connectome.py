@@ -126,7 +126,9 @@ def test_optional_rust_loader_returns_matrix_contract(monkeypatch):
         return np.arange(n_regions * n_regions, dtype=np.float64)
 
     monkeypatch.setattr(connectome_module, "_HAS_RUST", True)
-    monkeypatch.setattr(connectome_module, "_rust_load_hcp", fake_rust_load_hcp)
+    monkeypatch.setattr(
+        connectome_module, "_rust_load_hcp", fake_rust_load_hcp, raising=False
+    )
 
     knm = load_hcp_connectome(3, seed=17)
 

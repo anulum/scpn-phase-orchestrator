@@ -143,8 +143,12 @@ class TestAdjustEIRatio:
             return flat_knm * 3.0
 
         monkeypatch.setattr(ei_balance_module, "_HAS_RUST", True)
-        monkeypatch.setattr(ei_balance_module, "_rust_ei", fake_rust_ei)
-        monkeypatch.setattr(ei_balance_module, "_rust_adjust", fake_rust_adjust)
+        monkeypatch.setattr(
+            ei_balance_module, "_rust_ei", fake_rust_ei, raising=False
+        )
+        monkeypatch.setattr(
+            ei_balance_module, "_rust_adjust", fake_rust_adjust, raising=False
+        )
 
         knm = np.array([[0.0, 0.5], [1.5, 0.0]], dtype=np.float64)
         balance = compute_ei_balance(knm, [0], [1])
