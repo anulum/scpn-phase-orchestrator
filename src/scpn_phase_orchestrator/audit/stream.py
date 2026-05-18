@@ -277,6 +277,8 @@ class EventStreamWriter:
                 self._previous_hash = last.event_hash
 
     def write(self, payload: Payload, *, event_type: str | None = None) -> None:
+        """Append one payload as a hashed and optionally signed audit event."""
+
         canonical_payload = _canonical_json(payload)
         payload_sha256 = hashlib.sha256(canonical_payload.encode()).hexdigest()
         self._sequence += 1
@@ -340,6 +342,8 @@ class EventStreamWriter:
         self._previous_hash = event_hash
 
     def close(self) -> None:
+        """Flush buffered audit bytes and close the underlying stream handle."""
+
         self._fh.flush()
         self._fh.close()
 
