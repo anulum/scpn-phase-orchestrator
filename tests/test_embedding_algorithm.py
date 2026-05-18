@@ -60,6 +60,11 @@ class TestDelayEmbed:
         with pytest.raises(ValueError, match="too short"):
             delay_embed(np.arange(3, dtype=np.float64), delay=5, dimension=3)
 
+    @_python
+    def test_rejects_boolean_signal(self):
+        with pytest.raises(ValueError, match="signal"):
+            delay_embed(np.array([True, False, True]), delay=1, dimension=2)
+
 
 class TestMutualInformation:
     @_python
@@ -111,6 +116,11 @@ class TestNearestNeighborDistances:
         dist, idx = nearest_neighbor_distances(np.zeros((0, 3)))
         assert dist.size == 0
         assert idx.size == 0
+
+    @_python
+    def test_rejects_boolean_embedded(self):
+        with pytest.raises(ValueError, match="embedded"):
+            nearest_neighbor_distances(np.array([[True, False], [False, True]]))
 
 
 class TestOptimalDelay:

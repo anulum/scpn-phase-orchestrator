@@ -186,8 +186,11 @@ class EmbeddingResult:
 
 
 def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
+    raw = np.asarray(signal)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        array = np.asarray(signal, dtype=np.float64).ravel()
+        array = raw.astype(np.float64, copy=True).ravel()
     except (TypeError, ValueError) as exc:
         raise ValueError(
             f"{name} must be a finite one-dimensional float array"
@@ -198,8 +201,11 @@ def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
 
 
 def _validate_embedded(embedded: object) -> FloatArray:
+    raw = np.asarray(embedded)
+    if raw.dtype == np.bool_:
+        raise ValueError("embedded must not contain boolean values")
     try:
-        array = np.atleast_2d(np.asarray(embedded, dtype=np.float64))
+        array = np.atleast_2d(raw.astype(np.float64, copy=True))
     except (TypeError, ValueError) as exc:
         raise ValueError(
             "embedded must be a finite two-dimensional float array"
