@@ -128,6 +128,11 @@ class TestInformationalEdgeCases:
         assert states[0].quality == 0.0
         assert states[0].omega == 0.0
 
+    def test_unsorted_timestamps_rejected(self):
+        extractor = InformationalExtractor()
+        with pytest.raises(ValueError, match="signal timestamps must be sorted"):
+            extractor.extract(np.array([0.0, 0.3, 0.2, 0.5]), sample_rate=0.0)
+
     def test_two_timestamps_minimal(self):
         """Two timestamps = one interval → valid extraction."""
         states = InformationalExtractor().extract(np.array([0.0, 0.5]), 0.0)

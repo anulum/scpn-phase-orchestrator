@@ -60,6 +60,9 @@ class InformationalExtractor(PhaseExtractor):
         sample_rate: not used for timestamps but kept for interface consistency.
         """
         signal = _validate_signal(signal)
+        raw_intervals = np.diff(signal)
+        if np.any(raw_intervals < 0.0):
+            raise ValueError("signal timestamps must be sorted ascending")
         if len(signal) < 2:
             return [
                 PhaseState(
@@ -72,8 +75,7 @@ class InformationalExtractor(PhaseExtractor):
                 )
             ]
 
-        intervals = np.diff(signal)
-        intervals = intervals[intervals > 0]
+        intervals = raw_intervals[raw_intervals > 0]
         if len(intervals) == 0:
             return [
                 PhaseState(
