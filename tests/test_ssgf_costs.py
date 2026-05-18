@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
 
@@ -69,6 +70,37 @@ class TestSSGFCosts:
             + 0.3 * costs.c4_symmetry
         )
         assert abs(costs.u_total - expected) < 1e-10
+
+    @pytest.mark.parametrize(
+        ("W", "phases", "match"),
+        [
+            (np.zeros((2, 3)), np.zeros(2), "W"),
+            (np.zeros((2, 2)), np.zeros(3), "phases"),
+            (np.array([[0.0, np.nan], [0.0, 0.0]]), np.zeros(2), "W"),
+            (np.zeros((2, 2)), np.array([0.0, np.inf]), "phases"),
+            (np.array([[False, True], [True, False]]), np.zeros(2), "W"),
+            (np.zeros((2, 2)), np.array([True, False]), "phases"),
+        ],
+    )
+    def test_rejects_invalid_payloads(self, W, phases, match):
+        with pytest.raises(ValueError, match=match):
+            compute_ssgf_costs(W, phases)
+
+    @pytest.mark.parametrize(
+        "weights",
+        [
+            (),
+            (1.0, 0.5, 0.1),
+            (1.0, 0.5, 0.1, 0.1, 0.0),
+            (1.0, np.nan, 0.1, 0.1),
+            (1.0, -0.5, 0.1, 0.1),
+            (1.0, True, 0.1, 0.1),
+            (1.0, "0.5", 0.1, 0.1),
+        ],
+    )
+    def test_rejects_invalid_weights(self, weights):
+        with pytest.raises(ValueError, match="weights"):
+            compute_ssgf_costs(np.eye(2), np.zeros(2), weights=weights)
 
     def test_returns_dataclass(self):
         costs = compute_ssgf_costs(np.eye(3), np.zeros(3))

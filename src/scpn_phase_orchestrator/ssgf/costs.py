@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -29,6 +30,52 @@ except ImportError:
 __all__ = ["SSGFCosts", "compute_ssgf_costs"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _validate_weights(weights: tuple[float, ...]) -> tuple[float, float, float, float]:
+    if not isinstance(weights, tuple) or len(weights) != 4:
+        raise ValueError("weights must be a tuple of four finite non-negative reals")
+    parsed: list[float] = []
+    for weight in weights:
+        if isinstance(weight, bool) or not isinstance(weight, Real):
+            raise ValueError("weights must contain finite non-negative real values")
+        value = float(weight)
+        if not np.isfinite(value) or value < 0.0:
+            raise ValueError("weights must contain finite non-negative real values")
+        parsed.append(value)
+    return parsed[0], parsed[1], parsed[2], parsed[3]
+
+
+def _validate_phases(phases: FloatArray) -> FloatArray:
+    raw = np.asarray(phases)
+    if raw.dtype == np.bool_:
+        raise ValueError("phases must not contain boolean values")
+    try:
+        values = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases must be numeric") from exc
+    if values.ndim != 1:
+        raise ValueError("phases must be a one-dimensional vector")
+    if values.shape[0] < 1:
+        raise ValueError("phases must contain at least one oscillator")
+    if not np.all(np.isfinite(values)):
+        raise ValueError("phases must contain only finite values")
+    return values
+
+
+def _validate_weight_matrix(W: FloatArray) -> FloatArray:
+    raw = np.asarray(W)
+    if raw.dtype == np.bool_:
+        raise ValueError("W must not contain boolean values")
+    try:
+        values = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("W must be numeric") from exc
+    if values.ndim != 2 or values.shape[0] != values.shape[1]:
+        raise ValueError("W must be a square matrix")
+    if not np.all(np.isfinite(values)):
+        raise ValueError("W must contain only finite values")
+    return values
 
 
 @dataclass
@@ -54,8 +101,11 @@ def compute_ssgf_costs(
 
     U_total = w1·C1 + w2·C2 + w3·C3 + w4·C4
     """
-    w1, w2, w3, w4 = weights
-    W_array: FloatArray = np.asarray(W, dtype=np.float64)
+    w1, w2, w3, w4 = _validate_weights(weights)
+    phases = _validate_phases(phases)
+    W_array = _validate_weight_matrix(W)
+    if phases.shape[0] != W_array.shape[0]:
+        raise ValueError("phases length must match W dimensions")
     n = W_array.shape[0]
 
     if _HAS_RUST:
