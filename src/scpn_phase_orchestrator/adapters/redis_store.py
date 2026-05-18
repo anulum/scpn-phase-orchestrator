@@ -60,14 +60,25 @@ class RedisStateStore:
 
     def save_state(self, sim_state: dict) -> None:
         """Serialise state dict to JSON and store in Redis."""
-        self._client.set(self._key, json.dumps(sim_state))
+        if not isinstance(sim_state, dict):
+            raise ValueError("sim_state must be a JSON-serializable dict")
+        try:
+            payload = json.dumps(sim_state)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("sim_state must be JSON serializable") from exc
+        self._client.set(self._key, payload)
 
     def load_state(self) -> dict | None:
         """Load state from Redis. Returns None if key does not exist."""
         raw = self._client.get(self._key)
         if raw is None:
             return None
-        result: dict = json.loads(raw)
+        try:
+            result = json.loads(raw)
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise ValueError("Redis payload must be a JSON object") from exc
+        if not isinstance(result, dict):
+            raise ValueError("Redis payload must be a JSON object")
         return result
 
     def delete_state(self) -> None:

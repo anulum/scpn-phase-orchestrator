@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
+import pytest
+
 from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
 
 
@@ -65,6 +67,35 @@ def test_roundtrip():
     mock.get.return_value = mock.set.call_args[0][1]
     loaded = store.load_state()
     assert loaded == state
+
+
+def test_save_state_rejects_non_dict_payload():
+    store, mock = _make_store()
+    with pytest.raises(ValueError, match="sim_state"):
+        store.save_state(["not", "a", "dict"])  # type: ignore[arg-type]
+    mock.set.assert_not_called()
+
+
+def test_save_state_rejects_non_json_payload():
+    store, mock = _make_store()
+    with pytest.raises(ValueError, match="JSON"):
+        store.save_state({"bad": object()})
+    mock.set.assert_not_called()
+
+
+@pytest.mark.parametrize("payload", ["[1, 2, 3]", '"string"', "42"])
+def test_load_state_rejects_non_object_json_payload(payload: str):
+    store, mock = _make_store()
+    mock.get.return_value = payload
+    with pytest.raises(ValueError, match="Redis payload"):
+        store.load_state()
+
+
+def test_load_state_rejects_malformed_json_payload():
+    store, mock = _make_store()
+    mock.get.return_value = "{not-json"
+    with pytest.raises(ValueError, match="Redis payload"):
+        store.load_state()
 
 
 class TestRedisStorePipelineWiring:
