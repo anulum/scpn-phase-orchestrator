@@ -1,102 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Commercial license available
-# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
-# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# (c) Concepts 1996-2026 Miroslav Sotek. All rights reserved.
+# (c) Code 2020-2026 Miroslav Sotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Julia bridge for embedding primitives
+# SCPN Phase Orchestrator - Legacy accelerator import wrapper
 
-"""Julia backend for ``monitor/embedding.py``."""
+"""Legacy accelerator compatibility wrapper."""
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, TypeAlias
-
-import numpy as np
-from numpy.typing import NDArray
-
-FloatArray: TypeAlias = NDArray[np.float64]
-IntArray: TypeAlias = NDArray[np.int64]
-
-__all__ = [
-    "delay_embed_julia",
-    "mutual_information_julia",
-    "nearest_neighbor_distances_julia",
-]
-
-_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "embedding.jl"
-_JULIA_MODULE: Any | None = None
-
-
-def _ensure() -> Any:
-    global _JULIA_MODULE
-    if _JULIA_MODULE is not None:
-        return _JULIA_MODULE
-    from juliacall import Main as JuliaMain
-
-    if not _JULIA_FILE.exists():
-        raise ImportError(f"julia side-file not found: {_JULIA_FILE}")
-    JuliaMain.include(str(_JULIA_FILE))
-    _JULIA_MODULE = JuliaMain.EmbeddingJL
-    return _JULIA_MODULE
-
-
-def delay_embed_julia(
-    signal: FloatArray,
-    delay: int,
-    dimension: int,
-) -> FloatArray:
-    """Build a delay-coordinate embedding through the Julia backend."""
-
-    jl = _ensure()
-    return np.asarray(
-        jl.delay_embed(
-            np.ascontiguousarray(signal.ravel(), dtype=np.float64),
-            int(delay),
-            int(dimension),
-        ),
-        dtype=np.float64,
-    )
-
-
-def mutual_information_julia(
-    signal: FloatArray,
-    lag: int,
-    n_bins: int,
-) -> float:
-    """Compute mutual information for embedded phase samples.
-
-    The calculation is delegated to the Julia backend.
-    """
-
-    jl = _ensure()
-    return float(
-        jl.mutual_information(
-            np.ascontiguousarray(signal.ravel(), dtype=np.float64),
-            int(lag),
-            int(n_bins),
-        )
-    )
-
-
-def nearest_neighbor_distances_julia(
-    embedded: FloatArray,
-    t: int,
-    m: int,
-) -> tuple[FloatArray, IntArray]:
-    """Compute nearest-neighbour distances for embedded states.
-
-    The calculation is delegated to the Julia backend.
-    """
-
-    jl = _ensure()
-    dist, idx = jl.nearest_neighbor_distances(
-        np.ascontiguousarray(embedded.ravel(), dtype=np.float64),
-        int(t),
-        int(m),
-    )
-    return (
-        np.asarray(dist, dtype=np.float64),
-        np.asarray(idx, dtype=np.int64),
-    )
+from ..experimental.accelerators.monitor._embedding_julia import *  # noqa: F401,F403

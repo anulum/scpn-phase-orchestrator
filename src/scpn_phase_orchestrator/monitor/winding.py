@@ -50,7 +50,7 @@ def _load_rust_fn() -> Callable[..., IntArray]:
 
 
 def _load_mojo_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._winding_mojo import (
+    from ..experimental.accelerators.monitor._winding_mojo import (
         _ensure_exe,
         winding_numbers_mojo,
     )
@@ -61,7 +61,8 @@ def _load_mojo_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchai
 
 def _load_julia_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.monitor._winding_julia import (
+
+    from ..experimental.accelerators.monitor._winding_julia import (
         winding_numbers_julia,
     )
 
@@ -69,7 +70,7 @@ def _load_julia_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolcha
 
 
 def _load_go_fn() -> Callable[..., IntArray]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._winding_go import (
+    from ..experimental.accelerators.monitor._winding_go import (
         _load_lib,
         winding_numbers_go,
     )

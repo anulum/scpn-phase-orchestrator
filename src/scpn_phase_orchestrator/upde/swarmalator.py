@@ -80,7 +80,7 @@ def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._swarmalator_mojo import (
+    from ..experimental.accelerators.upde._swarmalator_mojo import (
         _ensure_exe,
         swarmalator_step_mojo,
     )
@@ -92,7 +92,8 @@ def _load_mojo_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._swarmalator_julia import (
+
+    from ..experimental.accelerators.upde._swarmalator_julia import (
         swarmalator_step_julia,
     )
 
@@ -101,7 +102,7 @@ def _load_julia_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
 
 def _load_go_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._swarmalator_go import (
+    from ..experimental.accelerators.upde._swarmalator_go import (
         _load_lib,
         swarmalator_step_go,
     )

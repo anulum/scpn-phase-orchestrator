@@ -73,7 +73,7 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
 
 def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._engine_mojo import (
+    from ..experimental.accelerators.upde._engine_mojo import (
         _ensure_exe,
         upde_run_mojo,
     )
@@ -83,7 +83,7 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
 
 
 def _load_webgpu_fn() -> Callable[..., NDArray[np.float64]]:
-    from scpn_phase_orchestrator.upde._engine_webgpu import (
+    from ..experimental.accelerators.upde._engine_webgpu import (
         load_webgpu_dispatch_bridge,
     )
 
@@ -93,14 +93,20 @@ def _load_webgpu_fn() -> Callable[..., NDArray[np.float64]]:
 def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._engine_julia import upde_run_julia
+
+    from ..experimental.accelerators.upde._engine_julia import (
+        upde_run_julia,
+    )
 
     return upde_run_julia
 
 
 def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._engine_go import _load_lib, upde_run_go
+    from ..experimental.accelerators.upde._engine_go import (
+        _load_lib,
+        upde_run_go,
+    )
 
     _load_lib()
     return upde_run_go

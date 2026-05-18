@@ -86,7 +86,7 @@ def _load_rust_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float
 
 def _load_mojo_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._inertial_mojo import (
+    from ..experimental.accelerators.upde._inertial_mojo import (
         _ensure_exe,
         inertial_step_mojo,
     )
@@ -98,7 +98,8 @@ def _load_mojo_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float
 def _load_julia_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._inertial_julia import (
+
+    from ..experimental.accelerators.upde._inertial_julia import (
         inertial_step_julia,
     )
 
@@ -107,7 +108,10 @@ def _load_julia_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.floa
 
 def _load_go_fn() -> Callable[..., tuple[NDArray[np.float64], NDArray[np.float64]]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._inertial_go import _load_lib, inertial_step_go
+    from ..experimental.accelerators.upde._inertial_go import (
+        _load_lib,
+        inertial_step_go,
+    )
 
     _load_lib()
     return inertial_step_go

@@ -113,7 +113,7 @@ def _load_rust_fn() -> Callable[..., tuple[float, float, float, float]]:
 
 def _load_mojo_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._reduction_mojo import (
+    from ..experimental.accelerators.upde._reduction_mojo import (
         _ensure_exe,
         oa_run_mojo,
     )
@@ -125,14 +125,20 @@ def _load_mojo_fn() -> Callable[..., tuple[float, float, float, float]]:
 def _load_julia_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._reduction_julia import oa_run_julia
+
+    from ..experimental.accelerators.upde._reduction_julia import (
+        oa_run_julia,
+    )
 
     return oa_run_julia
 
 
 def _load_go_fn() -> Callable[..., tuple[float, float, float, float]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._reduction_go import _load_lib, oa_run_go
+    from ..experimental.accelerators.upde._reduction_go import (
+        _load_lib,
+        oa_run_go,
+    )
 
     _load_lib()
     return oa_run_go

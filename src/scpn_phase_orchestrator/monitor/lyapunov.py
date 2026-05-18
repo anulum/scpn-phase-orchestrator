@@ -56,7 +56,7 @@ def _load_rust_fn() -> LyapunovBackendFn:
 
 
 def _load_mojo_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._lyapunov_mojo import (
+    from ..experimental.accelerators.monitor._lyapunov_mojo import (
         _ensure_exe,
         lyapunov_spectrum_mojo,
     )
@@ -67,7 +67,8 @@ def _load_mojo_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
 
 def _load_julia_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.monitor._lyapunov_julia import (
+
+    from ..experimental.accelerators.monitor._lyapunov_julia import (
         lyapunov_spectrum_julia,
     )
 
@@ -75,7 +76,7 @@ def _load_julia_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
 
 
 def _load_go_fn() -> LyapunovBackendFn:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._lyapunov_go import (
+    from ..experimental.accelerators.monitor._lyapunov_go import (
         _load_lib,
         lyapunov_spectrum_go,
     )

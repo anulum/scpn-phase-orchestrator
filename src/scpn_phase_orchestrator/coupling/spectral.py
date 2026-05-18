@@ -159,7 +159,7 @@ def _load_mojo_primitive() -> Callable[
     [FloatArray, int], tuple[FloatArray, FloatArray]
 ]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.coupling._spectral_mojo import (
+    from ..experimental.accelerators.coupling._spectral_mojo import (
         _ensure_exe,
         spectral_eig_mojo,
     )
@@ -173,7 +173,8 @@ def _load_julia_primitive() -> Callable[
 ]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.coupling._spectral_julia import (
+
+    from ..experimental.accelerators.coupling._spectral_julia import (
         spectral_eig_julia,
     )
 
@@ -182,7 +183,7 @@ def _load_julia_primitive() -> Callable[
 
 def _load_go_primitive() -> Callable[[FloatArray, int], tuple[FloatArray, FloatArray]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.coupling._spectral_go import (
+    from ..experimental.accelerators.coupling._spectral_go import (
         _load_lib,
         spectral_eig_go,
     )

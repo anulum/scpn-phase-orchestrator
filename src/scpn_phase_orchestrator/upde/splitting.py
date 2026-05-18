@@ -100,7 +100,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._splitting_mojo import (
+    from ..experimental.accelerators.upde._splitting_mojo import (
         _ensure_exe,
         splitting_run_mojo,
     )
@@ -112,7 +112,8 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._splitting_julia import (
+
+    from ..experimental.accelerators.upde._splitting_julia import (
         splitting_run_julia,
     )
 
@@ -121,7 +122,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._splitting_go import (
+    from ..experimental.accelerators.upde._splitting_go import (
         _load_lib,
         splitting_run_go,
     )

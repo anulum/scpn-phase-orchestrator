@@ -1,114 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Commercial license available
-# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
-# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# (c) Concepts 1996-2026 Miroslav Sotek. All rights reserved.
+# (c) Code 2020-2026 Miroslav Sotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Go bridge for Poincaré kernels
+# SCPN Phase Orchestrator - Legacy accelerator import wrapper
 
-"""Go backend for ``monitor/poincare.py`` via ``libpoincare.so``."""
+"""Legacy accelerator compatibility wrapper."""
 
 from __future__ import annotations
 
-import ctypes
-from pathlib import Path
-from typing import TypeAlias
-
-import numpy as np
-from numpy.typing import NDArray
-
-FloatArray: TypeAlias = NDArray[np.float64]
-
-__all__ = ["phase_poincare_go", "poincare_section_go"]
-
-_LIB_PATH = Path(__file__).resolve().parents[3] / "go" / "libpoincare.so"
-_LIB: ctypes.CDLL | None = None
-
-
-def _load_lib() -> ctypes.CDLL:
-    global _LIB
-    if _LIB is not None:
-        return _LIB
-    if not _LIB_PATH.exists():
-        raise ImportError(
-            f"libpoincare.so not found at {_LIB_PATH}. Build with: "
-            f"cd go && go build -buildmode=c-shared -o libpoincare.so "
-            f"poincare.go"
-        )
-    lib = ctypes.CDLL(str(_LIB_PATH))
-    lib.PoincareSection.restype = ctypes.c_int
-    lib.PoincareSection.argtypes = [
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int,
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.c_double,
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.POINTER(ctypes.c_double),
-    ]
-    lib.PhasePoincare.restype = ctypes.c_int
-    lib.PhasePoincare.argtypes = [
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int,
-        ctypes.c_int,
-        ctypes.c_int,
-        ctypes.c_double,
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.POINTER(ctypes.c_double),
-    ]
-    _LIB = lib
-    return lib
-
-
-def poincare_section_go(
-    traj_flat: FloatArray,
-    t: int,
-    d: int,
-    normal: FloatArray,
-    offset: float,
-    direction_id: int,
-) -> tuple[FloatArray, FloatArray, int]:
-    """Extract Poincare section crossings through the Go backend."""
-
-    lib = _load_lib()
-    traj = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
-    nrm = np.ascontiguousarray(normal.ravel(), dtype=np.float64)
-    crossings = np.zeros(t * d, dtype=np.float64)
-    times = np.zeros(t, dtype=np.float64)
-    n_cr = lib.PoincareSection(
-        traj.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(d)),
-        nrm.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_double(float(offset)),
-        ctypes.c_int(int(direction_id)),
-        crossings.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        times.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-    )
-    return crossings, times, int(n_cr)
-
-
-def phase_poincare_go(
-    phases_flat: FloatArray,
-    t: int,
-    n: int,
-    oscillator_idx: int,
-    section_phase: float,
-) -> tuple[FloatArray, FloatArray, int]:
-    """Compute phase-space Poincare diagnostics through the Go backend."""
-
-    lib = _load_lib()
-    phases = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
-    crossings = np.zeros(t * n, dtype=np.float64)
-    times = np.zeros(t, dtype=np.float64)
-    n_cr = lib.PhasePoincare(
-        phases.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        ctypes.c_int(int(t)),
-        ctypes.c_int(int(n)),
-        ctypes.c_int(int(oscillator_idx)),
-        ctypes.c_double(float(section_phase)),
-        crossings.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-        times.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-    )
-    return crossings, times, int(n_cr)
+from ..experimental.accelerators.monitor._poincare_go import *  # noqa: F401,F403

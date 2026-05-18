@@ -70,7 +70,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._envelope_mojo import (
+    from ..experimental.accelerators.upde._envelope_mojo import (
         _ensure_exe,
         envelope_modulation_depth_mojo,
         extract_envelope_mojo,
@@ -85,7 +85,8 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._envelope_julia import (
+
+    from ..experimental.accelerators.upde._envelope_julia import (
         envelope_modulation_depth_julia,
         extract_envelope_julia,
     )
@@ -97,7 +98,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._envelope_go import (
+    from ..experimental.accelerators.upde._envelope_go import (
         _load_lib,
         envelope_modulation_depth_go,
         extract_envelope_go,

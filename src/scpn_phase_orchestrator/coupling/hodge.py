@@ -74,7 +74,7 @@ def _load_rust_fn() -> HodgeBackend:
 
 def _load_mojo_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.coupling._hodge_mojo import (
+    from ..experimental.accelerators.coupling._hodge_mojo import (
         _ensure_exe,
         hodge_decomposition_mojo,
     )
@@ -86,7 +86,8 @@ def _load_mojo_fn() -> HodgeBackend:
 def _load_julia_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.coupling._hodge_julia import (
+
+    from ..experimental.accelerators.coupling._hodge_julia import (
         hodge_decomposition_julia,
     )
 
@@ -95,7 +96,7 @@ def _load_julia_fn() -> HodgeBackend:
 
 def _load_go_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.coupling._hodge_go import (
+    from ..experimental.accelerators.coupling._hodge_go import (
         _load_lib,
         hodge_decomposition_go,
     )

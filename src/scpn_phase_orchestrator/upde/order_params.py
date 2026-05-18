@@ -66,7 +66,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.upde._order_params_mojo import (
+    from ..experimental.accelerators.upde._order_params_mojo import (
         _ensure_exe,
         layer_coherence_mojo,
         order_parameter_mojo,
@@ -83,7 +83,8 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._order_params_julia import (
+
+    from ..experimental.accelerators.upde._order_params_julia import (
         layer_coherence_julia,
         order_parameter_julia,
         plv_julia,
@@ -97,7 +98,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.upde._order_params_go import (
+    from ..experimental.accelerators.upde._order_params_go import (
         _load_lib,
         layer_coherence_go,
         order_parameter_go,

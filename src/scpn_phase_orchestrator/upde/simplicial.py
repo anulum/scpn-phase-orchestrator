@@ -95,7 +95,7 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
 
 def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._simplicial_mojo import (
+    from ..experimental.accelerators.upde._simplicial_mojo import (
         _ensure_exe,
         simplicial_run_mojo,
     )
@@ -107,7 +107,8 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
 def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._simplicial_julia import (
+
+    from ..experimental.accelerators.upde._simplicial_julia import (
         simplicial_run_julia,
     )
 
@@ -116,7 +117,7 @@ def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
 
 def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._simplicial_go import (
+    from ..experimental.accelerators.upde._simplicial_go import (
         _load_lib,
         simplicial_run_go,
     )

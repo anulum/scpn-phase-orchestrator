@@ -93,7 +93,7 @@ def _load_rust_fn() -> Callable[..., float]:
 
 def _load_mojo_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._basin_stability_mojo import (
+    from ..experimental.accelerators.upde._basin_stability_mojo import (
         _ensure_exe,
         steady_state_r_mojo,
     )
@@ -105,7 +105,8 @@ def _load_mojo_fn() -> Callable[..., float]:
 def _load_julia_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._basin_stability_julia import (
+
+    from ..experimental.accelerators.upde._basin_stability_julia import (
         steady_state_r_julia,
     )
 
@@ -114,7 +115,7 @@ def _load_julia_fn() -> Callable[..., float]:
 
 def _load_go_fn() -> Callable[..., float]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._basin_stability_go import (
+    from ..experimental.accelerators.upde._basin_stability_go import (
         _load_lib,
         steady_state_r_go,
     )

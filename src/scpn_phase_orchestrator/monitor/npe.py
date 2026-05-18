@@ -49,7 +49,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.monitor._npe_mojo import (
+    from ..experimental.accelerators.monitor._npe_mojo import (
         _ensure_exe,
         compute_npe_mojo,
         phase_distance_matrix_mojo,
@@ -64,7 +64,8 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.monitor._npe_julia import (
+
+    from ..experimental.accelerators.monitor._npe_julia import (
         compute_npe_julia,
         phase_distance_matrix_julia,
     )
@@ -76,7 +77,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-ga
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.monitor._npe_go import (
+    from ..experimental.accelerators.monitor._npe_go import (
         _load_lib,
         compute_npe_go,
         phase_distance_matrix_go,

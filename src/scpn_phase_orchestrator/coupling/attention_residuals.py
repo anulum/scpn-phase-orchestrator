@@ -185,7 +185,7 @@ def _load_rust() -> _BackendFn:
 
 
 def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.coupling._attnres_mojo import (
+    from ..experimental.accelerators.coupling._attnres_mojo import (
         _ensure_exe,
         attnres_modulate_mojo,
     )
@@ -196,7 +196,8 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.coupling._attnres_julia import (
+
+    from ..experimental.accelerators.coupling._attnres_julia import (
         attnres_modulate_julia,
     )
 
@@ -204,7 +205,7 @@ def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 
 def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
-    from scpn_phase_orchestrator.coupling._attnres_go import (
+    from ..experimental.accelerators.coupling._attnres_go import (
         _load_lib,
         attnres_modulate_go,
     )

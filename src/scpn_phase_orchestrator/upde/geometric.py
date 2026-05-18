@@ -84,7 +84,7 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
 
 def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._geometric_mojo import (
+    from ..experimental.accelerators.upde._geometric_mojo import (
         _ensure_exe,
         torus_run_mojo,
     )
@@ -96,14 +96,20 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
 def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._geometric_julia import torus_run_julia
+
+    from ..experimental.accelerators.upde._geometric_julia import (
+        torus_run_julia,
+    )
 
     return torus_run_julia
 
 
 def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._geometric_go import _load_lib, torus_run_go
+    from ..experimental.accelerators.upde._geometric_go import (
+        _load_lib,
+        torus_run_go,
+    )
 
     _load_lib()
     return torus_run_go

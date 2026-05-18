@@ -66,7 +66,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
 
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._chimera_mojo import (
+    from ..experimental.accelerators.monitor._chimera_mojo import (
         _ensure_exe,
         local_order_parameter_mojo,
     )
@@ -77,7 +77,8 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolch
 
 def _load_julia_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.monitor._chimera_julia import (
+
+    from ..experimental.accelerators.monitor._chimera_julia import (
         local_order_parameter_julia,
     )
 
@@ -85,7 +86,7 @@ def _load_julia_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolc
 
 
 def _load_go_fn() -> Callable[..., FloatArray]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._chimera_go import (
+    from ..experimental.accelerators.monitor._chimera_go import (
         _load_lib,
         local_order_parameter_go,
     )

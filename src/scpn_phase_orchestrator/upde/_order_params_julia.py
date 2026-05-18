@@ -1,87 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Commercial license available
-# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
-# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# (c) Concepts 1996-2026 Miroslav Sotek. All rights reserved.
+# (c) Code 2020-2026 Miroslav Sotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Julia bridge for order parameters
+# SCPN Phase Orchestrator - Legacy accelerator import wrapper
 
-"""Julia backend for ``upde/order_params.py``.
-
-Loads ``juliacall`` lazily — ``_load_julia()`` in the dispatcher
-probes this module at resolve time and raises ``ImportError`` when
-the toolchain is absent.
-"""
+"""Legacy accelerator compatibility wrapper."""
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-
-import numpy as np
-from numpy.typing import NDArray
-
-__all__ = [
-    "order_parameter_julia",
-    "plv_julia",
-    "layer_coherence_julia",
-]
-
-_JULIA_FILE = Path(__file__).resolve().parents[3] / "julia" / "order_params.jl"
-_JULIA_MODULE: Any | None = None
-
-
-def _ensure_julia_loaded() -> Any:
-    global _JULIA_MODULE
-    if _JULIA_MODULE is not None:
-        return _JULIA_MODULE
-    from juliacall import Main as JuliaMain
-
-    if not _JULIA_FILE.exists():
-        raise ImportError(f"julia side-file not found: {_JULIA_FILE}")
-    JuliaMain.include(str(_JULIA_FILE))
-    _JULIA_MODULE = JuliaMain.OrderParams
-    return _JULIA_MODULE
-
-
-def order_parameter_julia(phases: NDArray[np.float64]) -> tuple[float, float]:
-    """Compute the Kuramoto order parameter.
-
-    The calculation is delegated to the Julia backend.
-    """
-
-    jl = _ensure_julia_loaded()
-    r, psi = jl.order_parameter(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
-    return float(r), float(psi)
-
-
-def plv_julia(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
-    """Compute phase-locking value.
-
-    The calculation is delegated to the Julia backend.
-    """
-
-    jl = _ensure_julia_loaded()
-    return float(
-        jl.plv(
-            np.ascontiguousarray(phases_a.ravel(), dtype=np.float64),
-            np.ascontiguousarray(phases_b.ravel(), dtype=np.float64),
-        )
-    )
-
-
-def layer_coherence_julia(
-    phases: NDArray[np.float64], indices: NDArray[np.int64]
-) -> float:
-    """Compute layer-wise phase coherence.
-
-    The calculation is delegated to the Julia backend.
-    """
-
-    jl = _ensure_julia_loaded()
-    return float(
-        jl.layer_coherence(
-            np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-            np.ascontiguousarray(indices.ravel(), dtype=np.int64),
-        )
-    )
+from ..experimental.accelerators.upde._order_params_julia import *  # noqa: F401,F403

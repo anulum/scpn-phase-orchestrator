@@ -165,16 +165,19 @@ def test_new_core_to_experimental_imports_fail_without_legacy_allowlist(
     assert violations[0].target_boundary == "experimental"
 
 
-def test_legacy_allowlist_usage_is_measured(tmp_path: Path) -> None:
+def test_core_accelerator_port_allowlist_usage_is_measured(tmp_path: Path) -> None:
     core = _write_module(
         tmp_path,
         "upde/engine.py",
-        "from scpn_phase_orchestrator.upde._engine_mojo import upde_run_mojo\n",
+        "from scpn_phase_orchestrator.experimental.accelerators.upde._engine_mojo "
+        "import upde_run_mojo\n",
     )
 
-    used = mod.find_legacy_accelerator_imports([core])
+    used = mod.find_core_accelerator_port_imports([core])
 
-    assert used == {"scpn_phase_orchestrator.upde._engine_mojo"}
+    assert used == {
+        "scpn_phase_orchestrator.experimental.accelerators.upde._engine_mojo"
+    }
     assert mod.find_violations([core]) == []
 
 
@@ -212,8 +215,8 @@ def test_current_source_tree_has_no_unclassified_modules() -> None:
     assert unclassified == set()
 
 
-def test_current_legacy_allowlist_has_no_stale_entries() -> None:
+def test_current_core_accelerator_port_allowlist_has_no_stale_entries() -> None:
     mod.SRC_ROOT = ORIGINAL_SRC_ROOT
-    used = mod.find_legacy_accelerator_imports(mod.iter_python_files())
+    used = mod.find_core_accelerator_port_imports(mod.iter_python_files())
 
-    assert mod.LEGACY_CORE_ACCELERATOR_IMPORTS - used == set()
+    assert mod.CORE_ACCELERATOR_PORT_IMPORTS - used == set()

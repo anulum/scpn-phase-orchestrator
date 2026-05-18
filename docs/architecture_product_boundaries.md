@@ -47,19 +47,21 @@ but must not import Runtime/Serving or Research/Experimental modules.
 ## Research and Experimental
 
 Research and Experimental contains neural-network research modules, notebooks,
-experiments, Go/Julia/Mojo/WebGPU shims, visualisation helpers, and special
-domain packs that are not required for the production Runtime surface. It also
-contains autotuning pipelines and legacy public neural-network compatibility
-aliases until those surfaces are split behind explicit optional package extras.
+experiments, Go/Julia/Mojo/WebGPU accelerator implementations, visualisation
+helpers, and special domain packs that are not required for the production
+Runtime surface. It also contains autotuning pipelines and legacy public
+neural-network compatibility aliases until those surfaces are split behind
+explicit optional package extras.
 
 Experimental modules may depend on Core Engine for parity and validation, but
-Core Engine must not import Experimental modules. Language shims currently live
-inside some Core Engine directories for legacy import compatibility; the product
-boundary checker classifies them as experimental by module suffix and keeps the
-existing Core-to-shim imports on an explicit frozen allowlist until the
-Research and Experimental migration batch moves those shims behind stable
-adapter dispatch points. The allowlist is self-auditing: full-tree runs fail if
-an entry becomes stale, forcing migrated shims to be removed from the exception
+Core Engine must not import arbitrary Experimental modules. Accelerator
+implementations live under
+`scpn_phase_orchestrator.experimental.accelerators.{coupling,monitor,upde}`.
+Core dispatch modules may import only the explicit accelerator-port modules
+listed in `tools/check_product_boundaries.py`; legacy module paths under
+`coupling`, `monitor`, and `upde` are compatibility wrappers only. The
+accelerator-port allowlist is self-auditing: full-tree runs fail if an entry
+becomes stale, forcing migrated dispatch ports to be removed from the exception
 set instead of leaving dead architecture debt behind.
 
 ## Enforcement

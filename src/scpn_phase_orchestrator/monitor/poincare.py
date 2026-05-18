@@ -102,7 +102,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._poincare_mojo import (
+    from ..experimental.accelerators.monitor._poincare_mojo import (
         _ensure_exe,
         phase_poincare_mojo,
         poincare_section_mojo,
@@ -114,7 +114,8 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.monitor._poincare_julia import (
+
+    from ..experimental.accelerators.monitor._poincare_julia import (
         phase_poincare_julia,
         poincare_section_julia,
     )
@@ -123,7 +124,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._poincare_go import (
+    from ..experimental.accelerators.monitor._poincare_go import (
         _load_lib,
         phase_poincare_go,
         poincare_section_go,

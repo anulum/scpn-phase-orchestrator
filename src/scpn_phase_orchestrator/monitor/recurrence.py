@@ -94,7 +94,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._recurrence_mojo import (
+    from ..experimental.accelerators.monitor._recurrence_mojo import (
         _ensure_exe,
         cross_recurrence_matrix_mojo,
         recurrence_matrix_mojo,
@@ -109,7 +109,8 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.monitor._recurrence_julia import (
+
+    from ..experimental.accelerators.monitor._recurrence_julia import (
         cross_recurrence_matrix_julia,
         recurrence_matrix_julia,
     )
@@ -121,7 +122,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._recurrence_go import (
+    from ..experimental.accelerators.monitor._recurrence_go import (
         _load_lib,
         cross_recurrence_matrix_go,
         recurrence_matrix_go,

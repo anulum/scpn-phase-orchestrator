@@ -123,7 +123,7 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
 
 def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._hypergraph_mojo import (
+    from ..experimental.accelerators.upde._hypergraph_mojo import (
         _ensure_exe,
         hypergraph_run_mojo,
     )
@@ -135,7 +135,8 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
 def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._hypergraph_julia import (
+
+    from ..experimental.accelerators.upde._hypergraph_julia import (
         hypergraph_run_julia,
     )
 
@@ -144,7 +145,7 @@ def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
 
 def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._hypergraph_go import (
+    from ..experimental.accelerators.upde._hypergraph_go import (
         _load_lib,
         hypergraph_run_go,
     )

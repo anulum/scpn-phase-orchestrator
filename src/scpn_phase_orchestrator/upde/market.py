@@ -87,7 +87,7 @@ def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
 
 def _load_mojo_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._market_mojo import (
+    from ..experimental.accelerators.upde._market_mojo import (
         _ensure_exe,
         market_order_parameter_mojo,
         market_plv_mojo,
@@ -100,7 +100,8 @@ def _load_mojo_fn() -> tuple[_MarketFn, _MarketFn]:
 def _load_julia_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.upde._market_julia import (
+
+    from ..experimental.accelerators.upde._market_julia import (
         market_order_parameter_julia,
         market_plv_julia,
     )
@@ -110,7 +111,7 @@ def _load_julia_fn() -> tuple[_MarketFn, _MarketFn]:
 
 def _load_go_fn() -> tuple[_MarketFn, _MarketFn]:
     # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.upde._market_go import (
+    from ..experimental.accelerators.upde._market_go import (
         _load_lib,
         market_order_parameter_go,
         market_plv_go,

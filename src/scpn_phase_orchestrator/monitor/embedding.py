@@ -88,7 +88,7 @@ def _load_rust_fns() -> dict[str, object]:
 
 
 def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._embedding_mojo import (
+    from ..experimental.accelerators.monitor._embedding_mojo import (
         _ensure_exe,
         delay_embed_mojo,
         mutual_information_mojo,
@@ -105,7 +105,8 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
     import juliacall  # noqa: F401
-    from scpn_phase_orchestrator.monitor._embedding_julia import (
+
+    from ..experimental.accelerators.monitor._embedding_julia import (
         delay_embed_julia,
         mutual_information_julia,
         nearest_neighbor_distances_julia,
@@ -119,7 +120,7 @@ def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain
 
 
 def _load_go_fns() -> dict[str, object]:  # pragma: no cover — toolchain
-    from scpn_phase_orchestrator.monitor._embedding_go import (
+    from ..experimental.accelerators.monitor._embedding_go import (
         _load_lib,
         delay_embed_go,
         mutual_information_go,
