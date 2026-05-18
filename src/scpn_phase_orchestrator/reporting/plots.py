@@ -90,6 +90,10 @@ class CoherencePlot:
                 return parsed
         return 0.0
 
+    @classmethod
+    def _step_value(cls, value: object) -> int:
+        return int(cls._numeric_value(value))
+
     @staticmethod
     def _actions(step: dict) -> list[dict]:
         actions = step.get("actions", [])
@@ -103,7 +107,7 @@ class CoherencePlot:
 
     def _extract_r_series(self) -> tuple[list[int], int, list[list[float]]]:
         steps = self._require_steps()
-        x = [s["step"] for s in steps]
+        x = [self._step_value(s.get("step", 0)) for s in steps]
         n_layers = max(len(self._layers(s)) for s in steps)
         series = []
         for i in range(n_layers):
@@ -121,19 +125,20 @@ class CoherencePlot:
         steps = self._require_steps()
         epochs: list[tuple[str, int, int]] = []
         prev = steps[0].get("regime", "NOMINAL")
-        start = steps[0]["step"]
+        start = self._step_value(steps[0].get("step", 0))
         for s in steps[1:]:
             regime = s.get("regime", "NOMINAL")
             if regime != prev:
-                epochs.append((prev, start, s["step"]))
+                step_no = self._step_value(s.get("step", 0))
+                epochs.append((prev, start, step_no))
                 prev = regime
-                start = s["step"]
-        epochs.append((prev, start, steps[-1]["step"] + 1))
+                start = step_no
+        epochs.append((prev, start, self._step_value(steps[-1].get("step", 0)) + 1))
         return epochs
 
     def _extract_actions(self) -> tuple[list[int], list[float], dict[str, list[int]]]:
         steps = self._require_steps()
-        x = [s["step"] for s in steps]
+        x = [self._step_value(s.get("step", 0)) for s in steps]
         r_global = []
         for s in steps:
             rs = [self._numeric_value(layer.get("R", 0.0)) for layer in self._layers(s)]
@@ -141,12 +146,14 @@ class CoherencePlot:
         knob_steps: dict[str, list[int]] = {}
         for s in steps:
             for a in self._actions(s):
-                knob_steps.setdefault(str(a["knob"]), []).append(s["step"])
+                knob_steps.setdefault(str(a["knob"]), []).append(
+                    self._step_value(s.get("step", 0))
+                )
         return x, r_global, knob_steps
 
     def _extract_amplitude(self) -> tuple[list[int], list[float], list[float]]:
         steps = self._require_steps()
-        x = [s["step"] for s in steps]
+        x = [self._step_value(s.get("step", 0)) for s in steps]
         amps = [self._numeric_value(s.get("mean_amplitude", 0.0)) for s in steps]
         sub_frac = [
             self._numeric_value(s.get("subcritical_fraction", 0.0)) for s in steps

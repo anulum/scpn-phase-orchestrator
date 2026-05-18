@@ -150,6 +150,31 @@ class TestExtractors:
         assert "NOMINAL" in regimes
         assert "DEGRADED" in regimes
 
+    def test_extractors_ignore_malformed_step_identifiers(self) -> None:
+        plot = CoherencePlot(
+            [
+                {"step": True, "regime": "NOMINAL", "layers": [{"R": 0.2}]},
+                {
+                    "step": "not-an-int",
+                    "regime": "DEGRADED",
+                    "layers": [{"R": 0.4}],
+                    "actions": [{"knob": "K"}],
+                    "mean_amplitude": 0.5,
+                    "subcritical_fraction": 0.25,
+                },
+            ]
+        )
+        x, _, _ = plot._extract_r_series()
+        epochs = plot._extract_regime_epochs()
+        action_x, _, knob_steps = plot._extract_actions()
+        amplitude_x, _, _ = plot._extract_amplitude()
+
+        assert x == [0, 0]
+        assert epochs == [("NOMINAL", 0, 0), ("DEGRADED", 0, 1)]
+        assert action_x == [0, 0]
+        assert knob_steps == {"K": [0]}
+        assert amplitude_x == [0, 0]
+
     def test_extract_actions(self) -> None:
         plot = CoherencePlot(_make_log())
         x, r_global, knob_steps = plot._extract_actions()
