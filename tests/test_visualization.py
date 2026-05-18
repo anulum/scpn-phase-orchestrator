@@ -132,6 +132,20 @@ class TestCouplingHeatmap:
         assert data["min"] == 0.0
         assert data["max"] == 1.0
 
+    @pytest.mark.parametrize("layer_names", [["Alpha"], ["Alpha", "Beta", "Gamma"]])
+    def test_rejects_layer_names_length_mismatch(self, layer_names: object):
+        knm = np.full((2, 2), 0.5)
+        np.fill_diagonal(knm, 0.0)
+        with pytest.raises(ValueError, match="layer_names length"):
+            coupling_heatmap_json(knm, layer_names=layer_names)
+
+    @pytest.mark.parametrize("layer_names", [["", "Beta"], ["Alpha", True]])
+    def test_rejects_invalid_layer_names(self, layer_names: object):
+        knm = np.full((2, 2), 0.5)
+        np.fill_diagonal(knm, 0.0)
+        with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
+            coupling_heatmap_json(knm, layer_names=layer_names)
+
     @pytest.mark.parametrize(
         "knm",
         [
