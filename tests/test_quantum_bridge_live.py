@@ -8,20 +8,21 @@
 
 from __future__ import annotations
 
+import importlib.util
+import json
+import sys
+from hashlib import sha256
+from types import ModuleType
+
 import numpy as np
 import pytest
-
-try:
-    import importlib.util
-
-    HAS_QC = importlib.util.find_spec("scpn_quantum_control") is not None
-except (ImportError, ModuleNotFoundError):
-    HAS_QC = False
 
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import (
     QuantumControlBridge,
 )
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+HAS_QC = importlib.util.find_spec("scpn_quantum_control") is not None
 
 
 def _make_state() -> UPDEState:
@@ -34,6 +35,20 @@ def _make_state() -> UPDEState:
         stability_proxy=0.8,
         regime_id="nominal",
     )
+
+
+def _install_fake_quantum_module(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    orchestrator_to_quantum_phases=None,
+    quantum_to_orchestrator_phases=None,
+) -> None:
+    module = ModuleType("scpn_quantum_control")
+    if orchestrator_to_quantum_phases is not None:
+        module.orchestrator_to_quantum_phases = orchestrator_to_quantum_phases
+    if quantum_to_orchestrator_phases is not None:
+        module.quantum_to_orchestrator_phases = quantum_to_orchestrator_phases
+    monkeypatch.setitem(sys.modules, "scpn_quantum_control", module)
 
 
 # The tests below exercise the adapter paths that do NOT require the
@@ -95,6 +110,150 @@ class TestQuantumBridgeAdapterLocal:
         state = bridge.import_artifact({"phases": [0.0, np.pi]})
         assert state.stability_proxy == 0.0
         assert state.regime_id == "NOMINAL"
+
+    def test_export_artifact_rejects_non_upde_state(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="state must be a UPDEState"):
+            bridge.export_artifact(object())
+
+    def test_export_artifact_rejects_non_finite_layer_metrics(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        state = UPDEState(
+            layers=[
+                LayerState(R=float("nan"), psi=0.2),
+            ],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.4,
+            regime_id="NOMINAL",
+        )
+        with pytest.raises(ValueError, match="layers\\[0\\]\\.R must be finite"):
+            bridge.export_artifact(state)
+
+    def test_export_artifact_rejects_non_finite_cross_alignment(self):
+        bridge = QuantumControlBridge(n_oscillators=3)
+        state = UPDEState(
+            layers=[LayerState(R=1.0, psi=0.0)],
+            cross_layer_alignment=np.array([[float("nan")]]),
+            stability_proxy=0.4,
+            regime_id="NOMINAL",
+        )
+        with pytest.raises(ValueError, match="must contain finite values"):
+            bridge.export_artifact(state)
+
+    def test_export_artifact_rejects_cross_layer_shape_mismatch(self):
+        bridge = QuantumControlBridge(n_oscillators=3)
+        state = UPDEState(
+            layers=[
+                LayerState(R=1.0, psi=0.0),
+                LayerState(R=1.0, psi=1.0),
+            ],
+            cross_layer_alignment=np.eye(3),
+            stability_proxy=0.4,
+            regime_id="NOMINAL",
+        )
+        with pytest.raises(ValueError, match="shape must match number of layers"):
+            bridge.export_artifact(state)
+
+    def test_build_quantum_compiler_manifest_has_reproducible_handoff_metadata(self):
+        bridge = QuantumControlBridge(n_oscillators=3)
+        knm = np.array(
+            [[0.0, 0.1, 0.0], [0.1, 0.0, 0.05], [0.0, 0.05, 0.0]],
+            dtype=np.float64,
+        )
+        omegas = np.array([0.4, 0.5, 0.6], dtype=np.float64)
+        manifest = bridge.build_quantum_compiler_manifest(knm, omegas, dt=0.2)
+        assert manifest["manifest_kind"] == "quantum_compiler_manifest"
+        assert manifest["schema_version"] == 1
+        assert manifest["n_qubits"] == 3
+        assert manifest["status"] == "co_simulation_parity_passed"
+        assert manifest["qpu_execution_permitted"] is False
+        assert manifest["actuation_permitted"] is False
+        assert manifest["target_backends"] == ["qiskit_openqasm3", "pennylane_qasm"]
+        assert manifest["co_simulation_parity"]["term_count"] == len(
+            manifest["frequency_terms"] + manifest["coupling_terms"]
+        )
+        assert manifest["openqasm"].startswith("OPENQASM 3.0;")
+        parity_projection = json.dumps(
+            {key: value for key, value in manifest.items() if key != "manifest_sha256"},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        assert (
+            manifest["manifest_sha256"]
+            == sha256(parity_projection.encode("utf-8")).hexdigest()
+        )
+
+
+class TestQuantumBridgeDependencyShim:
+    def test_orchestrator_to_quantum_honours_contract_with_fake_dependency(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        captured: dict[str, object] = {}
+
+        def fake_orchestrator_to_quantum_phases(payload: object) -> np.ndarray:
+            captured["payload"] = dict(payload)  # type: ignore[arg-type]
+            return np.array([0.1, 0.2], dtype=np.float64)
+
+        _install_fake_quantum_module(
+            monkeypatch,
+            orchestrator_to_quantum_phases=fake_orchestrator_to_quantum_phases,
+        )
+
+        bridge = QuantumControlBridge(n_oscillators=4)
+        phases = bridge.orchestrator_to_quantum(_make_state())
+        np.testing.assert_allclose(phases, np.array([0.1, 0.2], dtype=np.float64))
+        assert captured["payload"] == {"layer_0": 0.5, "layer_1": 1.2}
+
+    def test_orchestrator_to_quantum_contract_import_fails_if_contract_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        _install_fake_quantum_module(monkeypatch)
+        bridge = QuantumControlBridge(n_oscillators=4)
+        with pytest.raises(ImportError, match="orchestrator_to_quantum_phases"):
+            bridge.orchestrator_to_quantum(_make_state())
+
+    def test_quantum_to_orchestrator_honours_contract_with_fake_dependency(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        captured: dict[str, object] = {}
+
+        def fake_quantum_to_orchestrator_phases(payload: object) -> dict[str, object]:
+            captured["payload"] = payload
+            return {"phases": list(np.asarray(payload, dtype=np.float64))}
+
+        _install_fake_quantum_module(
+            monkeypatch,
+            quantum_to_orchestrator_phases=fake_quantum_to_orchestrator_phases,
+        )
+
+        bridge = QuantumControlBridge(n_oscillators=4)
+        payload = bridge.quantum_to_orchestrator(
+            np.array([0.8, 1.1], dtype=np.float64),
+        )
+        assert payload["phases"] == [0.8, 1.1]
+        np.testing.assert_allclose(captured["payload"], np.array([0.8, 1.1]))
+
+    def test_quantum_to_orchestrator_contract_import_fails_if_contract_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        _install_fake_quantum_module(monkeypatch)
+        bridge = QuantumControlBridge(n_oscillators=4)
+        with pytest.raises(ImportError, match="quantum_to_orchestrator_phases"):
+            bridge.quantum_to_orchestrator(np.array([0.8, 1.1]))
+
+    def test_build_hamiltonian_rejects_invalid_shapes_without_dependency(self):
+        bridge = QuantumControlBridge(3)
+        with pytest.raises(ValueError, match="does not match n_oscillators=3"):
+            bridge.build_hamiltonian(np.ones((2, 2)), np.ones(3))
+
+    def test_solve_q_upde_rejects_invalid_t_max_before_dependency_import(self):
+        bridge = QuantumControlBridge(2)
+        with pytest.raises(ValueError, match="t_max must be finite and positive"):
+            bridge.solve_q_upde(np.ones((2, 2)), np.ones(2), t_max=0.0)
 
 
 @pytest.mark.skipif(not HAS_QC, reason="scpn-quantum-control not installed")

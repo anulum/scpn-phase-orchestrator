@@ -67,6 +67,15 @@ def _require_fidelity(value: object, *, name: str) -> float:
     return parsed
 
 
+def _require_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite")
+    parsed = float(value)
+    if not np.isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
 def _finite_array(value: object, *, name: str) -> FloatArray:
     try:
         array = np.asarray(value, dtype=np.float64)
@@ -107,6 +116,35 @@ def _validate_layer_assignments(
         raise ValueError("layer_assignments must cover every phase index exactly once")
 
     return validated
+
+
+def _validate_upde_state(state: object) -> tuple[list[LayerState], FloatArray]:
+    if not isinstance(state, UPDEState):
+        raise ValueError("state must be a UPDEState")
+
+    if not isinstance(state.layers, list):
+        raise ValueError("UPDEState.layers must be a list")
+
+    for index, layer in enumerate(state.layers):
+        if not isinstance(layer, LayerState):
+            raise ValueError(f"UPDEState.layers[{index}] must be a LayerState")
+        _require_finite_real(layer.R, name=f"UPDEState.layers[{index}].R")
+        _require_finite_real(layer.psi, name=f"UPDEState.layers[{index}].psi")
+
+    cross_layer_alignment = _finite_array(
+        state.cross_layer_alignment,
+        name="cross_layer_alignment",
+    )
+    if cross_layer_alignment.ndim != 2:
+        raise ValueError("cross_layer_alignment must be a square matrix")
+    if cross_layer_alignment.shape[0] != cross_layer_alignment.shape[1]:
+        raise ValueError("cross_layer_alignment must be a square matrix")
+
+    n_layers = len(state.layers)
+    if cross_layer_alignment.shape != (n_layers, n_layers):
+        raise ValueError("cross_layer_alignment shape must match number of layers")
+
+    return state.layers, cross_layer_alignment
 
 
 class QuantumControlBridge:
@@ -173,11 +211,16 @@ class QuantumControlBridge:
 
     def export_artifact(self, state: UPDEState) -> dict:
         """Convert UPDEState back to a dict compatible with scpn-quantum-control."""
+        layers, cross_layer_alignment = _validate_upde_state(state)
+        fidelity = _require_finite_real(
+            state.stability_proxy,
+            name="state.stability_proxy",
+        )
         return {
             "regime": state.regime_id,
-            "fidelity": state.stability_proxy,
-            "layers": [{"R": ls.R, "psi": ls.psi} for ls in state.layers],
-            "cross_alignment": state.cross_layer_alignment.tolist(),
+            "fidelity": fidelity,
+            "layers": [{"R": ls.R, "psi": ls.psi} for ls in layers],
+            "cross_alignment": cross_layer_alignment.tolist(),
         }
 
     def import_knm(self, knm_array: FloatArray) -> CouplingState:

@@ -165,6 +165,12 @@ def _validate_positive_int(value: object, *, name: str) -> int:
     return int(value)
 
 
+def _validate_nonnegative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
+    return int(value)
+
+
 def _validate_positive_float(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
@@ -198,8 +204,13 @@ def _validate_state_array(
     name: str,
     shape: tuple[int, ...],
 ) -> FloatArray:
+    arr = value if isinstance(value, np.ndarray) else np.asarray(value)
+    if arr.dtype == np.bool_ or not (
+        np.issubdtype(arr.dtype, np.integer) or np.issubdtype(arr.dtype, np.floating)
+    ):
+        raise ValueError(f"{name} must contain finite reals, got {arr.dtype}")
     try:
-        arr = np.asarray(value, dtype=np.float64)
+        arr = arr.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite float array") from exc
     if arr.shape != shape:
@@ -207,6 +218,15 @@ def _validate_state_array(
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(arr, dtype=np.float64)
+
+
+def _validate_backend_result(
+    value: object,
+    *,
+    name: str,
+    n: int,
+) -> FloatArray:
+    return _validate_state_array(value, name=name, shape=(n,))
 
 
 def _python_run(
@@ -311,18 +331,56 @@ class SimplicialEngine:
     ) -> FloatArray:
         """Integrate pairwise-plus-simplicial Kuramoto dynamics."""
 
-        n_steps = _validate_positive_int(n_steps, name="n_steps")
+        n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
         knm64 = _validate_state_array(knm, name="knm", shape=(self._n, self._n))
         alpha64 = _validate_state_array(alpha, name="alpha", shape=(self._n, self._n))
         zeta = _validate_finite_float(zeta, name="zeta")
         psi = _validate_finite_float(psi, name="psi")
+        if n_steps == 0:
+            return np.asarray(phases64, dtype=np.float64).copy()
         knm_flat = knm64.ravel()
         alpha_flat = alpha64.ravel()
         backend_fn = _dispatch()
         if backend_fn is not None:
-            return backend_fn(
+            try:
+                backend_out = backend_fn(
+                    phases64,
+                    omegas64,
+                    knm_flat,
+                    alpha_flat,
+                    self._n,
+                    zeta,
+                    psi,
+                    float(self._sigma2),
+                    float(self._dt),
+                    int(n_steps),
+                )
+            except Exception:
+                return _validate_backend_result(
+                    _python_run(
+                        phases64,
+                        omegas64,
+                        knm_flat,
+                        alpha_flat,
+                        self._n,
+                        zeta,
+                        psi,
+                        float(self._sigma2),
+                        float(self._dt),
+                        int(n_steps),
+                    ),
+                    name="backend output",
+                    n=self._n,
+                )
+            return _validate_backend_result(
+                backend_out,
+                name="backend output",
+                n=self._n,
+            )
+        return _validate_backend_result(
+            _python_run(
                 phases64,
                 omegas64,
                 knm_flat,
@@ -333,18 +391,9 @@ class SimplicialEngine:
                 float(self._sigma2),
                 float(self._dt),
                 int(n_steps),
-            )
-        return _python_run(
-            phases64,
-            omegas64,
-            knm_flat,
-            alpha_flat,
-            self._n,
-            zeta,
-            psi,
-            float(self._sigma2),
-            float(self._dt),
-            int(n_steps),
+            ),
+            name="backend output",
+            n=self._n,
         )
 
     def order_parameter(self, phases: FloatArray) -> float:
