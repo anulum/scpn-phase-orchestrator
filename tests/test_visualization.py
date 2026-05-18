@@ -95,6 +95,31 @@ class TestCouplingHeatmap:
         assert data["min"] == 0.0
         assert data["max"] == 1.0
 
+    @pytest.mark.parametrize(
+        "knm",
+        [
+            np.array([[0.0, float("nan")], [0.0, 0.0]]),
+            np.array([[0.0, float("inf")], [0.0, 0.0]]),
+            np.array([[True, False], [False, True]]),
+            np.array([[1.0 + 0.0j, 0.0], [0.0, 0.0]]),
+            np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object),
+        ],
+    )
+    def test_rejects_invalid_coupling_matrix(self, knm: object):
+        with pytest.raises(ValueError, match="knm must be finite"):
+            coupling_heatmap_json(knm)
+
+    @pytest.mark.parametrize(
+        "knm",
+        [
+            np.array([0.0, 1.0]),
+            np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 1.0]]),
+        ],
+    )
+    def test_rejects_non_square_coupling_matrix(self, knm: object):
+        with pytest.raises(ValueError, match="knm must be a square matrix"):
+            coupling_heatmap_json(knm)
+
 
 class TestTorusPoints:
     def test_valid_json(self):

@@ -88,6 +88,7 @@ def coupling_heatmap_json(
 
     Returns JSON with {labels: [...], matrix: [[...]]} for rendering.
     """
+    knm = _validate_coupling_matrix(knm, name="knm")
     n = knm.shape[0]
     if layer_names is None:
         layer_names = [f"L{i}" for i in range(n)]
