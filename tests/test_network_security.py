@@ -99,6 +99,14 @@ def test_rate_limiter_resets_on_new_window() -> None:
     assert limiter.allow("client-a", now=60.0) is True
 
 
+@pytest.mark.parametrize("now", [True, float("nan"), float("inf"), "10"])
+def test_rate_limiter_rejects_malformed_timestamp(now: object) -> None:
+    limiter = FixedWindowRateLimiter(limit_per_minute=1)
+
+    with pytest.raises(ValueError, match="now"):
+        limiter.allow("client-a", now=cast(float, now))
+
+
 def test_rate_limiter_rejects_non_positive_limit() -> None:
     with pytest.raises(ValueError, match=">= 1"):
         FixedWindowRateLimiter(limit_per_minute=0)

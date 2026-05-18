@@ -11,6 +11,8 @@ from __future__ import annotations
 import os
 import threading
 import time
+from math import isfinite
+from numbers import Real
 
 __all__ = ["FixedWindowRateLimiter", "env_int", "is_production_mode"]
 
@@ -53,7 +55,16 @@ class FixedWindowRateLimiter:
 
     def allow(self, identity: str, now: float | None = None) -> bool:
         """Return True if *identity* has capacity in the current minute."""
-        timestamp = time.time() if now is None else now
+        if now is None:
+            timestamp = time.time()
+        else:
+            if (
+                not isinstance(now, Real)
+                or isinstance(now, bool)
+                or not isfinite(float(now))
+            ):
+                raise ValueError("now must be a finite real timestamp")
+            timestamp = float(now)
         window = int(timestamp // 60)
         key = identity or "anonymous"
         with self._lock:
