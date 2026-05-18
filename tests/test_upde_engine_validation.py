@@ -35,6 +35,20 @@ class TestUPDEEngineValidation:
         with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
             UPDEEngine(n_oscillators=n_oscillators, dt=0.01)
 
+    def test_compute_order_parameter_rejects_phase_shape_mismatch(self) -> None:
+        engine = UPDEEngine(n_oscillators=4, dt=0.01)
+
+        with pytest.raises(ValueError, match="phases"):
+            engine.compute_order_parameter(np.zeros(5, dtype=np.float64))
+
+    def test_compute_order_parameter_rejects_non_finite_phases(self) -> None:
+        engine = UPDEEngine(n_oscillators=4, dt=0.01)
+        phases = np.zeros(4, dtype=np.float64)
+        phases[0] = np.nan
+
+        with pytest.raises(ValueError, match="phases"):
+            engine.compute_order_parameter(phases)
+
     @pytest.mark.parametrize(
         "dt",
         [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"],

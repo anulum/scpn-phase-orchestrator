@@ -267,6 +267,10 @@ class UPDEEngine:
         """Kuramoto order parameter: R = |<exp(i*theta)>|, psi = arg(...)."""
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
+        if phases.shape != (self._n,):
+            raise ValueError(f"phases.shape={phases.shape}, expected {(self._n,)}")
+        if not np.all(np.isfinite(phases)):
+            raise ValueError("phases contains NaN/Inf")
         return compute_order_parameter(phases)
 
     def _validate_inputs(
