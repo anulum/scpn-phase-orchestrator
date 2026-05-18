@@ -27,6 +27,22 @@ except ImportError:
 __all__ = ["VisualizerStreamer"]
 
 
+def _validate_host(host: str) -> str:
+    if not isinstance(host, str) or not host:
+        raise ValueError("host must be a non-empty string")
+    if any(ord(char) < 32 for char in host):
+        raise ValueError("host must not contain control characters")
+    return host
+
+
+def _validate_port(port: int) -> int:
+    if not isinstance(port, int) or isinstance(port, bool):
+        raise ValueError("port must be an integer in [1, 65535]")
+    if port < 1 or port > 65535:
+        raise ValueError("port must be an integer in [1, 65535]")
+    return port
+
+
 class VisualizerStreamer:
     """Real-time Manifold Streamer for WebXR / Three.js visualization.
 
@@ -36,8 +52,8 @@ class VisualizerStreamer:
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 8765):
-        self.host = host
-        self.port = port
+        self.host = _validate_host(host)
+        self.port = _validate_port(port)
         self._loop: asyncio.AbstractEventLoop | None = None
         self._server: Any = None
         self._clients: set[Any] = set()

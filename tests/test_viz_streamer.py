@@ -41,6 +41,20 @@ def test_default_host_and_port():
     assert streamer.port == 8765
 
 
+@pytest.mark.parametrize("host", ["", "bad\nhost", object()])
+def test_constructor_rejects_invalid_host(host):
+    """Host validation must fail before an invalid bind reaches a server thread."""
+    with pytest.raises(ValueError, match="host"):
+        VisualizerStreamer(host=host)
+
+
+@pytest.mark.parametrize("port", [0, -1, 65536, True, 1.5, "8765"])
+def test_constructor_rejects_invalid_port(port):
+    """Port validation must reject malformed values before WebSocket binding."""
+    with pytest.raises(ValueError, match="port"):
+        VisualizerStreamer(port=port)
+
+
 def test_json_safe_passes_through_primitives():
     """Native Python primitives must round-trip through _json_safe unchanged."""
     streamer = VisualizerStreamer()
