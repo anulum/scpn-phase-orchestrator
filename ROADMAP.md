@@ -60,7 +60,7 @@
 - ~~Rust RegimeManager: hysteresis, EventBus, downward_streak parity with Python~~ (done)
 - ~~Rust LagModel: algorithm alignment with Python adaptive lag pipeline~~ (done)
 - ~~FFI improvements: PyStuartLandauStepper numpy array input, PyActionProjector unknown-knob warning~~ (done)
-- ~~Expand domainpack channel coverage (target: all 3 channels in 12+ packs)~~ (10/24 done)
+- Expand domainpack channel coverage (target: all 3 channels in 12+ packs): in progress; 10/24 audited, carry remaining channel-coverage work into the N-channel rollout track.
 - ~~Async test infrastructure: pytest-asyncio + httpx.AsyncClient for QueueWaves~~ (done)
 - ~~Tutorial notebooks for binding, audit replay, reporting, adapter bridges~~ (done)
 - ~~nn/ module physics validation: 194 tests across 13 phases (183 pass, 10 xfail, 1 skip), 14 findings~~ (done)
