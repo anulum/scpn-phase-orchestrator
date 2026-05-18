@@ -123,6 +123,7 @@ def test_detect_phase_lock_rejects_invalid_threshold(threshold):
         (np.ones(2, dtype=np.float64), "cross_layer_alignment"),
         (np.ones((2, 3), dtype=np.float64), "cross_layer_alignment"),
         (np.array([[1.0, np.nan], [1.0, 1.0]], dtype=np.float64), "finite"),
+        (np.array([[True, False], [False, True]]), "cross_layer_alignment"),
     ],
 )
 def test_detect_phase_lock_rejects_invalid_cross_layer_alignment(cla, match):

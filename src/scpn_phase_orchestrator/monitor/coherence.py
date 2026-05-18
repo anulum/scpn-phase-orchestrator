@@ -38,8 +38,11 @@ def _validate_plv_threshold(value: object) -> float:
 
 
 def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> np.ndarray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError("cross_layer_alignment must not contain boolean values")
     try:
-        cla = np.asarray(value, dtype=np.float64)
+        cla = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(
             "cross_layer_alignment must be convertible to a finite float matrix"
