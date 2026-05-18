@@ -152,16 +152,50 @@ class HodgeResult:
     harmonic: FloatArray
 
 
+def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
+    try:
+        phases = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
+    if phases.ndim != 1:
+        raise ValueError(f"{name} must be a finite 1-D phase vector")
+    if not np.all(np.isfinite(phases)):
+        raise ValueError(f"{name} must contain only finite values")
+    return phases
+
+
+def _validate_coupling_matrix(value: object, *, expected_n: int) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError("knm must not contain boolean values")
+    try:
+        matrix = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("knm must be a finite square matrix") from exc
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError("knm must be a finite square matrix")
+    if matrix.shape != (expected_n, expected_n):
+        raise ValueError(
+            f"knm shape {matrix.shape} does not match ({expected_n}, {expected_n})"
+        )
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("knm must contain only finite values")
+    return matrix
+
+
 def hodge_decomposition(knm: FloatArray, phases: FloatArray) -> HodgeResult:
     """Decompose coupling dynamics into gradient / curl / harmonic
     per-oscillator contributions."""
-    phases = np.asarray(phases, dtype=np.float64)
+    phases = _validate_phase_vector(phases, name="phases")
     n = int(phases.size)
     if n == 0:
         empty = np.array([], dtype=np.float64)
         return HodgeResult(gradient=empty, curl=empty, harmonic=empty)
 
-    k = np.asarray(knm, dtype=np.float64)
+    k = _validate_coupling_matrix(knm, expected_n=n)
     k_flat = np.ascontiguousarray(k.ravel())
 
     backend_fn = _dispatch()

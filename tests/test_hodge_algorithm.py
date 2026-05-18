@@ -20,6 +20,7 @@ import functools
 import math
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -97,6 +98,21 @@ class TestHodge:
         assert res.gradient.size == 0
         assert res.curl.size == 0
         assert res.harmonic.size == 0
+
+    @_python
+    @pytest.mark.parametrize(
+        ("knm", "phases", "match"),
+        [
+            (np.zeros((2, 2)), np.array([True, False]), "phases"),
+            (np.array([[True, False], [False, True]]), np.zeros(2), "knm"),
+            (np.zeros((2, 3)), np.zeros(2), "knm"),
+            (np.zeros((2, 2)), np.array([0.0, np.nan]), "phases"),
+            (np.zeros((3, 3)), np.zeros(2), "knm"),
+        ],
+    )
+    def test_rejects_invalid_inputs(self, knm, phases, match):
+        with pytest.raises(ValueError, match=match):
+            hodge_decomposition(knm, phases)
 
 
 class TestHypothesis:
