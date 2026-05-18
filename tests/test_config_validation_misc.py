@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -20,12 +22,22 @@ from scpn_phase_orchestrator.supervisor.events import EventBus
 
 
 class TestWebhookAlerterValidation:
-    def test_rejects_negative_cooldown(self) -> None:
-        with pytest.raises(ValueError, match="cooldown_seconds must be non-negative"):
-            WebhookAlerter(sinks=[], cooldown_seconds=-1.0)
+    @pytest.mark.parametrize(
+        "cooldown_seconds",
+        [-1.0, float("nan"), float("inf"), True, "300"],
+    )
+    def test_rejects_invalid_cooldown(self, cooldown_seconds: Any) -> None:
+        with pytest.raises(
+            ValueError, match="cooldown_seconds must be a finite non-negative real"
+        ):
+            WebhookAlerter(sinks=[], cooldown_seconds=cooldown_seconds)
 
     def test_accepts_zero_cooldown(self) -> None:
         WebhookAlerter(sinks=[], cooldown_seconds=0.0)
+
+    def test_normalises_integer_cooldown_to_float(self) -> None:
+        alerter = WebhookAlerter(sinks=[], cooldown_seconds=30)
+        assert alerter._cooldown == 30.0
 
 
 class TestMetricBufferValidation:

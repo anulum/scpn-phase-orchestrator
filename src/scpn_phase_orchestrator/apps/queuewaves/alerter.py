@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 import time
+from math import isfinite
+from numbers import Real
 
 from scpn_phase_orchestrator.apps.queuewaves.config import AlertSink
 from scpn_phase_orchestrator.apps.queuewaves.detector import Anomaly
@@ -28,6 +30,15 @@ _SEND_ERRORS: tuple[type[BaseException], ...] = (OSError, RuntimeError, _HTTPErr
 
 _SEVERITY_COLORS = {"critical": "#FF0000", "warning": "#FFA500"}
 _SEVERITY_EMOJI = {"critical": ":rotating_light:", "warning": ":warning:"}
+
+
+def _require_cooldown_seconds(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("cooldown_seconds must be a finite non-negative real")
+    cooldown = float(value)
+    if not isfinite(cooldown) or cooldown < 0.0:
+        raise ValueError("cooldown_seconds must be a finite non-negative real")
+    return cooldown
 
 
 def _format_slack(anomaly: Anomaly, suppressed: int = 0) -> dict:
@@ -73,12 +84,9 @@ class WebhookAlerter:
     """Posts anomaly alerts to configured webhook sinks with deduplication."""
 
     def __init__(self, sinks: list[AlertSink], cooldown_seconds: float = 300.0):
-        if cooldown_seconds < 0.0:
-            raise ValueError(
-                f"cooldown_seconds must be non-negative, got {cooldown_seconds}"
-            )
+        cooldown = _require_cooldown_seconds(cooldown_seconds)
         self._sinks = sinks
-        self._cooldown = cooldown_seconds
+        self._cooldown = cooldown
         self._last_fired: dict[str, float] = {}
         self._suppressed_count: dict[str, int] = {}
 
