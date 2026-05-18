@@ -399,6 +399,33 @@ def test_chained_verify_single_entry(tmp_path):
     assert n == 0
 
 
+def test_chained_verification_rejects_missing_required_step_arrays(tmp_path):
+    engine = UPDEEngine(2, dt=0.01)
+    re = ReplayEngine(tmp_path / "unused.jsonl")
+
+    passed, n_verified = re.verify_determinism_chained(
+        engine,
+        [
+            {
+                "step": 0,
+                "phases": [0.1, 0.2],
+                "knm": [[0.0, 0.3], [0.3, 0.0]],
+                "alpha": [[0.0, 0.0], [0.0, 0.0]],
+            },
+            {
+                "step": 1,
+                "phases": [0.2, 0.3],
+                "omegas": [1.0, 1.0],
+                "knm": [[0.0, 0.3], [0.3, 0.0]],
+                "alpha": [[0.0, 0.0], [0.0, 0.0]],
+            },
+        ],
+    )
+
+    assert not passed
+    assert n_verified == 0
+
+
 def test_cli_replay_verify_roundtrip(tmp_path):
     """CLI: run --audit -> replay --verify succeeds."""
     import yaml

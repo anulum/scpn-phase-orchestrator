@@ -34,6 +34,7 @@ __all__ = ["ReplayEngine"]
 _AUDIT_SCHEMA_VERSION = 1
 _ZERO_HASH = "0" * 64
 _ENGINE_METHODS = frozenset(("euler", "rk4", "rk45"))
+_UPDE_REPLAY_FIELDS = frozenset(("phases", "omegas", "knm", "alpha"))
 
 
 def _layer_records(step_data: dict) -> list[dict]:
@@ -85,6 +86,10 @@ def _header_amplitude_mode(header: dict) -> bool:
     if isinstance(value, bool):
         return value
     raise ValueError("audit header amplitude_mode must be a boolean")
+
+
+def _has_fields(entry: dict, fields: frozenset[str]) -> bool:
+    return all(field in entry for field in fields)
 
 
 class ReplayEngine:
@@ -162,6 +167,8 @@ class ReplayEngine:
         for i in range(len(replayable) - 1):
             curr = replayable[i]
             nxt = replayable[i + 1]
+            if not _has_fields(curr, _UPDE_REPLAY_FIELDS) or "phases" not in nxt:
+                return False, verified
             phases = np.asarray(curr["phases"])
             omegas = np.asarray(curr["omegas"])
             knm_arr = np.asarray(curr["knm"])
