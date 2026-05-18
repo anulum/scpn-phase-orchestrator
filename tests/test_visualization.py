@@ -12,6 +12,7 @@ import json
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.visualization.network import (
     coupling_heatmap_json,
@@ -94,6 +95,24 @@ class TestTorusPoints:
         phases = np.array([0.0, 1.0])
         data = json.loads(torus_points_json(phases, R_values=[0.5, 0.9]))
         assert data["points"][0]["R"] == 0.5
+
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([0.0, float("nan")]),
+            np.array([0.0, float("inf")]),
+            np.array([True, False]),
+            np.array([1.0 + 0.0j]),
+            np.array(["0.0"], dtype=object),
+        ],
+    )
+    def test_rejects_invalid_phases(self, phases: object):
+        with pytest.raises(ValueError, match="phases must be finite"):
+            torus_points_json(phases)
+
+    def test_rejects_multidimensional_phases(self):
+        with pytest.raises(ValueError, match="phases must be 1-D"):
+            torus_points_json(np.array([[0.0, 1.0]]))
 
 
 class TestPhaseWheel:

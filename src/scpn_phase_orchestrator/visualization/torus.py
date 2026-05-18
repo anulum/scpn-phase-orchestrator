@@ -19,6 +19,23 @@ __all__ = ["torus_points_json", "phase_wheel_json"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _validate_phase_array(value: object, *, name: str) -> FloatArray:
+    array = np.asarray(value)
+    dtype = array.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.number)
+    ):
+        raise ValueError(f"{name} must be finite")
+    if array.ndim != 1:
+        raise ValueError(f"{name} must be 1-D, got shape {array.shape}")
+    parsed = array.astype(np.float64, copy=False)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
 def torus_points_json(
     phases: FloatArray,
     R_values: list[float] | None = None,
@@ -33,6 +50,7 @@ def torus_points_json(
       z = r · sin(φ_i)
     where φ_i = 2π·i/N distributes oscillators around the minor circle.
     """
+    phases = _validate_phase_array(phases, name="phases")
     n = len(phases)
     if R_values is None:
         R_values = [1.0] * n
