@@ -25,6 +25,8 @@ class InformationalDriver:
     """External drive Psi_I(t) = 2*pi*cadence_hz*t (mod 2*pi)."""
 
     def __init__(self, cadence_hz: float):
+        if isinstance(cadence_hz, bool):
+            raise ValueError("cadence_hz must be finite and positive")
         try:
             parsed_cadence = float(cadence_hz)
         except (TypeError, ValueError) as exc:

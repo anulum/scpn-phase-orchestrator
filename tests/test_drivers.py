@@ -145,7 +145,7 @@ class TestInformationalDriver:
         with pytest.raises(ValueError, match="positive"):
             InformationalDriver(cadence_hz=-1.0)
 
-    @pytest.mark.parametrize("cadence_hz", [float("nan"), float("inf"), "fast"])
+    @pytest.mark.parametrize("cadence_hz", [float("nan"), float("inf"), "fast", True])
     def test_invalid_cadence_rejected(self, cadence_hz: object):
         with pytest.raises(ValueError, match="cadence_hz"):
             InformationalDriver(cadence_hz=cast(Any, cadence_hz))
