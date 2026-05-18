@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -16,6 +16,13 @@ import pytest
 from scpn_phase_orchestrator.adapters.scpn_control_bridge import SCPNControlBridge
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
+
+
+class TestInit:
+    @pytest.mark.parametrize("config", [None, [], True])
+    def test_rejects_malformed_config(self, config: object) -> None:
+        with pytest.raises(ValueError, match="scpn_config"):
+            SCPNControlBridge(cast(dict, config))
 
 
 def _make_state(n_layers: int = 3) -> UPDEState:
@@ -80,6 +87,11 @@ class TestImportKnm:
         cs = bridge.import_knm(knm_int)
         assert cs.knm.dtype == np.float64
 
+    def test_non_finite_raises(self) -> None:
+        bridge = SCPNControlBridge({})
+        with pytest.raises(ValueError, match="finite"):
+            bridge.import_knm(np.array([[0.0, np.nan], [1.0, 0.0]]))
+
 
 class TestImportOmega:
     def test_valid_positive(self) -> None:
@@ -103,6 +115,11 @@ class TestImportOmega:
         bridge = SCPNControlBridge({})
         with pytest.raises(ValueError, match="1-D"):
             bridge.import_omega(np.ones((3, 2)))
+
+    def test_non_finite_raises(self) -> None:
+        bridge = SCPNControlBridge({})
+        with pytest.raises(ValueError, match="finite"):
+            bridge.import_omega(np.array([1.0, np.inf]))
 
 
 class TestExportState:

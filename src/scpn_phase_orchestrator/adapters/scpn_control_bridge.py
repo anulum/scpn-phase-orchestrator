@@ -25,6 +25,8 @@ class SCPNControlBridge:
     """Adapter between scpn-control telemetry and phase-orchestrator types."""
 
     def __init__(self, scpn_config: dict):
+        if not isinstance(scpn_config, dict):
+            raise ValueError("scpn_config must be a dict")
         self._config = scpn_config
 
     def import_knm(self, scpn_knm: FloatArray) -> CouplingState:
@@ -32,6 +34,8 @@ class SCPNControlBridge:
         knm: FloatArray = np.asarray(scpn_knm, dtype=np.float64)
         if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
             raise ValueError(f"Knm must be square, got shape {knm.shape}")
+        if not np.all(np.isfinite(knm)):
+            raise ValueError("Knm must contain only finite values")
         n = knm.shape[0]
         return CouplingState(
             knm=knm,
@@ -44,6 +48,8 @@ class SCPNControlBridge:
         omega: FloatArray = np.asarray(scpn_omega, dtype=np.float64)
         if omega.ndim != 1:
             raise ValueError(f"omega must be 1-D, got ndim={omega.ndim}")
+        if not np.all(np.isfinite(omega)):
+            raise ValueError("omega must contain only finite values")
         if np.any(omega <= 0.0):
             raise ValueError("All natural frequencies must be positive")
         return omega
