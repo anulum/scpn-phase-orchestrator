@@ -55,6 +55,29 @@ class TestNetworkGraph:
         assert data["nodes"][0]["R"] == 0.8
 
     @pytest.mark.parametrize(
+        "r_values",
+        [
+            [0.8, float("nan")],
+            [0.8, float("inf")],
+            [True, False],
+            [1.0 + 0.0j, 0.0],
+            ["0.8", "0.9"],
+        ],
+    )
+    def test_rejects_invalid_R_values(self, r_values: object):
+        knm = np.full((2, 2), 0.5)
+        np.fill_diagonal(knm, 0.0)
+        with pytest.raises(ValueError, match="R_values must be finite"):
+            network_graph_json(knm, R_values=r_values)
+
+    @pytest.mark.parametrize("r_values", [[0.8], [0.8, 0.9, 1.0]])
+    def test_rejects_R_values_length_mismatch(self, r_values: object):
+        knm = np.full((2, 2), 0.5)
+        np.fill_diagonal(knm, 0.0)
+        with pytest.raises(ValueError, match="R_values length"):
+            network_graph_json(knm, R_values=r_values)
+
+    @pytest.mark.parametrize(
         "knm",
         [
             np.array([[0.0, float("nan")], [0.0, 0.0]]),

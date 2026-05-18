@@ -36,6 +36,32 @@ def _validate_coupling_matrix(value: object, *, name: str) -> FloatArray:
     return parsed
 
 
+def _validate_metric_values(
+    value: object,
+    *,
+    name: str,
+    expected_length: int,
+) -> FloatArray:
+    values = np.asarray(value)
+    dtype = values.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.number)
+    ):
+        raise ValueError(f"{name} must be finite")
+    if values.ndim != 1:
+        raise ValueError(f"{name} must be 1-D, got shape {values.shape}")
+    parsed = values.astype(np.float64, copy=False)
+    if len(parsed) != expected_length:
+        raise ValueError(
+            f"{name} length must match node count {expected_length}, got {len(parsed)}"
+        )
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
 def network_graph_json(
     knm: FloatArray,
     layer_names: list[str] | None = None,
@@ -52,7 +78,13 @@ def network_graph_json(
     if layer_names is None:
         layer_names = [f"L{i}" for i in range(n)]
     if R_values is None:
-        R_values = [0.0] * n
+        r_values = np.zeros(n, dtype=np.float64)
+    else:
+        r_values = _validate_metric_values(
+            R_values,
+            name="R_values",
+            expected_length=n,
+        )
 
     nodes = []
     for i in range(n):
@@ -60,7 +92,7 @@ def network_graph_json(
             {
                 "id": i,
                 "name": layer_names[i],
-                "R": round(float(R_values[i]), 4),
+                "R": round(float(r_values[i]), 4),
             }
         )
 
