@@ -20,10 +20,13 @@ from __future__ import annotations
 from numbers import Integral, Real
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["CoherenceMonitor"]
+
+FloatArray = NDArray[np.float64]
 
 
 def _validate_layer_indices(values: list[int], *, name: str) -> list[int]:
@@ -46,7 +49,7 @@ def _validate_plv_threshold(value: object) -> float:
     return threshold
 
 
-def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> np.ndarray:
+def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> FloatArray:
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError("cross_layer_alignment must not contain boolean values")

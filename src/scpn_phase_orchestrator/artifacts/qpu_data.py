@@ -29,6 +29,9 @@ from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 
+FloatArray = NDArray[np.float64]
+FloatMatrix = NDArray[np.float64]
+
 SCHEMA_VERSION = "scpn-quantum-control.qpu-data-artifact.v1"
 REAL_SOURCE_MODES = frozenset({"recorded", "replay", "curated", "derived"})
 SYNTHETIC_SOURCE_MODES = frozenset({"synthetic", "simulation", "fixture"})
@@ -55,7 +58,7 @@ _REQUIRED_FIELDS = frozenset(
 )
 
 
-def _array_sha256(array: NDArray[np.float64]) -> str:
+def _array_sha256(array: FloatArray) -> str:
     contiguous = np.ascontiguousarray(array, dtype=np.float64)
     return hashlib.sha256(contiguous.tobytes()).hexdigest()
 
@@ -65,7 +68,7 @@ def _json_sha256(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _finite_float_array(name: str, value: Any, *, ndim: int) -> NDArray[np.float64]:
+def _finite_float_array(name: str, value: Any, *, ndim: int) -> FloatArray:
     array = np.asarray(value, dtype=np.float64)
     if array.ndim != ndim:
         raise ValueError(f"{name} must be {ndim}-D, got shape {array.shape}")
@@ -77,9 +80,9 @@ def _finite_float_array(name: str, value: Any, *, ndim: int) -> NDArray[np.float
 def _hashes_with_verified_values(
     hashes: Mapping[str, str],
     *,
-    K_nm: NDArray[np.float64],
-    omega: NDArray[np.float64],
-    theta0: NDArray[np.float64] | None,
+    K_nm: FloatMatrix,
+    omega: FloatArray,
+    theta0: FloatArray | None,
 ) -> dict[str, str]:
     result = dict(hashes)
     expected = {
@@ -102,9 +105,9 @@ class QPUDataArtifact:
     domain: str
     source_name: str
     source_mode: str
-    K_nm: NDArray[np.float64]
-    omega: NDArray[np.float64]
-    theta0: NDArray[np.float64] | None = None
+    K_nm: FloatMatrix
+    omega: FloatArray
+    theta0: FloatArray | None = None
     layer_assignments: list[str] = field(default_factory=list)
     normalization: str = ""
     extraction_method: str = ""
@@ -285,11 +288,11 @@ def emit_qpu_data_artifact(
     domain: str,
     source_name: str,
     source_mode: str,
-    K_nm: NDArray[np.float64] | Sequence[Sequence[float]],
-    omega: NDArray[np.float64] | Sequence[float],
+    K_nm: FloatMatrix | Sequence[Sequence[float]],
+    omega: FloatArray | Sequence[float],
     normalization: str,
     extraction_method: str,
-    theta0: NDArray[np.float64] | Sequence[float] | None = None,
+    theta0: FloatArray | Sequence[float] | None = None,
     layer_assignments: Sequence[str] = (),
     source_timestamp: str | None = None,
     replay_id: str | None = None,
@@ -320,7 +323,7 @@ def compile_domain_to_qpu_artifact(
     source_name: str | None = None,
     replay_id: str | None = None,
     source_timestamp: str | None = None,
-    theta0: Sequence[float] | NDArray[np.float64] | None = None,
+    theta0: Sequence[float] | FloatArray | None = None,
     require_publication_safe: bool = True,
 ) -> dict[str, Any]:
     """Compile a binding spec or domainpack directory into a QPU artifact."""

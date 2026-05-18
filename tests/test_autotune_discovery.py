@@ -8,10 +8,13 @@
 
 from __future__ import annotations
 
+from typing import get_type_hints
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.autotune.discovery import (
+    TimeSeriesDiscoveryReport,
     discover_time_series_structure,
     infer_sample_rate_from_time_column,
 )
@@ -174,3 +177,15 @@ def test_infer_sample_rate_rejects_irregular_time_column() -> None:
 
     with pytest.raises(ValueError, match="regular sampling interval"):
         infer_sample_rate_from_time_column(rows, ("time", "signal"))
+
+
+def test_discovery_public_array_contracts_are_element_typed() -> None:
+    """Guard the V2 typed-array contract for discovery evidence surfaces."""
+
+    samples_hint = get_type_hints(discover_time_series_structure)["samples"]
+    assert "numpy.ndarray" in str(samples_hint)
+    assert "float64" in str(samples_hint)
+
+    report_hints = get_type_hints(TimeSeriesDiscoveryReport)
+    assert report_hints["sample_period_s"] is float
+    assert report_hints["sample_count"] is int

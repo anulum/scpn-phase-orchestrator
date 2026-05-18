@@ -28,20 +28,22 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde._ref_kernel import upde_run_python
 
+FloatArray = NDArray[np.float64]
+
 __all__ = ["ACTIVE_BACKEND", "AVAILABLE_BACKENDS", "upde_run"]
 
 
 _BACKEND_NAMES = ("rust", "webgpu", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_rust_fn() -> Callable[..., FloatArray]:
     from spo_kernel import PyUPDEStepper  # noqa: F401
 
     def _rust_run(
-        phases: NDArray[np.float64],
-        omegas: NDArray[np.float64],
-        knm: NDArray[np.float64],
-        alpha: NDArray[np.float64],
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
+        alpha: FloatArray,
         zeta: float,
         psi: float,
         dt: float,
@@ -50,7 +52,7 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
         n_substeps: int,
         atol: float,
         rtol: float,
-    ) -> NDArray[np.float64]:
+    ) -> FloatArray:
         n = int(phases.size)
         stepper = PyUPDEStepper(
             n, dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
@@ -68,10 +70,10 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
             dtype=np.float64,
         )
 
-    return cast("Callable[..., NDArray[np.float64]]", _rust_run)
+    return cast("Callable[..., FloatArray]", _rust_run)
 
 
-def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from ..experimental.accelerators.upde._engine_mojo import (
         _ensure_exe,
@@ -82,7 +84,7 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     return upde_run_mojo
 
 
-def _load_webgpu_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_webgpu_fn() -> Callable[..., FloatArray]:
     from ..experimental.accelerators.upde._engine_webgpu import (
         load_webgpu_dispatch_bridge,
     )
@@ -90,7 +92,7 @@ def _load_webgpu_fn() -> Callable[..., NDArray[np.float64]]:
     return load_webgpu_dispatch_bridge()
 
 
-def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
 
@@ -101,7 +103,7 @@ def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     return upde_run_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from ..experimental.accelerators.upde._engine_go import (
         _load_lib,
@@ -112,7 +114,7 @@ def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     return upde_run_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray[np.float64]]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
     "rust": _load_rust_fn,
     "webgpu": _load_webgpu_fn,
     "mojo": _load_mojo_fn,
@@ -136,17 +138,17 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray[np.float64]] | None:
+def _dispatch() -> Callable[..., FloatArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
 
 
 def upde_run(
-    phases: NDArray[np.float64],
-    omegas: NDArray[np.float64],
-    knm: NDArray[np.float64],
-    alpha: NDArray[np.float64],
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
@@ -155,7 +157,7 @@ def upde_run(
     n_substeps: int = 1,
     atol: float = 1e-6,
     rtol: float = 1e-3,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Stateless batched UPDE integrator.
 
     Dispatches to the first available backend per the SPO chain

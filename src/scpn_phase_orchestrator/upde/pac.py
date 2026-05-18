@@ -34,6 +34,8 @@ from typing import cast
 import numpy as np
 from numpy.typing import NDArray
 
+FloatArray = NDArray[np.float64]
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -115,7 +117,7 @@ def _validate_n_bins(n_bins: object) -> int:
     return bins
 
 
-def _validate_signal(name: str, value: NDArray[np.float64]) -> NDArray[np.float64]:
+def _validate_signal(name: str, value: FloatArray) -> FloatArray:
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -132,8 +134,8 @@ def _validate_signal(name: str, value: NDArray[np.float64]) -> NDArray[np.float6
 
 def _validate_history(
     name: str,
-    value: NDArray[np.float64],
-) -> NDArray[np.float64]:
+    value: FloatArray,
+) -> FloatArray:
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -167,8 +169,8 @@ def _load_backend(name: str) -> dict[str, object]:
 
 
 def _modulation_index_python(
-    theta_low: NDArray[np.float64],
-    amp_high: NDArray[np.float64],
+    theta_low: FloatArray,
+    amp_high: FloatArray,
     n_bins: int,
 ) -> float:
     n = min(theta_low.size, amp_high.size)
@@ -220,7 +222,7 @@ def _modulation_index_probe_seconds(name: str) -> float:
             _modulation_index_python(theta, amp, 18)
         else:
             fn = cast(
-                "Callable[[NDArray[np.float64], NDArray[np.float64], int], float]",
+                "Callable[[FloatArray, FloatArray, int], float]",
                 _load_backend(name)["modulation_index"],
             )
             fn(theta, amp, 18)
@@ -242,7 +244,7 @@ def _dispatch(fn_name: str) -> object:
 
 
 def modulation_index(
-    theta_low: NDArray[np.float64], amp_high: NDArray[np.float64], n_bins: int = 18
+    theta_low: FloatArray, amp_high: FloatArray, n_bins: int = 18
 ) -> float:
     """Phase-amplitude coupling via Tort et al. 2010, J. Neurophysiol.
 
@@ -261,7 +263,7 @@ def modulation_index(
     backend_fn = _dispatch("modulation_index")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray[np.float64], NDArray[np.float64], int], float]",
+            "Callable[[FloatArray, FloatArray, int], float]",
             backend_fn,
         )
         return float(
@@ -276,10 +278,10 @@ def modulation_index(
 
 
 def pac_matrix(
-    phases_history: NDArray[np.float64],
-    amplitudes_history: NDArray[np.float64],
+    phases_history: FloatArray,
+    amplitudes_history: FloatArray,
     n_bins: int = 18,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """``(N, N)`` PAC matrix. Entry ``[i, j]`` is
     ``MI(phase_i, amplitude_j)`` over the ``T`` timesteps.
 
@@ -298,10 +300,7 @@ def pac_matrix(
     backend_fn = _dispatch("pac_matrix")
     if backend_fn is not None:
         fn = cast(
-            (
-                "Callable[[NDArray[np.float64], NDArray[np.float64], int, int, int],"
-                " NDArray[np.float64]]"
-            ),
+            ("Callable[[FloatArray, FloatArray, int, int, int], FloatArray]"),
             backend_fn,
         )
         flat = fn(

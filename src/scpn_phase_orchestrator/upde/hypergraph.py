@@ -53,6 +53,10 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+FloatArray = NDArray[np.float64]
+IntArray = NDArray[np.int64]
+
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -83,23 +87,23 @@ class Hyperedge:
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_rust_fn() -> Callable[..., FloatArray]:
     from spo_kernel import hypergraph_run_rust
 
     def _rust(
-        phases: NDArray[np.float64],
-        omegas: NDArray[np.float64],
+        phases: FloatArray,
+        omegas: FloatArray,
         n: int,
-        edge_nodes: NDArray[np.int64],
-        edge_offsets: NDArray[np.int64],
-        edge_strengths: NDArray[np.float64],
-        knm_flat: NDArray[np.float64],
-        alpha_flat: NDArray[np.float64],
+        edge_nodes: IntArray,
+        edge_offsets: IntArray,
+        edge_strengths: FloatArray,
+        knm_flat: FloatArray,
+        alpha_flat: FloatArray,
         zeta: float,
         psi: float,
         dt: float,
         n_steps: int,
-    ) -> NDArray[np.float64]:
+    ) -> FloatArray:
         return np.asarray(
             hypergraph_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -121,7 +125,7 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
     return _rust
 
 
-def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from ..experimental.accelerators.upde._hypergraph_mojo import (
         _ensure_exe,
@@ -132,7 +136,7 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     return hypergraph_run_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
 
@@ -143,7 +147,7 @@ def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     return hypergraph_run_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from ..experimental.accelerators.upde._hypergraph_go import (
         _load_lib,
@@ -154,7 +158,7 @@ def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     return hypergraph_run_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray[np.float64]]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -177,7 +181,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray[np.float64]] | None:
+def _dispatch() -> Callable[..., FloatArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -212,7 +216,7 @@ def _validate_state_array(
     *,
     name: str,
     shape: tuple[int, ...],
-) -> NDArray[np.float64]:
+) -> FloatArray:
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -229,7 +233,7 @@ def _validate_optional_state_array(
     *,
     name: str,
     shape: tuple[int, ...],
-) -> NDArray[np.float64]:
+) -> FloatArray:
     if value is None:
         return np.empty(0, dtype=np.float64)
     return _validate_state_array(value, name=name, shape=shape).ravel()
@@ -259,19 +263,19 @@ def _validate_hyperedge(edge: Hyperedge, *, n_oscillators: int) -> Hyperedge:
 
 
 def _python_run(
-    phases: NDArray[np.float64],
-    omegas: NDArray[np.float64],
+    phases: FloatArray,
+    omegas: FloatArray,
     n: int,
-    edge_nodes: NDArray[np.int64],
-    edge_offsets: NDArray[np.int64],
-    edge_strengths: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    edge_nodes: IntArray,
+    edge_offsets: IntArray,
+    edge_strengths: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     zeta: float,
     psi: float,
     dt: float,
     n_steps: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Python reference aligned to the Rust kernel.
 
     Uses the ``sin(θ_j − θ_i) = s_j·c_i − c_j·s_i`` expansion for
@@ -377,7 +381,7 @@ class HypergraphEngine:
 
     def _encode_edges(
         self,
-    ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
+    ) -> tuple[IntArray, IntArray, FloatArray]:
         edge_nodes_list: list[int] = []
         edge_offsets_list: list[int] = []
         edge_strengths_list: list[float] = []
@@ -393,13 +397,13 @@ class HypergraphEngine:
 
     def step(
         self,
-        phases: NDArray[np.float64],
-        omegas: NDArray[np.float64],
-        pairwise_knm: NDArray[np.float64] | None = None,
-        alpha: NDArray[np.float64] | None = None,
+        phases: FloatArray,
+        omegas: FloatArray,
+        pairwise_knm: FloatArray | None = None,
+        alpha: FloatArray | None = None,
         zeta: float = 0.0,
         psi: float = 0.0,
-    ) -> NDArray[np.float64]:
+    ) -> FloatArray:
         """One explicit-Euler step."""
         return self.run(
             phases,
@@ -413,14 +417,14 @@ class HypergraphEngine:
 
     def run(
         self,
-        phases: NDArray[np.float64],
-        omegas: NDArray[np.float64],
+        phases: FloatArray,
+        omegas: FloatArray,
         n_steps: int,
-        pairwise_knm: NDArray[np.float64] | None = None,
-        alpha: NDArray[np.float64] | None = None,
+        pairwise_knm: FloatArray | None = None,
+        alpha: FloatArray | None = None,
         zeta: float = 0.0,
         psi: float = 0.0,
-    ) -> NDArray[np.float64]:
+    ) -> FloatArray:
         """Integrate ``n_steps`` Euler steps through the fastest
         available backend; return final phases."""
         n_steps = _validate_positive_int(n_steps, name="n_steps")
@@ -470,7 +474,7 @@ class HypergraphEngine:
             int(n_steps),
         )
 
-    def order_parameter(self, phases: NDArray[np.float64]) -> float:
+    def order_parameter(self, phases: FloatArray) -> float:
         """Standard Kuramoto R = |<exp(iθ)>|."""
         phases64 = _validate_state_array(
             phases,

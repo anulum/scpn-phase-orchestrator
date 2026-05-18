@@ -49,6 +49,10 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+FloatArray = NDArray[np.float64]
+IntArray = NDArray[np.int64]
+
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -59,21 +63,21 @@ __all__ = [
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 
-def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_rust_fn() -> Callable[..., FloatArray]:
     from spo_kernel import simplicial_run_rust
 
     def _rust(
-        phases: NDArray[np.float64],
-        omegas: NDArray[np.float64],
-        knm_flat: NDArray[np.float64],
-        alpha_flat: NDArray[np.float64],
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm_flat: FloatArray,
+        alpha_flat: FloatArray,
         n: int,
         zeta: float,
         psi: float,
         sigma2: float,
         dt: float,
         n_steps: int,
-    ) -> NDArray[np.float64]:
+    ) -> FloatArray:
         return np.asarray(
             simplicial_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
@@ -93,7 +97,7 @@ def _load_rust_fn() -> Callable[..., NDArray[np.float64]]:
     return _rust
 
 
-def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_mojo_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from ..experimental.accelerators.upde._simplicial_mojo import (
         _ensure_exe,
@@ -104,7 +108,7 @@ def _load_mojo_fn() -> Callable[..., NDArray[np.float64]]:
     return simplicial_run_mojo
 
 
-def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_julia_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     import juliacall  # noqa: F401
 
@@ -115,7 +119,7 @@ def _load_julia_fn() -> Callable[..., NDArray[np.float64]]:
     return simplicial_run_julia
 
 
-def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
+def _load_go_fn() -> Callable[..., FloatArray]:
     # pragma: no cover — toolchain
     from ..experimental.accelerators.upde._simplicial_go import (
         _load_lib,
@@ -126,7 +130,7 @@ def _load_go_fn() -> Callable[..., NDArray[np.float64]]:
     return simplicial_run_go
 
 
-_LOADERS: dict[str, Callable[[], Callable[..., NDArray[np.float64]]]] = {
+_LOADERS: dict[str, Callable[[], Callable[..., FloatArray]]] = {
     "rust": _load_rust_fn,
     "mojo": _load_mojo_fn,
     "julia": _load_julia_fn,
@@ -149,7 +153,7 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., NDArray[np.float64]] | None:
+def _dispatch() -> Callable[..., FloatArray] | None:
     if ACTIVE_BACKEND == "python":
         return None
     return _LOADERS[ACTIVE_BACKEND]()
@@ -193,7 +197,7 @@ def _validate_state_array(
     *,
     name: str,
     shape: tuple[int, ...],
-) -> NDArray[np.float64]:
+) -> FloatArray:
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -206,17 +210,17 @@ def _validate_state_array(
 
 
 def _python_run(
-    phases: NDArray[np.float64],
-    omegas: NDArray[np.float64],
-    knm_flat: NDArray[np.float64],
-    alpha_flat: NDArray[np.float64],
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm_flat: FloatArray,
+    alpha_flat: FloatArray,
     n: int,
     zeta: float,
     psi: float,
     sigma2: float,
     dt: float,
     n_steps: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     """Python reference aligned to the Rust kernel exactly.
 
     Uses the sincos expansion for the pairwise alpha-zero fast
@@ -284,27 +288,27 @@ class SimplicialEngine:
 
     def step(
         self,
-        phases: NDArray[np.float64],
-        omegas: NDArray[np.float64],
-        knm: NDArray[np.float64],
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
+        alpha: FloatArray,
+    ) -> FloatArray:
         """Advance one pairwise-plus-simplicial Kuramoto timestep."""
 
         return self.run(phases, omegas, knm, zeta, psi, alpha, n_steps=1)
 
     def run(
         self,
-        phases: NDArray[np.float64],
-        omegas: NDArray[np.float64],
-        knm: NDArray[np.float64],
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
         zeta: float,
         psi: float,
-        alpha: NDArray[np.float64],
+        alpha: FloatArray,
         n_steps: int,
-    ) -> NDArray[np.float64]:
+    ) -> FloatArray:
         """Integrate pairwise-plus-simplicial Kuramoto dynamics."""
 
         n_steps = _validate_positive_int(n_steps, name="n_steps")
@@ -343,7 +347,7 @@ class SimplicialEngine:
             int(n_steps),
         )
 
-    def order_parameter(self, phases: NDArray[np.float64]) -> float:
+    def order_parameter(self, phases: FloatArray) -> float:
         """Standard Kuramoto R = |<exp(iθ)>|."""
         phases64 = _validate_state_array(
             phases,

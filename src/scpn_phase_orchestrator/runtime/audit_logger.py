@@ -37,6 +37,8 @@ from scpn_phase_orchestrator.upde.metrics import UPDEState
 
 __all__ = ["AuditLogger"]
 
+FloatArray = NDArray[np.float64]
+
 _AUDIT_SCHEMA_VERSION = 1
 _DEFAULT_STREAM_ID = "spo-audit-jsonl"
 _ZERO_HASH = "0" * 64
@@ -194,15 +196,15 @@ class AuditLogger:
         upde_state: UPDEState,
         actions: list[ControlAction],
         *,
-        phases: NDArray[np.floating] | None = None,
-        omegas: NDArray[np.floating] | None = None,
-        knm: NDArray[np.floating] | None = None,
-        alpha: NDArray[np.floating] | None = None,
+        phases: FloatArray | None = None,
+        omegas: FloatArray | None = None,
+        knm: FloatArray | None = None,
+        alpha: FloatArray | None = None,
         zeta: float = 0.0,
         psi_drive: float = 0.0,
-        amplitudes: NDArray[np.floating] | None = None,
-        mu: NDArray[np.floating] | None = None,
-        knm_r: NDArray[np.floating] | None = None,
+        amplitudes: FloatArray | None = None,
+        mu: FloatArray | None = None,
+        knm_r: FloatArray | None = None,
         epsilon: float | None = None,
         channel_runtime: dict[str, object] | None = None,
     ) -> None:

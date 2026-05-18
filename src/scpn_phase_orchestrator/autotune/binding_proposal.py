@@ -29,6 +29,7 @@ from typing import Any
 
 import numpy as np
 import yaml
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.autotune.discovery import (
     discover_time_series_structure,
@@ -52,6 +53,7 @@ __all__ = [
 
 
 _CHANNEL_ORDER = ("P", "I", "S")
+FloatArray = NDArray[np.float64]
 
 
 class _EventLogSourceSummary(ImportedSourceSummary):
@@ -281,7 +283,7 @@ def propose_binding_from_graph(
 def _numeric_signal_table(
     rows: Sequence[Mapping[str, str]],
     columns: Sequence[str],
-) -> np.ndarray:
+) -> FloatArray:
     values: list[list[float]] = []
     for row_index, row in enumerate(rows):
         row_values: list[float] = []
@@ -364,7 +366,7 @@ def _families_for_time_series(
     *,
     channels: Sequence[str],
     inferred_channels: Sequence[str],
-    signal_table: np.ndarray,
+    signal_table: FloatArray,
     sample_rate_hz: float,
     sample_period_s: float,
 ) -> tuple[tuple[str, str, str, dict[str, JsonValue]], ...]:
@@ -489,7 +491,7 @@ def _edge_sequence(
 
 
 def _accumulate_directed_edges(
-    matrix: np.ndarray,
+    matrix: FloatArray,
     *,
     column_index: Mapping[str, int],
     edges: Sequence[Mapping[str, JsonValue]],
@@ -512,7 +514,7 @@ def _accumulate_directed_edges(
 
 
 def _accumulate_correlation_edges(
-    matrix: np.ndarray,
+    matrix: FloatArray,
     *,
     column_index: Mapping[str, int],
     edges: Sequence[Mapping[str, JsonValue]],

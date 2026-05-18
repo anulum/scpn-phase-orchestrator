@@ -13,9 +13,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
-from typing import cast
+from typing import TypeAlias, cast
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 from scpn_phase_orchestrator.studio.workflow import JsonValue
@@ -31,6 +32,9 @@ _TIME_COLUMNS = frozenset({"time", "timestamp", "t"})
 _SINDY_LIBRARY = "affine_state_derivative"
 _PHASE_SINDY_LIBRARY = "kuramoto_sine_phase_differences"
 _PHASE_COLUMN_MARKERS = ("phase", "theta", "angle", "phi")
+
+FloatArray: TypeAlias = NDArray[np.float64]
+BoolArray: TypeAlias = NDArray[np.bool_]
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,7 +161,7 @@ def infer_sample_rate_from_time_column(
 
 
 def discover_time_series_structure(
-    samples: np.ndarray,
+    samples: FloatArray,
     *,
     columns: Sequence[str],
     sample_period_s: float,
@@ -231,7 +235,7 @@ def _normalised_column_name(column: str) -> str:
 
 
 def _correlation_graph(
-    table: np.ndarray,
+    table: FloatArray,
     columns: tuple[str, ...],
     *,
     threshold: float,
@@ -261,7 +265,7 @@ def _correlation_graph(
     }
 
 
-def _pearson(left: np.ndarray, right: np.ndarray) -> float:
+def _pearson(left: FloatArray, right: FloatArray) -> float:
     left_centered = left - float(np.mean(left))
     right_centered = right - float(np.mean(right))
     denominator = float(np.linalg.norm(left_centered) * np.linalg.norm(right_centered))
@@ -315,7 +319,7 @@ def _correlation_clusters(
 
 
 def _sparse_derivative_library(
-    table: np.ndarray,
+    table: FloatArray,
     columns: tuple[str, ...],
     *,
     sample_period_s: float,
@@ -358,7 +362,7 @@ def _sparse_derivative_library(
 
 
 def _phase_sindy_library(
-    table: np.ndarray,
+    table: FloatArray,
     columns: tuple[str, ...],
     *,
     sample_period_s: float,
@@ -430,7 +434,7 @@ def _skipped_phase_sindy(reason: str, threshold: float) -> dict[str, JsonValue]:
     }
 
 
-def _is_phase_like_table(table: np.ndarray, columns: tuple[str, ...]) -> bool:
+def _is_phase_like_table(table: FloatArray, columns: tuple[str, ...]) -> bool:
     if any(
         marker in column.strip().lower()
         for column in columns
@@ -444,7 +448,7 @@ def _is_phase_like_table(table: np.ndarray, columns: tuple[str, ...]) -> bool:
 def _phase_sindy_edges(
     columns: tuple[str, ...],
     *,
-    coefficients: Sequence[np.ndarray],
+    coefficients: Sequence[FloatArray],
     threshold: float,
 ) -> list[JsonValue]:
     edges: list[JsonValue] = []
@@ -476,10 +480,10 @@ def _phase_sindy_edges(
 
 
 def _phase_sindy_predictions(
-    table: np.ndarray,
+    table: FloatArray,
     *,
-    coefficients: Sequence[np.ndarray],
-) -> np.ndarray:
+    coefficients: Sequence[FloatArray],
+) -> FloatArray:
     source = table[:-1, :]
     predictions = np.zeros_like(source, dtype=np.float64)
     for target_index, coefficient in enumerate(coefficients):
@@ -497,8 +501,8 @@ def _phase_sindy_predictions(
 
 def _regression_quality(
     *,
-    observations: np.ndarray,
-    predictions: np.ndarray,
+    observations: FloatArray,
+    predictions: FloatArray,
     active_terms: int,
 ) -> dict[str, float]:
     residual = np.asarray(observations, dtype=np.float64) - np.asarray(
@@ -555,7 +559,7 @@ def _sindy_model_selection(
 
 
 def _lagged_learned_graph(
-    table: np.ndarray,
+    table: FloatArray,
     columns: tuple[str, ...],
     *,
     threshold: float,
@@ -569,7 +573,10 @@ def _lagged_learned_graph(
     predictors = features[:-1, :]
     targets = features[1:, :]
     library = np.column_stack([np.ones(predictors.shape[0]), predictors])
-    coefficients, *_ = np.linalg.lstsq(library, targets, rcond=None)
+    coefficients = cast(
+        FloatArray,
+        np.linalg.lstsq(library, targets, rcond=None)[0],
+    )
     predictions = library @ coefficients
     active_mask = np.abs(coefficients) >= threshold
     active_terms = int(np.count_nonzero(active_mask))
@@ -620,7 +627,7 @@ def _skipped_learned_graph(reason: str, threshold: float) -> dict[str, JsonValue
 def _lagged_graph_edges(
     columns: tuple[str, ...],
     *,
-    coefficients: np.ndarray,
+    coefficients: FloatArray,
     threshold: float,
 ) -> list[JsonValue]:
     edges: list[JsonValue] = []
@@ -666,18 +673,18 @@ def _selection_candidate(
     }
 
 
-def _standardise(table: np.ndarray) -> np.ndarray:
+def _standardise(table: FloatArray) -> FloatArray:
     centre = np.mean(table, axis=0)
     scale = np.std(table, axis=0)
     scale = np.where(scale > 0.0, scale, 1.0)
-    return cast(np.ndarray, (table - centre) / scale)
+    return cast(FloatArray, (table - centre) / scale)
 
 
 def _equation_for_target(
     *,
     target: str,
-    coefficients: np.ndarray,
-    active: np.ndarray,
+    coefficients: FloatArray,
+    active: BoolArray,
     term_names: Sequence[str],
 ) -> str:
     terms: list[str] = []

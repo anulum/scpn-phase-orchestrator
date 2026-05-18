@@ -34,6 +34,11 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 
+FloatArray = NDArray[np.float64]
+IntArray = NDArray[np.int64]
+BoolArray = NDArray[np.bool_]
+
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -138,7 +143,7 @@ def _unit_interval(value: float) -> float:
     return float(np.clip(value, 0.0, 1.0))
 
 
-def _validate_phases(name: str, phases: NDArray[np.float64]) -> NDArray[np.float64]:
+def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
     raw = np.asarray(phases)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -151,7 +156,7 @@ def _validate_phases(name: str, phases: NDArray[np.float64]) -> NDArray[np.float
     return values
 
 
-def _python_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
+def _python_order_parameter(phases: FloatArray) -> tuple[float, float]:
     with np.errstate(invalid="ignore"):
         z = np.mean(np.exp(1j * phases))
     return _unit_interval(float(np.abs(z))), float(np.angle(z) % TWO_PI)
@@ -178,7 +183,7 @@ def _order_parameter_probe_seconds(name: str) -> float:
             _python_order_parameter(phases)
         else:
             fn = cast(
-                "Callable[[NDArray[np.float64]], tuple[float, float]]",
+                "Callable[[FloatArray], tuple[float, float]]",
                 _load_backend(name)["order_parameter"],
             )
             fn(phases)
@@ -205,7 +210,7 @@ def _dispatch(fn_name: str) -> object:
 # ---------------------------------------------------------------------
 
 
-def compute_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
+def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
     """Kuramoto global order parameter ``(R, ψ)``.
 
     ``R = |mean(exp(i · θ))|``;
@@ -216,7 +221,7 @@ def compute_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
         return (0.0, 0.0)
     backend_fn = _dispatch("order_parameter")
     if backend_fn is not None:
-        fn = cast("Callable[[NDArray[np.float64]], tuple[float, float]]", backend_fn)
+        fn = cast("Callable[[FloatArray], tuple[float, float]]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         r, psi = fn(p)
         return _unit_interval(float(r)), float(psi)
@@ -224,7 +229,7 @@ def compute_order_parameter(phases: NDArray[np.float64]) -> tuple[float, float]:
     return _python_order_parameter(phases)
 
 
-def compute_plv(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) -> float:
+def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
     """Phase-locking value between two equal-length phase series.
 
     PLV = ``|mean(exp(i · (φ_a − φ_b)))|`` over samples.
@@ -240,7 +245,7 @@ def compute_plv(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) ->
     backend_fn = _dispatch("plv")
     if backend_fn is not None:
         fn = cast(
-            "Callable[[NDArray[np.float64], NDArray[np.float64]], float]",
+            "Callable[[FloatArray, FloatArray], float]",
             backend_fn,
         )
         a = np.ascontiguousarray(phases_a.ravel(), dtype=np.float64)
@@ -251,7 +256,7 @@ def compute_plv(phases_a: NDArray[np.float64], phases_b: NDArray[np.float64]) ->
 
 
 def compute_layer_coherence(
-    phases: NDArray[np.float64], layer_mask: NDArray[np.int64]
+    phases: FloatArray, layer_mask: BoolArray | IntArray
 ) -> float:
     """Order parameter R for the subset of oscillators selected by
     ``layer_mask`` (boolean mask *or* integer index array)."""
@@ -267,9 +272,7 @@ def compute_layer_coherence(
         return 0.0
     backend_fn = _dispatch("layer_coherence")
     if backend_fn is not None:
-        fn = cast(
-            "Callable[[NDArray[np.float64], NDArray[np.int64]], float]", backend_fn
-        )
+        fn = cast("Callable[[FloatArray, IntArray], float]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
         return _unit_interval(float(fn(p, indices)))
 

@@ -35,6 +35,10 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
+BoolArray = NDArray[np.bool_]
+FloatArray = NDArray[np.float64]
+IntArray = NDArray[np.int32]
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -48,15 +52,13 @@ __all__ = [
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
-_MarketFn = Callable[..., NDArray[np.float64]]
+_MarketFn = Callable[..., FloatArray]
 
 
 def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
     from spo_kernel import market_order_parameter_rust, market_plv_rust
 
-    def _rust_op(
-        phases_flat: NDArray[np.float64], t: int, n: int
-    ) -> NDArray[np.float64]:
+    def _rust_op(phases_flat: FloatArray, t: int, n: int) -> FloatArray:
         return np.asarray(
             market_order_parameter_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -67,11 +69,11 @@ def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
         )
 
     def _rust_plv(
-        phases_flat: NDArray[np.float64],
+        phases_flat: FloatArray,
         t: int,
         n: int,
         window: int,
-    ) -> NDArray[np.float64]:
+    ) -> FloatArray:
         return np.asarray(
             market_plv_rust(
                 np.ascontiguousarray(phases_flat, dtype=np.float64),
@@ -165,7 +167,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
     return coerced
 
 
-def _validate_series(value: object) -> NDArray[np.float64]:
+def _validate_series(value: object) -> FloatArray:
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -182,7 +184,7 @@ def _validate_series(value: object) -> NDArray[np.float64]:
     return np.ascontiguousarray(arr, dtype=np.float64)
 
 
-def _validate_phase_matrix(value: object) -> NDArray[np.float64]:
+def _validate_phase_matrix(value: object) -> FloatArray:
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -196,7 +198,7 @@ def _validate_phase_matrix(value: object) -> NDArray[np.float64]:
     return np.ascontiguousarray(arr, dtype=np.float64)
 
 
-def _validate_signal_vector(value: object, *, name: str) -> NDArray[np.float64]:
+def _validate_signal_vector(value: object, *, name: str) -> FloatArray:
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -210,7 +212,7 @@ def _validate_signal_vector(value: object, *, name: str) -> NDArray[np.float64]:
     return np.ascontiguousarray(arr, dtype=np.float64)
 
 
-def extract_phase(series: NDArray[np.float64]) -> NDArray[np.float64]:
+def extract_phase(series: FloatArray) -> FloatArray:
     """Extract instantaneous phase from a time series via the
     Hilbert transform. Shape-preserving; output in ``[0, 2π)``.
 
@@ -220,24 +222,24 @@ def extract_phase(series: NDArray[np.float64]) -> NDArray[np.float64]:
     """
     series = _validate_series(series)
     analytic = hilbert(series, axis=0)
-    phase: NDArray[np.float64] = np.angle(analytic) % (2.0 * np.pi)
+    phase: FloatArray = np.angle(analytic) % (2.0 * np.pi)
     return phase
 
 
 def _python_market_order_parameter(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     if t == 0 or n == 0:
         return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)
     z = np.exp(1j * phases)
-    R: NDArray[np.float64] = np.abs(np.mean(z, axis=1))
+    R: FloatArray = np.abs(np.mean(z, axis=1))
     return np.ascontiguousarray(R, dtype=np.float64)
 
 
-def market_order_parameter(phases: NDArray[np.float64]) -> NDArray[np.float64]:
+def market_order_parameter(phases: FloatArray) -> FloatArray:
     """Kuramoto order parameter ``R(t)`` across ``N`` assets at
     every timestep."""
     phases = _validate_phase_matrix(phases)
@@ -251,11 +253,11 @@ def market_order_parameter(phases: NDArray[np.float64]) -> NDArray[np.float64]:
 
 
 def _python_market_plv(
-    phases_flat: NDArray[np.float64],
+    phases_flat: FloatArray,
     t: int,
     n: int,
     window: int,
-) -> NDArray[np.float64]:
+) -> FloatArray:
     if t < window or n == 0 or window == 0:
         return np.empty(0, dtype=np.float64)
     phases = phases_flat.reshape(t, n)
@@ -275,7 +277,7 @@ def _python_market_plv(
     return out
 
 
-def market_plv(phases: NDArray[np.float64], window: int = 50) -> NDArray[np.float64]:
+def market_plv(phases: FloatArray, window: int = 50) -> FloatArray:
     """Rolling phase-locking-value matrix between assets.
 
     Returns shape ``(T − window + 1, N, N)``.
@@ -297,10 +299,10 @@ def market_plv(phases: NDArray[np.float64], window: int = 50) -> NDArray[np.floa
 
 
 def detect_regimes(
-    R: NDArray[np.float64],
+    R: FloatArray,
     sync_threshold: float = 0.7,
     desync_threshold: float = 0.3,
-) -> NDArray[np.int32]:
+) -> IntArray:
     """Classify market synchronisation regimes from ``R(t)``.
 
     Returns ``int32`` labels: 0 = desynchronised, 1 = transition,
@@ -335,10 +337,10 @@ def detect_regimes(
 
 
 def sync_warning(
-    R: NDArray[np.float64],
+    R: FloatArray,
     threshold: float = 0.7,
     lookback: int = 10,
-) -> NDArray[np.bool_]:
+) -> BoolArray:
     """Detect synchronisation warning signals — timesteps where
     the smoothed ``R`` crosses the threshold from below."""
     R = _validate_signal_vector(R, name="R")
