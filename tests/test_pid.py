@@ -61,7 +61,7 @@ class TestRedundancy:
 
     @pytest.mark.parametrize(
         "phases",
-        [np.array([[0.0, 1.0]]), np.array([0.0, np.nan])],
+        [np.array([[0.0, 1.0]]), np.array([0.0, np.nan]), np.array([True, False])],
     )
     def test_rejects_invalid_phase_vector(self, phases):
         with pytest.raises(ValueError, match="phases"):

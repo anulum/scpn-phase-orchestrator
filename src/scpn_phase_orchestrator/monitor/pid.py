@@ -35,8 +35,11 @@ def _validate_n_bins(value: object) -> int:
 
 
 def _validate_phases(value: object) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError("phases must not contain boolean values")
     try:
-        phases = np.asarray(value, dtype=np.float64)
+        phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a finite 1-D phase vector") from exc
     if phases.ndim != 1:
