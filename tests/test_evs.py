@@ -97,6 +97,7 @@ def test_constructor_rejects_invalid_thresholds(kwargs, match):
         (np.array([0.0, 1.0, 2.0]), "phases_trials"),
         (np.empty((0, 4)), "phases_trials"),
         (np.array([[0.0, np.nan], [1.0, 2.0]]), "phases_trials"),
+        (np.array([[True, False], [False, True]]), "phases_trials"),
     ],
 )
 def test_evaluate_rejects_invalid_phase_trials(phases, match):

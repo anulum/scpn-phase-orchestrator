@@ -183,8 +183,11 @@ def _validate_real(value: object, *, name: str) -> float:
 
 
 def _validate_phase_trials(value: object) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError("phases_trials must not contain boolean values")
     try:
-        phases = np.asarray(value, dtype=np.float64)
+        phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases_trials must be a finite 2-D phase matrix") from exc
     if phases.ndim != 2:
