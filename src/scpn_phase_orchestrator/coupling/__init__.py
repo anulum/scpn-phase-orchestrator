@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coupling subsystem
 
+"""Lazy public coupling API for K/alpha construction and analysis.
+
+The coupling package owns phase-coupling matrices, lag matrices, topology
+constraints, spectral diagnostics, plasticity updates, empirical priors,
+connectome loaders, and causal inference helpers. Exports are lazy so optional
+Rust or scientific dependencies do not make importing the package expensive.
+Public implementations reject malformed numeric inputs at their owning module
+boundary before returning matrices to UPDE or supervisor code.
+"""
+
 from __future__ import annotations
 
 import importlib

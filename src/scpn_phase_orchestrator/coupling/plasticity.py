@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Three-factor Hebbian plasticity for coupling
 
+"""Validated three-factor plasticity updates for coupling matrices.
+
+The module computes pairwise phase eligibility traces and applies a
+modulator-gated Hebbian update to `K_nm`. Public functions reject boolean,
+non-numeric, non-finite, non-vector, non-square, and shape-mismatched inputs so
+plasticity cannot corrupt coupling state silently.
+"""
+
 from __future__ import annotations
 
 from numbers import Real

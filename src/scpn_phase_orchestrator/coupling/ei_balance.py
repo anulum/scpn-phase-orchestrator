@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Excitatory/Inhibitory balance
 
+"""Excitatory/inhibitory balance summaries and adjustment helpers.
+
+The module measures mean outgoing coupling from caller-specified excitatory and
+inhibitory index sets, then optionally rescales inhibitory rows toward a target
+ratio. Rust acceleration is used when available; the NumPy fallback preserves
+the same shape and summary contract for examples and deterministic tests.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

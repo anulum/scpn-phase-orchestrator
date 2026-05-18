@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coupling templates
 
+"""Named coupling-template registry for runtime K/alpha switching.
+
+Templates bundle a phase-coupling matrix, phase-lag matrix, description, and
+stable name. The registry is intentionally in-memory and deterministic:
+retrieval fails explicitly with available names when a requested template is
+not registered, leaving persistence and validation to the binding/template
+owner.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

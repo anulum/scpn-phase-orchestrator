@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Geometry constraints and Knm validation
 
+"""Projection and validation helpers for coupling-matrix geometry.
+
+Geometry constraints project candidate `K_nm` matrices onto simple feasible
+sets such as symmetry and non-negativity. `validate_knm` enforces the runtime
+matrix contract used by domainpacks and UPDE handoff: square, symmetric,
+non-negative, and zero diagonal within tolerance.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

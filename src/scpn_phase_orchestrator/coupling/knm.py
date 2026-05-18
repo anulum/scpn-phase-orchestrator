@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coupling matrix builder
 
+"""Coupling-matrix builders for generic and SCPN-layer topologies.
+
+`CouplingBuilder` constructs deterministic `K_nm`, `alpha`, and optional
+amplitude-coupling snapshots from validated scalar parameters. The Rust-backed
+path and NumPy fallback share the same public contract: finite non-boolean
+inputs, positive layer counts, zero diagonals, and explicit template labels for
+runtime/audit reporting.
+"""
+
 from __future__ import annotations
 
 import json

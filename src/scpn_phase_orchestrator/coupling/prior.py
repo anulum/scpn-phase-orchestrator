@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Universal coupling prior
 
+"""Empirical domain-agnostic prior for coupling hyperparameters.
+
+`UniversalPrior` provides default/sample/log-probability helpers for `K_base`
+and `decay_alpha`, plus a Dörfler-Bullo-style critical-coupling estimate over
+the spectral module. When the optional Rust kernel is importable the
+log-probability path dispatches there; otherwise the NumPy scalar fallback
+preserves the same Gaussian-prior contract.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

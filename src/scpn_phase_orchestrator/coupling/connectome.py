@@ -15,6 +15,15 @@
 # For real HCP data, use neurolib (Cakan & Obermayer 2021, Neuroimage 227:117474)
 # or the HCP1200 parcellation directly.
 
+"""Synthetic and optional neurolib HCP coupling loaders.
+
+`load_hcp_connectome` generates a deterministic HCP-inspired synthetic matrix
+with explicit non-real-data provenance. `load_neurolib_hcp` is the optional real
+HCP path and fails with an import error when `neurolib` is unavailable. Both
+paths return non-negative zero-diagonal structural coupling matrices suitable
+for examples, validation, and explicit downstream review.
+"""
+
 from __future__ import annotations
 
 from typing import TypeAlias

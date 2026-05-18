@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coupling lag functions
 
+"""Phase-lag estimation and alpha-matrix construction.
+
+`LagModel` converts physical distances or observed signal offsets into
+antisymmetric phase-lag matrices consumed by the UPDE engine. The module is
+kept dependency-light and deterministic; callers remain responsible for
+supplying finite sampled signals and physically meaningful carrier/speed
+scales before using the resulting lags in closed-loop runs.
+"""
+
 from __future__ import annotations
 
 from typing import TypeAlias
