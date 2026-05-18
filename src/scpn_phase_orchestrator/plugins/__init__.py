@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Plugin interface exports
 
+"""Public plugin-interface facade for manifest and compatibility utilities.
+
+The plugins package re-exports manifest dataclasses, capability records,
+registry builders, marketplace catalog generation, discovery, and compatibility
+reporting. Importing the package does not discover files, load native plugins,
+or execute plugin code; validation and registry construction occur only through
+explicit calls into ``plugins.registry``.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.plugins.registry import (

@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Transfer entropy directed adaptive coupling
 
+"""Transfer-entropy-guided coupling adaptation for offline matrix updates.
+
+``te_adapt_coupling`` derives a directed transfer-entropy matrix from phase
+history and combines it with the current coupling matrix under learning-rate
+and decay parameters. The Python fallback clamps the returned coupling to
+non-negative values and clears self-coupling; the optional Rust path preserves
+the same dense ``N x N`` output contract. The helper returns a new matrix and
+does not mutate live solver state or apply actuation.
+"""
+
 from __future__ import annotations
 
 from typing import TypeAlias

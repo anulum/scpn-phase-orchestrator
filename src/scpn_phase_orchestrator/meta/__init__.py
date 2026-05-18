@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Meta-orchestration exports
 
+"""Public facade for cross-domain meta-transfer audit utilities.
+
+The meta package exports policy records, training summaries, transfer proposal
+types, and audit-log loaders used by cross-domain meta-orchestration workflows.
+This initializer performs no filesystem scans or training by itself; concrete
+functions in ``meta.transfer`` own JSONL parsing, validation, proposal ranking,
+and any derived audit evidence.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.meta.transfer import (

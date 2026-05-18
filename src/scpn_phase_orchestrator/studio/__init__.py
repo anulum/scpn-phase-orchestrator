@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Studio workflow package
 
+"""Public Studio workflow facade for operator-facing project artifacts.
+
+The studio package gathers workflow dataclasses and UI helper builders for
+binding review, canvas artifacts, deployment readiness, export manifests,
+runtime snapshots, live connector plans, and replay previews. Importing the
+facade only exposes functions and types; concrete helpers own validation,
+materialization planning, filesystem discovery, replay execution, and any live
+connector records.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.studio.ui_helpers import (
