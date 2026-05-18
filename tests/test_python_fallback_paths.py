@@ -101,6 +101,116 @@ def test_reference_kernel_fallback_methods_match_manual_dynamics() -> None:
     assert np.all((rk45 >= 0.0) & (rk45 < TWO_PI))
 
 
+def test_reference_kernel_zero_steps_returns_independent_copy() -> None:
+    phases = np.array([0.25, 1.5], dtype=np.float64)
+
+    result = _ref_kernel.upde_run_python(
+        phases,
+        np.ones(2),
+        np.ones((2, 2)),
+        np.zeros((2, 2)),
+        zeta=0.0,
+        psi=0.0,
+        dt=0.01,
+        n_steps=0,
+        method="euler",
+        n_substeps=1,
+        atol=1e-8,
+        rtol=1e-6,
+    )
+
+    np.testing.assert_array_equal(result, phases)
+    assert result is not phases
+    result[0] = 999.0
+    assert phases[0] == 0.25
+
+
+def test_reference_kernel_euler_without_drive_matches_linear_phase_advance() -> None:
+    phases = np.array([TWO_PI - 0.05, 0.25], dtype=np.float64)
+    omegas = np.array([1.0, -0.5], dtype=np.float64)
+
+    result = _ref_kernel.upde_run_python(
+        phases,
+        omegas,
+        np.zeros((2, 2)),
+        np.zeros((2, 2)),
+        zeta=0.0,
+        psi=1.25,
+        dt=0.1,
+        n_steps=2,
+        method="euler",
+        n_substeps=1,
+        atol=1e-8,
+        rtol=1e-6,
+    )
+
+    expected = (phases + 2 * 0.1 * omegas) % TWO_PI
+    np.testing.assert_allclose(result, expected, rtol=1e-12, atol=1e-12)
+
+
+def test_reference_kernel_rk45_retry_exhaustion_returns_finite_wrapped_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = []
+
+    def fake_dp_stages(phases, omegas, knm, alpha, zeta, psi, dt):
+        calls.append(dt)
+        return phases + 10.0, phases - 10.0
+
+    monkeypatch.setattr(_ref_kernel, "_dp_stages", fake_dp_stages)
+
+    result = _ref_kernel.upde_run_python(
+        np.array([0.1, 0.2], dtype=np.float64),
+        np.ones(2),
+        np.zeros((2, 2)),
+        np.zeros((2, 2)),
+        zeta=0.0,
+        psi=0.0,
+        dt=0.5,
+        n_steps=1,
+        method="rk45",
+        n_substeps=1,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    assert len(calls) == 4
+    assert all(
+        next_dt < prev_dt for prev_dt, next_dt in zip(calls, calls[1:], strict=False)
+    )
+    np.testing.assert_allclose(result, (np.array([0.1, 0.2]) + 10.0) % TWO_PI)
+
+
+def test_reference_kernel_rk45_zero_error_caps_next_internal_dt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = []
+
+    def fake_dp_stages(phases, omegas, knm, alpha, zeta, psi, dt):
+        calls.append(dt)
+        return phases + dt, phases + dt
+
+    monkeypatch.setattr(_ref_kernel, "_dp_stages", fake_dp_stages)
+
+    result = _ref_kernel.upde_run_python(
+        np.array([0.1], dtype=np.float64),
+        np.ones(1),
+        np.zeros((1, 1)),
+        np.zeros((1, 1)),
+        zeta=0.0,
+        psi=0.0,
+        dt=0.25,
+        n_steps=2,
+        method="rk45",
+        n_substeps=1,
+        atol=1e-8,
+        rtol=1e-6,
+    )
+
+    assert calls == [0.25, 1.25]
+    np.testing.assert_allclose(result, np.array([(0.1 + 0.25 + 1.25) % TWO_PI]))
+
+
 @pytest.mark.parametrize(
     ("method", "n_substeps", "match"),
     [
