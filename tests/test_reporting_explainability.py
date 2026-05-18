@@ -117,3 +117,41 @@ def test_explainability_report_ignores_malformed_step_identifiers() -> None:
 
     assert report.regime_transitions == ("Step 0: nominal -> degraded",)
     assert report.action_explanations[0].step == 0
+
+
+def test_explainability_report_ignores_malformed_layer_containers() -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 0,
+                "regime": "nominal",
+                "stability": 0.75,
+                "layers": None,
+            },
+            {
+                "step": 1,
+                "regime": "degraded",
+                "stability": 0.25,
+                "layers": ["not-a-layer", {"R": 0.4}],
+                "actions": [
+                    {
+                        "knob": "K",
+                        "scope": "global",
+                        "value": 0.1,
+                        "ttl_s": 1.0,
+                    },
+                ],
+            },
+        ],
+    )
+
+    assert report.layers == 1
+    assert report.metric_summary == (
+        "Layer 0: mean R=0.400, final R=0.400, min R=0.400, max R=0.400",
+        "Stability proxy: mean=0.500, final=0.250, min=0.250, max=0.750",
+    )
+    assert report.action_explanations[0].evidence == (
+        "mean layer R=0.400",
+        "stability proxy=0.250",
+        "L0 R=0.400",
+    )

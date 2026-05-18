@@ -62,9 +62,16 @@ def _step_records(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [entry for entry in entries if "step" in entry and "layers" in entry]
 
 
+def _layers(step: dict[str, Any]) -> list[dict[str, Any]]:
+    layers = step.get("layers", [])
+    if not isinstance(layers, list):
+        return []
+    return [layer for layer in layers if isinstance(layer, dict)]
+
+
 def _layer_rs(step: dict[str, Any]) -> list[float]:
     values: list[float] = []
-    for layer in step.get("layers", []):
+    for layer in _layers(step):
         values.append(_numeric_value(layer.get("R", 0.0)))
     return values
 
@@ -136,12 +143,10 @@ def _event_lines(entries: list[dict[str, Any]], limit: int = 12) -> tuple[str, .
 def _metric_summary(steps: list[dict[str, Any]]) -> tuple[str, ...]:
     if not steps:
         return ()
-    n_layers = max(len(step.get("layers", [])) for step in steps)
+    n_layers = max(len(_layers(step)) for step in steps)
     lines: list[str] = []
     for idx in range(n_layers):
-        series = [
-            _layer_rs(step)[idx] for step in steps if idx < len(step.get("layers", []))
-        ]
+        series = [_layer_rs(step)[idx] for step in steps if idx < len(_layers(step))]
         if not series:
             continue
         lines.append(
@@ -223,7 +228,7 @@ def build_explainability_report(
     last = steps[-1]
     return ExplainabilityReport(
         steps=len(steps),
-        layers=max(len(step.get("layers", [])) for step in steps),
+        layers=max(len(_layers(step)) for step in steps),
         hash_chain_ok=integrity_ok,
         hash_chain_verified=n_verified,
         final_regime=str(last.get("regime", "unknown")),
