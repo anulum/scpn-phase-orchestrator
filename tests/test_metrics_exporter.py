@@ -74,6 +74,15 @@ def test_export_escapes_regime_label_value():
     assert 'critical"phase\\shift\nline' not in result
 
 
+@pytest.mark.parametrize("regime", ["", "bad\x00regime", True])
+def test_export_rejects_malformed_regime(regime: object):
+    exp = MetricsExporter()
+    state = _make_state([0.9])
+
+    with pytest.raises(ValueError, match="regime"):
+        exp.export(state, cast(str, regime), 0.1)
+
+
 @pytest.mark.parametrize("latency_ms", [float("nan"), float("inf"), -0.1, True])
 def test_export_rejects_malformed_latency(latency_ms: object):
     exp = MetricsExporter()
@@ -81,6 +90,30 @@ def test_export_rejects_malformed_latency(latency_ms: object):
 
     with pytest.raises(ValueError, match="latency_ms"):
         exp.export(state, "nominal", cast(float, latency_ms))
+
+
+@pytest.mark.parametrize(
+    ("state", "field"),
+    [
+        (_make_state([float("nan")]), "layer 0 R"),
+        (_make_state([0.9], pac_max=float("inf")), "pac_max"),
+        (
+            UPDEState(
+                layers=[LayerState(R=0.9, psi=0.0)],
+                cross_layer_alignment=np.eye(1),
+                stability_proxy=float("nan"),
+                regime_id="nominal",
+                pac_max=0.1,
+            ),
+            "stability_proxy",
+        ),
+    ],
+)
+def test_export_rejects_nonfinite_state_metrics(state: UPDEState, field: str):
+    exp = MetricsExporter()
+
+    with pytest.raises(ValueError, match=field):
+        exp.export(state, "nominal", 0.1)
 
 
 def test_exposition_lines_count():
