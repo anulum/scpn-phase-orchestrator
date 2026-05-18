@@ -74,7 +74,7 @@ unchanged while the stream becomes tail-safe and schema-versioned.
 
 Given the same binding spec and initial seed, replaying the sequence of actions from the audit log must reproduce the same layer R values within floating-point tolerance (< 1e-12 absolute difference).
 
-`ReplayEngine` in `audit.replay` loads JSONL and provides iteration over entries.
+`ReplayEngine` in `runtime.replay` loads JSONL and provides iteration over entries.
 
 ## Protobuf Event Stream
 

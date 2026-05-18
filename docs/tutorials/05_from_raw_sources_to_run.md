@@ -199,7 +199,7 @@ You now have a complete raw-source -> binding -> run -> decision chain.
 ## 8. Quick Visual Check
 
 ```python
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.reporting.plots import CoherencePlot
 
 entries = ReplayEngine("valve_tune_audit.jsonl").load()

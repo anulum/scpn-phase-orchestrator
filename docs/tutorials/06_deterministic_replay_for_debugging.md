@@ -103,7 +103,7 @@ thresholds first.
 This guarantees that figures are generated from the same record that replay checks:
 
 ```python
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.reporting import CoherencePlot
 
 entries = ReplayEngine("valve_tune_audit.jsonl").load()

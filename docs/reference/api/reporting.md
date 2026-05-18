@@ -87,7 +87,7 @@ same JSON-ready report payload as `spo report --json-out`.
 ## Usage
 
 ```python
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.reporting.plots import CoherencePlot
 
 # Load audit log

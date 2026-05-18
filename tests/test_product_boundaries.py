@@ -94,6 +94,7 @@ def test_runtime_namespace_is_runtime_boundary() -> None:
         mod.classify_module("scpn_phase_orchestrator.runtime.network_security")
         == "runtime"
     )
+    assert mod.classify_module("scpn_phase_orchestrator.runtime.replay") == "runtime"
     assert mod.classify_module("scpn_phase_orchestrator.runtime.server") == "runtime"
     assert mod.classify_module("scpn_phase_orchestrator.runtime.server_grpc") == (
         "runtime"

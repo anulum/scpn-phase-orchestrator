@@ -147,7 +147,7 @@ platform differences, or code regressions.
   are handled via configurable tolerance
 
 ```python
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
 engine = ReplayEngine("audit.jsonl", binding_spec)
 divergences = engine.replay()
@@ -156,7 +156,7 @@ if divergences:
         print(f"Step {d.step}: Δ={d.magnitude:.2e}")
 ```
 
-::: scpn_phase_orchestrator.audit.replay
+::: scpn_phase_orchestrator.runtime.replay
 
 ## Protobuf Event Stream
 

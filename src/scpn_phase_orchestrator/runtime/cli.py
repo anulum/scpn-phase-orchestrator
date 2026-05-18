@@ -29,7 +29,6 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.audit.logger import AuditLogger
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.audit.stream import (
     AuditStreamEvent,
     iter_event_stream,
@@ -70,6 +69,7 @@ from scpn_phase_orchestrator.plugins import (
     discover_plugin_manifests,
 )
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.scaffold.llm import (
     LLMScaffoldProvider,
     StaticJSONScaffoldProvider,
