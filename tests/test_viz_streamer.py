@@ -10,7 +10,9 @@ import numpy as np
 import pytest
 
 pytest.importorskip("websockets", reason="websockets not installed")
-from scpn_phase_orchestrator.visualization.streamer import VisualizerStreamer
+from scpn_phase_orchestrator.visualization import streamer as streamer_module
+
+VisualizerStreamer = streamer_module.VisualizerStreamer
 
 
 def test_viz_streamer_initialization():
@@ -119,6 +121,91 @@ def test_broadcast_before_start_does_not_raise():
     assert streamer._loop is None
     assert streamer._clients == set()
     streamer.broadcast({"any": "data"})  # should not throw
+
+
+def test_start_delegates_to_background_thread():
+    """start() must delegate socket ownership to the configured daemon thread."""
+
+    class ThreadProbe:
+        def __init__(self):
+            self.started = False
+
+        def start(self):
+            self.started = True
+
+    thread = ThreadProbe()
+    streamer = VisualizerStreamer()
+    streamer._thread = thread
+
+    streamer.start()
+
+    assert thread.started is True
+
+
+def test_stop_signals_existing_event_loop_threadsafe():
+    """stop() must signal the running event loop without touching clients."""
+
+    calls = []
+
+    class LoopProbe:
+        def stop(self):
+            calls.append("stop")
+
+        def call_soon_threadsafe(self, callback):
+            calls.append(callback.__name__)
+            callback()
+
+    streamer = VisualizerStreamer()
+    streamer._loop = LoopProbe()
+
+    streamer.stop()
+
+    assert calls == ["stop", "stop"]
+
+
+def test_run_server_builds_websocket_server_without_network(monkeypatch):
+    """_run_server wires a new event loop into websockets.serve deterministically."""
+
+    serve_calls = []
+    set_loop_calls = []
+
+    class LoopProbe:
+        def __init__(self):
+            self.run_until_complete_arg = None
+            self.forever_called = False
+
+        def run_until_complete(self, awaitable):
+            self.run_until_complete_arg = awaitable
+            return "server-object"
+
+        def run_forever(self):
+            self.forever_called = True
+
+    loop = LoopProbe()
+
+    def fake_set_event_loop(loop_arg):
+        set_loop_calls.append(loop_arg)
+
+    class WebsocketsProbe:
+        @staticmethod
+        def serve(handler, host, port):
+            serve_calls.append((handler, host, port))
+            return "serve-awaitable"
+
+    monkeypatch.setattr(streamer_module.asyncio, "new_event_loop", lambda: loop)
+    monkeypatch.setattr(streamer_module.asyncio, "set_event_loop", fake_set_event_loop)
+    monkeypatch.setattr(streamer_module, "websockets", WebsocketsProbe)
+
+    streamer = VisualizerStreamer(host="127.0.0.1", port=9988)
+
+    streamer._run_server()
+
+    assert streamer._loop is loop
+    assert set_loop_calls == [loop]
+    assert serve_calls == [(streamer._handler, "127.0.0.1", 9988)]
+    assert loop.run_until_complete_arg == "serve-awaitable"
+    assert streamer._server == "server-object"
+    assert loop.forever_called is True
 
 
 def test_json_safe_deep_nesting():
