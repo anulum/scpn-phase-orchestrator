@@ -13,15 +13,21 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::action::Regime;
 use crate::error::{SpoError, SpoResult};
 
+/// Channel identifier for phase-state and channel-coherence metrics.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Channel {
+    /// Physical channel.
     P,
+    /// Informational channel.
     I,
+    /// Symbolic channel.
     S,
+    /// User-defined channel identifier.
     Custom(String),
 }
 
 impl Channel {
+    /// Build a channel from an identifier, preserving built-in `P`, `I`, and `S`.
     #[must_use]
     pub fn new(id: impl Into<String>) -> Self {
         match id.into().as_str() {
@@ -48,6 +54,7 @@ impl Channel {
         Ok(Self::new(id))
     }
 
+    /// Return the serialisable channel identifier.
     #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
@@ -58,6 +65,7 @@ impl Channel {
         }
     }
 
+    /// Return whether the channel is one of the built-in `P`, `I`, or `S`.
     #[must_use]
     pub fn is_builtin(&self) -> bool {
         matches!(self, Self::P | Self::I | Self::S)
@@ -83,11 +91,16 @@ impl<'de> Deserialize<'de> for Channel {
     }
 }
 
+/// Coherence summary for one named channel.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChannelMetric {
+    /// Channel being summarised.
     pub channel: Channel,
+    /// Channel order-parameter magnitude in `[0, 1]`.
     pub r: f64,
+    /// Channel mean phase.
     pub psi: f64,
+    /// Non-negative channel weight used by consumers.
     pub weight: f64,
 }
 
@@ -138,33 +151,50 @@ impl ChannelMetric {
     }
 }
 
+/// Per-node phase state carried across orchestration boundaries.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PhaseState {
+    /// Phase angle.
     pub theta: f64,
+    /// Natural or instantaneous angular frequency.
     pub omega: f64,
+    /// Oscillator amplitude.
     pub amplitude: f64,
+    /// Data-quality or confidence score.
     pub quality: f64,
+    /// Channel assigned to the node.
     pub channel: Channel,
+    /// Stable node identifier.
     pub node_id: String,
 }
 
+/// Per-layer phase-coherence summary.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayerState {
+    /// Layer order-parameter magnitude.
     pub r: f64,
+    /// Layer mean phase.
     pub psi: f64,
 }
 
+/// Runtime UPDE state summary exchanged with supervisor logic.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UPDEState {
+    /// Per-layer order-parameter summaries.
     pub layers: Vec<LayerState>,
+    /// Optional channel-level summaries.
     #[serde(default)]
     pub channel_metrics: Vec<ChannelMetric>,
+    /// Cross-layer alignment metrics.
     pub cross_layer_alignment: Vec<f64>,
+    /// Stability proxy consumed by regime classification.
     pub stability_proxy: f64,
+    /// Current supervisor regime.
     pub regime: Regime,
 }
 
 impl UPDEState {
+    /// Return the arithmetic mean of layer order-parameter magnitudes.
     #[must_use]
     pub fn mean_r(&self) -> f64 {
         if self.layers.is_empty() {
@@ -174,6 +204,7 @@ impl UPDEState {
         sum / self.layers.len() as f64
     }
 
+    /// Return the channel metric matching `channel`, if present.
     #[must_use]
     pub fn channel_metric(&self, channel: &Channel) -> Option<&ChannelMetric> {
         self.channel_metrics
@@ -181,6 +212,7 @@ impl UPDEState {
             .find(|metric| &metric.channel == channel)
     }
 
+    /// Return the mean `r` over the requested channels with available metrics.
     #[must_use]
     pub fn mean_channel_r(&self, channels: &[Channel]) -> f64 {
         let vals: Vec<f64> = channels

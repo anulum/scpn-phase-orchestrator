@@ -10,19 +10,29 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{SpoError, SpoResult};
 
+/// Numerical integration method used by Rust steppers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Method {
+    /// First-order explicit Euler integration.
     Euler,
+    /// Classical fourth-order Runge-Kutta integration.
     RK4,
+    /// Adaptive Dormand-Prince RK45 integration.
     RK45,
 }
 
+/// Shared integration settings for Rust phase-dynamics steppers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntegrationConfig {
+    /// Outer timestep in simulation units.
     pub dt: f64,
+    /// Integration method applied at each step.
     pub method: Method,
+    /// Fixed substep count for non-adaptive methods.
     pub n_substeps: u32,
+    /// Absolute tolerance used by adaptive RK45.
     pub atol: f64,
+    /// Relative tolerance used by adaptive RK45.
     pub rtol: f64,
 }
 
@@ -68,9 +78,12 @@ impl IntegrationConfig {
     }
 }
 
+/// Coupling defaults shared by dense and sparse phase dynamics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CouplingConfig {
+    /// Baseline coupling strength.
     pub base_strength: f64,
+    /// Non-negative decay coefficient for distance or hierarchy attenuation.
     pub decay_alpha: f64,
 }
 

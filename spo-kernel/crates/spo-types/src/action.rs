@@ -8,28 +8,44 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Supervisor operating regime for closed-loop control decisions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Regime {
+    /// Normal operation with no boundary pressure.
     Nominal,
+    /// Reduced-margin operation requiring conservative control.
     Degraded,
+    /// Boundary-violating or near-unstable operation requiring intervention.
     Critical,
+    /// Recovery trajectory after a critical or degraded transition.
     Recovery,
 }
 
+/// Tunable control dimension addressed by a supervisor action.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Knob {
+    /// Coupling strength control.
     K,
+    /// Phase-lag control.
     Alpha,
+    /// Global drive or anchoring control.
     Zeta,
+    /// Reference phase control.
     Psi,
 }
 
+/// One projected control command emitted by the supervisor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ControlAction {
+    /// Tunable dimension affected by the command.
     pub knob: Knob,
+    /// Target scope, for example `global`, layer, node, or channel identifier.
     pub scope: String,
+    /// Commanded numeric value after projection.
     pub value: f64,
+    /// Time-to-live in seconds for downstream actuators.
     pub ttl_s: f64,
+    /// Human-readable reason attached to the command.
     pub justification: String,
 }
 
