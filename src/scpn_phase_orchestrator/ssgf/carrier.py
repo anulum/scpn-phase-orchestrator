@@ -42,6 +42,8 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 @dataclass
 class SSGFState:
+    """Snapshot returned after one SSGF latent-geometry update step."""
+
     z: FloatArray
     W: FloatArray
     cost: float
@@ -82,10 +84,12 @@ class GeometryCarrier:
 
     @property
     def z(self) -> FloatArray:
+        """Copy of the current latent geometry vector."""
         return self._z.copy()
 
     @property
     def z_dim(self) -> int:
+        """Dimension of the latent geometry vector."""
         return self._z_dim
 
     def decode(self, z: FloatArray | None = None) -> FloatArray:
@@ -139,6 +143,7 @@ class GeometryCarrier:
         )
 
     def reset(self, seed: int | None = None) -> None:
+        """Reinitialize the latent vector and reset the outer-step counter."""
         rng = np.random.default_rng(seed)
         self._z = rng.normal(0, 0.1, self._z_dim)
         self._step = 0

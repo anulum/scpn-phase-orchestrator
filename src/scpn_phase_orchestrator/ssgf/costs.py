@@ -90,6 +90,8 @@ def _validate_weight_matrix(W: FloatArray) -> FloatArray:
 
 @dataclass
 class SSGFCosts:
+    """Individual SSGF cost terms plus the weighted total objective."""
+
     c1_sync: float
     c2_spectral_gap: float
     c3_sparsity: float
