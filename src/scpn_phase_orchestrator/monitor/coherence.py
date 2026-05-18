@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coherence monitor
 
+"""Coherence partition monitoring utilities for layer-bound phase states.
+
+This module computes in-group and out-group Kuramoto-style locking metrics,
+including R_good/R_bad summaries and PLV-based lock detection. Configuration
+objects validate layer indices, threshold intervals, CLA terms, and denominator
+semantics before analysis; invalid layer references fail early instead of being
+silently clipped into a different biological partition.
+"""
+
 from __future__ import annotations
 
 from numbers import Integral, Real

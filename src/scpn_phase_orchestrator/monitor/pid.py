@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Partial Information Decomposition for phase groups
 
+"""Approximate phase-based partial information metrics for grouped oscillators.
+
+The routines compute deterministic redundancy and synergy summaries over
+grouped phase observations. A Rust extension may provide acceleration; the
+Python implementation remains dependency-light and reference-compatible. Phase
+inputs must be finite one-dimensional arrays and group indices are validated
+before histogram estimation, so malformed partitions fail instead of silently
+reassigning oscillators.
+"""
+
 from __future__ import annotations
 
 from typing import Any, TypeAlias

@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Boundary observer
 
+"""Boundary observer utilities for compartment and event-bus safety checks.
+
+The observer evaluates declared soft and hard partitions against runtime state
+without mutating the monitored values. Missing state variables are ignored so
+partially observed deployments can still emit useful diagnostics, while unknown
+severity policy is treated as a fail-hard configuration error before monitoring
+starts. Events are emitted through the supplied bus only after checks are
+classified, preserving a clear separation between detection and actuation.
+"""
+
 from __future__ import annotations
 
 import logging

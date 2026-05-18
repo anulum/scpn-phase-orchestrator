@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Sleep stage classifier from Kuramoto order parameter
 
+"""Sleep staging helpers derived from validated phase-synchrony time series.
+
+The staging path maps Kuramoto R summaries and ultradian phase estimates into
+an AASM-like heuristic stage timeline for diagnostics and simulation review.
+R values, timestamps, and stage labels are validated before use, and the Rust
+accelerator mirrors the deterministic Python fallback rather than changing
+classification semantics.
+"""
+
 from __future__ import annotations
 
 from numbers import Real

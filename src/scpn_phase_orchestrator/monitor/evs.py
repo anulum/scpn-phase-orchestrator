@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Entrainment Verification Score (EVS)
 
+"""EVS and phase-locking metrics for finite two-dimensional phase recordings.
+
+The module implements ITPC, persistence across pauses, and
+frequency-specificity checks for Entrainment Verification Signals. A Rust
+extension is used when available while the Python fallback remains the
+reference-compatible path. Inputs are normalized to finite ``trials x time``
+phase arrays, pause indices are bounds-checked, and candidate frequency vectors
+must match the trial axis before evidence is reported.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

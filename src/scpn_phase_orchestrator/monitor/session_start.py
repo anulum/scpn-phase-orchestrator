@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Session-start coherence gate
 
+"""Session-start validation gate for extractor, imprint, and coherence inputs.
+
+The validator checks startup preconditions across extractor quality signals,
+imprint availability, and initial coherence metrics before a session is allowed
+to proceed. It returns explicit warnings and errors without mutating source
+state or triggering actuation, keeping the gate suitable for dry-run previews,
+operator review, and fail-closed orchestration handoffs.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -10,6 +10,16 @@
 # ("The entropic brain: a theory of conscious states informed by
 # neuroimaging research with psychedelic drugs")
 
+"""Psychedelic phase-dispersion simulation utilities for research diagnostics.
+
+The helpers model coupling reduction, phase entropy, and trajectory evolution
+through an optional backend chain while keeping a deterministic Python fallback.
+Inputs are constrained to finite phase vectors, finite square coupling matrices,
+and unit-interval coupling factors before simulation begins. The module is a
+research simulation surface only; it does not provide clinical guidance,
+actuation, dosage advice, or patient-state decisions.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable

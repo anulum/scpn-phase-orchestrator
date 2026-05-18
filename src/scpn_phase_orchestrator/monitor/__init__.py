@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Monitor subsystem
 
+"""Lazy public registry for safety, coherence, and diagnostics monitors.
+
+The monitor package exposes boundary checks, coherence partitioning,
+entrainment verification, information measures, recurrence and embedding
+diagnostics, runtime verification, sleep staging, and related phase-analysis
+helpers. Exports are intentionally lazy so optional backend or toolchain
+dependencies do not make package import expensive; numeric validation and
+fail-closed policies remain in the owning monitor modules.
+"""
+
 from __future__ import annotations
 
 import importlib
