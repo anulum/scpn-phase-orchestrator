@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import textwrap
 from dataclasses import dataclass
+from math import isfinite
+from numbers import Real
 from pathlib import Path
 from typing import Any
 
@@ -63,11 +65,16 @@ def _step_records(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _layer_rs(step: dict[str, Any]) -> list[float]:
     values: list[float] = []
     for layer in step.get("layers", []):
-        try:
-            values.append(float(layer.get("R", 0.0)))
-        except (TypeError, ValueError):
-            values.append(0.0)
+        values.append(_numeric_value(layer.get("R", 0.0)))
     return values
+
+
+def _numeric_value(value: object) -> float:
+    if isinstance(value, Real) and not isinstance(value, bool):
+        parsed = float(value)
+        if isfinite(parsed):
+            return parsed
+    return 0.0
 
 
 def _mean(values: list[float]) -> float:
@@ -134,7 +141,7 @@ def _metric_summary(steps: list[dict[str, Any]]) -> tuple[str, ...]:
             f"final R={series[-1]:.3f}, min R={min(series):.3f}, "
             f"max R={max(series):.3f}"
         )
-    stability = [float(step.get("stability", 0.0)) for step in steps]
+    stability = [_numeric_value(step.get("stability", 0.0)) for step in steps]
     lines.append(
         f"Stability proxy: mean={_mean(stability):.3f}, "
         f"final={stability[-1]:.3f}, min={min(stability):.3f}, "
@@ -155,7 +162,7 @@ def _action_explanations(
         step_no = int(step.get("step", 0))
         regime = str(step.get("regime", "unknown"))
         rs = _layer_rs(step)
-        stability = float(step.get("stability", 0.0))
+        stability = _numeric_value(step.get("stability", 0.0))
         evidence = [
             f"mean layer R={_mean(rs):.3f}" if rs else "no layer R values recorded",
             f"stability proxy={stability:.3f}",
@@ -212,7 +219,7 @@ def build_explainability_report(
         hash_chain_ok=integrity_ok,
         hash_chain_verified=n_verified,
         final_regime=str(last.get("regime", "unknown")),
-        final_stability=float(last.get("stability", 0.0)),
+        final_stability=_numeric_value(last.get("stability", 0.0)),
         regime_counts=_regime_counts(steps),
         regime_transitions=_regime_transitions(steps),
         action_explanations=_action_explanations(steps, max_actions),
