@@ -36,32 +36,44 @@ __all__ = [
 
 @dataclass
 class StateRequest:
+    """Fallback request for retrieving the current orchestrator state."""
+
     pass
 
 
 @dataclass
 class StepRequest:
+    """Fallback request to advance the orchestrator by ``n_steps``."""
+
     n_steps: int = 1
 
 
 @dataclass
 class ResetRequest:
+    """Fallback request to reset orchestrator state."""
+
     pass
 
 
 @dataclass
 class StreamRequest:
+    """Fallback request for bounded streaming of phase-state snapshots."""
+
     max_steps: int = 100
     interval_s: float = 0.05
 
 
 @dataclass
 class ConfigRequest:
+    """Fallback request for static orchestrator configuration."""
+
     pass
 
 
 @dataclass
 class LayerState:
+    """Fallback per-layer coherence state returned by gRPC responses."""
+
     name: str = ""
     R: float = 0.0
     psi: float = 0.0
@@ -69,6 +81,8 @@ class LayerState:
 
 @dataclass
 class StateResponse:
+    """Fallback response containing runtime state and layer summaries."""
+
     step: int = 0
     R_global: float = 0.0
     regime: str = ""
@@ -79,6 +93,8 @@ class StateResponse:
 
 @dataclass
 class ConfigResponse:
+    """Fallback response containing static binding and timing configuration."""
+
     name: str = ""
     n_oscillators: int = 0
     n_layers: int = 0

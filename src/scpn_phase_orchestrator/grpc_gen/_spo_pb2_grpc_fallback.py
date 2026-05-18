@@ -44,24 +44,29 @@ class PhaseOrchestratorServicer(abc.ABC):
 
     @abc.abstractmethod
     def GetState(self, request: StateRequest, context: Any) -> StateResponse:
+        """Return the current orchestrator state without advancing simulation."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def Step(self, request: StepRequest, context: Any) -> StateResponse:
+        """Advance simulation according to ``request`` and return new state."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def Reset(self, request: Any, context: Any) -> StateResponse:
+        """Reset simulation state and return the post-reset state snapshot."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def StreamPhases(
         self, request: StreamRequest, context: Any
     ) -> Iterator[StateResponse]:
+        """Yield bounded phase-state snapshots for a streaming request."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def GetConfig(self, request: ConfigRequest, context: Any) -> ConfigResponse:
+        """Return static orchestrator configuration metadata."""
         raise NotImplementedError
 
 
