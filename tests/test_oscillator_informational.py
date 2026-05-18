@@ -135,6 +135,21 @@ class TestInformationalEdgeCases:
         assert states[0].omega == pytest.approx(TWO_PI * 2.0, rel=0.01)
         assert states[0].quality > 0.0
 
+    @pytest.mark.parametrize(
+        "signal",
+        [
+            np.array([0.0, float("nan")]),
+            np.array([0.0, float("inf")]),
+            np.array([True, False]),
+            np.array([1.0 + 0.0j, 2.0 + 0.0j]),
+            np.array(["0.0", "1.0"], dtype=object),
+        ],
+    )
+    def test_extract_rejects_invalid_signal(self, signal: object):
+        extractor = InformationalExtractor()
+        with pytest.raises(ValueError, match="signal must be finite"):
+            extractor.extract(signal, sample_rate=0.0)
+
 
 # ---------------------------------------------------------------------------
 # Metadata

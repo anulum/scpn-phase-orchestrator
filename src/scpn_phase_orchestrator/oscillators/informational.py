@@ -27,6 +27,23 @@ def _validate_node_id(value: object) -> str:
     return value
 
 
+def _validate_signal(value: object) -> FloatArray:
+    signal = np.asarray(value)
+    dtype = signal.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.number)
+    ):
+        raise ValueError("signal must be finite")
+    if signal.ndim != 1:
+        raise ValueError(f"signal must be 1-D, got shape {signal.shape}")
+    parsed = signal.astype(np.float64, copy=False)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError("signal must be finite")
+    return parsed
+
+
 class InformationalExtractor(PhaseExtractor):
     """Extracts phase from event timestamps (spike trains, discrete events).
 
@@ -42,6 +59,7 @@ class InformationalExtractor(PhaseExtractor):
         signal: 1-D array of event timestamps in seconds (sorted ascending).
         sample_rate: not used for timestamps but kept for interface consistency.
         """
+        signal = _validate_signal(signal)
         if len(signal) < 2:
             return [
                 PhaseState(
