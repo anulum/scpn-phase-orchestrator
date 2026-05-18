@@ -121,8 +121,11 @@ def _dispatch(fn_name: str) -> object:
 
 
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        phases = np.asarray(value, dtype=np.float64)
+        phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
     if phases.ndim != 1:
@@ -133,8 +136,11 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
 
 
 def _validate_phase_series(value: object, *, name: str) -> FloatArray:
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
     try:
-        series = np.asarray(value, dtype=np.float64)
+        series = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 2-D phase series") from exc
     if series.ndim != 2:

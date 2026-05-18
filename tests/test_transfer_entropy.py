@@ -78,6 +78,8 @@ class TestTransferEntropy:
             ([[0.0, 1.0, 2.0]], np.array([0.0, 1.0, 2.0]), "source must be 1-D"),
             (np.array([0.0, np.nan, 2.0]), np.array([0.0, 1.0, 2.0]), "source"),
             (np.array([0.0, 1.0, 2.0]), np.array([0.0, np.inf, 2.0]), "target"),
+            (np.array([True, False, True]), np.array([0.0, 1.0, 2.0]), "source"),
+            (np.array([0.0, 1.0, 2.0]), np.array([True, False, True]), "target"),
         ],
     )
     def test_phase_te_rejects_non_vector_or_non_finite_inputs(
@@ -98,6 +100,11 @@ class TestTransferEntropy:
 
     def test_matrix_rejects_non_finite_phase_series(self):
         series = np.array([[0.0, 1.0, np.nan], [0.1, 1.1, 2.1]])
+        with pytest.raises(ValueError, match="phase_series"):
+            transfer_entropy_matrix(series)
+
+    def test_matrix_rejects_boolean_phase_series(self):
+        series = np.array([[True, False, True], [False, True, False]])
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
