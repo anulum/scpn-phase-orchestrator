@@ -156,7 +156,9 @@ class LSLBCIBridge:
             if self._running:
                 return
 
-            if self._thread is not None and self._thread.is_alive():
+            thread = self._thread
+            is_alive = getattr(thread, "is_alive", None)
+            if thread is not None and callable(is_alive) and is_alive():
                 # Defensively avoid duplicate capture loops.
                 self._running = True
                 return
@@ -179,7 +181,8 @@ class LSLBCIBridge:
                 )
 
             self._running = True
-            self._thread = threading.Thread(target=self._capture_loop, daemon=True)
+            if self._thread is None:
+                self._thread = threading.Thread(target=self._capture_loop, daemon=True)
             self._thread.start()
 
     def stop(self) -> None:
@@ -192,10 +195,10 @@ class LSLBCIBridge:
             thread.join(timeout=1.0)
 
         with self._thread_lock:
+            self._inlet = None
             if thread and thread.is_alive():
                 return
             self._thread = None
-            self._inlet = None
 
     def get_instantaneous_phase(self) -> float:
         """Extract the current phase from the buffered signal.
