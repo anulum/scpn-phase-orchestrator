@@ -306,6 +306,24 @@ def test_build_engine_rejects_malformed_method_metadata(tmp_path, method):
         )
 
 
+@pytest.mark.parametrize("amplitude_mode", [1, "true", [], object()])
+def test_build_engine_rejects_malformed_amplitude_mode_metadata(
+    tmp_path, amplitude_mode
+):
+    re = ReplayEngine(tmp_path / "unused.jsonl")
+
+    with pytest.raises(ValueError, match="audit header amplitude_mode"):
+        re.build_engine(
+            {
+                "header": True,
+                "n_oscillators": 4,
+                "dt": 0.01,
+                "method": "euler",
+                "amplitude_mode": amplitude_mode,
+            }
+        )
+
+
 def test_chained_verification_detects_divergence(tmp_path):
     """Tampered phases are caught by chained verification."""
     n = 4

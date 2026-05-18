@@ -80,6 +80,13 @@ def _header_method(header: dict) -> str:
     raise ValueError(f"audit header method must be one of: {allowed}")
 
 
+def _header_amplitude_mode(header: dict) -> bool:
+    value = header.get("amplitude_mode", False)
+    if isinstance(value, bool):
+        return value
+    raise ValueError("audit header amplitude_mode must be a boolean")
+
+
 class ReplayEngine:
     """Replay and verify determinism of JSONL audit logs."""
 
@@ -128,7 +135,7 @@ class ReplayEngine:
         n_oscillators = _required_header_int(header, "n_oscillators")
         dt = _required_header_float(header, "dt")
         method = _header_method(header)
-        if header.get("amplitude_mode"):
+        if _header_amplitude_mode(header):
             return StuartLandauEngine(
                 n_oscillators=n_oscillators,
                 dt=dt,
