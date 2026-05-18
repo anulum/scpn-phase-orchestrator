@@ -238,8 +238,54 @@ class TestValidation:
 
     def test_rejects_non_positive_dt(self) -> None:
         compiler = KuramotoVerilogCompiler(n_oscillators=2)
-        with pytest.raises(ValueError, match="dt must be positive"):
+        with pytest.raises(ValueError, match="dt must be a positive finite real"):
             compiler.compile(np.zeros((2, 2)), np.ones(2), 0.0)
+
+    @pytest.mark.parametrize("dt", [True, "0.01", np.nan, np.inf, -np.inf])
+    def test_rejects_malformed_dt(self, dt: Any) -> None:
+        compiler = KuramotoVerilogCompiler(n_oscillators=2)
+        with pytest.raises(ValueError, match="dt must be a positive finite real"):
+            compiler.compile(np.zeros((2, 2)), np.ones(2), dt)
+
+    @pytest.mark.parametrize(
+        ("knm", "match"),
+        [
+            ([[0.0, 0.1], [0.2]], "knm must be a finite float array"),
+            (np.array([[0.0, np.nan], [0.2, 0.0]]), "knm must contain only finite"),
+            (np.zeros((2, 2, 1)), "knm shape"),
+        ],
+    )
+    def test_rejects_malformed_coupling_matrix(
+        self,
+        knm: Any,
+        match: str,
+    ) -> None:
+        compiler = KuramotoVerilogCompiler(n_oscillators=2)
+        with pytest.raises(ValueError, match=match):
+            compiler.compile(knm, np.ones(2), 0.01)
+
+    @pytest.mark.parametrize(
+        ("omegas", "match"),
+        [
+            ([1.0, object()], "omegas must be a finite float array"),
+            (np.array([1.0, np.inf]), "omegas must contain only finite"),
+            (np.ones((2, 1)), "omegas shape"),
+        ],
+    )
+    def test_rejects_malformed_frequency_vector(
+        self,
+        omegas: Any,
+        match: str,
+    ) -> None:
+        compiler = KuramotoVerilogCompiler(n_oscillators=2)
+        with pytest.raises(ValueError, match=match):
+            compiler.compile(np.zeros((2, 2)), omegas, 0.01)
+
+    def test_compile_accepts_array_like_numeric_inputs(self) -> None:
+        compiler = KuramotoVerilogCompiler(n_oscillators=2)
+        verilog = compiler.compile([[0.0, 0.25], [0.0, 0.0]], [1, 2], 0.01)
+        assert "K_0_1" in verilog
+        assert "OMEGA_1" in verilog
 
 
 class TestHdlCompilerPipelineWiring:

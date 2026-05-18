@@ -21,7 +21,7 @@ The compiler is arithmetic-complete — no ``real``, no system tasks, no
 
 from __future__ import annotations
 
-from numbers import Integral
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -62,6 +62,32 @@ def _require_integer(value: object, *, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer")
     return int(value)
+
+
+def _require_finite_array(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if array.shape != shape:
+        raise ValueError(f"{name} shape {array.shape} does not match expected {shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _require_positive_finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a positive finite real")
+    coerced = float(value)
+    if not np.isfinite(coerced) or coerced <= 0.0:
+        raise ValueError(f"{name} must be a positive finite real")
+    return coerced
 
 
 class KuramotoVerilogCompiler:
@@ -117,16 +143,13 @@ class KuramotoVerilogCompiler:
         include path (usually via ``\`include "kuramoto_core.v"`` or an
         IP library).
         """
-        if knm.shape != (self.n, self.n):
-            raise ValueError(
-                f"knm shape {knm.shape} does not match n={self.n} oscillators"
-            )
-        if omegas.shape != (self.n,):
-            raise ValueError(
-                f"omegas shape {omegas.shape} does not match n={self.n} oscillators"
-            )
-        if dt <= 0.0:
-            raise ValueError(f"dt must be positive, got {dt}")
+        knm = _require_finite_array(
+            knm,
+            name="knm",
+            shape=(self.n, self.n),
+        )
+        omegas = _require_finite_array(omegas, name="omegas", shape=(self.n,))
+        dt = _require_positive_finite_float(dt, name="dt")
 
         dt_q = _hex_q16_16(dt)
         lines: list[str] = []

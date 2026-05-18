@@ -289,6 +289,33 @@ class TestSheafEngineEdgeCases:
         with pytest.raises(ValueError, match="zeta must be finite"):
             engine.step(phases, omegas, restriction_maps, np.inf, psi)
 
+        with pytest.raises(ValueError, match="zeta must be finite real"):
+            engine.step(phases, omegas, restriction_maps, True, psi)
+
+        with pytest.raises(ValueError, match="psi.shape"):
+            engine.step(phases, omegas, restriction_maps, 0.0, np.zeros((2, 1)))
+
+        with pytest.raises(ValueError, match="omegas contains NaN/Inf"):
+            engine.step(
+                phases,
+                np.array([[1.0, 2.0], [3.0, np.inf]]),
+                restriction_maps,
+                0.0,
+                psi,
+            )
+
+    def test_step_accepts_numeric_array_like_inputs(self):
+        engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
+        out = engine.step(
+            [[0.0], [0.1]],
+            [[1.0], [2.0]],
+            [[[[0.0]], [[0.0]]], [[[0.0]], [[0.0]]]],
+            0,
+            [0.0],
+        )
+
+        np.testing.assert_allclose(out, [[0.01], [0.12]], atol=1e-12)
+
     def test_run_zero_steps_returns_independent_copy(self):
         engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
         phases = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64)
@@ -348,6 +375,53 @@ class TestSheafEngineEdgeCases:
         assert np.all(out_rk45 < 2 * np.pi)
         with pytest.raises(AssertionError):
             np.testing.assert_allclose(out_rk45, out_rk4, atol=1e-12, rtol=1e-12)
+
+    def test_rust_step_rejects_malformed_flattened_output(self, monkeypatch):
+        class BadSheafStepper:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def step(self, phases, omegas, restriction_maps, zeta, psi):
+                return np.array([0.1, 0.2, 0.3], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySheafUPDEStepper = BadSheafStepper
+        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
+        with pytest.raises(ValueError, match="Rust sheaf step returned 3 values"):
+            engine.step(
+                np.zeros((2, 2)),
+                np.ones((2, 2)),
+                np.zeros((2, 2, 2, 2)),
+                0.0,
+                np.zeros(2),
+            )
+
+    def test_rust_run_rejects_non_finite_flattened_output(self, monkeypatch):
+        class BadSheafStepper:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def run(self, phases, omegas, restriction_maps, zeta, psi, n_steps):
+                return np.array([0.1, 0.2, np.nan, 0.4], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySheafUPDEStepper = BadSheafStepper
+        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
+        with pytest.raises(ValueError, match="Rust sheaf run returned NaN/Inf"):
+            engine.run(
+                np.zeros((2, 2)),
+                np.ones((2, 2)),
+                np.zeros((2, 2, 2, 2)),
+                0.0,
+                np.zeros(2),
+                1,
+            )
 
 
 # Pipeline wiring: SheafUPDEEngine extends UPDEEngine to multi-dimensional

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import threading
 from numbers import Integral, Real
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -52,6 +52,49 @@ def _validate_nonnegative_int(value: object, *, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
     return int(value)
+
+
+def _validate_finite_matrix(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, ...],
+) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
+    if array.shape != shape:
+        raise ValueError(f"{name}.shape={array.shape}, expected {shape}")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} contains NaN/Inf")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_finite_real(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite real, got {value!r}")
+    return coerced
+
+
+def _reshape_rust_result(
+    value: object,
+    *,
+    name: str,
+    shape: tuple[int, int],
+) -> FloatArray:
+    array = np.asarray(value, dtype=np.float64)
+    expected_size = shape[0] * shape[1]
+    if array.size != expected_size:
+        raise ValueError(
+            f"Rust sheaf {name} returned {array.size} values, expected {expected_size}"
+        )
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"Rust sheaf {name} returned NaN/Inf")
+    return np.ascontiguousarray(array.reshape(shape), dtype=np.float64)
 
 
 class SheafUPDEEngine:
@@ -160,7 +203,13 @@ class SheafUPDEEngine:
         Returns:
             New phase matrix, shape (N, D).
         """
-        self._validate_inputs(phases, omegas, restriction_maps, zeta, psi)
+        phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(
+            phases,
+            omegas,
+            restriction_maps,
+            zeta,
+            psi,
+        )
         with self._lock:
             if self._rust is not None:
                 res = self._rust.step(
@@ -170,9 +219,10 @@ class SheafUPDEEngine:
                     float(zeta),
                     np.ascontiguousarray(psi.ravel(), dtype=np.float64),
                 )
-                return cast(
-                    "FloatArray",
-                    np.asarray(res).reshape((self._n, self._d)),
+                return _reshape_rust_result(
+                    res,
+                    name="step",
+                    shape=(self._n, self._d),
                 )
 
             if self._method == "euler":
@@ -192,7 +242,13 @@ class SheafUPDEEngine:
     ) -> FloatArray:
         """Run multiple steps in a batch, return final phases."""
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
-        self._validate_inputs(phases, omegas, restriction_maps, zeta, psi)
+        phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(
+            phases,
+            omegas,
+            restriction_maps,
+            zeta,
+            psi,
+        )
         with self._lock:
             if self._rust is not None:
                 res = self._rust.run(
@@ -203,9 +259,10 @@ class SheafUPDEEngine:
                     np.ascontiguousarray(psi.ravel(), dtype=np.float64),
                     n_steps,
                 )
-                return cast(
-                    "FloatArray",
-                    np.asarray(res).reshape((self._n, self._d)),
+                return _reshape_rust_result(
+                    res,
+                    name="run",
+                    shape=(self._n, self._d),
                 )
 
             p = phases.copy()
@@ -220,21 +277,20 @@ class SheafUPDEEngine:
         restriction_maps: FloatArray,
         zeta: float,
         psi: FloatArray,
-    ) -> None:
+    ) -> tuple[FloatArray, FloatArray, FloatArray, float, FloatArray]:
         n, d = self._n, self._d
-        if not np.isfinite(zeta):
-            raise ValueError("zeta must be finite")
-        checks = (
-            ("phases", phases, (n, d)),
-            ("omegas", omegas, (n, d)),
-            ("restriction_maps", restriction_maps, (n, n, d, d)),
-            ("psi", psi, (d,)),
+        zeta = _validate_finite_real(zeta, name="zeta")
+        return (
+            _validate_finite_matrix(phases, name="phases", shape=(n, d)),
+            _validate_finite_matrix(omegas, name="omegas", shape=(n, d)),
+            _validate_finite_matrix(
+                restriction_maps,
+                name="restriction_maps",
+                shape=(n, n, d, d),
+            ),
+            zeta,
+            _validate_finite_matrix(psi, name="psi", shape=(d,)),
         )
-        for name, arr, shape in checks:
-            if arr.shape != shape:
-                raise ValueError(f"{name}.shape={arr.shape}, expected {shape}")
-            if not np.all(np.isfinite(arr)):
-                raise ValueError(f"{name} contains NaN/Inf")
 
     def _derivative(
         self,

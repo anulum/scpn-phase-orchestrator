@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
@@ -116,6 +117,51 @@ class TestBoundaryEscalation:
         state_ok = observer.observe({"R": 0.9})
         assert len(state_ok.violations) == 0
 
+    def test_hard_boundary_violation_feeds_control_action(self) -> None:
+        """Hard boundary crossings must survive the observer -> policy path."""
+        layers = [LayerState(R=0.05, psi=0.0), LayerState(R=0.05, psi=0.0)]
+        upde_state = UPDEState(
+            layers=layers,
+            cross_layer_alignment=np.eye(2),
+            stability_proxy=0.05,
+            regime_id="critical",
+        )
+        boundary_defs = [
+            BoundaryDef(
+                name="R_floor",
+                variable="R",
+                lower=0.3,
+                upper=None,
+                severity="hard",
+            ),
+        ]
+        observer = BoundaryObserver(boundary_defs)
+        boundary_state = observer.observe({"R": 0.05})
+
+        actions = SupervisorPolicy(RegimeManager(cooldown_steps=0)).decide(
+            upde_state,
+            boundary_state,
+        )
+
+        assert boundary_state.violations
+        assert actions
+
+    def test_boundary_observer_ignores_missing_runtime_variable(self) -> None:
+        boundary_defs = [
+            BoundaryDef(
+                name="R_floor",
+                variable="R",
+                lower=0.3,
+                upper=None,
+                severity="hard",
+            ),
+        ]
+        observer = BoundaryObserver(boundary_defs)
+
+        boundary_state = observer.observe({"not_R": 0.1})
+
+        assert boundary_state.violations == []
+
 
 class TestConfigurationBoundaries:
     """Engine construction with boundary configurations."""
@@ -150,6 +196,29 @@ class TestConfigurationBoundaries:
         assert np.all(np.isfinite(final))
         assert np.all(final >= 0)
         assert np.all(final < TWO_PI)
+
+    def test_pipeline_rejects_malformed_coupling_before_supervision(self) -> None:
+        """Invalid dynamics input must fail before boundary/supervisor decisions."""
+        n = 3
+        engine = UPDEEngine(n_oscillators=n, dt=0.01)
+        phases = np.zeros(n)
+        omegas = np.ones(n)
+        malformed_knm = np.zeros((n - 1, n - 1))
+        alpha = np.zeros((n, n))
+
+        with pytest.raises(ValueError, match="knm"):
+            engine.step(phases, omegas, malformed_knm, 0.0, 0.0, alpha)
+
+    def test_pipeline_rejects_non_finite_phase_state(self) -> None:
+        n = 3
+        engine = UPDEEngine(n_oscillators=n, dt=0.01)
+        phases = np.array([0.0, np.nan, 1.0])
+        omegas = np.ones(n)
+        knm = np.zeros((n, n))
+        alpha = np.zeros((n, n))
+
+        with pytest.raises(ValueError, match="phases"):
+            engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
 
 
 class TestRegimeHysteresis:
@@ -191,6 +260,30 @@ class TestRegimeHysteresis:
         actions = policy.decide(state, observer.observe({"R": 0.05}))
         # With a hard violation and critical regime, actions should exist.
         assert isinstance(actions, list)
+        assert actions
+
+    def test_cooldown_holds_previous_critical_regime(self) -> None:
+        mgr = RegimeManager(cooldown_steps=3)
+        policy = SupervisorPolicy(mgr)
+        observer = BoundaryObserver([])
+        critical = UPDEState(
+            layers=[LayerState(R=0.05, psi=0.0) for _ in range(2)],
+            cross_layer_alignment=np.eye(2),
+            stability_proxy=0.05,
+            regime_id="critical",
+        )
+        recovered = UPDEState(
+            layers=[LayerState(R=0.95, psi=0.0) for _ in range(2)],
+            cross_layer_alignment=np.eye(2),
+            stability_proxy=0.95,
+            regime_id="nominal",
+        )
+
+        first_actions = policy.decide(critical, observer.observe({"R": 0.05}))
+        second_actions = policy.decide(recovered, observer.observe({"R": 0.95}))
+
+        assert first_actions
+        assert second_actions
 
 
 # Pipeline wiring: integration coverage now touches CouplingBuilder →
