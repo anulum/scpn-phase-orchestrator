@@ -74,9 +74,12 @@ def test_runtime_observability_records_step_without_otel_backend() -> None:
 def test_runtime_span_validates_attributes_without_otel_backend() -> None:
     runtime_obs = RuntimeObservability()
 
-    with pytest.raises(ValueError, match="attributes"), runtime_obs.span(
-        "spo.step",
-        cast(dict[str, object], {"bad": object()}),
+    with (
+        pytest.raises(ValueError, match="attributes"),
+        runtime_obs.span(
+            "spo.step",
+            cast(dict[str, object], {"bad": object()}),
+        ),
     ):
         pass
 

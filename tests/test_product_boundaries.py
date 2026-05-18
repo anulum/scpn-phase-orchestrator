@@ -100,16 +100,14 @@ def test_runtime_namespace_is_runtime_boundary() -> None:
         "runtime"
     )
     assert (
-        mod.classify_module("scpn_phase_orchestrator.runtime.audit_logger")
-        == "runtime"
+        mod.classify_module("scpn_phase_orchestrator.runtime.audit_logger") == "runtime"
     )
     assert (
         mod.classify_module("scpn_phase_orchestrator.runtime.audit_signing")
         == "runtime"
     )
     assert (
-        mod.classify_module("scpn_phase_orchestrator.runtime.audit_stream")
-        == "runtime"
+        mod.classify_module("scpn_phase_orchestrator.runtime.audit_stream") == "runtime"
     )
     assert (
         mod.classify_module("scpn_phase_orchestrator.runtime.network_security")
