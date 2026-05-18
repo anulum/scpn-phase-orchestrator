@@ -84,6 +84,13 @@ def _validate_coupling_matrix(knm: object) -> FloatArray:
 
 
 def _validate_omegas(omegas: object, *, expected_n: int) -> FloatArray:
+    values = _validate_omega_vector(omegas)
+    if values.shape != (expected_n,):
+        raise ValueError(f"omegas shape {values.shape} does not match ({expected_n},)")
+    return values
+
+
+def _validate_omega_vector(omegas: object) -> FloatArray:
     raw = np.asarray(omegas)
     if raw.dtype == np.bool_:
         raise ValueError("omegas must not contain boolean values")
@@ -93,8 +100,8 @@ def _validate_omegas(omegas: object, *, expected_n: int) -> FloatArray:
         raise ValueError("omegas must be a finite 1-D frequency vector") from exc
     if values.ndim != 1:
         raise ValueError("omegas must be a finite 1-D frequency vector")
-    if values.shape != (expected_n,):
-        raise ValueError(f"omegas shape {values.shape} does not match ({expected_n},)")
+    if values.size == 0:
+        raise ValueError("omegas must contain at least one frequency")
     if not np.all(np.isfinite(values)):
         raise ValueError("omegas must contain only finite values")
     return values
@@ -275,7 +282,7 @@ def critical_coupling(omegas: FloatArray, knm: FloatArray) -> float:
     (``λ₂ ≈ 0``)."""
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
-    omegas = _validate_omegas(omegas, expected_n=n)
+    omegas = _validate_omega_vector(omegas)
     if ACTIVE_BACKEND == "rust":
         flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         o = np.ascontiguousarray(omegas, dtype=np.float64)
@@ -326,10 +333,10 @@ def sync_convergence_rate(
     (Dörfler-Bullo 2014 §III.B)."""
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
-    omegas = _validate_omegas(omegas, expected_n=n)
-    gamma_max = _validate_gamma_max(gamma_max)
     if n == 0:
         return 0.0
+    omegas = _validate_omegas(omegas, expected_n=n)
+    gamma_max = _validate_gamma_max(gamma_max)
     if ACTIVE_BACKEND == "rust":
         flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         o = np.ascontiguousarray(omegas, dtype=np.float64)

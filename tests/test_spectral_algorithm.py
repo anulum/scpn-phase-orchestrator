@@ -174,13 +174,20 @@ class TestCriticalCoupling:
         [
             (np.array([True, False]), np.ones((2, 2)), "omegas"),
             (np.array([0.0, np.inf]), np.ones((2, 2)), "omegas"),
-            (np.zeros(3), np.ones((2, 2)), "omegas"),
+            (np.array([]), np.ones((2, 2)), "omegas"),
             (np.zeros(2), np.array([[True, False], [False, True]]), "knm"),
         ],
     )
     def test_rejects_invalid_frequency_or_coupling_inputs(self, omegas, knm, match):
         with pytest.raises(ValueError, match=match):
             critical_coupling(omegas, knm)
+
+    @_python
+    def test_accepts_frequency_vector_shorter_than_layer_matrix(self):
+        W = np.ones((4, 4), dtype=np.float64)
+        np.fill_diagonal(W, 0.0)
+
+        assert critical_coupling(np.array([5.0, 10.0]), W) == pytest.approx(1.25)
 
 
 class TestFiedlerPartition:
