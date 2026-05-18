@@ -234,3 +234,21 @@ class TestFastAPIEndpoints:
 # Pipeline wiring: SimulationState wraps the full pipeline (binding → engine →
 # order_parameter → policy). TestSimulationState exercises step/status/reset
 # via FastAPI client. TestServerDomainpacks verifies all registered domainpacks.
+
+
+def test_metrics_endpoint_is_default_runtime_observability_surface():
+    from fastapi.testclient import TestClient
+
+    from scpn_phase_orchestrator.server import create_app
+
+    client = TestClient(
+        create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+    )
+
+    response = client.get("/api/metrics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "spo_r_global" in response.text
+    assert "spo_stability_proxy" in response.text
+    assert "spo_step" in response.text

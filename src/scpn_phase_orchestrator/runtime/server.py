@@ -54,6 +54,10 @@ from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+from scpn_phase_orchestrator.runtime.observability import (
+    RuntimeMetricSnapshot,
+    RuntimeObservability,
+)
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -521,17 +525,12 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         }
 
     @app.get("/api/metrics")
-    async def get_metrics() -> Response:  # pragma: no cover
+    async def get_metrics() -> Response:
         """Handle GET /api/metrics — export Prometheus-format metrics."""
         from fastapi.responses import PlainTextResponse
 
-        from scpn_phase_orchestrator.adapters.metrics_exporter import (
-            MetricsExporter,
-        )
-
         with sim._lock:
             snap = sim.snapshot()
-        exporter = MetricsExporter()
         upde_state = UPDEState(
             layers=[
                 LayerState(R=ly["R"], psi=ly.get("psi", 0.0)) for ly in snap["layers"]
@@ -540,7 +539,15 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             stability_proxy=snap["R_global"],
             regime_id=snap["regime"],
         )
-        text = exporter.export(upde_state, snap["regime"], 0.0)
+        observability = RuntimeObservability()
+        text = observability.prometheus_text(
+            RuntimeMetricSnapshot(
+                upde_state=upde_state,
+                regime=snap["regime"],
+                latency_ms=0.0,
+                step_idx=snap.get("step"),
+            )
+        )
         return PlainTextResponse(text, media_type="text/plain")
 
     @app.get("/api/health")

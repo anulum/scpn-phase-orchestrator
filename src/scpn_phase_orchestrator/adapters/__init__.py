@@ -9,10 +9,10 @@
 """Public adapter registry for optional external-system bridge surfaces.
 
 The adapters package re-exports bridges for fusion, plasma, quantum, SNN,
-Prometheus, Redis, hardware I/O, OpenTelemetry, NeuroCore, Remanentia, Synapse,
-and related integration points. Importing the registry only exposes classes,
-flags, and builders; concrete adapters own dependency checks, socket or client
-creation, validation, persistence, and any explicit runtime side effects.
+Prometheus, Redis, hardware I/O, NeuroCore, Remanentia, Synapse, and related
+integration points. Runtime metrics and OpenTelemetry compatibility exports are
+re-exported here for historical callers; their canonical implementation lives
+under ``scpn_phase_orchestrator.runtime.observability``.
 """
 
 from __future__ import annotations

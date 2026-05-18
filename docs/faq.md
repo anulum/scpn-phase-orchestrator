@@ -75,14 +75,15 @@ service alerts trigger. See the
 
 ### How do I integrate with Prometheus?
 
-Two options:
+Runtime observability is enabled by default. The HTTP runtime exposes
+`/api/metrics` as Prometheus text with `spo_r_global`, `spo_stability_proxy`,
+`spo_pac_max`, `spo_latency_ms`, `spo_step`, and per-layer gauges through
+`scpn_phase_orchestrator.runtime.observability`.
 
-1. `OTelExporter` -- emits OpenTelemetry spans and metrics, which
-   the OTel Collector can forward to Prometheus.
-2. `PrometheusExporter` -- directly exposes a `/metrics` endpoint with
-   `spo_r_global`, `spo_regime`, and per-layer gauges.
-
-Both live in `scpn_phase_orchestrator.adapters`.
+OpenTelemetry remains an optional export backend: `OTelExporter` validates
+spans and metric records even when the OTel extra is not installed, then emits
+them when `scpn-phase-orchestrator[otel]` is available. Historical adapter
+imports remain compatibility aliases.
 
 ### What is PAC?
 

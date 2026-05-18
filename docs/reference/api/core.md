@@ -65,6 +65,15 @@ per-identity fixed-window rate limiting.
 
 ::: scpn_phase_orchestrator.runtime.network_security
 
+## Runtime observability
+
+Prometheus text metrics are a default Runtime/Serving surface, not an optional
+external adapter. OpenTelemetry remains an optional backend; absent OTel packages
+produce validated no-op spans while `/api/metrics` and local Prometheus text
+export stay active.
+
+::: scpn_phase_orchestrator.runtime.observability
+
 ## Web and gRPC services
 
 The service modules expose the FastAPI dashboard state container and the gRPC

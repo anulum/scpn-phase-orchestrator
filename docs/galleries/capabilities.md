@@ -65,8 +65,9 @@ domain-specific telemetry:
 | `plasma_control_bridge` | Tokamak real-time PCS |
 | `quantum_control_bridge` | Qiskit circuit parameters |
 | `snn_bridge` | sc-neurocore SNN spike rates |
-| `opentelemetry` | OTel spans and metrics |
-| `prometheus` | `/metrics` endpoint (Prometheus scrape) |
+| `runtime.observability` | Default runtime Prometheus text metrics and optional OTel export |
+| `opentelemetry` | Compatibility alias for runtime OTel spans and metrics |
+| `prometheus` | Prometheus query client for external metric sources |
 
 ---
 

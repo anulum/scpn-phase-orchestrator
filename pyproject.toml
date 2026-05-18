@@ -179,6 +179,7 @@ module = [
     "scpn_phase_orchestrator.adapters.hardware_io",
     "scpn_phase_orchestrator.adapters.redis_store",
     "scpn_phase_orchestrator.adapters.opentelemetry",
+    "scpn_phase_orchestrator.runtime.observability",
     "scpn_phase_orchestrator.adapters.neurocore_bridge",
     "scpn_phase_orchestrator.adapters.quantum_control_bridge",
     "scpn_phase_orchestrator.adapters.lsl_bci_bridge",
@@ -280,7 +281,6 @@ omit = [
     "*/adapters/fusion_core_bridge.py",
     "*/adapters/neurocore_bridge.py",
     "*/adapters/plasma_control_bridge.py",
-    "*/adapters/metrics_exporter.py",
     "*/monitor/stl.py",
     # Optional native backend shims: exercised through availability/parity gates,
     # but their Go/Julia/Mojo subprocess branches depend on external toolchains.
