@@ -18,7 +18,8 @@ leaking stream identifiers in shared error messages.
 from __future__ import annotations
 
 import threading
-from math import isfinite
+from collections.abc import Sequence
+from math import ceil, isfinite
 from numbers import Integral, Real
 from typing import Any
 
@@ -64,6 +65,36 @@ def _validate_buffer_size_s(buffer_size_s: float) -> float:
     return float(buffer_size_s)
 
 
+def _validate_connect_timeout(connect_timeout: float) -> float:
+    if (
+        isinstance(connect_timeout, bool)
+        or not isinstance(connect_timeout, Real)
+        or not isfinite(float(connect_timeout))
+        or float(connect_timeout) <= 0.0
+    ):
+        raise ValueError("connect_timeout must be a finite positive real value")
+    return float(connect_timeout)
+
+
+def _validate_nominal_srate(nominal_srate: Any) -> float:
+    if (
+        isinstance(nominal_srate, bool)
+        or not isinstance(nominal_srate, Real)
+        or not isfinite(float(nominal_srate))
+        or float(nominal_srate) <= 0.0
+    ):
+        raise ValueError("stream nominal sample rate must be a finite positive value")
+    return float(nominal_srate)
+
+
+def _is_valid_sample(sample: Any) -> bool:
+    try:
+        value = float(sample)
+    except (TypeError, ValueError):
+        return False
+    return isfinite(value)
+
+
 class LSLBCIBridge:
     """Real-time BCI Entrainment Bridge via Lab Streaming Layer (LSL).
 
@@ -89,14 +120,17 @@ class LSLBCIBridge:
         self.buffer_size_s = _validate_buffer_size_s(buffer_size_s)
 
         self._running = False
+        self._thread_lock = threading.Lock()
         self._inlet: Any = None
         self._data_buffer: list[float] = []
         self._lock = threading.Lock()
-
-        self._thread = threading.Thread(target=self._capture_loop, daemon=True)
+        self._thread: threading.Thread | None = None
+        self._buffer_len: int = 0
 
     def connect(self, timeout: float = 5.0) -> bool:
         """Resolve and connect to the LSL stream."""
+        timeout = _validate_connect_timeout(timeout)
+
         if not HAS_LSL or pylsl is None:
             return False
 
@@ -104,33 +138,64 @@ class LSLBCIBridge:
         if not streams:
             return False
 
-        self._inlet = pylsl.StreamInlet(streams[0])
-        info = self._inlet.info()
-        self.sampling_rate = info.nominal_srate()
-        self._buffer_len = int(self.buffer_size_s * self.sampling_rate)
+        inlet = pylsl.StreamInlet(streams[0])
+        info = inlet.info()
+        try:
+            nominal_srate = _validate_nominal_srate(info.nominal_srate())
+        except ValueError:
+            return False
+        self._inlet = inlet
+        self.sampling_rate = nominal_srate
+        self._buffer_len = max(1, int(ceil(self.buffer_size_s * nominal_srate)))
 
         return True
 
     def start(self) -> None:
         """Start the background capture thread."""
-        if self._inlet is None and not self.connect():
-            # Do not echo the configured stream_name — keep the error
-            # message independent of the user-configured identifier so
-            # shared logs never broadcast deployment topology.
-            raise RuntimeError(
-                "Could not connect to configured LSL stream "
-                "(check stream configuration)"
-            )
+        with self._thread_lock:
+            if self._running:
+                return
 
-        self._running = True
-        self._thread.start()
+            if self._thread is not None and self._thread.is_alive():
+                # Defensively avoid duplicate capture loops.
+                self._running = True
+                return
+
+            if self._inlet is None:
+                try:
+                    connected = self.connect()
+                except ValueError:
+                    connected = False
+            else:
+                connected = True
+
+            if not connected:
+                # Do not echo the configured stream_name — keep the error
+                # message independent of the user-configured identifier so
+                # shared logs never broadcast deployment topology.
+                raise RuntimeError(
+                    "Could not connect to configured LSL stream "
+                    "(check stream configuration)"
+                )
+
+            self._running = True
+            self._thread = threading.Thread(target=self._capture_loop, daemon=True)
+            self._thread.start()
 
     def stop(self) -> None:
         """Stop capture and disconnect."""
-        self._running = False
-        if self._thread.is_alive():
-            self._thread.join(timeout=1.0)
-        self._inlet = None
+        with self._thread_lock:
+            self._running = False
+            thread = self._thread
+
+        if thread and thread.is_alive():
+            thread.join(timeout=1.0)
+
+        with self._thread_lock:
+            if thread and thread.is_alive():
+                return
+            self._thread = None
+            self._inlet = None
 
     def get_instantaneous_phase(self) -> float:
         """Extract the current phase from the buffered signal.
@@ -139,9 +204,12 @@ class LSLBCIBridge:
         Returns phase in [0, 2*pi).
         """
         with self._lock:
-            if len(self._data_buffer) < 32:  # Hilbert needs >=32 samples for stability
+            signal = np.array(
+                [sample for sample in self._data_buffer if _is_valid_sample(sample)],
+                dtype=float,
+            )
+            if len(signal) < 32:  # Hilbert needs >=32 samples for stability
                 return 0.0
-            signal = np.array(self._data_buffer)
 
         # Analytic signal via Hilbert transform
         analytic_signal = hilbert(signal)
@@ -155,12 +223,25 @@ class LSLBCIBridge:
         """Background thread reading samples into the buffer."""
         while self._running:
             try:
-                sample, timestamp = self._inlet.pull_sample(timeout=0.1)
-                if sample:
-                    val = sample[self.target_channel]
-                    with self._lock:
-                        self._data_buffer.append(val)
-                        if len(self._data_buffer) > self._buffer_len:
-                            self._data_buffer.pop(0)
-            except (OSError, ValueError):
+                sample, _ = self._inlet.pull_sample(timeout=0.1)
+            except (OSError, ValueError, RuntimeError):
                 continue
+
+            if sample is None:
+                continue
+            if not isinstance(sample, Sequence):
+                continue
+            try:
+                if self.target_channel >= len(sample):
+                    continue
+                value = sample[self.target_channel]
+            except (TypeError, IndexError):
+                continue
+
+            if not _is_valid_sample(value):
+                continue
+
+            with self._lock:
+                self._data_buffer.append(float(value))
+                if len(self._data_buffer) > self._buffer_len:
+                    self._data_buffer.pop(0)

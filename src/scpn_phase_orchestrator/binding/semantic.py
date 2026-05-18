@@ -46,6 +46,12 @@ __all__ = [
     "compile_symbolic_binding",
 ]
 
+_LAYER_PATTERN = re.compile(r"(-?\d+)[ -]layer", re.IGNORECASE)
+_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
+_MAX_LAYERS = 256
+_MAX_OSCILLATORS_PER_LAYER = 256
+_MAX_DRY_RUN_STEPS = 256
+
 
 @dataclass(frozen=True)
 class RetrievalEvidence:
@@ -92,7 +98,7 @@ class GeneratedBindingArtifacts:
         """Write generated artefacts as a reviewable domainpack directory."""
         import json
 
-        path = Path(output_dir)
+        path = _coerce_output_dir(output_dir)
         path.mkdir(parents=True, exist_ok=True)
         (path / "binding_spec.yaml").write_text(self.binding_yaml, encoding="utf-8")
         (path / "policy.yaml").write_text(self.policy_yaml, encoding="utf-8")
@@ -147,18 +153,29 @@ class SemanticDomainCompiler:
         docs_root: str | Path | None = "docs",
     ) -> GeneratedBindingArtifacts:
         """Compile domain intent into binding, policy, audit, and dry-run artefacts."""
-        if not name or not re.match(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$", name):
-            raise ValueError("name must match [A-Za-z][A-Za-z0-9_-]{0,63}")
-        if oscillators_per_layer < 1:
-            raise ValueError("oscillators_per_layer must be >= 1")
-        if dry_run_steps < 1:
-            raise ValueError("dry_run_steps must be >= 1")
+        (
+            prompt,
+            name,
+            oscillators_per_layer,
+            dry_run_steps,
+            retrieval_root,
+            docs_root,
+        ) = _validate_compilation_inputs(
+            prompt=prompt,
+            name=name,
+            oscillators_per_layer=oscillators_per_layer,
+            dry_run_steps=dry_run_steps,
+            retrieval_root=retrieval_root,
+            docs_root=docs_root,
+        )
 
         # Heuristic: Layer detection
-        layer_match = re.search(r"(\d+)[ -]layer", prompt, re.IGNORECASE)
+        layer_match = _LAYER_PATTERN.search(prompt)
         num_layers = int(layer_match.group(1)) if layer_match else 2
         if num_layers < 1:
             raise ValueError("layer count must be >= 1")
+        if num_layers > _MAX_LAYERS:
+            raise ValueError(f"layer count must be <= {_MAX_LAYERS}")
 
         # Heuristic: Discipline detection
         lowered = prompt.lower()
@@ -352,6 +369,14 @@ def compile_symbolic_binding(
     docs_root: str | Path | None = "docs",
 ) -> GeneratedBindingArtifacts:
     """Compile domain intent into a reviewable generated domainpack."""
+    _validate_compilation_inputs(
+        prompt=prompt,
+        name=name,
+        oscillators_per_layer=oscillators_per_layer,
+        dry_run_steps=dry_run_steps,
+        retrieval_root=retrieval_root,
+        docs_root=docs_root,
+    )
     return SemanticDomainCompiler().compile_artifacts(
         prompt,
         name=name,
@@ -360,6 +385,102 @@ def compile_symbolic_binding(
         retrieval_root=retrieval_root,
         docs_root=docs_root,
     )
+
+
+def _validate_compilation_inputs(
+    *,
+    prompt: Any,
+    name: Any,
+    oscillators_per_layer: Any,
+    dry_run_steps: Any,
+    retrieval_root: str | Path | None,
+    docs_root: str | Path | None,
+) -> tuple[str, str, int, int, Path | None, Path | None]:
+    prompt_value = _as_str(prompt, "prompt")
+    name_value = _as_name(name)
+    oscillators = _as_positive_int(
+        oscillators_per_layer,
+        "oscillators_per_layer",
+        max_value=_MAX_OSCILLATORS_PER_LAYER,
+    )
+    dry_run = _as_positive_int(
+        dry_run_steps,
+        "dry_run_steps",
+        max_value=_MAX_DRY_RUN_STEPS,
+    )
+    retrieval_path = _as_path(
+        retrieval_root,
+        "retrieval_root",
+        allow_none=True,
+    )
+    docs_path = _as_path(
+        docs_root,
+        "docs_root",
+        allow_none=True,
+    )
+    return (
+        prompt_value,
+        name_value,
+        oscillators,
+        dry_run,
+        retrieval_path,
+        docs_path,
+    )
+
+
+def _as_str(value: object, field_name: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f"{field_name} must be a string")
+    return value
+
+
+def _as_name(value: object) -> str:
+    value = _as_str(value, "name")
+    if not _NAME_PATTERN.fullmatch(value):
+        raise ValueError("name must match [A-Za-z][A-Za-z0-9_-]{0,63}")
+    return value
+
+
+def _as_positive_int(value: object, field_name: str, *, max_value: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{field_name} must be an integer")
+    if value < 1:
+        raise ValueError(f"{field_name} must be >= 1")
+    if value > max_value:
+        raise ValueError(f"{field_name} must be <= {max_value}")
+    return value
+
+
+def _as_path(
+    value: str | Path | None,
+    field_name: str,
+    *,
+    allow_none: bool = False,
+) -> Path | None:
+    if value is None:
+        if not allow_none:
+            raise TypeError(f"{field_name} must be a string, pathlib.Path, or None")
+        return None
+    if isinstance(value, Path):
+        path = value
+    elif isinstance(value, str):
+        if not value.strip():
+            raise ValueError(f"{field_name} must be a non-empty path")
+        path = Path(value)
+    else:
+        raise TypeError(f"{field_name} must be a string, pathlib.Path, or None")
+    if path.exists() and not path.is_dir():
+        raise ValueError(f"{field_name} must be a directory when provided")
+    return path
+
+
+def _coerce_output_dir(output_dir: str | Path) -> Path:
+    if not isinstance(output_dir, (str, Path)):
+        raise TypeError("output_dir must be a string or pathlib.Path")
+    path = Path(output_dir)
+    if path.exists() and not path.is_dir():
+        raise ValueError("output_dir must be a directory path")
+    return path
 
 
 def _confidence(

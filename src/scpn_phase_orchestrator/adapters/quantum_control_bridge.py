@@ -43,12 +43,27 @@ def _require_positive_integer(value: object, *, name: str) -> int:
     return parsed
 
 
+def _require_mapping(value: object, *, name: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a mapping")
+    return cast("dict[str, object]", value)
+
+
 def _require_positive_real(value: object, *, name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and positive")
     parsed = float(value)
     if not np.isfinite(parsed) or parsed <= 0.0:
         raise ValueError(f"{name} must be finite and positive")
+    return parsed
+
+
+def _require_fidelity(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite and in the range [0.0, 1.0]")
+    parsed = float(value)
+    if not np.isfinite(parsed) or parsed < 0.0 or parsed > 1.0:
+        raise ValueError(f"{name} must be finite and in the range [0.0, 1.0]")
     return parsed
 
 
@@ -88,6 +103,9 @@ def _validate_layer_assignments(
             validated_group.append(parsed)
         validated.append(validated_group)
 
+    if len(seen) != n_phases:
+        raise ValueError("layer_assignments must cover every phase index exactly once")
+
     return validated
 
 
@@ -111,17 +129,18 @@ class QuantumControlBridge:
 
     def import_artifact(self, artifact_dict: dict) -> UPDEState:
         """Convert a scpn-quantum-control result dict into UPDEState."""
-        phases = _finite_array(artifact_dict["phases"], name="phases")
+        artifact = _require_mapping(artifact_dict, name="artifact_dict")
+        if "phases" not in artifact:
+            raise ValueError("artifact_dict must include 'phases'")
+        phases = _finite_array(artifact["phases"], name="phases")
         if phases.shape != (self._n,):
             raise ValueError(
                 f"phases shape {phases.shape} does not match n_oscillators={self._n}"
             )
         phases = phases % TWO_PI
-        fidelity = float(artifact_dict.get("fidelity", 0.0))
-        if not np.isfinite(fidelity):
-            raise ValueError("fidelity must be finite")
+        fidelity = _require_fidelity(artifact.get("fidelity", 0.0), name="fidelity")
 
-        layer_assignments = artifact_dict.get("layer_assignments")
+        layer_assignments = artifact.get("layer_assignments")
         if layer_assignments is None:
             mid = len(phases) // 2
             layer_assignments = [list(range(mid)), list(range(mid, len(phases)))]
@@ -143,7 +162,7 @@ class QuantumControlBridge:
 
         n_layers = len(layers)
         cross = np.eye(n_layers, dtype=np.float64)
-        regime = str(artifact_dict.get("regime", "NOMINAL"))
+        regime = str(artifact.get("regime", "NOMINAL"))
 
         return UPDEState(
             layers=layers,
@@ -263,13 +282,13 @@ class QuantumControlBridge:
 
         Requires scpn-quantum-control.
         """
-        knm, omegas = self._validate_knm_omegas(knm, omegas)
         t_max = _require_positive_real(t_max, name="t_max")
         dt = _require_positive_real(dt, name="dt")
         trotter_per_step = _require_positive_integer(
             trotter_per_step,
             name="trotter_per_step",
         )
+        knm, omegas = self._validate_knm_omegas(knm, omegas)
         from scpn_quantum_control.phase.xy_kuramoto import QuantumKuramotoSolver
 
         solver = QuantumKuramotoSolver(

@@ -311,6 +311,190 @@ def test_compile_artifacts_rejects_invalid_generation_parameters():
             compiler.compile_artifacts("A 2-layer system", **kwargs)
 
 
+@pytest.mark.parametrize("bad_prompt", [None, 123, ["not", "a", "string"]])
+def test_compile_artifacts_rejects_invalid_prompt_type(bad_prompt):
+    compiler = SemanticDomainCompiler()
+    with pytest.raises(TypeError, match="prompt must be a string"):
+        compiler.compile_artifacts(bad_prompt)
+
+
+@pytest.mark.parametrize(
+    ("value", "exc"),
+    [
+        (123, TypeError),
+        (None, TypeError),
+        ("bad name", ValueError),
+        ("-bad", ValueError),
+        ("", ValueError),
+    ],
+)
+def test_compile_artifacts_rejects_invalid_name(value, exc):
+    compiler = SemanticDomainCompiler()
+    with pytest.raises(exc):
+        compiler.compile_artifacts("A 2-layer system", name=value)
+
+
+@pytest.mark.parametrize("value", [True, False, 3.2, "4"])
+def test_compile_artifacts_rejects_non_integer_oscillators_or_dry_run(value):
+    compiler = SemanticDomainCompiler()
+    with pytest.raises(TypeError):
+        compiler.compile_artifacts("A 2-layer system", oscillators_per_layer=value)
+    with pytest.raises(TypeError):
+        compiler.compile_artifacts("A 2-layer system", dry_run_steps=value)
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "A 0-layer power grid stability controller",
+        "A -1-layer power grid stability controller",
+        "A 9999-layer power grid stability controller",
+    ],
+)
+def test_compile_artifacts_rejects_dangerous_layer_counts(prompt):
+    compiler = SemanticDomainCompiler()
+    with pytest.raises(ValueError, match="layer count"):
+        compiler.compile_artifacts(prompt)
+
+
+@pytest.mark.parametrize("value", [None, "4", 2.5, object()])
+def test_compile_symbolic_binding_rejects_invalid_parameter_types(value):
+    with pytest.raises(TypeError):
+        compile_symbolic_binding("A 2-layer power grid", oscillators_per_layer=value)
+
+
+@pytest.mark.parametrize("name", [123, None, "bad name", "-bad", ""])
+def test_compile_symbolic_binding_rejects_invalid_name(name):
+    with pytest.raises((TypeError, ValueError)):
+        compile_symbolic_binding("A 2-layer power grid", name=name)
+
+
+@pytest.mark.parametrize("bad_prompt", [None, 123, ["not", "a", "string"]])
+def test_compile_symbolic_binding_rejects_invalid_prompt_type(bad_prompt):
+    with pytest.raises(TypeError, match="prompt must be a string"):
+        compile_symbolic_binding(bad_prompt)
+
+
+@pytest.mark.parametrize(
+    ("docs_root", "retrieval_root", "expected_error"),
+    [
+        (123, None, "docs_root"),
+        (None, 123, "retrieval_root"),
+    ],
+)
+def test_compile_artifacts_rejects_invalid_retrieval_roots(
+    docs_root,
+    retrieval_root,
+    expected_error,
+):
+    compiler = SemanticDomainCompiler()
+    with pytest.raises(TypeError, match=expected_error):
+        compiler.compile_artifacts(
+            "A 2-layer power grid",
+            retrieval_root=retrieval_root,
+            docs_root=docs_root,
+        )
+
+
+def test_compile_artifacts_rejects_retrieval_root_file_path(tmp_path):
+    compiler = SemanticDomainCompiler()
+    file_root = tmp_path / "not_a_dir.txt"
+    file_root.write_text("not a dir", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="must be a directory"):
+        compiler.compile_artifacts(
+            "A 2-layer power grid",
+            retrieval_root=file_root,
+        )
+
+
+def test_compile_artifacts_rejects_docs_root_file_path(tmp_path):
+    compiler = SemanticDomainCompiler()
+    file_root = tmp_path / "docs.txt"
+    file_root.write_text("not docs", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="must be a directory"):
+        compiler.compile_artifacts(
+            "A 2-layer power grid",
+            docs_root=file_root,
+        )
+
+
+def test_generated_artifacts_write_domainpack_is_idempotent(tmp_path):
+    compiler = SemanticDomainCompiler()
+    artefacts = compiler.compile_artifacts(
+        "A 2-layer cardiac rhythm suppression system",
+        name="cardiac_review_pack",
+        oscillators_per_layer=2,
+    )
+    output_dir = tmp_path / "domainpack"
+
+    artefacts.write_domainpack(output_dir)
+    first_snapshot = {
+        file_name: (output_dir / file_name).read_text(encoding="utf-8")
+        for file_name in [
+            "binding_spec.yaml",
+            "policy.yaml",
+            "review_notebook.ipynb",
+            "audit.json",
+            "README.md",
+        ]
+    }
+
+    artefacts.write_domainpack(output_dir)
+    second_snapshot = {
+        file_name: (output_dir / file_name).read_text(encoding="utf-8")
+        for file_name in [
+            "binding_spec.yaml",
+            "policy.yaml",
+            "review_notebook.ipynb",
+            "audit.json",
+            "README.md",
+        ]
+    }
+
+    assert first_snapshot == second_snapshot
+
+
+def test_generated_artifacts_write_domainpack_rejects_non_directory_output(tmp_path):
+    compiler = SemanticDomainCompiler()
+    artifacts = compiler.compile_artifacts(
+        "A 2-layer cardiac rhythm suppression system",
+    )
+    output_file = tmp_path / "not_a_directory"
+    output_file.write_text("occupied", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="output_dir must be a directory path"):
+        artifacts.write_domainpack(output_file)
+
+
+def test_generated_artifacts_audit_record_matches_execution_payload():
+    compiler = SemanticDomainCompiler()
+    artifacts = compiler.compile_artifacts(
+        "A 2-layer traffic flow",
+        name="traffic_pack",
+        oscillators_per_layer=3,
+        dry_run_steps=2,
+        retrieval_root=None,
+        docs_root=None,
+    )
+
+    assert artifacts.audit_record["schema_valid"] is (artifacts.validation_errors == [])
+    assert artifacts.audit_record["validation_errors"] == artifacts.validation_errors
+    assert artifacts.audit_record["layers"] == len(artifacts.binding_spec.layers)
+    assert artifacts.audit_record["oscillators_per_layer"] == len(
+        artifacts.binding_spec.layers[0].oscillator_ids
+    )
+    assert artifacts.audit_record["dry_run_steps"] == 2
+    assert (
+        artifacts.audit_record["dry_run_order_parameter"]
+        == artifacts.dry_run_order_parameter
+    )
+    assert len(artifacts.audit_record["retrieval_evidence"]) == len(
+        artifacts.retrieval_evidence
+    )
+
+
 # Pipeline wiring: SemanticDomainCompiler is the natural-language frontend
 # to BindingSpec. These cases pin the three layer-count paths (default,
 # numeric match, case-insensitive), the three discipline-keyword paths

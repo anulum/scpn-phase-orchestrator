@@ -143,6 +143,90 @@ class TestImportArtifactEdges:
         assert state.layers[0].R > 0.9
 
 
+class TestImportArtifactValidation:
+    def test_rejects_non_mapping_artifact(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="artifact_dict must be a mapping"):
+            bridge.import_artifact(cast("Any", [0.0, 0.1]))
+
+    def test_rejects_missing_phases(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="must include 'phases'"):
+            bridge.import_artifact({"fidelity": 0.5})
+
+    def test_rejects_non_finite_fidelity(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="fidelity must be finite"):
+            bridge.import_artifact({"phases": [0.0, 1.0], "fidelity": float("inf")})
+
+    def test_rejects_invalid_fidelity(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="fidelity must be finite"):
+            bridge.import_artifact({"phases": [0.0, 1.0], "fidelity": "high"})
+
+    def test_rejects_out_of_range_fidelity(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="fidelity must be finite"):
+            bridge.import_artifact({"phases": [0.0, 1.0], "fidelity": 1.7})
+
+    def test_rejects_non_list_layer_assignments(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="must be a list of index groups"):
+            bridge.import_artifact(
+                {
+                    "phases": [0.0, 0.1],
+                    "fidelity": 0.3,
+                    "layer_assignments": "bad",
+                }
+            )
+
+    def test_rejects_non_integral_layer_index(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="must contain integer indexes"):
+            bridge.import_artifact(
+                {
+                    "phases": [0.0, 0.1],
+                    "fidelity": 0.3,
+                    "layer_assignments": [[0, 1.1]],
+                }
+            )
+
+    def test_rejects_out_of_range_layer_index(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="out of phase range"):
+            bridge.import_artifact(
+                {
+                    "phases": [0.0, 0.1],
+                    "fidelity": 0.3,
+                    "layer_assignments": [[0, 2]],
+                }
+            )
+
+    def test_rejects_repeated_layer_index(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="must not repeat phase indexes"):
+            bridge.import_artifact(
+                {
+                    "phases": [0.0, 0.1],
+                    "fidelity": 0.3,
+                    "layer_assignments": [[0], [0]],
+                }
+            )
+
+    def test_rejects_incomplete_layer_assignments(self):
+        bridge = QuantumControlBridge(n_oscillators=4)
+        with pytest.raises(
+            ValueError, match="must cover every phase index exactly once"
+        ):
+            bridge.import_artifact(
+                {
+                    "phases": [0.0, 0.1, 0.2, 0.3],
+                    "fidelity": 0.3,
+                    "layer_assignments": [[0, 1, 2]],
+                }
+            )
+
+
 class TestImportKnm:
     def test_square_matrix_accepted(self):
         bridge = QuantumControlBridge(n_oscillators=3)
@@ -165,6 +249,70 @@ class TestImportKnm:
         bridge = QuantumControlBridge(n_oscillators=2)
         state = bridge.import_knm(np.array([[0.0, 0.4], [0.4, 0.0]]))
         assert np.all(state.alpha == 0.0)
+
+    def test_accepts_array_like_input(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        state = bridge.import_knm([[0.0, 0.4], [0.4, 0.0]])
+        assert state.knm.shape == (2, 2)
+
+    def test_rejects_non_finite_knm(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="must contain finite values"):
+            bridge.import_knm([[0.0, float("nan")], [0.0, 0.0]])
+
+
+class TestCompilerManifestValidation:
+    def test_rejects_invalid_shapes(self):
+        bridge = QuantumControlBridge(n_oscillators=3)
+        with pytest.raises(ValueError, match="does not match n_oscillators=3"):
+            bridge.build_quantum_compiler_manifest(
+                knm=np.ones((2, 2)),
+                omegas=np.ones(2),
+                dt=0.1,
+            )
+
+    def test_rejects_non_finite_dt(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="dt must be finite and positive"):
+            bridge.build_quantum_compiler_manifest(
+                knm=np.ones((2, 2)),
+                omegas=np.ones(2),
+                dt=float("nan"),
+            )
+
+    def test_rejects_non_finite_compiler_arrays(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="must contain finite values"):
+            bridge.build_quantum_compiler_manifest(
+                knm=np.array([[0.0, float("inf")], [0.0, 0.0]]),
+                omegas=np.ones(2),
+                dt=0.1,
+            )
+
+
+class TestSolveQUPDEValidation:
+    def test_rejects_invalid_t_max(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        knm = np.array([[0.5, 0.5], [0.5, 0.5]])
+        omegas = np.ones(2)
+        with pytest.raises(ValueError, match="t_max must be finite and positive"):
+            bridge.solve_q_upde(knm, omegas, t_max=0.0)
+
+    def test_rejects_invalid_dt(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        knm = np.array([[0.5, 0.5], [0.5, 0.5]])
+        omegas = np.ones(2)
+        with pytest.raises(ValueError, match="dt must be finite and positive"):
+            bridge.solve_q_upde(knm, omegas, t_max=1.0, dt=float("inf"))
+
+    def test_rejects_invalid_trotter_per_step(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        knm = np.array([[0.5, 0.5], [0.5, 0.5]])
+        omegas = np.ones(2)
+        with pytest.raises(
+            ValueError, match="trotter_per_step must be an integer >= 1"
+        ):
+            bridge.solve_q_upde(knm, omegas, trotter_per_step=0)
 
 
 class TestExportArtifact:
