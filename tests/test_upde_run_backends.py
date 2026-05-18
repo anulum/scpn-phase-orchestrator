@@ -23,10 +23,16 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_go import (
+    upde_run_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_julia import (
+    upde_run_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_mojo import (
+    upde_run_mojo,
+)
 from scpn_phase_orchestrator.upde import engine as eng_mod
-from scpn_phase_orchestrator.upde._engine_go import upde_run_go
-from scpn_phase_orchestrator.upde._engine_julia import upde_run_julia
-from scpn_phase_orchestrator.upde._engine_mojo import upde_run_mojo
 from scpn_phase_orchestrator.upde.engine import (
     AVAILABLE_BACKENDS,
     upde_run,

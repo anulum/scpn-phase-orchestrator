@@ -24,19 +24,19 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.upde import envelope as e_mod
-from scpn_phase_orchestrator.upde._envelope_go import (
+from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_go import (
     envelope_modulation_depth_go,
     extract_envelope_go,
 )
-from scpn_phase_orchestrator.upde._envelope_julia import (
+from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_julia import (
     envelope_modulation_depth_julia,
     extract_envelope_julia,
 )
-from scpn_phase_orchestrator.upde._envelope_mojo import (
+from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_mojo import (
     envelope_modulation_depth_mojo,
     extract_envelope_mojo,
 )
+from scpn_phase_orchestrator.upde import envelope as e_mod
 from scpn_phase_orchestrator.upde.envelope import (
     AVAILABLE_BACKENDS,
     envelope_modulation_depth,

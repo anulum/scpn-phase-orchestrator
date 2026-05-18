@@ -584,17 +584,19 @@ class TestBackendLoaderContracts:
             return 0.5
 
         mojo_mod = types.ModuleType(
-            "scpn_phase_orchestrator.upde._basin_stability_mojo"
+            "scpn_phase_orchestrator.experimental.accelerators.upde._basin_stability_mojo"
         )
         mojo_mod._ensure_exe = lambda: None
         mojo_mod.steady_state_r_mojo = fake_backend
 
         julia_mod = types.ModuleType(
-            "scpn_phase_orchestrator.upde._basin_stability_julia"
+            "scpn_phase_orchestrator.experimental.accelerators.upde._basin_stability_julia"
         )
         julia_mod.steady_state_r_julia = fake_backend
 
-        go_mod = types.ModuleType("scpn_phase_orchestrator.upde._basin_stability_go")
+        go_mod = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._basin_stability_go"
+        )
         go_mod._load_lib = lambda: None
         go_mod.steady_state_r_go = fake_backend
 

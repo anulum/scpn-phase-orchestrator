@@ -220,17 +220,17 @@ class TestBackendLoaderContracts:
         fake_juliacall = types.ModuleType("juliacall")
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         install_backend(
-            "scpn_phase_orchestrator.upde._inertial_mojo",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo",
             "inertial_step_mojo",
             0.10,
         )
         install_backend(
-            "scpn_phase_orchestrator.upde._inertial_julia",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_julia",
             "inertial_step_julia",
             0.20,
         )
         install_backend(
-            "scpn_phase_orchestrator.upde._inertial_go",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_go",
             "inertial_step_go",
             0.30,
         )

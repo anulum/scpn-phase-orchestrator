@@ -214,17 +214,17 @@ class TestBackendLoaderContracts:
 
         monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
         install_backend(
-            "scpn_phase_orchestrator.upde._geometric_mojo",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_mojo",
             "torus_run_mojo",
             0.10,
         )
         install_backend(
-            "scpn_phase_orchestrator.upde._geometric_julia",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_julia",
             "torus_run_julia",
             0.20,
         )
         install_backend(
-            "scpn_phase_orchestrator.upde._geometric_go",
+            "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go",
             "torus_run_go",
             0.30,
         )

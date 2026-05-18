@@ -317,16 +317,22 @@ class TestBackendLoaderContracts:
         def fake_plv(*_args: object) -> np.ndarray:
             return np.array([1.0])
 
-        mojo_mod = types.ModuleType("scpn_phase_orchestrator.upde._market_mojo")
+        mojo_mod = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._market_mojo"
+        )
         mojo_mod._ensure_exe = lambda: None
         mojo_mod.market_order_parameter_mojo = fake_order
         mojo_mod.market_plv_mojo = fake_plv
 
-        julia_mod = types.ModuleType("scpn_phase_orchestrator.upde._market_julia")
+        julia_mod = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._market_julia"
+        )
         julia_mod.market_order_parameter_julia = fake_order
         julia_mod.market_plv_julia = fake_plv
 
-        go_mod = types.ModuleType("scpn_phase_orchestrator.upde._market_go")
+        go_mod = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._market_go"
+        )
         go_mod._load_lib = lambda: None
         go_mod.market_order_parameter_go = fake_order
         go_mod.market_plv_go = fake_plv

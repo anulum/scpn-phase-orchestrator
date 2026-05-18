@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from scpn_phase_orchestrator.upde import _run as run_mod
-from scpn_phase_orchestrator.upde._engine_webgpu import (
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_webgpu import (
     WEBGPU_WORKGROUP_SIZE,
     WebGPUBackendUnavailableError,
     build_webgpu_upde_package,
@@ -19,6 +18,7 @@ from scpn_phase_orchestrator.upde._engine_webgpu import (
     is_webgpu_runtime_available,
     upde_run_webgpu,
 )
+from scpn_phase_orchestrator.upde import _run as run_mod
 
 
 def test_webgpu_capabilities_are_explicit_about_precision_and_methods() -> None:
