@@ -49,6 +49,20 @@ class EIBalance:
     is_balanced: bool
 
 
+def _validate_indices(indices: list[int], n: int, name: str) -> list[int]:
+    valid: list[int] = []
+    for idx in indices:
+        if not isinstance(idx, int) or isinstance(idx, bool):
+            msg = f"{name} indices must be integers, got {idx!r}"
+            raise ValueError(msg)
+        if idx < 0:
+            msg = f"{name} indices must be non-negative, got {idx}"
+            raise ValueError(msg)
+        if idx < n:
+            valid.append(idx)
+    return valid
+
+
 def compute_ei_balance(
     knm: FloatArray,
     excitatory_indices: list[int],
@@ -65,6 +79,8 @@ def compute_ei_balance(
     """
     knm = np.asarray(knm, dtype=np.float64)
     n = knm.shape[0]
+    excitatory_indices = _validate_indices(excitatory_indices, n, "excitatory")
+    inhibitory_indices = _validate_indices(inhibitory_indices, n, "inhibitory")
 
     if _HAS_RUST:
         k_flat = np.ascontiguousarray(knm.ravel())
@@ -81,11 +97,9 @@ def compute_ei_balance(
     e_mask = np.zeros(n, dtype=bool)
     i_mask = np.zeros(n, dtype=bool)
     for idx in excitatory_indices:
-        if idx < n:
-            e_mask[idx] = True
+        e_mask[idx] = True
     for idx in inhibitory_indices:
-        if idx < n:
-            i_mask[idx] = True
+        i_mask[idx] = True
 
     # Excitatory strength: mean coupling FROM excitatory oscillators
     e_strength = float(np.mean(knm[e_mask, :])) if np.any(e_mask) else 0.0
@@ -118,6 +132,8 @@ def adjust_ei_ratio(
     """
     knm = np.asarray(knm, dtype=np.float64)
     n = knm.shape[0]
+    excitatory_indices = _validate_indices(excitatory_indices, n, "excitatory")
+    inhibitory_indices = _validate_indices(inhibitory_indices, n, "inhibitory")
 
     if _HAS_RUST:
         k_flat = np.ascontiguousarray(knm.ravel())
@@ -140,6 +156,5 @@ def adjust_ei_ratio(
     scale = current_ratio / target_ratio
     result: FloatArray = knm.copy()
     for idx in inhibitory_indices:
-        if idx < n:
-            result[idx, :] *= scale
+        result[idx, :] *= scale
     return result

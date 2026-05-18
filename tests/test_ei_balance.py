@@ -11,7 +11,9 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
+from scpn_phase_orchestrator.coupling import ei_balance as ei_balance_module
 from scpn_phase_orchestrator.coupling.ei_balance import (
     EIBalance,
     adjust_ei_ratio,
@@ -65,6 +67,13 @@ class TestComputeEIBalance:
         knm = _uniform_knm(4)
         bal = compute_ei_balance(knm, [0, 1, 99], [2, 3])
         assert bal.excitatory_strength > 0
+        expected = compute_ei_balance(knm, [0, 1], [2, 3])
+        assert bal == expected
+
+    def test_negative_indices_are_rejected(self):
+        knm = _uniform_knm(4)
+        with pytest.raises(ValueError, match="indices"):
+            compute_ei_balance(knm, [-1], [2, 3])
 
     def test_returns_dataclass(self):
         knm = _uniform_knm(4)
@@ -105,6 +114,60 @@ class TestAdjustEIRatio:
         result = adjust_ei_ratio(knm, [0, 1, 2], [3, 4, 5], target_ratio=2.0)
         bal = compute_ei_balance(result, [0, 1, 2], [3, 4, 5])
         assert abs(bal.ratio - 2.0) < 0.1
+
+    def test_negative_indices_are_rejected(self):
+        knm = _uniform_knm(4)
+        with pytest.raises(ValueError, match="indices"):
+            adjust_ei_ratio(knm, [0, 1], [-1], target_ratio=1.0)
+
+    def test_optional_rust_paths_preserve_contract(self, monkeypatch):
+        calls = []
+
+        def fake_rust_ei(flat_knm, n, excitatory, inhibitory):
+            calls.append(
+                ("ei", flat_knm.copy(), n, excitatory.copy(), inhibitory.copy())
+            )
+            return 2.0, 4.0, 2.0, False
+
+        def fake_rust_adjust(flat_knm, n, excitatory, inhibitory, target_ratio):
+            calls.append(
+                (
+                    "adjust",
+                    flat_knm.copy(),
+                    n,
+                    excitatory.copy(),
+                    inhibitory.copy(),
+                    target_ratio,
+                )
+            )
+            return flat_knm * 3.0
+
+        monkeypatch.setattr(ei_balance_module, "_HAS_RUST", True)
+        monkeypatch.setattr(ei_balance_module, "_rust_ei", fake_rust_ei)
+        monkeypatch.setattr(ei_balance_module, "_rust_adjust", fake_rust_adjust)
+
+        knm = np.array([[0.0, 0.5], [1.5, 0.0]], dtype=np.float64)
+        balance = compute_ei_balance(knm, [0], [1])
+        adjusted = adjust_ei_ratio(knm, [0], [1], target_ratio=1.25)
+
+        assert balance == EIBalance(
+            ratio=2.0,
+            excitatory_strength=4.0,
+            inhibitory_strength=2.0,
+            is_balanced=False,
+        )
+        np.testing.assert_array_equal(adjusted, knm * 3.0)
+        assert calls[0][0] == "ei"
+        np.testing.assert_array_equal(calls[0][1], np.array([0.0, 0.5, 1.5, 0.0]))
+        assert calls[0][2] == 2
+        np.testing.assert_array_equal(calls[0][3], np.array([0]))
+        np.testing.assert_array_equal(calls[0][4], np.array([1]))
+        assert calls[1][0] == "adjust"
+        np.testing.assert_array_equal(calls[1][1], np.array([0.0, 0.5, 1.5, 0.0]))
+        assert calls[1][2] == 2
+        np.testing.assert_array_equal(calls[1][3], np.array([0]))
+        np.testing.assert_array_equal(calls[1][4], np.array([1]))
+        assert calls[1][5] == 1.25
 
 
 class TestEIBalancePipelineWiring:
