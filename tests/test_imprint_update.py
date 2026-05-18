@@ -100,6 +100,82 @@ def test_zero_saturation_raises():
         ImprintModel(decay_rate=0.1, saturation=0.0)
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "field"),
+    [
+        ({"decay_rate": np.nan, "saturation": 1.0}, "decay_rate"),
+        ({"decay_rate": True, "saturation": 1.0}, "decay_rate"),
+        ({"decay_rate": 0.1, "saturation": np.inf}, "saturation"),
+        ({"decay_rate": 0.1, "saturation": True}, "saturation"),
+    ],
+)
+def test_constructor_rejects_nonfinite_or_bool_config(kwargs, field):
+    with pytest.raises(ValueError, match=field):
+        ImprintModel(**kwargs)
+
+
+@pytest.mark.parametrize("dt", [0.0, -0.1, np.nan, True])
+def test_update_rejects_invalid_dt(dt):
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    with pytest.raises(ValueError, match="dt"):
+        model.update(_state([0.0]), np.zeros(1), dt=dt)
+
+
+@pytest.mark.parametrize(
+    "exposure",
+    [np.ones((1, 1)), np.ones(2), np.array([np.nan]), np.array([-0.1])],
+)
+def test_update_rejects_invalid_exposure(exposure):
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    with pytest.raises(ValueError, match="exposure"):
+        model.update(_state([0.0]), exposure, dt=0.1)
+
+
+@pytest.mark.parametrize(
+    "state",
+    [
+        ImprintState(m_k=np.ones((1, 1)), last_update=0.0),
+        ImprintState(m_k=np.array([np.nan]), last_update=0.0),
+        ImprintState(m_k=np.array([-0.1]), last_update=0.0),
+        ImprintState(m_k=np.array([0.0]), last_update=np.inf),
+    ],
+)
+def test_update_rejects_invalid_state(state):
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    with pytest.raises(ValueError, match="imprint|last_update|m_k"):
+        model.update(state, np.zeros(1), dt=0.1)
+
+
+@pytest.mark.parametrize(
+    "knm",
+    [np.ones((2, 3)), np.ones(2), np.array([[0.0, np.nan], [0.0, 0.0]])],
+)
+def test_modulate_coupling_rejects_invalid_knm(knm):
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    with pytest.raises(ValueError, match="knm"):
+        model.modulate_coupling(knm, _state([0.0, 0.1]))
+
+
+@pytest.mark.parametrize(
+    "alpha",
+    [np.ones((2, 3)), np.ones(2), np.array([[0.0, np.nan], [0.0, 0.0]])],
+)
+def test_modulate_lag_rejects_invalid_alpha(alpha):
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    with pytest.raises(ValueError, match="alpha"):
+        model.modulate_lag(alpha, _state([0.0, 0.1]))
+
+
+@pytest.mark.parametrize(
+    "mu",
+    [np.ones((2, 1)), np.ones(3), np.array([0.0, np.nan])],
+)
+def test_modulate_mu_rejects_invalid_mu(mu):
+    model = ImprintModel(decay_rate=0.1, saturation=1.0)
+    with pytest.raises(ValueError, match="mu"):
+        model.modulate_mu(mu, _state([0.0, 0.1]))
+
+
 class TestImprintUpdatePipelineWiring:
     """Pipeline: engine → exposure → imprint update → modulate K → engine."""
 
