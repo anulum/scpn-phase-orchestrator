@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from numbers import Integral
 from typing import TypeAlias
 
 import numpy as np
@@ -26,6 +27,15 @@ TWO_PI = 2.0 * np.pi
 _PHYSICAL_EXTRACTORS = frozenset({"hilbert", "wavelet", "zero_crossing"})
 _INFORMATIONAL_EXTRACTORS = frozenset({"event"})
 _SYMBOLIC_EXTRACTORS = frozenset({"ring", "graph"})
+
+
+def _validate_n_states(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("n_states must be an integer >= 2")
+    n_states = int(value)
+    if n_states < 2:
+        raise ValueError(f"n_states must be >= 2, got {n_states}")
+    return n_states
 
 
 def extract_initial_phases(
@@ -114,5 +124,5 @@ def _get_n_states(families: dict[str, OscillatorFamily]) -> int:
     for fam in families.values():
         if fam.channel == "S" or fam.extractor_type in _SYMBOLIC_EXTRACTORS:
             cfg = fam.config or {}
-            return int(cfg.get("n_states", 4))
+            return _validate_n_states(cfg.get("n_states", 4))
     return 4

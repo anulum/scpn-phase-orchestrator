@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
@@ -21,6 +22,7 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
 )
 from scpn_phase_orchestrator.oscillators.init_phases import (
+    _get_n_states,
     _resolve_channel,
     extract_initial_phases,
 )
@@ -142,6 +144,37 @@ def test_named_channels_route_by_extractor_semantics():
     assert phases.shape == (4,)
     assert np.all(phases >= 0.0)
     assert np.all(phases < TWO_PI)
+
+
+def test_get_n_states_from_symbolic_config():
+    families = {
+        "sym": OscillatorFamily(
+            channel="S",
+            extractor_type="ring",
+            config={"n_states": 8},
+        ),
+    }
+    assert _get_n_states(families) == 8
+
+
+def test_get_n_states_no_symbolic_family_defaults_to_4():
+    families = {
+        "phys": OscillatorFamily(channel="P", extractor_type="hilbert", config={}),
+    }
+    assert _get_n_states(families) == 4
+
+
+@pytest.mark.parametrize("n_states", [True, 4.0, "4", 1])
+def test_get_n_states_rejects_invalid_symbolic_config(n_states: object):
+    families = {
+        "sym": OscillatorFamily(
+            channel="S",
+            extractor_type="ring",
+            config={"n_states": n_states},
+        ),
+    }
+    with pytest.raises(ValueError, match="n_states"):
+        _get_n_states(families)
 
 
 def test_unknown_channel_and_extractor_falls_back_to_random_phase():
