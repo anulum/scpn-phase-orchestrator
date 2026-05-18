@@ -81,6 +81,22 @@ def test_quality_score_empty():
     assert extractor.quality_score([]) == 0.0
 
 
+@pytest.mark.parametrize(
+    "signal",
+    [
+        np.array([0.0, float("nan")]),
+        np.array([0.0, float("inf")]),
+        np.array([True, False]),
+        np.array([1.0 + 0.0j, 0.0 + 0.0j]),
+        np.array(["0.0", "1.0"], dtype=object),
+    ],
+)
+def test_extract_rejects_invalid_signal(signal: object):
+    extractor = PhysicalExtractor()
+    with pytest.raises(ValueError, match="signal must be finite"):
+        extractor.extract(signal, sample_rate=1000.0)
+
+
 def test_envelope_quality_clean_sinusoid():
     """Clean sinusoid has near-constant envelope → quality well above 0.5."""
     from scipy.signal import hilbert

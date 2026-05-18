@@ -29,6 +29,25 @@ def _validate_node_id(value: object) -> str:
     return value
 
 
+def _validate_signal(value: object) -> FloatArray:
+    signal = np.asarray(value)
+    dtype = signal.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.number)
+    ):
+        raise ValueError("signal must be finite")
+    if signal.ndim != 1 or signal.size < 2:
+        raise ValueError(
+            f"signal must be 1-D with >= 2 samples, got shape {signal.shape}"
+        )
+    parsed = signal.astype(np.float64, copy=False)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError("signal must be finite")
+    return parsed
+
+
 class PhysicalExtractor(PhaseExtractor):
     """Extracts instantaneous phase from continuous waveforms via Hilbert transform."""
 
@@ -37,10 +56,7 @@ class PhysicalExtractor(PhaseExtractor):
 
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Extract instantaneous phase from a 1-D waveform via Hilbert transform."""
-        if signal.ndim != 1 or signal.size < 2:
-            raise ValueError(
-                f"signal must be 1-D with >= 2 samples, got shape {signal.shape}"
-            )
+        signal = _validate_signal(signal)
         from scipy.signal import hilbert  # noqa: PLC0415
 
         analytic = hilbert(signal)
