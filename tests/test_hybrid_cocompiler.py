@@ -178,6 +178,10 @@ def test_hybrid_cocompiler_manifest_blocks_mismatched_or_invalid_inputs() -> Non
 
     with pytest.raises(ValueError, match="quantum manifest kind"):
         build_hybrid_cocompiler_manifest({"manifest_kind": "wrong"}, spiking)
+    with pytest.raises(ValueError, match="quantum_manifest"):
+        build_hybrid_cocompiler_manifest([], spiking)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="neuromorphic_manifest"):
+        build_hybrid_cocompiler_manifest(quantum, [])  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="n_channel_semantics"):
         build_hybrid_cocompiler_manifest(quantum, spiking, n_channel_semantics=())
 
@@ -211,9 +215,9 @@ def test_hybrid_cocompiler_fails_closed_for_all_component_permission_leaks() -> 
     quantum = _quantum_manifest()
     spiking = _neuromorphic_manifest()
     quantum["qpu_execution_permitted"] = True
-    quantum["actuation_permitted"] = None
+    quantum["actuation_permitted"] = True
     spiking["hardware_write_permitted"] = True
-    spiking["actuation_permitted"] = "pending-review"
+    spiking["actuation_permitted"] = True
 
     manifest = build_hybrid_cocompiler_manifest(quantum, spiking)
 
@@ -247,6 +251,7 @@ def test_hybrid_cocompiler_reports_neuromorphic_parity_failure() -> None:
     ("field", "bad_value"),
     [
         ("qasm_sha256", "a" * 63),
+        ("qasm_sha256", "g" * 64),
         ("manifest_sha256", 123),
     ],
 )
@@ -268,6 +273,28 @@ def test_hybrid_cocompiler_rejects_invalid_neuromorphic_hash() -> None:
     spiking["schedule_sha256"] = ""
 
     with pytest.raises(ValueError, match="schedule_sha256 must be a 64-character"):
+        build_hybrid_cocompiler_manifest(quantum, spiking)
+
+
+@pytest.mark.parametrize(
+    ("manifest_name", "field"),
+    [
+        ("quantum", "qpu_execution_permitted"),
+        ("quantum", "actuation_permitted"),
+        ("neuromorphic", "hardware_write_permitted"),
+        ("neuromorphic", "actuation_permitted"),
+    ],
+)
+def test_hybrid_cocompiler_rejects_non_bool_permission_fields(
+    manifest_name: str,
+    field: str,
+) -> None:
+    quantum = _quantum_manifest()
+    spiking = _neuromorphic_manifest()
+    target = quantum if manifest_name == "quantum" else spiking
+    target[field] = 0
+
+    with pytest.raises(ValueError, match=field):
         build_hybrid_cocompiler_manifest(quantum, spiking)
 
 

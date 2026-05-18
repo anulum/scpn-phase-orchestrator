@@ -24,6 +24,14 @@ def build_hybrid_cocompiler_manifest(
     n_channel_semantics: Sequence[str] = ("Q_control", "S_spike", "audit"),
 ) -> dict[str, object]:
     """Combine quantum and spiking manifests under one audit envelope."""
+    quantum_manifest = _validate_manifest_mapping(
+        quantum_manifest,
+        label="quantum_manifest",
+    )
+    neuromorphic_manifest = _validate_manifest_mapping(
+        neuromorphic_manifest,
+        label="neuromorphic_manifest",
+    )
     _validate_manifest_kind(
         quantum_manifest,
         expected="quantum_compiler_manifest",
@@ -33,6 +41,16 @@ def build_hybrid_cocompiler_manifest(
         neuromorphic_manifest,
         expected="neuromorphic_schedule_manifest",
         label="neuromorphic manifest kind",
+    )
+    _validate_permission_fields(
+        quantum_manifest,
+        label="quantum",
+        fields=("qpu_execution_permitted", "actuation_permitted"),
+    )
+    _validate_permission_fields(
+        neuromorphic_manifest,
+        label="neuromorphic",
+        fields=("hardware_write_permitted", "actuation_permitted"),
     )
     semantics = _normalise_semantics(n_channel_semantics)
     blocked_reasons = _blocked_reasons(quantum_manifest, neuromorphic_manifest)
@@ -69,6 +87,16 @@ def build_hybrid_cocompiler_manifest(
     return manifest
 
 
+def _validate_manifest_mapping(
+    manifest: Mapping[str, object],
+    *,
+    label: str,
+) -> Mapping[str, object]:
+    if not isinstance(manifest, Mapping):
+        raise ValueError(f"{label} must be a mapping")
+    return manifest
+
+
 def _validate_manifest_kind(
     manifest: Mapping[str, object],
     *,
@@ -77,6 +105,17 @@ def _validate_manifest_kind(
 ) -> None:
     if manifest.get("manifest_kind") != expected:
         raise ValueError(f"{label} must be {expected}")
+
+
+def _validate_permission_fields(
+    manifest: Mapping[str, object],
+    *,
+    label: str,
+    fields: Sequence[str],
+) -> None:
+    for field in fields:
+        if not isinstance(manifest.get(field), bool):
+            raise ValueError(f"{label} {field} must be a bool")
 
 
 def _normalise_semantics(n_channel_semantics: Sequence[str]) -> list[str]:
@@ -146,7 +185,11 @@ def _component_hashes(
 
 def _hash_text(manifest: Mapping[str, object], key: str) -> str:
     value = manifest.get(key)
-    if not isinstance(value, str) or len(value) != 64:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(ch not in "0123456789abcdefABCDEF" for ch in value)
+    ):
         raise ValueError(f"{key} must be a 64-character SHA-256 hex string")
     return value
 
