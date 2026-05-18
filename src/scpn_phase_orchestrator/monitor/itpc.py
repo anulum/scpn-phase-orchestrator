@@ -112,8 +112,11 @@ def _dispatch(fn_name: str) -> object | None:
 
 
 def _validate_phases_trials(phases_trials: object) -> FloatArray:
+    raw = np.asarray(phases_trials)
+    if raw.dtype == np.bool_:
+        raise ValueError("phases_trials must not contain boolean values")
     try:
-        phases = np.asarray(phases_trials, dtype=np.float64)
+        phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases_trials must be a finite 1D or 2D float array") from exc
     if phases.ndim not in {1, 2}:

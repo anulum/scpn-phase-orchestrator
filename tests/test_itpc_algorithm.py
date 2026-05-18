@@ -20,6 +20,7 @@ import functools
 import math
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -182,6 +183,16 @@ class TestInputValidation:
     @_python
     def test_zero_trials_empty_output(self):
         assert compute_itpc(np.zeros((0, 50))).size == 0
+
+    @_python
+    def test_rejects_boolean_phases(self):
+        with pytest.raises(ValueError, match="phases_trials"):
+            compute_itpc(np.array([[True, False], [False, True]]))
+
+    @_python
+    def test_persistence_rejects_boolean_phases(self):
+        with pytest.raises(ValueError, match="phases_trials"):
+            itpc_persistence(np.array([True, False, True]), [0])
 
     @_python
     def test_persistence_with_no_trials_handles_gracefully(self):
