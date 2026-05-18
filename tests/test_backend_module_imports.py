@@ -116,11 +116,15 @@ BACKEND_MODULES = (
 
 RUNTIME_MODULES = (
     "scpn_phase_orchestrator.cli",
+    "scpn_phase_orchestrator.distributed",
+    "scpn_phase_orchestrator.distributed.sync",
     "scpn_phase_orchestrator.grpc_gen",
     "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback",
     "scpn_phase_orchestrator.server",
     "scpn_phase_orchestrator.server_grpc",
     "scpn_phase_orchestrator.runtime.cli",
+    "scpn_phase_orchestrator.runtime.distributed",
+    "scpn_phase_orchestrator.runtime.distributed.sync",
     "scpn_phase_orchestrator.runtime.grpc_gen",
     "scpn_phase_orchestrator.runtime.grpc_gen._spo_pb2_fallback",
     "scpn_phase_orchestrator.runtime.server",
@@ -133,7 +137,11 @@ def test_runtime_module_import_surface(module_name: str) -> None:
     module = importlib.import_module(module_name)
     expected_name = (
         module_name
-        if ".runtime." in module_name or ".grpc_gen." in module_name
+        if (
+            ".runtime." in module_name
+            or ".grpc_gen." in module_name
+            or ".distributed." in module_name
+        )
         else module_name.replace(
             "scpn_phase_orchestrator.",
             "scpn_phase_orchestrator.runtime.",

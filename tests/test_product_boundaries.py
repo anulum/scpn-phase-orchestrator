@@ -90,6 +90,9 @@ def test_package_init_relative_import_stays_inside_package(tmp_path: Path) -> No
 
 def test_runtime_namespace_is_runtime_boundary() -> None:
     assert mod.classify_module("scpn_phase_orchestrator.runtime.cli") == "runtime"
+    assert mod.classify_module("scpn_phase_orchestrator.runtime.distributed") == (
+        "runtime"
+    )
     assert mod.classify_module("scpn_phase_orchestrator.runtime.grpc_gen") == (
         "runtime"
     )

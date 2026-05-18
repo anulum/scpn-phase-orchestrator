@@ -13,7 +13,7 @@ import json
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.distributed.sync import (
+from scpn_phase_orchestrator.runtime.distributed.sync import (
     DistributedSyncConfig,
     PhaseGossipNode,
     PhaseSyncMessage,

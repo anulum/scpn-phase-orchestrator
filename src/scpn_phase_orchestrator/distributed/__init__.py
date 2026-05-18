@@ -4,32 +4,14 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — distributed synchronisation protocols
+# SCPN Phase Orchestrator — distributed synchronisation compatibility alias
 
-"""Transport-neutral distributed phase synchronisation API.
-
-The package exports canonical phase-vector gossip messages, deterministic
-lossy replay helpers, and local node ingestion logic. It performs digest,
-shape, sequence, timeout, and bounded-correction validation, but it never opens
-sockets or starts a live transport by itself.
-"""
+"""Compatibility alias for ``scpn_phase_orchestrator.runtime.distributed``."""
 
 from __future__ import annotations
 
-from scpn_phase_orchestrator.distributed.sync import (
-    DistributedSyncConfig,
-    GossipIngestResult,
-    LossyGossipReplayResult,
-    PhaseGossipNode,
-    PhaseSyncMessage,
-    simulate_lossy_phase_gossip,
-)
+import sys
+from importlib import import_module
 
-__all__ = [
-    "DistributedSyncConfig",
-    "GossipIngestResult",
-    "LossyGossipReplayResult",
-    "PhaseGossipNode",
-    "PhaseSyncMessage",
-    "simulate_lossy_phase_gossip",
-]
+_module = import_module("scpn_phase_orchestrator.runtime.distributed")
+sys.modules[__name__] = _module

@@ -23,4 +23,4 @@ The module does not open sockets. Production deployments can carry the wire
 messages over UDP, QUIC, WebSocket, Kafka, REST, or another owned transport
 while keeping the protocol validation and bounded synchronisation logic shared.
 
-::: scpn_phase_orchestrator.distributed.sync
+::: scpn_phase_orchestrator.runtime.distributed.sync
