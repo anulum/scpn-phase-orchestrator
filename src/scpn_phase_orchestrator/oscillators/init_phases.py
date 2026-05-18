@@ -38,6 +38,30 @@ def _validate_n_states(value: object) -> int:
     return n_states
 
 
+def _oscillator_count(spec: BindingSpec) -> int:
+    return sum(len(layer.oscillator_ids) for layer in spec.layers)
+
+
+def _validate_omegas(value: object, *, expected_count: int) -> FloatArray:
+    omegas = np.asarray(value)
+    dtype = omegas.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.number)
+    ):
+        raise ValueError("omegas must be finite")
+    if omegas.ndim != 1 or len(omegas) != expected_count:
+        raise ValueError(
+            f"omegas length must match oscillator count {expected_count}, "
+            f"got shape {omegas.shape}"
+        )
+    parsed = omegas.astype(np.float64, copy=False)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError("omegas must be finite")
+    return parsed
+
+
 def extract_initial_phases(
     spec: BindingSpec,
     omegas: FloatArray,
@@ -51,6 +75,7 @@ def extract_initial_phases(
 
     Returns (n_osc,) array of initial phases in [0, 2*pi).
     """
+    omegas = _validate_omegas(omegas, expected_count=_oscillator_count(spec))
     rng = np.random.default_rng(seed)
     n_osc = len(omegas)
     phases = np.zeros(n_osc)

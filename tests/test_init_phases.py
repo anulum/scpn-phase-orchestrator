@@ -100,6 +100,36 @@ def test_different_seeds_differ():
     assert not np.array_equal(a, b)
 
 
+@pytest.mark.parametrize(
+    "omegas",
+    [
+        np.array([1.0, float("nan"), 3.0]),
+        np.array([1.0, float("inf"), 3.0]),
+        np.array([True, False, True]),
+        np.array([1.0 + 0.0j, 2.0 + 0.0j, 3.0 + 0.0j]),
+        np.array(["1.0", "2.0", "3.0"], dtype=object),
+    ],
+)
+def test_extract_initial_phases_rejects_invalid_omegas(omegas: object):
+    spec = _make_pis_spec()
+    with pytest.raises(ValueError, match="omegas must be finite"):
+        extract_initial_phases(spec, omegas)
+
+
+@pytest.mark.parametrize(
+    "omegas",
+    [
+        np.array([1.0, 2.0]),
+        np.array([1.0, 2.0, 3.0, 4.0]),
+        np.array([[1.0, 2.0, 3.0]]),
+    ],
+)
+def test_extract_initial_phases_rejects_omega_shape_mismatch(omegas: object):
+    spec = _make_pis_spec()
+    with pytest.raises(ValueError, match="omegas length"):
+        extract_initial_phases(spec, omegas)
+
+
 def test_named_channels_route_by_extractor_semantics():
     layers = [
         HierarchyLayer(
