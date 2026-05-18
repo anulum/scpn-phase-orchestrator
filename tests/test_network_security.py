@@ -46,12 +46,24 @@ def test_is_production_mode_ignores_non_production_values(
     assert is_production_mode("SPO") is False
 
 
+@pytest.mark.parametrize("prefix", ["", " ", True])
+def test_is_production_mode_rejects_malformed_prefix(prefix: object) -> None:
+    with pytest.raises(ValueError, match="prefix"):
+        is_production_mode(cast(str, prefix))
+
+
 def test_env_int_default_and_valid_value(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SPO_RATE_LIMIT_PER_MINUTE", raising=False)
     assert env_int("SPO_RATE_LIMIT_PER_MINUTE", 120) == 120
 
     monkeypatch.setenv("SPO_RATE_LIMIT_PER_MINUTE", "7")
     assert env_int("SPO_RATE_LIMIT_PER_MINUTE", 120) == 7
+
+
+@pytest.mark.parametrize("name", ["", " ", True])
+def test_env_int_rejects_malformed_name(name: object) -> None:
+    with pytest.raises(ValueError, match="name"):
+        env_int(cast(str, name), 120)
 
 
 def test_env_int_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:

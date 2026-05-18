@@ -17,8 +17,15 @@ from numbers import Real
 __all__ = ["FixedWindowRateLimiter", "env_int", "is_production_mode"]
 
 
+def _validated_identifier(value: str, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{label} must be a non-empty string")
+    return value
+
+
 def is_production_mode(prefix: str) -> bool:
     """Return True when a service-specific or generic env profile is production."""
+    prefix = _validated_identifier(prefix, "prefix")
     for key in (f"{prefix}_ENV", f"{prefix}_PROFILE", "SPO_ENV", "SPO_PROFILE"):
         if os.environ.get(key, "").strip().lower() == "production":
             return True
@@ -27,6 +34,7 @@ def is_production_mode(prefix: str) -> bool:
 
 def env_int(name: str, default: int) -> int:
     """Read a non-negative integer from the environment."""
+    name = _validated_identifier(name, "name")
     if not isinstance(default, int) or isinstance(default, bool) or default < 0:
         raise ValueError(f"{name} default must be a non-negative integer")
     raw = os.environ.get(name)
