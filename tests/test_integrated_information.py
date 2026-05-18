@@ -56,6 +56,12 @@ class TestIntegratedInformationContracts:
         with pytest.raises(ValueError, match="finite"):
             integrated_information(phases)
 
+    def test_boolean_phase_series_is_rejected(self) -> None:
+        phases = np.array([[True, False], [False, True]])
+
+        with pytest.raises(ValueError, match="phase_series"):
+            integrated_information(phases)
+
     @pytest.mark.parametrize("n_bins", [False, 1, 1.5])
     def test_invalid_bin_count_is_rejected(self, n_bins: Any) -> None:
         phases = np.zeros((2, 8), dtype=np.float64)

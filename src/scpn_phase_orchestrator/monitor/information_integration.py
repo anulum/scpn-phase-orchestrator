@@ -246,7 +246,11 @@ def benchmark_integrated_information_approximations(
 
 
 def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
-    phases = np.asarray(phase_series, dtype=np.float64)
+    raw = np.asarray(phase_series)
+    if raw.dtype == np.bool_:
+        msg = "phase_series must not contain boolean values"
+        raise ValueError(msg)
+    phases = raw.astype(np.float64, copy=True)
     if phases.ndim != 2:
         msg = "phase_series must have shape (n_oscillators, n_samples)"
         raise ValueError(msg)
