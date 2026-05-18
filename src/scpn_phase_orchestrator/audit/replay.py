@@ -50,6 +50,27 @@ def _numeric_value(value: object) -> float:
     return 0.0
 
 
+def _required_header_value(header: dict, field: str) -> object:
+    if field not in header:
+        raise ValueError(f"audit header missing {field}")
+    return header[field]
+
+
+def _required_header_int(header: dict, field: str) -> int:
+    value = _required_header_value(header, field)
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    raise ValueError(f"audit header {field} must be an integer")
+
+
+def _required_header_float(header: dict, field: str) -> float:
+    value = _required_header_value(header, field)
+    parsed = _numeric_value(value)
+    if parsed > 0.0:
+        return parsed
+    raise ValueError(f"audit header {field} must be a positive finite number")
+
+
 class ReplayEngine:
     """Replay and verify determinism of JSONL audit logs."""
 
@@ -95,15 +116,17 @@ class ReplayEngine:
 
     def build_engine(self, header: dict) -> UPDEEngine | StuartLandauEngine:
         """Construct engine from header (UPDE or Stuart-Landau)."""
+        n_oscillators = _required_header_int(header, "n_oscillators")
+        dt = _required_header_float(header, "dt")
         if header.get("amplitude_mode"):
             return StuartLandauEngine(
-                n_oscillators=header["n_oscillators"],
-                dt=header["dt"],
+                n_oscillators=n_oscillators,
+                dt=dt,
                 method=header.get("method", "euler"),
             )
         return UPDEEngine(
-            n_oscillators=header["n_oscillators"],
-            dt=header["dt"],
+            n_oscillators=n_oscillators,
+            dt=dt,
             method=header.get("method", "euler"),
         )
 

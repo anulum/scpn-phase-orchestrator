@@ -259,6 +259,21 @@ def test_roundtrip_deterministic_replay(tmp_path):
     assert n_verified == 9
 
 
+@pytest.mark.parametrize("missing", ["n_oscillators", "dt"])
+def test_build_engine_rejects_missing_required_header_fields(tmp_path, missing):
+    re = ReplayEngine(tmp_path / "unused.jsonl")
+    header = {
+        "header": True,
+        "n_oscillators": 4,
+        "dt": 0.01,
+        "method": "euler",
+    }
+    del header[missing]
+
+    with pytest.raises(ValueError, match=f"audit header missing {missing}"):
+        re.build_engine(header)
+
+
 def test_chained_verification_detects_divergence(tmp_path):
     """Tampered phases are caught by chained verification."""
     n = 4
