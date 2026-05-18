@@ -57,6 +57,8 @@ def entropy_production_rate_mojo(
     alpha: float,
     dt: float,
 ) -> float:
+    """Compute the entropy-production-rate monitor through the Mojo backend."""
+
     n = int(phases.size)
     if n == 0 or dt <= 0.0:
         return 0.0

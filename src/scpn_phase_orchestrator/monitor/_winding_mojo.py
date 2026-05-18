@@ -54,6 +54,8 @@ def winding_numbers_mojo(
     t: int,
     n: int,
 ) -> IntArray:
+    """Compute oscillator winding numbers through the Mojo backend."""
+
     if n == 0 or t < 2:
         return np.zeros(n, dtype=np.int64)
     tokens: list[str] = ["WIND", str(int(t)), str(int(n))]

@@ -58,6 +58,8 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def phase_te_go(source: FloatArray, target: FloatArray, n_bins: int) -> float:
+    """Compute pairwise phase transfer entropy through the Go backend."""
+
     lib = _load_lib()
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
@@ -81,6 +83,8 @@ def te_matrix_go(
     n_time: int,
     n_bins: int,
 ) -> FloatArray:
+    """Compute the phase transfer-entropy matrix through the Go backend."""
+
     lib = _load_lib()
     series = np.ascontiguousarray(phase_series, dtype=np.float64)
     out = np.zeros(n_osc * n_osc, dtype=np.float64)

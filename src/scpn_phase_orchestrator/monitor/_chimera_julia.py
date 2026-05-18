@@ -42,6 +42,8 @@ def local_order_parameter_julia(
     knm_flat: FloatArray,
     n: int,
 ) -> FloatArray:
+    """Compute local phase order parameters through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.local_order_parameter(

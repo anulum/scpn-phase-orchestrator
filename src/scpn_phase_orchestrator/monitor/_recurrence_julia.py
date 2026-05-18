@@ -45,6 +45,8 @@ def recurrence_matrix_julia(
     epsilon: float,
     angular: bool,
 ) -> ByteArray:
+    """Compute the recurrence matrix through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.recurrence_matrix(
@@ -66,6 +68,8 @@ def cross_recurrence_matrix_julia(
     epsilon: float,
     angular: bool,
 ) -> ByteArray:
+    """Compute the cross-recurrence matrix through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.cross_recurrence_matrix(

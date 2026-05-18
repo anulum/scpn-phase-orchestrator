@@ -62,6 +62,8 @@ def correlation_integral_mojo(
     idx_j: IntArray,
     epsilons: FloatArray,
 ) -> FloatArray:
+    """Compute the phase-space correlation integral through the Mojo backend."""
+
     n_p = int(idx_i.size)
     n_k = int(epsilons.size)
     tokens: list[str] = [
@@ -82,6 +84,8 @@ def correlation_integral_mojo(
 
 
 def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
+    """Estimate the Kaplan-Yorke dimension through the Mojo backend."""
+
     le = np.asarray(lyapunov_exponents, dtype=np.float64).ravel()
     n = int(le.size)
     tokens: list[str] = ["KY", str(n)]

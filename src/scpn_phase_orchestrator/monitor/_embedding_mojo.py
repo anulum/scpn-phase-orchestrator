@@ -60,6 +60,8 @@ def delay_embed_mojo(
     delay: int,
     dimension: int,
 ) -> FloatArray:
+    """Build a delay-coordinate embedding through the Mojo backend."""
+
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     t = int(s.size)
     tokens: list[str] = [
@@ -78,6 +80,11 @@ def mutual_information_mojo(
     lag: int,
     n_bins: int,
 ) -> float:
+    """Compute mutual information for embedded phase samples.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     t = int(s.size)
     tokens: list[str] = [
@@ -96,6 +103,11 @@ def nearest_neighbor_distances_mojo(
     t: int,
     m: int,
 ) -> tuple[FloatArray, IntArray]:
+    """Compute nearest-neighbour distances for embedded states.
+
+    The calculation is delegated to the Mojo backend.
+    """
+
     e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
     tokens: list[str] = ["NN", str(int(t)), str(int(m))]
     tokens.extend(repr(float(x)) for x in e.tolist())

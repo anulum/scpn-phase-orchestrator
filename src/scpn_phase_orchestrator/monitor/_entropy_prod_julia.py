@@ -44,6 +44,8 @@ def entropy_production_rate_julia(
     alpha: float,
     dt: float,
 ) -> float:
+    """Compute the entropy-production-rate monitor through the Julia backend."""
+
     jl = _ensure()
     return float(
         jl.entropy_production_rate(

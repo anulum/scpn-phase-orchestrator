@@ -67,6 +67,8 @@ def recurrence_matrix_go(
     epsilon: float,
     angular: bool,
 ) -> ByteArray:
+    """Compute the recurrence matrix through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
     out = np.zeros(t * t, dtype=np.uint8)
@@ -91,6 +93,8 @@ def cross_recurrence_matrix_go(
     epsilon: float,
     angular: bool,
 ) -> ByteArray:
+    """Compute the cross-recurrence matrix through the Go backend."""
+
     lib = _load_lib()
     a = np.ascontiguousarray(traj_a_flat.ravel(), dtype=np.float64)
     b = np.ascontiguousarray(traj_b_flat.ravel(), dtype=np.float64)

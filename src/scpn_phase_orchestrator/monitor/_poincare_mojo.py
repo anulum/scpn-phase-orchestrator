@@ -80,6 +80,8 @@ def poincare_section_mojo(
     offset: float,
     direction_id: int,
 ) -> tuple[FloatArray, FloatArray, int]:
+    """Extract Poincare section crossings through the Mojo backend."""
+
     tokens: list[str] = [
         "SEC",
         str(int(t)),
@@ -99,6 +101,8 @@ def phase_poincare_mojo(
     oscillator_idx: int,
     section_phase: float,
 ) -> tuple[FloatArray, FloatArray, int]:
+    """Compute phase-space Poincare diagnostics through the Mojo backend."""
+
     tokens: list[str] = [
         "PHASE",
         str(int(t)),

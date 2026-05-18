@@ -67,6 +67,8 @@ def correlation_integral_go(
     idx_j: IntArray,
     epsilons: FloatArray,
 ) -> FloatArray:
+    """Compute the phase-space correlation integral through the Go backend."""
+
     lib = _load_lib()
     traj = np.ascontiguousarray(traj_flat, dtype=np.float64)
     ii = np.ascontiguousarray(idx_i.ravel(), dtype=np.int64)
@@ -90,6 +92,8 @@ def correlation_integral_go(
 
 
 def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
+    """Estimate the Kaplan-Yorke dimension through the Go backend."""
+
     lib = _load_lib()
     le = np.ascontiguousarray(lyapunov_exponents.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

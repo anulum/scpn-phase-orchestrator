@@ -39,6 +39,8 @@ def _ensure() -> Any:
 
 
 def compute_itpc_julia(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
+    """Compute inter-trial phase coherence through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.compute_itpc(
@@ -56,6 +58,8 @@ def itpc_persistence_julia(
     n_tp: int,
     pause_indices: IntArray,
 ) -> float:
+    """Compute inter-trial phase-coherence persistence through the Julia backend."""
+
     jl = _ensure()
     return float(
         jl.itpc_persistence(

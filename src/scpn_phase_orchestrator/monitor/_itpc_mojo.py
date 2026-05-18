@@ -51,6 +51,8 @@ def _run(payload: str) -> list[float]:
 
 
 def compute_itpc_mojo(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
+    """Compute inter-trial phase coherence through the Mojo backend."""
+
     if n_trials == 0 or n_tp == 0:
         return np.zeros(n_tp, dtype=np.float64)
     tokens: list[str] = ["ITPC", str(n_trials), str(n_tp)]
@@ -67,6 +69,8 @@ def itpc_persistence_mojo(
     n_tp: int,
     pause_indices: IntArray,
 ) -> float:
+    """Compute inter-trial phase-coherence persistence through the Mojo backend."""
+
     idx = np.ascontiguousarray(pause_indices.ravel(), dtype=np.int64)
     if idx.size == 0:
         return 0.0

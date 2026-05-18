@@ -52,6 +52,8 @@ def lyapunov_spectrum_julia(
     zeta: float,
     psi: float,
 ) -> FloatArray:
+    """Estimate the Lyapunov spectrum through the Julia backend."""
+
     jl = _ensure()
     n = int(phases_init.size)
     return np.asarray(

@@ -47,6 +47,8 @@ def delay_embed_julia(
     delay: int,
     dimension: int,
 ) -> FloatArray:
+    """Build a delay-coordinate embedding through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.delay_embed(
@@ -63,6 +65,11 @@ def mutual_information_julia(
     lag: int,
     n_bins: int,
 ) -> float:
+    """Compute mutual information for embedded phase samples.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     return float(
         jl.mutual_information(
@@ -78,6 +85,11 @@ def nearest_neighbor_distances_julia(
     t: int,
     m: int,
 ) -> tuple[FloatArray, IntArray]:
+    """Compute nearest-neighbour distances for embedded states.
+
+    The calculation is delegated to the Julia backend.
+    """
+
     jl = _ensure()
     dist, idx = jl.nearest_neighbor_distances(
         np.ascontiguousarray(embedded.ravel(), dtype=np.float64),

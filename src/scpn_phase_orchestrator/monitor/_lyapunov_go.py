@@ -69,6 +69,8 @@ def lyapunov_spectrum_go(
     zeta: float,
     psi: float,
 ) -> FloatArray:
+    """Estimate the Lyapunov spectrum through the Go backend."""
+
     lib = _load_lib()
     n = int(phases_init.size)
     p = np.ascontiguousarray(phases_init.ravel(), dtype=np.float64)

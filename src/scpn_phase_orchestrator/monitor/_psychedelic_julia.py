@@ -38,6 +38,8 @@ def _ensure() -> Any:
 
 
 def entropy_from_phases_julia(phases: FloatArray, n_bins: int) -> float:
+    """Compute phase-distribution entropy through the Julia backend."""
+
     jl = _ensure()
     return float(
         jl.entropy_from_phases(

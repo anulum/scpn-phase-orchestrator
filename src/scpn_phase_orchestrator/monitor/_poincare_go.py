@@ -69,6 +69,8 @@ def poincare_section_go(
     offset: float,
     direction_id: int,
 ) -> tuple[FloatArray, FloatArray, int]:
+    """Extract Poincare section crossings through the Go backend."""
+
     lib = _load_lib()
     traj = np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64)
     nrm = np.ascontiguousarray(normal.ravel(), dtype=np.float64)
@@ -94,6 +96,8 @@ def phase_poincare_go(
     oscillator_idx: int,
     section_phase: float,
 ) -> tuple[FloatArray, FloatArray, int]:
+    """Compute phase-space Poincare diagnostics through the Go backend."""
+
     lib = _load_lib()
     phases = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     crossings = np.zeros(t * n, dtype=np.float64)

@@ -57,6 +57,8 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def compute_itpc_go(phases_flat: FloatArray, n_trials: int, n_tp: int) -> FloatArray:
+    """Compute inter-trial phase coherence through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     out = np.zeros(n_tp, dtype=np.float64)
@@ -77,6 +79,8 @@ def itpc_persistence_go(
     n_tp: int,
     pause_indices: IntArray,
 ) -> float:
+    """Compute inter-trial phase-coherence persistence through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     idx = np.ascontiguousarray(pause_indices.ravel(), dtype=np.int64)

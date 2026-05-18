@@ -63,6 +63,8 @@ def lyapunov_spectrum_mojo(
     zeta: float,
     psi: float,
 ) -> FloatArray:
+    """Estimate the Lyapunov spectrum through the Mojo backend."""
+
     n = int(phases_init.size)
     tokens: list[str] = [
         "SPEC",

@@ -50,6 +50,8 @@ def _run(payload: str) -> list[float]:
 
 
 def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
+    """Compute pairwise wrapped phase distances through the Mojo backend."""
+
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     n = int(p.size)
     if n == 0:
@@ -63,6 +65,8 @@ def phase_distance_matrix_mojo(phases: FloatArray) -> FloatArray:
 
 
 def compute_npe_mojo(phases: FloatArray, max_radius: float) -> float:
+    """Compute normalised phase entropy through the Mojo backend."""
+
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     n = int(p.size)
     if n < 2:

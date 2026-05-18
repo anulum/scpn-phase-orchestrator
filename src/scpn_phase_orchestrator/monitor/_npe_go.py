@@ -53,6 +53,8 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
+    """Compute pairwise wrapped phase distances through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     n = p.size
@@ -68,6 +70,8 @@ def phase_distance_matrix_go(phases: FloatArray) -> FloatArray:
 
 
 def compute_npe_go(phases: FloatArray, max_radius: float) -> float:
+    """Compute normalised phase entropy through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

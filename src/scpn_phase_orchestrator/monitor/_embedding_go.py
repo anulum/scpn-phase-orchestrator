@@ -74,6 +74,8 @@ def delay_embed_go(
     delay: int,
     dimension: int,
 ) -> FloatArray:
+    """Build a delay-coordinate embedding through the Go backend."""
+
     lib = _load_lib()
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     t_eff = int(s.size) - (int(dimension) - 1) * int(delay)
@@ -95,6 +97,8 @@ def mutual_information_go(
     lag: int,
     n_bins: int,
 ) -> float:
+    """Compute mutual information for embedded phase samples through the Go backend."""
+
     lib = _load_lib()
     s = np.ascontiguousarray(signal.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)
@@ -115,6 +119,11 @@ def nearest_neighbor_distances_go(
     t: int,
     m: int,
 ) -> tuple[FloatArray, IntArray]:
+    """Compute nearest-neighbour distances for embedded states.
+
+    The calculation is delegated to the Go backend.
+    """
+
     lib = _load_lib()
     e = np.ascontiguousarray(embedded.ravel(), dtype=np.float64)
     dist = np.zeros(t, dtype=np.float64)

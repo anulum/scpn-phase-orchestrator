@@ -48,6 +48,8 @@ def _load_lib() -> ctypes.CDLL:
 
 
 def entropy_from_phases_go(phases: FloatArray, n_bins: int) -> float:
+    """Compute phase-distribution entropy through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     out = ctypes.c_double(0.0)

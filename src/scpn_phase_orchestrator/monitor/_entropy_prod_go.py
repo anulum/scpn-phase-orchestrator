@@ -57,6 +57,8 @@ def entropy_production_rate_go(
     alpha: float,
     dt: float,
 ) -> float:
+    """Compute the entropy-production-rate monitor through the Go backend."""
+
     lib = _load_lib()
     n = int(phases.size)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

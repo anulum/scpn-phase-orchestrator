@@ -51,6 +51,8 @@ def _run(payload: str) -> list[float]:
 
 
 def phase_te_mojo(source: FloatArray, target: FloatArray, n_bins: int) -> float:
+    """Compute pairwise phase transfer entropy through the Mojo backend."""
+
     s = np.ascontiguousarray(source.ravel(), dtype=np.float64)
     t = np.ascontiguousarray(target.ravel(), dtype=np.float64)
     n = int(min(s.size, t.size))
@@ -69,6 +71,8 @@ def te_matrix_mojo(
     n_time: int,
     n_bins: int,
 ) -> FloatArray:
+    """Compute the phase transfer-entropy matrix through the Mojo backend."""
+
     s = np.ascontiguousarray(phase_series, dtype=np.float64)
     tokens = ["MAT", str(n_osc), str(n_time), str(n_bins)]
     tokens.extend(repr(float(x)) for x in s.tolist())

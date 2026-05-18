@@ -54,6 +54,8 @@ def local_order_parameter_mojo(
     knm_flat: FloatArray,
     n: int,
 ) -> FloatArray:
+    """Compute local phase order parameters through the Mojo backend."""
+
     if n == 0:
         return np.zeros(0, dtype=np.float64)
     tokens: list[str] = ["CHI", str(int(n))]

@@ -34,6 +34,8 @@ def _ensure_exe() -> Path:
 
 
 def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
+    """Compute phase-distribution entropy through the Mojo backend."""
+
     exe = _ensure_exe()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     tokens: list[str] = ["ENT", str(int(p.size)), str(int(n_bins))]

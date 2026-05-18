@@ -51,6 +51,8 @@ def local_order_parameter_go(
     knm_flat: FloatArray,
     n: int,
 ) -> FloatArray:
+    """Compute local phase order parameters through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)

@@ -51,6 +51,8 @@ def winding_numbers_go(
     t: int,
     n: int,
 ) -> IntArray:
+    """Compute oscillator winding numbers through the Go backend."""
+
     lib = _load_lib()
     p = np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64)
     out = np.zeros(n, dtype=np.int64)

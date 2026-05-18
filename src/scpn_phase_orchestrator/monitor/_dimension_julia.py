@@ -46,6 +46,8 @@ def correlation_integral_julia(
     idx_j: IntArray,
     epsilons: FloatArray,
 ) -> FloatArray:
+    """Compute the phase-space correlation integral through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.correlation_integral(
@@ -61,6 +63,8 @@ def correlation_integral_julia(
 
 
 def kaplan_yorke_dimension_julia(lyapunov_exponents: FloatArray) -> float:
+    """Estimate the Kaplan-Yorke dimension through the Julia backend."""
+
     jl = _ensure()
     return float(
         jl.kaplan_yorke_dimension(

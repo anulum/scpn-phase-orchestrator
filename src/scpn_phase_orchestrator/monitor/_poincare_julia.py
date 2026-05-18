@@ -45,6 +45,8 @@ def poincare_section_julia(
     offset: float,
     direction_id: int,
 ) -> tuple[FloatArray, FloatArray, int]:
+    """Extract Poincare section crossings through the Julia backend."""
+
     jl = _ensure()
     cr, times, n_cr = jl.poincare_section(
         np.ascontiguousarray(traj_flat.ravel(), dtype=np.float64),
@@ -68,6 +70,8 @@ def phase_poincare_julia(
     oscillator_idx: int,
     section_phase: float,
 ) -> tuple[FloatArray, FloatArray, int]:
+    """Compute phase-space Poincare diagnostics through the Julia backend."""
+
     jl = _ensure()
     cr, times, n_cr = jl.phase_poincare(
         np.ascontiguousarray(phases_flat.ravel(), dtype=np.float64),

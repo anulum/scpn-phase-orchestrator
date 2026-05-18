@@ -38,6 +38,8 @@ def _ensure() -> Any:
 
 
 def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
+    """Compute pairwise wrapped phase distances through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.phase_distance_matrix(
@@ -48,6 +50,8 @@ def phase_distance_matrix_julia(phases: FloatArray) -> FloatArray:
 
 
 def compute_npe_julia(phases: FloatArray, max_radius: float) -> float:
+    """Compute normalised phase entropy through the Julia backend."""
+
     jl = _ensure()
     return float(
         jl.compute_npe(

@@ -38,6 +38,8 @@ def _ensure() -> Any:
 
 
 def phase_te_julia(source: FloatArray, target: FloatArray, n_bins: int) -> float:
+    """Compute pairwise phase transfer entropy through the Julia backend."""
+
     jl = _ensure()
     return float(
         jl.phase_transfer_entropy(
@@ -54,6 +56,8 @@ def te_matrix_julia(
     n_time: int,
     n_bins: int,
 ) -> FloatArray:
+    """Compute the phase transfer-entropy matrix through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.transfer_entropy_matrix(

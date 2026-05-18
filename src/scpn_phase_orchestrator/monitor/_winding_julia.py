@@ -42,6 +42,8 @@ def winding_numbers_julia(
     t: int,
     n: int,
 ) -> IntArray:
+    """Compute oscillator winding numbers through the Julia backend."""
+
     jl = _ensure()
     return np.asarray(
         jl.winding_numbers(

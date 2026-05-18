@@ -61,6 +61,8 @@ def recurrence_matrix_mojo(
     epsilon: float,
     angular: bool,
 ) -> ByteArray:
+    """Compute the recurrence matrix through the Mojo backend."""
+
     tokens: list[str] = [
         "REC",
         str(int(t)),
@@ -83,6 +85,8 @@ def cross_recurrence_matrix_mojo(
     epsilon: float,
     angular: bool,
 ) -> ByteArray:
+    """Compute the cross-recurrence matrix through the Mojo backend."""
+
     tokens: list[str] = [
         "CROSS",
         str(int(t)),
