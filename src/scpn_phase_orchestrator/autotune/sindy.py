@@ -141,6 +141,7 @@ class PhaseSINDy:
         return self.coefficients
 
     def get_equations(self) -> list[str]:
+        """Format fitted sparse coefficients as per-node phase equations."""
         if not self.coefficients:
             raise RuntimeError("PhaseSINDy.get_equations() called before fit()")
         equations = []

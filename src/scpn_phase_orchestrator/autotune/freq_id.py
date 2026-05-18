@@ -30,6 +30,8 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 @dataclass
 class FrequencyResult:
+    """Dominant DMD frequencies, modal amplitudes, and channel assignments."""
+
     frequencies: FloatArray
     amplitudes: FloatArray
     layer_assignment: list[int]

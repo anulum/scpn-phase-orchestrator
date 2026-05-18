@@ -71,14 +71,17 @@ class TimeSeriesDiscoveryReport:
 
     @property
     def sindy_sparsity(self) -> float:
+        """Sparse-regression support fraction reported by the SINDy evidence."""
         return cast(float, self.sindy["sparsity"])
 
     @property
     def correlation_graph_density(self) -> float:
+        """Density of the thresholded correlation graph evidence."""
         return cast(float, self.correlation_graph["density"])
 
     @property
     def cluster_coverage(self) -> float:
+        """Fraction of channels covered by the largest discovered cluster."""
         if not self.columns:
             return 0.0
         largest_cluster_size = cast(int, self.clustering["largest_cluster_size"])
@@ -86,6 +89,7 @@ class TimeSeriesDiscoveryReport:
 
     @property
     def confidence_evidence(self) -> dict[str, float]:
+        """Confidence factors derived from fitted discovery evidence blocks."""
         factors = {
             "sindy_sparsity": self.sindy_sparsity,
             "correlation_graph_density": self.correlation_graph_density,
@@ -100,6 +104,7 @@ class TimeSeriesDiscoveryReport:
         return factors
 
     def to_audit_record(self) -> dict[str, JsonValue]:
+        """Return the complete JSON-safe discovery evidence record."""
         return {
             "sample_period_s": self.sample_period_s,
             "sample_count": self.sample_count,
