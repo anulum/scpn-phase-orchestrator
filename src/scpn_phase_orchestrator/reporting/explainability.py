@@ -167,6 +167,8 @@ def _action_explanations(
     steps: list[dict[str, Any]],
     max_actions: int,
 ) -> tuple[ActionExplanation, ...]:
+    if max_actions <= 0:
+        return ()
     explanations: list[ActionExplanation] = []
     for step in steps:
         actions = step.get("actions", [])

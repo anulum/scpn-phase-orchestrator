@@ -155,3 +155,27 @@ def test_explainability_report_ignores_malformed_layer_containers() -> None:
         "stability proxy=0.250",
         "L0 R=0.400",
     )
+
+
+def test_explainability_report_honors_zero_action_limit() -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 0,
+                "regime": "nominal",
+                "stability": 0.75,
+                "layers": [{"R": 0.5}],
+                "actions": [
+                    {
+                        "knob": "K",
+                        "scope": "global",
+                        "value": 0.1,
+                        "ttl_s": 1.0,
+                    },
+                ],
+            },
+        ],
+        max_actions=0,
+    )
+
+    assert report.action_explanations == ()
