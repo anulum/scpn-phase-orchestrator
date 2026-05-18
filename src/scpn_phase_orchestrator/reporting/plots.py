@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import importlib.util
+from math import isfinite
+from numbers import Real
 from pathlib import Path
 from typing import Any, TypeAlias
 
@@ -80,6 +82,14 @@ class CoherencePlot:
             return []
         return [layer for layer in layers if isinstance(layer, dict)]
 
+    @staticmethod
+    def _numeric_value(value: object) -> float:
+        if isinstance(value, Real) and not isinstance(value, bool):
+            parsed = float(value)
+            if isfinite(parsed):
+                return parsed
+        return 0.0
+
     def _extract_r_series(self) -> tuple[list[int], int, list[list[float]]]:
         steps = self._require_steps()
         x = [s["step"] for s in steps]
@@ -88,7 +98,9 @@ class CoherencePlot:
         for i in range(n_layers):
             series.append(
                 [
-                    self._layers(s)[i]["R"] if i < len(self._layers(s)) else 0.0
+                    self._numeric_value(self._layers(s)[i].get("R", 0.0))
+                    if i < len(self._layers(s))
+                    else 0.0
                     for s in steps
                 ]
             )
