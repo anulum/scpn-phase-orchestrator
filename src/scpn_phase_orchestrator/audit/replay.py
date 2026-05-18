@@ -33,6 +33,13 @@ _AUDIT_SCHEMA_VERSION = 1
 _ZERO_HASH = "0" * 64
 
 
+def _layer_records(step_data: dict) -> list[dict]:
+    layers = step_data.get("layers", [])
+    if not isinstance(layers, list):
+        return []
+    return [layer for layer in layers if isinstance(layer, dict)]
+
+
 class ReplayEngine:
     """Replay and verify determinism of JSONL audit logs."""
 
@@ -52,7 +59,7 @@ class ReplayEngine:
     def replay_step(self, step_data: dict) -> UPDEState:
         """Reconstruct UPDEState from a log entry."""
         layers = [
-            LayerState(R=ld["R"], psi=ld["psi"]) for ld in step_data.get("layers", [])
+            LayerState(R=ld["R"], psi=ld["psi"]) for ld in _layer_records(step_data)
         ]
         return UPDEState(
             layers=layers,

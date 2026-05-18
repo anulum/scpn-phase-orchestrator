@@ -61,6 +61,22 @@ def test_replay_step_reconstructs_state(log_file):
     assert state.stability_proxy == pytest.approx(0.85)
 
 
+def test_replay_step_ignores_malformed_layer_containers(tmp_path):
+    re = ReplayEngine(tmp_path / "unused.jsonl")
+
+    state = re.replay_step(
+        {
+            "step": 0,
+            "regime": "nominal",
+            "stability": 0.85,
+            "layers": ["not-a-layer", {"R": 0.5, "psi": 0.25}],
+        }
+    )
+
+    assert len(state.layers) == 1
+    assert state.layers[0] == LayerState(R=0.5, psi=0.25)
+
+
 def test_verify_determinism_with_matching_data(tmp_path):
     n = 4
     engine = UPDEEngine(n, dt=0.01)
