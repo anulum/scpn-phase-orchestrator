@@ -174,7 +174,8 @@ class CoherencePlot:
             raise ValueError(
                 f"pac_matrix length {len(flat)} does not match n*n dimensions {n * n}"
             )
-        return n, np.array(flat).reshape(n, n)
+        values = [self._numeric_value(value) for value in flat]
+        return n, np.array(values).reshape(n, n)
 
     def plot_r_timeline(self, output_path: str | Path) -> Path:
         """Line chart of per-layer R over simulation steps."""
