@@ -89,6 +89,21 @@ def test_jsonl_replay_accepts_decoded_envelopes_and_mappings() -> None:
     ]
 
 
+def test_jsonl_replay_accepts_mixed_input_types_and_keeps_deterministic() -> None:
+    result = replay_hierarchy_jsonl(
+        (
+            _envelope_record("edge-a", 1, r=0.3),
+            _envelope("edge-b", 3, r=0.4),
+            json.dumps(_envelope_record("edge-c", 2), sort_keys=True),
+        )
+    )
+
+    audit = result.to_audit_record()
+    assert audit["accepted_count"] == 3
+    assert audit["rejected_count"] == 0
+    assert audit["watermarks"] == {"edge-a": 1, "edge-b": 3, "edge-c": 2}
+
+
 def test_jsonl_replay_rejects_blank_and_malformed_lines() -> None:
     with pytest.raises(ValueError, match="JSONL line 1 must not be blank"):
         replay_hierarchy_jsonl((" ",))
@@ -114,6 +129,12 @@ def test_rest_boundary_rejects_non_json_content_type() -> None:
         handle_hierarchy_rest_payload(
             {"envelope": _envelope_record("edge-a", 1)},
             headers=[],
+        )
+
+    with pytest.raises(ValueError, match="content-type must be application/json"):
+        handle_hierarchy_rest_payload(
+            {"envelope": _envelope_record("edge-a", 1)},
+            headers={"content-type": None},
         )
 
     with pytest.raises(ValueError, match="content-type must be application/json"):
@@ -166,6 +187,9 @@ def test_rest_boundary_rejects_malformed_payload_shapes() -> None:
     with pytest.raises(ValueError, match="REST payload must be a decoded mapping"):
         handle_hierarchy_rest_payload(["not", "a", "mapping"], headers=headers)
 
+    with pytest.raises(ValueError, match="REST payload must contain exactly one of .*"):
+        handle_hierarchy_rest_payload({}, headers=headers)
+
     with pytest.raises(ValueError, match="REST payload.envelope must be"):
         handle_hierarchy_rest_payload({"envelope": "not-an-envelope"}, headers=headers)
 
@@ -199,6 +223,22 @@ def test_frame_boundary_validates_kind_and_payload() -> None:
         handle_hierarchy_frame({"kind": " ", "payload": _envelope_record("edge-a", 1)})
 
 
+def test_frame_boundary_type_alias_works_for_single_frames() -> None:
+    runtime = HierarchyTransportRuntime()
+    result = handle_hierarchy_frame(
+        {"type": "hierarchy_sync", "payload": _envelope_record("edge-a", 1)},
+        runtime=runtime,
+    )
+
+    assert result.to_audit_record()["frame_kind"] == "hierarchy_sync"
+    assert result.to_audit_record()["accepted_count"] == 1
+
+
+def test_frame_boundary_rejects_missing_payload_value_explicitly() -> None:
+    with pytest.raises(ValueError, match="payload must be provided"):
+        handle_hierarchy_frame({"kind": "hierarchy_sync", "payload": None})
+
+
 def test_frame_boundary_ingests_single_and_batch_frames() -> None:
     runtime = HierarchyTransportRuntime()
     single = handle_hierarchy_frame(
@@ -223,6 +263,31 @@ def test_frame_boundary_ingests_single_and_batch_frames() -> None:
     assert batch.to_audit_record()["accepted_count"] == 1
     assert batch.to_audit_record()["rejected_count"] == 1
     assert batch.to_audit_record()["watermarks"] == {"edge-a": 1, "edge-b": 1}
+
+
+def test_frame_boundary_rejects_bad_batch_payload_shapes() -> None:
+    with pytest.raises(ValueError, match="frame payload must be"):
+        handle_hierarchy_frame(
+            {"type": "hierarchy_sync_batch", "payload": "not-a-sequence"},
+        )
+
+    with pytest.raises(ValueError, match="frame payload.envelopes must be"):
+        handle_hierarchy_frame(
+            {
+                "type": "hierarchy_sync_batch",
+                "payload": {
+                    "envelopes": "not-a-sequence",
+                },
+            },
+        )
+
+    with pytest.raises(ValueError, match="frame payload contains unknown keys: extra"):
+        handle_hierarchy_frame(
+            {
+                "kind": "hierarchy_sync_batch",
+                "payload": {"envelopes": [_envelope_record("edge-a", 1)], "extra": 1},
+            },
+        )
 
 
 def test_frame_boundary_accepts_direct_batch_sequence_and_rejects_bad_items() -> None:

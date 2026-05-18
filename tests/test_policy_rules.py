@@ -941,6 +941,167 @@ def test_load_mixed_v1_v2_yaml(tmp_path):
     assert rules[1].condition.logic == "OR"
 
 
+def test_rejects_unknown_metric_and_unsupported_operator():
+    state = UPDEState(
+        layers=[LayerState(R=0.2, psi=0.0)],
+        cross_layer_alignment=np.array([[1.0]]),
+        stability_proxy=0.1,
+        regime_id="NOMINAL",
+    )
+
+    unknown_metric = PolicyRule(
+        name="unknown_metric",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(
+            metric="does_not_exist", layer=None, op=">", threshold=0.0
+        ),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+    unsupported_op = PolicyRule(
+        name="unsupported_op",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(metric="R", layer=None, op="!=", threshold=0.0),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+
+    assert PolicyEngine([unknown_metric]).evaluate(Regime.NOMINAL, state, [], []) == []
+    assert PolicyEngine([unsupported_op]).evaluate(Regime.NOMINAL, state, [], []) == []
+
+
+@pytest.mark.parametrize(
+    "metric,layer", [("amplitude_spread", 3), ("mean_amplitude_layer", 3)]
+)
+def test_metric_layer_lookup_is_none_out_of_range(metric, layer):
+    state = UPDEState(
+        layers=[LayerState(R=0.4, psi=0.0)],
+        cross_layer_alignment=np.array([[1.0]]),
+        stability_proxy=0.1,
+        regime_id="NOMINAL",
+    )
+
+    rule = PolicyRule(
+        name="range_lookup",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(metric=metric, layer=layer, op=">", threshold=0.0),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+    assert PolicyEngine([rule]).evaluate(Regime.NOMINAL, state, [], []) == []
+
+
+def test_rule_metrics_support_boundary_violation_count_and_imprint_mean():
+    state = UPDEState(
+        layers=[LayerState(R=0.4, psi=0.0)],
+        cross_layer_alignment=np.array([[1.0]]),
+        stability_proxy=0.1,
+        regime_id="NOMINAL",
+        boundary_violation_count=4,
+        imprint_mean=0.12,
+    )
+
+    boundary = PolicyRule(
+        name="boundary_violation",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(
+            metric="boundary_violation_count", layer=None, op=">=", threshold=3
+        ),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+    imprint = PolicyRule(
+        name="imprint_metric",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(
+            metric="imprint_mean", layer=None, op="<", threshold=0.5
+        ),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
+    )
+
+    assert PolicyEngine([boundary]).evaluate(Regime.NOMINAL, state, [], []) != []
+    assert PolicyEngine([imprint]).evaluate(Regime.NOMINAL, state, [], []) != []
+
+
+def test_load_policy_rules_rejects_rule_mapping_type_errors(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text("rules:\n  - 5\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="rule must be a mapping"):
+        load_policy_rules(p)
+
+    p.write_text(
+        "rules:\n"
+        "  - name: missing_threshold\n"
+        "    regime: [NOMINAL]\n"
+        "    condition:\n"
+        "      metric: R\n"
+        "      layer: 0\n"
+        "      op: '>'\n"
+        "    action:\n"
+        "      knob: K\n"
+        "      scope: global\n"
+        "      value: 0.1\n"
+        "      ttl_s: 1.0\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="condition missing required key 'threshold'"):
+        load_policy_rules(p)
+
+
+def test_load_policy_stl_specs_defaults_and_audit_records(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text(
+        "stl_monitors:\n  - name: sync_guard\n    spec: always (R >= 0.3)\n",
+        encoding="utf-8",
+    )
+    specs = load_policy_stl_specs(p)
+    assert len(specs) == 1
+    assert specs[0].name == "sync_guard"
+    assert specs[0].severity == "soft"
+
+    results = evaluate_policy_stl_specs(specs, {"R": [0.5]})
+    audit = results[0].to_audit_record()
+    assert audit["name"] == "sync_guard"
+    assert audit["severity"] == "soft"
+    assert "robustness" in audit
+    assert "satisfied" in audit
+
+    automata = synthesise_policy_stl_automata((specs[0],), {"R": [0.2, 0.5]})
+    automaton_record = automata[0].to_audit_record()
+    assert automaton_record["name"] == "sync_guard"
+    assert automaton_record["severity"] == "soft"
+    assert "satisfied" in automaton_record
+    assert "states" in automaton_record
+
+
+def test_load_policy_stl_specs_rejects_empty_name(tmp_path):
+    p = tmp_path / "policy.yaml"
+    p.write_text(
+        "stl_monitors:\n  - name: ''\n    spec: always (R >= 0.3)\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="stl_monitor.name must be a non-empty string"):
+        load_policy_stl_specs(p)
+
+
+def test_cooldown_then_max_fires_prevents_post_boundary_refire():
+    rule = PolicyRule(
+        name="combo",
+        regimes=["NOMINAL"],
+        condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.0),
+        actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
+        cooldown_s=5.0,
+        max_fires=1,
+    )
+    engine = PolicyEngine([rule])
+    state = UPDEState(
+        layers=[LayerState(R=0.5, psi=0.0)],
+        cross_layer_alignment=np.array([[1.0]]),
+        stability_proxy=0.1,
+        regime_id="NOMINAL",
+    )
+
+    assert len(engine.evaluate(Regime.NOMINAL, state, [0], [])) == 1
+    engine.advance_clock(10.0)
+    assert engine.evaluate(Regime.NOMINAL, state, [0], []) == []
+
+
 class TestPolicyRulesPipelineWiring:
     """Pipeline: engine R → UPDEState → PolicyEngine → actions."""
 

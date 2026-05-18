@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -159,6 +160,70 @@ def test_petri_net_prism_export_rejects_empty_net() -> None:
         export_petri_net_prism(PetriNet([], []), Marking())
 
 
+def test_petri_net_prism_export_preserves_collision_invariants() -> None:
+    net = PetriNet(
+        [Place("in"), Place("out-put"), Place("out put")],
+        [
+            Transition(
+                name="emit phase",
+                inputs=[],
+                outputs=[Arc("out-put")],
+            ),
+            Transition(
+                name="emit-phase",
+                inputs=[Arc("in")],
+                outputs=[Arc("out put")],
+            ),
+            Transition(
+                name="emit phase_2",
+                inputs=[Arc("out-put")],
+                outputs=[Arc("out put")],
+            ),
+        ],
+    )
+
+    export = export_petri_net_prism(
+        net,
+        Marking(tokens={"in": 3, "out-put": 0, "out put": 0}),
+        module_name="9",
+    )
+
+    identifier_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+    assert export.place_names == {
+        "in": "in",
+        "out put": "out_put",
+        "out-put": "out_put_2",
+    }
+    assert export.transition_names == {
+        "emit phase": "emit_phase",
+        "emit-phase": "emit_phase_2",
+        "emit phase_2": "emit_phase_2_2",
+    }
+    assert all(
+        identifier_re.fullmatch(name) is not None
+        for name in (
+            *export.place_names.values(),
+            *export.transition_names.values(),
+            *export.metric_names.values(),
+        )
+    )
+    assert len(set(export.transition_names.values())) == len(export.transition_names)
+
+
+def test_petri_net_prism_export_source_transition_no_inputs_guard() -> None:
+    source_net = PetriNet(
+        [Place("seed"), Place("active")],
+        [Transition(name="seed burst", inputs=[], outputs=[Arc("active")])],
+    )
+
+    export = export_petri_net_prism(
+        source_net,
+        Marking(tokens={"seed": 1, "active": 0}),
+    )
+
+    assert "[seed_burst] true & true -> (active'=active+1)" in export.model
+
+
 def test_petri_net_tla_export_serialises_actions_and_invariants() -> None:
     export = export_petri_net_tla(
         _net(),
@@ -231,6 +296,35 @@ def test_petri_net_tla_export_rejects_empty_net_and_bad_bounds() -> None:
 
     with pytest.raises(PolicyError, match="exceeds max_tokens"):
         export_petri_net_tla(_net(), Marking(tokens={"warmup": 3}), max_tokens=2)
+
+
+def test_petri_net_tla_export_is_deterministic_and_normalised() -> None:
+    first = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+    ).module
+    second = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+    ).module
+    assert first == second
+
+    assert (
+        "---- MODULE SpoModule_123_module ----"
+        in export_petri_net_tla(
+            _net(),
+            Marking(tokens={"warmup": 1, "nominal": 2}),
+            module_name="123 module",
+        ).module
+    )
+    assert (
+        "---- MODULE start ----"
+        in export_petri_net_tla(
+            _net(),
+            Marking(tokens={"warmup": 1, "nominal": 2}),
+            module_name=".start",
+        ).module
+    )
 
 
 def _rules() -> list[PolicyRule]:
@@ -333,6 +427,30 @@ def test_policy_rules_prism_export_preserves_or_guard_and_unique_actions() -> No
     assert "//   shed_load_K_global_1: knob='K', scope='global', value=-0.2" in (
         export.model
     )
+
+
+def test_policy_rules_prism_export_deduplicates_rules_and_actions() -> None:
+    rules = [
+        PolicyRule(
+            name="rule 1",
+            regimes=["DEGRADED"],
+            condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
+            actions=[PolicyAction(knob="gain", scope="global", value=0.2, ttl_s=1.0)],
+        ),
+        PolicyRule(
+            name="rule-1",
+            regimes=["DEGRADED"],
+            condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.2),
+            actions=[PolicyAction(knob="gain", scope="global", value=0.1, ttl_s=1.0)],
+        ),
+    ]
+
+    export = export_policy_rules_prism(rules, module_name="policy-1")
+    assert export.rule_names == {"rule 1": "rule_1", "rule-1": "rule_1_2"}
+    assert export.action_names == {
+        "rule 1.gain.global.0": "rule_1_gain_global_0",
+        "rule-1.gain.global.0": "rule_1_gain_global_0_2",
+    }
 
 
 def test_policy_rules_prism_export_rejects_bad_rules() -> None:
@@ -627,6 +745,47 @@ def test_stl_specs_prism_export_rejects_invalid_monitor_shapes(
 ) -> None:
     with pytest.raises(PolicyError, match=message):
         export_stl_specs_prism(specs)
+
+
+def test_stl_specs_prism_export_dedups_and_parses_conjunctions() -> None:
+    export = export_stl_specs_prism(
+        [
+            PolicySTLSpec(
+                name="keep sync",
+                spec="always (R >= 0.3 and amplitude_spread < 0.5)",
+                severity="hard",
+            ),
+            PolicySTLSpec(
+                name="keep-sync",
+                spec="eventually (R >= 0.2 && amplitude_spread <= 0.4)",
+                severity="hard",
+            ),
+            PolicySTLSpec(
+                name="keep&sync",
+                spec="always (R == 0.1)",
+                severity="soft",
+            ),
+        ],
+        module_name="stl 1",
+    )
+
+    assert export.stl_names == {
+        "keep sync": "keep_sync",
+        "keep-sync": "keep_sync_2",
+        "keep&sync": "keep_sync_3",
+    }
+    assert export.metric_names == {"R": "R", "amplitude_spread": "amplitude_spread"}
+    assert (
+        'label "stl_keep_sync_satisfied" = '
+        "R >= 0.29999999999999999 & amplitude_spread < 0.5;"
+    ) in export.model
+    assert (
+        'label "stl_keep_sync_2_satisfied" = '
+        "R >= 0.20000000000000001 & amplitude_spread <= 0.40000000000000002;"
+    ) in export.model
+    assert (
+        'label "stl_keep_sync_3_violated" = !(R == 0.10000000000000001);'
+    ) in export.model
 
 
 def test_formal_export_cli_writes_prism_model(tmp_path: Path) -> None:
