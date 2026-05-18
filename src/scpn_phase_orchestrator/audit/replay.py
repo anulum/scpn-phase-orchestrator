@@ -169,15 +169,20 @@ class ReplayEngine:
             nxt = replayable[i + 1]
             if not _has_fields(curr, _UPDE_REPLAY_FIELDS) or "phases" not in nxt:
                 return False, verified
-            phases = np.asarray(curr["phases"])
-            omegas = np.asarray(curr["omegas"])
-            knm_arr = np.asarray(curr["knm"])
-            alpha_arr = np.asarray(curr["alpha"])
-            zeta = curr.get("zeta", 0.0)
-            psi_drive = curr.get("psi_drive", 0.0)
+            try:
+                phases = np.asarray(curr["phases"])
+                omegas = np.asarray(curr["omegas"])
+                knm_arr = np.asarray(curr["knm"])
+                alpha_arr = np.asarray(curr["alpha"])
+                zeta = curr.get("zeta", 0.0)
+                psi_drive = curr.get("psi_drive", 0.0)
 
-            computed = engine.step(phases, omegas, knm_arr, zeta, psi_drive, alpha_arr)
-            logged_next = np.asarray(nxt["phases"])
+                computed = engine.step(
+                    phases, omegas, knm_arr, zeta, psi_drive, alpha_arr
+                )
+                logged_next = np.asarray(nxt["phases"])
+            except (TypeError, ValueError):
+                return False, verified
 
             if not np.allclose(computed, logged_next, atol=atol):
                 return False, verified
