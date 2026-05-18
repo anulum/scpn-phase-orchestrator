@@ -52,6 +52,11 @@ PYTHON_GATES: list[tuple[str, list[str], Path]] = [
         ROOT,
     ),
     (
+        "product-boundaries",
+        [_PY, "tools/check_product_boundaries.py"],
+        ROOT,
+    ),
+    (
         "module-linkage",
         [_PY, "tools/check_test_module_linkage.py"],
         ROOT,

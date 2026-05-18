@@ -9,9 +9,9 @@
 """Unit tests for ``tools/preflight.py``.
 
 Local CI orchestrator that chains ruff, ruff-format, version-sync,
-mypy, module-linkage, pytest, bandit, and the cargo gates. Tests run
-the two tight behavioural surfaces that don't need a full repo
-checkout: ``run_gate`` output formatting + return value, and
+mypy, product-boundaries, module-linkage, pytest, bandit, and the cargo
+gates. Tests run the two tight behavioural surfaces that don't need a
+full repo checkout: ``run_gate`` output formatting + return value, and
 ``main`` flag parsing + gate assembly (with subprocess patched).
 """
 
@@ -174,6 +174,24 @@ class TestMain:
             mod.main()
         # No gate should have invoked pytest.
         assert not any("pytest" in " ".join(c) for c in calls)
+
+    def test_includes_product_boundary_gate(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            calls.append(list(cmd))
+            return _completed(0)
+
+        with (
+            patch.object(mod.shutil, "which", return_value=None),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(sys, "argv", ["preflight", "--no-tests"]),
+        ):
+            mod.main()
+
+        assert any("tools/check_product_boundaries.py" in c for c in calls)
 
     def test_without_cargo_skips_rust_gates(
         self, capsys: pytest.CaptureFixture[str]

@@ -165,6 +165,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: python tools/check_product_boundaries.py
       - run: python tools/check_test_module_linkage.py
 
   hierarchy-transport-smoke:
