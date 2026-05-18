@@ -94,6 +94,16 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="tolerance"):
             sheaf_coherence(states, maps, tolerance=-1.0)
 
+    @pytest.mark.parametrize("tolerance", [True, "1e-8", object()])
+    def test_malformed_tolerance_is_rejected(self, tolerance: object) -> None:
+        states = np.zeros((2, 1), dtype=np.float64)
+        maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
+
+        with pytest.raises(ValueError, match="tolerance"):
+            sheaf_coherence(states, maps, tolerance=tolerance)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="tolerance"):
+            sheaf_laplacian(maps, tolerance=tolerance)  # type: ignore[arg-type]
+
 
 class TestSheafCoherenceBehaviour:
     def test_consistent_global_section_has_zero_obstruction(self) -> None:
@@ -228,8 +238,11 @@ class TestSheafCoherenceBehaviour:
         ("kwargs", "message"),
         [
             ({"warning_threshold": -0.1}, "tolerance"),
+            ({"warning_threshold": True}, "tolerance"),
             ({"warning_threshold": 0.5, "critical_threshold": 0.1}, "critical"),
             ({"top_k": -1}, "top_k"),
+            ({"top_k": True}, "top_k"),
+            ({"top_k": 1.5}, "top_k"),
         ],
     )
     def test_obstruction_summary_rejects_invalid_inputs(
@@ -244,6 +257,11 @@ class TestSheafCoherenceBehaviour:
 
         with pytest.raises(ValueError, match=message):
             build_sheaf_obstruction_summary(result, **kwargs)
+
+    @pytest.mark.parametrize("result", [None, object(), "result"])
+    def test_obstruction_summary_rejects_invalid_result(self, result: object) -> None:
+        with pytest.raises(ValueError, match="result"):
+            build_sheaf_obstruction_summary(result)  # type: ignore[arg-type]
 
 
 class TestSheafCoherencePipelineWiring:

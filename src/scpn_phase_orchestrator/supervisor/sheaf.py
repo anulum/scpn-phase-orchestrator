@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -112,12 +113,13 @@ def build_sheaf_obstruction_summary(
     top_k: int = 5,
 ) -> SheafObstructionSummary:
     """Build a passive triage summary from a sheaf-coherence result."""
+    if not isinstance(result, SheafCoherenceResult):
+        raise ValueError("result must be a SheafCoherenceResult")
     warn = _validate_tolerance(warning_threshold)
     critical = _validate_tolerance(critical_threshold)
     if critical < warn:
         raise ValueError("critical_threshold must be >= warning_threshold")
-    if top_k < 0:
-        raise ValueError("top_k must be non-negative")
+    top_k = _validate_top_k(top_k)
     severity = _obstruction_severity(result.obstruction_score, warn, critical)
     return SheafObstructionSummary(
         severity=severity,
@@ -260,10 +262,18 @@ def _validate_restriction_maps(
 
 
 def _validate_tolerance(tolerance: float) -> float:
+    if isinstance(tolerance, bool) or not isinstance(tolerance, Real):
+        raise ValueError("tolerance must be a finite real number")
     value = float(tolerance)
     if not np.isfinite(value) or value < 0.0:
         raise ValueError("tolerance must be finite and non-negative")
     return value
+
+
+def _validate_top_k(top_k: int) -> int:
+    if isinstance(top_k, bool) or not isinstance(top_k, Integral) or top_k < 0:
+        raise ValueError("top_k must be a non-negative integer")
+    return int(top_k)
 
 
 def _kernel_dimension(laplacian: FloatArray, tolerance: float) -> int:
