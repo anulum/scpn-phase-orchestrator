@@ -135,6 +135,12 @@ class TestActionValidation:
         # Global scope matches ALL actuators — K_L0 accepts 1.5
         assert mapper.validate_action(_action("K", "global", 1.5)) is True
 
+    @pytest.mark.parametrize("value", [True, float("nan"), float("inf"), "0.5"])
+    def test_malformed_action_values_are_rejected(self, mapper, value):
+        action = _action("K", "global", value)
+        assert mapper.validate_action(action) is False
+        assert mapper.map_actions([action]) == []
+
 
 # ---------------------------------------------------------------------------
 # Edge cases

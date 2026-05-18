@@ -43,6 +43,8 @@ class ActuationMapper:
         """Convert ControlActions into actuator command dicts, clamping to limits."""
         commands = []
         for action in actions:
+            if not _finite_real(action.value):
+                continue
             mappings = self._by_knob.get(action.knob, [])
             for am in mappings:
                 if am.scope == action.scope or action.scope == "global":
@@ -60,6 +62,8 @@ class ActuationMapper:
     def validate_action(self, action: ControlAction) -> bool:
         """Return True if knob is valid and value is within limits."""
         if action.knob not in VALID_KNOBS:
+            return False
+        if not _finite_real(action.value):
             return False
         mappings = self._by_knob.get(action.knob, [])
         for am in mappings:
