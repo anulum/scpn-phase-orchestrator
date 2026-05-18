@@ -39,6 +39,15 @@ def _require_positive_int(value: object, *, field: str) -> int:
     return result
 
 
+def _require_nonnegative_int(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{field} must be a non-negative integer")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{field} must be a non-negative integer")
+    return result
+
+
 def _require_positive_real(value: object, *, field: str) -> float:
     if (
         not isinstance(value, Real)
@@ -90,6 +99,10 @@ class SNNControllerBridge:
         self, state: UPDEState, i_scale: float = 1.0
     ) -> FloatArray:
         """Map R values from each layer to LIF input currents."""
+        i_scale = _require_positive_real(i_scale, field="i_scale")
+        for idx, layer in enumerate(state.layers):
+            if not np.isfinite(layer.R):
+                raise ValueError(f"layer {idx} R must be finite")
         r_values: FloatArray = np.array([ls.R for ls in state.layers], dtype=np.float64)
         result: FloatArray = r_values * i_scale
         return result
@@ -110,6 +123,8 @@ class SNNControllerBridge:
         if rates.ndim != 1:
             raise ValueError("rates must be 1-D")
         layer_assignments = _validated_layer_assignments(layer_assignments)
+        if len(layer_assignments) != rates.size:
+            raise ValueError("layer_assignments length must match rates length")
         threshold_hz = _require_positive_real(threshold_hz, field="threshold_hz")
         actions: list[ControlAction] = []
         for idx, (rate, layer) in enumerate(
@@ -134,6 +149,8 @@ class SNNControllerBridge:
         rate = 1 / (tau_ref - tau_rc * ln(1 - 1/J))  for J > 1
         """
         currents = _require_finite_array(currents, field="currents")
+        if currents.ndim != 1:
+            raise ValueError("currents must be 1-D")
         rates: FloatArray = np.zeros_like(currents, dtype=np.float64)
         above = currents > 1.0
         if above.any():
@@ -149,6 +166,9 @@ class SNNControllerBridge:
         Returns a SimpleNamespace with input_node, ensemble, output_node
         attributes and a step() method.
         """
+        n_layers = _require_positive_int(n_layers, field="n_layers")
+        seed = _require_nonnegative_int(seed, field="seed")
+        synapse = _require_positive_real(synapse, field="synapse")
         rng = np.random.default_rng(seed)
         n = self.n_neurons
         encoders = rng.choice([-1.0, 1.0], (n, n_layers))
@@ -180,6 +200,7 @@ class SNNControllerBridge:
 
         Raises ImportError if lava-nc is not installed.
         """
+        _require_positive_int(n_layers, field="n_layers")
         # type ignore: lava-nc is an optional dependency without bundled stubs.
         from lava.proc.lif.process import LIF  # type: ignore[import-not-found]
 

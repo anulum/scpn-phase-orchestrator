@@ -68,6 +68,17 @@ def test_upde_to_current_empty():
     assert len(currents) == 0
 
 
+def test_upde_to_current_rejects_invalid_scale_and_state_values():
+    bridge = SNNControllerBridge()
+    state = _make_state([0.5])
+    with pytest.raises(ValueError, match="i_scale"):
+        bridge.upde_state_to_input_current(state, i_scale=0.0)
+
+    bad_state = _make_state([float("nan")])
+    with pytest.raises(ValueError, match="layer 0 R"):
+        bridge.upde_state_to_input_current(bad_state)
+
+
 def test_public_array_contracts_are_parameterised():
     for hint in [
         get_type_hints(SNNControllerBridge.upde_state_to_input_current)["return"],
@@ -107,8 +118,12 @@ def test_spike_rates_reject_malformed_inputs():
     bridge = SNNControllerBridge()
     with pytest.raises(ValueError, match="rates"):
         bridge.spike_rates_to_actions(np.array([np.nan]), [0], threshold_hz=50.0)
+    with pytest.raises(ValueError, match="rates"):
+        bridge.spike_rates_to_actions(np.ones((1, 1)), [0], threshold_hz=50.0)
     with pytest.raises(ValueError, match="layer_assignments"):
         bridge.spike_rates_to_actions(np.array([60.0]), [True], threshold_hz=50.0)
+    with pytest.raises(ValueError, match="layer_assignments"):
+        bridge.spike_rates_to_actions(np.array([60.0, 70.0]), [0], threshold_hz=50.0)
     with pytest.raises(ValueError, match="threshold_hz"):
         bridge.spike_rates_to_actions(np.array([60.0]), [0], threshold_hz=0.0)
 
@@ -139,6 +154,8 @@ def test_lif_rate_rejects_non_finite_currents():
     bridge = SNNControllerBridge()
     with pytest.raises(ValueError, match="currents"):
         bridge.lif_rate_estimate(np.array([1.0, np.inf]))
+    with pytest.raises(ValueError, match="currents"):
+        bridge.lif_rate_estimate(np.ones((1, 1)))
 
 
 def test_custom_lif_params():
@@ -157,6 +174,25 @@ def test_numpy_network_builds():
     assert model.ensemble.encoders.shape == (50, 3)
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "field"),
+    [
+        ({"n_layers": 0}, "n_layers"),
+        ({"n_layers": True}, "n_layers"),
+        ({"n_layers": 3, "seed": True}, "seed"),
+        ({"n_layers": 3, "synapse": 0.0}, "synapse"),
+        ({"n_layers": 3, "synapse": float("nan")}, "synapse"),
+    ],
+)
+def test_numpy_network_rejects_malformed_config(
+    kwargs: dict[str, object],
+    field: str,
+):
+    bridge = SNNControllerBridge(n_neurons=50)
+    with pytest.raises(ValueError, match=field):
+        bridge.build_numpy_network(**cast(dict, kwargs))
+
+
 def test_nengo_network_alias():
     bridge = SNNControllerBridge(n_neurons=50)
     model = bridge.build_nengo_network(n_layers=3, seed=42)
@@ -167,6 +203,12 @@ def test_lava_import_error():
     bridge = SNNControllerBridge()
     with contextlib.suppress(ImportError):
         bridge.build_lava_process(n_layers=3)
+
+
+def test_lava_process_rejects_invalid_layer_count():
+    bridge = SNNControllerBridge()
+    with pytest.raises(ValueError, match="n_layers"):
+        bridge.build_lava_process(n_layers=0)
 
 
 def test_lava_process_with_mock():
