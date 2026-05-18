@@ -116,8 +116,6 @@ BACKEND_MODULES = (
 
 RUNTIME_MODULES = (
     "scpn_phase_orchestrator.cli",
-    "scpn_phase_orchestrator.distributed",
-    "scpn_phase_orchestrator.distributed.sync",
     "scpn_phase_orchestrator.grpc_gen",
     "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback",
     "scpn_phase_orchestrator.server",
@@ -137,11 +135,7 @@ def test_runtime_module_import_surface(module_name: str) -> None:
     module = importlib.import_module(module_name)
     expected_name = (
         module_name
-        if (
-            ".runtime." in module_name
-            or ".grpc_gen." in module_name
-            or ".distributed." in module_name
-        )
+        if ".runtime." in module_name or ".grpc_gen." in module_name
         else module_name.replace(
             "scpn_phase_orchestrator.",
             "scpn_phase_orchestrator.runtime.",
@@ -149,6 +143,22 @@ def test_runtime_module_import_surface(module_name: str) -> None:
         )
     )
     assert module.__name__ == expected_name
+
+
+@pytest.mark.parametrize(
+    "module_name",
+    (
+        "scpn_phase_orchestrator.distributed",
+        "scpn_phase_orchestrator.distributed.sync",
+    ),
+)
+def test_legacy_distributed_import_surface_is_removed(module_name: str) -> None:
+    try:
+        spec = importlib.util.find_spec(module_name)
+    except ModuleNotFoundError:
+        spec = None
+
+    assert spec is None
 
 
 @pytest.mark.parametrize("module_name", BACKEND_MODULES)

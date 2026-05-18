@@ -8,9 +8,10 @@
 
 """Validate product-boundary imports for the Python source tree.
 
-The boundary contract is intentionally narrower than a directory move: it keeps
-legacy import paths stable while preventing the Core Engine layer from acquiring
-new dependencies on runtime, integration, or experimental surfaces.
+The boundary contract is intentionally narrower than a directory move: it
+classifies genuine product namespaces while preventing the Core Engine layer
+from acquiring new dependencies on runtime, integration, or experimental
+surfaces.
 """
 
 from __future__ import annotations
@@ -46,7 +47,6 @@ RUNTIME_PACKAGES = frozenset(
         "artifacts",
         "audit",
         "cli",
-        "distributed",
         "grpc_gen",
         "meta",
         "network_security",
