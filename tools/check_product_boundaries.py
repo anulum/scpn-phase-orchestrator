@@ -48,7 +48,6 @@ RUNTIME_PACKAGES = frozenset(
         "audit",
         "grpc_gen",
         "meta",
-        "network_security",
         "plugins",
         "reporting",
         "runtime",

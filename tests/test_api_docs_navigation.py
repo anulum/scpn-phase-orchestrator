@@ -31,7 +31,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc",
     "scpn_phase_orchestrator.grpc_gen.spo_pb2",
     "scpn_phase_orchestrator.grpc_gen.spo_pb2_grpc",
-    "scpn_phase_orchestrator.network_security",
+    "scpn_phase_orchestrator.runtime.network_security",
     "scpn_phase_orchestrator.runtime.server",
     "scpn_phase_orchestrator.runtime.server_grpc",
 }

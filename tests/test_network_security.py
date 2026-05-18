@@ -8,12 +8,11 @@
 
 from __future__ import annotations
 
+import importlib.util
 from typing import cast
 
 import pytest
 
-from scpn_phase_orchestrator import network_security as legacy_network_security
-from scpn_phase_orchestrator.runtime import network_security as runtime_network_security
 from scpn_phase_orchestrator.runtime.network_security import (
     FixedWindowRateLimiter,
     env_int,
@@ -21,8 +20,8 @@ from scpn_phase_orchestrator.runtime.network_security import (
 )
 
 
-def test_legacy_network_security_alias_targets_runtime_module() -> None:
-    assert legacy_network_security is runtime_network_security
+def test_presplit_network_security_module_is_removed() -> None:
+    assert importlib.util.find_spec("scpn_phase_orchestrator.network_security") is None
 
 
 def test_is_production_mode_uses_service_specific_env(
