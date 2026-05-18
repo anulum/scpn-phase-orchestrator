@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -20,6 +21,59 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 __all__ = ["PGBO", "PGBOSnapshot"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _validate_cost_weights(cost_weights: tuple[float, ...]) -> tuple[float, ...]:
+    if not isinstance(cost_weights, tuple) or len(cost_weights) < 1:
+        raise ValueError("cost_weights must contain at least one weight")
+    weights: list[float] = []
+    for weight in cost_weights:
+        if isinstance(weight, bool) or not isinstance(weight, Real):
+            raise ValueError("cost_weights must contain finite real weights")
+        value = float(weight)
+        if not np.isfinite(value):
+            raise ValueError("cost_weights must contain finite real weights")
+        if value < 0.0:
+            raise ValueError(f"cost_weights must be non-negative, got {cost_weights}")
+        weights.append(value)
+    return tuple(weights)
+
+
+def _validate_phases(phases: FloatArray) -> FloatArray:
+    raw = np.asarray(phases)
+    if raw.dtype == np.bool_ or any(
+        isinstance(item, bool | np.bool_) for item in raw.ravel()
+    ):
+        raise ValueError("phases must not contain boolean values")
+    try:
+        values = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases must be numeric") from exc
+    if values.ndim != 1:
+        raise ValueError("phases must be a one-dimensional vector")
+    if values.shape[0] < 1:
+        raise ValueError("phases must contain at least one oscillator")
+    if not np.all(np.isfinite(values)):
+        raise ValueError("phases must be finite")
+    return values
+
+
+def _validate_coupling_matrix(W: FloatArray, n_oscillators: int) -> FloatArray:
+    raw = np.asarray(W)
+    if raw.dtype == np.bool_ or any(
+        isinstance(item, bool | np.bool_) for item in raw.ravel()
+    ):
+        raise ValueError("W must not contain boolean values")
+    try:
+        values = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("W must be numeric") from exc
+    expected = (n_oscillators, n_oscillators)
+    if values.shape != expected:
+        raise ValueError(f"W must have shape {expected}")
+    if not np.all(np.isfinite(values)):
+        raise ValueError("W must be finite")
+    return values
 
 
 @dataclass
@@ -51,11 +105,7 @@ class PGBO:
     """
 
     def __init__(self, cost_weights: tuple[float, ...] = (1.0, 0.5, 0.1, 0.1)):
-        if len(cost_weights) < 1:
-            raise ValueError("cost_weights must contain at least one weight")
-        if any(w < 0.0 for w in cost_weights):
-            raise ValueError(f"cost_weights must be non-negative, got {cost_weights}")
-        self._weights = cost_weights
+        self._weights = _validate_cost_weights(cost_weights)
         self._step = 0
         self._history: list[PGBOSnapshot] = []
 
@@ -70,6 +120,8 @@ class PGBO:
             A PGBOSnapshot containing order parameter R, Psi, SSGF costs,
             and the gauge curvature proxy.
         """
+        phases = _validate_phases(phases)
+        W = _validate_coupling_matrix(W, phases.shape[0])
         self._step += 1
         R, psi = compute_order_parameter(phases)
         costs = compute_ssgf_costs(W, phases, weights=self._weights)

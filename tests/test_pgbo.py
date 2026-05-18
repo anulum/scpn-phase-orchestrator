@@ -26,6 +26,14 @@ class TestPGBO:
         with pytest.raises(ValueError, match="non-negative"):
             PGBO(cost_weights=(1.0, -0.1))
 
+    @pytest.mark.parametrize(
+        "cost_weights",
+        [(1.0, np.nan), (1.0, np.inf), (1.0, True), (1.0, "0.5")],
+    )
+    def test_rejects_malformed_cost_weights(self, cost_weights):
+        with pytest.raises(ValueError, match="cost_weights"):
+            PGBO(cost_weights=cost_weights)
+
     def test_observe_returns_snapshot(self):
         pgbo = PGBO()
         phases = np.zeros(4)
@@ -34,6 +42,23 @@ class TestPGBO:
         snap = pgbo.observe(phases, W)
         assert isinstance(snap, PGBOSnapshot)
         assert snap.step == 1
+
+    @pytest.mark.parametrize(
+        ("phases", "W", "match"),
+        [
+            (np.zeros((2, 2)), np.zeros((4, 4)), "phases"),
+            (np.array([0.0, np.nan]), np.zeros((2, 2)), "phases"),
+            (np.array([0.0, True], dtype=object), np.zeros((2, 2)), "phases"),
+            (np.zeros(2), np.zeros((2, 3)), "W"),
+            (np.zeros(2), np.array([[0.0, np.inf], [0.0, 0.0]]), "W"),
+            (np.zeros(2), np.array([[False, True], [True, False]]), "W"),
+        ],
+    )
+    def test_observe_rejects_malformed_inputs(self, phases, W, match):
+        pgbo = PGBO()
+
+        with pytest.raises(ValueError, match=match):
+            pgbo.observe(phases, W)
 
     def test_R_correct(self):
         pgbo = PGBO()
