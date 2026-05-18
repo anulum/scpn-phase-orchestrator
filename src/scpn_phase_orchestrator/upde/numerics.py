@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Numerical utilities
 
+"""Numerical integration configuration and explicit-step stability checks.
+
+``IntegrationConfig`` records solver tolerances and method selection, while
+``check_stability`` provides a CFL-like phase-step bound for explicit Kuramoto
+integration. The helper is deliberately conservative and side-effect free: it
+does not adapt solvers or clamp parameters, it only reports whether the supplied
+derivative bound keeps a single step below a half-cycle.
+"""
+
 from __future__ import annotations
 
 import math

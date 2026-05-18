@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Sparse UPDE integration engine
 
+"""Sparse CSR-style UPDE engine for validated oscillator coupling graphs.
+
+The sparse engine advances phase vectors from row pointers, column indices,
+coupling values, and phase-lag values instead of dense ``N x N`` matrices.
+Inputs are checked for finite values, CSR monotonicity, edge-count consistency,
+valid oscillator indices, and method selection before stepping. Optional Rust
+execution and Python fallback preserve the same shape and bounds contracts.
+"""
+
 from __future__ import annotations
 
 import threading

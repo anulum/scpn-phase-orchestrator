@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — UPDE diagnostic metrics
 
+"""Immutable diagnostic dataclasses for UPDE lock and layer state snapshots.
+
+The module contains data-only records for pairwise lock signatures, per-layer
+coherence and amplitude summaries, and aggregate UPDE diagnostic state. These
+types intentionally perform no simulation, I/O, or mutation beyond dataclass
+construction; producers are responsible for numeric validation before emitting
+snapshots.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

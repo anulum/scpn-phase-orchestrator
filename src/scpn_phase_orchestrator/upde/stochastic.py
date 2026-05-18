@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Stochastic noise injection and optimal D*
 
+"""Stochastic noise injection and noise-level sweeps for UPDE phase dynamics.
+
+``StochasticInjector`` owns a local random generator and applies
+Euler-Maruyama phase noise under validated non-negative diffusion and positive
+time-step parameters. ``find_optimal_noise`` sweeps finite non-negative
+candidate noise levels against a supplied UPDE engine and reports the best
+coherence profile without changing the engine configuration or caller-provided
+input arrays outside normal engine stepping.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - Cellular Sheaf UPDE Engine
 
+"""Cellular-sheaf UPDE integrator for multidimensional oscillator phases.
+
+``SheafUPDEEngine`` advances ``N x D`` phase matrices using restriction-map
+coupling blocks and optional Rust acceleration. It validates oscillator counts,
+dimensions, timestep/tolerances, solver method, forcing scalars, phase targets,
+and tensor shapes before integration. Instance-level locks protect reusable
+scratch buffers so concurrent callers cannot corrupt adaptive or fixed-step
+solver state.
+"""
+
 from __future__ import annotations
 
 import threading

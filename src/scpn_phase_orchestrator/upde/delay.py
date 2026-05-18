@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Time-delayed Kuramoto coupling
 
+"""Time-delayed Kuramoto buffer and engine with validated phase history.
+
+``DelayBuffer`` stores copied finite phase snapshots in a bounded deque, and
+``DelayedEngine`` advances phases with delayed coupling, optional external
+forcing, and Rust acceleration when available. Constructors and step inputs
+reject non-positive dimensions, non-finite scalars, and shape-mismatched arrays
+before integration so delayed history never aliases invalid caller state.
+"""
+
 from __future__ import annotations
 
 from collections import deque

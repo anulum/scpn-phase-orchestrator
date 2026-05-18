@@ -15,6 +15,17 @@
 # forward model, providing an anticipatory signal absent from the
 # standard UPDE which has retention (L9 memory) but no forward prediction.
 
+"""Forward and variational prediction models for validated UPDE phase states.
+
+The module supplies a linear prediction-error model and a variational
+free-energy predictor over one-dimensional oscillator phase vectors. Public
+constructors and update methods validate oscillator counts, positive time
+steps, finite phase/frequency arrays, and precision vectors before mutating
+internal weights, sufficient statistics, or error histories. The implementation
+is a concrete numerical mechanism and does not claim to formalize
+phenomenological time-consciousness.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

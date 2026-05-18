@@ -10,6 +10,16 @@
 # solver for exact gradients at O(1) memory cost. This module provides a
 # numpy finite-difference fallback for environments without JAX.
 
+"""Adjoint and finite-difference sensitivities for UPDE coupling gradients.
+
+The module defines the synchronization cost ``1 - R`` and two gradient paths:
+a deterministic NumPy finite-difference estimator over coupling entries and a
+JAX autodiff implementation when the optional JAX stack is installed. The
+finite-difference path mutates only local coupling copies for each perturbation,
+while the JAX path fails explicitly with ``ImportError`` instead of silently
+claiming accelerated gradients without the required dependency.
+"""
+
 from __future__ import annotations
 
 from typing import Any, TypeAlias

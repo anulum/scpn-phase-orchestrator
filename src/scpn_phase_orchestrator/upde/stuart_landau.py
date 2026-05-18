@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Stuart-Landau oscillator model
 
+"""Thread-safe Stuart-Landau phase-amplitude integrator with backend parity.
+
+``StuartLandauEngine`` advances paired phase and amplitude state vectors using
+Euler, RK4, or adaptive RK45 methods, with optional Rust acceleration when the
+kernel is installed. Constructor and step validation reject invalid dimensions,
+methods, non-finite arrays, and non-finite forcing before solver state changes.
+The instance lock protects reusable scratch buffers and adaptive timestep state
+for concurrent callers.
+"""
+
 from __future__ import annotations
 
 import threading

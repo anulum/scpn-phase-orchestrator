@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — UPDE subsystem
 
+"""Lazy public facade for UPDE engines, diagnostics, and numeric helpers.
+
+The UPDE package exposes phase-dynamics engines, reductions, prediction
+models, stochastic injectors, stability utilities, and diagnostic dataclasses
+without importing every optional backend at package import time. Concrete
+modules own numeric validation, integration methods, Rust/JAX fallback behavior,
+and mutation boundaries; this facade only resolves documented public symbols on
+demand.
+"""
+
 from __future__ import annotations
 
 import importlib
