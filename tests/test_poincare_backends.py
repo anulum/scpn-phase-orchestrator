@@ -18,19 +18,19 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.monitor import poincare as p_mod
-from scpn_phase_orchestrator.monitor._poincare_go import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_go import (
     phase_poincare_go,
     poincare_section_go,
 )
-from scpn_phase_orchestrator.monitor._poincare_julia import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_julia import (
     phase_poincare_julia,
     poincare_section_julia,
 )
-from scpn_phase_orchestrator.monitor._poincare_mojo import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_mojo import (
     phase_poincare_mojo,
     poincare_section_mojo,
 )
+from scpn_phase_orchestrator.monitor import poincare as p_mod
 from scpn_phase_orchestrator.monitor.poincare import (
     AVAILABLE_BACKENDS,
     phase_poincare,

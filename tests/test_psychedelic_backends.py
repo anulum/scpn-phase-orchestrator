@@ -21,14 +21,20 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _psychedelic_go,
+    _psychedelic_julia,
+    _psychedelic_mojo,
+)
 from scpn_phase_orchestrator.monitor import psychedelic as py_mod
-from scpn_phase_orchestrator.monitor._psychedelic_go import entropy_from_phases_go
-from scpn_phase_orchestrator.monitor._psychedelic_julia import entropy_from_phases_julia
-from scpn_phase_orchestrator.monitor._psychedelic_mojo import entropy_from_phases_mojo
 from scpn_phase_orchestrator.monitor.psychedelic import (
     AVAILABLE_BACKENDS,
     entropy_from_phases,
 )
+
+entropy_from_phases_go = _psychedelic_go.entropy_from_phases_go
+entropy_from_phases_julia = _psychedelic_julia.entropy_from_phases_julia
+entropy_from_phases_mojo = _psychedelic_mojo.entropy_from_phases_mojo
 
 TWO_PI = 2.0 * np.pi
 

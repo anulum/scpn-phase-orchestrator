@@ -30,22 +30,22 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.monitor import embedding as em_mod
-from scpn_phase_orchestrator.monitor._embedding_go import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._embedding_go import (
     delay_embed_go,
     mutual_information_go,
     nearest_neighbor_distances_go,
 )
-from scpn_phase_orchestrator.monitor._embedding_julia import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._embedding_julia import (
     delay_embed_julia,
     mutual_information_julia,
     nearest_neighbor_distances_julia,
 )
-from scpn_phase_orchestrator.monitor._embedding_mojo import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._embedding_mojo import (
     delay_embed_mojo,
     mutual_information_mojo,
     nearest_neighbor_distances_mojo,
 )
+from scpn_phase_orchestrator.monitor import embedding as em_mod
 from scpn_phase_orchestrator.monitor.embedding import (
     AVAILABLE_BACKENDS,
     delay_embed,

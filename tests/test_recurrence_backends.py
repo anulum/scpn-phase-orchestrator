@@ -22,24 +22,24 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _recurrence_go,
+    _recurrence_julia,
+    _recurrence_mojo,
+)
 from scpn_phase_orchestrator.monitor import recurrence as r_mod
-from scpn_phase_orchestrator.monitor._recurrence_go import (
-    cross_recurrence_matrix_go,
-    recurrence_matrix_go,
-)
-from scpn_phase_orchestrator.monitor._recurrence_julia import (
-    cross_recurrence_matrix_julia,
-    recurrence_matrix_julia,
-)
-from scpn_phase_orchestrator.monitor._recurrence_mojo import (
-    cross_recurrence_matrix_mojo,
-    recurrence_matrix_mojo,
-)
 from scpn_phase_orchestrator.monitor.recurrence import (
     AVAILABLE_BACKENDS,
     cross_recurrence_matrix,
     recurrence_matrix,
 )
+
+cross_recurrence_matrix_go = _recurrence_go.cross_recurrence_matrix_go
+cross_recurrence_matrix_julia = _recurrence_julia.cross_recurrence_matrix_julia
+cross_recurrence_matrix_mojo = _recurrence_mojo.cross_recurrence_matrix_mojo
+recurrence_matrix_go = _recurrence_go.recurrence_matrix_go
+recurrence_matrix_julia = _recurrence_julia.recurrence_matrix_julia
+recurrence_matrix_mojo = _recurrence_mojo.recurrence_matrix_mojo
 
 
 def _force(backend: str) -> str:

@@ -24,18 +24,20 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _entropy_prod_go,
+    _entropy_prod_julia,
+    _entropy_prod_mojo,
+)
 from scpn_phase_orchestrator.monitor import entropy_prod as ep_mod
-from scpn_phase_orchestrator.monitor._entropy_prod_go import entropy_production_rate_go
-from scpn_phase_orchestrator.monitor._entropy_prod_julia import (
-    entropy_production_rate_julia,
-)
-from scpn_phase_orchestrator.monitor._entropy_prod_mojo import (
-    entropy_production_rate_mojo,
-)
 from scpn_phase_orchestrator.monitor.entropy_prod import (
     AVAILABLE_BACKENDS,
     entropy_production_rate,
 )
+
+entropy_production_rate_go = _entropy_prod_go.entropy_production_rate_go
+entropy_production_rate_julia = _entropy_prod_julia.entropy_production_rate_julia
+entropy_production_rate_mojo = _entropy_prod_mojo.entropy_production_rate_mojo
 
 TWO_PI = 2.0 * np.pi
 

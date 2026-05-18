@@ -25,12 +25,18 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling import hodge as h_mod
-from scpn_phase_orchestrator.coupling._hodge_go import hodge_decomposition_go
-from scpn_phase_orchestrator.coupling._hodge_julia import hodge_decomposition_julia
-from scpn_phase_orchestrator.coupling._hodge_mojo import hodge_decomposition_mojo
 from scpn_phase_orchestrator.coupling.hodge import (
     AVAILABLE_BACKENDS,
     hodge_decomposition,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go import (
+    hodge_decomposition_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia import (
+    hodge_decomposition_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo import (
+    hodge_decomposition_mojo,
 )
 
 TWO_PI = 2.0 * np.pi
@@ -237,12 +243,14 @@ class TestBackendLoaderDispatch:
     ) -> None:
         sentinel = object()
         fake_juliacall = types.ModuleType("juliacall")
-        fake_backend = types.ModuleType("scpn_phase_orchestrator.coupling._hodge_julia")
+        fake_backend = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia"
+        )
         fake_backend.hodge_decomposition_julia = sentinel
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         monkeypatch.setitem(
             sys.modules,
-            "scpn_phase_orchestrator.coupling._hodge_julia",
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia",
             fake_backend,
         )
 

@@ -295,7 +295,9 @@ class TestDispatcherSurface:
         def spectral_eig_backend(flat, n):
             return np.arange(n, dtype=np.float64), np.ones(n, dtype=np.float64)
 
-        mojo = types.ModuleType("scpn_phase_orchestrator.coupling._spectral_mojo")
+        mojo = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo"
+        )
         mojo.spectral_eig_mojo = spectral_eig_backend
         mojo.ensure_called = False
 
@@ -303,9 +305,13 @@ class TestDispatcherSurface:
             mojo.ensure_called = True
 
         mojo._ensure_exe = ensure_exe
-        julia = types.ModuleType("scpn_phase_orchestrator.coupling._spectral_julia")
+        julia = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_julia"
+        )
         julia.spectral_eig_julia = spectral_eig_backend
-        go = types.ModuleType("scpn_phase_orchestrator.coupling._spectral_go")
+        go = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go"
+        )
         go.spectral_eig_go = spectral_eig_backend
         go.load_called = False
 
@@ -317,17 +323,17 @@ class TestDispatcherSurface:
         monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
         monkeypatch.setitem(
             sys.modules,
-            "scpn_phase_orchestrator.coupling._spectral_mojo",
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo",
             mojo,
         )
         monkeypatch.setitem(
             sys.modules,
-            "scpn_phase_orchestrator.coupling._spectral_julia",
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_julia",
             julia,
         )
         monkeypatch.setitem(
             sys.modules,
-            "scpn_phase_orchestrator.coupling._spectral_go",
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go",
             go,
         )
 

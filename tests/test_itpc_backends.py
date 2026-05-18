@@ -27,19 +27,19 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.monitor import itpc as it_mod
-from scpn_phase_orchestrator.monitor._itpc_go import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_go import (
     compute_itpc_go,
     itpc_persistence_go,
 )
-from scpn_phase_orchestrator.monitor._itpc_julia import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_julia import (
     compute_itpc_julia,
     itpc_persistence_julia,
 )
-from scpn_phase_orchestrator.monitor._itpc_mojo import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_mojo import (
     compute_itpc_mojo,
     itpc_persistence_mojo,
 )
+from scpn_phase_orchestrator.monitor import itpc as it_mod
 from scpn_phase_orchestrator.monitor.itpc import (
     AVAILABLE_BACKENDS,
     compute_itpc,

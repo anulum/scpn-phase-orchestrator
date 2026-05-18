@@ -21,10 +21,16 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_go import (
+    lyapunov_spectrum_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_julia import (
+    lyapunov_spectrum_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_mojo import (
+    lyapunov_spectrum_mojo,
+)
 from scpn_phase_orchestrator.monitor import lyapunov as ly_mod
-from scpn_phase_orchestrator.monitor._lyapunov_go import lyapunov_spectrum_go
-from scpn_phase_orchestrator.monitor._lyapunov_julia import lyapunov_spectrum_julia
-from scpn_phase_orchestrator.monitor._lyapunov_mojo import lyapunov_spectrum_mojo
 from scpn_phase_orchestrator.monitor.lyapunov import (
     AVAILABLE_BACKENDS,
     lyapunov_spectrum,

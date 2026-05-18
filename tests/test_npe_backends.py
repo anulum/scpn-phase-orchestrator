@@ -17,19 +17,19 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.monitor import npe as npe_mod
-from scpn_phase_orchestrator.monitor._npe_go import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_go import (
     compute_npe_go,
     phase_distance_matrix_go,
 )
-from scpn_phase_orchestrator.monitor._npe_julia import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_julia import (
     compute_npe_julia,
     phase_distance_matrix_julia,
 )
-from scpn_phase_orchestrator.monitor._npe_mojo import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._npe_mojo import (
     compute_npe_mojo,
     phase_distance_matrix_mojo,
 )
+from scpn_phase_orchestrator.monitor import npe as npe_mod
 from scpn_phase_orchestrator.monitor.npe import (
     AVAILABLE_BACKENDS,
     compute_npe,

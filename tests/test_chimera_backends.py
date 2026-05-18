@@ -23,10 +23,16 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_go import (
+    local_order_parameter_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_julia import (
+    local_order_parameter_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_mojo import (
+    local_order_parameter_mojo,
+)
 from scpn_phase_orchestrator.monitor import chimera as ch_mod
-from scpn_phase_orchestrator.monitor._chimera_go import local_order_parameter_go
-from scpn_phase_orchestrator.monitor._chimera_julia import local_order_parameter_julia
-from scpn_phase_orchestrator.monitor._chimera_mojo import local_order_parameter_mojo
 from scpn_phase_orchestrator.monitor.chimera import (
     AVAILABLE_BACKENDS,
     detect_chimera,

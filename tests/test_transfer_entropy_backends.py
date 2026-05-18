@@ -19,13 +19,19 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from scpn_phase_orchestrator.monitor import transfer_entropy as te_mod
-from scpn_phase_orchestrator.monitor._te_go import phase_te_go, te_matrix_go
-from scpn_phase_orchestrator.monitor._te_julia import (
+from scpn_phase_orchestrator.experimental.accelerators.monitor._te_go import (
+    phase_te_go,
+    te_matrix_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor._te_julia import (
     phase_te_julia,
     te_matrix_julia,
 )
-from scpn_phase_orchestrator.monitor._te_mojo import phase_te_mojo, te_matrix_mojo
+from scpn_phase_orchestrator.experimental.accelerators.monitor._te_mojo import (
+    phase_te_mojo,
+    te_matrix_mojo,
+)
+from scpn_phase_orchestrator.monitor import transfer_entropy as te_mod
 from scpn_phase_orchestrator.monitor.transfer_entropy import (
     AVAILABLE_BACKENDS,
     phase_transfer_entropy,

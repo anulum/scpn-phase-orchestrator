@@ -32,15 +32,21 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling import spectral as s_mod
-from scpn_phase_orchestrator.coupling._spectral_go import spectral_eig_go
-from scpn_phase_orchestrator.coupling._spectral_julia import spectral_eig_julia
-from scpn_phase_orchestrator.coupling._spectral_mojo import spectral_eig_mojo
 from scpn_phase_orchestrator.coupling.spectral import (
     fiedler_value,
     fiedler_vector,
     graph_laplacian,
     spectral_eig,
     spectral_gap,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go import (
+    spectral_eig_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_julia import (
+    spectral_eig_julia,
+)
+from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo import (
+    spectral_eig_mojo,
 )
 
 TOL_LAPACK = 1e-12
