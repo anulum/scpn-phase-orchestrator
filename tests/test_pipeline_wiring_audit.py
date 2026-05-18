@@ -321,8 +321,8 @@ class TestAdapterWiring:
 
     def test_audit_logger_to_replay(self, tmp_path):
         """AuditLogger → ReplayEngine: data written is exactly data read back."""
-        from scpn_phase_orchestrator.audit.logger import AuditLogger
-        from scpn_phase_orchestrator.audit.replay import ReplayEngine
+        from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
+        from scpn_phase_orchestrator.runtime.replay import ReplayEngine
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
         state = UPDEState(

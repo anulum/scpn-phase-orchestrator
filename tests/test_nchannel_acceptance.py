@@ -15,13 +15,13 @@ from typing import Any
 import numpy as np
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.audit.logger import AuditLogger
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.reporting.explainability import (
     build_explainability_report,
 )
 from scpn_phase_orchestrator.reporting.plots import CoherencePlot
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.cli import main
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.visualization.network import (
     coupling_heatmap_json,

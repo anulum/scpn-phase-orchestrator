@@ -38,7 +38,7 @@ _EXPORT_MODULES = {
 
 
 def __getattr__(name: str) -> Any:
-    """Lazily expose historical audit package exports without import cycles."""
+    """Lazily expose audit package exports without import cycles."""
     module_name = _EXPORT_MODULES.get(name)
     if module_name is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

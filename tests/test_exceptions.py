@@ -144,7 +144,7 @@ class TestExceptionsRaisedByRealCode:
     def test_audit_error_on_incomplete_replay_fields(self, tmp_path):
         """AuditLogger must raise AuditError (not ValueError) when phases
         are provided without omegas/knm/alpha."""
-        from scpn_phase_orchestrator.audit.logger import AuditLogger
+        from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
         state = UPDEState(
@@ -183,7 +183,7 @@ class TestExceptionsRaisedByRealCode:
     def test_except_spo_catches_audit_error_from_logger(self, tmp_path):
         """Integration: a generic `except SPOError` must catch AuditError
         raised by the logger — proving the hierarchy works in practice."""
-        from scpn_phase_orchestrator.audit.logger import AuditLogger
+        from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
         state = UPDEState(

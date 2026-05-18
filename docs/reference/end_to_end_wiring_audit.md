@@ -68,7 +68,7 @@ Tested with `power_grid` domainpack (N=12):
 | 3. Run engine | `upde.engine` | `phases, omegas, K, 200 steps` | `R=0.3896` | OK |
 | 4. Monitor | `monitor.boundaries` | `spec.boundaries` | `BoundaryObserver` | OK |
 | 5. Imprint | `imprint.update` | `ImprintModel + ImprintState` | `m_k mean=0.039` | OK |
-| 6. Audit | `audit.logger` | `path` | `AuditLogger` | OK |
+| 6. Audit | `runtime.audit_logger` | `path` | `AuditLogger` | OK |
 
 ---
 

@@ -16,9 +16,9 @@ import json
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.audit.logger import AuditLogger
 from scpn_phase_orchestrator.coupling.lags import LagModel
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine

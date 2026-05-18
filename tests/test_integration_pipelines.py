@@ -15,11 +15,11 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
-from scpn_phase_orchestrator.audit.logger import AuditLogger
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.coupling import CouplingBuilder
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter

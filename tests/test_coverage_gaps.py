@@ -22,8 +22,6 @@ from click.testing import CliRunner
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import (
     QuantumControlBridge,
 )
-from scpn_phase_orchestrator.audit.logger import AuditLogger
-from scpn_phase_orchestrator.audit.replay import ReplayEngine
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 from scpn_phase_orchestrator.binding.types import (
     AmplitudeSpec,
@@ -32,7 +30,9 @@ from scpn_phase_orchestrator.binding.types import (
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.cli import main
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.supervisor.petri_net import Guard, Marking, PetriNet, Place
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (

@@ -35,7 +35,7 @@ class TestStuartLandauReplayDeterminism:
 
     @pytest.fixture()
     def replay_engine(self, tmp_path):
-        from scpn_phase_orchestrator.audit.replay import ReplayEngine
+        from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
         log = tmp_path / "audit.jsonl"
         log.write_text("")

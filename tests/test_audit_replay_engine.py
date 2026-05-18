@@ -8,16 +8,16 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 
-from scpn_phase_orchestrator.audit import replay as legacy_replay
-from scpn_phase_orchestrator.runtime import replay as runtime_replay
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 
-def test_legacy_audit_replay_alias_targets_runtime_module() -> None:
-    assert legacy_replay is runtime_replay
+def test_presplit_audit_replay_submodule_is_removed() -> None:
+    assert importlib.util.find_spec("scpn_phase_orchestrator.audit.replay") is None
 
 
 def test_load_parses_jsonl(tmp_path):

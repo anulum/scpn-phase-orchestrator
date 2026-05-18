@@ -9,12 +9,11 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 
 import pytest
 
-from scpn_phase_orchestrator.audit import signing as legacy_signing
-from scpn_phase_orchestrator.runtime import audit_signing as runtime_signing
 from scpn_phase_orchestrator.runtime.audit_signing import (
     SIGNATURE_ALGORITHM,
     audit_verification_keys,
@@ -22,8 +21,8 @@ from scpn_phase_orchestrator.runtime.audit_signing import (
 )
 
 
-def test_legacy_audit_signing_alias_targets_runtime_module() -> None:
-    assert legacy_signing is runtime_signing
+def test_presplit_audit_signing_submodule_is_removed() -> None:
+    assert importlib.util.find_spec("scpn_phase_orchestrator.audit.signing") is None
 
 
 def test_key_id_for_secret_matches_audit_metadata_prefix() -> None:
