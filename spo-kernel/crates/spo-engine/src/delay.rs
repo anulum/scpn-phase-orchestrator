@@ -230,3 +230,33 @@ pub fn delayed_kuramoto_run(
         .expect("stepper init failed");
     p
 }
+
+#[cfg(test)]
+mod delayed_kuramoto_run_tests {
+    use super::*;
+
+    #[test]
+    fn delayed_kuramoto_run_zero_steps_returns_initial_phases() {
+        let phases = vec![0.2, 1.1];
+        let omegas = vec![0.0, 0.0];
+        let knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, 2, 0.0, 0.0, 0.01, 1, 0);
+
+        assert_eq!(result, phases);
+    }
+
+    #[test]
+    fn delayed_kuramoto_run_advances_uncoupled_natural_frequency() {
+        let phases = vec![0.2, TAU - 0.05];
+        let omegas = vec![1.0, 1.0];
+        let knm = vec![0.0; 4];
+        let alpha = vec![0.0; 4];
+
+        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, 2, 0.0, 0.0, 0.1, 1, 1);
+
+        assert!((result[0] - 0.3).abs() < 1e-12);
+        assert!((result[1] - 0.05).abs() < 1e-12);
+    }
+}
