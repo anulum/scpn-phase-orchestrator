@@ -106,6 +106,22 @@ class TestExtractors:
         assert len(series) == 2
         assert len(series[0]) == 10
 
+    def test_extract_r_series_ignores_malformed_layer_containers(self) -> None:
+        plot = CoherencePlot(
+            [
+                {"step": 0, "regime": "NOMINAL", "layers": None},
+                {
+                    "step": 1,
+                    "regime": "DEGRADED",
+                    "layers": ["not-a-layer", {"R": 0.4}],
+                },
+            ]
+        )
+        x, n_layers, series = plot._extract_r_series()
+        assert x == [0, 1]
+        assert n_layers == 1
+        assert series == [[0.0, 0.4]]
+
     def test_extract_regime_epochs(self) -> None:
         plot = CoherencePlot(_make_log())
         epochs = plot._extract_regime_epochs()

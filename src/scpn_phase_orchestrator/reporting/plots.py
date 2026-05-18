@@ -73,14 +73,24 @@ class CoherencePlot:
             raise ValueError("No step records in log data")
         return self._steps
 
+    @staticmethod
+    def _layers(step: dict) -> list[dict]:
+        layers = step.get("layers", [])
+        if not isinstance(layers, list):
+            return []
+        return [layer for layer in layers if isinstance(layer, dict)]
+
     def _extract_r_series(self) -> tuple[list[int], int, list[list[float]]]:
         steps = self._require_steps()
         x = [s["step"] for s in steps]
-        n_layers = max(len(s.get("layers", [])) for s in steps)
+        n_layers = max(len(self._layers(s)) for s in steps)
         series = []
         for i in range(n_layers):
             series.append(
-                [s["layers"][i]["R"] if i < len(s["layers"]) else 0.0 for s in steps]
+                [
+                    self._layers(s)[i]["R"] if i < len(self._layers(s)) else 0.0
+                    for s in steps
+                ]
             )
         return x, n_layers, series
 
