@@ -107,10 +107,55 @@ class TestRemanentiaBridge:
         assert bridge._last_R == 0.85
         assert bridge._last_regime == "nominal"
 
+    @pytest.mark.parametrize("r_value", [-0.1, 1.1, float("nan"), True])
+    def test_report_coherence_rejects_invalid_r(self, r_value: object) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        with pytest.raises(ValueError, match="R"):
+            bridge.report_coherence(R=cast(float, r_value), regime="nominal")
+
+    @pytest.mark.parametrize("regime", ["", "bad\nregime", True])
+    def test_report_coherence_rejects_invalid_regime(self, regime: object) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        with pytest.raises(ValueError, match="regime"):
+            bridge.report_coherence(R=0.5, regime=cast(str, regime))
+
+    def test_report_coherence_rejects_invalid_agent_phases(self) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        with pytest.raises(ValueError, match="agent_phases"):
+            bridge.report_coherence(R=0.5, regime="nominal", agent_phases={"a": np.nan})
+
+    @pytest.mark.parametrize("query", ["", " ", True])
+    def test_novelty_score_rejects_invalid_query(self, query: object) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        with pytest.raises(ValueError, match="query"):
+            bridge.get_novelty_score(cast(str, query))
+
+    @pytest.mark.parametrize("force", [0, 1, "yes"])
+    def test_trigger_consolidation_rejects_non_bool_force(self, force: object) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        with pytest.raises(ValueError, match="force"):
+            bridge.trigger_consolidation(force=cast(bool, force))
+
     def test_novelty_to_coupling_delta(self, bridge: RemanentiaBridge) -> None:
         deltas = bridge.novelty_to_coupling_delta(["q1", "q2"], scale=0.5)
         assert deltas.shape == (2,)
         assert np.all(deltas >= 1.0)
+
+    def test_novelty_to_coupling_delta_rejects_invalid_queries(self) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        with pytest.raises(ValueError, match="queries"):
+            bridge.novelty_to_coupling_delta(cast(list[str], "q1"), scale=0.5)
+        with pytest.raises(ValueError, match="query"):
+            bridge.novelty_to_coupling_delta([""], scale=0.5)
+
+    @pytest.mark.parametrize("scale", [0.0, -1.0, float("inf"), True])
+    def test_novelty_to_coupling_delta_rejects_invalid_scale(
+        self,
+        scale: object,
+    ) -> None:
+        bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
+        with pytest.raises(ValueError, match="scale"):
+            bridge.novelty_to_coupling_delta(["q1"], scale=cast(float, scale))
 
     def test_snapshot(self, bridge: RemanentiaBridge) -> None:
         bridge.report_coherence(R=0.9, regime="sync")

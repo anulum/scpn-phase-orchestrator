@@ -74,6 +74,59 @@ def _validated_timeout(timeout: object) -> float:
     return value
 
 
+def _validated_positive_real(value: object, *, name: str) -> float:
+    if (
+        not isinstance(value, Real)
+        or isinstance(value, bool)
+        or not isfinite(float(value))
+    ):
+        raise ValueError(f"{name} must be a finite positive real value")
+    result = float(value)
+    if result <= 0.0:
+        raise ValueError(f"{name} must be a finite positive real value")
+    return result
+
+
+def _validated_unit_interval(value: object, *, name: str) -> float:
+    if not isinstance(value, Real) or isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite float in [0, 1]")
+    result = float(value)
+    if not isfinite(result) or result < 0.0 or result > 1.0:
+        raise ValueError(f"{name} must be a finite float in [0, 1]")
+    return result
+
+
+def _validated_label(value: object, *, name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} must be a non-empty string")
+    if any(ord(char) < 32 for char in value):
+        raise ValueError(f"{name} must not contain control characters")
+    return value
+
+
+def _validated_query(query: object) -> str:
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("query must be a non-empty string")
+    return query
+
+
+def _validated_agent_phases(agent_phases: object) -> dict[str, float] | None:
+    if agent_phases is None:
+        return None
+    if not isinstance(agent_phases, dict):
+        raise ValueError("agent_phases must map agent names to finite phases")
+    validated: dict[str, float] = {}
+    for agent, phase in agent_phases.items():
+        name = _validated_label(agent, name="agent_phases key")
+        if not isinstance(phase, Real) or isinstance(phase, bool):
+            raise ValueError("agent_phases values must be finite real numbers")
+        parsed = float(phase)
+        if not isfinite(parsed):
+            raise ValueError("agent_phases values must be finite real numbers")
+        validated[name] = parsed
+    return validated
+
+
 class RemanentiaBridge:
     """Bidirectional SPO <-> Remanentia bridge.
 
@@ -149,6 +202,9 @@ class RemanentiaBridge:
         Remanentia can use this to decide when to consolidate:
         high R = aligned agents = good time to merge their traces.
         """
+        R = _validated_unit_interval(R, name="R")
+        regime = _validated_label(regime, name="regime")
+        _validated_agent_phases(agent_phases)
         self._last_R = R
         self._last_regime = regime
         # Store as a reasoning trace that Remanentia can index
@@ -170,6 +226,7 @@ class RemanentiaBridge:
         If recall returns few/none -> high novelty (unexplored territory).
         Novelty feeds SPO coupling: novel = boost K (explore together).
         """
+        query = _validated_query(query)
         try:
             resp = self._post("/recall", {"query": query, "top_k": 5})
             results = resp.get("results", [])
@@ -194,6 +251,8 @@ class RemanentiaBridge:
 
         Best called when R is high (agents aligned, traces coherent).
         """
+        if not isinstance(force, bool):
+            raise ValueError("force must be a bool")
         try:
             resp = self._post("/consolidate", {"force": force})
             return resp.get("status") == "ok"
@@ -213,11 +272,14 @@ class RemanentiaBridge:
 
         Returns (N,) array of per-agent K multipliers.
         """
+        if not isinstance(queries, list):
+            raise ValueError("queries must be a list of non-empty strings")
+        scale = _validated_positive_real(scale, name="scale")
         deltas = []
         for q in queries:
-            novelty = self.get_novelty_score(q)
+            novelty = self.get_novelty_score(_validated_query(q))
             deltas.append(1.0 + novelty * scale)
-        return np.array(deltas)
+        return np.array(deltas, dtype=np.float64)
 
     def snapshot(self) -> CoherenceMemorySnapshot:
         """Combined coherence + memory state."""
