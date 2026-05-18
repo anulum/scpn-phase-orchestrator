@@ -12,6 +12,8 @@ import hashlib
 import hmac
 import json
 import logging
+from math import isfinite
+from numbers import Real
 from pathlib import Path
 
 import numpy as np
@@ -40,6 +42,14 @@ def _layer_records(step_data: dict) -> list[dict]:
     return [layer for layer in layers if isinstance(layer, dict)]
 
 
+def _numeric_value(value: object) -> float:
+    if isinstance(value, Real) and not isinstance(value, bool):
+        parsed = float(value)
+        if isfinite(parsed):
+            return parsed
+    return 0.0
+
+
 class ReplayEngine:
     """Replay and verify determinism of JSONL audit logs."""
 
@@ -59,7 +69,11 @@ class ReplayEngine:
     def replay_step(self, step_data: dict) -> UPDEState:
         """Reconstruct UPDEState from a log entry."""
         layers = [
-            LayerState(R=ld["R"], psi=ld["psi"]) for ld in _layer_records(step_data)
+            LayerState(
+                R=_numeric_value(ld.get("R", 0.0)),
+                psi=_numeric_value(ld.get("psi", 0.0)),
+            )
+            for ld in _layer_records(step_data)
         ]
         return UPDEState(
             layers=layers,

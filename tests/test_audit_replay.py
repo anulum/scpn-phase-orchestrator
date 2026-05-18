@@ -77,6 +77,31 @@ def test_replay_step_ignores_malformed_layer_containers(tmp_path):
     assert state.layers[0] == LayerState(R=0.5, psi=0.25)
 
 
+def test_replay_step_sanitizes_malformed_layer_numeric_values(tmp_path):
+    re = ReplayEngine(tmp_path / "unused.jsonl")
+
+    state = re.replay_step(
+        {
+            "step": 0,
+            "regime": "nominal",
+            "stability": 0.85,
+            "layers": [
+                {"R": True, "psi": float("nan")},
+                {"R": float("inf")},
+                {"psi": 0.25},
+                {"R": 0.5, "psi": 0.75},
+            ],
+        }
+    )
+
+    assert state.layers == [
+        LayerState(R=0.0, psi=0.0),
+        LayerState(R=0.0, psi=0.0),
+        LayerState(R=0.0, psi=0.25),
+        LayerState(R=0.5, psi=0.75),
+    ]
+
+
 def test_verify_determinism_with_matching_data(tmp_path):
     n = 4
     engine = UPDEEngine(n, dt=0.01)
