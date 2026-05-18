@@ -147,6 +147,25 @@ class TestTorusPoints:
         assert data["points"][0]["R"] == 0.5
 
     @pytest.mark.parametrize(
+        "r_values",
+        [
+            [0.5, float("nan")],
+            [0.5, float("inf")],
+            [True, False],
+            [1.0 + 0.0j, 0.0],
+            ["0.5", "0.9"],
+        ],
+    )
+    def test_rejects_invalid_R_values(self, r_values: object):
+        with pytest.raises(ValueError, match="R_values must be finite"):
+            torus_points_json(np.array([0.0, 1.0]), R_values=r_values)
+
+    @pytest.mark.parametrize("r_values", [[0.5], [0.5, 0.9, 1.0]])
+    def test_rejects_R_values_length_mismatch(self, r_values: object):
+        with pytest.raises(ValueError, match="R_values length"):
+            torus_points_json(np.array([0.0, 1.0]), R_values=r_values)
+
+    @pytest.mark.parametrize(
         "phases",
         [
             np.array([0.0, float("nan")]),

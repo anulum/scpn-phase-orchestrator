@@ -36,6 +36,21 @@ def _validate_phase_array(value: object, *, name: str) -> FloatArray:
     return parsed
 
 
+def _validate_metric_values(
+    value: object,
+    *,
+    name: str,
+    expected_length: int,
+) -> FloatArray:
+    values = _validate_phase_array(value, name=name)
+    if len(values) != expected_length:
+        raise ValueError(
+            f"{name} length must match phases length {expected_length}, "
+            f"got {len(values)}"
+        )
+    return values
+
+
 def torus_points_json(
     phases: FloatArray,
     R_values: list[float] | None = None,
@@ -53,7 +68,13 @@ def torus_points_json(
     phases = _validate_phase_array(phases, name="phases")
     n = len(phases)
     if R_values is None:
-        R_values = [1.0] * n
+        r_values = np.ones(n, dtype=np.float64)
+    else:
+        r_values = _validate_metric_values(
+            R_values,
+            name="R_values",
+            expected_length=n,
+        )
 
     phi = np.linspace(0, 2 * np.pi, n, endpoint=False)
     R = major_radius
@@ -72,7 +93,7 @@ def torus_points_json(
                 "y": round(float(y), 4),
                 "z": round(float(z), 4),
                 "phase": round(theta, 4),
-                "R": round(float(R_values[i]), 4),
+                "R": round(float(r_values[i]), 4),
                 "id": i,
             }
         )
