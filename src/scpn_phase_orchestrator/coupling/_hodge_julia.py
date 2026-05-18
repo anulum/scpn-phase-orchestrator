@@ -41,6 +41,8 @@ def hodge_decomposition_julia(
     phases: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Compute Hodge gradient, curl, and harmonic terms with Julia."""
+
     jl = _ensure()
     g, c, h = jl.hodge_decomposition(
         np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),

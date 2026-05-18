@@ -50,6 +50,8 @@ def spectral_eig_go(
     knm_flat: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Compute coupling-spectrum eigenvalues and Fiedler vector with Go."""
+
     lib = _load_lib()
     k = np.ascontiguousarray(knm_flat, dtype=np.float64)
     eigvals = np.zeros(int(n), dtype=np.float64)

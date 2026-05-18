@@ -41,6 +41,8 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 @dataclass
 class EIBalance:
+    """Summary of excitatory and inhibitory coupling balance."""
+
     ratio: float
     excitatory_strength: float
     inhibitory_strength: float

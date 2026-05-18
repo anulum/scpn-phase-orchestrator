@@ -52,6 +52,8 @@ def hodge_decomposition_go(
     phases: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Compute Hodge gradient, curl, and harmonic terms with the Go backend."""
+
     lib = _load_lib()
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

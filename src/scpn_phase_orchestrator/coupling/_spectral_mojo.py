@@ -36,6 +36,8 @@ def spectral_eig_mojo(
     knm_flat: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Compute coupling-spectrum eigenvalues and Fiedler vector via Mojo."""
+
     exe = _ensure_exe()
     tokens: list[str] = ["EIG", str(int(n))]
     tokens.extend(repr(float(x)) for x in np.asarray(knm_flat).ravel().tolist())

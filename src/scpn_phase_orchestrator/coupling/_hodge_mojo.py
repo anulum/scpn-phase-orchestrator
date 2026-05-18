@@ -37,6 +37,8 @@ def hodge_decomposition_mojo(
     phases: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Compute Hodge gradient, curl, and harmonic terms via the Mojo executable."""
+
     exe = _ensure_exe()
     k = np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64)
     p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

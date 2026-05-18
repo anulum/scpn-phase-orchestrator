@@ -40,6 +40,8 @@ def spectral_eig_julia(
     knm_flat: FloatArray,
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
+    """Compute coupling-spectrum eigenvalues and Fiedler vector with Julia."""
+
     jl = _ensure()
     eigvals, fiedler = jl.spectral_eig(
         np.ascontiguousarray(knm_flat, dtype=np.float64),
