@@ -42,6 +42,8 @@ class TestPredictionModel:
             (np.zeros(4), np.ones(3), 0.01, "omegas"),
             (np.array([0.0, np.nan, 1.0, 2.0]), np.ones(4), 0.01, "phases"),
             (np.zeros(4), np.array([1.0, np.inf, 1.0, 1.0]), 0.01, "omegas"),
+            (np.array([True, False, True, False]), np.ones(4), 0.01, "phases"),
+            (np.zeros(4), np.array([True, True, True, True]), 0.01, "omegas"),
             (np.zeros(4), np.ones(4), 0.0, "dt"),
             (np.zeros(4), np.ones(4), -0.01, "dt"),
             (np.zeros(4), np.ones(4), np.inf, "dt"),
@@ -193,6 +195,24 @@ class TestVariationalPredictor:
             (np.array([0.0, np.nan, 0.0, 0.0]), np.zeros(4), np.ones(4), "predicted"),
             (np.zeros(4), np.array([0.0, np.inf, 0.0, 0.0]), np.ones(4), "observed"),
             (np.zeros(4), np.zeros(4), np.array([1.0, 0.0, 1.0, 1.0]), "precision"),
+            (
+                np.array([True, False, True, False]),
+                np.zeros(4),
+                np.ones(4),
+                "predicted",
+            ),
+            (
+                np.zeros(4),
+                np.array([True, False, True, False]),
+                np.ones(4),
+                "observed",
+            ),
+            (
+                np.zeros(4),
+                np.zeros(4),
+                np.array([True, True, True, True]),
+                "precision",
+            ),
         ],
     )
     def test_free_energy_rejects_invalid_inputs(

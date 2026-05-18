@@ -62,7 +62,10 @@ def _validate_positive_float(name: str, value: float) -> float:
 
 
 def _validate_vector(name: str, value: FloatArray, n_oscillators: int) -> FloatArray:
-    array = np.asarray(value, dtype=np.float64)
+    raw = np.asarray(value)
+    if raw.dtype == np.bool_:
+        raise ValueError(f"{name} must not contain boolean values")
+    array = raw.astype(np.float64, copy=True)
     if array.shape != (n_oscillators,):
         raise ValueError(f"{name} must have shape ({n_oscillators},)")
     if not np.all(np.isfinite(array)):
