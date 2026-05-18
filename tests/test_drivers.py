@@ -225,6 +225,20 @@ class TestSymbolicDriver:
         scalar = np.array([drv.compute(s) for s in steps])
         np.testing.assert_array_equal(batch, scalar)
 
+    @pytest.mark.parametrize(
+        "steps",
+        [
+            np.array([True, False]),
+            np.array([0.0, 1.0]),
+            np.array([1 + 0j]),
+            np.array(["1"], dtype=object),
+        ],
+    )
+    def test_compute_batch_rejects_non_integer_steps(self, steps: object):
+        drv = SymbolicDriver(sequence=[10.0, 20.0])
+        with pytest.raises(ValueError, match="steps must be integer"):
+            drv.compute_batch(cast(Any, steps))
+
     def test_single_element_sequence(self):
         """Single-element sequence returns the same value always."""
         drv = SymbolicDriver(sequence=[42.0])

@@ -37,6 +37,18 @@ def _validate_step(value: object) -> int:
     return int(value)
 
 
+def _validate_steps(value: object) -> IntArray:
+    steps = np.asarray(value)
+    dtype = steps.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.integer)
+    ):
+        raise ValueError("steps must be integer")
+    return steps.astype(np.int64, copy=False)
+
+
 class SymbolicDriver:
     """Deterministic phase sequence driver for symbolic/semiotic channels."""
 
@@ -60,5 +72,6 @@ class SymbolicDriver:
 
     def compute_batch(self, steps: IntArray) -> FloatArray:
         """Vectorised symbolic phase lookup over an array of step indices."""
-        result: FloatArray = self._sequence[steps.astype(int) % self._n]
+        steps = _validate_steps(steps)
+        result: FloatArray = self._sequence[steps % self._n]
         return result
