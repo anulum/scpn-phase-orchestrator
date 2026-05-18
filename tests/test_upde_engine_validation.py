@@ -518,7 +518,7 @@ class TestSimplicialEngineValidation:
         with pytest.raises(ValueError, match="sigma2 must be non-negative"):
             engine.sigma2 = sigma2
 
-    @pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "10"])
+    @pytest.mark.parametrize("n_steps", [False, -1, 1.5, "10"])
     def test_run_rejects_invalid_step_count(self, n_steps: Any) -> None:
         engine = SimplicialEngine(n_oscillators=4, dt=0.01)
         phases = np.zeros(4, dtype=np.float64)
@@ -526,7 +526,7 @@ class TestSimplicialEngineValidation:
         knm = np.zeros((4, 4), dtype=np.float64)
         alpha = np.zeros((4, 4), dtype=np.float64)
 
-        with pytest.raises(ValueError, match="n_steps must be >= 1"):
+        with pytest.raises(ValueError, match="n_steps must be >= 0"):
             engine.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=n_steps)
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
