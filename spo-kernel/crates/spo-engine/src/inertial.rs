@@ -10,6 +10,7 @@ use rayon::prelude::*;
 use spo_types::{IntegrationConfig, SpoError, SpoResult};
 use std::f64::consts::TAU;
 
+/// RK4 stepper for second-order inertial Kuramoto swing dynamics.
 pub struct InertialStepper {
     n: usize,
     dt: f64,
@@ -36,6 +37,11 @@ impl std::fmt::Debug for InertialStepper {
 }
 
 impl InertialStepper {
+    /// Create an inertial Kuramoto stepper for `n` oscillators.
+    ///
+    /// # Errors
+    /// Returns `InvalidDimension` when `n` is zero and propagates integration
+    /// configuration validation failures.
     pub fn new(n: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
@@ -60,6 +66,11 @@ impl InertialStepper {
         })
     }
 
+    /// Advance one inertial Kuramoto RK4 timestep in place.
+    ///
+    /// # Errors
+    /// Currently returns `Ok(())` after construction-time validation; the result
+    /// type is retained for API parity with other Rust steppers.
     pub fn step(
         &mut self,
         theta: &mut [f64],
@@ -207,6 +218,7 @@ fn compute_derivative(
     });
 }
 
+/// Advance one inertial Kuramoto RK4 step and return phase/frequency state.
 pub fn inertial_step(
     theta: &[f64],
     omega_dot: &[f64],
@@ -232,6 +244,7 @@ pub fn inertial_step(
     (th, od)
 }
 
+/// Run inertial Kuramoto dynamics and return final state plus flattened traces.
 pub fn inertial_run(
     theta_init: &[f64],
     omega_init: &[f64],
@@ -262,4 +275,60 @@ pub fn inertial_run(
         od_traj.extend_from_slice(&od);
     }
     (th, od, th_traj, od_traj)
+}
+
+#[cfg(test)]
+mod inertial_run_tests {
+    use super::*;
+
+    #[test]
+    fn inertial_step_zero_power_and_velocity_keeps_state() {
+        let theta = vec![0.2, 1.1];
+        let omega_dot = vec![0.0, 0.0];
+        let power = vec![0.0, 0.0];
+        let knm = vec![0.0; 4];
+        let inertia = vec![1.0, 1.0];
+        let damping = vec![0.1, 0.1];
+
+        let (new_theta, new_omega) =
+            inertial_step(&theta, &omega_dot, &power, &knm, &inertia, &damping, 2, 0.1);
+
+        assert_eq!(new_theta, theta);
+        assert_eq!(new_omega, omega_dot);
+    }
+
+    #[test]
+    fn inertial_step_positive_power_accelerates_frequency() {
+        let theta = vec![0.0];
+        let omega_dot = vec![0.0];
+        let power = vec![1.0];
+        let knm = vec![0.0];
+        let inertia = vec![2.0];
+        let damping = vec![0.0];
+
+        let (new_theta, new_omega) =
+            inertial_step(&theta, &omega_dot, &power, &knm, &inertia, &damping, 1, 0.1);
+
+        assert!((new_theta[0] - 0.0025).abs() < 1e-12);
+        assert!((new_omega[0] - 0.05).abs() < 1e-12);
+    }
+
+    #[test]
+    fn inertial_run_zero_steps_returns_initial_state_and_empty_traces() {
+        let theta = vec![0.2, 1.1];
+        let omega_dot = vec![0.3, -0.2];
+        let power = vec![0.0, 0.0];
+        let knm = vec![0.0; 4];
+        let inertia = vec![1.0, 1.0];
+        let damping = vec![0.1, 0.1];
+
+        let (new_theta, new_omega, theta_trace, omega_trace) = inertial_run(
+            &theta, &omega_dot, &power, &knm, &inertia, &damping, 2, 0.1, 0,
+        );
+
+        assert_eq!(new_theta, theta);
+        assert_eq!(new_omega, omega_dot);
+        assert!(theta_trace.is_empty());
+        assert!(omega_trace.is_empty());
+    }
 }
