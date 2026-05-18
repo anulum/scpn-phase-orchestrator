@@ -9,9 +9,10 @@
 from __future__ import annotations
 
 import contextlib
-from typing import get_type_hints
+from typing import cast, get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.adapters.snn_bridge import (
     TAU_RC,
@@ -34,6 +35,23 @@ def test_default_lif_params():
     bridge = SNNControllerBridge()
     assert bridge.tau_rc == TAU_RC
     assert bridge.tau_ref == TAU_REF
+
+
+@pytest.mark.parametrize(
+    ("field", "kwargs"),
+    [
+        ("n_neurons", {"n_neurons": 0}),
+        ("n_neurons", {"n_neurons": True}),
+        ("tau_rc", {"tau_rc": 0.0}),
+        ("tau_ref", {"tau_ref": float("nan")}),
+    ],
+)
+def test_constructor_rejects_malformed_config(
+    field: str,
+    kwargs: dict[str, object],
+):
+    with pytest.raises(ValueError, match=field):
+        SNNControllerBridge(**cast(dict, kwargs))
 
 
 def test_upde_to_current():
@@ -85,6 +103,16 @@ def test_spike_rate_action_value():
     assert abs(actions[0].value - expected_value) < 1e-10
 
 
+def test_spike_rates_reject_malformed_inputs():
+    bridge = SNNControllerBridge()
+    with pytest.raises(ValueError, match="rates"):
+        bridge.spike_rates_to_actions(np.array([np.nan]), [0], threshold_hz=50.0)
+    with pytest.raises(ValueError, match="layer_assignments"):
+        bridge.spike_rates_to_actions(np.array([60.0]), [True], threshold_hz=50.0)
+    with pytest.raises(ValueError, match="threshold_hz"):
+        bridge.spike_rates_to_actions(np.array([60.0]), [0], threshold_hz=0.0)
+
+
 def test_lif_rate_superthreshold():
     bridge = SNNControllerBridge()
     currents = np.array([1.5, 2.0, 3.0])
@@ -105,6 +133,12 @@ def test_lif_rate_edge():
     currents = np.array([1.01])
     rates = bridge.lif_rate_estimate(currents)
     assert rates[0] > 0
+
+
+def test_lif_rate_rejects_non_finite_currents():
+    bridge = SNNControllerBridge()
+    with pytest.raises(ValueError, match="currents"):
+        bridge.lif_rate_estimate(np.array([1.0, np.inf]))
 
 
 def test_custom_lif_params():

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 from hashlib import sha256
+from math import isfinite
+from numbers import Integral, Real
 from types import SimpleNamespace
 from typing import TypeAlias
 
@@ -28,6 +30,46 @@ TAU_RC = 0.02  # s, membrane time constant
 TAU_REF = 0.002  # s, refractory period
 
 
+def _require_positive_int(value: object, *, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{field} must be a positive integer")
+    result = int(value)
+    if result <= 0:
+        raise ValueError(f"{field} must be a positive integer")
+    return result
+
+
+def _require_positive_real(value: object, *, field: str) -> float:
+    if (
+        not isinstance(value, Real)
+        or isinstance(value, bool)
+        or not isfinite(float(value))
+    ):
+        raise ValueError(f"{field} must be finite and positive")
+    result = float(value)
+    if result <= 0.0:
+        raise ValueError(f"{field} must be finite and positive")
+    return result
+
+
+def _require_finite_array(values: FloatArray, *, field: str) -> FloatArray:
+    array: FloatArray = np.asarray(values, dtype=np.float64)
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{field} must contain only finite values")
+    return array
+
+
+def _validated_layer_assignments(layer_assignments: list[int]) -> list[int]:
+    if not isinstance(layer_assignments, list):
+        raise ValueError("layer_assignments must be a list of non-negative integers")
+    validated: list[int] = []
+    for layer in layer_assignments:
+        if isinstance(layer, bool) or not isinstance(layer, Integral) or layer < 0:
+            raise ValueError("layer_assignments must contain non-negative integers")
+        validated.append(int(layer))
+    return validated
+
+
 class SNNControllerBridge:
     """Bridge between UPDE state and spiking neural network controllers.
 
@@ -40,9 +82,9 @@ class SNNControllerBridge:
         tau_rc: float = TAU_RC,
         tau_ref: float = TAU_REF,
     ) -> None:
-        self.n_neurons = n_neurons
-        self.tau_rc = tau_rc
-        self.tau_ref = tau_ref
+        self.n_neurons = _require_positive_int(n_neurons, field="n_neurons")
+        self.tau_rc = _require_positive_real(tau_rc, field="tau_rc")
+        self.tau_ref = _require_positive_real(tau_ref, field="tau_ref")
 
     def upde_state_to_input_current(
         self, state: UPDEState, i_scale: float = 1.0
@@ -64,6 +106,11 @@ class SNNControllerBridge:
         *layer_assignments*: maps each rate index to a layer.
         *threshold_hz*: rates above this trigger coupling boost.
         """
+        rates = _require_finite_array(rates, field="rates")
+        if rates.ndim != 1:
+            raise ValueError("rates must be 1-D")
+        layer_assignments = _validated_layer_assignments(layer_assignments)
+        threshold_hz = _require_positive_real(threshold_hz, field="threshold_hz")
         actions: list[ControlAction] = []
         for idx, (rate, layer) in enumerate(
             zip(rates, layer_assignments, strict=False)
@@ -86,6 +133,7 @@ class SNNControllerBridge:
 
         rate = 1 / (tau_ref - tau_rc * ln(1 - 1/J))  for J > 1
         """
+        currents = _require_finite_array(currents, field="currents")
         rates: FloatArray = np.zeros_like(currents, dtype=np.float64)
         above = currents > 1.0
         if above.any():
