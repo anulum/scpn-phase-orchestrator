@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -19,6 +21,34 @@ from scpn_phase_orchestrator.upde.metrics import UPDEState
 __all__ = ["SCPNControlBridge"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+JSONConfig: TypeAlias = dict[str, object]
+
+
+def _validate_config_value(value: object, *, path: str) -> object:
+    if value is None or isinstance(value, str | bool):
+        return value
+    if isinstance(value, Real):
+        result = float(value)
+        if not isfinite(result):
+            raise ValueError(f"{path} must be finite")
+        return int(value) if isinstance(value, int) else result
+    if isinstance(value, list):
+        return [
+            _validate_config_value(item, path=f"{path}[{index}]")
+            for index, item in enumerate(value)
+        ]
+    if isinstance(value, dict):
+        return _validate_scpn_config(value, path=path)
+    raise ValueError(f"{path} must be JSON-compatible")
+
+
+def _validate_scpn_config(config: dict, *, path: str = "scpn_config") -> JSONConfig:
+    validated: JSONConfig = {}
+    for key, value in config.items():
+        if not isinstance(key, str) or not key:
+            raise ValueError(f"{path} keys must be non-empty strings")
+        validated[key] = _validate_config_value(value, path=f"{path}.{key}")
+    return validated
 
 
 class SCPNControlBridge:
@@ -27,7 +57,7 @@ class SCPNControlBridge:
     def __init__(self, scpn_config: dict):
         if not isinstance(scpn_config, dict):
             raise ValueError("scpn_config must be a dict")
-        self._config = scpn_config
+        self._config = _validate_scpn_config(scpn_config)
 
     def import_knm(self, scpn_knm: FloatArray) -> CouplingState:
         """Wrap an external Knm matrix into a CouplingState."""

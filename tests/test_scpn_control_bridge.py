@@ -24,6 +24,30 @@ class TestInit:
         with pytest.raises(ValueError, match="scpn_config"):
             SCPNControlBridge(cast(dict, config))
 
+    def test_accepts_nested_json_like_config(self) -> None:
+        bridge = SCPNControlBridge(
+            {"layers": 4, "profile": {"enabled": True, "weights": [1, 2.5, None]}}
+        )
+
+        assert bridge._config == {
+            "layers": 4,
+            "profile": {"enabled": True, "weights": [1, 2.5, None]},
+        }
+
+    @pytest.mark.parametrize("config", [{1: "bad"}, {"": "bad"}])
+    def test_rejects_non_string_or_empty_config_keys(self, config: dict) -> None:
+        with pytest.raises(ValueError, match="keys"):
+            SCPNControlBridge(config)
+
+    @pytest.mark.parametrize("config", [{"gain": np.nan}, {"nested": {"gain": np.inf}}])
+    def test_rejects_non_finite_config_numbers(self, config: dict) -> None:
+        with pytest.raises(ValueError, match="finite"):
+            SCPNControlBridge(config)
+
+    def test_rejects_non_json_compatible_config_values(self) -> None:
+        with pytest.raises(ValueError, match="JSON-compatible"):
+            SCPNControlBridge({"callback": object()})
+
 
 def _make_state(n_layers: int = 3) -> UPDEState:
     layers = []
