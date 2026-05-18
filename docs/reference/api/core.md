@@ -63,7 +63,7 @@ keeps the callable entry points visible to mkdocstrings.
 Shared helpers for production-mode detection, environment integer parsing, and
 per-identity fixed-window rate limiting.
 
-::: scpn_phase_orchestrator.network_security
+::: scpn_phase_orchestrator.runtime.network_security
 
 ## Web and gRPC services
 

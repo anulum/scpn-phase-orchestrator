@@ -40,7 +40,7 @@ from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
     PhaseComputePipeline,
     PipelineSnapshot,
 )
-from scpn_phase_orchestrator.network_security import FixedWindowRateLimiter
+from scpn_phase_orchestrator.runtime.network_security import FixedWindowRateLimiter
 
 _IO_ERRORS: tuple[type[BaseException], ...] = (
     ConnectionError,

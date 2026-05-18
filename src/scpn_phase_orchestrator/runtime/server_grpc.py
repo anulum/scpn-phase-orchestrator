@@ -30,7 +30,7 @@ from scpn_phase_orchestrator.grpc_gen import (
     PhaseOrchestratorServicer,
     StateResponse,
 )
-from scpn_phase_orchestrator.network_security import (
+from scpn_phase_orchestrator.runtime.network_security import (
     FixedWindowRateLimiter,
     env_int,
     is_production_mode,

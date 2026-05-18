@@ -391,7 +391,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         msg = "fastapi not installed. pip install fastapi uvicorn"
         raise ImportError(msg) from exc
 
-    from scpn_phase_orchestrator.network_security import (
+    from scpn_phase_orchestrator.runtime.network_security import (
         FixedWindowRateLimiter,
         env_int,
         is_production_mode,

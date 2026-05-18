@@ -217,7 +217,7 @@ For network/file-bound adapters, keep transport inputs explicit and bounded:
 from pathlib import Path
 from scpn_phase_orchestrator.adapters import SecureModbusAdapter
 from scpn_phase_orchestrator.adapters import RedisStateStore
-from scpn_phase_orchestrator.network_security import FixedWindowRateLimiter, env_int
+from scpn_phase_orchestrator.runtime.network_security import FixedWindowRateLimiter, env_int
 
 # Strictly parse transport schema before constructing adapters.
 modbus = SecureModbusAdapter(
