@@ -62,6 +62,15 @@ def _validate_omegas(value: object, *, expected_count: int) -> FloatArray:
     return parsed
 
 
+def _validate_seed(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("seed must be a non-negative integer")
+    seed = int(value)
+    if seed < 0:
+        raise ValueError("seed must be a non-negative integer")
+    return seed
+
+
 def extract_initial_phases(
     spec: BindingSpec,
     omegas: FloatArray,
@@ -76,6 +85,7 @@ def extract_initial_phases(
     Returns (n_osc,) array of initial phases in [0, 2*pi).
     """
     omegas = _validate_omegas(omegas, expected_count=_oscillator_count(spec))
+    seed = _validate_seed(seed)
     rng = np.random.default_rng(seed)
     n_osc = len(omegas)
     phases = np.zeros(n_osc)

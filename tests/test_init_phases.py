@@ -100,6 +100,21 @@ def test_different_seeds_differ():
     assert not np.array_equal(a, b)
 
 
+@pytest.mark.parametrize("seed", [True, -1, 1.5, "42"])
+def test_extract_initial_phases_rejects_invalid_seed(seed: object):
+    spec = _make_pis_spec()
+    omegas = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match="seed must be a non-negative integer"):
+        extract_initial_phases(spec, omegas, seed=seed)
+
+
+def test_extract_initial_phases_accepts_numpy_integer_seed():
+    spec = _make_pis_spec()
+    omegas = np.array([1.0, 2.0, 3.0])
+    phases = extract_initial_phases(spec, omegas, seed=np.int64(42))
+    assert phases.shape == (3,)
+
+
 @pytest.mark.parametrize(
     "omegas",
     [
