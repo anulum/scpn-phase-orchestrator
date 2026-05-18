@@ -22,6 +22,7 @@ import functools
 import math
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -100,6 +101,25 @@ class TestLocalOrderParameter:
     def test_empty_input(self):
         r = local_order_parameter(np.array([]), np.zeros((0, 0)))
         assert r.shape == (0,)
+
+    @_python
+    @pytest.mark.parametrize(
+        ("phases", "knm", "match"),
+        [
+            (np.zeros((2, 2), dtype=np.float64), np.zeros((4, 4)), "phases"),
+            (np.array([0.0, np.nan]), np.zeros((2, 2)), "phases"),
+            (np.zeros(3), np.zeros((2, 2)), "knm shape"),
+            (np.zeros(2), np.array([[0.0, np.inf], [0.0, 0.0]]), "knm"),
+        ],
+    )
+    def test_rejects_invalid_inputs(
+        self,
+        phases: np.ndarray,
+        knm: np.ndarray,
+        match: str,
+    ):
+        with pytest.raises(ValueError, match=match):
+            local_order_parameter(phases, knm)
 
 
 class TestDetectChimera:

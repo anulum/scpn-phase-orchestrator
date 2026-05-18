@@ -132,14 +132,41 @@ class ChimeraState:
     chimera_index: float = 0.0
 
 
+def _validate_chimera_inputs(
+    phases: object,
+    knm: object,
+) -> tuple[FloatArray, FloatArray]:
+    try:
+        phases_array = np.asarray(phases, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases must be a finite one-dimensional array") from exc
+    if phases_array.ndim != 1:
+        raise ValueError(f"phases shape {phases_array.shape} must be one-dimensional")
+    if not np.all(np.isfinite(phases_array)):
+        raise ValueError("phases must contain only finite values")
+
+    n = int(phases_array.size)
+    try:
+        knm_array = np.asarray(knm, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("knm must be a finite square coupling matrix") from exc
+    if knm_array.shape != (n, n):
+        raise ValueError(f"knm shape {knm_array.shape} does not match {(n, n)}")
+    if not np.all(np.isfinite(knm_array)):
+        raise ValueError("knm must contain only finite values")
+    return (
+        np.ascontiguousarray(phases_array, dtype=np.float64),
+        np.ascontiguousarray(knm_array, dtype=np.float64),
+    )
+
+
 def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
     """Per-oscillator local order parameter.
 
     ``R_i = |⟨exp(i(θ_j − θ_i))⟩_{j ∈ N(i)}|`` with ``N(i) =
     {j : K_ij > 0}``. Zero when oscillator ``i`` has no neighbours.
     """
-    phases = np.asarray(phases, dtype=np.float64)
-    knm = np.asarray(knm, dtype=np.float64)
+    phases, knm = _validate_chimera_inputs(phases, knm)
     n = int(phases.size)
     if n == 0:
         return np.zeros(0, dtype=np.float64)
@@ -173,8 +200,7 @@ def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
         :class:`ChimeraState` with coherent / incoherent index lists and
         the boundary-fraction chimera index.
     """
-    phases = np.asarray(phases, dtype=np.float64)
-    knm = np.asarray(knm, dtype=np.float64)
+    phases, knm = _validate_chimera_inputs(phases, knm)
     n = int(phases.size)
     if n == 0:
         return ChimeraState()
