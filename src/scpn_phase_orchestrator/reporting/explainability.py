@@ -77,6 +77,14 @@ def _numeric_value(value: object) -> float:
     return 0.0
 
 
+def _integer_value(value: object) -> int:
+    if isinstance(value, Real) and not isinstance(value, bool):
+        parsed = float(value)
+        if isfinite(parsed):
+            return int(parsed)
+    return 0
+
+
 def _mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
@@ -98,7 +106,7 @@ def _regime_transitions(steps: list[dict[str, Any]]) -> tuple[str, ...]:
         current = str(step.get("regime", "unknown"))
         if current != previous:
             transitions.append(
-                f"Step {int(step.get('step', 0))}: {previous} -> {current}"
+                f"Step {_integer_value(step.get('step', 0))}: {previous} -> {current}"
             )
             previous = current
     return tuple(transitions)
@@ -159,7 +167,7 @@ def _action_explanations(
         actions = step.get("actions", [])
         if not isinstance(actions, list):
             continue
-        step_no = int(step.get("step", 0))
+        step_no = _integer_value(step.get("step", 0))
         regime = str(step.get("regime", "unknown"))
         rs = _layer_rs(step)
         stability = _numeric_value(step.get("stability", 0.0))

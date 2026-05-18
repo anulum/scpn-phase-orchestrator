@@ -87,3 +87,33 @@ def test_explainability_report_ignores_malformed_action_numeric_fields() -> None
     assert first.ttl_s == 0.0
     assert second.value == 0.0
     assert second.ttl_s == 2.0
+
+
+def test_explainability_report_ignores_malformed_step_identifiers() -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 0,
+                "regime": "nominal",
+                "stability": 0.75,
+                "layers": [{"R": 0.5}],
+            },
+            {
+                "step": "not-an-integer",
+                "regime": "degraded",
+                "stability": 0.25,
+                "layers": [{"R": 0.25}],
+                "actions": [
+                    {
+                        "knob": "K",
+                        "scope": "global",
+                        "value": 0.1,
+                        "ttl_s": 1.0,
+                    },
+                ],
+            },
+        ],
+    )
+
+    assert report.regime_transitions == ("Step 0: nominal -> degraded",)
+    assert report.action_explanations[0].step == 0
