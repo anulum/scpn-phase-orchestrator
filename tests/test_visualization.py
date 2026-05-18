@@ -54,6 +54,31 @@ class TestNetworkGraph:
         data = json.loads(network_graph_json(knm, R_values=[0.8, 0.9]))
         assert data["nodes"][0]["R"] == 0.8
 
+    @pytest.mark.parametrize(
+        "knm",
+        [
+            np.array([[0.0, float("nan")], [0.0, 0.0]]),
+            np.array([[0.0, float("inf")], [0.0, 0.0]]),
+            np.array([[True, False], [False, True]]),
+            np.array([[1.0 + 0.0j, 0.0], [0.0, 0.0]]),
+            np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object),
+        ],
+    )
+    def test_rejects_invalid_coupling_matrix(self, knm: object):
+        with pytest.raises(ValueError, match="knm must be finite"):
+            network_graph_json(knm)
+
+    @pytest.mark.parametrize(
+        "knm",
+        [
+            np.array([0.0, 1.0]),
+            np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 1.0]]),
+        ],
+    )
+    def test_rejects_non_square_coupling_matrix(self, knm: object):
+        with pytest.raises(ValueError, match="knm must be a square matrix"):
+            network_graph_json(knm)
+
 
 class TestCouplingHeatmap:
     def test_valid_json(self):

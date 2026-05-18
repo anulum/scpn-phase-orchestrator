@@ -19,6 +19,23 @@ __all__ = ["network_graph_json", "coupling_heatmap_json"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _validate_coupling_matrix(value: object, *, name: str) -> FloatArray:
+    matrix = np.asarray(value)
+    dtype = matrix.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.number)
+    ):
+        raise ValueError(f"{name} must be finite")
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"{name} must be a square matrix")
+    parsed = matrix.astype(np.float64, copy=False)
+    if not np.all(np.isfinite(parsed)):
+        raise ValueError(f"{name} must be finite")
+    return parsed
+
+
 def network_graph_json(
     knm: FloatArray,
     layer_names: list[str] | None = None,
@@ -30,6 +47,7 @@ def network_graph_json(
     Returns JSON with {nodes: [...], links: [...]} for D3.js consumption.
     Edges below threshold are omitted.
     """
+    knm = _validate_coupling_matrix(knm, name="knm")
     n = knm.shape[0]
     if layer_names is None:
         layer_names = [f"L{i}" for i in range(n)]
