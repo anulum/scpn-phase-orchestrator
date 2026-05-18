@@ -48,6 +48,8 @@ def _validate_signal(value: object) -> IntArray:
         or not np.issubdtype(dtype, np.integer)
     ):
         raise ValueError("signal must be integer")
+    if signal.ndim != 1:
+        raise ValueError(f"signal must be 1-D, got shape {signal.shape}")
     return signal.astype(np.int64, copy=False)
 
 

@@ -215,6 +215,11 @@ class TestSymbolicExtractorMetadata:
         with pytest.raises(ValueError, match="signal must be integer"):
             ext.extract(signal, sample_rate=1.0)
 
+    def test_extract_rejects_multidimensional_signal(self):
+        ext = SymbolicExtractor(n_states=4, mode="ring")
+        with pytest.raises(ValueError, match="signal must be 1-D"):
+            ext.extract(np.array([[0, 1], [2, 3]]), sample_rate=1.0)
+
     @pytest.mark.parametrize(
         "sample_rate",
         [True, 0.0, -1.0, float("nan"), float("inf"), "1.0"],
