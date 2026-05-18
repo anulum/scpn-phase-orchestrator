@@ -36,6 +36,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from typing import Any, TypeAlias
+from urllib.parse import urlparse
 
 import numpy as np
 from numpy.typing import NDArray
@@ -44,6 +45,41 @@ __all__ = ["SynapseChannelBridge", "AgentState"]
 
 TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _validate_hub_uri(hub_uri: str) -> str:
+    """Validate Synapse hub websocket endpoint configuration."""
+    if not isinstance(hub_uri, str) or not hub_uri:
+        raise ValueError("hub_uri must be a non-empty ws(s) URL")
+
+    parsed = urlparse(hub_uri)
+    if parsed.scheme not in {"ws", "wss"} or not parsed.netloc:
+        raise ValueError("hub_uri must be a non-empty ws(s) URL")
+
+    return hub_uri
+
+
+def _validate_agents(agents: list[str] | None) -> list[str]:
+    """Validate and copy the Synapse agent roster."""
+    if agents is None:
+        return []
+    if not isinstance(agents, list):
+        raise ValueError("agents must be a list of unique non-empty strings")
+
+    seen: set[str] = set()
+    validated: list[str] = []
+    for agent in agents:
+        if not isinstance(agent, str) or not agent:
+            raise ValueError("agents must be a list of unique non-empty strings")
+        if any(ord(char) < 32 for char in agent):
+            raise ValueError("agent names must not contain control characters")
+        if agent in seen:
+            raise ValueError("agents must contain unique names")
+
+        seen.add(agent)
+        validated.append(agent)
+
+    return validated
 
 
 @dataclass
@@ -68,8 +104,8 @@ class SynapseChannelBridge:
         hub_uri: str = "ws://localhost:8876",
         agents: list[str] | None = None,
     ):
-        self._uri = hub_uri
-        self._agents = agents or []
+        self._uri = _validate_hub_uri(hub_uri)
+        self._agents = _validate_agents(agents)
         self._agent_idx: dict[str, int] = {
             name: i for i, name in enumerate(self._agents)
         }

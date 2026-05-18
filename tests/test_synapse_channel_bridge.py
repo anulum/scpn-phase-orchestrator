@@ -31,6 +31,36 @@ class TestSynapseChannelBridge:
         bridge = self._make_bridge()
         assert bridge.n_oscillators == 4
 
+    @pytest.mark.parametrize(
+        "hub_uri",
+        ["", "http://localhost:8876", "ws://", object()],
+    )
+    def test_rejects_invalid_hub_uri(self, hub_uri: object) -> None:
+        with pytest.raises(ValueError, match="hub_uri"):
+            SynapseChannelBridge(hub_uri=hub_uri)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "agents",
+        [
+            ["Agent-A", "Agent-A"],
+            [""],
+            ["bad\nagent"],
+            [object()],
+            "Agent-A",
+        ],
+    )
+    def test_rejects_invalid_agents(self, agents: object) -> None:
+        with pytest.raises(ValueError, match="agents|agent names"):
+            SynapseChannelBridge(agents=agents)  # type: ignore[arg-type]
+
+    def test_agents_are_copied(self) -> None:
+        agents = ["Agent-A"]
+        bridge = SynapseChannelBridge(agents=agents)
+        agents.append("Agent-B")
+
+        assert bridge.n_oscillators == 1
+        assert "Agent-B" not in bridge.get_agent_summary()
+
     def test_get_phases_initial_zero(self) -> None:
         bridge = self._make_bridge()
         phases = bridge.get_phases()
