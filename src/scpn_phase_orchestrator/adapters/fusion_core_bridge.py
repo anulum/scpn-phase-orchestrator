@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from numbers import Integral
+from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -32,6 +33,38 @@ _OBS_NAMES = [
     "elm_count",
     "mhd_amplitude",
 ]
+
+
+def _finite_real(value: object, *, name: str) -> float:
+    if not isinstance(value, Real) or isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite real value")
+    result = float(value)
+    if not isfinite(result):
+        raise ValueError(f"{name} must be a finite real value")
+    return result
+
+
+def _non_negative_int(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return int(value)
+
+
+def _finite_vector(value: object, *, name: str) -> FloatArray:
+    try:
+        array = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if array.ndim != 1:
+        raise ValueError(f"{name} must be a 1-D array")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain finite values")
+    return array
+
+
+def _validate_q_bounds(q_min: float, q_max: float) -> None:
+    if q_max <= q_min:
+        raise ValueError("q_max must be greater than q_min")
 
 
 class FusionCoreBridge:
@@ -65,14 +98,20 @@ class FusionCoreBridge:
           elm_count       → count*pi mod 2*pi
           mhd_amplitude   → 2*pi*amplitude/threshold
         """
-        q = float(snapshot.get("q_profile", 1.5))
-        q_min = float(snapshot.get("q_min", 1.0))
-        q_max = float(snapshot.get("q_max", 5.0))
-        beta_n = float(snapshot.get("beta_n", 1.0))
-        tau_e = float(snapshot.get("tau_e", 1.0))
-        saw_count = int(snapshot.get("sawtooth_count", 0))
-        elm_count = int(snapshot.get("elm_count", 0))
-        mhd_amp = float(snapshot.get("mhd_amplitude", 0.0))
+        if not isinstance(snapshot, dict):
+            raise ValueError("snapshot must be a dict")
+        q = _finite_real(snapshot.get("q_profile", 1.5), name="q_profile")
+        q_min = _finite_real(snapshot.get("q_min", 1.0), name="q_min")
+        q_max = _finite_real(snapshot.get("q_max", 5.0), name="q_max")
+        _validate_q_bounds(q_min, q_max)
+        beta_n = _finite_real(snapshot.get("beta_n", 1.0), name="beta_n")
+        tau_e = _finite_real(snapshot.get("tau_e", 1.0), name="tau_e")
+        saw_count = _non_negative_int(
+            snapshot.get("sawtooth_count", 0),
+            name="sawtooth_count",
+        )
+        elm_count = _non_negative_int(snapshot.get("elm_count", 0), name="elm_count")
+        mhd_amp = _finite_real(snapshot.get("mhd_amplitude", 0.0), name="mhd_amplitude")
 
         denom_q = q_max - q_min if q_max != q_min else 1.0
         phases = np.array(
@@ -95,6 +134,10 @@ class FusionCoreBridge:
         omegas: FloatArray,
     ) -> dict:
         """Convert phase state back to feedback signals for the equilibrium solver."""
+        phases = _finite_vector(phases, name="phases")
+        omegas = _finite_vector(omegas, name="omegas")
+        if omegas.size < min(phases.size, self._n_layers):
+            raise ValueError("omegas length must cover feedback oscillator count")
         n = min(len(phases), self._n_layers)
         z = np.exp(1j * phases[:n])
         order = z.mean()
@@ -113,26 +156,57 @@ class FusionCoreBridge:
         Returns normalised dict with keys: q_min, q_max, q_axis, q_edge.
         """
         if isinstance(q_profile_or_dict, dict):
-            q_min = float(q_profile_or_dict.get("q_min", 1.0))
-            q_max = float(q_profile_or_dict.get("q_max", 5.0))
-            q_axis = float(q_profile_or_dict.get("q_axis", q_min))
-            q_edge = float(q_profile_or_dict.get("q_edge", q_max))
+            q_min = _finite_real(q_profile_or_dict.get("q_min", 1.0), name="q_min")
+            q_max = _finite_real(q_profile_or_dict.get("q_max", 5.0), name="q_max")
+            q_axis = _finite_real(
+                q_profile_or_dict.get("q_axis", q_min),
+                name="q_axis",
+            )
+            q_edge = _finite_real(
+                q_profile_or_dict.get("q_edge", q_max),
+                name="q_edge",
+            )
         else:
-            q_min = float(getattr(q_profile_or_dict, "q_min", 1.0))
-            q_max = float(getattr(q_profile_or_dict, "q_max", 5.0))
-            q_axis = float(getattr(q_profile_or_dict, "q_axis", q_min))
-            q_edge = float(getattr(q_profile_or_dict, "q_edge", q_max))
+            q_min = _finite_real(getattr(q_profile_or_dict, "q_min", 1.0), name="q_min")
+            q_max = _finite_real(getattr(q_profile_or_dict, "q_max", 5.0), name="q_max")
+            q_axis = _finite_real(
+                getattr(q_profile_or_dict, "q_axis", q_min),
+                name="q_axis",
+            )
+            q_edge = _finite_real(
+                getattr(q_profile_or_dict, "q_edge", q_max),
+                name="q_edge",
+            )
+        _validate_q_bounds(q_min, q_max)
+        if not q_min <= q_axis <= q_max:
+            raise ValueError("q_axis must be within q_min and q_max")
+        if not q_min <= q_edge <= q_max:
+            raise ValueError("q_edge must be within q_min and q_max")
         return {"q_min": q_min, "q_max": q_max, "q_axis": q_axis, "q_edge": q_edge}
 
     def import_equilibrium(self, kernel_result: dict) -> dict:
         """Extract equilibrium observables from a fusion kernel result dict."""
+        if not isinstance(kernel_result, dict):
+            raise ValueError("kernel_result must be a dict")
         return {
-            "q_profile": float(kernel_result.get("q_profile", 1.5)),
-            "beta_n": float(kernel_result.get("beta_n", 1.0)),
-            "tau_e": float(kernel_result.get("tau_e", 1.0)),
-            "sawtooth_count": int(kernel_result.get("sawtooth_count", 0)),
-            "elm_count": int(kernel_result.get("elm_count", 0)),
-            "mhd_amplitude": float(kernel_result.get("mhd_amplitude", 0.0)),
+            "q_profile": _finite_real(
+                kernel_result.get("q_profile", 1.5),
+                name="q_profile",
+            ),
+            "beta_n": _finite_real(kernel_result.get("beta_n", 1.0), name="beta_n"),
+            "tau_e": _finite_real(kernel_result.get("tau_e", 1.0), name="tau_e"),
+            "sawtooth_count": _non_negative_int(
+                kernel_result.get("sawtooth_count", 0),
+                name="sawtooth_count",
+            ),
+            "elm_count": _non_negative_int(
+                kernel_result.get("elm_count", 0),
+                name="elm_count",
+            ),
+            "mhd_amplitude": _finite_real(
+                kernel_result.get("mhd_amplitude", 0.0),
+                name="mhd_amplitude",
+            ),
         }
 
     def check_stability(self, observables: dict) -> list[dict]:
@@ -140,10 +214,14 @@ class FusionCoreBridge:
 
         Returns a list of violation dicts (empty if all invariants hold).
         """
+        if not isinstance(observables, dict):
+            raise ValueError("stability observables must be a dict")
         violations: list[dict] = []
         q_min = observables.get("q_min")
         if q_min is None:
             q_min = observables.get("q_profile")
+        if q_min is not None:
+            q_min = _finite_real(q_min, name="stability q_min")
         if q_min is not None and q_min < Q_MIN_STABLE:
             violations.append(
                 {
@@ -155,6 +233,8 @@ class FusionCoreBridge:
                 }
             )
         beta_n = observables.get("beta_n")
+        if beta_n is not None:
+            beta_n = _finite_real(beta_n, name="stability beta_n")
         if beta_n is not None and beta_n > BETA_N_LIMIT:
             violations.append(
                 {
@@ -166,6 +246,8 @@ class FusionCoreBridge:
                 }
             )
         tau_ratio = observables.get("tau_e_ratio")
+        if tau_ratio is not None:
+            tau_ratio = _finite_real(tau_ratio, name="stability tau_e_ratio")
         if tau_ratio is not None and tau_ratio < 0.5:
             violations.append(
                 {

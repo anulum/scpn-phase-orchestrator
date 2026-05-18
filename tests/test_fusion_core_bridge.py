@@ -65,6 +65,21 @@ class TestObservablesToPhases:
         phases = bridge.observables_to_phases(snap)
         assert phases[1] == pytest.approx(TWO_PI)
 
+    @pytest.mark.parametrize(
+        ("snapshot", "field"),
+        [
+            ({"q_profile": np.nan}, "q_profile"),
+            ({"q_min": 2.0, "q_max": 1.0}, "q_max"),
+            ({"sawtooth_count": -1}, "sawtooth_count"),
+            ({"elm_count": True}, "elm_count"),
+            ("not-a-dict", "snapshot"),
+        ],
+    )
+    def test_rejects_invalid_observable_snapshot(self, snapshot: object, field: str):
+        bridge = FusionCoreBridge(n_layers=6)
+        with pytest.raises(ValueError, match=field):
+            bridge.observables_to_phases(snapshot)  # type: ignore[arg-type]
+
 
 class TestPhasesToFeedback:
     def test_output_format(self):
@@ -77,6 +92,26 @@ class TestPhasesToFeedback:
         assert "mean_omega" in fb
         assert fb["n_oscillators"] == 6
         assert fb["R_global"] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize(
+        ("phases", "omegas", "field"),
+        [
+            (np.ones((2, 2)), np.ones(4), "phases"),
+            (np.array([0.0, np.nan]), np.ones(2), "phases"),
+            (np.ones(2), np.ones((1, 2)), "omegas"),
+            (np.ones(2), np.array([1.0, np.inf]), "omegas"),
+            (np.ones(3), np.ones(2), "omegas"),
+        ],
+    )
+    def test_rejects_invalid_feedback_vectors(
+        self,
+        phases: object,
+        omegas: object,
+        field: str,
+    ):
+        bridge = FusionCoreBridge(n_layers=3)
+        with pytest.raises(ValueError, match=field):
+            bridge.phases_to_feedback(phases, omegas)  # type: ignore[arg-type]
 
 
 class TestConstructorValidation:
@@ -123,6 +158,20 @@ class TestQProfileImport:
         assert result["q_min"] == pytest.approx(0.8)
         assert result["q_edge"] == pytest.approx(4.2)
 
+    @pytest.mark.parametrize(
+        "q_data",
+        [
+            {"q_min": np.nan},
+            {"q_min": 4.0, "q_max": 3.0},
+            {"q_min": 1.0, "q_max": 5.0, "q_axis": 6.0},
+            {"q_min": 1.0, "q_max": 5.0, "q_edge": 0.5},
+        ],
+    )
+    def test_rejects_invalid_q_profile(self, q_data: dict):
+        bridge = FusionCoreBridge()
+        with pytest.raises(ValueError, match="q_"):
+            bridge.import_q_profile(q_data)
+
 
 class TestStabilityChecks:
     def test_nominal_no_violations(self):
@@ -160,6 +209,20 @@ class TestStabilityChecks:
         assert len(violations) == 1
         assert violations[0]["variable"] == "q_min"
 
+    @pytest.mark.parametrize(
+        "observables",
+        [
+            {"q_min": np.nan},
+            {"beta_n": "high"},
+            {"tau_e_ratio": True},
+            "not-a-dict",
+        ],
+    )
+    def test_rejects_invalid_stability_payload(self, observables: object):
+        bridge = FusionCoreBridge()
+        with pytest.raises(ValueError, match="stability"):
+            bridge.check_stability(observables)  # type: ignore[arg-type]
+
 
 class TestEquilibriumImport:
     def test_import_equilibrium(self):
@@ -176,6 +239,24 @@ class TestEquilibriumImport:
         )
         assert result["q_profile"] == pytest.approx(2.0)
         assert result["sawtooth_count"] == 3
+
+    @pytest.mark.parametrize(
+        ("kernel_result", "field"),
+        [
+            ({"q_profile": np.nan}, "q_profile"),
+            ({"sawtooth_count": -1}, "sawtooth_count"),
+            ({"elm_count": True}, "elm_count"),
+            ("not-a-dict", "kernel_result"),
+        ],
+    )
+    def test_import_equilibrium_rejects_invalid_payload(
+        self,
+        kernel_result: object,
+        field: str,
+    ):
+        bridge = FusionCoreBridge()
+        with pytest.raises(ValueError, match=field):
+            bridge.import_equilibrium(kernel_result)  # type: ignore[arg-type]
 
 
 class TestFusionDomainpack:
