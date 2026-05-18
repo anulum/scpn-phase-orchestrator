@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import re
-from typing import get_type_hints
+from typing import Any, get_type_hints
 
 import numpy as np
 import pytest
@@ -191,13 +191,39 @@ class TestValidation:
         with pytest.raises(ValueError, match="n_oscillators must be >= 1"):
             KuramotoVerilogCompiler(n_oscillators=0)
 
+    @pytest.mark.parametrize("n_oscillators", [True, 1.5, "4"])
+    def test_rejects_non_integer_oscillator_count(self, n_oscillators: Any) -> None:
+        with pytest.raises(ValueError, match="n_oscillators must be an integer"):
+            KuramotoVerilogCompiler(n_oscillators=n_oscillators)
+
     def test_rejects_non_32_bit_width(self) -> None:
         with pytest.raises(ValueError, match="32-bit Q16.16"):
             KuramotoVerilogCompiler(n_oscillators=4, bit_width=16)
 
+    @pytest.mark.parametrize("bit_width", [True, 32.0, "32"])
+    def test_rejects_non_integer_bit_width(self, bit_width: Any) -> None:
+        with pytest.raises(ValueError, match="bit_width must be an integer"):
+            KuramotoVerilogCompiler(n_oscillators=4, bit_width=bit_width)
+
     def test_rejects_zero_cordic_stages(self) -> None:
         with pytest.raises(ValueError, match="cordic_stages must be >= 1"):
             KuramotoVerilogCompiler(n_oscillators=4, cordic_stages=0)
+
+    @pytest.mark.parametrize("cordic_stages", [True, 4.0, "4"])
+    def test_rejects_non_integer_cordic_stages(self, cordic_stages: Any) -> None:
+        with pytest.raises(ValueError, match="cordic_stages must be an integer"):
+            KuramotoVerilogCompiler(n_oscillators=4, cordic_stages=cordic_stages)
+
+    def test_constructor_normalises_integer_subclasses(self) -> None:
+        compiler = KuramotoVerilogCompiler(
+            n_oscillators=np.int64(2),
+            bit_width=np.int64(32),
+            cordic_stages=np.int64(4),
+        )
+
+        assert compiler.n == 2
+        assert compiler.width == 32
+        assert compiler.cordic_stages == 4
 
     def test_rejects_shape_mismatch(self) -> None:
         compiler = KuramotoVerilogCompiler(n_oscillators=3)

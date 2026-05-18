@@ -21,6 +21,7 @@ The compiler is arithmetic-complete — no ``real``, no system tasks, no
 
 from __future__ import annotations
 
+from numbers import Integral
 from typing import TypeAlias
 
 import numpy as np
@@ -57,6 +58,12 @@ def _hex_q16_16(value: float) -> str:
     return f"32'h{_q16_16(value):08X}"
 
 
+def _require_integer(value: object, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be an integer")
+    return int(value)
+
+
 class KuramotoVerilogCompiler:
     """Compile a Kuramoto topology into synthesisable Verilog.
 
@@ -86,6 +93,9 @@ class KuramotoVerilogCompiler:
         bit_width: int = _WORD_BITS,
         cordic_stages: int = 4,
     ) -> None:
+        n_oscillators = _require_integer(n_oscillators, name="n_oscillators")
+        bit_width = _require_integer(bit_width, name="bit_width")
+        cordic_stages = _require_integer(cordic_stages, name="cordic_stages")
         if n_oscillators < 1:
             raise ValueError(f"n_oscillators must be >= 1, got {n_oscillators}")
         if bit_width != _WORD_BITS:
