@@ -9,6 +9,15 @@
 # Mirrors proto/spo.proto. Re-generate real stubs with:
 #     bash tools/generate_grpc.sh
 
+"""Dataclass fallback messages mirroring the Phase Orchestrator protobuf API.
+
+These classes provide a lightweight import-time substitute for generated
+protobuf message classes when ``google.protobuf`` or generated artifacts are
+unavailable. They preserve field names and default values used by local tests
+and server fallback paths, but they do not implement protobuf serialization,
+wire compatibility, descriptors, or validation beyond dataclass construction.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

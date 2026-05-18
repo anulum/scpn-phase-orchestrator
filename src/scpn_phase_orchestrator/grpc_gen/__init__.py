@@ -15,6 +15,16 @@
 #   3. Try generated gRPC servicer (requires grpcio).
 #   4. Fall back to hand-written ABC servicer.
 
+"""Generated-stub loader with explicit protobuf and gRPC fallback flags.
+
+The module exposes the public message and service symbols expected by the
+server code while preferring generated ``spo_pb2`` and ``spo_pb2_grpc`` modules
+when their optional dependencies are installed. If generated imports fail, it
+falls back to hand-written dataclass messages and an abstract servicer surface.
+The ``USING_GENERATED_*`` flags make this runtime choice auditable without
+performing network registration or starting a gRPC server at import time.
+"""
+
 from __future__ import annotations
 
 USING_GENERATED_PB2: bool

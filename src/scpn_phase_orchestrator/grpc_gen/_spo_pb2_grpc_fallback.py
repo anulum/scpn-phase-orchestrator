@@ -9,6 +9,15 @@
 # Mirrors proto/spo.proto. Re-generate real stubs with:
 #     bash tools/generate_grpc.sh
 
+"""Abstract gRPC service fallback for environments without generated stubs.
+
+The fallback servicer mirrors the ``spo.PhaseOrchestrator`` method surface so
+server implementations can be type-checked and tested without generated gRPC
+code. Registration remains fail-closed: a live server registration requires
+``grpcio`` at call time and raises ``ImportError`` when the dependency is
+missing. Importing this module never starts a server or binds network handlers.
+"""
+
 from __future__ import annotations
 
 import abc
