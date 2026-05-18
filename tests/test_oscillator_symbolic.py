@@ -201,6 +201,20 @@ class TestSymbolicExtractorMetadata:
                 f"Expected ω≈π/2 for single-step ring(4), got {s.omega}"
             )
 
+    @pytest.mark.parametrize(
+        "signal",
+        [
+            np.array([True, False]),
+            np.array([0.0, 1.0]),
+            np.array([1 + 0j]),
+            np.array(["1"], dtype=object),
+        ],
+    )
+    def test_extract_rejects_non_integer_signal(self, signal: object):
+        ext = SymbolicExtractor(n_states=4, mode="ring")
+        with pytest.raises(ValueError, match="signal must be integer"):
+            ext.extract(signal, sample_rate=1.0)
+
 
 class TestSymbolicPipelineEndToEnd:
     """Full pipeline: SymbolicExtractor → theta/omega → Engine → R.

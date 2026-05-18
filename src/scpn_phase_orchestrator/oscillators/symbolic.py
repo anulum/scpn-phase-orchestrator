@@ -38,6 +38,18 @@ def _validate_node_id(value: object) -> str:
     return value
 
 
+def _validate_signal(value: object) -> IntArray:
+    signal = np.asarray(value)
+    dtype = signal.dtype
+    if (
+        np.issubdtype(dtype, np.bool_)
+        or np.issubdtype(dtype, np.complexfloating)
+        or not np.issubdtype(dtype, np.integer)
+    ):
+        raise ValueError("signal must be integer")
+    return signal.astype(np.int64, copy=False)
+
+
 class SymbolicExtractor(PhaseExtractor):
     """Phase extraction from discrete symbolic state sequences.
 
@@ -61,7 +73,7 @@ class SymbolicExtractor(PhaseExtractor):
 
     def extract(self, signal: FloatArray, sample_rate: float) -> list[PhaseState]:
         """Map discrete state indices to phases on the unit circle."""
-        indices = np.asarray(signal, dtype=np.int64)
+        indices = _validate_signal(signal)
         if self._mode == "ring":
             thetas = TWO_PI * indices / self._n_states
         else:
