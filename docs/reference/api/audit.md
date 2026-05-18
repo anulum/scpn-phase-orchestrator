@@ -125,12 +125,12 @@ logger.close()
 
 ## Audit Signing Helpers
 
-`scpn_phase_orchestrator.audit.signing` centralises audit signature constants,
+`scpn_phase_orchestrator.runtime.audit_signing` centralises audit signature constants,
 key identifiers, and verification key loading. It is used by JSONL audit replay
 and protobuf event-stream verification so keyring validation stays consistent
 across both audit transports.
 
-::: scpn_phase_orchestrator.audit.signing
+::: scpn_phase_orchestrator.runtime.audit_signing
 
 ## Deterministic Replay
 

@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.audit.signing import (
+from scpn_phase_orchestrator.runtime.audit_signing import (
     SIGNATURE_ALGORITHM,
     audit_verification_keys,
     key_id_for_secret,

@@ -13,11 +13,17 @@ import json
 
 import pytest
 
-from scpn_phase_orchestrator.audit.signing import (
+from scpn_phase_orchestrator.audit import signing as legacy_signing
+from scpn_phase_orchestrator.runtime import audit_signing as runtime_signing
+from scpn_phase_orchestrator.runtime.audit_signing import (
     SIGNATURE_ALGORITHM,
     audit_verification_keys,
     key_id_for_secret,
 )
+
+
+def test_legacy_audit_signing_alias_targets_runtime_module() -> None:
+    assert legacy_signing is runtime_signing
 
 
 def test_key_id_for_secret_matches_audit_metadata_prefix() -> None:

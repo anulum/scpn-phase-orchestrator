@@ -24,7 +24,7 @@ from google.protobuf import descriptor_pb2, descriptor_pool, message_factory
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.message import Message
 
-from scpn_phase_orchestrator.audit.signing import (
+from scpn_phase_orchestrator.runtime.audit_signing import (
     SIGNATURE_ALGORITHM,
     audit_verification_keys,
     key_id_for_secret,

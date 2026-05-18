@@ -27,11 +27,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
-from scpn_phase_orchestrator.audit.signing import (
+from scpn_phase_orchestrator.exceptions import AuditError
+from scpn_phase_orchestrator.runtime.audit_signing import (
     SIGNATURE_ALGORITHM,
     key_id_for_secret,
 )
-from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.runtime.audit_stream import EventStreamWriter
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
