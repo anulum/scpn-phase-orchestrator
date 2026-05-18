@@ -8,9 +8,12 @@
 
 # Product boundaries
 
-SCPN Phase Orchestrator is organised around four product boundaries. The
-boundaries are architectural ownership lines, not an immediate promise that all
-legacy import paths have already moved into matching directories.
+SCPN Phase Orchestrator is organised around four product boundaries. Every
+boundary described here is production code: the split exists for convenience,
+maintainability, dependency ownership, and reviewability, not to divide the
+repository into older and newer quality tiers. Pre-split public import
+paths may remain during migration windows only when they are explicitly
+maintained and tested as production surfaces.
 
 ## Core Engine
 
@@ -49,8 +52,8 @@ but must not import Runtime/Serving or Research/Experimental modules.
 Research and Experimental contains neural-network research modules, notebooks,
 experiments, Go/Julia/Mojo/WebGPU accelerator implementations, visualisation
 helpers, and special domain packs that are not required for the production
-Runtime surface. It also contains autotuning pipelines and legacy public
-neural-network compatibility aliases until those surfaces are split behind
+Runtime surface. It also contains autotuning pipelines and public
+neural-network compatibility surfaces until those surfaces are split behind
 explicit optional package extras.
 
 Experimental modules may depend on Core Engine for parity and validation, but
@@ -58,8 +61,8 @@ Core Engine must not import arbitrary Experimental modules. Accelerator
 implementations live under
 `scpn_phase_orchestrator.experimental.accelerators.{coupling,monitor,upde}`.
 Core dispatch modules may import only the explicit accelerator-port modules
-listed in `tools/check_product_boundaries.py`; legacy module paths under
-`coupling`, `monitor`, and `upde` are compatibility wrappers only. The
+listed in `tools/check_product_boundaries.py`; pre-split module paths under
+`coupling`, `monitor`, and `upde` are production boundary forwarding modules. The
 accelerator-port allowlist is self-auditing: full-tree runs fail if an entry
 becomes stale, forcing migrated dispatch ports to be removed from the exception
 set instead of leaving dead architecture debt behind.
@@ -80,4 +83,4 @@ landing outside the boundary map.
 This guard deliberately starts with the highest-value invariant: Core Engine is
 the stable lower layer. Later migration batches should add stricter rules for
 Runtime-to-Experimental coupling and optional integration dependency isolation
-after those imports are inventoried and compatibility re-exports are in place.
+after those imports are inventoried and production forwarding surfaces are in place.

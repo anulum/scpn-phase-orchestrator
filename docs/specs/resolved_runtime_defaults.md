@@ -14,7 +14,7 @@ that are inferred from `binding_spec.yaml` and shown via:
 - `spo validate <binding_spec>`
 - `spo inspect <binding_spec>`
 - `spo run <binding_spec>`
-- audit header metadata (`binding_summary` and legacy-compatible `binding_config`)
+- audit header metadata (`binding_summary` and backward-compatible `binding_config`)
 
 ## Inferred values
 

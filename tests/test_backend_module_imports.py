@@ -152,7 +152,7 @@ def test_runtime_module_import_surface(module_name: str) -> None:
         "scpn_phase_orchestrator.distributed.sync",
     ),
 )
-def test_legacy_distributed_import_surface_is_removed(module_name: str) -> None:
+def test_presplit_distributed_import_surface_is_removed(module_name: str) -> None:
     try:
         spec = importlib.util.find_spec(module_name)
     except ModuleNotFoundError:
