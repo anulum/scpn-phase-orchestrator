@@ -98,6 +98,25 @@ def _require_seed(value: int | None) -> int | None:
     return int(value)
 
 
+def _require_unit_interval(value: object, *, field: str) -> float:
+    result = _require_finite_real(value, field=field, positive=False)
+    if result > 1.0:
+        raise ValueError(f"{field} must be in [0, 1]")
+    return result
+
+
+def _require_rate_vector(value: object, *, n_layers: int) -> FloatArray:
+    try:
+        rates = np.asarray(value, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("rates must be a finite non-negative 1-D vector") from exc
+    if rates.shape != (n_layers,):
+        raise ValueError(f"rates must have shape ({n_layers},)")
+    if not np.all(np.isfinite(rates)) or np.any(rates < 0.0):
+        raise ValueError("rates must be finite and non-negative")
+    return rates
+
+
 class NeurocoreBridge:
     """Live integration with sc-neurocore StochasticLIFNeuron ensemble.
 
@@ -188,8 +207,15 @@ class NeurocoreBridge:
 
     def step(self, state: UPDEState, n_substeps: int = 10) -> FloatArray:
         """Run neuron ensemble for n_substeps, return per-layer spike rates."""
+        n_substeps = _require_positive_int(n_substeps, field="n_substeps")
+        if len(state.layers) < self._n_layers:
+            raise ValueError("state.layers must cover configured n_layers")
+        validated_r_values = [
+            _require_unit_interval(layer.R, field=f"layer {idx} R")
+            for idx, layer in enumerate(state.layers[: self._n_layers])
+        ]
         r_values = np.array(
-            [ls.R for ls in state.layers[: self._n_layers]],
+            validated_r_values,
             dtype=np.float64,
         )
         layer_currents = r_values * self._scale
@@ -254,6 +280,7 @@ class NeurocoreBridge:
 
     def rates_to_actions(self, rates: FloatArray) -> list[ControlAction]:
         """Convert per-layer spike rates to coupling boost actions."""
+        rates = _require_rate_vector(rates, n_layers=self._n_layers)
         actions: list[ControlAction] = []
         for layer_idx, rate in enumerate(rates):
             if rate > self._threshold_hz:

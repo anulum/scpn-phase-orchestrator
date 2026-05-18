@@ -52,6 +52,20 @@ class TestNeurocoreBridge:
         assert rates.shape == (3,)
         assert np.all(rates >= 0.0)
 
+    @pytest.mark.parametrize("n_substeps", [0, -1, 1.5, True])
+    def test_step_rejects_invalid_substep_count(self, n_substeps: object):
+        bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
+        with pytest.raises(ValueError, match="n_substeps"):
+            bridge.step(_make_state([0.8, 0.6]), n_substeps=n_substeps)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "r_values", [[0.8], [np.nan, 0.5], [-0.1, 0.5], [1.1, 0.5]]
+    )
+    def test_step_rejects_invalid_upde_state_payload(self, r_values: list[float]):
+        bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
+        with pytest.raises(ValueError, match="state.layers|layer 0 R"):
+            bridge.step(_make_state(r_values), n_substeps=10)
+
     def test_high_coherence_higher_rate(self):
         bridge = NeurocoreBridge(
             n_layers=2,
@@ -68,6 +82,20 @@ class TestNeurocoreBridge:
         assert len(actions) == 1
         assert actions[0].scope == "layer_0"
         assert actions[0].knob == "K"
+
+    @pytest.mark.parametrize(
+        "rates",
+        [
+            np.ones((1, 2)),
+            np.array([1.0, np.nan]),
+            np.array([1.0]),
+            np.array([1.0, -1.0]),
+        ],
+    )
+    def test_rates_to_actions_rejects_invalid_rate_vector(self, rates: object):
+        bridge = NeurocoreBridge(n_layers=2, backend="numpy")
+        with pytest.raises(ValueError, match="rates"):
+            bridge.rates_to_actions(rates)  # type: ignore[arg-type]
 
     def test_step_and_act(self):
         bridge = NeurocoreBridge(n_layers=3, neurons_per_layer=4)
