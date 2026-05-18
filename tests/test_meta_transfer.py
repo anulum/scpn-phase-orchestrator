@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from typing import get_type_hints
 
 import pytest
@@ -368,3 +369,105 @@ class TestMetaTransferBehaviour:
 
         with pytest.raises(ValueError, match="min_records=2"):
             records_from_audit_directory(tmp_path, min_records=2)
+
+    def test_rejects_records_with_no_shared_feature_keys(self) -> None:
+        class _RecordLike(SimpleNamespace):
+            domain = "orphan"
+            features = {}
+            knobs = {"K": 0.2}
+            reward = 1.0
+
+        with pytest.raises(ValueError, match="at least one feature"):
+            CrossDomainMetaTransfer.fit((_RecordLike(),))
+
+    def test_negative_similarity_does_not_influence_top_knob(self) -> None:
+        model = CrossDomainMetaTransfer.fit(
+            (
+                MetaPolicyRecord(
+                    domain="matching",
+                    features={"a": 1.0, "b": 0.0},
+                    knobs={"K": 0.2},
+                    reward=0.4,
+                ),
+                MetaPolicyRecord(
+                    domain="antagonist",
+                    features={"a": -1.0, "b": 0.0},
+                    knobs={"K": 0.9},
+                    reward=1.0,
+                ),
+            )
+        )
+
+        proposal = model.propose({"a": 1.0, "b": 0.0}, k_neighbours=2)
+
+        assert proposal.neighbours[0][0] == "matching"
+        assert proposal.neighbours[0][1] == pytest.approx(1.0)
+        assert proposal.neighbours[1][1] == pytest.approx(0.0)
+        assert proposal.knobs["K"] == pytest.approx(0.2)
+        assert proposal.confidence == pytest.approx(0.5)
+
+    def test_zero_norm_record_is_stable_evidence_without_affecting_output(self) -> None:
+        model = CrossDomainMetaTransfer.fit(
+            (
+                MetaPolicyRecord(
+                    domain="signal",
+                    features={"a": 1.0, "b": 0.0},
+                    knobs={"K": 0.4},
+                    reward=0.5,
+                ),
+                MetaPolicyRecord(
+                    domain="null_signal",
+                    features={"a": 0.0, "b": 0.0},
+                    knobs={"K": 0.1},
+                    reward=0.2,
+                ),
+            )
+        )
+        prior = model.to_json_package()
+        proposal = model.propose({"a": 1.0, "b": 0.0}, k_neighbours=2)
+        after = model.to_json_package()
+
+        assert proposal.neighbours[1][0] == "null_signal"
+        assert proposal.neighbours[1][1] == pytest.approx(0.0)
+        assert proposal.knobs == {"K": pytest.approx(0.4)}
+        assert prior == after
+
+    def test_to_json_package_is_deterministic_and_round_trip_stable(self) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+
+        first = model.to_json_package()
+        second = model.to_json_package()
+
+        assert first == second
+        loaded = CrossDomainMetaTransfer.from_json_package(first)
+        assert loaded.to_json_package() == first
+
+    def test_audit_jsonl_line_context_identifies_invalid_candidate_record(
+        self,
+        tmp_path,
+    ) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text(
+            "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "domain": "reference",
+                            "features": {"a": 1.0},
+                            "knobs": {"K": 0.01},
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "domainpack": "invalid_candidate",
+                            "features": "invalid-mapping",
+                            "actions": [{"knob": "K", "value": 0.2}],
+                        }
+                    ),
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match=r"line 2: features/metrics"):
+            records_from_audit_jsonl(audit_path)

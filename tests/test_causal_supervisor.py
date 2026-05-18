@@ -524,3 +524,176 @@ def test_learn_causal_graph_rejects_invalid_trace_inputs() -> None:
 
     with pytest.raises(ValueError, match="trace signal 'a' contains NaN/Inf"):
         learn_causal_graph({"a": [0.1, np.inf], "b": [0.2, 0.3]})
+
+
+def test_learn_causal_graph_rejects_empty_trace_evidence() -> None:
+    with pytest.raises(ValueError, match="at least two signals"):
+        learn_causal_graph({})
+
+
+def test_counterfactual_audit_record_is_deterministic_and_ordered() -> None:
+    rollout = CounterfactualRollout(
+        baseline_R=[0.35, 0.40, 0.45],
+        intervention_R=[0.35, 0.39, 0.43],
+        baseline_psi=[0.0, 0.1, 0.2],
+        intervention_psi=[0.0, 0.11, 0.19],
+        delta_R_final=0.08,
+        delta_R_mean=0.02,
+        delta_psi_final=0.12,
+        actions=(
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=0.4,
+                ttl_s=5.0,
+                justification="first",
+            ),
+            ControlAction(
+                knob="zeta",
+                scope="global",
+                value=-0.1,
+                ttl_s=1.0,
+                justification="second",
+            ),
+        ),
+    )
+
+    record = rollout.to_audit_record()
+    assert list(record) == [
+        "baseline_R",
+        "intervention_R",
+        "baseline_psi",
+        "intervention_psi",
+        "delta_R_final",
+        "delta_R_mean",
+        "delta_psi_final",
+        "actions",
+    ]
+    assert record["actions"] == [
+        {
+            "knob": "K",
+            "scope": "global",
+            "value": 0.4,
+            "ttl_s": 5.0,
+            "justification": "first",
+        },
+        {
+            "knob": "zeta",
+            "scope": "global",
+            "value": -0.1,
+            "ttl_s": 1.0,
+            "justification": "second",
+        },
+    ]
+    assert rollout.to_audit_record() == record
+
+
+def test_rollout_attribution_boundary_thresholding() -> None:
+    stabilising_tie = CounterfactualRollout(
+        baseline_R=[0.2, 0.2, 0.3],
+        intervention_R=[0.2, 0.2, 0.4],
+        baseline_psi=[0.0, 0.1, 0.2],
+        intervention_psi=[0.0, 0.1, 0.2],
+        delta_R_final=0.10,
+        delta_R_mean=0.10,
+        delta_psi_final=0.0,
+        actions=(),
+    )
+
+    tied = stabilising_tie.attribute(threshold=0.10)
+    assert tied.effect == "neutral"
+    assert tied.confidence == pytest.approx(1.0)
+
+    zero = stabilising_tie.attribute(threshold=0.0)
+    assert zero.effect == "stabilising"
+    assert zero.confidence == 0.0
+    with pytest.raises(ValueError, match="non-negative"):
+        stabilising_tie.attribute(threshold=float("nan"))
+
+
+def test_graph_edges_are_ranked_cycle_safe_and_intervention_nodes_deduplicate() -> None:
+    trace = {
+        "A": [0.0, 1.0, 0.0, 1.0, 0.0],
+        "B": [1.0, 0.0, 1.0, 0.0, 1.0],
+        "C": [2.0, 2.0, 2.0, 2.0, 2.0],
+    }
+    rollout_one = CounterfactualRollout(
+        baseline_R=[0.2, 0.21, 0.22],
+        intervention_R=[0.2, 0.31, 0.45],
+        baseline_psi=[0.0, 0.1, 0.2],
+        intervention_psi=[0.0, 0.1, 0.2],
+        delta_R_final=0.23,
+        delta_R_mean=0.13,
+        delta_psi_final=0.0,
+        actions=(
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=0.2,
+                ttl_s=4.0,
+                justification="shared intervention source",
+            ),
+        ),
+    )
+    rollout_two = CounterfactualRollout(
+        baseline_R=[0.2, 0.21, 0.22],
+        intervention_R=[0.2, 0.31, 0.44],
+        baseline_psi=[0.0, 0.1, 0.2],
+        intervention_psi=[0.0, 0.1, 0.2],
+        delta_R_final=0.22,
+        delta_R_mean=0.12,
+        delta_psi_final=0.0,
+        actions=(
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=0.2,
+                ttl_s=4.0,
+                justification="shared intervention source",
+            ),
+        ),
+    )
+    rollout_three = CounterfactualRollout(
+        baseline_R=[0.2, 0.21, 0.22],
+        intervention_R=[0.2, 0.20, 0.24],
+        baseline_psi=[0.0, 0.1, 0.2],
+        intervention_psi=[0.0, 0.1, 0.2],
+        delta_R_final=0.02,
+        delta_R_mean=0.01,
+        delta_psi_final=0.0,
+        actions=(
+            ControlAction(
+                knob="zeta",
+                scope="global",
+                value=0.03,
+                ttl_s=1.0,
+                justification="small intervention",
+            ),
+        ),
+    )
+
+    graph = learn_causal_graph(
+        trace,
+        [rollout_one, rollout_two, rollout_three],
+        lag=1,
+        min_abs_weight=1e-3,
+    )
+
+    edge_keys = [(edge.source, edge.target, edge.evidence) for edge in graph.edges]
+    assert edge_keys == sorted(edge_keys)
+    assert ("A", "B", "lagged_trace") in edge_keys
+    assert ("B", "A", "lagged_trace") in edge_keys
+    assert graph.nodes.count("do(K:global)") == 1
+    assert graph.nodes[-1] == "R"
+
+    do_edge_weights = [
+        edge.weight
+        for edge in graph.edges
+        if edge.evidence == "counterfactual_rollout" and edge.source == "do(K:global)"
+    ]
+    assert len(do_edge_weights) >= 2
+    assert do_edge_weights[0] == pytest.approx(0.65)
+    assert do_edge_weights[1] == pytest.approx(0.6)
+    assert do_edge_weights[0] != do_edge_weights[1]
+
+    assert graph.to_audit_record()["nodes"] == list(graph.nodes)
