@@ -63,6 +63,7 @@ class FixedWindowRateLimiter:
 
     def allow(self, identity: str, now: float | None = None) -> bool:
         """Return True if *identity* has capacity in the current minute."""
+        key = _validated_identifier(identity, "identity")
         if now is None:
             timestamp = time.time()
         else:
@@ -74,7 +75,6 @@ class FixedWindowRateLimiter:
                 raise ValueError("now must be a finite real timestamp")
             timestamp = float(now)
         window = int(timestamp // 60)
-        key = identity or "anonymous"
         with self._lock:
             current_window, count = self._windows.get(key, (window, 0))
             if current_window != window:

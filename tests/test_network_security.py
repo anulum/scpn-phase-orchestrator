@@ -119,6 +119,14 @@ def test_rate_limiter_rejects_malformed_timestamp(now: object) -> None:
         limiter.allow("client-a", now=cast(float, now))
 
 
+@pytest.mark.parametrize("identity", ["", " ", True, 7])
+def test_rate_limiter_rejects_malformed_identity(identity: object) -> None:
+    limiter = FixedWindowRateLimiter(limit_per_minute=1)
+
+    with pytest.raises(ValueError, match="identity"):
+        limiter.allow(cast(str, identity), now=10.0)
+
+
 def test_rate_limiter_rejects_non_positive_limit() -> None:
     with pytest.raises(ValueError, match=">= 1"):
         FixedWindowRateLimiter(limit_per_minute=0)
