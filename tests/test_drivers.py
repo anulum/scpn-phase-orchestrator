@@ -172,6 +172,12 @@ class TestSymbolicDriver:
         assert drv.compute(5) == 3.0
         assert drv.compute(100) == drv.compute(100 % 3)
 
+    @pytest.mark.parametrize("step", [True, 1.5, "2"])
+    def test_compute_rejects_non_integer_step(self, step: object):
+        drv = SymbolicDriver(sequence=[1.0, 2.0, 3.0])
+        with pytest.raises(ValueError, match="step must be an integer"):
+            drv.compute(cast(Any, step))
+
     def test_batch_matches_scalar(self):
         drv = SymbolicDriver(sequence=[10.0, 20.0, 30.0])
         steps = np.array([0, 1, 2, 3, 4, 5])

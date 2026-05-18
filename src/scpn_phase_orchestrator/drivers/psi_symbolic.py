@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from numbers import Integral
 from typing import TypeAlias
 
 import numpy as np
@@ -30,6 +31,12 @@ def _contains_bool(value: object) -> bool:
     return False
 
 
+def _validate_step(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("step must be an integer")
+    return int(value)
+
+
 class SymbolicDriver:
     """Deterministic phase sequence driver for symbolic/semiotic channels."""
 
@@ -48,6 +55,7 @@ class SymbolicDriver:
 
     def compute(self, step: int) -> float:
         """Return symbolic phase at discrete *step* (cyclic)."""
+        step = _validate_step(step)
         return float(self._sequence[step % self._n])
 
     def compute_batch(self, steps: IntArray) -> FloatArray:
