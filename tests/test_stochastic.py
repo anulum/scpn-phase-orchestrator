@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.upde.stochastic import (
     find_optimal_noise,
     optimal_D,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestStochasticInjector:
@@ -86,7 +87,10 @@ class TestStochasticInjector:
         hints = get_type_hints(StochasticInjector.inject)
         for name in ("phases", "return"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"inject:{name}",
+            )
             assert "numpy.float64" in text
 
 
@@ -181,7 +185,10 @@ class TestFindOptimalNoise:
         hints = get_type_hints(find_optimal_noise, localns={"UPDEEngine": UPDEEngine})
         for name in ("phases_init", "omegas", "knm", "alpha", "D_range"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"find_optimal_noise:{name}",
+            )
             assert "numpy.float64" in text
 
 

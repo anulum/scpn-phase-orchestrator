@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.drivers.psi_informational import InformationalDriver
 from scpn_phase_orchestrator.drivers.psi_physical import PhysicalDriver
 from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 # ---------------------------------------------------------------------------
 # PhysicalDriver: sinusoidal external drive Ψ_P(t) = A·sin(2πft)
@@ -328,9 +329,9 @@ class TestDriverTypeHints:
             )
             input_hint = hints[input_name]
             result_hint = hints["return"]
-            assert "numpy.ndarray" in str(input_hint)
+            assert_precise_ndarray_hint(input_hint)
             assert expected_input_dtype in str(input_hint)
-            assert "numpy.ndarray" in str(result_hint)
+            assert_precise_ndarray_hint(result_hint)
             assert "float64" in str(result_hint)
 
 

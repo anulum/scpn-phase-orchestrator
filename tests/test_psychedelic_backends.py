@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.monitor.psychedelic import (
     AVAILABLE_BACKENDS,
     entropy_from_phases,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 entropy_from_phases_go = _psychedelic_go.entropy_from_phases_go
 entropy_from_phases_julia = _psychedelic_julia.entropy_from_phases_julia
@@ -69,7 +70,7 @@ def test_backend_array_contracts_are_parameterised() -> None:
     )
     for fn in functions:
         hints = get_type_hints(fn)
-        assert "numpy.ndarray" in str(hints["phases"])
+        assert_precise_ndarray_hint(hints["phases"])
         assert "float64" in str(hints["phases"])
 
 

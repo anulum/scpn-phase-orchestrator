@@ -16,6 +16,7 @@ import pytest
 
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 # ---------------------------------------------------------------------------
 # ImprintState: immutability and data contracts
@@ -68,7 +69,7 @@ class TestImprintStateContracts:
     def test_public_array_contracts_are_parameterised(self) -> None:
         """Public imprint array contracts stay element-typed."""
         state_hint = get_type_hints(ImprintState)["m_k"]
-        assert "numpy.ndarray" in str(state_hint)
+        assert_precise_ndarray_hint(state_hint)
         assert "float64" in str(state_hint)
 
         for method, param in [
@@ -80,11 +81,11 @@ class TestImprintStateContracts:
             hints = get_type_hints(method)
             input_hint = hints[param]
             result_hint = hints["return"]
-            assert "numpy.ndarray" in str(input_hint)
+            assert_precise_ndarray_hint(input_hint)
             assert "float64" in str(input_hint)
-            assert "numpy.ndarray" in str(result_hint) or result_hint is ImprintState
             if result_hint is not ImprintState:
                 assert "float64" in str(result_hint)
+                assert_precise_ndarray_hint(result_hint)
 
 
 # ---------------------------------------------------------------------------

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import threading
 from numbers import Integral, Real
-from typing import Any, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -30,7 +30,7 @@ from scpn_phase_orchestrator._compat import TWO_PI
 __all__ = ["SparseUPDEEngine"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
-IntArray: TypeAlias = NDArray[np.integer[Any]]
+IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:

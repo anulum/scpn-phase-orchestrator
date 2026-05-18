@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.autotune.discovery import (
     discover_time_series_structure,
     infer_sample_rate_from_time_column,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_discover_time_series_structure_reports_json_ready_evidence() -> None:
@@ -183,7 +184,7 @@ def test_discovery_public_array_contracts_are_element_typed() -> None:
     """Guard the V2 typed-array contract for discovery evidence surfaces."""
 
     samples_hint = get_type_hints(discover_time_series_structure)["samples"]
-    assert "numpy.ndarray" in str(samples_hint)
+    assert_precise_ndarray_hint(samples_hint)
     assert "float64" in str(samples_hint)
 
     report_hints = get_type_hints(TimeSeriesDiscoveryReport)

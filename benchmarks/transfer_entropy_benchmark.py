@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import transfer_entropy as te_mod
 from scpn_phase_orchestrator.monitor.transfer_entropy import (
@@ -28,7 +29,12 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
 TWO_PI = 2.0 * np.pi
 
 
-def _bench(backend: str, src: np.ndarray, tgt: np.ndarray, calls: int) -> float:
+def _bench(
+    backend: str,
+    src: NDArray[np.floating],
+    tgt: NDArray[np.floating],
+    calls: int,
+) -> float:
     saved = te_mod.ACTIVE_BACKEND
     try:
         te_mod.ACTIVE_BACKEND = backend

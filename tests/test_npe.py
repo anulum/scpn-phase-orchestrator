@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.npe import compute_npe, phase_distance_matrix
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestPhaseDistanceMatrix:
@@ -25,7 +26,7 @@ class TestPhaseDistanceMatrix:
         )
 
         for hint in hints:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
     def test_symmetric(self):

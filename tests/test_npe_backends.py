@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.monitor.npe import (
     compute_npe,
     phase_distance_matrix,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -72,10 +73,10 @@ def test_backend_array_contracts_are_parameterised() -> None:
     )
     for fn in functions:
         hints = get_type_hints(fn)
-        assert "numpy.ndarray" in str(hints["phases"])
+        assert_precise_ndarray_hint(hints["phases"])
         assert "float64" in str(hints["phases"])
         if fn.__name__.startswith("phase_distance_matrix"):
-            assert "numpy.ndarray" in str(hints["return"])
+            assert_precise_ndarray_hint(hints["return"])
             assert "float64" in str(hints["return"])
 
 

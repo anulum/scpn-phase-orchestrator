@@ -15,6 +15,7 @@ import numpy as np
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier, SSGFState
 from scpn_phase_orchestrator.ssgf.closure import ClosureState, CyberneticClosure
 from scpn_phase_orchestrator.ssgf.ethical import EthicalCost, compute_ethical_cost
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -85,7 +86,7 @@ class TestGeometryCarrier:
     def test_public_array_contracts_are_parameterised(self) -> None:
         state_hints = get_type_hints(SSGFState)
         for field in ("z", "W"):
-            assert "numpy.ndarray" in str(state_hints[field])
+            assert_precise_ndarray_hint(state_hints[field])
             assert "float64" in str(state_hints[field])
 
         for hint in [
@@ -94,7 +95,7 @@ class TestGeometryCarrier:
             get_type_hints(GeometryCarrier.decode)["return"],
             get_type_hints(GeometryCarrier.update)["cost_fn"],
         ]:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
 
@@ -145,7 +146,7 @@ class TestCyberneticClosure:
             get_type_hints(CyberneticClosure.run)["phases"],
             get_type_hints(CyberneticClosure.run)["return"],
         ]:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
 
@@ -203,7 +204,7 @@ class TestEthicalCost:
     def test_public_array_contracts_are_parameterised(self) -> None:
         hints = get_type_hints(compute_ethical_cost)
         for param in ("phases", "knm"):
-            assert "numpy.ndarray" in str(hints[param])
+            assert_precise_ndarray_hint(hints[param])
             assert "float64" in str(hints[param])
 
 

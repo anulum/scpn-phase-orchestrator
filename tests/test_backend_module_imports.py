@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _swarmalator_julia,
     _swarmalator_mojo,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 simplicial_run_go = _simplicial_go.simplicial_run_go
 simplicial_run_julia = _simplicial_julia.simplicial_run_julia
@@ -282,17 +283,17 @@ def test_optional_upde_backend_array_contracts_are_parameterised() -> None:
 
     for fn in functions:
         hints = get_type_hints(fn)
-        assert "numpy.ndarray" in str(hints["return"])
+        assert_precise_ndarray_hint(hints["return"])
         assert "float64" in str(hints["return"])
 
         for param in ("phases", "omegas"):
-            assert "numpy.ndarray" in str(hints[param])
+            assert_precise_ndarray_hint(hints[param])
             assert "float64" in str(hints[param])
 
         if fn.__name__.startswith("swarmalator"):
-            assert "numpy.ndarray" in str(hints["pos"])
+            assert_precise_ndarray_hint(hints["pos"])
             assert "float64" in str(hints["pos"])
         else:
             for param in ("knm_flat", "alpha_flat"):
-                assert "numpy.ndarray" in str(hints[param])
+                assert_precise_ndarray_hint(hints[param])
                 assert "float64" in str(hints[param])

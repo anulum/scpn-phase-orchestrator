@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
     validate_knm,
 )
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 # ── validate_knm: square check ─────────────────────────────────────────
 
@@ -42,7 +43,7 @@ class TestCouplingArrayTypeHints:
             get_type_hints(project_knm)["knm"],
             get_type_hints(project_knm)["return"],
         ]:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
 

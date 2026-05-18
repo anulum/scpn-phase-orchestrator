@@ -54,6 +54,7 @@ from scpn_phase_orchestrator.monitor.embedding import (
     optimal_delay,
     optimal_dimension,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _force(backend: str) -> str:
@@ -111,13 +112,13 @@ def test_backend_array_contracts_are_parameterised() -> None:
         hints = get_type_hints(fn)
         for key in {"signal", "embedded"}:
             if key in hints:
-                assert "numpy.ndarray" in str(hints[key])
+                assert_precise_ndarray_hint(hints[key])
                 assert "float64" in str(hints[key])
         if fn.__name__.startswith("delay_embed"):
-            assert "numpy.ndarray" in str(hints["return"])
+            assert_precise_ndarray_hint(hints["return"])
             assert "float64" in str(hints["return"])
         if fn.__name__.startswith("nearest_neighbor_distances"):
-            assert "numpy.ndarray" in str(hints["return"])
+            assert_precise_ndarray_hint(hints["return"])
             assert "float64" in str(hints["return"])
             assert "int64" in str(hints["return"])
 

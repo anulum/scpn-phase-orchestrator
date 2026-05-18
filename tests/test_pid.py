@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestRedundancy:
@@ -28,10 +29,10 @@ class TestRedundancy:
         )
 
         for hint in hints:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
 
         assert "float64" in str(hints[0])
-        assert "integer" in str(hints[1])
+        assert "int64" in str(hints[1])
 
     def test_identical_groups_maximum_redundancy(self):
         """Same oscillators in both groups →

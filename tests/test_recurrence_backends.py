@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.monitor.recurrence import (
     cross_recurrence_matrix,
     recurrence_matrix,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 cross_recurrence_matrix_go = _recurrence_go.cross_recurrence_matrix_go
 cross_recurrence_matrix_julia = _recurrence_julia.cross_recurrence_matrix_julia
@@ -98,7 +99,7 @@ def test_backend_array_contracts_are_parameterised() -> None:
             if key in {"traj_flat", "traj_a_flat", "traj_b_flat"}
         )
         for hint in checked_hints:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
         float_hint = (
             hints["traj_flat"] if "traj_flat" in hints else hints["traj_a_flat"]
         )

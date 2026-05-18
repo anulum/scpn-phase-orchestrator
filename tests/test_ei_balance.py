@@ -19,6 +19,7 @@ from scpn_phase_orchestrator.coupling.ei_balance import (
     adjust_ei_ratio,
     compute_ei_balance,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_public_array_contracts_are_parameterised() -> None:
@@ -28,7 +29,7 @@ def test_public_array_contracts_are_parameterised() -> None:
         get_type_hints(adjust_ei_ratio)["knm"],
         get_type_hints(adjust_ei_ratio)["return"],
     ]:
-        assert "numpy.ndarray" in str(hint)
+        assert_precise_ndarray_hint(hint)
         assert "float64" in str(hint)
 
 

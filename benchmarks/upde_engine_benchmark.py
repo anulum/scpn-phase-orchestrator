@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import engine as eng_mod
 from scpn_phase_orchestrator.upde.engine import (
@@ -34,10 +35,10 @@ TWO_PI = 2.0 * np.pi
 
 def _bench(
     backend: str,
-    phases: np.ndarray,
-    omegas: np.ndarray,
-    knm: np.ndarray,
-    alpha: np.ndarray,
+    phases: NDArray[np.floating],
+    omegas: NDArray[np.floating],
+    knm: NDArray[np.floating],
+    alpha: NDArray[np.floating],
     method: str,
     n_steps: int,
     calls: int,

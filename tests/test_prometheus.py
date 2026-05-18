@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _mock_response(body: dict):
@@ -48,7 +49,7 @@ class TestPrometheusConfigValidation:
 class TestFetchMetric:
     def test_public_array_contracts_are_parameterised(self):
         hint = get_type_hints(PrometheusAdapter.fetch_metric)["return"]
-        assert "numpy.ndarray" in str(hint)
+        assert_precise_ndarray_hint(hint)
         assert "float64" in str(hint)
 
     def test_returns_values(self):

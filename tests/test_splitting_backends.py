@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 )
 from scpn_phase_orchestrator.upde import splitting as sp_mod
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 splitting_run_go = _splitting_go.splitting_run_go
 splitting_run_julia = _splitting_julia.splitting_run_julia
@@ -164,7 +165,10 @@ class TestBackendTypingContracts:
         hints = get_type_hints(fn)
         for name in ("phases", "omegas", "knm_flat", "alpha_flat", "return"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"{label}:{name}",
+            )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
 
 

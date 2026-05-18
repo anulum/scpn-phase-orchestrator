@@ -38,6 +38,7 @@ from scpn_phase_orchestrator.monitor.chimera import (
     detect_chimera,
     local_order_parameter,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -78,7 +79,7 @@ def test_backend_array_contracts_are_parameterised() -> None:
     for fn in functions:
         hints = get_type_hints(fn)
         for key in ("phases", "knm_flat", "return"):
-            assert "numpy.ndarray" in str(hints[key])
+            assert_precise_ndarray_hint(hints[key])
             assert "float64" in str(hints[key])
 
 

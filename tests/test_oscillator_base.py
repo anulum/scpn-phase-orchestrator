@@ -19,6 +19,7 @@ from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phas
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 # ── PhaseState construction and field access ────────────────────────────
 
@@ -310,11 +311,11 @@ class TestPhaseExtractorContract:
             (extract_initial_phases, "omegas"),
         ]:
             hint = get_type_hints(fn)[param]
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
         result_hint = get_type_hints(PhaseQualityScorer.downweight_mask)["return"]
-        assert "numpy.ndarray" in str(result_hint)
+        assert_precise_ndarray_hint(result_hint)
         assert "float64" in str(result_hint)
 
 

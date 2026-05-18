@@ -45,6 +45,7 @@ from scpn_phase_orchestrator.monitor.itpc import (
     compute_itpc,
     itpc_persistence,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -91,13 +92,13 @@ def test_backend_array_contracts_are_parameterised() -> None:
     )
     for fn in functions:
         hints = get_type_hints(fn)
-        assert "numpy.ndarray" in str(hints["phases_flat"])
+        assert_precise_ndarray_hint(hints["phases_flat"])
         assert "float64" in str(hints["phases_flat"])
         if "pause_indices" in hints:
-            assert "numpy.ndarray" in str(hints["pause_indices"])
+            assert_precise_ndarray_hint(hints["pause_indices"])
             assert "int64" in str(hints["pause_indices"])
         if fn.__name__.startswith("compute_itpc"):
-            assert "numpy.ndarray" in str(hints["return"])
+            assert_precise_ndarray_hint(hints["return"])
             assert "float64" in str(hints["return"])
 
 

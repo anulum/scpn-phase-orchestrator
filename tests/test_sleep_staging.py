@@ -18,11 +18,12 @@ from scpn_phase_orchestrator.monitor.sleep_staging import (
     classify_sleep_stage,
     ultradian_phase,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_public_array_contracts_are_parameterised():
     hint = get_type_hints(ultradian_phase)["timestamps"]
-    assert "numpy.ndarray" in str(hint)
+    assert_precise_ndarray_hint(hint)
     assert "float64" in str(hint)
 
 

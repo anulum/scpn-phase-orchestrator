@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.actuation.hdl_compiler import (
     KuramotoVerilogCompiler,
     _q16_16,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestQ1616Encoding:
@@ -47,7 +48,7 @@ class TestModuleStructure:
     def test_public_array_contracts_are_parameterised(self) -> None:
         hints = get_type_hints(KuramotoVerilogCompiler.compile)
         for param in ("knm", "omegas"):
-            assert "numpy.ndarray" in str(hints[param])
+            assert_precise_ndarray_hint(hints[param])
             assert "float64" in str(hints[param])
 
     def test_module_header_uses_n(self) -> None:

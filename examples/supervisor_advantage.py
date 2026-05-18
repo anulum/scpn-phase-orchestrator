@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -24,7 +25,11 @@ TWO_PI = 2.0 * np.pi
 
 
 def run_open_loop(
-    n: int, omegas: np.ndarray, knm: np.ndarray, phases: np.ndarray, n_steps: int
+    n: int,
+    omegas: NDArray[np.floating],
+    knm: NDArray[np.floating],
+    phases: NDArray[np.floating],
+    n_steps: int,
 ) -> list[float]:
     """Passive Kuramoto: no intervention, no monitoring."""
     eng = UPDEEngine(n, dt=0.01)
@@ -39,7 +44,11 @@ def run_open_loop(
 
 
 def run_supervised(
-    n: int, omegas: np.ndarray, knm: np.ndarray, phases: np.ndarray, n_steps: int
+    n: int,
+    omegas: NDArray[np.floating],
+    knm: NDArray[np.floating],
+    phases: NDArray[np.floating],
+    n_steps: int,
 ) -> list[float]:
     """SPO supervised: monitor R, boost coupling when degraded."""
     eng = UPDEEngine(n, dt=0.01)

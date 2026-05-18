@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import pac as pac_mod
 from scpn_phase_orchestrator.upde.pac import (
@@ -28,7 +29,12 @@ from scpn_phase_orchestrator.upde.pac import (
 TWO_PI = 2.0 * np.pi
 
 
-def _bench(backend: str, theta: np.ndarray, amp: np.ndarray, calls: int) -> float:
+def _bench(
+    backend: str,
+    theta: NDArray[np.floating],
+    amp: NDArray[np.floating],
+    calls: int,
+) -> float:
     saved = pac_mod.ACTIVE_BACKEND
     try:
         pac_mod.ACTIVE_BACKEND = backend

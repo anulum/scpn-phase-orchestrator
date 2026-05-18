@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.supervisor import (
 )
 from scpn_phase_orchestrator.supervisor import strange_loop as strange_loop_module
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _action(knob: str, value: float) -> ControlAction:
@@ -68,10 +69,10 @@ class TestStrangeLoopAssessment:
         oscillation_hints = get_type_hints(strange_loop_module._oscillation_score)
 
         assert strange_loop_direct_module.StrangeLoopSupervisor is StrangeLoopSupervisor
-        assert "numpy.ndarray" in str(vector_hints["return"])
+        assert_precise_ndarray_hint(vector_hints["return"])
         assert "float64" in str(vector_hints["return"])
         for hints in (coherence_hints, drift_hints, oscillation_hints):
-            assert "numpy.ndarray" in str(hints["matrix"])
+            assert_precise_ndarray_hint(hints["matrix"])
             assert "float64" in str(hints["matrix"])
 
     def test_actions_to_vector_returns_float64_vector(self) -> None:

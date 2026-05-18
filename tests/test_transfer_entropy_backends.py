@@ -37,6 +37,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
     phase_transfer_entropy,
     transfer_entropy_matrix,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -86,7 +87,7 @@ def test_backend_array_contracts_are_parameterised() -> None:
         if fn.__name__.startswith("te_matrix"):
             checked_hints.append(hints["return"])
         for hint in checked_hints:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
 

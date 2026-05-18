@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
@@ -35,7 +36,7 @@ def generate_synthetic_eeg(
     sample_rate: float = 256.0,
     alpha_freq: float = 10.0,
     seed: int = 42,
-) -> tuple[np.ndarray, float]:
+) -> tuple[NDArray[np.floating], float]:
     """Generate synthetic EEG-like signals (alpha band + pink noise).
 
     Returns (n_samples, n_channels) array and sample rate.
@@ -56,7 +57,7 @@ def generate_synthetic_eeg(
     return signals, sample_rate
 
 
-def extract_phases_hilbert(signals: np.ndarray) -> np.ndarray:
+def extract_phases_hilbert(signals: NDArray[np.floating]) -> NDArray[np.floating]:
     """Extract instantaneous phase from each channel via Hilbert transform.
 
     This is the standard method for narrowband EEG signals.

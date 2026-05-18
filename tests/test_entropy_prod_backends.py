@@ -34,6 +34,7 @@ from scpn_phase_orchestrator.monitor.entropy_prod import (
     AVAILABLE_BACKENDS,
     entropy_production_rate,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 entropy_production_rate_go = _entropy_prod_go.entropy_production_rate_go
 entropy_production_rate_julia = _entropy_prod_julia.entropy_production_rate_julia
@@ -78,7 +79,7 @@ def test_backend_array_contracts_are_parameterised() -> None:
     for fn in functions:
         hints = get_type_hints(fn)
         for key in ("phases", "omegas", "knm"):
-            assert "numpy.ndarray" in str(hints[key])
+            assert_precise_ndarray_hint(hints[key])
             assert "float64" in str(hints[key])
 
 

@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.adapters.scpn_control_bridge import SCPNControlBridge
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestInit:
@@ -81,7 +82,7 @@ class TestImportKnm:
             get_type_hints(SCPNControlBridge.import_omega)["scpn_omega"],
             get_type_hints(SCPNControlBridge.import_omega)["return"],
         ]:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
     def test_valid_square(self) -> None:

@@ -14,6 +14,8 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from tests.typing_contracts import assert_precise_ndarray_hint
+
 try:
     import httpx  # noqa: F401
 
@@ -105,7 +107,7 @@ def test_collector_client_lifecycle() -> None:
 def test_collector_array_annotations_use_float64_ndarray() -> None:
     values_hints = get_type_hints(MetricBuffer.values_array)
     arrays_hints = get_type_hints(PrometheusCollector.get_signal_arrays)
-    assert "numpy.ndarray" in str(values_hints["return"])
+    assert_precise_ndarray_hint(values_hints["return"])
     assert "numpy.float64" in str(values_hints["return"])
-    assert "numpy.ndarray" in str(arrays_hints["return"])
+    assert_precise_ndarray_hint(arrays_hints["return"])
     assert "numpy.float64" in str(arrays_hints["return"])

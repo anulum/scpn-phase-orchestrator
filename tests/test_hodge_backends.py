@@ -38,6 +38,7 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia imp
 from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo import (
     hodge_decomposition_mojo,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -204,7 +205,10 @@ class TestBackendTypingContracts:
         hints = get_type_hints(fn)
         for name in ("knm_flat", "phases", "return"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"{label}:{name}",
+            )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
 
 

@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.coupling.lags import LagModel
 from scpn_phase_orchestrator.coupling.prior import CouplingPrior, UniversalPrior
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestLagPriorTypeHints:
@@ -30,7 +31,7 @@ class TestLagPriorTypeHints:
             get_type_hints(LagModel.build_alpha_matrix)["return"],
             get_type_hints(UniversalPrior.estimate_Kc)["omegas"],
         ]:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
 

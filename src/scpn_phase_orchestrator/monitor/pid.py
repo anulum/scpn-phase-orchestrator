@@ -18,7 +18,7 @@ reassigning oscillators.
 
 from __future__ import annotations
 
-from typing import Any, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -28,7 +28,7 @@ from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 __all__ = ["redundancy", "synergy"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
-IntArray: TypeAlias = NDArray[np.integer[Any]]
+IntArray: TypeAlias = NDArray[np.int64]
 
 # Williams & Beer 2010, arXiv:1004.2515 — PID framework
 # Circular MI estimate via binned phase histograms

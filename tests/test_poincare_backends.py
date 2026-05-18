@@ -36,6 +36,7 @@ from scpn_phase_orchestrator.monitor.poincare import (
     phase_poincare,
     poincare_section,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _force(backend: str) -> str:
@@ -92,7 +93,7 @@ def test_backend_array_contracts_are_parameterised() -> None:
         hints = get_type_hints(fn)
         for key in hints:
             if key in {"traj_flat", "normal", "phases_flat", "return"}:
-                assert "numpy.ndarray" in str(hints[key])
+                assert_precise_ndarray_hint(hints[key])
                 assert "float64" in str(hints[key])
 
 

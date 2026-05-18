@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.ssgf.free_energy import (
     boltzmann_weight,
     effective_temperature,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestAddLangevinNoise:
@@ -128,7 +129,7 @@ class TestFreeEnergyTypeHints:
             get_type_hints(add_langevin_noise)["return"],
             get_type_hints(effective_temperature)["costs_history"],
         ]:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
 

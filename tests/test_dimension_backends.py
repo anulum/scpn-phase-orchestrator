@@ -46,6 +46,7 @@ from scpn_phase_orchestrator.monitor.dimension import (
     correlation_integral,
     kaplan_yorke_dimension,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _force(backend: str) -> str:
@@ -98,14 +99,14 @@ def test_backend_array_contracts_are_parameterised() -> None:
     for fn in ci_functions:
         hints = get_type_hints(fn)
         for key in ("traj_flat", "epsilons", "return"):
-            assert "numpy.ndarray" in str(hints[key])
+            assert_precise_ndarray_hint(hints[key])
             assert "float64" in str(hints[key])
         for key in ("idx_i", "idx_j"):
-            assert "numpy.ndarray" in str(hints[key])
+            assert_precise_ndarray_hint(hints[key])
             assert "int64" in str(hints[key])
     for fn in ky_functions:
         hints = get_type_hints(fn)
-        assert "numpy.ndarray" in str(hints["lyapunov_exponents"])
+        assert_precise_ndarray_hint(hints["lyapunov_exponents"])
         assert "float64" in str(hints["lyapunov_exponents"])
 
 

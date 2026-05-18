@@ -36,6 +36,7 @@ from scpn_phase_orchestrator.upde.swarmalator import (
     AVAILABLE_BACKENDS,
     SwarmalatorEngine,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 swarmalator_step_go = _swarmalator_go.swarmalator_step_go
 swarmalator_step_julia = _swarmalator_julia.swarmalator_step_julia
@@ -208,7 +209,10 @@ class TestBackendTypingContracts:
         hints = get_type_hints(fn)
         for name in ("pos", "phases", "omegas", "return"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"{label}:{name}",
+            )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
 
 

@@ -26,6 +26,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import order_params as op_mod
 from scpn_phase_orchestrator.upde.order_params import (
@@ -37,7 +38,7 @@ from scpn_phase_orchestrator.upde.order_params import (
 TWO_PI = 2.0 * np.pi
 
 
-def _bench_one(backend: str, phases: np.ndarray, n_calls: int) -> float:
+def _bench_one(backend: str, phases: NDArray[np.floating], n_calls: int) -> float:
     saved = op_mod.ACTIVE_BACKEND
     try:
         op_mod.ACTIVE_BACKEND = backend

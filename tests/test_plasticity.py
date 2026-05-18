@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.coupling.plasticity import (
     compute_eligibility,
     three_factor_update,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_public_array_contracts_are_parameterised() -> None:
@@ -28,7 +29,7 @@ def test_public_array_contracts_are_parameterised() -> None:
         get_type_hints(three_factor_update)["eligibility"],
         get_type_hints(three_factor_update)["return"],
     ]:
-        assert "numpy.ndarray" in str(hint)
+        assert_precise_ndarray_hint(hint)
         assert "float64" in str(hint)
 
 

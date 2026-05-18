@@ -17,6 +17,7 @@ from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
     PhaseComputePipeline,
     PipelineSnapshot,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_pipeline_tick_returns_snapshot(minimal_config: QueueWavesConfig) -> None:
@@ -196,7 +197,7 @@ def test_pipeline_empty_layer_osc_range() -> None:
 def test_pipeline_array_annotations_use_float64_ndarray() -> None:
     tick_hints = get_type_hints(PhaseComputePipeline.tick)
     imprint_hints = get_type_hints(PhaseComputePipeline.imprint_levels.fget)
-    assert "numpy.ndarray" in str(tick_hints["buffers"])
+    assert_precise_ndarray_hint(tick_hints["buffers"])
     assert "numpy.float64" in str(tick_hints["buffers"])
-    assert "numpy.ndarray" in str(imprint_hints["return"])
+    assert_precise_ndarray_hint(imprint_hints["return"])
     assert "numpy.float64" in str(imprint_hints["return"])

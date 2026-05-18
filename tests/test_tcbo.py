@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver, TCBOState
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestTCBOState:
@@ -39,7 +40,7 @@ class TestTCBOObserverInit:
             get_type_hints(TCBOObserver.observe)["phases"],
             get_type_hints(TCBOObserver._delay_embed)["return"],
         ]:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
 

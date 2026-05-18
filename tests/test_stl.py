@@ -15,6 +15,7 @@ import pytest
 
 from scpn_phase_orchestrator.monitor import stl as stl_module
 from scpn_phase_orchestrator.monitor.stl import HAS_RTAMT, STLMonitor, STLTraceResult
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 needs_rtamt = pytest.mark.skipif(not HAS_RTAMT, reason="rtamt not installed")
 
@@ -31,7 +32,7 @@ class TestSTLBuiltinFallback:
     def test_builtin_predicate_robustness_has_parameterised_array_return(self):
         hints = get_type_hints(stl_module._predicate_robustness)
 
-        assert "numpy.ndarray" in str(hints["return"])
+        assert_precise_ndarray_hint(hints["return"])
         assert "float64" in str(hints["return"])
 
     def test_simple_spec_uses_builtin_backend(self):

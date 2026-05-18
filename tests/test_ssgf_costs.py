@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestSSGFCosts:
@@ -109,7 +110,7 @@ class TestSSGFCosts:
     def test_public_array_contracts_are_parameterised(self) -> None:
         hints = get_type_hints(compute_ssgf_costs)
         for param in ("W", "phases"):
-            assert "numpy.ndarray" in str(hints[param])
+            assert_precise_ndarray_hint(hints[param])
             assert "float64" in str(hints[param])
 
 

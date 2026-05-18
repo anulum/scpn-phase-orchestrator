@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import basin_stability as b_mod
 from scpn_phase_orchestrator.upde.basin_stability import (
@@ -26,7 +27,7 @@ from scpn_phase_orchestrator.upde.basin_stability import (
 )
 
 
-def _all_to_all(n: int, strength: float = 2.0) -> np.ndarray:
+def _all_to_all(n: int, strength: float = 2.0) -> NDArray[np.floating]:
     k = np.ones((n, n)) * strength / n
     np.fill_diagonal(k, 0.0)
     return k

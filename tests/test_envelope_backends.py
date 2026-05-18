@@ -42,6 +42,7 @@ from scpn_phase_orchestrator.upde.envelope import (
     envelope_modulation_depth,
     extract_envelope,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _force(backend: str) -> str:
@@ -220,7 +221,10 @@ class TestBackendTypingContracts:
         hints = get_type_hints(fn)
         for name in ("amps", "return"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"{label}:{name}",
+            )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
 
     @pytest.mark.parametrize(
@@ -234,7 +238,10 @@ class TestBackendTypingContracts:
     def test_mod_annotations_use_float64_ndarray(self, fn, label: str) -> None:
         hints = get_type_hints(fn)
         text = str(hints["env"])
-        assert "numpy.ndarray" in text, f"{label}:env missing ndarray annotation"
+        assert_precise_ndarray_hint(
+            hints["env"],
+            context=f"{label}:env",
+        )
         assert "numpy.float64" in text, f"{label}:env missing float64 annotation"
 
 

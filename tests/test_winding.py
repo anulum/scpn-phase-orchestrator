@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestWindingNumbers:
@@ -26,7 +27,7 @@ class TestWindingNumbers:
         )
 
         for hint in hints:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
 
         assert "float64" in str(hints[0])
         assert "int64" in str(hints[1])

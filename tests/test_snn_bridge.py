@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.adapters.snn_bridge import (
     SNNControllerBridge,
 )
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _make_state(r_values):
@@ -86,7 +87,7 @@ def test_public_array_contracts_are_parameterised():
         get_type_hints(SNNControllerBridge.lif_rate_estimate)["currents"],
         get_type_hints(SNNControllerBridge.lif_rate_estimate)["return"],
     ]:
-        assert "numpy.ndarray" in str(hint)
+        assert_precise_ndarray_hint(hint)
         assert "float64" in str(hint)
 
 

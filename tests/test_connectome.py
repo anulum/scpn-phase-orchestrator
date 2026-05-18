@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.coupling.connectome import (
     load_hcp_connectome,
     load_neurolib_hcp,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_public_array_contracts_are_parameterised() -> None:
@@ -26,7 +27,7 @@ def test_public_array_contracts_are_parameterised() -> None:
         get_type_hints(load_hcp_connectome)["return"],
         get_type_hints(load_neurolib_hcp)["return"],
     ]:
-        assert "numpy.ndarray" in str(hint)
+        assert_precise_ndarray_hint(hint)
         assert "float64" in str(hint)
 
 

@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import dimension as dim_mod
 from scpn_phase_orchestrator.monitor.dimension import (
@@ -28,8 +29,8 @@ from scpn_phase_orchestrator.monitor.dimension import (
 
 def _bench(
     backend: str,
-    traj: np.ndarray,
-    eps: np.ndarray,
+    traj: NDArray[np.floating],
+    eps: NDArray[np.floating],
     calls: int,
 ) -> float:
     saved = dim_mod.ACTIVE_BACKEND

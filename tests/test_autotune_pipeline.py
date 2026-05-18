@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.autotune.pipeline import (
     AutoTuneResult,
     identify_binding_spec,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _multi_sine(freqs: list[float], fs: float, duration: float) -> np.ndarray:
@@ -117,7 +118,7 @@ class TestAutoTuneTypeHints:
             (identify_binding_spec, "time_series"),
         ]:
             hint = get_type_hints(fn)[param]
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
     def test_public_result_arrays_use_parameterised_ndarray_aliases(self):
@@ -129,5 +130,5 @@ class TestAutoTuneTypeHints:
             hints = get_type_hints(cls)
             for field in fields:
                 hint = hints[field]
-                assert "numpy.ndarray" in str(hint)
+                assert_precise_ndarray_hint(hint)
                 assert "float64" in str(hint)

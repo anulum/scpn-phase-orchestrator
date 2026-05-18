@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.supervisor import (
     sheaf_laplacian,
 )
 from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _identity_maps(n_nodes: int, n_channels: int) -> np.ndarray:
@@ -40,9 +41,9 @@ class TestSheafCoherenceContracts:
         hints = get_type_hints(sheaf_coherence)
 
         assert sheaf_module.sheaf_coherence is sheaf_coherence
-        assert "numpy.ndarray" in str(hints["node_states"])
+        assert_precise_ndarray_hint(hints["node_states"])
         assert "float64" in str(hints["node_states"])
-        assert "numpy.ndarray" in str(hints["restriction_maps"])
+        assert_precise_ndarray_hint(hints["restriction_maps"])
         assert hints["return"] is SheafCoherenceResult
 
     def test_invalid_node_state_shape_is_rejected(self) -> None:

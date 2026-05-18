@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
     phase_transfer_entropy,
     transfer_entropy_matrix,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestTransferEntropy:
@@ -29,7 +30,7 @@ class TestTransferEntropy:
             get_type_hints(transfer_entropy_matrix)["return"],
         )
         for hint in hints:
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
     def test_identical_signals_low_te(self):

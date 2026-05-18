@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.monitor.information_integration import (
     benchmark_integrated_information_approximations,
     integrated_information,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -28,7 +29,7 @@ class TestIntegratedInformationContracts:
     def test_public_array_contract_is_parameterised(self) -> None:
         hints = get_type_hints(integrated_information)
 
-        assert "numpy.ndarray" in str(hints["phase_series"])
+        assert_precise_ndarray_hint(hints["phase_series"])
         assert "float64" in str(hints["phase_series"])
         assert hints["return"] is IntegratedInformationResult
         assert callable(monitor.integrated_information)

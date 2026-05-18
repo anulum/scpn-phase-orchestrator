@@ -28,13 +28,13 @@ coupling from source to target.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, TypeAlias, cast
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 FloatArray: TypeAlias = NDArray[np.float64]
-IntArray: TypeAlias = NDArray[np.integer[Any]]
+IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
     "ACTIVE_BACKEND",

@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.monitor.lyapunov import (
     AVAILABLE_BACKENDS,
     lyapunov_spectrum,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
@@ -219,5 +220,8 @@ class TestBackendTypingContracts:
         hints = get_type_hints(fn)
         for name in ("phases_init", "omegas", "knm", "alpha", "return"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"{label}:{name}",
+            )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"

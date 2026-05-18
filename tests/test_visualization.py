@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.visualization.torus import (
     phase_wheel_json,
     torus_points_json,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestNetworkGraph:
@@ -353,5 +354,5 @@ class TestVisualizationTypeHints:
             (phase_wheel_json, "phases"),
         ]:
             hint = get_type_hints(fn)[param]
-            assert "numpy.ndarray" in str(hint)
+            assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)

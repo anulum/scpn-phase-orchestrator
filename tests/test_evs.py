@@ -19,6 +19,7 @@ import pytest
 
 from scpn_phase_orchestrator.monitor import evs as evs_mod
 from scpn_phase_orchestrator.monitor.evs import EVSMonitor, EVSResult
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def _entrained_phases(
@@ -62,7 +63,7 @@ def test_public_array_contracts_are_parameterised():
         specificity_hints["phases_trials"],
     )
     for hint in hints:
-        assert "numpy.ndarray" in str(hint)
+        assert_precise_ndarray_hint(hint)
     assert "float64" in str(evaluate_hints["phases_trials"])
     assert "int64" in str(evaluate_hints["pause_indices"])
     assert "float64" in str(specificity_hints["phases_trials"])

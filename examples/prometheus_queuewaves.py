@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -26,7 +27,7 @@ def fetch_prometheus_metrics(
     n_services: int = 5,
     n_samples: int = 100,
     seed: int = 42,
-) -> dict[str, np.ndarray]:
+) -> dict[str, NDArray[np.floating]]:
     """Simulate fetching queue depth metrics from Prometheus.
 
     In production, replace with:
@@ -53,7 +54,7 @@ def fetch_prometheus_metrics(
     return services
 
 
-def queue_depth_to_phase(queue_depths: np.ndarray) -> float:
+def queue_depth_to_phase(queue_depths: NDArray[np.floating]) -> float:
     """Convert queue depth time series to instantaneous phase.
 
     Uses the analytic signal (Hilbert transform) of the detrended

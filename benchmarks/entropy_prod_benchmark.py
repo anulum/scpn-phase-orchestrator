@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import entropy_prod as ep_mod
 from scpn_phase_orchestrator.monitor.entropy_prod import (
@@ -30,9 +31,9 @@ TWO_PI = 2.0 * np.pi
 
 def _bench(
     backend: str,
-    phases: np.ndarray,
-    omegas: np.ndarray,
-    knm: np.ndarray,
+    phases: NDArray[np.floating],
+    omegas: NDArray[np.floating],
+    knm: NDArray[np.floating],
     calls: int,
 ) -> float:
     saved = ep_mod.ACTIVE_BACKEND

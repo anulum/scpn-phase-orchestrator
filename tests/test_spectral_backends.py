@@ -48,6 +48,7 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_julia 
 from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo import (
     spectral_eig_mojo,
 )
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 TOL_LAPACK = 1e-12
 TOL_GONUM = 1e-11  # gonum EigenSym vs LAPACK
@@ -211,5 +212,8 @@ class TestBackendTypingContracts:
         hints = get_type_hints(fn)
         for name in ("knm_flat", "return"):
             text = str(hints[name])
-            assert "numpy.ndarray" in text, f"{label}:{name} missing ndarray annotation"
+            assert_precise_ndarray_hint(
+                hints[name],
+                context=f"{label}:{name}",
+            )
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"

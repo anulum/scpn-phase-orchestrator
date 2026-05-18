@@ -29,6 +29,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling import attention_residuals as attnres_mod
 from scpn_phase_orchestrator.coupling.attention_residuals import (
@@ -41,7 +42,7 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 TWO_PI = 2.0 * np.pi
 
 
-def _symmetric_knm(n: int, strength: float, seed: int) -> np.ndarray:
+def _symmetric_knm(n: int, strength: float, seed: int) -> NDArray[np.floating]:
     rng = np.random.default_rng(seed)
     half = rng.uniform(0.0, 2.0 * strength, size=(n, n))
     knm = 0.5 * (half + half.T)
@@ -54,10 +55,10 @@ def _bench_with_backend(
     n: int,
     n_steps: int,
     engine: UPDEEngine,
-    phases0: np.ndarray,
-    omegas: np.ndarray,
-    knm: np.ndarray,
-    alpha: np.ndarray,
+    phases0: NDArray[np.floating],
+    omegas: NDArray[np.floating],
+    knm: NDArray[np.floating],
+    alpha: NDArray[np.floating],
 ) -> float:
     """Return wall-clock seconds for `n_steps` of AttnRes-modulated integration
     using the named backend."""

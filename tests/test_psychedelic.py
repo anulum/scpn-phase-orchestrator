@@ -19,6 +19,7 @@ from scpn_phase_orchestrator.monitor.psychedelic import (
     simulate_psychedelic_trajectory,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_public_array_contracts_are_parameterised():
@@ -33,7 +34,7 @@ def test_public_array_contracts_are_parameterised():
     )
 
     for hint in hints:
-        assert "numpy.ndarray" in str(hint)
+        assert_precise_ndarray_hint(hint)
         assert "float64" in str(hint)
 
 
