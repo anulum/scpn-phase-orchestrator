@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Auto-tune pipeline: raw data → BindingSpec
 
+"""Offline auto-tune pipeline from raw channels to inferred coupling settings.
+
+``identify_binding_spec`` extracts per-channel phases and dominant frequencies,
+estimates a non-negative coupling matrix, initializes zero phase lags, and asks
+the universal prior for a critical-coupling estimate. The result is an
+``AutoTuneResult`` for review or downstream proposal generation; the function
+does not write a binding file, change runtime configuration, or activate the
+inferred parameters.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

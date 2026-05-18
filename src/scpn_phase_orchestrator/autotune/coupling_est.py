@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coupling estimation from phase data
 
+"""Least-squares coupling estimators for observed phase trajectories.
+
+The primary estimator fits pairwise sinusoidal Kuramoto coupling from
+phase-history derivatives and natural frequencies, returning a dense matrix
+with zero diagonal. The harmonics variant expands the regression library with
+higher Fourier sine and cosine terms. Both routines are offline inference
+helpers: they estimate parameters from caller-provided arrays and perform no
+runtime actuation or binding updates.
+"""
+
 from __future__ import annotations
 
 import contextlib

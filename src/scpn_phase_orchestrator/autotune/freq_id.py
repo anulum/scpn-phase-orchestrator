@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Frequency identification via DMD
 
+"""Dynamic Mode Decomposition frequency identification for multichannel data.
+
+``identify_frequencies`` derives dominant modal frequencies and amplitudes from
+SVD-truncated exact DMD, then assigns each channel to the nearest modal
+frequency estimated from Hilbert phase extraction. The function requires enough
+time samples for a forward-shift pair and returns a diagnostic result only; it
+does not alter bindings, layers, or coupling matrices.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

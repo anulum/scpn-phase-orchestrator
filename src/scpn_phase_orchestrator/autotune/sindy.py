@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator - Phase-SINDy Symbolic Discovery
 
+"""Sparse symbolic discovery of phase-dynamics equations from trajectories.
+
+``PhaseSINDy`` builds per-node trigonometric libraries, fits sparse regression
+coefficients, and formats discovered equations after a successful fit. Threshold
+and iteration counts are validated at construction, and the optional Rust path
+is remapped into the same Python coefficient layout. The class mutates only its
+own coefficients and feature-name history; it does not update live coupling
+state.
+"""
+
 from __future__ import annotations
 
 from math import isfinite

@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Phase extraction from raw time series
 
+"""Hilbert-transform phase extraction for finite one-dimensional signals.
+
+The extractor converts a raw real-valued signal into instantaneous phase,
+amplitude, frequency, and dominant FFT frequency, with an optional FFT-domain
+bandpass before Hilbert analysis. Inputs must be one-dimensional and long
+enough for stable derivative and FFT estimates. The module returns diagnostic
+arrays only and does not infer bindings or apply filtering outside its local
+copy.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

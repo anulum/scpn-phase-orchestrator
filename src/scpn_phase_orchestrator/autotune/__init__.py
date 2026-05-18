@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Auto-tune pipeline
 
+"""Public auto-tune facade for reviewable binding and parameter proposals.
+
+The package gathers time-series discovery, phase extraction, frequency
+identification, coupling estimation, symbolic SINDy discovery, replay-policy
+search, learner proposals, and binding-spec proposal helpers. Public exports
+produce review artifacts and inferred parameters only; validation, provenance,
+and mutation boundaries are owned by the concrete modules rather than hidden in
+the package initializer.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.autotune.binding_proposal import (

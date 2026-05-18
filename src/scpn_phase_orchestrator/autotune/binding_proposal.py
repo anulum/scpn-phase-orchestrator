@@ -6,6 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — reviewable auto-binding proposals
 
+"""Review-only binding proposal builders for CSV, event-log, and graph inputs.
+
+The module converts imported source text into ``StudioProjectState`` proposals
+with provenance, confidence factors, validator output, and inferred channel
+assignments. CSV samples are checked for numeric finite channels, event logs for
+event structure, and graph payloads for node/edge integrity before YAML is
+generated. The functions never activate bindings or mutate runtime state; they
+prepare operator-review artifacts.
+"""
+
 from __future__ import annotations
 
 import csv
