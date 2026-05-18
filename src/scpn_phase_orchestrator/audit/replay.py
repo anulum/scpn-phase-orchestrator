@@ -300,14 +300,17 @@ class ReplayEngine:
             except (TypeError, ValueError):
                 return False, verified
 
-            if "amplitudes" in nxt:
-                logged_next = np.concatenate(
-                    [np.asarray(nxt["phases"]), np.asarray(nxt["amplitudes"])]
-                )
-            else:
-                logged_next = np.asarray(nxt["phases"])
+            try:
+                if "amplitudes" in nxt:
+                    logged_next = np.concatenate(
+                        [np.asarray(nxt["phases"]), np.asarray(nxt["amplitudes"])]
+                    )
+                else:
+                    logged_next = np.asarray(nxt["phases"])
 
-            if not np.allclose(computed, logged_next, atol=atol):
+                if not np.allclose(computed, logged_next, atol=atol):
+                    return False, verified
+            except (TypeError, ValueError):
                 return False, verified
             verified += 1
 
