@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — phase-vector gossip synchronisation
 
+"""Deterministic phase-vector gossip primitives.
+
+This module defines the canonical JSON wire record for UPDE node phase sharing
+and a local ingestion/replay implementation for offline validation. All
+messages are digest checked, sequence-watermarked, protocol-versioned, and
+phase-step bounded before they can influence a local node; real transports are
+kept outside this module.
+"""
+
 from __future__ import annotations
 
 import hashlib

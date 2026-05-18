@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Actuation constraints
 
+"""Projection constraints for bounded supervisor control actions.
+
+`ActionProjector` is the last deterministic clamp before a control proposal is
+handed to actuator mapping. It preserves the requested knob/scope metadata and
+only changes the scalar value, first applying configured absolute bounds and
+then per-step rate limits relative to the previous actuator value.
+"""
+
 from __future__ import annotations
 
 from dataclasses import replace

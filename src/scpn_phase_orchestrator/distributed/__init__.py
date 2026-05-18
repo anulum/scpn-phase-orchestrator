@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — distributed synchronisation protocols
 
+"""Transport-neutral distributed phase synchronisation API.
+
+The package exports canonical phase-vector gossip messages, deterministic
+lossy replay helpers, and local node ingestion logic. It performs digest,
+shape, sequence, timeout, and bounded-correction validation, but it never opens
+sockets or starts a live transport by itself.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.distributed.sync import (

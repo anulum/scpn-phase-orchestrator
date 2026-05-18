@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Actuation mapper
 
+"""Map validated control actions onto configured actuator records.
+
+The mapper is deliberately data-only: it validates binding-level actuator
+metadata, clamps finite action values to each actuator limit, and returns
+command dictionaries for a transport or hardware layer to consume. Invalid
+action values are not sent onward, and invalid mapping definitions fail at
+construction time.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Actuation layer
 
+"""Actuation boundary for reviewed SPO control commands.
+
+The package exposes the value/rate projector and the binding-spec mapper that
+turn supervisor proposals into actuator-specific command dictionaries. It does
+not open hardware transports; downstream connectors consume the mapped command
+records after policy, value, and safety validation have already run.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector

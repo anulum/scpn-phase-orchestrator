@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Imprint subsystem
 
+"""Memory-imprint state and update model.
+
+The imprint subsystem tracks bounded per-oscillator exposure memory and applies
+it to coupling, lag, and bifurcation parameters. Public entry points fail
+closed on non-finite state, exposure, and timing inputs so imprint corruption
+cannot silently propagate into the UPDE or supervisor paths.
+"""
+
 from __future__ import annotations
 
 from scpn_phase_orchestrator.imprint.state import ImprintState

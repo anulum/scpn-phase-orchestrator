@@ -6,6 +6,15 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Imprint update rules
 
+"""Validated imprint accumulation and modulation rules.
+
+`ImprintModel` decays existing memory, accumulates non-negative exposure, clips
+to a configured saturation ceiling, and applies the resulting vector to `K`,
+`alpha`, or `mu` surfaces. All public methods reject boolean, non-numeric,
+non-finite, negative-state, or shape-mismatched inputs before returning arrays
+for downstream dynamics.
+"""
+
 from __future__ import annotations
 
 from numbers import Real

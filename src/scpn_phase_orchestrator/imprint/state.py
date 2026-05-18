@@ -6,6 +6,14 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Imprint state representation
 
+"""Immutable per-oscillator imprint state containers.
+
+`ImprintState` stores the L9 memory vector, its last update timestamp, and
+optional attribution weights. Validation is intentionally performed by the
+update/model layer so serialized historical states can still be inspected
+before being accepted into active dynamics.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
