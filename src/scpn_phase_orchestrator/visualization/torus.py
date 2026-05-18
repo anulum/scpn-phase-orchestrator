@@ -85,6 +85,7 @@ def phase_wheel_json(phases: FloatArray, layer_names: list[str] | None = None) -
 
     Each oscillator is a point at angle=θ_i, radius=1 on the unit circle.
     """
+    phases = _validate_phase_array(phases, name="phases")
     n = len(phases)
     if layer_names is None:
         layer_names = [f"L{i}" for i in range(n)]

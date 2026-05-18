@@ -134,6 +134,24 @@ class TestPhaseWheel:
         data = json.loads(phase_wheel_json(phases, layer_names=["A", "B"]))
         assert data["oscillators"][0]["name"] == "A"
 
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([0.0, float("nan")]),
+            np.array([0.0, float("inf")]),
+            np.array([True, False]),
+            np.array([1.0 + 0.0j]),
+            np.array(["0.0"], dtype=object),
+        ],
+    )
+    def test_rejects_invalid_phases(self, phases: object):
+        with pytest.raises(ValueError, match="phases must be finite"):
+            phase_wheel_json(phases)
+
+    def test_rejects_multidimensional_phases(self):
+        with pytest.raises(ValueError, match="phases must be 1-D"):
+            phase_wheel_json(np.array([[0.0, 1.0]]))
+
 
 class TestVisualizationPipelineWiring:
     """Pipeline: engine → phases/K_nm → visualization JSON."""
