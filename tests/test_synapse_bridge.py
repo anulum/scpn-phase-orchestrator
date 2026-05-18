@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import (
     SynapseCouplingBridge,
@@ -16,12 +17,114 @@ from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import (
 
 
 class TestSynapseCouplingBridge:
+    @pytest.mark.parametrize("n_oscillators", [0, -1, 1.5, True])
+    def test_rejects_invalid_n_oscillators(self, n_oscillators: object) -> None:
+        with pytest.raises(ValueError, match="n_oscillators"):
+            SynapseCouplingBridge(n_oscillators)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("scale", [0.0, -1.0, np.nan, np.inf, True])
+    def test_rejects_invalid_scale_parameters(self, scale: object) -> None:
+        with pytest.raises(ValueError, match="stdp_scale"):
+            SynapseCouplingBridge(3, stdp_scale=scale)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="gap_scale"):
+            SynapseCouplingBridge(3, gap_scale=scale)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="ca_scale"):
+            SynapseCouplingBridge(3, ca_scale=scale)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "weights",
+        [
+            np.ones((2, 3)),
+            np.ones(3),
+            np.array([[0.0, np.nan], [0.0, 0.0]]),
+        ],
+    )
+    def test_rejects_invalid_stdp_weight_matrix(self, weights: object) -> None:
+        bridge = SynapseCouplingBridge(2)
+        with pytest.raises(ValueError, match="weights"):
+            bridge.update_stdp_weights(weights)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "conductances",
+        [
+            np.ones((2, 3)),
+            np.ones(3),
+            np.array([[0.0, np.inf], [0.0, 0.0]]),
+            np.array([[0.0, -1.0], [0.0, 0.0]]),
+        ],
+    )
+    def test_rejects_invalid_gap_conductance_matrix(
+        self,
+        conductances: object,
+    ) -> None:
+        bridge = SynapseCouplingBridge(2)
+        with pytest.raises(ValueError, match="conductances"):
+            bridge.update_gap_conductances(conductances)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "ca_levels",
+        [
+            np.ones((2, 2)),
+            np.ones(3),
+            np.array([0.0, np.nan]),
+            np.array([0.0, -1.0]),
+        ],
+    )
+    def test_rejects_invalid_astrocyte_ca_vector(self, ca_levels: object) -> None:
+        bridge = SynapseCouplingBridge(2)
+        with pytest.raises(ValueError, match="ca_levels"):
+            bridge.update_astrocyte_ca(ca_levels)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "knm_base",
+        [
+            np.ones((2, 3)),
+            np.ones(3),
+            np.array([[0.0, np.inf], [0.0, 0.0]]),
+        ],
+    )
+    def test_rejects_invalid_knm_base(self, knm_base: object) -> None:
+        bridge = SynapseCouplingBridge(2)
+        with pytest.raises(ValueError, match="knm_base"):
+            bridge.apply_to_knm(knm_base)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "m_k",
+        [
+            np.ones((2, 2)),
+            np.ones(3),
+            np.array([0.0, np.nan]),
+        ],
+    )
+    def test_rejects_invalid_imprint_vector(self, m_k: object) -> None:
+        bridge = SynapseCouplingBridge(2)
+        with pytest.raises(ValueError, match="m_k"):
+            bridge.apply_to_imprint(m_k)  # type: ignore[arg-type]
+
     def test_initial_snapshot_zeros(self) -> None:
         bridge = SynapseCouplingBridge(4)
         snap = bridge.snapshot()
         np.testing.assert_array_equal(snap.knm_delta, 0.0)
         np.testing.assert_array_equal(snap.gap_coupling, 0.0)
         assert snap.mean_weight_change == 0.0
+
+    def test_stdp_weights_are_copied(self) -> None:
+        bridge = SynapseCouplingBridge(2)
+        weights = np.array([[0.0, 1.0], [0.0, 0.0]])
+        bridge.update_stdp_weights(weights)
+        weights[0, 1] = 99.0
+
+        snap = bridge.snapshot()
+        assert snap.knm_delta[0, 1] == 1.0
+
+    def test_astrocyte_ca_levels_are_copied(self) -> None:
+        bridge = SynapseCouplingBridge(2)
+        ca_levels = np.array([0.0, 1.0])
+        bridge.update_astrocyte_ca(ca_levels)
+        ca_levels[1] = 99.0
+
+        snap = bridge.snapshot()
+        assert snap.mean_ca == 0.5
 
     def test_stdp_delta(self) -> None:
         bridge = SynapseCouplingBridge(3)
