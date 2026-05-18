@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 
@@ -54,6 +57,12 @@ def test_channel_is_physical():
     states = extractor.extract(signal, fs)
     assert states[0].channel == "P"
     assert states[0].node_id == "p1"
+
+
+@pytest.mark.parametrize("node_id", ["", "   ", 42, True])
+def test_invalid_node_id_rejected(node_id: Any):
+    with pytest.raises(ValueError, match="node_id must be a non-empty string"):
+        PhysicalExtractor(node_id=node_id)
 
 
 def test_quality_score_aggregation():
