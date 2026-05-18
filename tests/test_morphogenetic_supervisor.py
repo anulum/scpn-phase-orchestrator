@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
@@ -400,6 +402,8 @@ class TestMorphogeneticTopologySupervisor:
         supervisor = MorphogeneticTopologySupervisor()
         with pytest.raises(ValueError, match="one-dimensional"):
             supervisor.step(np.zeros((2, 2)), _zero_knm(2))
+        with pytest.raises(ValueError, match=r"knm must have shape \(2, 2\)"):
+            supervisor.step(np.array([0.0, 0.1]), np.array([0.0, 0.2, 0.3]))
         with pytest.raises(ValueError, match="shape"):
             supervisor.step(np.zeros(3), _zero_knm(2))
         with pytest.raises(ValueError, match="field must have shape"):
@@ -430,6 +434,132 @@ class TestMorphogeneticTopologySupervisor:
     ) -> None:
         with pytest.raises(ValueError, match=message):
             build_morphogenetic_field_snapshot(MorphogeneticFieldState(field))
+
+    def test_coupling_updates_obey_max_delta_and_max_coupling_boundaries(self) -> None:
+        phases = np.array([0.0, 0.1], dtype=np.float64)
+        knm = _zero_knm(2)
+        supervisor = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(
+                growth_rate=1.0,
+                shrink_rate=0.0,
+                diffusion_rate=0.0,
+                coherence_target=0.0,
+                max_delta=10.0,
+                max_coupling=0.05,
+            )
+        )
+
+        result = supervisor.step(phases, knm)
+
+        assert result.knm[0, 1] == pytest.approx(0.05)
+        assert result.knm[1, 0] == pytest.approx(0.05)
+        assert result.delta_norm == pytest.approx(np.sqrt(2.0) * 0.05)
+        assert np.all(result.knm <= 0.05)
+
+    def test_thresholded_deltas_do_not_emit_spurious_edges(self) -> None:
+        phases = np.array([0.0, 0.0], dtype=np.float64)
+        knm = _zero_knm(2)
+        supervisor = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(
+                growth_rate=1.0,
+                shrink_rate=1.0,
+                diffusion_rate=0.0,
+                coherence_target=0.0,
+                max_delta=1e-13,
+                max_coupling=1.0,
+            )
+        )
+
+        result = supervisor.step(phases, knm)
+
+        assert result.grown_edges == ()
+        assert result.shrunk_edges == ()
+        assert result.field_state.field[0, 1] > 0.0
+        assert result.field_state.field[1, 0] > 0.0
+        assert result.delta_norm == pytest.approx(np.sqrt(2.0) * 1e-13)
+
+    def test_step_does_not_mutate_inputs(self) -> None:
+        phases = np.array([0.0, np.pi / 2, np.pi], dtype=np.float64)
+        knm = np.array(
+            [[0.0, 0.2, 0.1], [0.1, 0.0, 0.3], [0.4, 0.0, 0.0]],
+            dtype=np.float64,
+        )
+        field = np.array(
+            [[0.0, 0.5, 0.8], [0.5, 0.0, 0.4], [0.2, 0.6, 0.0]],
+            dtype=np.float64,
+        )
+        knm_before = knm.copy()
+        field_before = field.copy()
+
+        MorphogeneticTopologySupervisor().step(
+            phases,
+            knm,
+            MorphogeneticFieldState(field),
+        )
+
+        np.testing.assert_allclose(knm, knm_before)
+        np.testing.assert_allclose(field, field_before)
+
+    def test_step_result_audit_record_is_deterministic(self) -> None:
+        phases = np.array([0.0, 0.2, np.pi], dtype=np.float64)
+        result = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(growth_rate=0.35, max_delta=0.04)
+        ).step(phases, _zero_knm(3))
+
+        first = result.to_audit_record()
+        second = result.to_audit_record()
+        snapshot_first = result.field_state.to_audit_snapshot()
+        snapshot_second = result.field_state.to_audit_snapshot()
+
+        assert first == second
+        assert snapshot_first == snapshot_second
+        assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+        assert first["field"] == snapshot_first
+
+    def test_source_ranking_is_deterministic_by_weight_then_coordinates(self) -> None:
+        field = np.array(
+            [
+                [0.0, 0.2, 0.9],
+                [0.9, 0.0, 0.5],
+                [0.9, 0.5, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        snapshot = build_morphogenetic_field_snapshot(
+            MorphogeneticFieldState(field),
+            top_k=4,
+            palette=" .:#",
+        )
+
+        assert snapshot.top_edges == (
+            (0, 2, pytest.approx(0.9)),
+            (1, 0, pytest.approx(0.9)),
+            (2, 0, pytest.approx(0.9)),
+            (1, 2, pytest.approx(0.5)),
+        )
+
+    def test_snapshot_top_k_zero_returns_empty_top_edges(self) -> None:
+        field = np.array(
+            [[0.0, 0.2], [0.3, 0.0]],
+            dtype=np.float64,
+        )
+        snapshot = build_morphogenetic_field_snapshot(
+            MorphogeneticFieldState(field),
+            top_k=0,
+        )
+        assert snapshot.top_edges == ()
+
+    def test_svg_renderer_accepts_step_results(self) -> None:
+        result = MorphogeneticTopologySupervisor(
+            MorphogeneticFieldPolicy(growth_rate=0.1, max_delta=0.01)
+        ).step(np.array([0.0, 0.1, 0.2]), _zero_knm(3))
+
+        svg = render_morphogenetic_field_svg(result, top_k=1)
+
+        assert svg.snapshot.shape == (3, 3)
+        assert svg.snapshot.top_edges == (
+            (0, 1, pytest.approx(result.field_state.field[0, 1])),
+        )
 
     def test_result_feeds_upde_engine(self) -> None:
         phases = np.array([0.0, 0.02, 0.04, np.pi, np.pi + 0.01, np.pi + 0.03])

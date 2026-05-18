@@ -350,3 +350,143 @@ class TestValueAlignmentBehaviour:
     ) -> None:
         with pytest.raises(ValueError, match="value_alignment"):
             value_alignment_policy_from_template(template)
+
+    def test_constraint_rejects_non_finite_bounds(self) -> None:
+        with pytest.raises(ValueError, match="must be finite"):
+            ValueConstraint("limit-K", max_value=float("inf"))
+
+    def test_template_rejects_non_numeric_minimum_score(self) -> None:
+        with pytest.raises(ValueError, match="numeric"):
+            value_alignment_policy_from_template(
+                {"minimum_score": True, "constraints": [{"name": "limit-K"}]}
+            )
+
+    def test_multiple_bound_violations_are_reported_for_one_action(self) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(
+                    ValueConstraint(
+                        "window",
+                        knob="K",
+                        min_value=0.0,
+                        max_abs_value=0.5,
+                    ),
+                )
+            )
+        )
+
+        decision = guard.evaluate([_action(knob="K", value=-1.0)])
+
+        assert decision.blocked_actions == (_action(knob="K", value=-1.0),)
+        assert decision.violations[0].failed_bounds == (
+            "min_value",
+            "max_abs_value",
+        )
+
+    def test_scope_constraint_is_layer_specific(self) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(
+                    ValueConstraint(
+                        "local-only",
+                        knob="K",
+                        scope="layer-local",
+                        max_abs_value=0.1,
+                    ),
+                )
+            )
+        )
+        blocked = ControlAction(
+            knob="K",
+            scope="layer-local",
+            value=0.2,
+            ttl_s=5.0,
+            justification="test proposal",
+        )
+        global_action = ControlAction(
+            knob="K",
+            scope="global",
+            value=0.2,
+            ttl_s=5.0,
+            justification="test proposal",
+        )
+
+        local_decision = guard.evaluate([blocked])
+        global_decision = guard.evaluate([global_action])
+
+        assert not local_decision.satisfied
+        assert local_decision.violations[0].scope == "layer-local"
+        assert global_decision.satisfied
+        assert not global_decision.violations
+
+    def test_audit_record_is_deterministic_and_repeatable(self) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", max_abs_value=1.0),),
+                fallback_actions=(
+                    ControlAction(
+                        knob="zeta",
+                        scope="global",
+                        value=0.0,
+                        ttl_s=1.0,
+                        justification="alignment fallback: hold",
+                    ),
+                ),
+                minimum_score=1.0,
+            )
+        )
+
+        first = guard.evaluate([_action(value=1.5)]).to_audit_record()
+        second = guard.evaluate([_action(value=1.5)]).to_audit_record()
+
+        assert first == second
+        assert first["violations"][0]["counterfactual"] == (
+            "blocked_action_prevents_constraint_violation"
+        )
+
+    def test_threshold_fallback_with_no_fallback_actions_is_non_actuating(self) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("prefer-small", max_abs_value=1.0),),
+                minimum_score=0.99,
+            )
+        )
+
+        decision = guard.evaluate([_action(value=0.99)])
+
+        assert not decision.satisfied
+        assert not decision.violations
+        assert decision.actions_to_apply == ()
+        assert decision.score_counterfactuals[0].counterfactual == (
+            "fallback_applied_because_alignment_score_below_policy_minimum"
+        )
+
+    def test_zero_total_weight_scores_falls_back_to_default_score(self) -> None:
+        class _ZeroTotalWeight:
+            def __gt__(self, other: object) -> bool:
+                return True
+
+            def __add__(self, other: object) -> float:
+                return 0.0
+
+            def __radd__(self, other: object) -> float:
+                return 0.0
+
+            def __mul__(self, other: float) -> float:
+                return 0.0
+
+            def __rmul__(self, other: float) -> float:
+                return 0.0
+
+        constraint = ValueConstraint("max-small", max_abs_value=1.0)
+        object.__setattr__(constraint, "weight", _ZeroTotalWeight())
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(constraint,),
+            )
+        )
+
+        decision = guard.evaluate([_action(value=0.5)])
+
+        assert decision.satisfied
+        assert decision.alignment_score == pytest.approx(1.0)
