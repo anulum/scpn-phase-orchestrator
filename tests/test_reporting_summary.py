@@ -181,6 +181,62 @@ def test_audit_report_summary_includes_integrated_information_records() -> None:
     assert phi_summary["phi_series"] == [0.12, 0.18]
 
 
+def test_audit_report_summary_picks_binding_summary_field_when_present() -> None:
+    entries: list[dict[str, object]] = [
+        {
+            "header": True,
+            "binding_summary": {
+                "name": "primary",
+                "channel_algebra": {"derived_channels": ["B"]},
+            },
+            "binding_config": {"name": "fallback"},
+        },
+        {"step": 0, "layers": [{"R": 0.3}], "regime": "nominal"},
+    ]
+
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=True,
+        hash_chain_verified=1,
+    )
+    binding_summary = cast("dict[str, object]", summary["binding_summary"])
+
+    assert binding_summary["name"] == "primary"
+
+
+def test_audit_report_summary_defaults_when_final_step_fields_missing() -> None:
+    summary = build_audit_report_summary(
+        [{"step": 0, "layers": [{"R": 0.5}]}],
+        hash_chain_ok=False,
+        hash_chain_verified=0,
+    )
+
+    assert summary["final_regime"] == "unknown"
+    assert summary["final_stability"] == 0.0
+
+
+def test_audit_report_summary_falls_back_default_claim_boundary() -> None:
+    entries: list[dict[str, object]] = [
+        {"step": 0, "layers": [{"R": 0.8}], "regime": "nominal"},
+        {
+            "monitor": "integrated_information",
+            "phi": 0.21,
+            "normalised_phi": 0.42,
+        },
+    ]
+
+    summary = build_audit_report_summary(
+        entries,
+        hash_chain_ok=True,
+        hash_chain_verified=2,
+    )
+    phi_summary = cast("dict[str, object]", summary["integrated_information"])
+
+    assert phi_summary["records"] == 1
+    assert phi_summary["latest_phi"] == 0.21
+    assert phi_summary["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
+
+
 def test_audit_report_summary_skips_non_finite_integrated_information_records() -> None:
     entries: list[dict[str, object]] = [
         {"step": 0, "layers": [{"R": 0.8}], "regime": "nominal"},

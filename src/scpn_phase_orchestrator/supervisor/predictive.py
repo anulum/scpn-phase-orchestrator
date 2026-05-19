@@ -359,6 +359,12 @@ class FEPPredictiveSupervisor:
         boundary_state: BoundaryState,
     ) -> list[ControlAction]:
         """Return FEP-MPC control actions for the current observation."""
+        if not isinstance(upde_state, UPDEState):
+            raise ValueError(f"upde_state must be a UPDEState, got {upde_state!r}")
+        if not isinstance(boundary_state, BoundaryState):
+            raise ValueError(
+                f"boundary_state must be a BoundaryState, got {boundary_state!r}"
+            )
         if boundary_state.hard_violations:
             return [
                 ControlAction(
@@ -591,6 +597,8 @@ def _validate_hierarchy_inputs(
     child_drive_gain: float,
     parent_drive_gain: float,
 ) -> None:
+    if not isinstance(children, Mapping):
+        raise ValueError("children must be a mapping of child observations")
     if not children:
         raise ValueError("children must contain at least one child observation")
     _require_positive_real(dt, "dt")

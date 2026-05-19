@@ -105,6 +105,14 @@ class TestSheafCoherenceContracts:
         with pytest.raises(ValueError, match="tolerance"):
             sheaf_laplacian(maps, tolerance=tolerance)  # type: ignore[arg-type]
 
+    def test_non_square_restriction_maps_are_rejected(self) -> None:
+        with pytest.raises(ValueError, match="restriction_maps"):
+            sheaf_laplacian(np.zeros((2, 3, 1, 1), dtype=np.float64))
+
+    def test_supervisor_rejects_invalid_tolerance(self) -> None:
+        with pytest.raises(ValueError, match="tolerance"):
+            SheafCoherenceSupervisor(tolerance=-1e-3)
+
 
 class TestSheafCoherenceBehaviour:
     def test_consistent_global_section_has_zero_obstruction(self) -> None:
@@ -175,6 +183,31 @@ class TestSheafCoherenceBehaviour:
         assert result.obstruction_score == pytest.approx(0.0)
         assert result.kernel_dimension == 2
 
+    def test_single_node_case_preserves_channel_kernel_dim(self) -> None:
+        states = np.array([[0.25, -0.5]], dtype=np.float64)
+        maps = np.zeros((1, 1, 2, 2), dtype=np.float64)
+        result = sheaf_coherence(states, maps)
+
+        assert result.edge_count == 0
+        assert result.obstruction_dimension == 0
+        assert result.kernel_dimension == states.shape[1]
+        assert result.laplacian.shape == (2, 2)
+        assert np.allclose(result.laplacian, 0.0)
+
+    def test_supervisor_uses_configured_tolerance_for_edge_detection(self) -> None:
+        states = np.array([[0.0], [1e-9]], dtype=np.float64)
+        maps = _identity_maps(n_nodes=2, n_channels=1)
+
+        default = SheafCoherenceSupervisor().assess(states, maps)
+        configured = SheafCoherenceSupervisor(tolerance=1e-6).assess(states, maps)
+        strict = SheafCoherenceSupervisor(tolerance=1e-12).assess(states, maps)
+
+        assert default.obstruction_dimension == 0
+        assert configured.edge_count == 2
+        assert configured.obstruction_dimension == 0
+        assert strict.obstruction_dimension == 2
+        assert strict.edge_count == 2
+
     def test_audit_record_is_compact_and_serialisable(self) -> None:
         states = np.zeros((2, 2), dtype=np.float64)
         maps = _identity_maps(n_nodes=2, n_channels=2)
@@ -214,6 +247,71 @@ class TestSheafCoherenceBehaviour:
             record["top_residual_edges"][0]["norm"]
             >= (record["top_residual_edges"][1]["norm"])
         )
+
+    def test_summary_top_k_is_bounded_by_edge_count_and_stable(self) -> None:
+        states = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 2.0],
+                [0.0, -1.0],
+            ],
+            dtype=np.float64,
+        )
+        result = sheaf_coherence(states, _identity_maps(n_nodes=3, n_channels=2))
+        summary = build_sheaf_obstruction_summary(
+            result, warning_threshold=0.01, top_k=99
+        )
+
+        residual_norms = np.linalg.norm(result.residuals.reshape(-1, 2), axis=1)
+        expected = np.sort(residual_norms[residual_norms > 0.0])[::-1]
+        reported = np.array(
+            [edge[2] for edge in summary.top_residual_edges], dtype=np.float64
+        )
+        assert len(summary.top_residual_edges) == result.edge_count
+        assert np.all(reported <= expected[: len(reported)] + 1e-12)
+        assert np.all(np.diff(reported) <= 1e-12)
+
+    def test_obstruction_severity_uses_threshold_boundaries(self) -> None:
+        synthetic = SheafCoherenceResult(
+            laplacian=np.zeros((2, 2), dtype=np.float64),
+            residuals=np.zeros((2, 2, 1), dtype=np.float64),
+            obstruction_score=0.25,
+            consistency_energy=0.0,
+            kernel_dimension=2,
+            obstruction_dimension=0,
+            edge_count=0,
+            tolerance=1e-8,
+        )
+        exact_warning = build_sheaf_obstruction_summary(
+            synthetic,
+            warning_threshold=0.25,
+            critical_threshold=0.5,
+        )
+        exact_critical = build_sheaf_obstruction_summary(
+            synthetic,
+            warning_threshold=0.0,
+            critical_threshold=0.25,
+        )
+        below_threshold = build_sheaf_obstruction_summary(
+            synthetic,
+            warning_threshold=0.5,
+            critical_threshold=1.0,
+        )
+
+        assert exact_warning.severity == "warning"
+        assert exact_critical.severity == "critical"
+        assert below_threshold.severity == "nominal"
+
+    def test_kernel_dimension_is_tolerant_to_small_numerical_noise(self) -> None:
+        laplacian = np.array(
+            [
+                [1.0, -1.0 + 1e-12],
+                [-1.0, 1.0 + 1e-12],
+            ],
+            dtype=np.float64,
+        )
+        assert sheaf_module._kernel_dimension(laplacian, tolerance=1e-8) == 1
+        assert sheaf_module._kernel_dimension(laplacian, tolerance=1e-14) == 0
 
     def test_obstruction_summary_classifies_nominal_and_warning_states(self) -> None:
         nominal = sheaf_coherence(

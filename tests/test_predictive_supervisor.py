@@ -231,6 +231,25 @@ class TestDecide:
         assert actions[0].value == pytest.approx(0.2)
         assert "CRITICAL" in actions[0].justification
 
+    def test_zero_step_critical_prediction_triggers_max_boost(self):
+        ps = PredictiveSupervisor(2, dt=0.01, horizon=6, divergence_threshold=0.0)
+        phases = np.array([0.0, np.pi], dtype=np.float64)
+        omegas = np.ones(2, dtype=np.float64)
+        knm = np.zeros((2, 2), dtype=np.float64)
+        alpha = np.zeros((2, 2), dtype=np.float64)
+
+        pred = ps.predict(phases, omegas, knm, alpha)
+        actions = ps.decide(
+            phases, omegas, knm, alpha, _make_state(0.5), BoundaryState()
+        )
+
+        assert pred.steps_to_degradation == 0
+        assert pred.will_critical
+        assert len(actions) == 1
+        assert actions[0].knob == "K"
+        assert actions[0].value == pytest.approx(0.2)
+        assert "in 0 steps" in actions[0].justification
+
     def test_hard_violation_action(self):
         """Hard boundary violation → zeta=0.1 override."""
         ps = PredictiveSupervisor(4, dt=0.01)
@@ -389,6 +408,30 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         )
 
         assert actions == []
+
+    @pytest.mark.parametrize(
+        ("upde_state", "boundary_state", "match"),
+        [
+            (object(), BoundaryState(), "upde_state"),
+            (_make_state(0.9), object(), "boundary_state"),
+            (_make_state(0.9), True, "boundary_state"),
+        ],
+    )
+    def test_fep_decide_rejects_malformed_state_objects(
+        self,
+        upde_state: object,
+        boundary_state: object,
+        match: str,
+    ):
+        supervisor = FEPPredictiveSupervisor(4, dt=0.01)
+
+        with pytest.raises(ValueError, match=match):
+            supervisor.decide(
+                np.zeros(4),
+                np.ones(4),
+                upde_state,  # type: ignore[arg-type]
+                boundary_state,  # type: ignore[arg-type]
+            )
 
     @pytest.mark.parametrize(
         ("kwargs", "match"),
@@ -589,3 +632,26 @@ class TestFEPHierarchyInPredictiveCoverage:
     def test_fep_hierarchy_rejects_invalid_child_observations(self, children, match):
         with pytest.raises(ValueError, match=match):
             assess_fep_hierarchy(children, dt=0.01)
+
+    def test_fep_hierarchy_rejects_non_mapping_children(self):
+        with pytest.raises(ValueError, match="children must be a mapping"):
+            assess_fep_hierarchy("bad-children", dt=0.01)
+
+    def test_fep_hierarchy_parent_phase_encoding_extremes(self):
+        children = {
+            "coherent_child": (
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+            ),
+            "antiphase_child": (
+                np.array([0.0, np.pi], dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+            ),
+        }
+
+        hierarchy = assess_fep_hierarchy(children, dt=0.01)
+
+        assert hierarchy.parent_phase_encoding == (
+            pytest.approx(0.0),
+            pytest.approx(np.pi),
+        )
