@@ -93,6 +93,61 @@ class TestModulationIndex:
         amp = 1.0 + 0.25 * np.cos(theta)
         assert pac_mod._modulation_index_python(theta, amp, n_bins=1) == 0.0
 
+    def test_modulation_index_non_positive_bins_short_circuit(self) -> None:
+        theta = np.linspace(0.0, TWO_PI, 16, endpoint=False)
+        amp = np.ones_like(theta)
+        assert modulation_index(theta, amp, n_bins=0) == 0.0
+        assert modulation_index(theta, amp, n_bins=-2) == 0.0
+
+    @pytest.mark.parametrize(
+        ("backend_value", "expected"),
+        [
+            (-1.0, 0.0),
+            (2.5, 1.0),
+        ],
+    )
+    def test_modulation_index_backend_clamps_out_of_range_mi(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_value: float,
+        expected: float,
+    ) -> None:
+        def fake_modulation_index(
+            _theta_low: np.ndarray,
+            _amp_high: np.ndarray,
+            _n_bins: int,
+        ) -> float:
+            return backend_value
+
+        monkeypatch.setattr(
+            pac_mod,
+            "_dispatch",
+            lambda _fn_name: fake_modulation_index,
+        )
+        theta = np.linspace(0.0, TWO_PI, 16, endpoint=False)
+        amp = np.ones_like(theta)
+        assert modulation_index(theta, amp) == expected
+
+    def test_modulation_index_backend_rejects_non_finite(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_modulation_index(
+            _theta_low: np.ndarray,
+            _amp_high: np.ndarray,
+            _n_bins: int,
+        ) -> float:
+            return float("nan")
+
+        monkeypatch.setattr(
+            pac_mod,
+            "_dispatch",
+            lambda _fn_name: fake_modulation_index,
+        )
+        theta = np.linspace(0.0, TWO_PI, 16, endpoint=False)
+        amp = np.ones_like(theta)
+        with pytest.raises(ValueError, match="modulation_index backend"):
+            modulation_index(theta, amp)
+
 
 class TestPACMatrix:
     def test_shape(self) -> None:
@@ -117,6 +172,23 @@ class TestPACMatrix:
             pac_matrix(np.zeros((10, 3)), np.zeros((10, 4)))
 
     @pytest.mark.parametrize(
+        ("phases", "amps", "expected_shape"),
+        [
+            (np.zeros((0, 4)), np.zeros((0, 4)), (4, 4)),
+            (np.zeros((6, 0)), np.zeros((6, 0)), (0, 0)),
+        ],
+    )
+    def test_boundary_shapes_short_circuit_to_zero(
+        self,
+        phases: np.ndarray,
+        amps: np.ndarray,
+        expected_shape: tuple[int, int],
+    ) -> None:
+        mat = pac_matrix(phases, amps)
+        assert mat.shape == expected_shape
+        assert np.all(mat == 0.0)
+
+    @pytest.mark.parametrize(
         ("phases", "amps", "n_bins", "match"),
         [
             (np.array([[0.0, np.nan]]), np.ones((1, 2)), 18, "phases_history"),
@@ -135,6 +207,44 @@ class TestPACMatrix:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             pac_matrix(phases, amps, n_bins=n_bins)  # type: ignore[arg-type]
+
+
+class TestPACBackendErrorPaths:
+    def test_pac_matrix_rejects_backend_wrong_size_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_matrix(
+            _phases_flat: np.ndarray,
+            _amplitudes_flat: np.ndarray,
+            _t: int,
+            _n: int,
+            _n_bins: int,
+        ) -> np.ndarray:
+            return np.zeros(3, dtype=np.float64)
+
+        monkeypatch.setattr(pac_mod, "_dispatch", lambda _fn_name: fake_matrix)
+        phases = np.random.default_rng(0).uniform(0, TWO_PI, (4, 2))
+        amps = np.abs(np.random.default_rng(1).standard_normal((4, 2)))
+        with pytest.raises(ValueError, match=r"n\*n values"):
+            pac_matrix(phases, amps)
+
+    def test_pac_matrix_rejects_backend_non_finite_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_matrix(
+            phases_flat: np.ndarray,
+            amplitudes_flat: np.ndarray,
+            t: int,
+            n: int,
+            n_bins: int,
+        ) -> np.ndarray:
+            return np.array([0.0, 0.0, np.inf, 0.0], dtype=np.float64)
+
+        monkeypatch.setattr(pac_mod, "_dispatch", lambda _fn_name: fake_matrix)
+        phases = np.random.default_rng(0).uniform(0, TWO_PI, (4, 2))
+        amps = np.abs(np.random.default_rng(1).standard_normal((4, 2)))
+        with pytest.raises(ValueError, match="finite values"):
+            pac_matrix(phases, amps)
 
 
 class TestPACGate:

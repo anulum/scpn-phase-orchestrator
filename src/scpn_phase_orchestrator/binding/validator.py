@@ -53,11 +53,15 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             f"safety_tier must be one of {VALID_SAFETY_TIERS}, got {spec.safety_tier!r}"
         )
 
-    if spec.sample_period_s <= 0:
-        errors.append(f"sample_period_s must be > 0, got {spec.sample_period_s}")
+    if not math.isfinite(spec.sample_period_s) or spec.sample_period_s <= 0:
+        errors.append(
+            f"sample_period_s must be finite and > 0, got {spec.sample_period_s}"
+        )
 
-    if spec.control_period_s <= 0:
-        errors.append(f"control_period_s must be > 0, got {spec.control_period_s}")
+    if not math.isfinite(spec.control_period_s) or spec.control_period_s <= 0:
+        errors.append(
+            f"control_period_s must be finite and > 0, got {spec.control_period_s}"
+        )
 
     if spec.control_period_s < spec.sample_period_s:
         errors.append("control_period_s must be >= sample_period_s")
@@ -214,10 +218,12 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
                 f"actuator {act.name!r}: knob must be one of "
                 f"{VALID_KNOBS}, got {act.knob!r}"
             )
-        if len(act.limits) != 2 or act.limits[0] > act.limits[1]:
-            errors.append(
-                f"actuator {act.name!r}: limits must be (lo, hi) with lo <= hi"
-            )
+        if (
+            len(act.limits) != 2
+            or not all(math.isfinite(limit) for limit in act.limits)
+            or act.limits[0] > act.limits[1]
+        ):
+            errors.append(f"actuator {act.name!r}: limits must be finite and lo <= hi")
         if act.scope not in valid_scopes:
             errors.append(
                 f"actuator {act.name!r}: scope {act.scope!r} does not match any "
@@ -225,23 +231,30 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             )
 
     if spec.imprint_model is not None:
-        if spec.imprint_model.decay_rate < 0.0:
+        if (
+            not math.isfinite(spec.imprint_model.decay_rate)
+            or spec.imprint_model.decay_rate < 0.0
+        ):
             errors.append(
-                f"imprint_model.decay_rate must be >= 0, "
+                "imprint_model.decay_rate must be finite and >= 0, "
                 f"got {spec.imprint_model.decay_rate}"
             )
-        if spec.imprint_model.saturation <= 0.0:
+        if (
+            not math.isfinite(spec.imprint_model.saturation)
+            or spec.imprint_model.saturation <= 0.0
+        ):
             errors.append(
-                f"imprint_model.saturation must be > 0, "
+                "imprint_model.saturation must be finite and > 0, "
                 f"got {spec.imprint_model.saturation}"
             )
 
     if spec.amplitude is not None:
         if not math.isfinite(spec.amplitude.mu):
             errors.append("amplitude.mu must be finite")
-        if spec.amplitude.epsilon < 0.0:
+        if not math.isfinite(spec.amplitude.epsilon) or spec.amplitude.epsilon < 0.0:
             errors.append(
-                f"amplitude.epsilon must be >= 0, got {spec.amplitude.epsilon}"
+                "amplitude.epsilon must be finite and >= 0, "
+                f"got {spec.amplitude.epsilon}"
             )
 
     return errors

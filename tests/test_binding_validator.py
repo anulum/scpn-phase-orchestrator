@@ -56,6 +56,12 @@ def test_negative_sample_period(sample_binding_spec):
     assert any("sample_period_s" in e for e in errors)
 
 
+def test_nonfinite_sample_period_rejected(sample_binding_spec):
+    bad = replace(sample_binding_spec, sample_period_s=float("nan"))
+    errors = validate_binding_spec(bad)
+    assert any("sample_period_s" in e and "finite" in e for e in errors)
+
+
 def test_invalid_channel_identifier(sample_binding_spec):
     bad_families = {
         "x": OscillatorFamily(
@@ -108,6 +114,12 @@ def test_control_period_must_be_positive(sample_binding_spec):
     assert any("control_period_s" in e and "> 0" in e for e in errors)
 
 
+def test_nonfinite_control_period_rejected(sample_binding_spec):
+    bad = replace(sample_binding_spec, control_period_s=float("inf"))
+    errors = validate_binding_spec(bad)
+    assert any("control_period_s" in e and "finite" in e for e in errors)
+
+
 def test_control_period_ge_sample_period(sample_binding_spec):
     bad = replace(sample_binding_spec, sample_period_s=0.1, control_period_s=0.05)
     errors = validate_binding_spec(bad)
@@ -121,6 +133,26 @@ def test_actuator_limits_ordering(sample_binding_spec):
     bad = replace(sample_binding_spec, actuators=bad_actuators)
     errors = validate_binding_spec(bad)
     assert any("limits" in e and "lo <= hi" in e for e in errors)
+
+
+def test_actuator_limits_must_be_finite(sample_binding_spec):
+    bad_actuators = [
+        ActuatorMapping(
+            name="inf", knob="K", scope="global", limits=(float("inf"), 1.0)
+        ),
+    ]
+    bad = replace(sample_binding_spec, actuators=bad_actuators)
+    errors = validate_binding_spec(bad)
+    assert any("limits" in e and "finite" in e for e in errors)
+
+    bad_actuators = [
+        ActuatorMapping(
+            name="nan", knob="K", scope="global", limits=(0.0, float("nan"))
+        ),
+    ]
+    bad = replace(sample_binding_spec, actuators=bad_actuators)
+    errors = validate_binding_spec(bad)
+    assert any("limits" in e and "finite" in e for e in errors)
 
 
 def test_empty_objectives_error(sample_binding_spec):
@@ -402,8 +434,23 @@ def test_imprint_model_bounds_are_reported(sample_binding_spec):
 
     errors = validate_binding_spec(bad)
 
-    assert any("imprint_model.decay_rate must be >= 0" in e for e in errors)
-    assert any("imprint_model.saturation must be > 0" in e for e in errors)
+    assert any("imprint_model.decay_rate must be finite and >= 0" in e for e in errors)
+    assert any("imprint_model.saturation must be finite and > 0" in e for e in errors)
+
+
+def test_imprint_model_fields_must_be_finite(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        imprint_model=ImprintSpec(
+            decay_rate=float("nan"),
+            saturation=float("inf"),
+            modulates=["K"],
+        ),
+    )
+
+    errors = validate_binding_spec(bad)
+    assert any("imprint_model.decay_rate" in e for e in errors)
+    assert any("imprint_model.saturation" in e for e in errors)
 
 
 def test_amplitude_model_bounds_are_reported(sample_binding_spec):
@@ -415,7 +462,18 @@ def test_amplitude_model_bounds_are_reported(sample_binding_spec):
     errors = validate_binding_spec(bad)
 
     assert "amplitude.mu must be finite" in errors
-    assert any("amplitude.epsilon must be >= 0" in e for e in errors)
+    assert any("amplitude.epsilon must be finite and >= 0" in e for e in errors)
+
+
+def test_amplitude_fields_must_be_finite(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        amplitude=AmplitudeSpec(mu=1.0, epsilon=float("nan")),
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any("amplitude.epsilon must be finite" in e for e in errors)
 
 
 # Pipeline wiring: binding validator tested via schema enforcement, required field
