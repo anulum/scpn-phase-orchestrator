@@ -20,6 +20,8 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import shutil
+import subprocess
 import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -518,6 +520,9 @@ def _project_extras(pyproject: dict[str, Any]) -> list[str]:
 def _domainpack_files(root: Path, *, repo: Path) -> list[str]:
     if not root.exists():
         return []
+    tracked = _tracked_files(root, repo=repo)
+    if tracked is not None:
+        return sorted(path for path in tracked if path.endswith("/binding_spec.yaml"))
     return [_rel(path, repo) for path in sorted(root.rglob("binding_spec.yaml"))]
 
 
@@ -542,6 +547,13 @@ def _product_boundary_modules(
 def _rust_files(root: Path, *, repo: Path) -> list[str]:
     if not root.exists():
         return []
+    tracked = _tracked_files(root, repo=repo)
+    if tracked is not None:
+        return sorted(
+            path
+            for path in tracked
+            if path.endswith(".rs") or path.endswith("/Cargo.toml")
+        )
     files = list(root.rglob("*.rs")) + list(root.rglob("Cargo.toml"))
     return [_rel(path, repo) for path in sorted(files)]
 
@@ -549,6 +561,9 @@ def _rust_files(root: Path, *, repo: Path) -> list[str]:
 def _workflow_files(root: Path, *, repo: Path) -> list[str]:
     if not root.exists():
         return []
+    tracked = _tracked_files(root, repo=repo)
+    if tracked is not None:
+        return sorted(path for path in tracked if path.endswith((".yml", ".yaml")))
     files = list(root.glob("*.yml")) + list(root.glob("*.yaml"))
     return [_rel(path, repo) for path in sorted(files)]
 
@@ -556,6 +571,9 @@ def _workflow_files(root: Path, *, repo: Path) -> list[str]:
 def _python_files(root: Path, *, repo: Path) -> list[str]:
     if not root.exists():
         return []
+    tracked = _tracked_files(root, repo=repo)
+    if tracked is not None:
+        return sorted(path for path in tracked if path.endswith(".py"))
     return [_rel(path, repo) for path in sorted(root.rglob("*.py"))]
 
 
@@ -567,11 +585,43 @@ def _markdown_docs(
 ) -> list[str]:
     if not root.exists():
         return []
+    tracked = _tracked_files(root, repo=repo)
+    if tracked is not None:
+        return sorted(
+            path
+            for path in tracked
+            if path.endswith(".md")
+            and not set(Path(path).relative_to(_rel(root, repo)).parts).intersection(
+                exclude_parts
+            )
+        )
     return [
         _rel(path, repo)
         for path in sorted(root.rglob("*.md"))
         if not set(path.relative_to(root).parts).intersection(exclude_parts)
     ]
+
+
+def _tracked_files(root: Path, *, repo: Path) -> list[str] | None:
+    """Return Git-tracked files below ``root`` or ``None`` outside git repos."""
+
+    try:
+        relative_root = root.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        return None
+    git_executable = shutil.which("git")
+    if git_executable is None:
+        return None
+    result = subprocess.run(
+        [git_executable, "-C", str(repo), "ls-files", "--", relative_root],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return sorted(line for line in result.stdout.splitlines() if line)
 
 
 def _relative_path(path: Path, repo: Path) -> Path:

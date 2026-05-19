@@ -7,11 +7,11 @@
     "integration_modules": 24,
     "optional_extras": 14,
     "public_api_exports": 22,
-    "public_documentation_pages": 165,
+    "public_documentation_pages": 162,
     "python_package_modules": 392,
     "research_experimental_modules": 121,
     "runtime_serving_modules": 46,
-    "rust_kernel_files": 99,
+    "rust_kernel_files": 91,
     "test_files": 443
   },
   "documentation": {
@@ -171,16 +171,13 @@
       "docs/specs/regime_manager.md",
       "docs/specs/resolved_runtime_defaults.md",
       "docs/specs/upde_numerics.md",
-      "docs/superpowers/plans/2026-05-07-spo-industrial-workflow.md",
-      "docs/superpowers/specs/2026-05-07-spo-industrial-workflow-design.md",
       "docs/tutorials/01_new_domain_checklist.md",
       "docs/tutorials/02_oscillator_hunt_sheet.md",
       "docs/tutorials/03_build_knm_templates.md",
       "docs/tutorials/04_differentiable_kuramoto.md",
       "docs/tutorials/05_from_raw_sources_to_run.md",
       "docs/tutorials/06_deterministic_replay_for_debugging.md",
-      "docs/video_scripts.md",
-      "docs/wasm-pkg/README.md"
+      "docs/video_scripts.md"
     ]
   },
   "domainpacks": [
@@ -1640,15 +1637,7 @@
     "spo-kernel/crates/spo-types/src/lib.rs",
     "spo-kernel/crates/spo-types/src/state.rs",
     "spo-kernel/crates/spo-wasm/Cargo.toml",
-    "spo-kernel/crates/spo-wasm/src/lib.rs",
-    "spo-kernel/target/debug/build/serde-3eceff10943d83fb/out/private.rs",
-    "spo-kernel/target/debug/build/serde-be62b92d4562b0f4/out/private.rs",
-    "spo-kernel/target/debug/build/serde_core-946c15305fd42f94/out/private.rs",
-    "spo-kernel/target/debug/build/serde_core-e9531bdb6193ba06/out/private.rs",
-    "spo-kernel/target/debug/build/thiserror-2d968b5c7ad9a1bf/out/private.rs",
-    "spo-kernel/target/kani/x86_64-unknown-linux-gnu/debug/build/serde-0eade40e88c4385d/out/private.rs",
-    "spo-kernel/target/kani/x86_64-unknown-linux-gnu/debug/build/serde_core-32d2a5c03d3868f3/out/private.rs",
-    "spo-kernel/target/kani/x86_64-unknown-linux-gnu/debug/build/thiserror-15f02ff0bba6b2b5/out/private.rs"
+    "spo-kernel/crates/spo-wasm/src/lib.rs"
   ],
   "schema_version": "capability-manifest.v1"
 }

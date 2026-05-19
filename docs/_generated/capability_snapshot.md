@@ -13,10 +13,10 @@
 | Integration modules | 24 |
 | Research/Experimental modules | 121 |
 | Domainpack files | 36 |
-| Rust kernel files | 99 |
+| Rust kernel files | 91 |
 | Optional extras | 14 |
 | Python test files | 443 |
-| Public documentation pages | 165 |
+| Public documentation pages | 162 |
 | GitHub Actions workflows | 10 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
