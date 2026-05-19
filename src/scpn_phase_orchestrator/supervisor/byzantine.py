@@ -127,6 +127,8 @@ def _verify_proposal(
     proposal: Mapping[str, object],
     keyring: Mapping[str, str],
 ) -> dict[str, object]:
+    if not isinstance(proposal, Mapping):
+        raise ValueError("proposal must be a mapping")
     node_id = _require_text(proposal.get("node_id"), "node_id")
     payload = proposal.get("payload")
     if not isinstance(payload, Mapping):
@@ -248,7 +250,10 @@ def _require_text(value: object, label: str) -> str:
 def _require_hash(value: object, label: str) -> str:
     if not isinstance(value, str) or len(value) != 64:
         raise ValueError(f"{label} must be a 64-character SHA-256 hex string")
-    int(value, 16)
+    try:
+        int(value, 16)
+    except ValueError as exc:
+        raise ValueError(f"{label} must be a 64-character SHA-256 hex string") from exc
     return value
 
 

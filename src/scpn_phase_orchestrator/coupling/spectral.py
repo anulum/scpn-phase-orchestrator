@@ -72,6 +72,8 @@ def _validate_coupling_matrix(knm: object) -> FloatArray:
     raw = np.asarray(knm)
     if raw.dtype == np.bool_:
         raise ValueError("knm must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError("knm must be a finite square matrix")
     try:
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

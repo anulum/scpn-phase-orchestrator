@@ -284,6 +284,50 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
+    def test_resolve_backends_ignores_optional_loader_failures(self, monkeypatch):
+        """Unavailable optional backends must be skipped while preserving
+        import-path order and a deterministic python fallback."""
+        calls: list[str] = []
+
+        def fail():
+            calls.append("fail")
+            raise RuntimeError("backend not available")
+
+        def ok():
+            calls.append("ok")
+
+            def _primitive(flat, n):
+                return np.arange(n, dtype=np.float64), np.ones(n, dtype=np.float64)
+
+            return _primitive
+
+        monkeypatch.setitem(s_mod._LOADERS, "rust", fail)
+        monkeypatch.setitem(s_mod._LOADERS, "mojo", fail)
+        monkeypatch.setitem(s_mod._LOADERS, "julia", fail)
+        monkeypatch.setitem(s_mod._LOADERS, "go", ok)
+
+        active_backend, available_backends = s_mod._resolve_backends()
+
+        assert active_backend == "go"
+        assert available_backends == ["go", "python"]
+        assert calls == ["fail", "fail", "fail", "ok"]
+
+    def test_resolve_backends_falls_back_to_python_when_all_fail(self, monkeypatch):
+        """If all optional loaders fail, python remains the runtime default."""
+
+        def fail():
+            raise OSError("toolchain not usable")
+
+        monkeypatch.setitem(s_mod._LOADERS, "rust", fail)
+        monkeypatch.setitem(s_mod._LOADERS, "mojo", fail)
+        monkeypatch.setitem(s_mod._LOADERS, "julia", fail)
+        monkeypatch.setitem(s_mod._LOADERS, "go", fail)
+
+        active_backend, available_backends = s_mod._resolve_backends()
+
+        assert active_backend == "python"
+        assert available_backends == ["python"]
+
     def test_available_non_empty(self):
         assert s_mod.AVAILABLE_BACKENDS
         assert "python" in s_mod.AVAILABLE_BACKENDS
@@ -364,6 +408,49 @@ class TestDispatcherSurface:
         assert first is backend
         assert second is backend
         assert calls == 1
+
+
+class TestValidationBoundaries:
+    def test_graph_laplacian_rejects_complex_weights(self):
+        knm = np.array([[0.0, 1.0 + 1.0j], [1.0 + 1.0j, 0.0]])
+        with pytest.raises(ValueError, match="knm must be a finite square matrix"):
+            graph_laplacian(knm)
+
+    @pytest.mark.parametrize(
+        ("knm", "omegas", "match"),
+        [
+            (
+                np.array([[0.0, 1.0], [1.0, np.inf]]),
+                np.array([0.0, 1.0]),
+                "finite",
+            ),
+            (
+                np.array([[0.0, 1.0], [1.0, 0.0]]),
+                np.array([], dtype=np.float64),
+                "at least one frequency",
+            ),
+        ],
+    )
+    def test_convergence_rate_rejects_invalid_inputs(self, knm, omegas, match):
+        with pytest.raises(ValueError, match=match):
+            sync_convergence_rate(knm, omegas)
+
+    @pytest.mark.parametrize(
+        ("knm", "omegas"),
+        [
+            (
+                np.array([[0.0, 1.0], [1.0, 0.0]]),
+                np.array([True, False]),
+            ),
+            (
+                np.array([[0.0, 1.0], [1.0, 0.0]], dtype=bool),
+                np.array([0.0, 1.0]),
+            ),
+        ],
+    )
+    def test_critical_coupling_rejects_invalid_omega_or_matrix(self, knm, omegas):
+        with pytest.raises(ValueError, match="knm|omegas"):
+            critical_coupling(omegas, knm)
 
     def test_rust_primitive_uses_python_eigendecomposition_without_fast_path_roundtrip(
         self, monkeypatch

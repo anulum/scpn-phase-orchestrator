@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
@@ -189,6 +191,101 @@ class TestHigherOrderTopologySupervisor:
             )
         with pytest.raises(ValueError, match="hyperedges must be Hyperedge"):
             supervisor.mutate(np.zeros(3), _zero_knm(3), (object(),))
+        with pytest.raises(ValueError, match="integer"):
+            supervisor.mutate(
+                np.zeros(4),
+                _zero_knm(4),
+                (Hyperedge((True, 2, 3), strength=0.1),),
+            )
+
+    def test_max_new_simplices_limits_candidate_additions(self) -> None:
+        phases = np.array([0.0, 0.0, 0.0, np.pi, np.pi, np.pi], dtype=np.float64)
+        knm = _zero_knm(6)
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=1.0,
+                coherence_floor=0.15,
+                simplex_threshold=0.99,
+                max_new_simplices=1,
+                max_simplex_strength=0.5,
+            )
+        )
+
+        result = supervisor.mutate(phases, knm)
+
+        assert len(result.added_simplices) == 1
+        assert result.added_simplices[0].strength == pytest.approx(0.5)
+        assert result.added_simplices[0].nodes in {(0, 1, 2), (3, 4, 5)}
+        assert len(result.hyperedges) == len(result.added_simplices)
+
+    def test_max_new_simplices_zero_disables_additions_even_when_coherent(self) -> None:
+        phases = np.array([0.0, 0.0, 0.0, np.pi, np.pi, np.pi], dtype=np.float64)
+        knm = _zero_knm(6)
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=1.0,
+                coherence_floor=0.15,
+                simplex_threshold=0.99,
+                max_new_simplices=0,
+            )
+        )
+
+        result = supervisor.mutate(phases, knm)
+
+        assert result.added_simplices == ()
+        assert result.hyperedges == ()
+
+    def test_zero_strength_simplex_is_pruned(self) -> None:
+        phases = np.array([0.0, 0.0, 0.0, 0.1], dtype=np.float64)
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(coherence_floor=0.99)
+        )
+        existing = (Hyperedge((0, 1, 2), strength=0.0),)
+
+        result = supervisor.mutate(phases, _zero_knm(4), existing)
+
+        assert existing[0] in result.pruned_simplices
+        assert result.hyperedges == ()
+
+    def test_mutate_does_not_mutate_inputs(self) -> None:
+        phases = np.array([0.0, 0.1, 0.2], dtype=np.float64)
+        knm = np.full((3, 3), 0.1, dtype=np.float64)
+        np.fill_diagonal(knm, 0.0)
+        original_knm = knm.copy()
+        original_phases = phases.copy()
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=0.2,
+                max_pairwise_delta=0.05,
+                max_coupling=1.0,
+            )
+        )
+
+        _ = supervisor.mutate(phases, knm)
+
+        np.testing.assert_allclose(phases, original_phases)
+        np.testing.assert_allclose(knm, original_knm)
+
+    def test_to_audit_record_is_json_serialisable(self) -> None:
+        phases = np.array([0.0, 0.03, 0.06, np.pi, np.pi + 0.02, np.pi + 0.04])
+        result = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=0.5,
+                coherence_floor=0.95,
+                simplex_threshold=0.99,
+                max_simplex_strength=0.2,
+            )
+        ).mutate(phases, _zero_knm(6))
+
+        payload = result.to_audit_record()
+        payload_text = json.dumps(payload)
+
+        assert payload["global_coherence"] == pytest.approx(result.global_coherence)
+        assert payload["pairwise_delta_norm"] == pytest.approx(
+            result.pairwise_delta_norm
+        )
+        assert payload["hyperedge_count"] == len(result.hyperedges)
+        assert isinstance(payload_text, str)
 
     def test_does_not_add_simplices_when_global_coherence_is_already_high(self) -> None:
         phases = np.array([0.0, 0.01, 0.02, 0.03])

@@ -177,3 +177,150 @@ def test_bft_meta_orchestrator_rejects_non_mapping_payload_and_blank_text() -> N
         sign_policy_proposal("node-a", ["not", "a", "mapping"], "1" * 64, "alpha")
     with pytest.raises(ValueError, match="node_id"):
         sign_policy_proposal("   ", {"policy": "hold"}, "1" * 64, "alpha")
+
+
+def test_bft_meta_orchestrator_manifest_tiebreaks_by_payload_hash() -> None:
+    keyring = {
+        "node-a": "alpha",
+        "node-b": "bravo",
+        "node-c": "charlie",
+        "node-d": "delta",
+    }
+    parent_hash = "0" * 64
+    proposal_fast = sign_policy_proposal(
+        "node-a",
+        {"policy": "hold", "priority": 1, "actuation": False},
+        parent_hash,
+        keyring["node-a"],
+    )
+    proposal_fast_copy = sign_policy_proposal(
+        "node-b",
+        {"policy": "hold", "priority": 1, "actuation": False},
+        parent_hash,
+        keyring["node-b"],
+    )
+    proposal_slow = sign_policy_proposal(
+        "node-c",
+        {"policy": "raise", "priority": 2, "actuation": False},
+        parent_hash,
+        keyring["node-c"],
+    )
+    proposal_slow_copy = sign_policy_proposal(
+        "node-d",
+        {"policy": "raise", "priority": 2, "actuation": False},
+        parent_hash,
+        keyring["node-d"],
+    )
+
+    group_a_hash = proposal_fast["payload_hash"]
+    group_b_hash = proposal_slow["payload_hash"]
+    proposals_a_first = [
+        proposal_fast,
+        proposal_fast_copy,
+        proposal_slow,
+        proposal_slow_copy,
+    ]
+    proposals_b_first = list(reversed(proposals_a_first))
+
+    manifest_a = build_bft_meta_orchestrator_manifest(
+        proposals_a_first, keyring, quorum=2
+    )
+    manifest_b = build_bft_meta_orchestrator_manifest(
+        proposals_b_first, keyring, quorum=2
+    )
+
+    assert manifest_a["status"] == "accepted"
+    assert manifest_a == manifest_b
+
+    expected_winner_hash = min(group_a_hash, group_b_hash)
+    expected_accepted = sorted(
+        [
+            "node-a",
+            "node-b",
+        ]
+        if expected_winner_hash == group_a_hash
+        else [
+            "node-c",
+            "node-d",
+        ]
+    )
+    expected_rejected = sorted(
+        [
+            "node-c",
+            "node-d",
+        ]
+        if expected_winner_hash == group_a_hash
+        else [
+            "node-a",
+            "node-b",
+        ]
+    )
+
+    assert manifest_a["accepted_node_ids"] == expected_accepted
+    assert manifest_a["rejected_node_ids"] == expected_rejected
+
+
+def test_bft_meta_orchestrator_keeps_deduplicated_block_reasons() -> None:
+    keyring = {"node-a": "alpha", "node-b": "bravo"}
+    payload = {"policy": "hold", "actuation": False}
+    parent_hash = "1" * 64
+    first = sign_policy_proposal("node-a", payload, parent_hash, keyring["node-a"])
+    duplicate_1 = sign_policy_proposal(
+        "node-a",
+        payload,
+        parent_hash,
+        keyring["node-a"],
+    )
+    duplicate_2 = sign_policy_proposal(
+        "node-a",
+        payload,
+        parent_hash,
+        keyring["node-a"],
+    )
+    valid = sign_policy_proposal("node-b", payload, parent_hash, keyring["node-b"])
+
+    manifest = build_bft_meta_orchestrator_manifest(
+        [first, duplicate_1, duplicate_2, valid],
+        keyring,
+        quorum=2,
+    )
+
+    assert manifest["status"] == "accepted"
+    assert manifest["accepted_node_ids"] == ["node-a", "node-b"]
+    assert manifest["blocked_reasons"] == ["node-a duplicate proposal"]
+
+
+def test_bft_meta_orchestrator_rejects_invalid_non_mapping_proposal() -> None:
+    with pytest.raises(ValueError, match="proposal must be a mapping"):
+        build_bft_meta_orchestrator_manifest([1, 2, 3], {"node-a": "alpha"}, quorum=1)
+
+
+def test_sign_policy_proposal_does_not_accept_nan_payload() -> None:
+    keyring = {"node-a": "alpha"}
+
+    with pytest.raises(
+        ValueError,
+        match="Out of range float values are not JSON compliant",
+    ):
+        sign_policy_proposal(
+            "node-a",
+            {"metric": float("nan"), "actuation": False},
+            "f" * 64,
+            keyring["node-a"],
+        )
+
+
+def test_build_bft_meta_orchestrator_manifest_treats_malformed_hash_as_invalid() -> (
+    None
+):
+    keyring = {"node-a": "alpha"}
+    proposal = sign_policy_proposal(
+        "node-a",
+        {"policy": "hold", "actuation": False},
+        "8" * 64,
+        keyring["node-a"],
+    )
+    proposal["payload_hash"] = "z" * 64
+
+    with pytest.raises(ValueError, match="payload_hash"):
+        build_bft_meta_orchestrator_manifest([proposal], keyring, quorum=1)

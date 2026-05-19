@@ -179,7 +179,10 @@ def _validate_hyperedges(hyperedges: tuple[Hyperedge, ...], n: int) -> None:
             raise ValueError("higher-order hyperedges must contain at least 3 nodes")
         if len(set(edge.nodes)) != len(edge.nodes):
             raise ValueError("hyperedge nodes must be unique")
-        if any(node < 0 or node >= n for node in edge.nodes):
+        for node in edge.nodes:
+            if isinstance(node, bool) or not isinstance(node, Integral):
+                raise ValueError("hyperedge node must be an integer")
+        if any(int(node) < 0 or int(node) >= n for node in edge.nodes):
             raise ValueError("hyperedge node index out of range")
         if not np.isfinite(edge.strength) or edge.strength < 0.0:
             raise ValueError("hyperedge strength must be finite and non-negative")
