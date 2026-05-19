@@ -497,8 +497,9 @@ class TestCLIRun:
         path = tmp_path / "spec.yaml"
         path.write_text(yaml.dump(spec), encoding="utf-8")
         result = runner.invoke(main, ["run", str(path), "--steps", "5"])
-        assert result.exit_code == 0
-        assert "WARNING" in result.output
+        assert result.exit_code != 0
+        assert "safety_tier='clinical' is not enforced" in result.output
+        assert "R_good=" not in result.output
 
     def test_run_no_oscillators_exits_1(self, runner, tmp_path):
         spec = {
