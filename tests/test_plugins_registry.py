@@ -91,6 +91,44 @@ class TestPluginManifestContracts:
         with pytest.raises(ValueError, match="requires at least one capability"):
             PluginManifest.from_mapping(payload)
 
+    def test_mapping_with_missing_package_is_rejected(self) -> None:
+        payload: dict[str, Any] = {
+            "name": "bad_pack",
+            "version": "0.1.0",
+            "capabilities": (
+                {
+                    "kind": "bridge",
+                    "name": "bridge",
+                    "target": "bad_pack.bridges:Bridge",
+                },
+            ),
+        }
+
+        with pytest.raises(KeyError, match="package"):
+            PluginManifest.from_mapping(payload)
+
+    def test_mapping_with_non_mapping_capability_is_rejected(self) -> None:
+        payload: dict[str, Any] = {
+            "name": "bad_pack",
+            "version": "0.1.0",
+            "package": "bad_pack",
+            "capabilities": ("bridge",),
+        }
+
+        with pytest.raises(TypeError, match="string indices"):
+            PluginManifest.from_mapping(payload)
+
+    def test_mapping_with_invalid_capability_keys_is_rejected(self) -> None:
+        payload: dict[str, Any] = {
+            "name": "bad_pack",
+            "version": "0.1.0",
+            "package": "bad_pack",
+            "capabilities": ({"name": "bridge", "target": "bad_pack.bridges:Bridge"},),
+        }
+
+        with pytest.raises(KeyError, match="kind"):
+            PluginManifest.from_mapping(payload)
+
     @pytest.mark.parametrize(
         ("payload", "diagnostic"),
         (
@@ -231,6 +269,37 @@ class TestPluginCompatibility:
         assert not report.compatible
         assert "duplicate capability" in report.reasons[0]
 
+    def test_compatibility_aggregates_multiple_incompatible_reasons(self) -> None:
+        manifest = PluginManifest(
+            name="bad_pack",
+            version="0.1.0",
+            package="bad_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="extractor",
+                    name="sensor",
+                    target="bad_pack.extractors:SensorExtractor",
+                ),
+                PluginCapability(
+                    kind="extractor",
+                    name="sensor",
+                    target="bad_pack.extractors:SensorExtractorV2",
+                ),
+                PluginCapability(
+                    kind="actuator",
+                    name="output",
+                    target="bad_pack.actuators:OutputActuator",
+                ),
+            ),
+        )
+
+        report = compatibility_report(manifest)
+
+        assert not report.compatible
+        assert "extractor sensor must declare channels" in report.reasons
+        assert "duplicate capability extractor:sensor" in report.reasons
+        assert "actuator output must declare knobs" in report.reasons
+
     def test_future_spo_version_fails_closed_with_actionable_reason(self) -> None:
         import scpn_phase_orchestrator.plugins.registry as registry
 
@@ -350,6 +419,49 @@ class TestPluginMarketplaceCatalog:
         assert plugin_records[0]["compatible"] is False
         assert "must declare channels" in plugin_records[0]["reasons"][0]
 
+    def test_catalog_sorting_is_deterministic(self) -> None:
+        reversed_order = build_plugin_marketplace_catalog((_manifest(),))  # baseline
+        reverse_alpha = PluginManifest(
+            name="alpha_pack",
+            version="0.1.0",
+            package="alpha_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="domainpack",
+                    name="core",
+                    target="alpha_pack.domainpacks:Core",
+                ),
+            ),
+        )
+        reverse_zeta = PluginManifest(
+            name="zeta_pack",
+            version="0.1.0",
+            package="zeta_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="bridge",
+                    name="link",
+                    target="zeta_pack.bridges:Link",
+                    knobs=("K",),
+                ),
+            ),
+        )
+        catalog = build_plugin_marketplace_catalog((reverse_zeta, reverse_alpha))
+
+        plugin_records = cast("list[dict[str, Any]]", catalog["plugins"])
+        assert [record["manifest"]["name"] for record in plugin_records] == [
+            "alpha_pack",
+            "zeta_pack",
+        ]
+        assert catalog["plugin_count"] == 2
+        assert catalog["capability_counts"] == {
+            "actuator": 0,
+            "bridge": 1,
+            "domainpack": 1,
+            "extractor": 0,
+        }
+        assert catalog["schema_version"] == reversed_order["schema_version"]
+
     def test_rust_plugin_registry_flattens_capabilities(self) -> None:
         registry = build_rust_plugin_registry((_manifest(),))
 
@@ -408,6 +520,74 @@ class TestPluginMarketplaceCatalog:
         capability_records = cast("list[dict[str, Any]]", full_registry["capabilities"])
         assert capability_records[0]["plugin"] == "bad_extractor"
         assert capability_records[0]["compatible"] is False
+
+    def test_rust_registry_sorts_capabilities_deterministically(self) -> None:
+        first = PluginManifest(
+            name="zeta_pack",
+            version="0.1.0",
+            package="zeta_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="bridge",
+                    name="bridge_alpha",
+                    target="zeta_pack.bridges:BridgeAlpha",
+                ),
+                PluginCapability(
+                    kind="actuator",
+                    name="actuator_beta",
+                    target="zeta_pack.actuators:ActuatorBeta",
+                    knobs=("K",),
+                ),
+            ),
+        )
+        second = PluginManifest(
+            name="alpha_pack",
+            version="0.2.0",
+            package="alpha_pack",
+            capabilities=(
+                PluginCapability(
+                    kind="extractor",
+                    name="extractor_gamma",
+                    target="alpha_pack.extractors:ExtractorGamma",
+                    channels=("I",),
+                ),
+                PluginCapability(
+                    kind="actuator",
+                    name="actuator_alpha",
+                    target="alpha_pack.actuators:ActuatorAlpha",
+                    knobs=("K",),
+                ),
+                PluginCapability(
+                    kind="bridge",
+                    name="bridge_beta",
+                    target="alpha_pack.bridges:BridgeBeta",
+                ),
+            ),
+        )
+        registry = build_rust_plugin_registry((first, second))
+
+        capability_records = cast("list[dict[str, Any]]", registry["capabilities"])
+        assert [item["name"] for item in capability_records] == [
+            "actuator_alpha",
+            "bridge_beta",
+            "extractor_gamma",
+            "actuator_beta",
+            "bridge_alpha",
+        ]
+        assert [item["plugin"] for item in capability_records] == [
+            "alpha_pack",
+            "alpha_pack",
+            "alpha_pack",
+            "zeta_pack",
+            "zeta_pack",
+        ]
+        assert [item["kind"] for item in capability_records] == [
+            "actuator",
+            "bridge",
+            "extractor",
+            "actuator",
+            "bridge",
+        ]
 
     @pytest.mark.parametrize(
         ("plugins_payload", "diagnostic"),
@@ -515,6 +695,63 @@ class TestPluginDiscovery:
             def select(self, *, group: str) -> tuple[FakeEntryPoint, ...]:
                 if group == "scpn_phase_orchestrator.plugins":
                     return (FakeEntryPoint(),)
+                return ()
+
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        monkeypatch.setattr(
+            registry.metadata,
+            "entry_points",
+            lambda: FakeEntryPoints(),
+        )
+
+        discovered = discover_plugin_manifests()
+
+        assert discovered == (manifest,)
+
+    def test_discovery_rejects_invalid_entry_point_payload(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        @dataclass(frozen=True)
+        class InvalidEntryPoint:
+            def load(self) -> Any:
+                return {
+                    "name": "empty_pack",
+                    "version": "0.1.0",
+                    "package": "empty_pack",
+                }
+
+        class FakeEntryPoints(tuple):
+            def select(self, *, group: str) -> tuple[InvalidEntryPoint, ...]:
+                if group == "scpn_phase_orchestrator.plugins":
+                    return (InvalidEntryPoint(),)
+                return ()
+
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        monkeypatch.setattr(
+            registry.metadata,
+            "entry_points",
+            lambda: FakeEntryPoints(),
+        )
+
+        with pytest.raises(ValueError, match="requires at least one capability"):
+            discover_plugin_manifests()
+
+    def test_discovery_accepts_manifest_objects(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        manifest = _manifest()
+
+        @dataclass(frozen=True)
+        class ObjectEntryPoint:
+            def load(self) -> Any:
+                return manifest
+
+        class FakeEntryPoints(tuple):
+            def select(self, *, group: str) -> tuple[ObjectEntryPoint, ...]:
+                if group == "scpn_phase_orchestrator.plugins":
+                    return (ObjectEntryPoint(),)
                 return ()
 
         import scpn_phase_orchestrator.plugins.registry as registry

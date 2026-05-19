@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -347,3 +350,51 @@ def test_hybrid_cocompiler_defaults_missing_or_non_integer_parity_counts() -> No
     manifest = build_hybrid_cocompiler_manifest(quantum, spiking)
     assert manifest["co_simulation_parity"]["quantum_term_count"] == 0
     assert manifest["co_simulation_parity"]["neuromorphic_sample_count"] == 0
+
+
+def test_hybrid_cocompiler_hash_and_field_order_is_deterministic() -> None:
+    """Manifest hashes and content must not depend on input field order."""
+
+    quantum = dict(reversed(list(_quantum_manifest().items())))
+    neuromorphic = dict(reversed(list(_neuromorphic_manifest().items())))
+
+    manifest_one = build_hybrid_cocompiler_manifest(quantum, neuromorphic)
+    manifest_two = build_hybrid_cocompiler_manifest(quantum, neuromorphic)
+    assert manifest_one == manifest_two
+
+    manifest_body = {
+        k: v for k, v in manifest_one.items() if k != "hybrid_manifest_sha256"
+    }
+    expected_hash = hashlib.sha256(
+        json.dumps(manifest_body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+    assert manifest_one["hybrid_manifest_sha256"] == expected_hash
+
+
+def test_hybrid_cocompiler_does_not_mutate_input_manifests() -> None:
+    quantum = _quantum_manifest()
+    neuromorphic = _neuromorphic_manifest()
+    expected_quantum = deepcopy(quantum)
+    expected_neuromorphic = deepcopy(neuromorphic)
+
+    build_hybrid_cocompiler_manifest(quantum, neuromorphic)
+
+    assert quantum == expected_quantum
+    assert neuromorphic == expected_neuromorphic
+
+
+@pytest.mark.parametrize(
+    "missing_key", ["qasm_sha256", "manifest_sha256", "schedule_sha256"]
+)
+def test_hybrid_cocompiler_rejects_missing_component_hashes(missing_key: str) -> None:
+    quantum = _quantum_manifest()
+    neuromorphic = _neuromorphic_manifest()
+
+    if missing_key in ("qasm_sha256", "manifest_sha256"):
+        quantum.pop(missing_key)
+    else:
+        neuromorphic.pop(missing_key)
+
+    with pytest.raises(ValueError, match=f"{missing_key} must be a 64-character"):
+        build_hybrid_cocompiler_manifest(quantum, neuromorphic)

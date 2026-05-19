@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import embedding as em_mod
 from scpn_phase_orchestrator.monitor.embedding import (
     EmbeddingResult,
     auto_embed,
@@ -78,6 +79,45 @@ class TestDelayEmbed:
 
         np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
 
+    def test_uses_dispatched_backend_kernel(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: dict[str, object] = {}
+
+        def _dispatch(fn_name: str) -> object | None:
+            calls["fn_name"] = fn_name
+            if fn_name == "de":
+                return lambda signal, delay, dimension: (
+                    np.arange(6, dtype=np.float64) + 10
+                )
+            return None
+
+        monkeypatch.setattr(em_mod, "_dispatch", _dispatch)
+        emb = em_mod.delay_embed(
+            np.array([0, 1, 2, 3], dtype=np.float64),
+            delay=1,
+            dimension=2,
+        )
+
+        assert calls["fn_name"] == "de"
+        assert emb.shape == (3, 2)
+        np.testing.assert_array_equal(emb[0], [10.0, 11.0])
+        np.testing.assert_array_equal(emb[1], [12.0, 13.0])
+
+    def test_python_fallback_returns_shifted_windows(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "python")
+        monkeypatch.setattr(em_mod, "_dispatch", lambda fn_name: None)
+        emb = em_mod.delay_embed(
+            np.array([5, 4, 3, 2, 1], dtype=np.float64),
+            delay=2,
+            dimension=2,
+        )
+        np.testing.assert_array_equal(emb, [[5.0, 3.0], [4.0, 2.0], [3.0, 1.0]])
+
 
 class TestMutualInformationContracts:
     @pytest.mark.parametrize(
@@ -126,6 +166,32 @@ class TestNearestNeighborContracts:
 
         np.testing.assert_allclose(dist, [1.0, 1.0, 2.0])
         np.testing.assert_array_equal(idx, [1, 0, 1])
+
+    def test_rejects_non_2d_embedded_array(self) -> None:
+        with pytest.raises(ValueError, match="two-dimensional"):
+            nearest_neighbor_distances(np.ones((2, 2, 2), dtype=np.float64))
+
+    def test_tie_chooses_first_minimum_index(
+        self,
+    ) -> None:
+        signal = np.array([[0.0, 0.0], [0.0, 0.0], [1.0, 1.0], [2.0, 2.0]])
+        dist, idx = em_mod.nearest_neighbor_distances(signal)
+
+        assert idx.tolist() == [1, 0, 0, 2]
+        assert np.all(np.isfinite(dist))
+
+
+class TestValidationBoundarySemantics:
+    def test_validate_int_at_least_accepts_numpy_integers(self) -> None:
+        assert em_mod._validate_int_at_least(np.int64(4), name="k", minimum=1) == 4
+
+    def test_validate_int_at_least_rejects_bool(self) -> None:
+        with pytest.raises(ValueError, match="integer >= 1"):
+            em_mod._validate_int_at_least(True, name="k", minimum=1)
+
+    def test_validate_non_negative_real_rejects_boolean(self) -> None:
+        with pytest.raises(ValueError, match="finite non-negative real"):
+            em_mod._validate_non_negative_real(np.bool_(True), name="atol")
 
 
 class TestOptimalDelay:
