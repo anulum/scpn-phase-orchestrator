@@ -102,6 +102,45 @@ class TestStep:
         np.testing.assert_allclose(got, theta, atol=1e-14)
 
 
+class TestBoundarySemantics:
+    @_python
+    def test_wrap_initial_phases_and_preserve_wrap_after_dynamics(self):
+        phases = np.array(
+            [-0.25, 0.0, TWO_PI + 0.3, 3.0 * TWO_PI - 0.4],
+            dtype=np.float64,
+        )
+        omegas = np.array([0.2, -0.5, 0.4, -0.1], dtype=np.float64)
+        knm = np.zeros((4, 4), dtype=np.float64)
+        alpha = np.zeros((4, 4), dtype=np.float64)
+        dt = 0.02
+        n_steps = 7
+
+        eng = TorusEngine(4, dt)
+        got = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=n_steps)
+
+        expected = (phases + dt * n_steps * omegas) % TWO_PI
+        np.testing.assert_allclose(got, expected, atol=1e-12)
+        assert np.all(got >= 0.0)
+        assert np.all(got < TWO_PI)
+
+    @_python
+    def test_run_zero_steps_returns_wrapped_copy(self):
+        phases = np.array(
+            [0.1, TWO_PI - 1e-12, TWO_PI + 0.4, -TWO_PI / 3.0],
+            dtype=np.float64,
+        )
+        omegas = np.array([0.2, -0.1, 0.4, -0.3], dtype=np.float64)
+        knm = np.zeros((4, 4), dtype=np.float64)
+        alpha = np.zeros((4, 4), dtype=np.float64)
+        expected = np.mod(phases, TWO_PI)
+
+        eng = TorusEngine(4, 0.01)
+        got = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=0)
+
+        np.testing.assert_allclose(got, expected)
+        assert got is not phases
+
+
 class TestTorusPreservation:
     @_python
     def test_z_stays_on_unit_circle_after_many_steps(self):

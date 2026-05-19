@@ -71,6 +71,59 @@ class TestConstructor:
 
 class TestStep:
     @_python
+    def test_invalid_state_shapes_are_rejected(self):
+        pos, phases, omegas = _problem(4)
+        eng = SwarmalatorEngine(16, 2, 0.01)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(pos[:15], phases, omegas, 1.0, 1.0, 0.8, 1.0)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(pos, phases[:15], omegas, 1.0, 1.0, 0.8, 1.0)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(pos, phases, omegas[:15], 1.0, 1.0, 0.8, 1.0)
+
+        bad_pos = pos.copy()
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(bad_pos[:, :1], phases, omegas, 1.0, 1.0, 0.8, 1.0)
+
+    @_python
+    def test_nonfinite_step_inputs_are_rejected(self):
+        pos, phases, omegas = _problem(5)
+        eng = SwarmalatorEngine(16, 2, 0.01)
+
+        bad_pos = pos.copy()
+        bad_pos[0, 0] = np.nan
+        with pytest.raises(ValueError, match="finite"):
+            eng.step(bad_pos, phases, omegas, 1.0, 1.0, 0.8, 1.0)
+
+        bad_phases = phases.copy()
+        bad_phases[0] = np.inf
+        with pytest.raises(ValueError, match="finite"):
+            eng.step(pos, bad_phases, omegas, 1.0, 1.0, 0.8, 1.0)
+
+        bad_omegas = omegas.copy()
+        bad_omegas[0] = np.nan
+        with pytest.raises(ValueError, match="finite"):
+            eng.step(pos, phases, bad_omegas, 1.0, 1.0, 0.8, 1.0)
+
+    @_python
+    def test_single_agent_kinematic_boundary(self):
+        eng = SwarmalatorEngine(1, dim=2, dt=0.01)
+        pos = np.array([[0.2, -0.1]], dtype=float)
+        phases = np.array([0.8], dtype=float)
+        omegas = np.array([1.2], dtype=float)
+        new_pos, new_phases = eng.step(
+            pos,
+            phases,
+            omegas,
+            a=1.0,
+            b=1.0,
+            j=0.3,
+            k=0.7,
+        )
+        np.testing.assert_allclose(new_pos, pos)
+        np.testing.assert_allclose(new_phases, (phases + 0.01 * omegas) % (2.0 * np.pi))
+
+    @_python
     def test_output_shape(self):
         pos, phases, omegas = _problem(0)
         eng = SwarmalatorEngine(16, 2, 0.01)
@@ -113,6 +166,42 @@ class TestRun:
         assert final_ph.shape == (16,)
         assert pos_traj.shape == (5, 16, 2)
         assert phase_traj.shape == (5, 16)
+
+    @_python
+    def test_zero_steps_rejected(self):
+        pos, phases, omegas = _problem(4)
+        eng = SwarmalatorEngine(16, 2, 0.01)
+        with pytest.raises(ValueError, match="n_steps"):
+            eng.run(
+                pos,
+                phases,
+                omegas,
+                n_steps=0,
+            )
+
+    @_python
+    def test_one_step_run_matches_single_step(self):
+        pos, phases, omegas = _problem(5)
+        eng = SwarmalatorEngine(16, 2, 0.01)
+        step_pos, step_ph = eng.step(pos, phases, omegas)
+        final_pos, final_ph, pos_traj, phase_traj = eng.run(
+            pos,
+            phases,
+            omegas,
+            n_steps=1,
+        )
+        np.testing.assert_allclose(final_pos, step_pos)
+        np.testing.assert_allclose(final_ph, step_ph)
+        assert pos_traj.shape == (1, 16, 2)
+        assert phase_traj.shape == (1, 16)
+        np.testing.assert_allclose(pos_traj[0], step_pos)
+        np.testing.assert_allclose(phase_traj[0], step_ph)
+
+    def test_negative_step_count_rejected(self):
+        pos, phases, omegas = _problem(6)
+        eng = SwarmalatorEngine(16, 2, 0.01)
+        with pytest.raises(ValueError):
+            eng.run(pos, phases, omegas, n_steps=-1)
 
 
 class TestOrderParameter:

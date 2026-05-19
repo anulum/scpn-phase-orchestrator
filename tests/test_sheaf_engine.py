@@ -107,6 +107,47 @@ class TestSheafEngineEdgeCases:
         p = engine.step(phases, omegas, restriction_maps, 0.0, psi)
         np.testing.assert_allclose(p, 0.5 * dt * np.ones((n, d)), atol=1e-12)
 
+    def test_run_rejects_shape_mismatch(self):
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="euler")
+        phases = np.zeros(2, dtype=np.float64)
+        omegas = np.ones((2, 2), dtype=np.float64)
+        restriction_maps = np.zeros((2, 2, 2, 2), dtype=np.float64)
+        psi = np.zeros(2, dtype=np.float64)
+
+        with pytest.raises(ValueError, match="phases.shape"):
+            engine.run(phases, omegas, restriction_maps, 0.0, psi, 1)
+
+    def test_run_rejects_non_finite_inputs(self):
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="euler")
+        phases = np.array([[0.0, 0.0], [0.1, 0.1]], dtype=np.float64)
+        omegas = np.array([[1.0, 0.0], [np.inf, 0.2]], dtype=np.float64)
+        restriction_maps = np.zeros((2, 2, 2, 2), dtype=np.float64)
+        psi = np.zeros(2, dtype=np.float64)
+
+        with pytest.raises(ValueError, match="omegas contains NaN/Inf"):
+            engine.run(phases, omegas, restriction_maps, 0.0, psi, 1)
+
+    def test_run_with_empty_restriction_maps_decouples(self):
+        n = 3
+        d = 3
+        dt = 0.02
+        engine = SheafUPDEEngine(n, d_dimensions=d, dt=dt, method="euler")
+        phases = np.array(
+            [[0.0, 0.5, 1.0], [0.2, 0.7, 1.2], [0.4, 0.9, 1.4]],
+            dtype=np.float64,
+        )
+        omegas = np.array(
+            [[0.1, 0.2, 0.3], [0.2, 0.3, 0.4], [0.3, 0.4, 0.5]],
+            dtype=np.float64,
+        )
+        restriction_maps = np.zeros((n, n, d, d), dtype=np.float64)
+        psi = np.zeros(d, dtype=np.float64)
+        n_steps = 4
+
+        out = engine.run(phases, omegas, restriction_maps, 0.0, psi, n_steps)
+        expected = (phases + n_steps * dt * omegas) % (2 * np.pi)
+        np.testing.assert_allclose(out, expected, atol=1e-12)
+
     def test_d_dimensions_one_matches_scalar_engine_over_many_steps(self):
         """Long-run parity: D=1 sheaf tracks scalar UPDEEngine across 50
         steps (single-step parity is already covered above)."""

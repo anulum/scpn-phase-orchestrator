@@ -68,6 +68,59 @@ class TestConstructor:
 
 class TestStep:
     @_python
+    def test_invalid_state_shapes_are_rejected(self):
+        theta, omega_dot, power, knm, inertia, damping = _problem(11)
+        eng = InertialKuramotoEngine(8, 0.01)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(theta[:7], omega_dot, power, knm, inertia, damping)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(theta, omega_dot[:7], power, knm, inertia, damping)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(theta, omega_dot, power[:7], knm, inertia, damping)
+        bad_knm = np.ones((7, 7))
+        np.fill_diagonal(bad_knm, 0.0)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(theta, omega_dot, power, bad_knm, inertia, damping)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(theta, omega_dot, power, knm, inertia[:7], damping)
+        with pytest.raises(ValueError, match="shape"):
+            eng.step(theta, omega_dot, power, knm, inertia, damping[:7])
+
+    @_python
+    def test_nonfinite_step_inputs_are_rejected(self):
+        theta, omega_dot, power, knm, inertia, damping = _problem(12)
+        eng = InertialKuramotoEngine(8, 0.01)
+
+        nan_theta = theta.copy()
+        nan_theta[0] = np.nan
+        with pytest.raises(ValueError, match="finite"):
+            eng.step(nan_theta, omega_dot, power, knm, inertia, damping)
+
+        inf_power = power.copy()
+        inf_power[0] = float("inf")
+        with pytest.raises(ValueError, match="finite"):
+            eng.step(theta, omega_dot, inf_power, knm, inertia, damping)
+
+        neg_inertia = inertia.copy()
+        neg_inertia[0] = -1.0
+        with pytest.raises(ValueError, match="positive"):
+            eng.step(theta, omega_dot, power, knm, neg_inertia, damping)
+
+    def test_zero_step_run_is_rejected(self):
+        theta, omega_dot, power, knm, inertia, damping = _problem(13)
+        eng = InertialKuramotoEngine(8, 0.01)
+        with pytest.raises(ValueError, match="n_steps"):
+            eng.run(
+                theta,
+                omega_dot,
+                power,
+                knm,
+                inertia,
+                damping,
+                n_steps=0,
+            )
+
+    @_python
     def test_output_shapes(self):
         theta, od, p, k, m, d = _problem(0)
         eng = InertialKuramotoEngine(8, 0.01)
@@ -151,6 +204,33 @@ class TestRun:
         assert final_od.shape == (8,)
         assert th_traj.shape == (5, 8)
         assert od_traj.shape == (5, 8)
+
+    @_python
+    def test_one_step_run_matches_single_step(self):
+        theta, od, p, k, m, d = _problem(14)
+        eng = InertialKuramotoEngine(8, 0.01)
+        step_th, step_omega = eng.step(theta, od, p, k, m, d)
+        run_final_th, run_final_omega, th_traj, omega_traj = eng.run(
+            theta,
+            od,
+            p,
+            k,
+            m,
+            d,
+            n_steps=1,
+        )
+        np.testing.assert_allclose(run_final_th, step_th)
+        np.testing.assert_allclose(run_final_omega, step_omega)
+        assert th_traj.shape == (1, 8)
+        assert omega_traj.shape == (1, 8)
+        np.testing.assert_allclose(th_traj[0], step_th)
+        np.testing.assert_allclose(omega_traj[0], step_omega)
+
+    def test_negative_step_count_rejected(self):
+        theta, od, p, k, m, d = _problem(15)
+        eng = InertialKuramotoEngine(8, 0.01)
+        with pytest.raises(ValueError):
+            eng.run(theta, od, p, k, m, d, n_steps=-1)
 
 
 class TestHelpers:

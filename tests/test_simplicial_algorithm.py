@@ -144,6 +144,24 @@ class TestThreeBodyIdentity:
         np.testing.assert_allclose(got, expected, atol=1e-12)
 
 
+class TestDegenerateSimplex:
+    @_python
+    def test_two_node_system_skips_three_body_term(self):
+        phases = np.array([0.2, 1.1], dtype=np.float64)
+        omegas = np.array([0.3, -0.5], dtype=np.float64)
+        knm = np.array([[0.0, 0.7], [0.2, 0.0]], dtype=np.float64)
+        alpha = np.array([[0.0, 0.1], [0.3, 0.0]], dtype=np.float64)
+        dt = 0.01
+        eng = SimplicialEngine(2, dt=dt, sigma2=1.25)
+
+        got = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+
+        diff = phases[np.newaxis, :] - phases[:, np.newaxis] - alpha
+        pairwise = np.sum(knm * np.sin(diff), axis=1)
+        expected = (phases + dt * (omegas + pairwise)) % TWO_PI
+        np.testing.assert_allclose(got, expected, atol=1e-12)
+
+
 class TestSyncFixedPoint:
     @_python
     def test_fully_synced_is_fixed_point(self):

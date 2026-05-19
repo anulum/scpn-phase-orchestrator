@@ -163,6 +163,46 @@ class TestSparseEngineEdgeCases:
         p_dense = dense.step(phases, omegas, knm, 0.0, 0.0, alpha)
         np.testing.assert_allclose(p_sparse, p_dense, atol=1e-12)
 
+    def test_run_rejects_invalid_row_ptr_shape(self):
+        engine = SparseUPDEEngine(3, dt=0.01, method="euler")
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.ones(3, dtype=np.float64)
+        row_ptr = np.array([0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="row_ptr.shape"):
+            engine.run(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av, 1)
+
+    def test_run_rejects_non_finite_inputs(self):
+        engine = SparseUPDEEngine(3, dt=0.01, method="euler")
+        phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
+        omegas = np.array([1.0, float("nan"), 1.2], dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        with pytest.raises(ValueError, match="omegas contains NaN/Inf"):
+            engine.run(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av, 1)
+
+    def test_run_with_empty_boundary_decouples(self):
+        n = 4
+        dt = 0.02
+        n_steps = 5
+        engine = SparseUPDEEngine(n, dt=dt, method="euler")
+        phases = np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
+        omegas = np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
+        row_ptr = np.array([0, 0, 0, 0, 0], dtype=np.uint64)
+        col = np.array([], dtype=np.uint64)
+        kv = np.array([], dtype=np.float64)
+        av = np.array([], dtype=np.float64)
+
+        out = engine.run(phases, omegas, row_ptr, col, kv, 0.0, 0.0, av, n_steps)
+        expected = (phases + n_steps * dt * omegas) % (2 * np.pi)
+        np.testing.assert_allclose(out, expected, atol=1e-12)
+
     def test_rk45_parity_with_dense(self):
         """Adaptive-step integrator parity across sparse and dense paths."""
         n = 6

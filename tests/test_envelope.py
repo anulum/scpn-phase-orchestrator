@@ -102,6 +102,22 @@ class TestExtractEnvelope:
         assert np.all(np.isfinite(env))
         assert env.size > 0
 
+    def test_window_equal_to_signal_length(self) -> None:
+        amp = np.array([1.0, 2.0, 3.0, 4.0])
+        env = extract_envelope(amp, window=4)
+        expected = np.full_like(amp, np.sqrt(np.mean(np.square(amp))))
+        np.testing.assert_allclose(env, expected)
+
+    def test_window_one_more_than_length_uses_global_rms(self) -> None:
+        amp = np.array([1.0, 2.0, 3.0])
+        env = extract_envelope(amp, window=4)
+        expected = np.full_like(amp, np.sqrt(np.mean(np.square(amp))))
+        np.testing.assert_allclose(env, expected)
+
+    def test_invalid_ndim_is_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            extract_envelope(np.zeros((2, 2, 2)), window=3)
+
 
 class TestEnvelopeModulationDepth:
     def test_constant_returns_zero(self) -> None:
@@ -127,6 +143,10 @@ class TestEnvelopeModulationDepth:
         env = np.abs(rng.standard_normal(100)) + 0.01
         depth = envelope_modulation_depth(env)
         assert 0.0 <= depth <= 1.0
+
+    def test_negative_envelope_returns_zero(self) -> None:
+        env = np.array([-2.0, -1.0, -0.5])
+        assert envelope_modulation_depth(env) == 0.0
 
 
 class TestEnvelopeState:

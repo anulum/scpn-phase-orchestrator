@@ -183,6 +183,68 @@ class TestPredictFromOscillators:
         assert isinstance(state, OAState)
         assert 0.0 <= state.R <= 1.0 + 1e-12
 
+    @pytest.mark.parametrize(
+        ("omegas", "match"),
+        [
+            (np.zeros((3, 1), dtype=np.float64), "one-dimensional"),
+            (np.array([], dtype=np.float64), "at least one frequency"),
+            (np.array([0.0, np.inf, 0.0], dtype=np.float64), "only finite values"),
+        ],
+    )
+    def test_predict_from_oscillators_rejects_malformed_samples(
+        self,
+        omegas: np.ndarray,
+        match: str,
+    ) -> None:
+        red = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0)
+        with pytest.raises(ValueError, match=match):
+            red.predict_from_oscillators(omegas, K=1.0)
+
+    @pytest.mark.parametrize(
+        "K",
+        [float("nan"), float("inf"), "1.0", False],
+    )
+    def test_predict_from_oscillators_rejects_invalid_coupling(
+        self,
+        K: object,
+    ) -> None:
+        red = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0)
+        with pytest.raises(ValueError, match="K must be a finite real"):
+            red.predict_from_oscillators([0.1, 0.2, 0.3], K=K)
+
+    def test_predict_from_oscillators_uses_iqr_fallback_when_spread_collapses(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        red = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=2.0, dt=0.01)
+        seen: dict[str, float] = {}
+
+        def fake_python_oa_run(
+            z_re: float,
+            z_im: float,
+            omega_0: float,
+            delta: float,
+            k_coupling: float,
+            dt: float,
+            n_steps: int,
+        ) -> tuple[float, float, float, float]:
+            seen["omega_0"] = omega_0
+            seen["delta"] = delta
+            seen["n_steps"] = n_steps
+            return 0.01, 0.0, 0.01, 0.0
+
+        monkeypatch.setattr(r_mod, "_HAS_RUST_SCALAR", False, raising=False)
+        monkeypatch.setattr(r_mod, "_dispatch", lambda: None)
+        monkeypatch.setattr(r_mod, "_python_oa_run", fake_python_oa_run)
+
+        state = red.predict_from_oscillators(np.array([1.0, 1.0, 1.0]), K=1.4)
+
+        assert pytest.approx(1.0) == seen["omega_0"]
+        assert pytest.approx(0.01) == seen["delta"]
+        assert seen["n_steps"] == int(10.0 / red._dt)
+        assert isinstance(state, OAState)
+        assert state.K_c == pytest.approx(0.02)
+
 
 class TestHypothesis:
     @_python
