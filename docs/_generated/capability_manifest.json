@@ -12,7 +12,7 @@
     "research_experimental_modules": 121,
     "runtime_serving_modules": 46,
     "rust_kernel_files": 91,
-    "test_files": 443
+    "test_files": 444
   },
   "documentation": {
     "public_pages": [
@@ -1134,6 +1134,7 @@
       "tests/test_attention_residuals_stability.py",
       "tests/test_audit_event_stream.py",
       "tests/test_audit_logger.py",
+      "tests/test_audit_package_exports.py",
       "tests/test_audit_replay.py",
       "tests/test_audit_replay_engine.py",
       "tests/test_audit_signing.py",
