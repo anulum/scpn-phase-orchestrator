@@ -43,12 +43,63 @@ def _install_fake_quantum_module(
     orchestrator_to_quantum_phases=None,
     quantum_to_orchestrator_phases=None,
 ) -> None:
+    for module_name in (
+        "scpn_quantum_control.bridge",
+        "scpn_quantum_control.bridge.knm_hamiltonian",
+        "scpn_quantum_control.phase",
+        "scpn_quantum_control.phase.xy_kuramoto",
+    ):
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
     module = ModuleType("scpn_quantum_control")
     if orchestrator_to_quantum_phases is not None:
         module.orchestrator_to_quantum_phases = orchestrator_to_quantum_phases
     if quantum_to_orchestrator_phases is not None:
         module.quantum_to_orchestrator_phases = quantum_to_orchestrator_phases
     monkeypatch.setitem(sys.modules, "scpn_quantum_control", module)
+
+
+def _install_fake_quantum_bridge_modules(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    knm_to_hamiltonian,
+) -> None:
+    base_module = ModuleType("scpn_quantum_control")
+    bridge_module = ModuleType("scpn_quantum_control.bridge")
+    hamiltonian_module = ModuleType("scpn_quantum_control.bridge.knm_hamiltonian")
+    bridge_module.__path__ = []  # type: ignore[attr-defined]
+    hamiltonian_module.knm_to_hamiltonian = knm_to_hamiltonian
+    bridge_module.knm_hamiltonian = hamiltonian_module
+    base_module.bridge = bridge_module
+    base_module.__path__ = []  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "scpn_quantum_control", base_module)
+    monkeypatch.setitem(sys.modules, "scpn_quantum_control.bridge", bridge_module)
+    monkeypatch.setitem(
+        sys.modules,
+        "scpn_quantum_control.bridge.knm_hamiltonian",
+        hamiltonian_module,
+    )
+
+
+def _install_fake_quantum_solver_module(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    solver_type: type,
+) -> None:
+    base_module = ModuleType("scpn_quantum_control")
+    phase_module = ModuleType("scpn_quantum_control.phase")
+    phase_xy_module = ModuleType("scpn_quantum_control.phase.xy_kuramoto")
+    phase_module.__path__ = []  # type: ignore[attr-defined]
+    phase_xy_module.QuantumKuramotoSolver = solver_type
+    phase_module.xy_kuramoto = phase_xy_module
+    base_module.phase = phase_module
+    base_module.__path__ = []  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "scpn_quantum_control", base_module)
+    monkeypatch.setitem(sys.modules, "scpn_quantum_control.phase", phase_module)
+    monkeypatch.setitem(
+        sys.modules,
+        "scpn_quantum_control.phase.xy_kuramoto",
+        phase_xy_module,
+    )
 
 
 # The tests below exercise the adapter paths that do NOT require the
@@ -250,10 +301,102 @@ class TestQuantumBridgeDependencyShim:
         with pytest.raises(ValueError, match="does not match n_oscillators=3"):
             bridge.build_hamiltonian(np.ones((2, 2)), np.ones(3))
 
+    def test_build_hamiltonian_uses_fake_quantum_control_dependency(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        captured: dict[str, object] = {}
+
+        def fake_knm_to_hamiltonian(
+            knm: np.ndarray,
+            omegas: np.ndarray,
+        ) -> object:
+            captured["knm"] = knm
+            captured["omegas"] = omegas
+            return {"kind": "hamiltonian"}
+
+        _install_fake_quantum_bridge_modules(
+            monkeypatch,
+            knm_to_hamiltonian=fake_knm_to_hamiltonian,
+        )
+        bridge = QuantumControlBridge(2)
+        knm = np.array([[0.0, 0.2], [0.3, 0.0]])
+        omegas = np.array([0.1, 0.2])
+        result = bridge.build_hamiltonian(knm, omegas)
+        assert result["kind"] == "hamiltonian"
+        np.testing.assert_allclose(captured["knm"], np.array([[0.0, 0.2], [0.3, 0.0]]))
+        np.testing.assert_allclose(captured["omegas"], omegas)
+
+    def test_build_hamiltonian_fails_if_dependency_contract_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        _install_fake_quantum_module(monkeypatch)
+        bridge = QuantumControlBridge(2)
+        with pytest.raises(ImportError):
+            bridge.build_hamiltonian(np.ones((2, 2)), np.ones(2))
+
     def test_solve_q_upde_rejects_invalid_t_max_before_dependency_import(self):
         bridge = QuantumControlBridge(2)
         with pytest.raises(ValueError, match="t_max must be finite and positive"):
             bridge.solve_q_upde(np.ones((2, 2)), np.ones(2), t_max=0.0)
+
+    def test_solve_q_upde_uses_fake_quantum_control_dependency(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        captured: dict[str, object] = {}
+
+        class FakeSolver:
+            def __init__(
+                self,
+                *,
+                n_oscillators: int,
+                K_coupling: np.ndarray,
+                omega_natural: np.ndarray,
+                trotter_order: int,
+            ) -> None:
+                captured["n_oscillators"] = n_oscillators
+                captured["trotter_order"] = trotter_order
+                captured["K_coupling"] = K_coupling
+                captured["omega_natural"] = omega_natural
+
+            def run(
+                self,
+                *,
+                t_max: float,
+                dt: float,
+                trotter_per_step: int,
+            ) -> dict[str, object]:
+                captured["t_max"] = t_max
+                captured["dt"] = dt
+                captured["trotter_per_step"] = trotter_per_step
+                return {"ok": True}
+
+        _install_fake_quantum_solver_module(monkeypatch, solver_type=FakeSolver)
+        bridge = QuantumControlBridge(2, trotter_order=3)
+        result = bridge.solve_q_upde(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.4]),
+            t_max=0.7,
+            dt=0.2,
+            trotter_per_step=6,
+        )
+        assert result == {"ok": True}
+        assert captured["n_oscillators"] == 2
+        assert captured["trotter_order"] == 3
+        assert captured["t_max"] == 0.7
+        assert captured["dt"] == 0.2
+        assert captured["trotter_per_step"] == 6
+
+    def test_solve_q_upde_fails_if_solver_contract_is_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        _install_fake_quantum_module(monkeypatch)
+        bridge = QuantumControlBridge(2)
+        with pytest.raises(ImportError):
+            bridge.solve_q_upde(np.ones((2, 2)), np.ones(2))
 
 
 @pytest.mark.skipif(not HAS_QC, reason="scpn-quantum-control not installed")

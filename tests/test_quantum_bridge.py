@@ -289,6 +289,37 @@ class TestCompilerManifestValidation:
                 dt=0.1,
             )
 
+    def test_marks_parity_status_as_failed_when_terms_differ(self, monkeypatch: Any):
+        bridge = QuantumControlBridge(n_oscillators=2)
+
+        def _fake_parity(
+            _self: QuantumControlBridge,
+            omegas_in: np.ndarray,
+            frequency_terms: list[dict[str, object]],
+            knm: np.ndarray,
+            coupling_terms: list[dict[str, object]],
+        ) -> dict[str, object]:
+            return {
+                "engine": "deterministic_xy_term_reconstruction",
+                "max_abs_frequency_error": 0.75,
+                "max_abs_coupling_error": 0.0,
+                "term_count": len(frequency_terms) + len(coupling_terms),
+            }
+
+        monkeypatch.setattr(
+            QuantumControlBridge,
+            "_quantum_compiler_parity",
+            _fake_parity,
+        )
+
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+        assert manifest["status"] == "co_simulation_parity_failed"
+        assert manifest["co_simulation_parity"]["max_abs_frequency_error"] == 0.75
+
 
 class TestSolveQUPDEValidation:
     def test_rejects_invalid_t_max(self):

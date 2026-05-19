@@ -16,7 +16,18 @@ from scpn_phase_orchestrator.supervisor import (
     load_hierarchy_sync_envelope,
     simulate_hierarchy_gossip_consensus,
 )
-from scpn_phase_orchestrator.supervisor.hierarchy import _reject_raw_instance_attributes
+from scpn_phase_orchestrator.supervisor.hierarchy import (
+    _child_escalations,
+    _is_forbidden_hierarchy_key,
+    _load_child_summary,
+    _load_mapping_record,
+    _metadata_to_audit_record,
+    _normalise_metadata_value,
+    _normalise_previous_sequences,
+    _reject_raw_hierarchy_keys,
+    _reject_raw_instance_attributes,
+    _reject_unknown_keys,
+)
 
 
 def test_hierarchical_plan_composes_reduced_child_summaries_only() -> None:
@@ -598,6 +609,194 @@ def test_hierarchy_transport_runtime_rejects_stale_followup_only() -> None:
     ]
     assert [envelope.source_node for envelope in ledger.accepted] == ["node-b"]
     assert runtime.previous_sequences == {"node-a": 2, "node-b": 1}
+
+
+def test_hierarchy_transport_runtime_rejects_thresholds_outside_unit_interval() -> None:
+    with pytest.raises(
+        ValueError,
+        match="degraded_threshold must be finite and in \\[0, 1\\]",
+    ):
+        HierarchyTransportRuntime(degraded_threshold=1.2)
+
+    with pytest.raises(
+        ValueError,
+        match="critical_threshold must be finite and in \\[0, 1\\]",
+    ):
+        HierarchyTransportRuntime(critical_threshold=-0.2)
+
+
+def test_load_mapping_record_parses_json_and_rejects_invalid_record_types() -> None:
+    record = {
+        "protocol_version": "spo-hierarchy-sync/v1",
+        "source_node": "node-a",
+        "sequence": 1,
+        "summary": {"name": "edge-a", "channel": "power", "R": 0.9, "psi": 0.0},
+    }
+
+    loaded = _load_mapping_record(json.dumps(record))
+    assert loaded == record
+
+    with pytest.raises(ValueError, match="hierarchy sync envelope must be valid JSON"):
+        _load_mapping_record('{"protocol_version":}')
+
+    with pytest.raises(
+        ValueError,
+        match="hierarchy sync envelope must be a mapping or JSON string",
+    ):
+        _load_mapping_record(1)
+
+
+def test_child_escalations_reports_confidence_and_coherence_reasons() -> None:
+    child = ChildSupervisorSummary(
+        "edge-a",
+        "grid",
+        R=0.2,
+        psi=0.0,
+        confidence=0.2,
+        regime="critical-observed",
+    )
+
+    escalations = _child_escalations(
+        child,
+        degraded_threshold=0.65,
+        critical_threshold=0.35,
+        min_confidence=0.5,
+    )
+
+    assert [item.reason for item in escalations] == [
+        "child_summary_below_min_confidence",
+        "child_coherence_below_critical",
+    ]
+    assert escalations[1].severity == "critical"
+
+
+def test_child_escalations_reports_declared_degraded_regime() -> None:
+    child = ChildSupervisorSummary(
+        "edge-a",
+        "grid",
+        R=0.9,
+        psi=0.0,
+        confidence=1.0,
+        regime="degraded-observer",
+    )
+
+    escalations = _child_escalations(
+        child,
+        degraded_threshold=0.65,
+        critical_threshold=0.35,
+        min_confidence=0.5,
+    )
+
+    assert [(item.severity, item.reason) for item in escalations] == [
+        ("degraded", "child_regime_escalation"),
+    ]
+
+
+def test_load_child_summary_defaults_regime_and_confidence() -> None:
+    summary = _load_child_summary(
+        {
+            "name": "edge-a",
+            "channel": "grid",
+            "R": 0.8,
+            "psi": 0.1,
+        },
+    )
+    assert summary.regime == "nominal"
+    assert summary.confidence == 1.0
+    assert summary.metadata == {}
+
+
+def test_load_child_summary_rejects_unknown_fields() -> None:
+    with pytest.raises(
+        ValueError,
+        match="hierarchy sync summary contains unknown fields",
+    ):
+        _load_child_summary(
+            {
+                "name": "edge-a",
+                "channel": "grid",
+                "R": 0.8,
+                "psi": 0.0,
+                "unknown": "bad",
+            },
+        )
+
+
+def test_load_child_summary_rejects_json_unsafe_metadata() -> None:
+    with pytest.raises(ValueError, match="contains raw child evidence: raw_phases"):
+        _load_child_summary(
+            {
+                "name": "edge-a",
+                "channel": "grid",
+                "R": 0.8,
+                "psi": 0.0,
+                "metadata": {"raw_phases": [0.1, 0.2]},
+            },
+        )
+
+
+def test_reject_raw_hierarchy_keys_enforces_child_evidence_filter() -> None:
+    _reject_raw_hierarchy_keys({"name": "node-a", "channel": "grid"}, "summary")
+    with pytest.raises(
+        ValueError,
+        match="contains raw child evidence: raw_phase_history",
+    ):
+        _reject_raw_hierarchy_keys({"raw_phase_history": [0.1]}, "summary")
+
+
+def test_reject_unknown_keys_rejects_bad_key_types_and_unknown_fields() -> None:
+    with pytest.raises(ValueError, match="keys must be strings"):
+        _reject_unknown_keys({1: "x"}, allowed=frozenset({"name"}), location="summary")
+
+    with pytest.raises(
+        ValueError,
+        match="summary contains unknown fields: extra",
+    ):
+        _reject_unknown_keys(
+            {"extra": 1},
+            allowed=frozenset({"name"}),
+            location="summary",
+        )
+
+
+def test_normalise_metadata_value_converts_nested_containers() -> None:
+    value = _normalise_metadata_value(
+        {"site": {"region": ["north", "west"]}, "active": True},
+        "metadata",
+    )
+    assert isinstance(value["site"], Mapping)
+    assert isinstance(value["site"]["region"], tuple)
+
+
+def test_normalise_metadata_value_rejects_json_unsafe_scalar() -> None:
+    with pytest.raises(ValueError, match="must be JSON-safe metadata"):
+        _normalise_metadata_value((2**60), "metadata")
+
+
+def test_metadata_to_audit_record_returns_plain_python_containers() -> None:
+    assert _metadata_to_audit_record(
+        {"site": ("north", "south"), "samples": [1, (2, 3)]},
+    ) == {
+        "site": ["north", "south"],
+        "samples": [1, [2, 3]],
+    }
+
+
+def test_is_forbidden_hierarchy_key_distinguishes_clean_keys() -> None:
+    assert _is_forbidden_hierarchy_key("raw_phase_history")
+    assert _is_forbidden_hierarchy_key("child_evidence")
+    assert not _is_forbidden_hierarchy_key("coherence")
+    assert not _is_forbidden_hierarchy_key("phase_count")
+
+
+def test_normalise_previous_sequences_checks_mapping_contract() -> None:
+    assert _normalise_previous_sequences({"node-a": 3}) == {"node-a": 3}
+
+    with pytest.raises(ValueError, match="source_node must be a non-empty string"):
+        _normalise_previous_sequences({"": 1})
+
+    with pytest.raises(ValueError, match="sequence must be >= 0"):
+        _normalise_previous_sequences({"node-a": -1})
 
 
 @pytest.mark.parametrize(

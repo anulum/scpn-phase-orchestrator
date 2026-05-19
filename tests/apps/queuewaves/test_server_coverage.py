@@ -11,13 +11,16 @@ run_server lifecycle."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
+from starlette.websockets import WebSocketDisconnect
 
 from scpn_phase_orchestrator.apps.queuewaves.config import (
     QueueWavesConfig,
+    SecurityConfig,
 )
 from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
     PipelineSnapshot,
@@ -29,6 +32,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
+from scpn_phase_orchestrator.apps.queuewaves import server as server_mod
 from scpn_phase_orchestrator.apps.queuewaves.server import create_app
 
 
@@ -74,6 +78,31 @@ class TestServerNoData:
         client = TestClient(app)
         r = client.get("/")
         assert r.status_code == 200
+
+    def test_root_uses_fallback_when_dashboard_missing(
+        self, minimal_config: QueueWavesConfig, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        original_is_dir = server_mod.Path.is_dir
+        original_exists = server_mod.Path.exists
+
+        def patched_is_dir(path: Path) -> bool:
+            if path.name == "static" and path.parent.name == "queuewaves":
+                return False
+            return original_is_dir(path)
+
+        def patched_exists(path: Path) -> bool:
+            if path.name == "index.html" and path.parent.name == "static":
+                return False
+            return original_exists(path)
+
+        monkeypatch.setattr(server_mod.Path, "is_dir", patched_is_dir)
+        monkeypatch.setattr(server_mod.Path, "exists", patched_exists)
+
+        app = create_app(minimal_config)
+        client = TestClient(app)
+        r = client.get("/")
+        assert r.status_code == 200
+        assert r.text == "QueueWaves is running. No dashboard found."
 
     def test_websocket_connect_disconnect(self, minimal_config: QueueWavesConfig):
         app = create_app(minimal_config)
@@ -166,6 +195,65 @@ class TestBroadcastAndLoop:
             # App starts despite scrape errors
             r = client.get("/api/v1/health")
             assert r.status_code == 200
+
+    def test_websocket_rejects_missing_api_key_in_production(
+        self, minimal_config: QueueWavesConfig, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cfg = QueueWavesConfig(
+            prometheus_url=minimal_config.prometheus_url,
+            services=minimal_config.services,
+            scrape_interval_s=minimal_config.scrape_interval_s,
+            buffer_length=minimal_config.buffer_length,
+            thresholds=minimal_config.thresholds,
+            coupling=minimal_config.coupling,
+            alert_sinks=minimal_config.alert_sinks,
+            server=minimal_config.server,
+            security=SecurityConfig(mode="production"),
+        )
+        monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
+        app = create_app(cfg)
+        client = TestClient(app)
+
+        with (
+            pytest.raises(WebSocketDisconnect) as exc_info,
+            client.websocket_connect("/ws/stream"),
+        ):
+            pass
+        assert exc_info.value.code == 1008
+
+    def test_websocket_rate_limit_enforced_when_exceeded(
+        self, minimal_config: QueueWavesConfig, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cfg = QueueWavesConfig(
+            prometheus_url=minimal_config.prometheus_url,
+            services=minimal_config.services,
+            scrape_interval_s=minimal_config.scrape_interval_s,
+            buffer_length=minimal_config.buffer_length,
+            thresholds=minimal_config.thresholds,
+            coupling=minimal_config.coupling,
+            alert_sinks=minimal_config.alert_sinks,
+            server=minimal_config.server,
+            security=SecurityConfig(mode="production", rate_limit_per_minute=1),
+        )
+        monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
+        app = create_app(cfg)
+        client = TestClient(app)
+        headers = {"x-api-key": "test-key"}
+
+        with (
+            client.websocket_connect("/ws/stream", headers=headers),
+            pytest.raises(WebSocketDisconnect) as exc_info,
+            client.websocket_connect("/ws/stream", headers=headers),
+        ):
+            pass
+        assert exc_info.value.code == 1013
+
+    def test_create_app_rejects_unknown_security_mode(
+        self, minimal_config: QueueWavesConfig
+    ) -> None:
+        object.__setattr__(minimal_config.security, "mode", "staging")
+        with pytest.raises(ValueError, match="QueueWaves security.mode"):
+            create_app(minimal_config)
 
 
 class TestRunServer:

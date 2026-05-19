@@ -25,8 +25,39 @@ from scpn_phase_orchestrator.apps.queuewaves.config import (
     ServerConfig,
     ServiceDef,
     ThresholdConfig,
+    _require_finite_non_negative,
+    _require_int_range,
+    _require_non_empty,
     load_config,
 )
+
+
+def test_require_non_empty_accepts_non_empty() -> None:
+    assert _require_non_empty("abc", "field") == "abc"
+
+
+def test_require_finite_non_negative_normalises_numeric_input() -> None:
+    assert _require_finite_non_negative("3.25", "field") == 3.25
+
+
+def test_require_int_range_parses_numeric_and_respects_bounds() -> None:
+    assert _require_int_range("16", "field", 4) == 16
+    assert _require_int_range(8.0, "field", 4) == 8
+
+
+def test_load_config_accepts_numeric_buffer_length_from_string(tmp_path: Path) -> None:
+    cfg_text = textwrap.dedent("""\
+        prometheus_url: "http://prom:9090"
+        services:
+          - name: svc-a
+            promql: up
+        buffer_length: "128"
+    """)
+    cfg_path = tmp_path / "queuewaves.yaml"
+    cfg_path.write_text(cfg_text, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+    assert cfg.buffer_length == 128
 
 
 def test_load_config(tmp_path: Path) -> None:
