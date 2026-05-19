@@ -30,6 +30,7 @@ __all__ = ["SupervisorPolicy", "SupervisorPolicyGains"]
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True)
 class SupervisorPolicyGains:
     """Tunable regime-action gains for a deployment-specific supervisor."""
@@ -125,7 +126,7 @@ class SupervisorPolicy:
                     ControlAction(
                         knob="K",
                         scope=f"layer_{worst}",
-                    value=self._gains.k_reduce,
+                        value=self._gains.k_reduce,
                         ttl_s=5.0,
                         justification=f"critical: reduce coupling on layer {worst}",
                     )
