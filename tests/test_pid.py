@@ -106,6 +106,14 @@ class TestSynergy:
         phases = np.array([0.0, 1.0, 2.0])
         assert synergy(phases, [], [0, 1]) == 0.0
 
+    @pytest.mark.parametrize(
+        "phases",
+        [np.array([0.0, np.nan]), np.array([True, False])],
+    )
+    def test_rejects_invalid_phase_vector(self, phases: np.ndarray) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            synergy(phases, [0], [1])
+
     @pytest.mark.parametrize("group", [[0.5], [True], [-1], [3], np.array([[0]])])
     def test_rejects_invalid_group_indices(self, group):
         phases = np.array([0.0, 1.0, 2.0])
@@ -164,3 +172,16 @@ class TestPIDPipelineWiring:
         s = synergy(phases, group_a, group_b)
         assert r >= 0.0
         assert np.isfinite(s)
+
+    def test_redundancy_synergy_are_deterministic_for_identical_inputs(self):
+        phases = np.linspace(0.0, 2 * np.pi, 100, dtype=np.float64)
+        group_a = [0, 1, 2, 3, 4]
+        group_b = [5, 6, 7, 8, 9]
+
+        r1 = redundancy(phases, group_a, group_b)
+        s1 = synergy(phases, group_a, group_b)
+        r2 = redundancy(phases, group_a, group_b)
+        s2 = synergy(phases, group_a, group_b)
+
+        assert r1 == pytest.approx(r2, abs=0.0)
+        assert s1 == pytest.approx(s2, abs=0.0)

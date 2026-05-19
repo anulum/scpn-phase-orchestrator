@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.coupling.prior import CouplingPrior, UniversalPrior
 
@@ -36,6 +37,12 @@ class TestUniversalPrior:
         assert abs(np.mean(K_vals) - 0.47) < 0.02
         assert abs(np.std(K_vals) - 0.09) < 0.02
 
+    def test_sample_seed_reproducible(self):
+        prior = UniversalPrior()
+        first = prior.sample(seed=1234)
+        second = prior.sample(seed=1234)
+        assert first == second
+
     def test_estimate_Kc(self):
         prior = UniversalPrior()
         omegas = np.array([1.0, 1.5, 2.0, 2.5])
@@ -50,11 +57,48 @@ class TestUniversalPrior:
         result = prior.estimate_Kc(omegas, 4)
         assert result.K_c_estimate == 0.0
 
+    def test_estimate_Kc_rejects_empty_omegas(self):
+        prior = UniversalPrior()
+        with pytest.raises(ValueError, match="omegas"):
+            prior.estimate_Kc(np.array([]), 3)
+
+    def test_estimate_Kc_rejects_layer_mismatch(self):
+        prior = UniversalPrior()
+        with pytest.raises(ValueError, match="n_layers"):
+            prior.estimate_Kc(np.array([0.1, 0.2, 0.3]), 4)
+
+    def test_estimate_Kc_rejects_invalid_layer_count(self):
+        prior = UniversalPrior()
+        with pytest.raises((TypeError, ValueError), match="n_layers"):
+            prior.estimate_Kc(np.array([0.1, 0.2]), True)  # type: ignore[arg-type]
+
     def test_log_probability_peak_at_mean(self):
         prior = UniversalPrior()
         lp_peak = prior.log_probability(0.47, 0.25)
         lp_off = prior.log_probability(0.8, 0.5)
         assert lp_peak > lp_off
+
+    @pytest.mark.parametrize(
+        ("K_base", "decay_alpha"),
+        [
+            (np.nan, 0.25),
+            (0.47, np.nan),
+            (np.inf, 0.25),
+            (0.47, np.inf),
+        ],
+    )
+    def test_log_probability_rejects_non_finite_inputs(
+        self, K_base: float, decay_alpha: float
+    ) -> None:
+        prior = UniversalPrior()
+        with pytest.raises(ValueError, match="finite"):
+            prior.log_probability(K_base, decay_alpha)
+
+    @pytest.mark.parametrize("value", ["0.47", None, object()])
+    def test_log_probability_rejects_invalid_types(self, value: object) -> None:
+        prior = UniversalPrior()
+        with pytest.raises((TypeError, ValueError), match="finite real value|finite"):
+            prior.log_probability(value, 0.25)  # type: ignore[arg-type]
 
     def test_log_probability_symmetric(self):
         prior = UniversalPrior()

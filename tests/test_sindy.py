@@ -78,6 +78,17 @@ def test_sindy_recovery():
     assert "0.5000 * sin(theta_1 - theta_0)" in equations[0]
 
 
+def test_sindy_recover_single_oscillator_frequency():
+    """One oscillator should recover its constant frequency term."""
+    phases = np.array([[0.0], [0.2], [0.4], [0.6], [0.8]], dtype=np.float64)
+    sindy = PhaseSINDy(threshold=0.0)
+    coeffs = sindy.fit(phases, 0.1)
+
+    assert len(coeffs) == 1
+    assert coeffs[0].shape == (1,)
+    assert abs(coeffs[0][0] - 2.0) < 1e-2
+
+
 def test_sindy_zero_coupling():
     """Uncoupled oscillators: SINDy must return K ≈ 0 under the threshold."""
     dt = 0.05
@@ -210,6 +221,21 @@ def test_sindy_threshold_sparsifies_weak_terms():
     )
 
 
+def test_sindy_threshold_zero_retains_weak_coupling_terms():
+    """A zero threshold must not zero weak but present coupling terms."""
+    dt = 0.05
+    steps = 320
+    omega = np.array([1.0, 1.2])
+    K = np.array([[0.0, 0.04], [0.04, 0.0]])
+    phases = _simulate(np.array([0.0, 0.5]), omega, K, dt, steps)
+
+    sindy = PhaseSINDy(threshold=0.0)
+    coeffs = sindy.fit(phases, dt)
+
+    assert abs(coeffs[0][1]) > 1e-6
+    assert abs(coeffs[1][1]) > 1e-6
+
+
 def test_sindy_equations_dump_format():
     """get_equations() returns one string per node with the 'theta_' marker."""
     n = 3
@@ -228,6 +254,27 @@ def test_sindy_equations_dump_format():
     for node_i, eq in enumerate(eqs):
         assert isinstance(eq, str)
         assert f"d(theta_{node_i})/dt" in eq
+
+
+def test_sindy_repeated_fit_is_deterministic():
+    """Running fit twice over the same trajectory is deterministic."""
+    n = 3
+    dt = 0.04
+    steps = 180
+    rng = np.random.default_rng(3)
+    omega = rng.uniform(0.7, 1.4, size=n)
+    K = 0.2 * (np.ones((n, n)) - np.eye(n))
+    phases = _simulate(rng.uniform(0.0, 2.0, n), omega, K, dt, steps)
+
+    sindy = PhaseSINDy()
+    first = sindy.fit(phases, dt)
+    first_eq = sindy.get_equations()
+    second = sindy.fit(phases, dt)
+    second_eq = sindy.get_equations()
+
+    for left, right in zip(first, second, strict=True):
+        assert np.array_equal(left, right)
+    assert first_eq == second_eq
 
 
 def test_sindy_import_detects_available_rust_backend(monkeypatch: pytest.MonkeyPatch):
@@ -388,6 +435,17 @@ def test_sindy_single_timestep_returns_zero_coefficients():
     assert len(coeffs[1]) == 2
     assert np.allclose(coeffs[0], 0.0)
     assert np.allclose(coeffs[1], 0.0)
+
+
+def test_sindy_single_timestep_returns_zero_equations():
+    """Single-step trajectories render equations through the zero-structure contract."""
+    sindy = PhaseSINDy()
+    sindy.fit(np.array([[0.0, 0.3]]), 0.05)
+
+    assert sindy.get_equations() == [
+        "d(theta_0)/dt = 0",
+        "d(theta_1)/dt = 0",
+    ]
 
 
 # Pipeline wiring: PhaseSINDy feeds the auto-tune pipeline (see

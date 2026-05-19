@@ -134,6 +134,32 @@ def test_detect_phase_lock_rejects_invalid_cross_layer_alignment(cla, match):
         monitor.detect_phase_lock(state, threshold=0.9)
 
 
+def test_detect_phase_lock_uses_lock_signatures_when_cla_is_below_threshold():
+    cla = np.eye(2)
+    state = _make_state([0.9, 0.8], lock_pairs={(0, 1): 0.95}, cla=cla)
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    locked = monitor.detect_phase_lock(state, threshold=0.9)
+    assert locked == [(0, 1)]
+
+
+def test_detect_phase_lock_deterministic_and_sorted():
+    cla = np.array(
+        [
+            [1.0, 0.95, 0.97],
+            [0.95, 1.0, 0.91],
+            [0.97, 0.91, 1.0],
+        ]
+    )
+    state = _make_state([0.9, 0.8, 0.7], cla=cla)
+    monitor = CoherenceMonitor(good_layers=[0, 1], bad_layers=[2])
+
+    first = monitor.detect_phase_lock(state, threshold=0.9)
+    second = monitor.detect_phase_lock(state, threshold=0.9)
+    assert first == [(0, 1), (0, 2), (1, 2)]
+    assert second == first
+
+
 class TestCoherenceMonitorPipelineWiring:
     """Pipeline: engine → per-layer R → CoherenceMonitor → R_good/R_bad."""
 

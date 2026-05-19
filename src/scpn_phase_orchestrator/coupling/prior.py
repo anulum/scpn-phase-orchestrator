@@ -18,6 +18,7 @@ preserves the same Gaussian-prior contract.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -105,9 +106,18 @@ class UniversalPrior:
         K_c = max|ω_i - ω_j| / λ₂(L) where L is built from the prior's
         decay_alpha on a chain graph of n_layers.
         """
+        if isinstance(n_layers, bool) or not isinstance(n_layers, Integral):
+            raise TypeError(f"n_layers must be an integer, got {n_layers!r}")
+        if n_layers <= 0:
+            raise ValueError("n_layers must be a positive integer")
         from scpn_phase_orchestrator.coupling.spectral import critical_coupling
 
         prior = self.default()
+        raw_omegas = np.asarray(omegas)
+        if raw_omegas.ndim != 1:
+            raise ValueError("omegas must be a 1-D frequency vector")
+        if raw_omegas.size != n_layers:
+            raise ValueError("n_layers must match the length of omegas")
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
         knm: FloatArray = prior.K_base * np.exp(-prior.decay_alpha * dist)
@@ -121,6 +131,14 @@ class UniversalPrior:
 
     def log_probability(self, K_base: float, decay_alpha: float) -> float:
         """Log-probability under the Gaussian prior (unnormalized)."""
+        if isinstance(K_base, bool) or not isinstance(K_base, Real):
+            raise TypeError("K_base must be a finite real value")
+        if isinstance(decay_alpha, bool) or not isinstance(decay_alpha, Real):
+            raise TypeError("decay_alpha must be a finite real value")
+        K_base = float(K_base)
+        decay_alpha = float(decay_alpha)
+        if not np.isfinite(K_base) or not np.isfinite(decay_alpha):
+            raise ValueError("K_base and decay_alpha must be finite real values")
         if _HAS_RUST:
             return float(
                 _rust_log_prob(

@@ -28,6 +28,7 @@ quantities.
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -116,6 +117,41 @@ def test_te_independent_signals_bounded(n: int, seed: int) -> None:
     assert te <= np.log(8) + 1e-9, (
         f"TE={te} exceeds log(8) upper bound for independent signals"
     )
+
+
+@pytest.mark.parametrize(
+    ("source", "target"),
+    [
+        (np.array([0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.0])),
+        (np.array([0.0, 1.0, 2.0, 3.0]), np.array([3.0, 2.0, 1.0, 0.0])),
+        (np.linspace(0.0, np.pi, 10), np.linspace(0.0, np.pi / 2, 10)),
+    ],
+)
+def test_phase_transfer_entropy_contracts_and_reproducibility(
+    source: np.ndarray,
+    target: np.ndarray,
+) -> None:
+    te_a = phase_transfer_entropy(source, target, n_bins=8)
+    te_b = phase_transfer_entropy(source, target, n_bins=8)
+    assert te_a == pytest.approx(te_b, abs=0.0)
+    assert np.isfinite(te_a)
+    assert te_a >= 0.0
+
+
+@pytest.mark.parametrize(
+    ("source", "target"),
+    [
+        (np.array([0.0, np.nan]), np.array([0.1, 0.2])),
+        (np.array([True, False]), np.array([0.1, 0.2])),
+        (np.array([[0.0, 1.0]]), np.array([0.0, 1.0, 2.0])),
+    ],
+)
+def test_phase_transfer_entropy_rejects_invalid_inputs(
+    source: np.ndarray,
+    target: np.ndarray,
+) -> None:
+    with pytest.raises(ValueError, match="must"):
+        phase_transfer_entropy(source, target, n_bins=8)
 
 
 @given(

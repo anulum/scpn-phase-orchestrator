@@ -61,6 +61,19 @@ class TestPGBO:
         with pytest.raises(ValueError, match=match):
             pgbo.observe(phases, W)
 
+    def test_rejects_empty_phases(self):
+        pgbo = PGBO()
+        with pytest.raises(ValueError, match="at least one oscillator"):
+            pgbo.observe(np.array([], dtype=np.float64), np.zeros((0, 0)))
+
+    def test_rejects_non_numeric_coupling_matrix(self):
+        pgbo = PGBO()
+        with pytest.raises(ValueError, match="W must be numeric"):
+            pgbo.observe(
+                np.array([0.0, 0.1], dtype=np.float64),
+                np.array([["a", 0.5], [0.5, "b"]], dtype=object),
+            )
+
     def test_R_correct(self):
         pgbo = PGBO()
         phases = np.zeros(4)
@@ -94,9 +107,56 @@ class TestPGBO:
         trend = pgbo.alignment_trend(window=5)
         assert isinstance(trend, float)
 
+    def test_alignment_trend_rejects_non_positive_window(self):
+        pgbo = PGBO()
+        W = np.full((3, 3), 0.5)
+        np.fill_diagonal(W, 0.0)
+        for _ in range(3):
+            pgbo.observe(np.zeros(3), W)
+
+        with pytest.raises(ValueError, match="window must be"):
+            pgbo.alignment_trend(window=0)
+        with pytest.raises(ValueError, match="window must be"):
+            pgbo.alignment_trend(window=-1)
+
+    def test_alignment_trend_large_window_matches_all_history(self):
+        pgbo = PGBO()
+        W = np.array(
+            [
+                [0.0, 0.4, 0.9],
+                [0.4, 0.0, 0.2],
+                [0.9, 0.2, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        phases = [
+            np.array([0.0, 0.4, 1.1]),
+            np.array([0.1, 0.7, 1.3]),
+            np.array([0.3, 1.0, 1.5]),
+            np.array([0.4, 1.2, 1.8]),
+        ]
+        seen = [
+            pgbo.observe(phases[idx], W).phase_geometry_alignment for idx in range(4)
+        ]
+
+        assert pgbo.alignment_trend(window=10) == pytest.approx(sum(seen) / len(seen))
+
     def test_alignment_trend_empty(self):
         pgbo = PGBO()
         assert pgbo.alignment_trend() == 0.0
+
+    def test_history_is_a_snapshot_copy(self):
+        pgbo = PGBO()
+        W = np.full((3, 3), 0.5)
+        np.fill_diagonal(W, 0.0)
+        pgbo.observe(np.zeros(3), W)
+
+        history = pgbo.history
+        assert isinstance(history, list)
+        history.append("tamper")
+
+        assert len(pgbo.history) == 1
+        assert len(history) == 2
 
     def test_reset(self):
         pgbo = PGBO()

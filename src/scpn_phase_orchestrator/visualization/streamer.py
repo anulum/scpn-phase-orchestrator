@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import threading
 from collections.abc import Callable
 from typing import Any
@@ -139,9 +140,13 @@ class VisualizerStreamer:
         if isinstance(data, tuple):
             return [self._json_safe(v) for v in data]
         if isinstance(data, np.ndarray):
+            if np.issubdtype(data.dtype, np.floating) and not np.all(np.isfinite(data)):
+                raise ValueError("array values must be finite")
             return data.tolist()
         if isinstance(data, np.generic):
             return self._json_safe(data.item())
+        if isinstance(data, float) and not math.isfinite(data):
+            raise ValueError("float values must be finite")
         if isinstance(data, (str, int, float, bool)) or data is None:
             return data
         raise TypeError(f"Object of type {type(data)!r} is not JSON serializable")

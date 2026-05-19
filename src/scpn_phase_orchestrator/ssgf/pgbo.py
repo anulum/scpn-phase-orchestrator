@@ -184,6 +184,10 @@ class PGBO:
         """Mean alignment over last window observations."""
         if not self._history:
             return 0.0
+        if isinstance(window, bool) or not isinstance(window, int):
+            raise ValueError("window must be a positive integer")
+        if window < 1:
+            raise ValueError("window must be a positive integer")
         recent = self._history[-window:]
         return float(np.mean([s.phase_geometry_alignment for s in recent]))
 

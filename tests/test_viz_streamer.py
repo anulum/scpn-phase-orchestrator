@@ -108,6 +108,24 @@ def test_json_safe_handles_list_of_arrays():
     assert result == [[1, 2], [3, 4]]
 
 
+@pytest.mark.parametrize(
+    "value",
+    [float("nan"), float("inf"), float("-inf"), np.float32(float("nan"))],
+)
+def test_json_safe_rejects_non_finite_scalar_values(value: object):
+    """Non-finite numbers should never cross the JSON boundary."""
+    streamer = VisualizerStreamer()
+    with pytest.raises(ValueError, match="finite"):
+        streamer._json_safe(value)
+
+
+def test_json_safe_rejects_non_finite_array_values():
+    """Array payloads must be finite before JSON serialization."""
+    streamer = VisualizerStreamer()
+    with pytest.raises(ValueError, match="finite"):
+        streamer._json_safe(np.array([0.0, np.inf]))
+
+
 def test_json_safe_handles_numpy_scalars_of_every_dtype():
     """float32, float64, int32, int64 all collapse to native Python types."""
     streamer = VisualizerStreamer()
@@ -146,6 +164,119 @@ def test_broadcast_ignores_non_json_safe_payload():
     streamer.broadcast({"bad": object()})
 
     assert client in streamer._clients
+
+
+def test_broadcast_rejects_non_finite_payload_without_sending(monkeypatch):
+    """Non-finite numbers must be filtered before coroutine submission."""
+
+    class Client:
+        def __init__(self) -> None:
+            self.message_count = 0
+
+        async def send(self, message: str) -> None:
+            self.message_count += 1
+
+    sent = []
+    streamer = VisualizerStreamer()
+    streamer._loop = object()
+    client = Client()
+    streamer._clients.add(client)
+
+    def fake_submit(*args: object) -> None:
+        sent.append(args)
+
+    monkeypatch.setattr(
+        streamer_module.asyncio,
+        "run_coroutine_threadsafe",
+        fake_submit,
+    )
+
+    streamer.broadcast({"bad": np.float64(float("nan"))})
+
+    assert client.message_count == 0
+    assert client in streamer._clients
+    assert sent == []
+
+
+def test_broadcast_handles_task_with_no_cleanup_hook(monkeypatch):
+    """send() futures without `add_done_callback` keep the client registered."""
+    sent: list[str] = []
+
+    class Client:
+        async def send(self, message: str) -> None:
+            sent.append(message)
+
+    class FutureWithoutCallback:
+        pass
+
+    def fake_submit(_coro: object, _loop: object) -> FutureWithoutCallback:
+        asyncio.run(_coro)
+        return FutureWithoutCallback()
+
+    visualizer = VisualizerStreamer()
+    visualizer._loop = object()
+    client = Client()
+    visualizer._clients.add(client)
+
+    monkeypatch.setattr(
+        streamer_module.asyncio,
+        "run_coroutine_threadsafe",
+        fake_submit,
+    )
+
+    visualizer.broadcast({"step": 1})
+
+    assert client in visualizer._clients
+    assert sent == ['{"step": 1}']
+
+
+def test_broadcast_serialisation_is_deterministic(monkeypatch):
+    """The same payload should produce identical JSON wire format each tick."""
+    sent: list[str] = []
+
+    class Client:
+        async def send(self, message: str) -> None:
+            sent.append(message)
+
+    class Future:
+        def add_done_callback(self, callback):
+            callback(self)
+
+        def exception(self, timeout: float | None = None):
+            return None
+
+        def cancelled(self) -> bool:
+            return False
+
+    def fake_submit(coro: object, _loop: object) -> Future:
+        asyncio.run(coro)
+        return Future()
+
+    visualizer = VisualizerStreamer()
+    visualizer._loop = object()
+    visualizer._clients.add(Client())
+
+    monkeypatch.setattr(
+        streamer_module.asyncio,
+        "run_coroutine_threadsafe",
+        fake_submit,
+    )
+
+    payload = {"beta": np.float64(2.0), "alpha": np.float64(1.0), "omega": 2}
+    visualizer.broadcast(payload)
+    visualizer.broadcast(payload)
+
+    assert sent == [
+        '{"beta": 2.0, "alpha": 1.0, "omega": 2}',
+        '{"beta": 2.0, "alpha": 1.0, "omega": 2}',
+    ]
+
+
+def test_stop_without_active_loop_is_noop():
+    """stop() should be safe before start()."""
+    streamer = VisualizerStreamer()
+    streamer._loop = None
+    streamer.stop()
 
 
 def test_broadcast_discards_clients_on_send_failure(monkeypatch):
