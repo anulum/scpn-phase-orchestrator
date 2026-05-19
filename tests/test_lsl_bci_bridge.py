@@ -48,6 +48,16 @@ class TestInit:
         with pytest.raises(ValueError, match="buffer_size_s"):
             LSLBCIBridge(buffer_size_s=buffer_size_s)  # type: ignore[arg-type]
 
+    def test_rejects_stream_name_control_character_without_echoing_value(self) -> None:
+        stream_name = "PRIVATE_TOPOLOGY\rEEG"
+
+        with pytest.raises(ValueError) as excinfo:
+            LSLBCIBridge(stream_name=stream_name)
+
+        message = str(excinfo.value)
+        assert message == "stream_name must not contain control characters"
+        assert "PRIVATE_TOPOLOGY" not in message
+
     def test_initial_state(self) -> None:
         bridge = LSLBCIBridge()
         assert bridge._running is False
@@ -120,6 +130,60 @@ class TestConnectWithLSL:
             assert bridge._inlet.stream == "stream-1"
             assert bridge.sampling_rate == 128.0
             assert bridge._buffer_len == 64
+        finally:
+            monkeypatch.delitem(sys.modules, "pylsl", raising=False)
+            importlib.reload(lsl_mod)
+
+    @pytest.mark.parametrize("timeout", [True, 0.0, -0.1, float("nan"), "0.25"])
+    def test_rejects_invalid_connect_timeout_before_stream_resolution(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        timeout: object,
+    ) -> None:
+        fake_pylsl = types.SimpleNamespace(
+            resolve_byprop=MagicMock(return_value=("stream-1",)),
+            StreamInlet=MagicMock(),
+        )
+        monkeypatch.setitem(sys.modules, "pylsl", fake_pylsl)
+        reloaded = importlib.reload(lsl_mod)
+        try:
+            bridge = reloaded.LSLBCIBridge(stream_name="EEG")
+
+            with pytest.raises(ValueError, match="connect_timeout"):
+                bridge.connect(timeout=timeout)  # type: ignore[arg-type]
+
+            fake_pylsl.resolve_byprop.assert_not_called()
+            fake_pylsl.StreamInlet.assert_not_called()
+        finally:
+            monkeypatch.delitem(sys.modules, "pylsl", raising=False)
+            importlib.reload(lsl_mod)
+
+    @pytest.mark.parametrize("nominal_srate", [0.0, -1.0, True, float("nan"), "250"])
+    def test_invalid_nominal_srate_fails_closed_without_retaining_inlet(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        nominal_srate: object,
+    ) -> None:
+        class FakeInfo:
+            def nominal_srate(self) -> object:
+                return nominal_srate
+
+        class FakeInlet:
+            def info(self) -> FakeInfo:
+                return FakeInfo()
+
+        fake_pylsl = types.SimpleNamespace(
+            resolve_byprop=MagicMock(return_value=("stream-1",)),
+            StreamInlet=MagicMock(return_value=FakeInlet()),
+        )
+        monkeypatch.setitem(sys.modules, "pylsl", fake_pylsl)
+        reloaded = importlib.reload(lsl_mod)
+        try:
+            bridge = reloaded.LSLBCIBridge(stream_name="EEG")
+
+            assert bridge.connect(timeout=0.25) is False
+            assert bridge._inlet is None
+            assert bridge._buffer_len == 0
         finally:
             monkeypatch.delitem(sys.modules, "pylsl", raising=False)
             importlib.reload(lsl_mod)

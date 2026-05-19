@@ -76,7 +76,9 @@ class CoherencePlot:
 
     def __init__(self, log_data: list[dict]) -> None:
         self._data = log_data
-        self._steps = [d for d in log_data if "step" in d and "layers" in d]
+        self._steps = [
+            d for d in log_data if isinstance(d, dict) and "step" in d and "layers" in d
+        ]
 
     def _require_steps(self) -> list[dict]:
         if not self._steps:
@@ -140,10 +142,10 @@ class CoherencePlot:
     def _extract_regime_epochs(self) -> list[tuple[str, int, int]]:
         steps = self._require_steps()
         epochs: list[tuple[str, int, int]] = []
-        prev = steps[0].get("regime", "NOMINAL")
+        prev = str(steps[0].get("regime", "NOMINAL"))
         start = self._step_value(steps[0].get("step", 0))
         for s in steps[1:]:
-            regime = s.get("regime", "NOMINAL")
+            regime = str(s.get("regime", "NOMINAL"))
             if regime != prev:
                 step_no = self._step_value(s.get("step", 0))
                 epochs.append((prev, start, step_no))
@@ -179,12 +181,14 @@ class CoherencePlot:
     def _extract_pac_matrix(self) -> tuple[int, FloatArray]:
         pac_record = None
         for d in reversed(self._data):
-            if "pac_matrix" in d:
+            if isinstance(d, dict) and "pac_matrix" in d:
                 pac_record = d
                 break
         if pac_record is None:
             raise ValueError("No pac_matrix record in log data")
         flat = pac_record["pac_matrix"]
+        if not isinstance(flat, list):
+            raise ValueError("pac_matrix must be a flat list")
         raw_n = pac_record.get("n")
         if raw_n is None:
             n = int(np.sqrt(len(flat)))

@@ -502,21 +502,21 @@ def load_hierarchy_sync_envelope(
         _validate_envelope_reduced_only(record)
         return _canonical_hierarchy_sync_envelope(record)
     payload = _load_mapping_record(record)
+    _reject_raw_hierarchy_keys(payload, "hierarchy sync envelope")
     _reject_unknown_keys(
         payload,
         allowed=_HIERARCHY_SYNC_ENVELOPE_KEYS,
         location="hierarchy sync envelope",
     )
-    _reject_raw_hierarchy_keys(payload, "hierarchy sync envelope")
     summary_record = payload.get("summary")
     if not isinstance(summary_record, Mapping):
         raise ValueError("summary must be a decoded mapping")
+    _reject_raw_hierarchy_keys(summary_record, "hierarchy sync summary")
     _reject_unknown_keys(
         summary_record,
         allowed=_HIERARCHY_SYNC_SUMMARY_KEYS,
         location="hierarchy sync summary",
     )
-    _reject_raw_hierarchy_keys(summary_record, "hierarchy sync summary")
 
     sequence = _require_integer(payload.get("sequence"), "sequence")
     monotonic_time_s = payload.get("monotonic_time_s")

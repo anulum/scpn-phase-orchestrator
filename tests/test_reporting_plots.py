@@ -14,6 +14,7 @@ import importlib.util
 
 import pytest
 
+import scpn_phase_orchestrator.reporting.plots as plots_module
 from scpn_phase_orchestrator.reporting.plots import CoherencePlot
 
 _HAS_MPL = importlib.util.find_spec("matplotlib") is not None
@@ -109,6 +110,7 @@ class TestExtractors:
     def test_extract_r_series_ignores_malformed_layer_containers(self) -> None:
         plot = CoherencePlot(
             [
+                "corrupted-jsonl-line",
                 {"step": 0, "regime": "NOMINAL", "layers": None},
                 {
                     "step": 1,
@@ -121,6 +123,22 @@ class TestExtractors:
         assert x == [0, 1]
         assert n_layers == 1
         assert series == [[0.0, 0.4]]
+
+    def test_constructor_ignores_non_dict_audit_payloads(self) -> None:
+        plot = CoherencePlot(
+            [
+                None,
+                17,
+                {"event": "bootstrap"},
+                {"step": 0, "regime": "NOMINAL", "layers": [{"R": 0.2}]},
+            ]
+        )
+
+        x, n_layers, series = plot._extract_r_series()
+
+        assert x == [0]
+        assert n_layers == 1
+        assert series == [[0.2]]
 
     def test_extract_r_series_ignores_malformed_layer_r_values(self) -> None:
         plot = CoherencePlot(
@@ -149,6 +167,19 @@ class TestExtractors:
         regimes = [e[0] for e in epochs]
         assert "NOMINAL" in regimes
         assert "DEGRADED" in regimes
+
+    def test_extract_regime_epochs_stringifies_malformed_regime_values(self) -> None:
+        plot = CoherencePlot(
+            [
+                {"step": 0, "regime": ["NOMINAL"], "layers": [{"R": 0.2}]},
+                {"step": 1, "regime": {"bad": "shape"}, "layers": [{"R": 0.4}]},
+            ]
+        )
+
+        assert plot._extract_regime_epochs() == [
+            ("['NOMINAL']", 0, 1),
+            ("{'bad': 'shape'}", 1, 2),
+        ]
 
     def test_extractors_ignore_malformed_step_identifiers(self) -> None:
         plot = CoherencePlot(
@@ -284,6 +315,19 @@ class TestExtractors:
         assert n_out == 2
         assert mat.tolist() == [[0.0, 0.0], [0.0, 0.25]]
 
+    def test_extract_pac_matrix_skips_non_dict_records_and_rejects_non_list_matrix(
+        self,
+    ) -> None:
+        plot = CoherencePlot(
+            [
+                "corrupted-jsonl-line",
+                {"event": "pac_snapshot", "pac_matrix": "not-a-flat-list", "n": 2},
+            ]
+        )
+
+        with pytest.raises(ValueError, match="pac_matrix must be a flat list"):
+            plot._extract_pac_matrix()
+
     @pytest.mark.parametrize("n_value", [True, float("nan"), float("inf"), 2.5, "2"])
     def test_extract_pac_matrix_rejects_malformed_n_metadata(
         self, n_value: object
@@ -317,6 +361,17 @@ def test_no_matplotlib_guard() -> None:
     plot = CoherencePlot([])
     with pytest.raises((ValueError, ImportError)):
         plot.plot_r_timeline("/dev/null")
+
+
+def test_require_matplotlib_fails_closed_when_optional_dependency_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(plots_module, "_HAS_MPL", False)
+    monkeypatch.setattr(plots_module, "_plt", None)
+    monkeypatch.setattr(plots_module, "_Rectangle", None)
+
+    with pytest.raises(ImportError, match="matplotlib required"):
+        plots_module._require_matplotlib()
 
 
 def test_matplotlib_not_imported_on_module_import() -> None:

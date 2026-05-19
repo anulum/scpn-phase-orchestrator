@@ -149,6 +149,15 @@ def _policy_conditions(
     return [condition]
 
 
+def _compound_logic(condition: CompoundCondition) -> str:
+    if not isinstance(condition.logic, str):
+        raise PolicyError("compound policy condition logic must be AND or OR")
+    logic = condition.logic.upper()
+    if logic not in {"AND", "OR"}:
+        raise PolicyError("compound policy condition logic must be AND or OR")
+    return logic
+
+
 def _policy_metric_mapping(rules: list[PolicyRule]) -> dict[str, str]:
     used: set[str] = set()
     metrics = sorted(
@@ -227,7 +236,7 @@ def _policy_guard_expr(
     if isinstance(condition, CompoundCondition):
         if not condition.conditions:
             raise PolicyError("compound policy condition must not be empty")
-        op = "|" if condition.logic.upper() == "OR" else "&"
+        op = "|" if _compound_logic(condition) == "OR" else "&"
         parts = [
             _policy_condition_expr(item, metric_names) for item in condition.conditions
         ]
@@ -242,7 +251,7 @@ def _tla_policy_guard_expr(
     if isinstance(condition, CompoundCondition):
         if not condition.conditions:
             raise PolicyError("compound policy condition must not be empty")
-        op = "\\/" if condition.logic.upper() == "OR" else "/\\"
+        op = "\\/" if _compound_logic(condition) == "OR" else "/\\"
         parts = [
             _tla_policy_condition_expr(item, metric_names)
             for item in condition.conditions

@@ -23,9 +23,10 @@ def build_audit_report_summary(
     hash_chain_verified: int,
 ) -> dict[str, object]:
     """Build a JSON-ready report summary from audit log entries."""
-    steps = [entry for entry in entries if "step" in entry and "layers" in entry]
-    events = [entry for entry in entries if "event" in entry]
-    header = _load_header(entries)
+    records = _record_entries(entries)
+    steps = [entry for entry in records if "step" in entry and "layers" in entry]
+    events = [entry for entry in records if "event" in entry]
+    header = _load_header(records)
     if not steps:
         raise ValueError("audit report requires at least one step record")
 
@@ -49,7 +50,7 @@ def build_audit_report_summary(
         "layers": n_layers,
         "amplitude_mode": bool(header and header.get("amplitude_mode")),
         "final_regime": steps[-1].get("regime", "unknown"),
-        "final_stability": steps[-1].get("stability", 0.0),
+        "final_stability": _numeric_value(steps[-1], "stability"),
         "layer_r_mean": [
             round(sum(series) / len(series), 4) if series else 0.0
             for series in r_series
@@ -63,7 +64,7 @@ def build_audit_report_summary(
         "hash_chain_ok": hash_chain_ok,
         "hash_chain_verified": hash_chain_verified,
     }
-    integrated_information = _integrated_information_summary(entries)
+    integrated_information = _integrated_information_summary(records)
     if integrated_information is not None:
         summary["integrated_information"] = integrated_information
     if header is not None:
@@ -74,6 +75,10 @@ def build_audit_report_summary(
             if isinstance(channel_algebra, dict):
                 summary["channel_algebra"] = channel_algebra
     return summary
+
+
+def _record_entries(entries: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [entry for entry in entries if isinstance(entry, dict)]
 
 
 def _load_header(entries: list[dict[str, object]]) -> dict[str, object] | None:

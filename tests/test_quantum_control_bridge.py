@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import builtins
 import importlib.util
 import re
 import sys
@@ -255,6 +256,20 @@ class TestQuantumControlBridge:
                 dt=0.1,
             )
 
+    def test_quantum_compiler_manifest_does_not_mutate_numeric_inputs(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        knm = np.array([[0.0, 0.25], [0.5, 0.0]])
+        omegas = np.array([1.0, -0.5])
+        expected_knm = knm.copy()
+        expected_omegas = omegas.copy()
+
+        manifest = bridge.build_quantum_compiler_manifest(knm, omegas, dt=0.125)
+
+        np.testing.assert_allclose(knm, expected_knm)
+        np.testing.assert_allclose(omegas, expected_omegas)
+        assert manifest["qpu_execution_permitted"] is False
+        assert manifest["actuation_permitted"] is False
+
     def test_build_hamiltonian_rejects_invalid_inputs_before_backend_import(self):
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="knm shape"):
@@ -427,6 +442,61 @@ class TestExportArtifactValidation:
             match="cross_layer_alignment shape must match number of layers",
         ):
             bridge.export_artifact(state)
+
+    def test_rejects_out_of_range_stability_proxy_as_exported_fidelity(self):
+        bridge = QuantumControlBridge(n_oscillators=1)
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0)],
+            cross_layer_alignment=np.eye(1, dtype=np.float64),
+            stability_proxy=1.5,
+            regime_id="SINGLET",
+        )
+
+        with pytest.raises(ValueError, match="state.stability_proxy"):
+            bridge.export_artifact(state)
+
+    def test_live_phase_export_validates_state_before_optional_backend_import(
+        self,
+        monkeypatch,
+    ):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0), LayerState(R=0.6, psi=1.0)],
+            cross_layer_alignment=np.eye(1, dtype=np.float64),
+            stability_proxy=0.2,
+            regime_id="BILAYER",
+        )
+        real_import = builtins.__import__
+
+        def guarded_import(name, *args, **kwargs):
+            if name.startswith("scpn_quantum_control"):
+                raise AssertionError("optional backend import attempted")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+        with pytest.raises(ValueError, match="cross_layer_alignment shape"):
+            bridge.orchestrator_to_quantum(state)
+
+    def test_live_phase_import_validates_quantum_theta_before_optional_backend_import(
+        self,
+        monkeypatch,
+    ):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        real_import = builtins.__import__
+
+        def guarded_import(name, *args, **kwargs):
+            if name.startswith("scpn_quantum_control"):
+                raise AssertionError("optional backend import attempted")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+        with pytest.raises(ValueError, match="quantum_theta must contain finite"):
+            bridge.quantum_to_orchestrator(np.array([0.0, np.nan]))
+
+        with pytest.raises(ValueError, match="quantum_theta shape"):
+            bridge.quantum_to_orchestrator(np.array([0.0, 1.0, 2.0]))
 
 
 class TestOptionalQuantumControlBackend:

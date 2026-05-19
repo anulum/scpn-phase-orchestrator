@@ -212,6 +212,12 @@ def test_hybrid_cocompiler_strips_semantics_and_rejects_invalid_channels() -> No
             spiking,
             n_channel_semantics=("Q_control", " "),
         )
+    with pytest.raises(ValueError, match="non-empty sequence"):
+        build_hybrid_cocompiler_manifest(
+            quantum,
+            spiking,
+            n_channel_semantics={"Q_control": "active"},
+        )
 
 
 def test_hybrid_cocompiler_fails_closed_for_all_component_permission_leaks() -> None:
@@ -277,6 +283,20 @@ def test_hybrid_cocompiler_rejects_invalid_neuromorphic_hash() -> None:
 
     with pytest.raises(ValueError, match="schedule_sha256 must be a 64-character"):
         build_hybrid_cocompiler_manifest(quantum, spiking)
+
+
+def test_hybrid_cocompiler_hash_errors_do_not_echo_payload_values() -> None:
+    quantum = _quantum_manifest()
+    spiking = _neuromorphic_manifest()
+    quantum["qasm_sha256"] = "/private/topology/qpu-audit"
+
+    with pytest.raises(ValueError) as excinfo:
+        build_hybrid_cocompiler_manifest(quantum, spiking)
+
+    message = str(excinfo.value)
+    assert message == "qasm_sha256 must be a 64-character SHA-256 hex string"
+    assert "private" not in message
+    assert "qpu-audit" not in message
 
 
 @pytest.mark.parametrize(

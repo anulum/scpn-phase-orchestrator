@@ -212,7 +212,7 @@ class QuantumControlBridge:
     def export_artifact(self, state: UPDEState) -> dict:
         """Convert UPDEState back to a dict compatible with scpn-quantum-control."""
         layers, cross_layer_alignment = _validate_upde_state(state)
-        fidelity = _require_finite_real(
+        fidelity = _require_fidelity(
             state.stability_proxy,
             name="state.stability_proxy",
         )
@@ -350,11 +350,11 @@ class QuantumControlBridge:
         state: UPDEState,
     ) -> FloatArray:
         """Convert orchestrator UPDEState to quantum phase array."""
+        payload = self.export_artifact(state)
         from scpn_quantum_control import (  # noqa: PLC0415
             orchestrator_to_quantum_phases,
         )
 
-        payload = self.export_artifact(state)
         layer_phases = {
             f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
         }
@@ -365,11 +365,17 @@ class QuantumControlBridge:
         quantum_theta: FloatArray,
     ) -> dict:
         """Convert quantum phase array back to orchestrator-compatible dict."""
+        theta = _finite_array(quantum_theta, name="quantum_theta")
+        if theta.shape != (self._n,):
+            raise ValueError(
+                f"quantum_theta shape {theta.shape} does not match "
+                f"n_oscillators={self._n}"
+            )
         from scpn_quantum_control import (  # noqa: PLC0415
             quantum_to_orchestrator_phases,
         )
 
-        return cast("dict", quantum_to_orchestrator_phases(quantum_theta))
+        return cast("dict", quantum_to_orchestrator_phases(theta.copy()))
 
     def _validate_compiler_inputs(
         self,

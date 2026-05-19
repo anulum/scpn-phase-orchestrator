@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 from math import isnan
 from typing import cast, get_type_hints
 
@@ -213,6 +214,38 @@ def test_audit_report_summary_defaults_when_final_step_fields_missing() -> None:
 
     assert summary["final_regime"] == "unknown"
     assert summary["final_stability"] == 0.0
+
+
+def test_audit_report_summary_ignores_non_dict_audit_payloads() -> None:
+    summary = build_audit_report_summary(
+        [
+            "corrupted-jsonl-line",
+            3,
+            None,
+            {"event": "bootstrap"},
+            {"step": 0, "layers": [{"R": 0.25}], "regime": "nominal"},
+        ],
+        hash_chain_ok=True,
+        hash_chain_verified=1,
+    )
+
+    assert summary["steps"] == 1
+    assert summary["events"] == 1
+    assert summary["layer_r_mean"] == [0.25]
+
+
+def test_audit_report_summary_scrubs_non_finite_final_stability_for_json() -> None:
+    summary = build_audit_report_summary(
+        [
+            {"step": 0, "layers": [{"R": 0.5}], "stability": 0.25},
+            {"step": 1, "layers": [{"R": 0.75}], "stability": float("nan")},
+        ],
+        hash_chain_ok=True,
+        hash_chain_verified=2,
+    )
+
+    assert summary["final_stability"] == 0.0
+    json.dumps(summary, allow_nan=False, sort_keys=True)
 
 
 def test_audit_report_summary_falls_back_default_claim_boundary() -> None:

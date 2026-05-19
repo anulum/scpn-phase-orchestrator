@@ -119,7 +119,11 @@ def _validate_permission_fields(
 
 
 def _normalise_semantics(n_channel_semantics: Sequence[str]) -> list[str]:
-    if isinstance(n_channel_semantics, str) or not n_channel_semantics:
+    if (
+        isinstance(n_channel_semantics, str)
+        or not isinstance(n_channel_semantics, Sequence)
+        or not n_channel_semantics
+    ):
         raise ValueError("n_channel_semantics must be a non-empty sequence")
     semantics: list[str] = []
     for channel in n_channel_semantics:

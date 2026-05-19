@@ -63,6 +63,15 @@ _MAX_CONDITIONS_PER_RULE = 32
 _MAX_ACTIONS_PER_RULE = 32
 
 
+def _compound_logic(logic: str) -> str:
+    if not isinstance(logic, str):
+        _policy_error("rule.logic must be AND or OR")
+    normalised = logic.upper()
+    if normalised not in ("AND", "OR"):
+        _policy_error("rule.logic must be AND or OR")
+    return normalised
+
+
 @dataclass(frozen=True)
 class PolicyCondition:
     """Known metrics: R, R_good, R_bad, stability_proxy, pac_max,
@@ -217,7 +226,7 @@ class PolicyEngine:
                 self._eval_single(c, state, good_layers, bad_layers)
                 for c in cond.conditions
             ]
-            if cond.logic == "OR":
+            if _compound_logic(cond.logic) == "OR":
                 return any(results)
             return all(results)
         return self._eval_single(cond, state, good_layers, bad_layers)
@@ -481,12 +490,7 @@ def load_policy_rules(path: str | Path) -> list[PolicyRule]:
                 _policy_error("rule.conditions must not be empty")
             if len(conditions) > _MAX_CONDITIONS_PER_RULE:
                 _policy_error("too many rule conditions")
-            logic = r.get("logic", "AND")
-            if not isinstance(logic, str):
-                _policy_error("rule.logic must be a string")
-            logic = logic.upper()
-            if logic not in ("AND", "OR"):
-                _policy_error("rule.logic must be AND or OR")
+            logic = _compound_logic(r.get("logic", "AND"))
             cond: PolicyCondition | CompoundCondition = CompoundCondition(
                 conditions=[_parse_condition(c) for c in conditions],
                 logic=logic,
