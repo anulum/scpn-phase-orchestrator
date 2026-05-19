@@ -9,12 +9,16 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any, cast
 
 import numpy as np
 import pytest
+
+from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 _BRIDGE_PATH = (
     Path(__file__).resolve().parent.parent
@@ -330,6 +334,100 @@ class TestQuantumControlBridge:
                 [{"source": 0, "target": 1, "symmetric_coupling": False}],
             )
 
+    def test_manifest_reports_failed_parity_when_terms_are_mutated(
+        self,
+        monkeypatch,
+    ):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        knm = np.array([[0.0, 0.4], [0.2, 0.0]])
+        omegas = np.array([1.0, -0.5])
+
+        def tampered_coupling_terms(*, dt: float) -> list[dict[str, object]]:
+            return [
+                {
+                    "source": 0,
+                    "target": 1,
+                    "forward_coupling": 0.0,
+                    "reverse_coupling": 0.0,
+                    "symmetric_coupling": 0.0,
+                    "xx_angle": 0.4 * dt,
+                    "yy_angle": 0.4 * dt,
+                }
+            ]
+
+        monkeypatch.setattr(
+            bridge,
+            "_quantum_coupling_terms",
+            lambda knm, dt: tampered_coupling_terms(dt=dt),
+        )
+
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm,
+            omegas,
+            dt=0.1,
+        )
+
+        assert manifest["status"] == "co_simulation_parity_failed"
+        assert manifest["co_simulation_parity"]["max_abs_coupling_error"] > 0.0
+        assert manifest["co_simulation_parity"]["term_count"] == 3
+
+
+class TestExportArtifactValidation:
+    def test_rejects_non_upde_state(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        with pytest.raises(ValueError, match="state must be a UPDEState"):
+            bridge.export_artifact(cast(Any, {"layers": []}))
+
+    def test_rejects_non_list_layers(self):
+        bridge = QuantumControlBridge(n_oscillators=1)
+        state = UPDEState(
+            layers=cast(Any, (LayerState(R=1.0, psi=0.0),)),
+            cross_layer_alignment=np.eye(1, dtype=np.float64),
+            stability_proxy=0.2,
+            regime_id="SINGLET",
+        )
+        with pytest.raises(ValueError, match="UPDEState.layers must be a list"):
+            bridge.export_artifact(state)
+
+    def test_rejects_non_layer_state_entry(self):
+        bridge = QuantumControlBridge(n_oscillators=1)
+        state = UPDEState(
+            layers=cast(Any, [{"R": 0.5, "psi": 0.0}]),
+            cross_layer_alignment=np.eye(1, dtype=np.float64),
+            stability_proxy=0.2,
+            regime_id="SINGLET",
+        )
+        expected_error = "UPDEState.layers[0] must be a LayerState"
+        with pytest.raises(ValueError, match=re.escape(expected_error)):
+            bridge.export_artifact(state)
+
+    def test_rejects_non_square_cross_layer_alignment(self):
+        bridge = QuantumControlBridge(n_oscillators=1)
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0)],
+            cross_layer_alignment=np.array([1.0]),
+            stability_proxy=0.2,
+            regime_id="SINGLET",
+        )
+        with pytest.raises(
+            ValueError, match="cross_layer_alignment must be a square matrix"
+        ):
+            bridge.export_artifact(state)
+
+    def test_rejects_cross_layer_alignment_shape_mismatch(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        state = UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0), LayerState(R=0.6, psi=1.0)],
+            cross_layer_alignment=np.eye(1, dtype=np.float64),
+            stability_proxy=0.2,
+            regime_id="BILAYER",
+        )
+        with pytest.raises(
+            ValueError,
+            match="cross_layer_alignment shape must match number of layers",
+        ):
+            bridge.export_artifact(state)
+
 
 class TestOptionalQuantumControlBackend:
     def test_build_hamiltonian_delegates_to_optional_backend(self, monkeypatch):
@@ -447,6 +545,18 @@ class TestOptionalQuantumControlBackend:
         np.testing.assert_allclose(calls["to_orchestrator"], quantum_theta)
         np.testing.assert_allclose(quantum_theta, [0.25, 1.25])
         assert roundtrip == {"layer_0": 0.25, "layer_1": 1.25}
+
+    def test_phase_converters_require_optional_quantum_backend(self, monkeypatch):
+        root = ModuleType("scpn_quantum_control")
+        monkeypatch.setitem(sys.modules, "scpn_quantum_control", root)
+        bridge = QuantumControlBridge(n_oscillators=2)
+        state = bridge.import_artifact({"phases": [0.25, 1.25], "fidelity": 0.5})
+
+        with pytest.raises(ImportError, match="orchestrator_to_quantum_phases"):
+            bridge.orchestrator_to_quantum(state)
+
+        with pytest.raises(ImportError, match="quantum_to_orchestrator_phases"):
+            bridge.quantum_to_orchestrator(np.array([0.25, 1.25]))
 
 
 class TestQuantumDomainpack:

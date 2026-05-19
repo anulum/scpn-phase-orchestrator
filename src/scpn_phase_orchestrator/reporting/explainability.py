@@ -67,7 +67,11 @@ class ExplainabilityReport:
 
 
 def _step_records(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [entry for entry in entries if "step" in entry and "layers" in entry]
+    return [
+        entry
+        for entry in entries
+        if isinstance(entry, dict) and "step" in entry and "layers" in entry
+    ]
 
 
 def _layers(step: dict[str, Any]) -> list[dict[str, Any]]:
@@ -130,6 +134,8 @@ def _regime_transitions(steps: list[dict[str, Any]]) -> tuple[str, ...]:
 def _event_lines(entries: list[dict[str, Any]], limit: int = 12) -> tuple[str, ...]:
     lines: list[str] = []
     for entry in entries:
+        if not isinstance(entry, dict):
+            continue
         event = entry.get("event")
         if event is None:
             continue

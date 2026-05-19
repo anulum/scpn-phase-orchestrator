@@ -543,6 +543,20 @@ def test_hierarchy_transport_runtime_rejects_inverted_thresholds() -> None:
         )
 
 
+def test_hierarchy_transport_runtime_rejects_invalid_min_confidence() -> None:
+    with pytest.raises(
+        ValueError,
+        match="min_confidence must be finite and in \\[0, 1\\]",
+    ):
+        HierarchyTransportRuntime(min_confidence=-0.1)
+
+    with pytest.raises(
+        ValueError,
+        match="min_confidence must be finite and in \\[0, 1\\]",
+    ):
+        HierarchyTransportRuntime(min_confidence=1.5)
+
+
 def test_hierarchy_transport_runtime_rejects_stale_followup_only() -> None:
     runtime = HierarchyTransportRuntime()
     runtime.ingest(
@@ -1647,6 +1661,70 @@ def test_hierarchy_gossip_consensus_moves_neighbours_towards_shared_state() -> N
         "neighbour_count": 1,
     }
     assert rounds[1].plan.parent_R == pytest.approx(first_round.plan.parent_R)
+
+
+def test_hierarchy_gossip_consensus_preserves_isolated_nodes_without_neighbours() -> (
+    None
+):
+    isolated = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary(
+            "node-a",
+            "grid",
+            R=0.84,
+            psi=0.4,
+            confidence=0.9,
+        ),
+        source_node="node-a",
+        sequence=1,
+    )
+
+    rounds = simulate_hierarchy_gossip_consensus(
+        (isolated,),
+        neighbour_map={"node-a": ("missing-node",)},
+        rounds=2,
+        self_weight=0.3,
+    )
+
+    assert [state.summary.R for state in rounds[0].states] == pytest.approx([0.84])
+    assert [state.summary.psi for state in rounds[0].states] == pytest.approx([0.4])
+    assert rounds[1].states == rounds[0].states
+    assert pytest.approx(0.84 * 0.9) == rounds[1].plan.parent_state.layers[0].R
+
+
+def test_hierarchy_gossip_consensus_zero_confidence_falls_back_to_zero_order() -> None:
+    node_a = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary(
+            "edge-a",
+            "grid",
+            R=0.9,
+            psi=0.0,
+            confidence=0.0,
+        ),
+        source_node="node-a",
+        sequence=1,
+    )
+    node_b = build_hierarchy_sync_envelope(
+        ChildSupervisorSummary(
+            "edge-b",
+            "grid",
+            R=0.3,
+            psi=math.pi,
+            confidence=0.0,
+        ),
+        source_node="node-b",
+        sequence=1,
+    )
+
+    rounds = simulate_hierarchy_gossip_consensus(
+        (node_a, node_b),
+        neighbour_map={"node-a": ("node-b",), "node-b": ("node-a",)},
+        rounds=1,
+        self_weight=0.5,
+    )
+
+    assert [state.summary.R for state in rounds[0].states] == pytest.approx([0.0, 0.0])
+    assert rounds[0].plan.parent_R == pytest.approx(0.0)
+    assert rounds[0].plan.parent_psi == pytest.approx(0.0)
 
 
 def test_hierarchy_gossip_consensus_carries_ingestion_rejections_once() -> None:

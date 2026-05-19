@@ -14,6 +14,9 @@ from dataclasses import asdict
 import pytest
 
 from scpn_phase_orchestrator.reporting.explainability import (
+    _make_pdf_bytes,
+    _pdf_escape,
+    _wrap_pdf_lines,
     build_explainability_report,
     render_markdown,
 )
@@ -225,6 +228,11 @@ def test_explainability_report_rejects_audit_without_step_records() -> None:
         )
 
 
+def test_explainability_report_rejects_audit_without_valid_step_records() -> None:
+    with pytest.raises(ValueError, match="no step records in audit log"):
+        build_explainability_report([1, "corrupted", None, []])
+
+
 def test_render_markdown_orders_regime_distribution() -> None:
     report = build_explainability_report(
         [
@@ -372,3 +380,40 @@ def test_explainability_report_json_payload_is_serializable() -> None:
 
     assert restored["steps"] == report.steps
     assert restored["metric_summary"] == list(report.metric_summary)
+
+
+def test_pdf_escape_escapes_pdf_control_characters() -> None:
+    assert _pdf_escape(r"control\\token (alpha) /beta") == (
+        r"control\\\\token \(alpha\) /beta"
+    )
+
+
+def test_wrap_pdf_lines_preserves_heading_and_width_contract() -> None:
+    markdown = (
+        "# explainability report\n\nvalue with a long value that should wrap\n**bold**"
+    )
+    lines = _wrap_pdf_lines(markdown, width=24)
+
+    assert lines[0] == "EXPLAINABILITY REPORT"
+    assert lines[1] == ""
+    assert all(len(line) <= 24 for line in lines if line)
+    assert lines[-1] == "**bold**"
+
+
+def test_make_pdf_bytes_handles_wrapping_and_escapes() -> None:
+    markdown_lines = _wrap_pdf_lines("## residual (line) test\nspecial\\line", width=20)
+    pdf = _make_pdf_bytes(markdown_lines)
+
+    assert b"%PDF-1.4" in pdf
+    assert b"\\(" in pdf
+    assert b"\\)" in pdf
+    assert b"/Count 1" in pdf
+
+
+def test_make_pdf_bytes_scales_to_multiple_pages() -> None:
+    lines: list[str] = [f"line {idx} for residual PDF coverage" for idx in range(120)]
+    pdf = _make_pdf_bytes(lines)
+
+    assert b"/Type /Pages" in pdf
+    assert b"/Count 3" in pdf
+    assert pdf.count(b"/Type /Page /Parent") == 3
