@@ -71,15 +71,44 @@ def test_runtime_observability_records_step_without_otel_backend() -> None:
     )
 
 
+def test_runtime_observability_records_invalid_step_idx_as_fail_closed() -> None:
+    runtime_obs = RuntimeObservability()
+
+    with pytest.raises(ValueError, match="step_idx must be a non-negative integer"):
+        runtime_obs.record_step(
+            RuntimeMetricSnapshot(
+                upde_state=_state(),
+                regime="nominal",
+                latency_ms=0.0,
+                step_idx=-1,
+            )
+        )
+
+
+def test_metrics_exporter_enforces_prometheus_prefix() -> None:
+    with pytest.raises(
+        ValueError,
+        match="prefix must be a valid Prometheus metric prefix",
+    ):
+        MetricsExporter(prefix="1spo")
+
+
 def test_runtime_span_validates_attributes_without_otel_backend() -> None:
     runtime_obs = RuntimeObservability()
 
     with (
         pytest.raises(ValueError, match="attributes"),
-        runtime_obs.span(
-            "spo.step",
-            cast(dict[str, object], {"bad": object()}),
-        ),
+        runtime_obs.span("spo.step", cast(dict[str, object], {"bad": object()})),
+    ):
+        pass
+
+
+def test_runtime_span_rejects_invalid_name() -> None:
+    runtime_obs = RuntimeObservability()
+
+    with (
+        pytest.raises(ValueError, match="span name"),
+        runtime_obs.span("bad span name"),
     ):
         pass
 
@@ -95,6 +124,39 @@ def test_metrics_exporter_rejects_malformed_step_index() -> None:
 def test_otel_exporter_rejects_malformed_service_name(service_name: str) -> None:
     with pytest.raises(ValueError, match="service_name"):
         OTelExporter(service_name)
+
+
+def test_runtime_observability_prometheus_text_stable_and_escape_safe() -> None:
+    runtime_obs = RuntimeObservability()
+    snapshot = RuntimeMetricSnapshot(
+        upde_state=_state(),
+        regime='nomi\n"al',
+        latency_ms=1.25,
+        step_idx=7,
+    )
+
+    text_a = runtime_obs.prometheus_text(snapshot)
+    text_b = runtime_obs.prometheus_text(snapshot)
+
+    assert text_a == text_b
+    assert 'regime="nomi\\n\\"al"' in text_a
+
+
+def test_runtime_observability_rejects_nonfinite_latency_ms() -> None:
+    runtime_obs = RuntimeObservability()
+
+    with pytest.raises(
+        ValueError,
+        match="latency_ms must be a finite non-negative real value",
+    ):
+        runtime_obs.prometheus_text(
+            RuntimeMetricSnapshot(
+                upde_state=_state(),
+                regime="nominal",
+                latency_ms=float("nan"),
+                step_idx=7,
+            )
+        )
 
 
 def test_otel_exporter_rejects_nonfinite_state_before_noop_return() -> None:

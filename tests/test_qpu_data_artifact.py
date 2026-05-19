@@ -355,3 +355,113 @@ def test_reading_tampered_json_file_reports_digest_mismatch(tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="artifact_sha256"):
         read_qpu_data_artifact(path)
+
+
+def test_compile_domain_to_qpu_artifact_accepts_binding_spec_path_inputs() -> None:
+    domain_pack = REPO_ROOT / "domainpacks" / "minimal_domain"
+    from_dir = compile_domain_to_qpu_artifact(
+        domain_pack,
+        source_mode="curated",
+        replay_id="domainpack:minimal_domain:0.1.0",
+    )
+    from_file = compile_domain_to_qpu_artifact(
+        domain_pack / "binding_spec.yaml",
+        source_mode="curated",
+        replay_id="domainpack:minimal_domain:0.1.0",
+    )
+    from_string = compile_domain_to_qpu_artifact(
+        str(domain_pack / "binding_spec.yaml"),
+        source_mode="curated",
+        replay_id="domainpack:minimal_domain:0.1.0",
+    )
+
+    assert from_dir["artifact_sha256"] == from_file["artifact_sha256"]
+    assert from_dir["artifact_sha256"] == from_string["artifact_sha256"]
+    assert from_dir["metadata"]["binding_spec"] == "binding_spec.yaml"
+    assert from_file["metadata"]["binding_spec"] == "binding_spec.yaml"
+    assert from_string["metadata"]["binding_spec"] == "binding_spec.yaml"
+
+
+def test_compile_domain_to_qpu_artifact_allows_skip_publication_safety_checks() -> None:
+    payload = compile_domain_to_qpu_artifact(
+        REPO_ROOT / "domainpacks" / "minimal_domain",
+        source_mode="recorded",
+        require_publication_safe=False,
+    )
+
+    assert payload["source_timestamp"] is None
+    assert payload["replay_id"] is None
+    validated = validate_qpu_data_artifact(payload, require_publication_safe=False)
+    assert validated.domain == "minimal_domain"
+
+
+def test_metadata_order_does_not_change_manifest_digest() -> None:
+    first = emit_qpu_data_artifact(
+        domain="unit",
+        source_name="unit-fixture",
+        source_mode="curated",
+        K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+        omega=np.array([1.0, 1.2]),
+        theta0=np.array([0.0, 0.5]),
+        layer_assignments=["a", "b"],
+        normalization="unit canonical scaling",
+        extraction_method="unit-test",
+        replay_id="unit:replay:1",
+        metadata={"x": 1, "y": 2},
+    )
+    second = emit_qpu_data_artifact(
+        domain="unit",
+        source_name="unit-fixture",
+        source_mode="curated",
+        K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+        omega=np.array([1.0, 1.2]),
+        theta0=np.array([0.0, 0.5]),
+        layer_assignments=["a", "b"],
+        normalization="unit canonical scaling",
+        extraction_method="unit-test",
+        replay_id="unit:replay:1",
+        metadata={"y": 2, "x": 1},
+    )
+
+    assert first["artifact_sha256"] == second["artifact_sha256"]
+    assert first["hashes"] == second["hashes"]
+
+
+def test_validate_rejects_non_finite_theta0() -> None:
+    with pytest.raises(ValueError, match="theta0 must contain only finite values"):
+        emit_qpu_data_artifact(
+            domain="unit",
+            source_name="unit-fixture",
+            source_mode="curated",
+            K_nm=[[0.0, 0.4], [0.4, 0.0]],
+            omega=[1.0, 1.2],
+            theta0=[0.0, np.nan],
+            layer_assignments=["a", "b"],
+            normalization="unit canonical scaling",
+            extraction_method="unit-test",
+            replay_id="unit:replay:1",
+        )
+
+
+def test_read_qpu_data_artifact_rejects_malformed_json_file(tmp_path: Path) -> None:
+    path = tmp_path / "malformed-qpu-data-artifact.json"
+    path.write_text("{", encoding="utf-8")
+    with pytest.raises(json.JSONDecodeError):
+        read_qpu_data_artifact(path)
+
+
+def test_emit_qpu_data_artifact_rejects_non_serialisable_metadata() -> None:
+    with pytest.raises(TypeError, match="not JSON serializable"):
+        emit_qpu_data_artifact(
+            domain="unit",
+            source_name="unit-fixture",
+            source_mode="curated",
+            K_nm=np.array([[0.0, 0.4], [0.4, 0.0]]),
+            omega=np.array([1.0, 1.2]),
+            theta0=np.array([0.0, 0.5]),
+            layer_assignments=["a", "b"],
+            normalization="unit canonical scaling",
+            extraction_method="unit-test",
+            replay_id="unit:replay:1",
+            metadata={"bad": {1, 2}},
+        )

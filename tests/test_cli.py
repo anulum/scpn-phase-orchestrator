@@ -197,6 +197,60 @@ def test_auto_bind_json_out_emits_audit_record(runner, tmp_path):
     assert record["runtime"]["replay_status"] == "proposal_only"
 
 
+def test_auto_bind_rejects_malformed_sample_rate_option(runner, tmp_path):
+    csv_path = tmp_path / "grid.csv"
+    csv_path.write_text(
+        "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(csv_path),
+            "--sample-rate-hz",
+            "not-a-number",
+            "--project-name",
+            "grid_replay",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid value for '--sample-rate-hz'" in result.output
+
+
+def test_auto_bind_json_out_is_read_only(runner, tmp_path):
+    csv_path = tmp_path / "grid.csv"
+    csv_path.write_text(
+        "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
+        encoding="utf-8",
+    )
+
+    with runner.isolated_filesystem() as fs_root:
+        input_path = Path(fs_root) / "grid.csv"
+        input_path.write_text(csv_path.read_text(encoding="utf-8"), encoding="utf-8")
+        before = set(Path(fs_root).iterdir())
+
+        result = runner.invoke(
+            main,
+            [
+                "auto-bind",
+                "time-series-csv",
+                str(input_path),
+                "--project-name",
+                "grid_replay",
+                "--json-out",
+            ],
+        )
+
+        after = set(Path(fs_root).iterdir())
+
+    assert result.exit_code == 0
+    assert before == after
+
+
 def test_auto_bind_infers_sample_rate_from_time_column(runner, tmp_path):
     csv_path = tmp_path / "signals.csv"
     csv_path.write_text(
@@ -376,6 +430,24 @@ def test_run_audit_records_channel_runtime_execution(runner, tmp_path):
 def test_run_invalid_spec(runner, invalid_spec_path):
     result = runner.invoke(main, ["run", invalid_spec_path])
     assert result.exit_code != 0
+
+
+def test_run_rejects_malformed_step_count(runner, valid_spec_path):
+    result = runner.invoke(main, ["run", valid_spec_path, "--steps", "not-a-number"])
+
+    assert result.exit_code == 2
+    assert "Invalid value for '--steps'" in result.output
+
+
+def test_run_with_seed_is_deterministic(runner, valid_spec_path):
+    args = ["run", valid_spec_path, "--steps", "8", "--seed", "12345"]
+
+    result_one = runner.invoke(main, args)
+    result_two = runner.invoke(main, args)
+
+    assert result_one.exit_code == 0
+    assert result_two.exit_code == 0
+    assert result_one.output == result_two.output
 
 
 def test_replay_command(runner, audit_log_path):
@@ -1689,7 +1761,7 @@ def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
     )
 
     assert result.exit_code == 0, result.output
-    stdout_record = json.loads(result.output)
+    stdout_record = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert stdout_record["proposal_type"] == (
         "differentiable_supervisor_experiment_manifest"
     )
