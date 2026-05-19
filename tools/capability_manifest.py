@@ -81,7 +81,7 @@ class CapabilityManifestConfig:
     exclude_doc_parts: tuple[str, ...]
     labels: dict[str, str]
     product_boundaries: dict[str, tuple[str, ...]]
-    source_path: Path | None
+    source_path: str | None
 
 
 def load_config(
@@ -128,7 +128,7 @@ def load_config(
         ),
         labels=labels,
         product_boundaries=product_boundaries,
-        source_path=_relative_path(path, repo) if path.exists() else None,
+        source_path=_manifest_path(path, repo) if path.exists() else None,
     )
 
 
@@ -160,9 +160,7 @@ def build_capability_manifest(
         "schema_version": config.schema_version,
         "project_label": config.project_label,
         "generated_from": {
-            "config": str(config.source_path)
-            if config.source_path is not None
-            else "built-in defaults",
+            "config": config.source_path or "built-in defaults",
             "generator": "tools/capability_manifest.py",
         },
         "project": {
@@ -624,11 +622,13 @@ def _tracked_files(root: Path, *, repo: Path) -> list[str] | None:
     return sorted(line for line in result.stdout.splitlines() if line)
 
 
-def _relative_path(path: Path, repo: Path) -> Path:
+def _manifest_path(path: Path, repo: Path) -> str:
+    """Return a deterministic POSIX-style repository path for manifest JSON."""
+
     try:
-        return path.resolve().relative_to(repo)
+        return path.resolve().relative_to(repo).as_posix()
     except ValueError:
-        return path.resolve()
+        return path.resolve().as_posix()
 
 
 def _rel(path: Path, root: Path) -> str:
