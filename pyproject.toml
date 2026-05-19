@@ -293,12 +293,10 @@ omit = [
     "*/upde/_*_go.py",
     "*/upde/_*_julia.py",
     "*/upde/_*_mojo.py",
-    # JAX/equinox not in standard CI
-    "*/nn/*",
 ]
 
 [tool.coverage.report]
-fail_under = 85  # TEMP 2026-05-01: user-approved lower gate while restoring coverage.
+fail_under = 85
 
 [tool.bandit]
 exclude_dirs = ["tests"]

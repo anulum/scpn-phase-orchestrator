@@ -18,6 +18,7 @@ does not apply actuation or mutate coupling matrices.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -25,15 +26,28 @@ from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
-__all__ = ["SupervisorPolicy"]
+__all__ = ["SupervisorPolicy", "SupervisorPolicyGains"]
 
 logger = logging.getLogger(__name__)
 
-# Empirical — see docs/ASSUMPTIONS.md § Supervisor Policy
-_K_BUMP = 0.05
-_ZETA_BUMP = 0.1
-_K_REDUCE = -0.03
-_RESTORE_FRACTION = 0.5
+@dataclass(frozen=True)
+class SupervisorPolicyGains:
+    """Tunable regime-action gains for a deployment-specific supervisor."""
+
+    k_bump: float = 0.05
+    zeta_bump: float = 0.1
+    k_reduce: float = -0.03
+    restore_fraction: float = 0.5
+
+    def __post_init__(self) -> None:
+        if self.k_bump <= 0.0:
+            raise ValueError("k_bump must be positive")
+        if self.zeta_bump <= 0.0:
+            raise ValueError("zeta_bump must be positive")
+        if self.k_reduce >= 0.0:
+            raise ValueError("k_reduce must be negative")
+        if not 0.0 < self.restore_fraction <= 1.0:
+            raise ValueError("restore_fraction must be in (0, 1]")
 
 
 class SupervisorPolicy:
@@ -47,9 +61,11 @@ class SupervisorPolicy:
         self,
         regime_manager: RegimeManager,
         petri_adapter: PetriNetAdapter | None = None,
+        gains: SupervisorPolicyGains | None = None,
     ):
         self._regime_manager = regime_manager
         self._petri_adapter = petri_adapter
+        self._gains = gains or SupervisorPolicyGains()
 
     def decide(
         self,
@@ -87,7 +103,7 @@ class SupervisorPolicy:
                 ControlAction(
                     knob="K",
                     scope="global",
-                    value=_K_BUMP,
+                    value=self._gains.k_bump,
                     ttl_s=10.0,
                     justification="degraded: boost global coupling",
                 )
@@ -98,7 +114,7 @@ class SupervisorPolicy:
                 ControlAction(
                     knob="zeta",
                     scope="global",
-                    value=_ZETA_BUMP,
+                    value=self._gains.zeta_bump,
                     ttl_s=5.0,
                     justification="critical: increase damping",
                 )
@@ -109,7 +125,7 @@ class SupervisorPolicy:
                     ControlAction(
                         knob="K",
                         scope=f"layer_{worst}",
-                        value=_K_REDUCE,
+                    value=self._gains.k_reduce,
                         ttl_s=5.0,
                         justification=f"critical: reduce coupling on layer {worst}",
                     )
@@ -121,7 +137,7 @@ class SupervisorPolicy:
             ControlAction(
                 knob="K",
                 scope="global",
-                value=_K_BUMP * _RESTORE_FRACTION,
+                value=self._gains.k_bump * self._gains.restore_fraction,
                 ttl_s=15.0,
                 justification="recovery: gradual coupling restore",
             )

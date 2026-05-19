@@ -35,6 +35,8 @@ Payload: TypeAlias = dict[str, Any]
 SCHEMA_VERSION = 1
 STREAM_MAGIC = b"SPOA1\n"
 ZERO_HASH = "0" * 64
+_AUDIT_DESCRIPTOR_POOL = descriptor_pool.DescriptorPool()
+_AUDIT_DESCRIPTOR_POOL.AddSerializedFile(_timestamp_pb2.DESCRIPTOR.serialized_pb)
 
 __all__ = [
     "AuditStreamEvent",
@@ -69,9 +71,10 @@ class AuditStreamEvent:
 
 def _audit_envelope_class() -> type[Message]:
     _ = _timestamp_pb2.DESCRIPTOR
-    pool = descriptor_pool.Default()
     try:
-        descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
+        descriptor = _AUDIT_DESCRIPTOR_POOL.FindMessageTypeByName(
+            "spo.audit.AuditEnvelope"
+        )
     except KeyError:
         file_proto = descriptor_pb2.FileDescriptorProto()
         file_proto.name = "audit.proto"
@@ -119,8 +122,10 @@ def _audit_envelope_class() -> type[Message]:
         )
         add_field("signature", 13, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
         add_field("audit_mode", 14, descriptor_pb2.FieldDescriptorProto.TYPE_STRING)
-        pool.Add(file_proto)
-        descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
+        _AUDIT_DESCRIPTOR_POOL.Add(file_proto)
+        descriptor = _AUDIT_DESCRIPTOR_POOL.FindMessageTypeByName(
+            "spo.audit.AuditEnvelope"
+        )
     return message_factory.GetMessageClass(descriptor)
 
 

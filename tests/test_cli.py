@@ -275,7 +275,7 @@ def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_p
     assert header["binding_summary"]["channel_algebra"]["required_channels"] == []
 
 
-def test_run_warns_for_unenforced_non_research_tier(runner, tmp_path):
+def test_run_fails_closed_for_unenforced_non_research_tier(runner, tmp_path):
     spec = {
         "name": "clinical-warning-test",
         "version": "1.0.0",
@@ -297,9 +297,9 @@ def test_run_warns_for_unenforced_non_research_tier(runner, tmp_path):
 
     result = runner.invoke(main, ["run", str(path), "--steps", "1"])
 
-    assert result.exit_code == 0
-    assert "WARNING: safety_tier='clinical'" in result.output
-    assert "R_good=" in result.output
+    assert result.exit_code != 0
+    assert "safety_tier='clinical' is not enforced" in result.output
+    assert "R_good=" not in result.output
 
 
 def test_run_audit_records_channel_runtime_execution(runner, tmp_path):

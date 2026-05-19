@@ -925,10 +925,10 @@ def run(
         raise SystemExit(1)
 
     if spec.safety_tier != "research":
-        click.echo(
-            f"WARNING: safety_tier={spec.safety_tier!r} — "
-            "non-research tiers are not yet enforced at runtime",
-            err=True,
+        raise click.ClickException(
+            f"safety_tier={spec.safety_tier!r} is not enforced by the local "
+            "runtime; use the formal export and certified controller pipeline "
+            "before executing non-research specs"
         )
     binding_summary = resolved_binding_config(spec)
     for line in format_resolved_binding_config(binding_summary):

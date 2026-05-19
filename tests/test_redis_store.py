@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import types
 from unittest.mock import MagicMock
 
 import pytest
@@ -96,6 +98,56 @@ def test_load_state_rejects_malformed_json_payload():
     mock.get.return_value = "{not-json"
     with pytest.raises(ValueError, match="Redis payload"):
         store.load_state()
+
+
+def test_constructed_client_uses_tls_auth_and_certificates(monkeypatch):
+    captured: dict[str, object] = {}
+    test_credential = "".join(("test", "-redis-auth-token"))
+
+    class FakeRedis:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    fake_module = types.SimpleNamespace(Redis=FakeRedis)
+    monkeypatch.setitem(sys.modules, "redis", fake_module)
+    monkeypatch.setattr(
+        "scpn_phase_orchestrator.adapters.redis_store._redis_mod",
+        fake_module,
+    )
+    monkeypatch.setattr("scpn_phase_orchestrator.adapters.redis_store._HAS_REDIS", True)
+
+    RedisStateStore(
+        host="redis.internal",
+        port=6380,
+        db=2,
+        password=test_credential,
+        ssl_ca_certs="/etc/redis/ca.pem",
+        ssl_certfile="/etc/redis/client.pem",
+        ssl_keyfile="/etc/redis/client.key",
+    )
+
+    assert captured == {
+        "host": "redis.internal",
+        "port": 6380,
+        "db": 2,
+        "ssl": True,
+        "password": test_credential,
+        "ssl_cert_reqs": "required",
+        "ssl_ca_certs": "/etc/redis/ca.pem",
+        "ssl_certfile": "/etc/redis/client.pem",
+        "ssl_keyfile": "/etc/redis/client.key",
+    }
+
+
+def test_plaintext_redis_is_rejected_for_non_loopback_hosts():
+    with pytest.raises(ValueError, match="loopback"):
+        RedisStateStore(host="redis.internal", ssl=False)
+
+
+def test_plaintext_redis_is_allowed_for_explicit_loopback_development_client():
+    mock_client = MagicMock()
+    store = RedisStateStore(host="127.0.0.1", ssl=False, client=mock_client)
+    assert store.key == "spo:sim_state"
 
 
 class TestRedisStorePipelineWiring:

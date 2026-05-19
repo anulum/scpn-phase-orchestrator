@@ -12,7 +12,10 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
-from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
+from scpn_phase_orchestrator.supervisor.policy import (
+    SupervisorPolicy,
+    SupervisorPolicyGains,
+)
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
@@ -58,10 +61,20 @@ class TestRegimeActionMapping:
         assert actions[0].scope == "global"
 
     def test_degraded_k_value_is_0_05(self, policy):
-        """K bump constant is 0.05 (from _K_BUMP)."""
+        """Default K bump is 0.05."""
         state = _make_upde([0.4, 0.45, 0.5])
         actions = policy.decide(state, BoundaryState())
         assert actions[0].value == pytest.approx(0.05)
+
+    def test_degraded_k_value_uses_configured_gain(self):
+        """Deployment-specific gain profiles replace hardcoded constants."""
+        policy = SupervisorPolicy(
+            RegimeManager(cooldown_steps=0),
+            gains=SupervisorPolicyGains(k_bump=0.12),
+        )
+        state = _make_upde([0.4, 0.45, 0.5])
+        actions = policy.decide(state, BoundaryState())
+        assert actions[0].value == pytest.approx(0.12)
 
     def test_critical_produces_zeta_and_negative_k(self, policy):
         """Low coherence → CRITICAL → zeta damping + reduce coupling on worst layer."""
@@ -139,10 +152,19 @@ class TestRecoveryRegime:
         assert "recovery" in actions[0].justification
 
     def test_recovery_k_is_half_bump(self, policy):
-        """Recovery K value should be K_BUMP * RESTORE_FRACTION = 0.05 * 0.5 = 0.025."""
+        """Recovery K value uses the configured restore fraction."""
         policy.decide(_make_upde([0.1, 0.15]), BoundaryState())
         actions = policy.decide(_make_upde([0.45, 0.50]), BoundaryState())
         assert actions[0].value == pytest.approx(0.025)
+
+    def test_recovery_k_uses_configured_restore_fraction(self):
+        policy = SupervisorPolicy(
+            RegimeManager(cooldown_steps=0),
+            gains=SupervisorPolicyGains(k_bump=0.2, restore_fraction=0.25),
+        )
+        policy.decide(_make_upde([0.1, 0.15]), BoundaryState())
+        actions = policy.decide(_make_upde([0.45, 0.50]), BoundaryState())
+        assert actions[0].value == pytest.approx(0.05)
 
     def test_recovery_scope_is_global(self, policy):
         policy.decide(_make_upde([0.1, 0.15]), BoundaryState())
@@ -186,6 +208,20 @@ class TestPolicyEdgeCases:
             actions = policy.decide(state, BoundaryState())
             for a in actions:
                 assert a.ttl_s > 0, f"Action {a.knob} has ttl_s={a.ttl_s}"
+
+    @pytest.mark.parametrize(
+        "kwargs, message",
+        [
+            ({"k_bump": 0.0}, "k_bump"),
+            ({"zeta_bump": 0.0}, "zeta_bump"),
+            ({"k_reduce": 0.0}, "k_reduce"),
+            ({"restore_fraction": 0.0}, "restore_fraction"),
+            ({"restore_fraction": 1.1}, "restore_fraction"),
+        ],
+    )
+    def test_policy_gains_reject_invalid_values(self, kwargs, message):
+        with pytest.raises(ValueError, match=message):
+            SupervisorPolicyGains(**kwargs)
 
 
 class TestPolicyPipelineEndToEnd:

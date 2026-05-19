@@ -13,7 +13,9 @@ import importlib.util
 import json
 
 import numpy as np
+import pytest
 from click.testing import CliRunner
+from google.protobuf import descriptor_pool
 
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.audit_stream import (
@@ -27,6 +29,13 @@ from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 def test_presplit_audit_stream_submodule_is_removed() -> None:
     assert importlib.util.find_spec("scpn_phase_orchestrator.audit.stream") is None
+
+
+def test_audit_envelope_descriptor_is_not_registered_in_default_pool() -> None:
+    default_pool = descriptor_pool.Default()
+
+    with pytest.raises(KeyError):
+        default_pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
 
 
 def _state() -> UPDEState:
