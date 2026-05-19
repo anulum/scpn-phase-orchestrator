@@ -253,3 +253,55 @@ def test_resolved_binding_config_surfaces_missing_required_channel(tmp_path):
 
     assert channel_algebra["missing_required_channels"] == ["Telemetry"]
     assert any("missing_required_channels: Telemetry" in line for line in lines)
+
+
+def test_format_resolved_binding_config_handles_non_list_metadata_gracefully():
+    summary = {
+        "name": "resolved-format-malformed",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.1,
+        "control_interval_steps": 10,
+        "engine_mode": "kuramoto",
+        "layer_count": 1,
+        "oscillator_count": 2,
+        "channels": {
+            "P": {
+                "families": "physical",
+                "extractors": "hilbert",
+                "driver_keys": "gain",
+                "declared": True,
+                "role": "plant",
+                "layer_count": 1,
+                "oscillator_count": 2,
+                "supervisor_visibility": True,
+                "replay_semantics": "phase",
+            }
+        },
+        "channel_groups": {},
+        "cross_channel_couplings": [],
+        "channel_algebra": {
+            "required_channels": "P",
+            "optional_channels": ["Q"],
+            "derived_channels": "Risk",
+            "missing_required_channels": "P",
+            "delayed_channels": "P",
+            "uncertain_channels": ["P"],
+            "supervisor_visible_channels": "P",
+            "coupling_participating_channels": ["P", "Q"],
+        },
+        "features": {
+            "amplitude": False,
+            "geometry_prior": False,
+            "imprint_model": False,
+            "protocol_net": False,
+        },
+    }
+
+    lines = format_resolved_binding_config(summary)
+
+    assert any("families=none" in line for line in lines)
+    assert any("extractors=none" in line for line in lines)
+    assert any("driver_keys=none" in line for line in lines)
+    assert not any("missing_required_channels" in line for line in lines)

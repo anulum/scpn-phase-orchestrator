@@ -448,6 +448,64 @@ def test_loader_rejects_non_boolean_channel_required_flag(tmp_path):
         load_binding_spec(p)
 
 
+def test_loader_allows_null_derived_from_as_empty_list(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "channels": {
+            "P": {"role": "plant", "derived_from": None},
+            "H": {"role": "operator", "required": True},
+        },
+    }
+    p = tmp_path / "null_derived_from.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    spec = load_binding_spec(p)
+
+    assert spec.channels["P"].derived_from == []
+
+
+def test_load_channel_groups_requires_channels_key(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "channel_groups": {
+            "supervised": {"description": "group without channels"},
+        },
+    }
+    p = tmp_path / "bad_channel_group.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError,
+        match="missing required key 'channels' in channel_groups\\.supervised",
+    ):
+        load_binding_spec(p)
+
+
+def test_loader_rejects_non_list_channel_group_entries(tmp_path):
+    data = {
+        **_SPEC_DATA,
+        "channel_groups": {"supervised": {"channels": "P"}},
+    }
+    p = tmp_path / "bad_channel_group_type.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(
+        BindingLoadError,
+        match="expected list in channel_groups\\.supervised\\.channels, got str",
+    ):
+        load_binding_spec(p)
+
+
+def test_load_binding_treats_null_cross_channel_couplings_as_empty(tmp_path):
+    data = {**_SPEC_DATA, "cross_channel_couplings": None}
+    p = tmp_path / "null_cross_channel_couplings.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    spec = load_binding_spec(p)
+
+    assert spec.cross_channel_couplings == []
+
+
 def test_loader_preserves_optional_layer_omegas_and_missing_boundary_bounds(tmp_path):
     data = {
         **_SPEC_DATA,

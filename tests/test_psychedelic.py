@@ -177,6 +177,43 @@ def test_simulate_trajectory_rejects_mismatched_runtime_shapes():
         )
 
 
+def test_simulate_trajectory_rejects_empty_phase_vector():
+    engine = UPDEEngine(1, dt=0.01)
+
+    with pytest.raises(ValueError, match="at least one oscillator"):
+        simulate_psychedelic_trajectory(
+            engine,
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            [0.0],
+            n_steps_per_level=1,
+        )
+
+
+def test_simulate_trajectory_with_empty_schedule_returns_empty_series():
+    n = 6
+    engine = UPDEEngine(n, dt=0.01)
+    phases = np.arange(n, dtype=float)
+    omegas = np.ones(n)
+    knm = np.ones((n, n))
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+
+    results = simulate_psychedelic_trajectory(
+        engine,
+        phases,
+        omegas,
+        knm,
+        alpha,
+        reduction_schedule=[],
+        n_steps_per_level=5,
+    )
+
+    assert results == []
+
+
 def test_simulate_trajectory_rejects_invalid_schedule_and_step_count():
     n = 4
     engine = UPDEEngine(n, dt=0.01)

@@ -74,6 +74,12 @@ def _write_runtime_spec(tmp_path) -> str:
     return str(path)
 
 
+def _write_runtime_spec_payload(tmp_path, payload: dict) -> str:
+    path = tmp_path / "binding_spec_payload.yaml"
+    path.write_text(yaml.dump(payload), encoding="utf-8")
+    return str(path)
+
+
 def test_channel_runtime_holds_delayed_evidence_and_weights_uncertainty(tmp_path):
     spec = load_binding_spec(_write_runtime_spec(tmp_path))
     executor = ChannelRuntimeExecutor.from_spec(spec)
@@ -134,3 +140,100 @@ def test_channel_runtime_non_finite_confidence_fails_closed_to_unit_weight(tmp_p
 
     assert execution.layers[1].R == 0.4
     assert execution.evidence[1].confidence_weight == 1.0
+
+
+def test_channel_runtime_defaults_to_current_tick_policy_for_undeclared_channel(
+    tmp_path,
+):
+    spec = {
+        "name": "channel-runtime-default-policy",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.02,
+        "control_period_s": 0.1,
+        "layers": [
+            {
+                "name": "latent",
+                "index": 0,
+                "oscillator_ids": ["h0"],
+                "family": "latent",
+            },
+        ],
+        "oscillator_families": {
+            "latent": {"channel": "H", "extractor_type": "event", "config": {}}
+        },
+        "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+        "drivers": {
+            "physical": {},
+            "informational": {},
+            "symbolic": {},
+        },
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+    spec_path = _write_runtime_spec_payload(tmp_path, spec)
+
+    executor = ChannelRuntimeExecutor.from_spec(load_binding_spec(spec_path))
+    execution = executor.execute([LayerState(R=0.42, psi=0.11)])
+
+    assert execution.layers[0].R == 0.42
+    assert execution.evidence[0].channel == "H"
+    assert execution.evidence[0].delay_policy == "use_current_tick_evidence"
+    assert (
+        execution.evidence[0].uncertainty_policy == "deterministic_runtime_contribution"
+    )
+    assert execution.evidence[0].evidence_source == "current_tick"
+    assert execution.evidence[0].confidence_weight == 1.0
+
+    record = execution.to_audit_record()
+    assert record["delayed_layers"] == []
+    assert record["uncertain_layers"] == []
+
+
+def test_channel_runtime_confidence_weights_clamped_to_unit_interval(tmp_path):
+    spec = {
+        "name": "channel-runtime-confidence",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.02,
+        "control_period_s": 0.1,
+        "layers": [
+            {
+                "name": "plant",
+                "index": 0,
+                "oscillator_ids": ["p0"],
+                "family": "plant",
+            },
+        ],
+        "oscillator_families": {
+            "plant": {"channel": "P", "extractor_type": "physical", "config": {}}
+        },
+        "channels": {
+            "P": {
+                "role": "uncertain",
+                "replay_semantics": "confidence",
+            }
+        },
+        "coupling": {"base_strength": 0.2, "decay_alpha": 0.1, "templates": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+
+    def run_with_weight(value: float) -> float:
+        payload = {
+            **spec,
+            "drivers": {
+                "physical": {"confidence_weight": value},
+                "informational": {},
+                "symbolic": {},
+            },
+        }
+        spec_path = _write_runtime_spec_payload(tmp_path, payload)
+        executor = ChannelRuntimeExecutor.from_spec(load_binding_spec(spec_path))
+        execution = executor.execute([LayerState(R=0.8, psi=0.2)])
+        return execution.layers[0].R
+
+    assert run_with_weight(3.0) == 0.8
+    assert run_with_weight(-0.5) == 0.0

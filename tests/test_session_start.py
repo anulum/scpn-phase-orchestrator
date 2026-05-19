@@ -151,6 +151,18 @@ def test_initial_phase_shape_mismatch_skips_coherence_without_failing():
     assert report.imprint_level == 0.3
 
 
+def test_empty_phase_states_does_not_block_shape_validation():
+    n = 4
+    phases = np.arange(n, dtype=float)
+    imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
+
+    report = check_session_start([], phases, imprint, n)
+
+    assert not report.passed
+    assert report.quality_scores == {}
+    assert any("Signal collapse" in message for message in report.errors)
+
+
 class TestSessionStartPipelineWiring:
     """Pipeline: extraction → session check → engine initialisation."""
 

@@ -99,6 +99,11 @@ class TestNPE:
             npe = compute_npe(phases)
             assert 0.0 <= npe <= 1.0
 
+    def test_zero_radius_forces_zero_npe(self):
+        phases = np.linspace(0.0, np.pi, 12)
+        npe = compute_npe(phases, max_radius=0.0)
+        assert npe == 0.0
+
     def test_more_sync_lower_npe(self):
         rng = np.random.default_rng(42)
         spread = rng.uniform(0, 2 * np.pi, 20)

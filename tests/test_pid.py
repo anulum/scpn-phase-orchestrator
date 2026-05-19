@@ -49,6 +49,11 @@ class TestRedundancy:
         r = redundancy(phases, [0, 1, 2], [3, 4, 5])
         assert r >= 0.0
 
+    def test_redundancy_with_repeated_group_members(self):
+        phases = np.array([0.0, 1.0, 2.0, 3.0])
+        r = redundancy(phases, [0, 1, 1], [2, 3])
+        assert r >= 0.0
+
     def test_empty_phases(self):
         assert redundancy(np.array([]), [0], [1]) == 0.0
 

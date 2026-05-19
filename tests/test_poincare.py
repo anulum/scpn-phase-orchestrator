@@ -90,6 +90,20 @@ class TestPoincareSection:
         with pytest.raises(ValueError, match=match):
             poincare_section(np.zeros((3, 1)), normal=normal)
 
+    def test_zero_normal_vector_returns_no_crossings(self):
+        trajectory = np.array(
+            [
+                [0.0, 1.0],
+                [0.5, 1.5],
+                [1.0, 2.0],
+            ]
+        )
+        result = poincare_section(trajectory, normal=np.array([0.0, 0.0]))
+
+        assert len(result.crossings) == 0
+        assert result.mean_return_time == 0.0
+        assert result.std_return_time == 0.0
+
     @pytest.mark.parametrize("offset", [False, np.nan, np.inf, "0.0"])
     def test_rejects_invalid_offset(self, offset: Any) -> None:
         with pytest.raises(ValueError, match="offset"):

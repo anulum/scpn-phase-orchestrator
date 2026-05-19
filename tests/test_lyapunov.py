@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_mod
 from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard
 
 
@@ -23,6 +24,21 @@ def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:
 
 
 class TestLyapunovFunction:
+    def test_spectrum_min_steps_uses_python_fallback_path(self, monkeypatch):
+        n = 4
+        phases = np.array([0.0, 1.0, 2.0, 3.0])
+        omegas = np.array([1.0, 1.1, 1.2, 1.3])
+        knm = _all_to_all(n, k=0.4)
+        alpha = np.zeros((n, n))
+
+        monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: None)
+        spectrum = lyapunov_mod.lyapunov_spectrum(
+            phases, omegas, knm, alpha, n_steps=1, qr_interval=10
+        )
+
+        assert spectrum.shape == (n,)
+        assert np.all(spectrum == 0.0)
+
     def test_synchronized_minimum(self):
         phases = np.zeros(4)
         knm = _all_to_all(4)

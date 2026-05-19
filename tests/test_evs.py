@@ -132,6 +132,26 @@ def test_persistence_criterion_required():
     assert not result.is_entrained
 
 
+def test_pause_indices_are_clipped_to_valid_range():
+    phases = np.tile(np.array([0.0, np.pi / 2, np.pi]), (4, 1))
+    mon = EVSMonitor(
+        itpc_threshold=0.95,
+        persistence_threshold=0.95,
+        specificity_threshold=0.95,
+    )
+
+    result = mon.evaluate(
+        phases,
+        pause_indices=[-3, 0, 1, 999, 4],
+        target_freq=5.0,
+        control_freq=5.0,
+    )
+
+    assert result.itpc_value == pytest.approx(1.0, abs=1e-12)
+    assert result.persistence_score == pytest.approx(1.0, abs=1e-12)
+    assert result.is_entrained
+
+
 def test_specificity_with_same_freq_gives_one():
     phases = _entrained_phases()
     mon = EVSMonitor(specificity_threshold=0.9)
