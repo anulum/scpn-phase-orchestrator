@@ -7,6 +7,7 @@
 # SCPN Phase Orchestrator — Visualizer Streamer tests
 
 import asyncio
+import json
 
 import numpy as np
 import pytest
@@ -192,6 +193,123 @@ def test_broadcast_discards_clients_on_send_failure(monkeypatch):
     streamer.broadcast({"step": 1})
 
     assert client not in streamer._clients
+
+
+def test_broadcast_sends_json_payload_to_all_live_clients(monkeypatch):
+    """Broadcast submits one JSON-safe payload to every connected client."""
+
+    messages: list[str] = []
+
+    class SuccessfulFuture:
+        def add_done_callback(self, callback):
+            callback(self)
+
+        def exception(self, timeout: float | None = None):
+            return None
+
+        def cancelled(self) -> bool:
+            return False
+
+    def fake_submit(coro: object, _loop: object) -> SuccessfulFuture:
+        asyncio.run(coro)
+        return SuccessfulFuture()
+
+    class Client:
+        async def send(self, message: str) -> None:
+            messages.append(message)
+
+    first = Client()
+    second = Client()
+    visualizer = VisualizerStreamer()
+    visualizer._loop = object()
+    visualizer._clients.update({first, second})
+
+    monkeypatch.setattr(
+        streamer_module.asyncio,
+        "run_coroutine_threadsafe",
+        fake_submit,
+    )
+
+    visualizer.broadcast(
+        {
+            "phase": np.array([0.0, np.pi]),
+            "metrics": {"R": np.float64(0.75), "step": np.int64(12)},
+        }
+    )
+
+    payloads = [json.loads(message) for message in messages]
+    assert payloads == [
+        {"phase": [0.0, np.pi], "metrics": {"R": 0.75, "step": 12}},
+        {"phase": [0.0, np.pi], "metrics": {"R": 0.75, "step": 12}},
+    ]
+    assert first in visualizer._clients
+    assert second in visualizer._clients
+
+
+def test_broadcast_discards_client_when_submission_raises(monkeypatch):
+    """A failed coroutine submission must close the coroutine and drop the client."""
+
+    class Client:
+        async def send(self, message: str) -> None:  # pylint: disable=unused-argument
+            raise AssertionError("send coroutine should not execute")
+
+    def fake_submit(_coro: object, _loop: object) -> object:
+        raise RuntimeError("event loop stopped")
+
+    client = Client()
+    visualizer = VisualizerStreamer()
+    visualizer._loop = object()
+    visualizer._clients.add(client)
+
+    monkeypatch.setattr(
+        streamer_module.asyncio,
+        "run_coroutine_threadsafe",
+        fake_submit,
+    )
+
+    visualizer.broadcast({"step": 1})
+
+    assert client not in visualizer._clients
+
+
+def test_send_cleanup_callback_discards_cancelled_send_result():
+    """Cancelled send futures must remove stale clients from the live set."""
+
+    class CancelledFuture:
+        def cancelled(self) -> bool:
+            return True
+
+        def exception(self, timeout: float | None = None):
+            raise AssertionError("cancelled futures should short-circuit exception")
+
+    client = object()
+    visualizer = VisualizerStreamer()
+    visualizer._clients.add(client)
+
+    visualizer._make_send_cleanup_callback(client)(CancelledFuture())
+
+    assert client not in visualizer._clients
+
+
+def test_handler_removes_client_after_normal_close():
+    """A normally closed WebSocket must leave no stale client registration."""
+
+    class ClosingWebSocket:
+        def __init__(self) -> None:
+            self.seen_registered = False
+
+        async def wait_closed(self) -> None:
+            self.seen_registered = self in visualizer._clients
+
+    async def exercise() -> None:
+        websocket = ClosingWebSocket()
+        await visualizer._handler(websocket)
+        assert websocket.seen_registered is True
+        assert websocket not in visualizer._clients
+
+    visualizer = VisualizerStreamer()
+
+    asyncio.run(exercise())
 
 
 def test_handler_removes_client_after_wait_closed_error():
