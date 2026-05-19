@@ -1,7 +1,7 @@
 {
   "metadata": {
     "suite_version": "reference_suite_v1",
-    "snapshot_date": "2026-05-13",
+    "snapshot_date": "2026-05-20",
     "command": "PYTHONPATH=src python benchmarks/reference_suite.py",
     "backend": "python_numpy",
     "python_version": "3.12.3",
@@ -13,35 +13,45 @@
   "benchmarks": {
     "auto_binding": {
       "suite": "auto_binding_synthetic_quality",
-      "fixture_count": 2,
-      "wall_time_s": 0.021209002996329218,
-      "steps_per_second": 94.29957647448836,
+      "fixture_count": 4,
+      "large_fixture_count": 4,
+      "wall_time_s": 0.06027109699789435,
+      "steps_per_second": 66.3668026506925,
       "validation_error_count": 0,
       "extractor_coverage": 1.0,
       "expected_edge_recall": 1.0,
-      "proposed_edge_count": 12
+      "proposed_edge_count": 33,
+      "domain_acceptance_passed": 1,
+      "accepted_domain_count": 4,
+      "failed_domain_count": 0,
+      "min_domain_extractor_coverage": 1.0,
+      "min_domain_expected_edge_recall": 1.0,
+      "max_domain_validation_errors": 0,
+      "min_sample_count": 128,
+      "domain_acceptance_thresholds_json": "{\"cardiac_rhythm_surrogate\": {\"max_proposed_edge_multiplier\": 6.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 128}, \"industrial_sensor_chain\": {\"max_proposed_edge_multiplier\": 8.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 96}, \"phase_chain\": {\"max_proposed_edge_multiplier\": 8.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 96}, \"power_grid_surrogate\": {\"max_proposed_edge_multiplier\": 8.0, \"max_validation_errors\": 0, \"min_expected_edge_recall\": 1.0, \"min_extractor_coverage\": 1.0, \"min_sample_count\": 160}}",
+      "domain_acceptance_results_json": "[{\"accepted\": true, \"domain\": \"phase_chain\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 6, \"proposed_edge_multiplier\": 6.0, \"sample_count\": 128, \"source_column_count\": 3, \"validation_error_count\": 0}, {\"accepted\": true, \"domain\": \"industrial_sensor_chain\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 6, \"proposed_edge_multiplier\": 6.0, \"sample_count\": 128, \"source_column_count\": 3, \"validation_error_count\": 0}, {\"accepted\": true, \"domain\": \"cardiac_rhythm_surrogate\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 9, \"proposed_edge_multiplier\": 4.5, \"sample_count\": 160, \"source_column_count\": 4, \"validation_error_count\": 0}, {\"accepted\": true, \"domain\": \"power_grid_surrogate\", \"expected_edge_recall\": 1.0, \"extractor_coverage\": 1.0, \"proposed_edge_count\": 12, \"proposed_edge_multiplier\": 6.0, \"sample_count\": 192, \"source_column_count\": 4, \"validation_error_count\": 0}]"
     },
     "kuramoto": {
       "suite": "kuramoto_reference_strogatz_2000",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.11908225799561478,
-      "steps_per_second": 8397.556586782433,
+      "wall_time_s": 0.16471287398599088,
+      "steps_per_second": 6071.17085507871,
       "final_order_parameter": 1.0
     },
     "stuart_landau": {
       "suite": "stuart_landau_reference_pikovsky_2001",
       "n_oscillators": 64,
       "n_steps": 1000,
-      "wall_time_s": 0.26880446799623314,
-      "steps_per_second": 3720.176258431885,
+      "wall_time_s": 0.31584654201287776,
+      "steps_per_second": 3166.094501548248,
       "final_mean_amplitude": 3.6193922141707704
     },
     "petri_reachability": {
       "suite": "petri_net_reachability",
       "n_steps": 5000,
-      "wall_time_s": 0.019305217996588908,
-      "steps_per_second": 258997.33434159943,
+      "wall_time_s": 0.02358600898878649,
+      "steps_per_second": 211990.0828655307,
       "reachable_markings": 4
     }
   }

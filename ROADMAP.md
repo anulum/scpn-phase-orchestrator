@@ -271,8 +271,17 @@ sessions do not treat them as abstract research labels.
     `benchmarks/reference_suite.py` now records extractor coverage, validator
     acceptance, expected initial-K support recall, proposed edge count, and
     throughput for deterministic auto-binding fixtures.
-  - Remaining work: benchmark the proposal quality on larger live datasets and
-    add domain-specific acceptance thresholds before any automatic runtime use.
+  - Larger proposal-quality gates are in place:
+    `benchmarks/reference_suite.py` now evaluates four deterministic
+    domain-like fixtures (`phase_chain`, `industrial_sensor_chain`,
+    `cardiac_rhythm_surrogate`, and `power_grid_surrogate`) with explicit
+    domain-specific thresholds for extractor coverage, expected-edge recall,
+    validation errors, sample count, and proposed-edge multiplier. The
+    benchmark snapshot records pass/fail evidence for all domain gates before
+    any automatic runtime use.
+  - Remaining work: add private or partner-provided live datasets when they are
+    available and preserve the same threshold-gated, review-only acceptance
+    contract.
   - Acceptance: the five-minute new-dataset workflow is zero-config except for
     operator review, with validation diagnostics, deterministic replay, and
     benchmarked graph evidence.

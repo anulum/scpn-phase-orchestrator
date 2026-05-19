@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import json
+
 from benchmarks.reference_suite import (
     BENCHMARK_COMMAND,
     benchmark_auto_binding_proposal_quality,
@@ -49,11 +51,42 @@ def test_auto_binding_proposal_quality_benchmark_shape() -> None:
     out = benchmark_auto_binding_proposal_quality()
 
     assert out["suite"] == "auto_binding_synthetic_quality"
-    assert out["fixture_count"] == 2
+    assert out["fixture_count"] == 4
+    assert out["large_fixture_count"] == 4
     assert out["validation_error_count"] == 0
     assert out["extractor_coverage"] == 1.0
-    assert float(out["expected_edge_recall"]) >= 0.5
+    assert float(out["expected_edge_recall"]) == 1.0
+    assert out["domain_acceptance_passed"] == 1
+    assert out["accepted_domain_count"] == 4
+    assert out["failed_domain_count"] == 0
+    assert out["min_domain_extractor_coverage"] == 1.0
+    assert out["min_domain_expected_edge_recall"] == 1.0
+    assert int(out["max_domain_validation_errors"]) == 0
+    assert int(out["min_sample_count"]) >= 96
     assert float(out["steps_per_second"]) > 0.0
+
+
+def test_auto_binding_proposal_quality_reports_domain_thresholds() -> None:
+    out = benchmark_auto_binding_proposal_quality()
+    thresholds = json.loads(str(out["domain_acceptance_thresholds_json"]))
+    results = json.loads(str(out["domain_acceptance_results_json"]))
+
+    assert set(thresholds) == {
+        "phase_chain",
+        "industrial_sensor_chain",
+        "cardiac_rhythm_surrogate",
+        "power_grid_surrogate",
+    }
+    assert [record["domain"] for record in results] == [
+        "phase_chain",
+        "industrial_sensor_chain",
+        "cardiac_rhythm_surrogate",
+        "power_grid_surrogate",
+    ]
+    assert all(record["accepted"] is True for record in results)
+    assert all(record["sample_count"] >= 96 for record in results)
+    assert all(record["expected_edge_recall"] >= 1.0 for record in results)
+    assert all(record["validation_error_count"] == 0 for record in results)
 
 
 def test_reference_suite_aggregates_all_benchmarks() -> None:

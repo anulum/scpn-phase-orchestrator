@@ -15,7 +15,7 @@ import time
 from collections.abc import Iterable, Mapping
 from datetime import date
 from pathlib import Path
-from typing import TypedDict
+from typing import NamedTuple, TypedDict
 
 import numpy as np
 
@@ -41,6 +41,26 @@ REFERENCE_SUITE_VERSION = "reference_suite_v1"
 
 BenchmarkValue = float | int | str
 BenchmarkRecord = dict[str, BenchmarkValue]
+
+
+class AutoBindingAcceptanceThresholds(NamedTuple):
+    min_extractor_coverage: float
+    min_expected_edge_recall: float
+    max_validation_errors: int
+    min_sample_count: int
+    max_proposed_edge_multiplier: float
+
+
+class AutoBindingFixture(NamedTuple):
+    domain: str
+    csv_text: str
+    sample_rate_hz: float | None
+    expected_edges: frozenset[tuple[str, str]]
+    thresholds: AutoBindingAcceptanceThresholds
+
+    @property
+    def sample_count(self) -> int:
+        return max(0, len(self.csv_text.splitlines()) - 1)
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -158,61 +178,199 @@ def benchmark_petri_reachability(n_steps: int = 5000) -> dict[str, float | int |
 
 
 def benchmark_auto_binding_proposal_quality() -> dict[str, float | int | str]:
-    fixtures = (
-        (
-            "phase_chain",
-            _phase_chain_csv(),
-            None,
-            frozenset({("theta_source", "theta_driven")}),
-        ),
-        (
-            "sensor_chain",
-            _sensor_chain_csv(),
-            10.0,
-            frozenset({("source", "driven")}),
-        ),
-    )
+    fixtures = _auto_binding_quality_fixtures()
     total_channels = 0
     covered_extractors = 0
     validation_error_count = 0
     expected_edge_count = 0
     expected_edge_hits = 0
     proposed_edge_count = 0
+    accepted_domain_count = 0
+    min_domain_extractor_coverage = 1.0
+    min_domain_expected_edge_recall = 1.0
+    max_domain_validation_errors = 0
+    min_sample_count = min(fixture.sample_count for fixture in fixtures)
+    domain_results: list[dict[str, float | int | str | bool]] = []
 
     t0 = time.perf_counter()
-    for fixture_name, csv_text, sample_rate_hz, expected_edges in fixtures:
+    for fixture in fixtures:
         proposal = propose_binding_from_time_series_csv(
-            csv_text,
-            sample_rate_hz=sample_rate_hz,
-            project_name=f"{fixture_name}_benchmark",
+            fixture.csv_text,
+            sample_rate_hz=fixture.sample_rate_hz,
+            project_name=f"{fixture.domain}_benchmark",
         )
-        validation_error_count += len(proposal.binding.validation_errors)
+        fixture_validation_errors = len(proposal.binding.validation_errors)
+        validation_error_count += fixture_validation_errors
         source_columns = _string_records(proposal.binding.provenance["source_columns"])
         extractor_proposals = proposal.binding.provenance[
             "extractor_parameter_proposals"
         ]
         total_channels += len(source_columns)
-        covered_extractors += _extractor_source_coverage(
+        fixture_covered_extractors = _extractor_source_coverage(
             source_columns=source_columns,
             extractor_proposals=_mapping_records(extractor_proposals),
         )
+        covered_extractors += fixture_covered_extractors
         proposed_edges = _proposed_source_edges(
             proposal.binding.provenance["initial_coupling_proposal"]
         )
+        fixture_expected_hits = len(fixture.expected_edges & proposed_edges)
+        fixture_expected_edge_recall = fixture_expected_hits / len(
+            fixture.expected_edges
+        )
+        fixture_extractor_coverage = fixture_covered_extractors / len(source_columns)
+        fixture_edge_multiplier = len(proposed_edges) / len(fixture.expected_edges)
+        fixture_accepted = _auto_binding_fixture_passes_thresholds(
+            fixture=fixture,
+            extractor_coverage=fixture_extractor_coverage,
+            expected_edge_recall=fixture_expected_edge_recall,
+            validation_error_count=fixture_validation_errors,
+            proposed_edge_multiplier=fixture_edge_multiplier,
+        )
+        if fixture_accepted:
+            accepted_domain_count += 1
+        min_domain_extractor_coverage = min(
+            min_domain_extractor_coverage, fixture_extractor_coverage
+        )
+        min_domain_expected_edge_recall = min(
+            min_domain_expected_edge_recall, fixture_expected_edge_recall
+        )
+        max_domain_validation_errors = max(
+            max_domain_validation_errors, fixture_validation_errors
+        )
+        domain_results.append(
+            {
+                "domain": fixture.domain,
+                "sample_count": fixture.sample_count,
+                "source_column_count": len(source_columns),
+                "validation_error_count": fixture_validation_errors,
+                "extractor_coverage": fixture_extractor_coverage,
+                "expected_edge_recall": fixture_expected_edge_recall,
+                "proposed_edge_count": len(proposed_edges),
+                "proposed_edge_multiplier": fixture_edge_multiplier,
+                "accepted": fixture_accepted,
+            }
+        )
         proposed_edge_count += len(proposed_edges)
-        expected_edge_count += len(expected_edges)
-        expected_edge_hits += len(expected_edges & proposed_edges)
+        expected_edge_count += len(fixture.expected_edges)
+        expected_edge_hits += fixture_expected_hits
     elapsed = time.perf_counter() - t0
 
     return {
         "suite": "auto_binding_synthetic_quality",
         "fixture_count": len(fixtures),
+        "large_fixture_count": sum(fixture.sample_count >= 96 for fixture in fixtures),
         "wall_time_s": elapsed,
         "steps_per_second": len(fixtures) / elapsed,
         "validation_error_count": validation_error_count,
         "extractor_coverage": covered_extractors / total_channels,
         "expected_edge_recall": expected_edge_hits / expected_edge_count,
         "proposed_edge_count": proposed_edge_count,
+        "domain_acceptance_passed": int(accepted_domain_count == len(fixtures)),
+        "accepted_domain_count": accepted_domain_count,
+        "failed_domain_count": len(fixtures) - accepted_domain_count,
+        "min_domain_extractor_coverage": min_domain_extractor_coverage,
+        "min_domain_expected_edge_recall": min_domain_expected_edge_recall,
+        "max_domain_validation_errors": max_domain_validation_errors,
+        "min_sample_count": min_sample_count,
+        "domain_acceptance_thresholds_json": json.dumps(
+            _auto_binding_threshold_summary(fixtures), sort_keys=True
+        ),
+        "domain_acceptance_results_json": json.dumps(domain_results, sort_keys=True),
+    }
+
+
+def _auto_binding_quality_fixtures() -> tuple[AutoBindingFixture, ...]:
+    return (
+        AutoBindingFixture(
+            domain="phase_chain",
+            csv_text=_phase_chain_csv(n_samples=128),
+            sample_rate_hz=None,
+            expected_edges=frozenset({("theta_source", "theta_driven")}),
+            thresholds=AutoBindingAcceptanceThresholds(
+                min_extractor_coverage=1.0,
+                min_expected_edge_recall=1.0,
+                max_validation_errors=0,
+                min_sample_count=96,
+                max_proposed_edge_multiplier=8.0,
+            ),
+        ),
+        AutoBindingFixture(
+            domain="industrial_sensor_chain",
+            csv_text=_sensor_chain_csv(n_samples=128),
+            sample_rate_hz=10.0,
+            expected_edges=frozenset({("source", "driven")}),
+            thresholds=AutoBindingAcceptanceThresholds(
+                min_extractor_coverage=1.0,
+                min_expected_edge_recall=1.0,
+                max_validation_errors=0,
+                min_sample_count=96,
+                max_proposed_edge_multiplier=8.0,
+            ),
+        ),
+        AutoBindingFixture(
+            domain="cardiac_rhythm_surrogate",
+            csv_text=_cardiac_phase_csv(n_samples=160),
+            sample_rate_hz=None,
+            expected_edges=frozenset(
+                {("pacemaker", "atrium"), ("atrium", "ventricle")}
+            ),
+            thresholds=AutoBindingAcceptanceThresholds(
+                min_extractor_coverage=1.0,
+                min_expected_edge_recall=1.0,
+                max_validation_errors=0,
+                min_sample_count=128,
+                max_proposed_edge_multiplier=6.0,
+            ),
+        ),
+        AutoBindingFixture(
+            domain="power_grid_surrogate",
+            csv_text=_power_grid_phase_csv(n_samples=192),
+            sample_rate_hz=None,
+            expected_edges=frozenset({("generator", "tie_line"), ("tie_line", "load")}),
+            thresholds=AutoBindingAcceptanceThresholds(
+                min_extractor_coverage=1.0,
+                min_expected_edge_recall=1.0,
+                max_validation_errors=0,
+                min_sample_count=160,
+                max_proposed_edge_multiplier=8.0,
+            ),
+        ),
+    )
+
+
+def _auto_binding_fixture_passes_thresholds(
+    *,
+    fixture: AutoBindingFixture,
+    extractor_coverage: float,
+    expected_edge_recall: float,
+    validation_error_count: int,
+    proposed_edge_multiplier: float,
+) -> bool:
+    thresholds = fixture.thresholds
+    return (
+        extractor_coverage >= thresholds.min_extractor_coverage
+        and expected_edge_recall >= thresholds.min_expected_edge_recall
+        and validation_error_count <= thresholds.max_validation_errors
+        and fixture.sample_count >= thresholds.min_sample_count
+        and proposed_edge_multiplier <= thresholds.max_proposed_edge_multiplier
+    )
+
+
+def _auto_binding_threshold_summary(
+    fixtures: Iterable[AutoBindingFixture],
+) -> dict[str, dict[str, float | int]]:
+    return {
+        fixture.domain: {
+            "min_extractor_coverage": fixture.thresholds.min_extractor_coverage,
+            "min_expected_edge_recall": fixture.thresholds.min_expected_edge_recall,
+            "max_validation_errors": fixture.thresholds.max_validation_errors,
+            "min_sample_count": fixture.thresholds.min_sample_count,
+            "max_proposed_edge_multiplier": (
+                fixture.thresholds.max_proposed_edge_multiplier
+            ),
+        }
+        for fixture in fixtures
     }
 
 
@@ -291,6 +449,44 @@ def _sensor_chain_csv(n_samples: int = 32, dt: float = 0.1) -> str:
         independent = np.cos(0.41 * index + 0.3)
         rows.append(f"{time_s:.12g},{source:.12g},{driven:.12g},{independent:.12g}")
         previous_source = source
+    return "\n".join(rows)
+
+
+def _cardiac_phase_csv(n_samples: int = 160, dt: float = 0.02) -> str:
+    rows = ["time,pacemaker,atrium,ventricle,artifact"]
+    previous_pacemaker = 0.0
+    previous_atrium = 0.0
+    for index in range(n_samples):
+        time_s = index * dt
+        pacemaker = 0.19 * index + 0.02 * np.sin(0.07 * index)
+        atrium = 0.75 * previous_pacemaker + 0.04 * np.sin(pacemaker)
+        ventricle = 0.68 * previous_atrium + 0.03 * np.cos(0.11 * index)
+        artifact = np.sin(0.31 * index + 1.7)
+        rows.append(
+            f"{time_s:.12g},{pacemaker:.12g},{atrium:.12g},"
+            f"{ventricle:.12g},{artifact:.12g}"
+        )
+        previous_pacemaker = pacemaker
+        previous_atrium = atrium
+    return "\n".join(rows)
+
+
+def _power_grid_phase_csv(n_samples: int = 192, dt: float = 0.05) -> str:
+    rows = ["time,generator,tie_line,load,renewable"]
+    previous_generator = 0.0
+    previous_tie_line = 0.0
+    for index in range(n_samples):
+        time_s = index * dt
+        generator = np.sin(0.09 * index) + 0.01 * index
+        tie_line = 0.62 * previous_generator + 0.05 * np.sin(0.2 * index)
+        load = 0.58 * previous_tie_line + 0.05 * np.cos(0.13 * index)
+        renewable = np.sin(0.29 * index + 0.4)
+        rows.append(
+            f"{time_s:.12g},{generator:.12g},{tie_line:.12g},"
+            f"{load:.12g},{renewable:.12g}"
+        )
+        previous_generator = generator
+        previous_tie_line = tie_line
     return "\n".join(rows)
 
 
