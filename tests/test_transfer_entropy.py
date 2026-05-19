@@ -64,6 +64,33 @@ class TestTransferEntropy:
         finally:
             te_mod.ACTIVE_BACKEND = previous
 
+    def test_length_mismatch_shortens_to_shortest_series(self) -> None:
+        previous = te_mod.ACTIVE_BACKEND
+        te_mod.ACTIVE_BACKEND = "python"
+        try:
+            source = np.array([0.0, 0.4, 0.8, 1.2, 1.6], dtype=np.float64)
+            target = np.array([0.0, 0.25, 0.5], dtype=np.float64)
+            result = phase_transfer_entropy(source, target, n_bins=12)
+            expected = phase_transfer_entropy(source[:3], target, n_bins=12)
+            assert result == pytest.approx(expected, rel=0.0, abs=1e-12)
+        finally:
+            te_mod.ACTIVE_BACKEND = previous
+
+    def test_short_signal_source_is_rejected_as_zero_regardless_of_target(self) -> None:
+        previous = te_mod.ACTIVE_BACKEND
+        te_mod.ACTIVE_BACKEND = "python"
+        try:
+            assert (
+                phase_transfer_entropy(
+                    np.array([0.1, 0.2], dtype=np.float64),
+                    np.array([0.3, 0.4, 0.5, 0.6], dtype=np.float64),
+                    n_bins=10,
+                )
+                == 0.0
+            )
+        finally:
+            te_mod.ACTIVE_BACKEND = previous
+
     @pytest.mark.parametrize("n_bins", [0, 1, True, 4.5])
     def test_phase_te_rejects_invalid_bin_counts(self, n_bins):
         with pytest.raises((TypeError, ValueError), match="n_bins"):

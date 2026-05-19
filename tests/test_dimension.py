@@ -75,6 +75,14 @@ class TestCorrelationIntegral:
 
         np.testing.assert_allclose(C, [0.0, 2.0 / 3.0])
 
+    def test_prepare_pair_indices_filters_equal_indices(self):
+        """Subsampling never allows i == j diagonal pairs."""
+        idx_i, idx_j = dim_mod._prepare_pair_indices(total_t=20, max_pairs=10, seed=1)
+        assert len(idx_i) == len(idx_j)
+        assert np.all(idx_i != idx_j)
+        assert idx_i.dtype == np.int64
+        assert idx_j.dtype == np.int64
+
     @pytest.mark.parametrize(
         "trajectory",
         [
@@ -260,6 +268,47 @@ class TestBackendDispatch:
 
         np.testing.assert_array_equal(C, np.array([0.25, 0.5, 1.0]))
         assert calls == [(3, 2, 17, 9)]
+
+    def test_non_rust_dispatch_uses_prepared_indices(
+        self,
+        monkeypatch,
+    ) -> None:
+        calls: list[tuple[int, int, np.ndarray, np.ndarray]] = []
+        idx_i = np.array([0, 2], dtype=np.int64)
+        idx_j = np.array([1, 3], dtype=np.int64)
+
+        def fake_ci(traj_flat, t, d, i, j, eps_sorted):
+            calls.append((int(t), int(d), np.array(i), np.array(j)))
+            assert traj_flat.dtype == np.float64
+            assert traj_flat.flags.c_contiguous
+            np.testing.assert_array_equal(eps_sorted, np.array([0.1, 0.5, 1.0]))
+            return np.array([0.0, 0.5, 1.0], dtype=np.float64)
+
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_loader = dim_mod._LOADERS["go"]
+        previous_prepare = dim_mod._prepare_pair_indices
+        dim_mod.ACTIVE_BACKEND = "go"
+        monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ci": fake_ci})
+        monkeypatch.setattr(
+            dim_mod,
+            "_prepare_pair_indices",
+            lambda _t, _max_pairs, _seed: (idx_i, idx_j),
+        )
+        try:
+            traj = np.array([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [3.0, 0.0]])
+            eps = np.array([1.0, 0.1, 0.5])
+            C = correlation_integral(traj, eps, max_pairs=7, seed=99)
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
+            monkeypatch.setattr(dim_mod, "_prepare_pair_indices", previous_prepare)
+
+        np.testing.assert_array_equal(C, np.array([0.0, 0.5, 1.0]))
+        assert len(calls) == 1
+        assert calls[0][0] == 4
+        assert calls[0][1] == 2
+        np.testing.assert_array_equal(calls[0][2], idx_i)
+        np.testing.assert_array_equal(calls[0][3], idx_j)
 
 
 class TestCorrelationDimensionEdgeCases:

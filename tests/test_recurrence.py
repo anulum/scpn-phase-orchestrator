@@ -91,6 +91,39 @@ class TestRecurrenceMatrix:
         assert R.shape == (3, 3)
         assert R.dtype == bool
 
+    def test_non_rust_dispatch_uses_flat_buffers(self, monkeypatch) -> None:
+        calls: list[tuple[int, int, float, bool]] = []
+
+        def fake_rm(traj_flat, t, d, epsilon, angular):
+            calls.append((traj_flat.shape[0], int(t), float(epsilon), bool(angular)))
+            return (
+                np.array(
+                    [1, 0, 0, 1],
+                    dtype=np.uint8,
+                )
+                .reshape(2, 2)
+                .ravel()
+            )
+
+        import scpn_phase_orchestrator.monitor.recurrence as rec_mod
+
+        previous_backend = rec_mod.ACTIVE_BACKEND
+        previous_loader = rec_mod._LOADERS["go"]
+        rec_mod.ACTIVE_BACKEND = "go"
+        monkeypatch.setitem(rec_mod._LOADERS, "go", lambda: {"rm": fake_rm})
+        try:
+            R = recurrence_matrix(
+                np.array([[0.0], [1.0]]),
+                epsilon=0.5,
+                metric="angular",
+            )
+        finally:
+            rec_mod.ACTIVE_BACKEND = previous_backend
+            monkeypatch.setitem(rec_mod._LOADERS, "go", previous_loader)
+
+        np.testing.assert_array_equal(R, np.array([[True, False], [False, True]]))
+        assert calls == [(2, 2, 0.5, True)]
+
 
 class TestRQA:
     def test_periodic_high_determinism(self):
@@ -123,6 +156,14 @@ class TestRQA:
         traj = np.array([[0.0], [1.0]])
         result = rqa(traj, epsilon=0.01)
         assert result.recurrence_rate == 0.0
+
+    def test_empty_trajectory_avoids_zero_division(self):
+        result = rqa(np.array([], dtype=np.float64), epsilon=0.1)
+        assert result.recurrence_rate == 0.0
+        assert result.determinism == 0.0
+        assert result.avg_diagonal == 0.0
+        assert result.max_diagonal == 0
+        assert result.max_vertical == 0
 
     def test_angular_rqa(self):
         """RQA with angular metric for phase data."""

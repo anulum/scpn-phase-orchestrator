@@ -31,6 +31,9 @@ CI can run on hosts without the full toolchain matrix.
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -252,3 +255,158 @@ class TestCrossBackendConsistency:
                     f"by more than atol={atol}"
                 ),
             )
+
+
+class TestBackendLoaderDispatch:
+    def test_mojo_loader_invokes_toolchain_bootstrap(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        ensure_calls: list[str] = []
+        backend_calls: list[tuple[np.ndarray, np.ndarray]] = []
+
+        def _ensure_exe() -> None:
+            ensure_calls.append("called")
+
+        def _backend(
+            knm_flat: np.ndarray,
+            theta: np.ndarray,
+            w_q: np.ndarray,
+            w_k: np.ndarray,
+            w_v: np.ndarray,
+            w_o: np.ndarray,
+            n: int,
+            n_heads: int,
+            block_size: int,
+            temperature: float,
+            lambda_: float,
+        ) -> np.ndarray:
+            backend_calls.append((knm_flat, np.asarray(theta)))
+            return knm_flat
+
+        fake_module = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_mojo"
+        )
+        fake_module._ensure_exe = _ensure_exe
+        fake_module.attnres_modulate_mojo = _backend
+        monkeypatch.setitem(sys.modules, fake_module.__name__, fake_module)
+
+        loader = attnres_mod._load_mojo()
+        knm = _symmetric_knm(3, seed=11)
+        theta = np.linspace(0.0, TWO_PI, 3, endpoint=False)
+        w = np.zeros((1, 8, 8), dtype=np.float64)
+
+        out = loader(
+            knm.ravel(),
+            theta,
+            w.ravel(),
+            w.ravel(),
+            w.ravel(),
+            np.zeros((8, 8), dtype=np.float64),
+            3,
+            1,
+            -1,
+            1.0,
+            0.25,
+        )
+
+        assert ensure_calls == ["called"]
+        assert backend_calls and backend_calls[0][0].shape == (9,)
+        np.testing.assert_array_equal(out, knm.ravel())
+
+    def test_go_loader_invokes_shared_object_loader(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        load_calls: list[str] = []
+
+        def _load_lib() -> None:
+            load_calls.append("loaded")
+
+        def _backend(
+            knm_flat: np.ndarray,
+            theta: np.ndarray,
+            w_q: np.ndarray,
+            w_k: np.ndarray,
+            w_v: np.ndarray,
+            w_o: np.ndarray,
+            n: int,
+            n_heads: int,
+            block_size: int,
+            temperature: float,
+            lambda_: float,
+        ) -> np.ndarray:
+            return np.asarray(knm_flat, dtype=np.float64)
+
+        fake_module = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go"
+        )
+        fake_module._load_lib = _load_lib
+        fake_module.attnres_modulate_go = _backend
+        monkeypatch.setitem(sys.modules, fake_module.__name__, fake_module)
+
+        loader = attnres_mod._load_go()
+        knm = _symmetric_knm(2, seed=5)
+        theta = np.linspace(0.0, TWO_PI, 2, endpoint=False)
+        w = np.zeros((1, 8, 8), dtype=np.float64)
+
+        out = loader(
+            knm.ravel(),
+            theta,
+            w.ravel(),
+            w.ravel(),
+            w.ravel(),
+            np.zeros((8, 8), dtype=np.float64),
+            2,
+            1,
+            -1,
+            1.0,
+            0.25,
+        )
+
+        assert load_calls == ["loaded"]
+        np.testing.assert_array_equal(out, knm.ravel())
+
+    def test_julia_loader_imports_juliacall(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fake_backend = object()
+
+        fake_juliacall = types.ModuleType("juliacall")
+        fake_julia = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia"
+        )
+        fake_julia.attnres_modulate_julia = fake_backend
+        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
+        monkeypatch.setitem(
+            sys.modules,
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia",
+            fake_julia,
+        )
+
+        assert attnres_mod._load_julia() is fake_backend
+
+    def test_resolve_backends_chooses_first_healthy_backend(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+
+        def _fail() -> object:
+            calls.append("fail")
+            raise RuntimeError("backend unavailable")
+
+        def _go() -> object:
+            calls.append("go")
+            return lambda *args: np.array([0.0], dtype=np.float64)
+
+        monkeypatch.setitem(attnres_mod._LOADERS, "rust", _fail)
+        monkeypatch.setitem(attnres_mod._LOADERS, "mojo", _fail)
+        monkeypatch.setitem(attnres_mod._LOADERS, "julia", _fail)
+        monkeypatch.setitem(attnres_mod._LOADERS, "go", _go)
+
+        active, available = attnres_mod._resolve_backends()
+        assert active == "go"
+        assert available == ["go", "python"]
+        assert calls == ["fail", "fail", "fail", "go"]

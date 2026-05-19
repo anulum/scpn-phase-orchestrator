@@ -169,6 +169,23 @@ def test_full_attention_default() -> None:
     assert np.any(np.abs(k_full - k_block)[far_mask] > 1e-8)
 
 
+def test_small_temperature_remains_finite_and_modulates() -> None:
+    knm = _symmetric_knm(10, strength=0.9, seed=2026)
+    theta = np.linspace(0.0, TWO_PI, knm.shape[0], endpoint=False)
+
+    out = attnres_modulate(
+        knm,
+        theta,
+        temperature=1e-6,
+        lambda_=0.5,
+        block_size=None,
+    )
+
+    assert np.all(np.isfinite(out))
+    assert np.allclose(np.diag(out), np.zeros(out.shape[0]))
+    assert np.any(np.abs(out - knm) > 1e-10)
+
+
 # ---------------------------------------------------------------------
 # Validation criterion — R within 5 % of baseline
 # ---------------------------------------------------------------------

@@ -17,6 +17,11 @@ import scpn_phase_orchestrator.monitor as monitor
 from scpn_phase_orchestrator.monitor.information_integration import (
     IntegratedInformationBenchmarkReport,
     IntegratedInformationResult,
+    _cross_partition_mean,
+    _mean_off_diagonal,
+    _minimum_bipartition,
+    _mutual_information,
+    _normalise_phi,
     benchmark_integrated_information_approximations,
     integrated_information,
 )
@@ -216,3 +221,69 @@ class TestIntegratedInformationApproximationBenchmarks:
     def test_benchmark_rejects_too_short_series(self) -> None:
         with pytest.raises(ValueError, match="n_samples"):
             benchmark_integrated_information_approximations(n_samples=31)
+
+
+class TestIntegratedInformationResidualPaths:
+    def test_wrapping_is_applied_before_binning(self) -> None:
+        phases = np.array(
+            [
+                [0.0, np.pi / 3, np.pi, 4 * np.pi / 3, 5 * np.pi / 3],
+                [np.pi / 2, 4 * np.pi / 3, 5 * np.pi / 3, 2 * np.pi, 7 * np.pi / 3],
+            ],
+            dtype=np.float64,
+        )
+        shifted = phases + 4.0 * np.pi
+
+        base_result = integrated_information(phases, n_bins=12)
+        shifted_result = integrated_information(shifted, n_bins=12)
+
+        np.testing.assert_allclose(
+            base_result.pairwise_mi, shifted_result.pairwise_mi, atol=1e-12
+        )
+        assert base_result.phi == pytest.approx(shifted_result.phi, rel=0.0, abs=1e-12)
+        assert base_result.total_integration == pytest.approx(
+            shifted_result.total_integration, rel=0.0, abs=1e-12
+        )
+
+    def test_mutual_information_empty_streams_return_zero(self) -> None:
+        empty = np.array([], dtype=np.float64)
+        assert _mutual_information(empty, empty, 8) == 0.0
+
+    def test_mean_off_diagonal_handles_degenerate_and_standard_shapes(self) -> None:
+        singleton = np.array([[0.0]], dtype=np.float64)
+        assert _mean_off_diagonal(singleton) == 0.0
+
+        matrix = np.array(
+            [
+                [0.0, 1.0, 2.0],
+                [1.0, 0.0, 3.0],
+                [2.0, 3.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        assert _mean_off_diagonal(matrix) == pytest.approx((1.0 + 2.0 + 3.0) / 3.0)
+
+    def test_minimum_bipartition_and_guards(self) -> None:
+        matrix = np.array(
+            [[0.0, 2.0, 4.0], [2.0, 0.0, 6.0], [4.0, 6.0, 0.0]],
+            dtype=np.float64,
+        )
+        minimum_partition, phi = _minimum_bipartition(matrix)
+
+        assert minimum_partition == ((0,), (1, 2))
+        assert phi == pytest.approx(3.0)
+
+        with pytest.raises(ValueError, match="at least two oscillators"):
+            _minimum_bipartition(np.zeros((1, 1), dtype=np.float64))
+
+    def test_cross_partition_mean_and_empty_partition_fallback(self) -> None:
+        matrix = np.array(
+            [[0.0, 1.0, 2.0], [1.0, 0.0, 3.0], [2.0, 3.0, 0.0]],
+            dtype=np.float64,
+        )
+        assert _cross_partition_mean(matrix, (0,), (1, 2)) == pytest.approx(1.5)
+        assert _cross_partition_mean(matrix, (0, 1), ()) == 0.0
+
+    def test_normalise_phi_handles_non_positive_scale(self) -> None:
+        assert _normalise_phi(2.5, 0) == 0.0
+        assert _normalise_phi(2.5, 1) == 0.0

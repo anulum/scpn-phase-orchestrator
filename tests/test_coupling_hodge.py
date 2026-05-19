@@ -199,3 +199,32 @@ class TestHodgeValidation:
 
         with pytest.raises(ValueError, match="knm must not contain boolean values"):
             hodge_decomposition(knm, phases)
+
+
+def test_large_phase_values_do_not_change_symmetry_identity(
+    python_backend: None,
+) -> None:
+    knm = np.array(
+        [
+            [0.0, 0.3, -0.2],
+            [0.3, 0.0, 0.8],
+            [-0.2, 0.8, 0.0],
+        ],
+        dtype=np.float64,
+    )
+    phases = np.array([1e8, -2e8, 3e8], dtype=np.float64)
+
+    result = hodge_decomposition(knm, phases)
+    diff = phases[np.newaxis, :] - phases[:, np.newaxis]
+    cos_diff = np.cos(diff)
+    expected_gradient = np.sum(0.5 * (knm + knm.T) * cos_diff, axis=1)
+    expected_curl = np.sum(0.5 * (knm - knm.T) * cos_diff, axis=1)
+    expected_total = np.sum(knm * cos_diff, axis=1)
+    expected_harmonic = expected_total - expected_gradient - expected_curl
+
+    np.testing.assert_allclose(result.gradient, expected_gradient)
+    np.testing.assert_allclose(result.curl, expected_curl)
+    np.testing.assert_allclose(result.harmonic, expected_harmonic)
+    assert np.all(np.isfinite(result.gradient))
+    assert np.all(np.isfinite(result.curl))
+    assert np.all(np.isfinite(result.harmonic))

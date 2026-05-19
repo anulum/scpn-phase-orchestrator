@@ -259,3 +259,112 @@ class TestBackendLoaderDispatch:
         )
 
         assert h_mod._load_julia_fn() is sentinel
+
+    def test_mojo_loader_runs_preflight_and_returns_backend(
+        self,
+        monkeypatch,
+    ) -> None:
+        events: list[str] = []
+
+        def fake_ensure_exe() -> None:
+            events.append("ensure")
+
+        def fake_backend(knm_flat: np.ndarray, phases: np.ndarray, n: int) -> tuple:
+            events.append("called")
+            return (
+                np.full(n, 1.0, dtype=np.float64),
+                np.full(n, 2.0, dtype=np.float64),
+                np.full(n, 3.0, dtype=np.float64),
+            )
+
+        fake_module = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo"
+        )
+        fake_module._ensure_exe = fake_ensure_exe
+        fake_module.hodge_decomposition_mojo = fake_backend
+        monkeypatch.setitem(
+            sys.modules,
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo",
+            fake_module,
+        )
+
+        backend = h_mod._load_mojo_fn()
+        knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
+        phases = np.array([0.1, 0.4], dtype=np.float64)
+        gradient, curl, harmonic = backend(knm, phases, 2)
+
+        np.testing.assert_array_equal(gradient, np.full(2, 1.0, dtype=np.float64))
+        np.testing.assert_array_equal(curl, np.full(2, 2.0, dtype=np.float64))
+        np.testing.assert_array_equal(harmonic, np.full(2, 3.0, dtype=np.float64))
+        assert events == ["ensure", "called"]
+
+    def test_go_loader_invokes_shared_object_loader(self, monkeypatch) -> None:
+        events: list[str] = []
+
+        def fake_load_lib() -> None:
+            events.append("load")
+
+        def fake_backend(knm_flat: np.ndarray, phases: np.ndarray, n: int) -> tuple:
+            events.append("called")
+            return (
+                np.full(n, 1.0, dtype=np.float64),
+                np.full(n, 2.0, dtype=np.float64),
+                np.full(n, 3.0, dtype=np.float64),
+            )
+
+        fake_module = types.ModuleType(
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go"
+        )
+        fake_module._load_lib = fake_load_lib
+        fake_module.hodge_decomposition_go = fake_backend
+        monkeypatch.setitem(
+            sys.modules,
+            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go",
+            fake_module,
+        )
+
+        backend = h_mod._load_go_fn()
+        knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
+        phases = np.array([0.1, 0.4], dtype=np.float64)
+        gradient, curl, harmonic = backend(knm, phases, 2)
+
+        assert events == ["load", "called"]
+        np.testing.assert_array_equal(gradient, np.full(2, 1.0, dtype=np.float64))
+        np.testing.assert_array_equal(curl, np.full(2, 2.0, dtype=np.float64))
+        np.testing.assert_array_equal(harmonic, np.full(2, 3.0, dtype=np.float64))
+
+
+class TestBackendResolution:
+    def test_resolve_backends_chooses_first_available_backend(
+        self,
+        monkeypatch,
+    ) -> None:
+        calls: list[str] = []
+
+        def _fail() -> h_mod.HodgeBackend:
+            calls.append("fail")
+            raise RuntimeError("backend unavailable")
+
+        def _go() -> h_mod.HodgeBackend:
+            calls.append("go")
+
+            def _backend(
+                knm_flat: np.ndarray, phases: np.ndarray, n: int
+            ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+                return (
+                    np.zeros(n, dtype=np.float64),
+                    np.zeros(n, dtype=np.float64),
+                    np.zeros(n, dtype=np.float64),
+                )
+
+            return _backend
+
+        monkeypatch.setitem(h_mod._LOADERS, "rust", _fail)
+        monkeypatch.setitem(h_mod._LOADERS, "mojo", _fail)
+        monkeypatch.setitem(h_mod._LOADERS, "julia", _fail)
+        monkeypatch.setitem(h_mod._LOADERS, "go", _go)
+
+        active, available = h_mod._resolve_backends()
+        assert active == "go"
+        assert available == ["go", "python"]
+        assert calls == ["fail", "fail", "fail", "go"]
