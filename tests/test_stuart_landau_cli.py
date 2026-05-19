@@ -248,8 +248,9 @@ class TestCLIRealDomainpacks:
         spec = self._PACK_DIR / "cardiac_rhythm" / "binding_spec.yaml"
         runner = CliRunner()
         result = runner.invoke(main, ["run", str(spec), "--steps", "20"])
-        assert result.exit_code == 0, result.output
-        assert "mean_amplitude=" in result.output
+        assert result.exit_code != 0
+        assert "safety_tier='clinical' is not enforced" in result.output
+        assert "mean_amplitude=" not in result.output
 
     def test_neuroscience_eeg_runs(self) -> None:
         spec = self._PACK_DIR / "neuroscience_eeg" / "binding_spec.yaml"
