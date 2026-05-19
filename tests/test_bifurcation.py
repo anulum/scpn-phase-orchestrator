@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.upde import bifurcation as bif
 from scpn_phase_orchestrator.upde.bifurcation import (
     BifurcationDiagram,
     BifurcationPoint,
@@ -392,6 +393,67 @@ class TestFindCriticalCoupling:
         )
         assert calls[:3] == [20.0, 10.0, 15.0]
         assert Kc == 12.5
+
+
+class TestBifurcationDispatchSurface:
+    def test_python_path_forwards_kernel_inputs(self, monkeypatch):
+        calls: dict[str, float] = {}
+        k_scales: list[float] = []
+
+        def fake_steady_state_r(
+            phases_init: np.ndarray,
+            omegas: np.ndarray,
+            knm_template: np.ndarray,
+            alpha: np.ndarray,
+            k_scale: float,
+            dt: float,
+            n_transient: int,
+            n_measure: int,
+        ) -> float:
+            calls["phases_size"] = int(phases_init.shape[0])
+            calls["omegas_size"] = int(omegas.shape[0])
+            calls["knm_shape"] = tuple(knm_template.shape)
+            calls["alpha_shape"] = tuple(alpha.shape)
+            calls["k_scale"] = float(k_scale)
+            k_scales.append(float(k_scale))
+            calls["dt"] = dt
+            calls["n_transient"] = n_transient
+            calls["n_measure"] = n_measure
+            return 0.25
+
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        monkeypatch.setattr(bif, "_dispatched_steady_state_r", fake_steady_state_r)
+
+        omegas = np.array([-0.2, 0.1, 0.4], dtype=np.float64)
+        knm = np.array(
+            [[0.0, 0.2, 0.3], [0.4, 0.0, 0.5], [0.2, 0.4, 0.0]],
+            dtype=np.float64,
+        )
+        alpha = np.full((3, 3), 0.05, dtype=np.float64)
+
+        diagram = trace_sync_transition(
+            omegas,
+            knm_template=knm,
+            alpha=alpha,
+            K_range=(0.0, 4.0),
+            n_points=4,
+            dt=0.03,
+            n_transient=10,
+            n_measure=5,
+            seed=7,
+        )
+
+        assert len(diagram.points) == 4
+        np.testing.assert_allclose(diagram.R_values, 0.25)
+        assert calls["phases_size"] == 3
+        assert calls["omegas_size"] == 3
+        assert calls["knm_shape"] == (3, 3)
+        assert calls["alpha_shape"] == (3, 3)
+        assert calls["k_scale"] == 4.0
+        np.testing.assert_allclose(k_scales, np.linspace(0.0, 4.0, 4))
+        assert calls["dt"] == 0.03
+        assert calls["n_transient"] == 10
+        assert calls["n_measure"] == 5
 
 
 class TestBifurcationPipelineWiring:

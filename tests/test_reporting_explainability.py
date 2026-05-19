@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from pathlib import Path
 
 import pytest
 
@@ -19,6 +20,8 @@ from scpn_phase_orchestrator.reporting.explainability import (
     _wrap_pdf_lines,
     build_explainability_report,
     render_markdown,
+    write_markdown,
+    write_pdf,
 )
 
 
@@ -417,3 +420,26 @@ def test_make_pdf_bytes_scales_to_multiple_pages() -> None:
     assert b"/Type /Pages" in pdf
     assert b"/Count 3" in pdf
     assert pdf.count(b"/Type /Page /Parent") == 3
+
+
+def test_write_helpers_create_parent_directories_for_nested_output_paths(
+    tmp_path: Path,
+) -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 0,
+                "regime": "nominal",
+                "stability": 0.5,
+                "layers": [{"R": 0.2}],
+            }
+        ]
+    )
+    nested_dir = tmp_path / "reports" / "v1"
+    markdown_path = nested_dir / "explain.md"
+    pdf_path = nested_dir / "explain.pdf"
+
+    assert write_markdown(report, markdown_path) == markdown_path
+    assert write_pdf(report, pdf_path) == pdf_path
+    assert markdown_path.is_file()
+    assert pdf_path.is_file()

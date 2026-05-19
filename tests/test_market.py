@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.upde import market as m_mod
 from scpn_phase_orchestrator.upde.market import (
     detect_regimes,
     extract_phase,
@@ -158,3 +159,59 @@ class TestMarketPipelineWiring:
         assert len(regimes) == T
         # detect_regimes returns integer labels
         assert all(isinstance(r, (int, np.integer)) for r in regimes)
+
+
+class TestMarketDispatchSurface:
+    def test_resolve_backends_prefers_first_available(self, monkeypatch):
+        def fail_once() -> tuple:
+            raise RuntimeError("backend unavailable")
+
+        op_calls: list[str] = []
+
+        def good_loader() -> tuple:
+            op_calls.append("mojo")
+            return (
+                lambda *args: np.array([0.2, 0.2], dtype=np.float64),
+                lambda *args: np.zeros((0,), dtype=np.float64),
+            )
+
+        monkeypatch.setattr(
+            m_mod,
+            "_LOADERS",
+            {
+                "rust": fail_once,
+                "mojo": good_loader,
+                "julia": fail_once,
+                "go": fail_once,
+            },
+        )
+
+        backend, available = m_mod._resolve_backends()
+        assert backend == "mojo"
+        assert available == ["mojo", "python"]
+        assert op_calls == ["mojo"]
+
+    def test_resolve_backends_falls_back_to_python_only(self, monkeypatch):
+        def loader_a() -> tuple:
+            raise ImportError("rust unavailable")
+
+        def loader_b() -> tuple:
+            raise RuntimeError("go unavailable")
+
+        monkeypatch.setattr(
+            m_mod,
+            "_LOADERS",
+            {
+                "rust": loader_a,
+                "mojo": loader_b,
+                "julia": loader_b,
+                "go": loader_b,
+            },
+        )
+        backend, available = m_mod._resolve_backends()
+        assert backend == "python"
+        assert available == ["python"]
+
+    def test_dispatch_returns_none_for_python_backend(self, monkeypatch):
+        monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "python")
+        assert m_mod._dispatch() is None

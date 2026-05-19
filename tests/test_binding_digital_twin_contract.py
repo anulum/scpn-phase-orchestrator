@@ -1022,3 +1022,146 @@ def test_digital_twin_hardware_adapter_rejects_invalid_device_registry(
             contract,
             device_ids=device_ids,
         )
+
+
+def test_digital_twin_jsonl_write_returns_empty_report_for_empty_batch(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "sync.jsonl"
+
+    report = write_digital_twin_sync_jsonl(path, ())
+
+    assert report.written == 0
+    assert report.accepted == ()
+    assert report.rejected == ()
+    assert report.to_audit_record() == {
+        "path": str(path),
+        "written": 0,
+        "accepted_count": 0,
+        "rejected_count": 0,
+        "accepted": [],
+        "rejected": [],
+    }
+    assert path.read_text(encoding="utf-8") == ""
+
+
+def test_digital_twin_jsonl_read_records_boolean_and_payload_type_rejections(
+    tmp_path: Path,
+) -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+    path = tmp_path / "sync.jsonl"
+    valid = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=7,
+        payload={"R": 0.91},
+    )
+    wrong_hash = build_digital_twin_sync_envelope(
+        contract,
+        capability="state_snapshot",
+        direction="twin_to_spo",
+        sequence=9,
+        payload={"R": 0.89},
+    )
+
+    path.write_text(
+        "\n".join(
+            [
+                "",  # parser skip path
+                valid.to_json(),
+                "{not-json}",
+                (
+                    '{"contract_hash":"'
+                    + contract.contract_hash
+                    + '","capability":"state_snapshot","direction":"twin_to_spo",'
+                    + '"sequence":true,"payload":{"R":0.91}}'
+                ),
+                (
+                    '{"contract_hash":"'
+                    + contract.contract_hash
+                    + '","capability":"state_snapshot","direction":"twin_to_spo",'
+                    + '"sequence":1,"payload":[1,2]}'
+                ),
+                wrong_hash.to_json().replace(
+                    contract.contract_hash,
+                    "mismatch-hash",
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = read_digital_twin_sync_jsonl(contract, path)
+
+    assert [validation.envelope.sequence for validation in report.accepted] == [7]
+    assert report.rejected == (
+        {"line_number": 3, "reason": "malformed_json"},
+        {"line_number": 4, "reason": "invalid_envelope"},
+        {"line_number": 5, "reason": "invalid_envelope"},
+        {"line_number": 6, "reason": "contract_hash_mismatch"},
+    )
+
+
+def test_digital_twin_grpc_kafka_and_hardware_responses_expose_audit_records() -> None:
+    spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+    contract = build_digital_twin_binding_contract(spec)
+
+    grpc_adapter = DigitalTwinSyncGrpcAdapter.for_contract(contract)
+    grpc_envelope = build_digital_twin_sync_envelope(
+        contract,
+        capability="audit_replay",
+        direction="spo_to_twin",
+        sequence=30,
+        payload={"event": "accepted"},
+    )
+    grpc_response = grpc_adapter.handle_unary(
+        grpc_envelope.to_audit_record(),
+        metadata={"authorization": "Bearer grpc"},
+    )
+    assert grpc_response.to_audit_record() == {
+        "status_code": "OK",
+        "accepted": True,
+        "reason": "accepted",
+        "message": {
+            "capability": "audit_replay",
+            "sequence": 30,
+            "contract_hash": contract.contract_hash,
+        },
+    }
+
+    kafka_adapter = DigitalTwinSyncKafkaAdapter.for_contract(contract)
+    kafka_response = kafka_adapter.handle_message(
+        {"topic": "spo.digital_twin.sync"},
+        headers={"authorization": "Bearer kafka"},
+    )
+    assert kafka_response.to_audit_record() == {
+        "accepted": False,
+        "reason": "invalid_message_value",
+        "retryable": False,
+        "message": {"contract_hash": contract.contract_hash},
+    }
+
+    hardware_adapter = DigitalTwinSyncHardwareAdapter.for_contract(
+        contract,
+        device_ids=("pynq-loopback-0",),
+    )
+    hardware_response = hardware_adapter.handle_frame(
+        {
+            "device_id": "pynq-loopback-0",
+            "safety_interlock": True,
+            "value": "not-a-record",
+        },
+        headers={"authorization": "Bearer hardware"},
+    )
+    assert hardware_response.to_audit_record() == {
+        "accepted": False,
+        "reason": "invalid_frame_value",
+        "hardware_write_permitted": False,
+        "frame": {
+            "device_id": "pynq-loopback-0",
+            "contract_hash": contract.contract_hash,
+        },
+    }

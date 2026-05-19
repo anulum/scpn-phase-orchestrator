@@ -306,6 +306,7 @@ def render_markdown(report: ExplainabilityReport) -> str:
 def write_markdown(report: ExplainabilityReport, output_path: str | Path) -> Path:
     """Write Markdown report and return the output path."""
     out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render_markdown(report), encoding="utf-8")
     return out
 
@@ -396,6 +397,7 @@ def _make_pdf_bytes(lines: list[str]) -> bytes:
 def write_pdf(report: ExplainabilityReport, output_path: str | Path) -> Path:
     """Write a dependency-free text PDF report and return the output path."""
     out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
     lines = _wrap_pdf_lines(render_markdown(report))
     out.write_bytes(_make_pdf_bytes(lines))
     return out

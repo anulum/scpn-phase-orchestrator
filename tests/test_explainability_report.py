@@ -12,8 +12,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from click.testing import CliRunner
 
+import scpn_phase_orchestrator.reporting.explainability as explainability
 from scpn_phase_orchestrator.reporting.explainability import (
     _make_pdf_bytes,
     _metric_summary,
@@ -139,6 +141,15 @@ def test_explain_cli_writes_files(tmp_path: Path) -> None:
     assert pdf_path.read_bytes().startswith(b"%PDF")
 
 
+def test_explain_cli_rejects_missing_log_file(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.jsonl"
+
+    result = CliRunner().invoke(main, ["explain", str(missing)])
+
+    assert result.exit_code != 0
+    assert "does not exist" in result.output
+
+
 def test_explain_cli_rejects_empty_log(tmp_path: Path) -> None:
     log = tmp_path / "audit.jsonl"
     log.write_text(json.dumps({"event": "only"}) + "\n", encoding="utf-8")
@@ -147,6 +158,32 @@ def test_explain_cli_rejects_empty_log(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "no step records" in result.output
+
+
+def test_report_marks_hash_chain_failure_explicitly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        explainability.ReplayEngine,
+        "verify_integrity",
+        lambda entries: (False, 0),
+    )
+
+    report_with_failed_chain = build_explainability_report(
+        [
+            {
+                "step": 0,
+                "regime": "NOMINAL",
+                "stability": 0.91,
+                "layers": [{"R": 0.82}, {"R": 0.18}],
+            }
+        ]
+    )
+    markdown = render_markdown(report_with_failed_chain)
+
+    assert report_with_failed_chain.hash_chain_ok is False
+    assert report_with_failed_chain.hash_chain_verified == 0
+    assert "- Hash chain: FAILED (0 records verified)" in markdown
 
 
 def test_report_summarises_causal_transfer_hodge_and_safety_channels() -> None:
