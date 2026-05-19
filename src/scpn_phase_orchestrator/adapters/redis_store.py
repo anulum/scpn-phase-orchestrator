@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from scpn_phase_orchestrator.adapters._schema import (
     require_non_empty_str,
@@ -63,7 +63,7 @@ class RedisStateStore:
         self._host = require_non_empty_str(host, field="Redis host")
         self._port = require_tcp_port(port, field="Redis port")
         self._db = require_non_negative_int(db, field="Redis db")
-        self._key = cast(str, require_non_empty_str(key, field="Redis key"))
+        self._key = require_non_empty_str(key, field="Redis key")
         if password is not None:
             password = require_non_empty_str(password, field="Redis password")
         self._ssl = bool(ssl)
@@ -136,4 +136,4 @@ class RedisStateStore:
 def _optional_path(value: str | Path | None, field: str) -> str | None:
     if value is None:
         return None
-    return cast(str, require_non_empty_str(str(value), field=field))
+    return require_non_empty_str(str(value), field=field)
