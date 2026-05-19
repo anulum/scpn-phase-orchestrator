@@ -245,3 +245,149 @@ class TestBackendLoaderDispatch:
         monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
 
         assert sp_mod._splitting_probe_seconds("rust") == float("inf")
+
+
+class TestBackendResolutionContracts:
+    """Resolver and dispatch contracts that affect production backend semantics."""
+
+    def test_load_backend_uses_cache(self, monkeypatch):
+        loads: list[str] = []
+
+        def fake_loader():
+            loads.append("rust")
+
+            def backend(*_args, **_kwargs):
+                return np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
+
+            return backend
+
+        monkeypatch.setitem(sp_mod._LOADERS, "rust", fake_loader)
+        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
+
+        first = sp_mod._load_backend("rust")
+        second = sp_mod._load_backend("rust")
+
+        assert first is second
+        assert loads == ["rust"]
+
+    def test_resolve_backends_prefers_fastest_loaded_backend(self, monkeypatch):
+        def fake_loader(_tag: str):
+            def _backend(
+                phases,
+                omegas,
+                knm_flat,
+                alpha_flat,
+                n,
+                zeta,
+                psi,
+                dt,
+                n_steps,
+            ):
+                return np.asarray(phases)
+
+            return _backend
+
+        probe = {"rust": 3.0, "mojo": 2.5, "julia": 1.2, "go": 0.4, "python": 5.0}
+
+        monkeypatch.setitem(sp_mod._LOADERS, "rust", lambda: fake_loader("rust"))
+        monkeypatch.setitem(sp_mod._LOADERS, "mojo", lambda: fake_loader("mojo"))
+        monkeypatch.setitem(sp_mod._LOADERS, "julia", lambda: fake_loader("julia"))
+        monkeypatch.setitem(sp_mod._LOADERS, "go", lambda: fake_loader("go"))
+        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(
+            sp_mod,
+            "_splitting_probe_seconds",
+            lambda name: probe[name],
+        )
+
+        active, available = sp_mod._resolve_backends()
+
+        assert active == "go"
+        assert available == ["rust", "mojo", "julia", "go", "python"]
+
+    def test_resolve_backends_falls_back_to_python_when_all_backends_fail_probe(
+        self,
+        monkeypatch,
+    ):
+        def fail_loader():
+            raise RuntimeError("backend unavailable")
+
+        monkeypatch.setitem(sp_mod._LOADERS, "rust", fail_loader)
+        monkeypatch.setitem(sp_mod._LOADERS, "mojo", fail_loader)
+        monkeypatch.setitem(sp_mod._LOADERS, "julia", fail_loader)
+        monkeypatch.setitem(sp_mod._LOADERS, "go", fail_loader)
+        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
+
+        active, available = sp_mod._resolve_backends()
+
+        assert active == "python"
+        assert available == ["python"]
+
+    def test_run_uses_selected_backend_for_positive_timestep(self, monkeypatch):
+        calls: list[tuple[int, float, int]] = []
+
+        def backend(
+            phases,
+            omegas,
+            knm_flat,
+            alpha_flat,
+            n,
+            zeta,
+            psi,
+            dt,
+            n_steps,
+        ):
+            calls.append((n, dt, n_steps))
+            assert phases.flags.c_contiguous
+            assert omegas.flags.c_contiguous
+            assert knm_flat.flags.c_contiguous
+            assert alpha_flat.flags.c_contiguous
+            return phases + float(n_steps) * dt * omegas
+
+        monkeypatch.setattr(sp_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(sp_mod, "_load_backend", lambda _name: backend)
+
+        n = 4
+        eng = SplittingEngine(n, dt=0.01)
+        phases = np.array([0.0, 0.25, 0.5, 0.75], dtype=np.float64)
+        omegas = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+        knm = np.full((n, n), 0.0, dtype=np.float64)
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n), dtype=np.float64)
+
+        result = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=2)
+
+        assert calls == [(4, 0.01, 2)]
+        np.testing.assert_allclose(result, phases + 0.02 * omegas)
+
+    def test_run_uses_python_path_for_negative_timestep(self, monkeypatch):
+        called = False
+
+        def explode(*_args, **_kwargs):
+            nonlocal called
+            called = True
+            return np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+
+        monkeypatch.setattr(sp_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(sp_mod, "_load_backend", lambda _name: explode)
+
+        n = 4
+        eng = SplittingEngine(n, dt=-0.01)
+        phases = np.array([0.0, 0.25, 0.5, 0.75], dtype=np.float64)
+        omegas = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+        knm = np.full((n, n), 0.0, dtype=np.float64)
+        np.fill_diagonal(knm, 0.0)
+
+        out = eng.run(
+            phases,
+            omegas,
+            knm,
+            0.0,
+            0.0,
+            np.zeros((n, n), dtype=np.float64),
+            n_steps=2,
+        )
+        assert not called
+        expected = (phases - 0.02 * omegas) % (2.0 * np.pi)
+        assert np.all(np.isfinite(out))
+        assert np.allclose(out, expected)

@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -223,6 +224,211 @@ def test_unknown_policy_justification_is_preserved_for_diagnostics() -> None:
     assert diagnostics_module._rule_name_from_justification("manual override") == (
         "manual override"
     )
+
+
+def test_policy_dry_run_skips_non_step_entries_and_defaults_missing_layer_fields(
+    tmp_path: Path,
+) -> None:
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            {
+                "rules": [
+                    {
+                        "name": "low_stability_boost",
+                        "regime": ["DEGRADED"],
+                        "condition": {
+                            "metric": "R",
+                            "layer": 0,
+                            "op": ">",
+                            "threshold": 0.1,
+                        },
+                        "action": {
+                            "knob": "K",
+                            "scope": "global",
+                            "value": 0.1,
+                            "ttl_s": 5.0,
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = dry_run_policy_rules(
+        load_policy_rules(policy_path),
+        [
+            {"header": True},
+            {
+                "step": 0,
+                "regime": "DEGRADED",
+                "stability": 0.2,
+                "layers": [{}],
+            },
+            {
+                "step": 2,
+                "regime": "DEGRADED",
+                "stability": 0.2,
+                "layers": [{"R": 0.2, "psi": 0.0}],
+            },
+            {"regime": "DEGRADED", "stability": 0.2, "layers": [{"R": 0.9}]},
+        ],
+        good_layers=[],
+        bad_layers=[],
+    )
+
+    assert report.steps == 2
+    assert report.step_reports[0].step == 0
+    assert report.step_reports[0].fired_rules == ()
+    assert report.step_reports[1].step == 2
+    assert report.step_reports[1].fired_rules == ("low_stability_boost",)
+    assert report.fire_counts["low_stability_boost"] == 1
+
+
+def test_policy_dry_run_applies_cooldown_and_max_fires_boundaries(
+    tmp_path: Path,
+) -> None:
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            {
+                "rules": [
+                    {
+                        "name": "single_fire_after_stability_check",
+                        "regime": ["DEGRADED"],
+                        "condition": {
+                            "metric": "R",
+                            "layer": 0,
+                            "op": ">",
+                            "threshold": 0.4,
+                        },
+                        "action": {
+                            "knob": "K",
+                            "scope": "global",
+                            "value": 0.1,
+                            "ttl_s": 1.0,
+                        },
+                        "cooldown_s": 1.5,
+                        "max_fires": 1,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = dry_run_policy_rules(
+        load_policy_rules(policy_path),
+        [
+            {"step": 0, "regime": "DEGRADED", "layers": [{"R": 0.5}]},
+            {"step": 1, "regime": "DEGRADED", "layers": [{"R": 0.6}]},
+            {"step": 2, "regime": "DEGRADED", "layers": [{"R": 0.7}]},
+        ],
+        good_layers=[],
+        bad_layers=[],
+    )
+
+    assert report.steps == 3
+    assert report.fire_counts["single_fire_after_stability_check"] == 1
+    assert report.action_collision_steps == ()
+    assert report.overlapping_steps == ()
+
+
+def test_policy_dry_run_detects_action_collisions(tmp_path: Path) -> None:
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            {
+                "rules": [
+                    {
+                        "name": "duplicate_actions",
+                        "regime": ["DEGRADED"],
+                        "condition": {
+                            "metric": "stability_proxy",
+                            "op": "<",
+                            "threshold": 0.5,
+                        },
+                        "actions": [
+                            {
+                                "knob": "K",
+                                "scope": "global",
+                                "value": 0.1,
+                                "ttl_s": 5.0,
+                            },
+                            {
+                                "knob": "K",
+                                "scope": "global",
+                                "value": 0.2,
+                                "ttl_s": 5.0,
+                            },
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = dry_run_policy_rules(
+        load_policy_rules(policy_path),
+        [
+            {
+                "step": 0,
+                "regime": "DEGRADED",
+                "stability": 0.2,
+                "layers": [{"R": 0.8}],
+            }
+        ],
+        good_layers=[],
+        bad_layers=[],
+    )
+
+    assert report.steps == 1
+    assert report.action_collision_steps == (0,)
+    assert report.action_counts["K:global"] == 2
+    assert report.step_reports[0].actions == ("K:global", "K:global")
+
+
+def test_policy_dry_run_rejects_non_int_step_values(tmp_path: Path) -> None:
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            {
+                "rules": [
+                    {
+                        "name": "single_fire_after_stability_check",
+                        "regime": ["DEGRADED"],
+                        "condition": {
+                            "metric": "R",
+                            "layer": 0,
+                            "op": ">",
+                            "threshold": 0.4,
+                        },
+                        "action": {
+                            "knob": "K",
+                            "scope": "global",
+                            "value": 0.1,
+                            "ttl_s": 5.0,
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="invalid literal"):
+        dry_run_policy_rules(
+            load_policy_rules(policy_path),
+            [
+                {
+                    "step": "zero",
+                    "regime": "DEGRADED",
+                    "layers": [{"R": 1.0}],
+                }
+            ],
+            good_layers=[],
+            bad_layers=[],
+        )
 
 
 def test_policy_dry_run_cli_outputs_json(tmp_path: Path) -> None:
