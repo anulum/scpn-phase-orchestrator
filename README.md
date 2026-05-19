@@ -38,6 +38,7 @@ Evidence boundary: this snapshot is a static inventory. Performance, coverage, h
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12193/badge)](https://www.bestpractices.dev/projects/12193)
 [![PyPI](https://img.shields.io/pypi/v/scpn-phase-orchestrator)](https://pypi.org/project/scpn-phase-orchestrator/)
 [![Downloads](https://img.shields.io/pypi/dm/scpn-phase-orchestrator.svg)](https://pypi.org/project/scpn-phase-orchestrator/)
+[![Total Downloads](https://static.pepy.tech/badge/scpn-phase-orchestrator)](https://pepy.tech/project/scpn-phase-orchestrator)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://anulum.github.io/scpn-phase-orchestrator/)
 [![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen)](https://github.com/anulum/scpn-phase-orchestrator)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
