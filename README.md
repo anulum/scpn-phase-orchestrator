@@ -4,7 +4,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 
 > **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
 
-**Version:** 0.6.0
+**Version:** 0.6.1
 **Status:** active development; public inventory is generated below.
 
 <!-- capability-snapshot:start -->
@@ -15,7 +15,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.6.0 |
+| Package version | 0.6.1 |
 | Public API exports | 22 |
 | Python package modules | 417 |
 | Core Engine modules | 224 |
@@ -25,7 +25,7 @@ Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
 | Domainpack files | 36 |
 | Rust kernel files | 91 |
 | Optional extras | 14 |
-| Python test files | 486 |
+| Python test files | 487 |
 | Public documentation pages | 162 |
 | GitHub Actions workflows | 10 |
 
