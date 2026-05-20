@@ -37,4 +37,17 @@ import target, console-script name, and training summary while keeping
 `execution_permitted=false`. It does not build, install, run, or upload a
 package.
 
+The same review-only manifest can be emitted from the CLI for release and
+operator review jobs:
+
+```bash
+spo meta-transfer-manifest audit_grid.jsonl audit_cardiac.jsonl --min-records 2
+spo meta-transfer-manifest --audit-directory audit_history --min-records 10
+```
+
+Both forms print manifest JSON to stdout unless `--output` is provided. The
+command accepts explicit audit JSONL files or one nested audit directory, never
+both, and still keeps `execution_permitted=false`; it does not build, install,
+upload, or execute `scpn-meta`.
+
 ::: scpn_phase_orchestrator.meta.transfer

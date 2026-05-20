@@ -1375,6 +1375,172 @@ def test_plugins_catalog_rejects_conflicting_rust_output_modes(runner) -> None:
     assert "mutually exclusive" in result.output
 
 
+def _write_meta_audit_record(
+    path: Path,
+    *,
+    domain: str,
+    coherence: float,
+    k_value: float,
+    reward: float,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "domain": domain,
+                "features": {"coherence": coherence, "event_rate": 1.0 - coherence},
+                "knobs": {"K": k_value, "zeta": 0.1 - k_value},
+                "reward": reward,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_meta_transfer_manifest_outputs_review_only_manifest(
+    runner,
+    tmp_path,
+) -> None:
+    first = tmp_path / "grid.jsonl"
+    second = tmp_path / "cardiac.jsonl"
+    _write_meta_audit_record(
+        first,
+        domain="power_grid",
+        coherence=0.8,
+        k_value=0.04,
+        reward=0.9,
+    )
+    _write_meta_audit_record(
+        second,
+        domain="cardiac",
+        coherence=0.9,
+        k_value=0.03,
+        reward=0.8,
+    )
+
+    result = runner.invoke(
+        main,
+        ["meta-transfer-manifest", str(first), str(second), "--min-records", "2"],
+    )
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["schema"] == "scpn_meta_package_manifest_v1"
+    assert data["package_name"] == "scpn-meta"
+    assert data["import_target"] == "scpn_phase_orchestrator.meta"
+    assert data["console_script"] == "scpn-meta"
+    assert data["execution_permitted"] is False
+    assert data["training_summary"]["record_count"] == 2
+    assert data["training_summary"]["domain_count"] == 2
+    assert len(data["package_sha256"]) == 64
+
+
+def test_meta_transfer_manifest_discovers_nested_audit_directory(
+    runner,
+    tmp_path,
+) -> None:
+    _write_meta_audit_record(
+        tmp_path / "grid" / "audit.jsonl",
+        domain="power_grid",
+        coherence=0.8,
+        k_value=0.04,
+        reward=0.9,
+    )
+    _write_meta_audit_record(
+        tmp_path / "nested" / "cardiac" / "audit.jsonl",
+        domain="cardiac",
+        coherence=0.9,
+        k_value=0.03,
+        reward=0.8,
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "meta-transfer-manifest",
+            "--audit-directory",
+            str(tmp_path),
+            "--min-records",
+            "2",
+            "--package-name",
+            "scpn-meta-cli",
+            "--console-script",
+            "scpn-meta-cli",
+        ],
+    )
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["package_name"] == "scpn-meta-cli"
+    assert data["console_script"] == "scpn-meta-cli"
+    assert data["execution_permitted"] is False
+    assert data["training_summary"]["domains"] == ["cardiac", "power_grid"]
+
+
+def test_meta_transfer_manifest_writes_only_explicit_output(
+    runner,
+    tmp_path,
+) -> None:
+    audit_path = tmp_path / "audit.jsonl"
+    output_path = tmp_path / "manifest.json"
+    _write_meta_audit_record(
+        audit_path,
+        domain="power_grid",
+        coherence=0.8,
+        k_value=0.04,
+        reward=0.9,
+    )
+
+    result = runner.invoke(
+        main,
+        ["meta-transfer-manifest", str(audit_path), "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 0
+    assert "Meta-transfer package manifest written:" in result.output
+    data = json.loads(output_path.read_text(encoding="utf-8"))
+    assert data["schema"] == "scpn_meta_package_manifest_v1"
+    assert data["execution_permitted"] is False
+
+
+def test_meta_transfer_manifest_rejects_missing_and_conflicting_sources(
+    runner,
+    tmp_path,
+) -> None:
+    audit_path = tmp_path / "audit.jsonl"
+    _write_meta_audit_record(
+        audit_path,
+        domain="power_grid",
+        coherence=0.8,
+        k_value=0.04,
+        reward=0.9,
+    )
+
+    missing = runner.invoke(main, ["meta-transfer-manifest"])
+    conflicting = runner.invoke(
+        main,
+        [
+            "meta-transfer-manifest",
+            str(audit_path),
+            "--audit-directory",
+            str(tmp_path),
+        ],
+    )
+    bad_min = runner.invoke(
+        main,
+        ["meta-transfer-manifest", str(audit_path), "--min-records", "0"],
+    )
+
+    assert missing.exit_code == 1
+    assert "provide one or more audit JSONL files" in missing.output
+    assert conflicting.exit_code == 1
+    assert "mutually exclusive" in conflicting.output
+    assert bad_min.exit_code == 1
+    assert "--min-records must be at least 1" in bad_min.output
+
+
 def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(main, ["scaffold", "test_domain"])

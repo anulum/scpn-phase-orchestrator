@@ -593,6 +593,11 @@ Near-term candidate tracks:
     `CrossDomainMetaTransfer.to_package_manifest()` binds the deterministic
     JSON package hash, training summary, public import target, and proposed
     `scpn-meta` console-script name while keeping execution disabled.
+  - Operator-facing manifest export is in place:
+    `spo meta-transfer-manifest` emits the same review-only package manifest
+    from explicit audit JSONL files or a nested audit directory, with
+    mutually exclusive source modes and no build, install, upload, or execution
+    side effects.
   - Package-manifest reference gates are in place:
     `benchmark_meta_transfer_package_manifest_quality()` verifies deterministic
     package and manifest hashes, training-summary coverage, digest linkage,
