@@ -931,10 +931,135 @@ def test_formal_export_package_outputs_no_execution_manifest(runner, tmp_path):
         command["execution_permitted"] is False
         for command in payload["checker_commands"]
     )
+    assert "checker_availability" not in payload
     assert len(payload["package_hash"]) == 64
     assert file_result.exit_code == 0
     assert "Formal verification package written:" in file_result.output
     assert json.loads(package_path.read_text(encoding="utf-8")) == payload
+
+
+def test_formal_export_package_can_include_checker_readiness(runner, tmp_path):
+    spec_path = _write_formal_export_spec(tmp_path)
+    rules = [
+        {
+            "name": "boost",
+            "regime": ["DEGRADED"],
+            "condition": {
+                "metric": "R_good",
+                "layer": 0,
+                "op": "<",
+                "threshold": 0.7,
+            },
+            "action": {"knob": "K", "scope": "global", "value": 0.1, "ttl_s": 5.0},
+        }
+    ]
+    _write_policy_rules(tmp_path, rules)
+
+    result = runner.invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "package",
+            "--module-name",
+            "cli_formal_package",
+            "--include-checker-readiness",
+            "--checker-path",
+            "prism=/opt/prism/bin/prism",
+            "--checker-path",
+            "tlc2.TLC=",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    availability = payload["checker_availability"]
+    assert [record["status"] for record in availability] == [
+        "missing_executable",
+        "ready_not_executed",
+        "ready_not_executed",
+    ]
+    assert [record["executable"] for record in availability] == [
+        "tlc2.TLC",
+        "prism",
+        "prism",
+    ]
+    assert [record["resolved_path"] for record in availability] == [
+        None,
+        "/opt/prism/bin/prism",
+        "/opt/prism/bin/prism",
+    ]
+    assert all(record["execution_permitted"] is False for record in availability)
+
+
+def test_formal_export_checker_readiness_options_are_package_only(
+    runner,
+    tmp_path,
+):
+    spec_path = _write_formal_export_spec(tmp_path)
+    _write_policy_rules(
+        tmp_path,
+        [
+            {
+                "name": "boost",
+                "regime": ["DEGRADED"],
+                "condition": {
+                    "metric": "R_good",
+                    "layer": 0,
+                    "op": "<",
+                    "threshold": 0.7,
+                },
+                "action": {
+                    "knob": "K",
+                    "scope": "global",
+                    "value": 0.1,
+                    "ttl_s": 5.0,
+                },
+            }
+        ],
+    )
+
+    non_package = runner.invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--include-checker-readiness",
+        ],
+    )
+    missing_readiness = runner.invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "package",
+            "--checker-path",
+            "prism=/opt/prism/bin/prism",
+        ],
+    )
+    malformed = runner.invoke(
+        main,
+        [
+            "formal-export",
+            str(spec_path),
+            "--export",
+            "package",
+            "--include-checker-readiness",
+            "--checker-path",
+            "prism",
+        ],
+    )
+
+    assert non_package.exit_code == 1
+    assert "only valid with --export package" in non_package.output
+    assert missing_readiness.exit_code == 1
+    assert "--checker-path requires --include-checker-readiness" in (
+        missing_readiness.output
+    )
+    assert malformed.exit_code == 1
+    assert "executable=/path syntax" in malformed.output
 
 
 def test_formal_export_stl_stdout_and_file_outputs(runner, tmp_path):

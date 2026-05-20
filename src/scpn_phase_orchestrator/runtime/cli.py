@@ -80,6 +80,7 @@ from scpn_phase_orchestrator.scaffold.llm import (
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalSafetyProperty,
+    audit_formal_checker_availability,
     build_formal_verification_package,
     export_petri_net_prism,
     export_petri_net_tla,
@@ -353,6 +354,23 @@ def plugins_catalog(
     click.echo(json.dumps(catalog, indent=2, sort_keys=True))
 
 
+def _parse_checker_path_overrides(
+    checker_paths: tuple[str, ...],
+) -> dict[str, str | None]:
+    overrides: dict[str, str | None] = {}
+    for item in checker_paths:
+        if "=" not in item:
+            raise click.ClickException(
+                "--checker-path entries must use executable=/path syntax"
+            )
+        executable, path = item.split("=", 1)
+        executable = executable.strip()
+        if not executable:
+            raise click.ClickException("--checker-path executable must not be empty")
+        overrides[executable] = path.strip() or None
+    return overrides
+
+
 @main.command("formal-export")
 @click.argument("binding_spec", type=click.Path(exists=True))
 @click.option(
@@ -381,6 +399,20 @@ def plugins_catalog(
     type=click.Path(exists=True),
     help="Policy YAML path for --export policy/stl; defaults to sibling policy.yaml",
 )
+@click.option(
+    "--include-checker-readiness",
+    is_flag=True,
+    help="Add non-executing PRISM/TLC executable-readiness records to package JSON",
+)
+@click.option(
+    "--checker-path",
+    "checker_paths",
+    multiple=True,
+    help=(
+        "Deterministic checker resolver override for package readiness, formatted "
+        "as executable=/path or executable= to force missing"
+    ),
+)
 def formal_export(
     binding_spec: str,
     output: str | None,
@@ -388,8 +420,22 @@ def formal_export(
     max_tokens: int | None,
     export_target: str,
     policy_path: str | None,
+    include_checker_readiness: bool,
+    checker_paths: tuple[str, ...],
 ) -> None:
     """Export supervisor artefacts for formal model checking."""
+    if include_checker_readiness and export_target != "package":
+        click.echo(
+            "ERROR: --include-checker-readiness is only valid with --export package",
+            err=True,
+        )
+        raise SystemExit(1)
+    if checker_paths and not include_checker_readiness:
+        click.echo(
+            "ERROR: --checker-path requires --include-checker-readiness",
+            err=True,
+        )
+        raise SystemExit(1)
     spec_path = Path(binding_spec)
     spec = load_binding_spec(spec_path)
     errors = validate_binding_spec(spec)
@@ -476,6 +522,18 @@ def formal_export(
                 package_name=module_name,
             )
             payload = package.to_audit_record()
+            if include_checker_readiness:
+                payload["checker_availability"] = [
+                    record.to_audit_record()
+                    for record in audit_formal_checker_availability(
+                        package,
+                        executable_paths=_parse_checker_path_overrides(
+                            checker_paths
+                        )
+                        if checker_paths
+                        else None,
+                    )
+                ]
             text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
             if output is None:
                 click.echo(text, nl=False)

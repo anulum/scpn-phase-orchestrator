@@ -736,7 +736,11 @@ actions.
 `--export package` emits a JSON formal verification package manifest that binds
 protocol PRISM/TLA and policy PRISM artefact hashes to named safety properties
 and external PRISM/TLC command records. The package does not run model checkers;
-all command records keep `execution_permitted=false`.
+all command records keep `execution_permitted=false`. Add
+`--include-checker-readiness` to append non-executing checker availability
+records to that JSON; `--checker-path executable=/path` can make CI readiness
+evidence deterministic, and `--checker-path executable=` forces a missing
+checker record without invoking anything.
 
 For builtin STL automata, `synthesise_stl_controller_candidates()` provides a
 non-actuating controller-synthesis bridge. It proposes signal-level candidate

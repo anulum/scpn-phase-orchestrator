@@ -349,7 +349,10 @@ sessions do not treat them as abstract research labels.
     missing checker counts, and disabled availability-audit execution.
   - CLI formal package export is in place:
     `spo formal-export --export package` emits the no-execution JSON manifest
-    for protocol PRISM/TLA and policy PRISM artefacts.
+    for protocol PRISM/TLA and policy PRISM artefacts. The package export can
+    now include non-executing checker-readiness records through
+    `--include-checker-readiness`, with deterministic `--checker-path`
+    overrides for CI evidence.
   - External-checker readiness audits are in place:
     `audit_formal_checker_availability()` records PRISM/TLC command
     executable availability as deterministic, non-executing audit records with
