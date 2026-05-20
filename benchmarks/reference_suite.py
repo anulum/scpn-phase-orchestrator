@@ -45,6 +45,8 @@ from scpn_phase_orchestrator.plugins import (
     build_rust_plugin_runtime_handoff,
 )
 from scpn_phase_orchestrator.supervisor.formal_export import (
+    FormalSafetyProperty,
+    build_formal_verification_package,
     export_petri_net_prism,
     export_petri_net_tla,
     export_policy_rules_prism,
@@ -142,7 +144,10 @@ class FormalExportThresholds(NamedTuple):
     min_artifact_count: int
     min_fail_closed_count: int
     min_identifier_map_count: int
+    min_package_property_count: int
+    min_checker_command_count: int
     require_deterministic_hash: bool
+    require_checker_execution_disabled: bool
 
 
 class DomainFormalExportThresholds(NamedTuple):
@@ -753,7 +758,10 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         min_artifact_count=5,
         min_fail_closed_count=4,
         min_identifier_map_count=12,
+        min_package_property_count=3,
+        min_checker_command_count=3,
         require_deterministic_hash=True,
+        require_checker_execution_disabled=True,
     )
     net, marking, rules, stl_specs = _formal_export_fixture()
 
@@ -780,6 +788,46 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         stl_specs,
         module_name="stl benchmark",
     )
+    package = build_formal_verification_package(
+        {
+            "petri_prism": petri_prism,
+            "petri_tla": petri_tla,
+            "policy_prism": policy_prism,
+        },
+        (
+            FormalSafetyProperty(
+                name="petri_reaches_done",
+                artifact_name="petri_prism",
+                checker="prism",
+                expression='P>=1 [ F "active_done" ]',
+                description="Petri net can reach terminal done place.",
+            ),
+            FormalSafetyProperty(
+                name="petri_type_ok",
+                artifact_name="petri_tla",
+                checker="tlc",
+                expression="Safety",
+                description="Petri TLA state variables remain bounded.",
+            ),
+            FormalSafetyProperty(
+                name="policy_boost_fires",
+                artifact_name="policy_prism",
+                checker="prism",
+                expression='P>=1 [ F "fires_boost_K" ]',
+                description="Policy rule firing remains externally checkable.",
+            ),
+        ),
+        package_name="spo-formal-reference",
+    )
+    repeated_package = build_formal_verification_package(
+        {
+            "petri_prism": petri_prism,
+            "petri_tla": petri_tla,
+            "policy_prism": policy_prism,
+        },
+        package.properties,
+        package_name="spo-formal-reference",
+    )
     repeated = export_policy_rules_prism(
         rules,
         module_name="policy benchmark",
@@ -798,6 +846,14 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
     repeated_hash = sha256(repeated.model.encode()).hexdigest()
     deterministic_hash = int(
         repeated_hash == sha256(policy_prism.model.encode()).hexdigest()
+        and package.package_hash == repeated_package.package_hash
+    )
+    package_record = package.to_audit_record()
+    checker_commands = package_record["checker_commands"]
+    if not isinstance(checker_commands, list):
+        raise TypeError("formal checker commands must be a list")
+    checker_execution_disabled = int(
+        all(command.get("execution_permitted") is False for command in checker_commands)
     )
     identifier_map_count = sum(
         len(mapping)
@@ -816,7 +872,11 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         len(artifact_texts) >= thresholds.min_artifact_count
         and fail_closed_count >= thresholds.min_fail_closed_count
         and identifier_map_count >= thresholds.min_identifier_map_count
+        and len(package.properties) >= thresholds.min_package_property_count
+        and len(package.checker_commands) >= thresholds.min_checker_command_count
         and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and checker_execution_disabled
+        == int(thresholds.require_checker_execution_disabled)
         and "Safety == TypeOK" in petri_tla.module
         and 'label "fires_boost_K"' in policy_prism.model
         and 'label "stl_keep_sync_satisfied"' in stl_prism.model
@@ -829,8 +889,12 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         "steps_per_second": len(artifact_texts) / elapsed,
         "identifier_map_count": identifier_map_count,
         "fail_closed_count": fail_closed_count,
+        "package_property_count": len(package.properties),
+        "checker_command_count": len(package.checker_commands),
+        "checker_execution_disabled": checker_execution_disabled,
         "deterministic_hash": deterministic_hash,
         "artifact_sha256": artifact_hash,
+        "package_sha256": package.package_hash,
         "petri_prism_bytes": len(petri_prism.model.encode()),
         "petri_tla_bytes": len(petri_tla.module.encode()),
         "policy_prism_bytes": len(policy_prism.model.encode()),
@@ -840,12 +904,18 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         "acceptance_thresholds_json": json.dumps(
             {
                 "min_artifact_count": thresholds.min_artifact_count,
+                "min_checker_command_count": thresholds.min_checker_command_count,
                 "min_fail_closed_count": thresholds.min_fail_closed_count,
                 "min_identifier_map_count": thresholds.min_identifier_map_count,
+                "min_package_property_count": thresholds.min_package_property_count,
+                "require_checker_execution_disabled": (
+                    thresholds.require_checker_execution_disabled
+                ),
                 "require_deterministic_hash": (thresholds.require_deterministic_hash),
             },
             sort_keys=True,
         ),
+        "checker_commands_json": json.dumps(checker_commands, sort_keys=True),
     }
 
 

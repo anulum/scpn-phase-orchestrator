@@ -341,6 +341,10 @@ sessions do not treat them as abstract research labels.
     `build_formal_verification_package()` records exported artefact hashes,
     named safety properties, and exact external PRISM/TLC checker commands
     without writing files or invoking model checkers locally.
+  - Formal package benchmark evidence is in place:
+    `benchmark_formal_export_artifact_quality()` now gates package property
+    counts, checker command counts, disabled checker execution, and package
+    hash determinism alongside PRISM/TLA/STL export artefacts.
   - Acceptance: plasma, power, and medical-style policies have reproducible
     safety artefacts suitable for credibility reviews.
 - Neuromorphic and quantum tighter integration:

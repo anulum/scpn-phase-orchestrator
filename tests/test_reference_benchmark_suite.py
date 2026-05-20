@@ -222,9 +222,13 @@ def test_formal_export_artifact_quality_benchmark_shape() -> None:
     assert out["artifact_count"] == 5
     assert out["identifier_map_count"] >= 12
     assert out["fail_closed_count"] >= 4
+    assert out["package_property_count"] == 3
+    assert out["checker_command_count"] == 3
+    assert out["checker_execution_disabled"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
     assert len(str(out["artifact_sha256"])) == 64
+    assert len(str(out["package_sha256"])) == 64
     assert int(out["petri_prism_bytes"]) > 0
     assert int(out["petri_tla_bytes"]) > 0
     assert int(out["policy_prism_bytes"]) > 0
@@ -236,13 +240,28 @@ def test_formal_export_artifact_quality_benchmark_shape() -> None:
 def test_formal_export_artifact_quality_reports_thresholds() -> None:
     out = benchmark_formal_export_artifact_quality()
     thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    checker_commands = json.loads(str(out["checker_commands_json"]))
 
     assert thresholds == {
         "min_artifact_count": 5,
+        "min_checker_command_count": 3,
         "min_fail_closed_count": 4,
         "min_identifier_map_count": 12,
+        "min_package_property_count": 3,
+        "require_checker_execution_disabled": True,
         "require_deterministic_hash": True,
     }
+    assert [command["checker"] for command in checker_commands] == [
+        "prism",
+        "tlc",
+        "prism",
+    ]
+    assert all(command["execution_permitted"] is False for command in checker_commands)
+    assert [command["property_name"] for command in checker_commands] == [
+        "petri_reaches_done",
+        "petri_type_ok",
+        "policy_boost_fires",
+    ]
 
 
 def test_domain_formal_safety_exports_benchmark_shape() -> None:
