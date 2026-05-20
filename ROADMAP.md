@@ -344,7 +344,9 @@ sessions do not treat them as abstract research labels.
   - Formal package benchmark evidence is in place:
     `benchmark_formal_export_artifact_quality()` now gates package property
     counts, checker command counts, disabled checker execution, and package
-    hash determinism alongside PRISM/TLA/STL export artefacts.
+    hash determinism alongside PRISM/TLA/STL export artefacts. The same gate
+    now records deterministic PRISM/TLC checker readiness status, available and
+    missing checker counts, and disabled availability-audit execution.
   - CLI formal package export is in place:
     `spo formal-export --export package` emits the no-execution JSON manifest
     for protocol PRISM/TLA and policy PRISM artefacts.

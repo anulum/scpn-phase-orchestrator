@@ -46,6 +46,7 @@ from scpn_phase_orchestrator.plugins import (
 )
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalSafetyProperty,
+    audit_formal_checker_availability,
     build_formal_verification_package,
     export_petri_net_prism,
     export_petri_net_tla,
@@ -146,6 +147,8 @@ class FormalExportThresholds(NamedTuple):
     min_identifier_map_count: int
     min_package_property_count: int
     min_checker_command_count: int
+    min_checker_availability_count: int
+    min_missing_checker_count: int
     require_deterministic_hash: bool
     require_checker_execution_disabled: bool
 
@@ -760,6 +763,8 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         min_identifier_map_count=12,
         min_package_property_count=3,
         min_checker_command_count=3,
+        min_checker_availability_count=3,
+        min_missing_checker_count=1,
         require_deterministic_hash=True,
         require_checker_execution_disabled=True,
     )
@@ -855,6 +860,27 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
     checker_execution_disabled = int(
         all(command.get("execution_permitted") is False for command in checker_commands)
     )
+    checker_availability = audit_formal_checker_availability(
+        package,
+        executable_paths={
+            "prism": "/opt/prism/bin/prism",
+            "tlc2.TLC": None,
+        },
+    )
+    checker_availability_records = [
+        item.to_audit_record() for item in checker_availability
+    ]
+    checker_availability_count = len(checker_availability_records)
+    checker_available_count = sum(
+        int(record["available"]) for record in checker_availability_records
+    )
+    checker_missing_count = checker_availability_count - checker_available_count
+    checker_availability_execution_disabled = int(
+        all(
+            record.get("execution_permitted") is False
+            for record in checker_availability_records
+        )
+    )
     identifier_map_count = sum(
         len(mapping)
         for mapping in (
@@ -874,8 +900,12 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         and identifier_map_count >= thresholds.min_identifier_map_count
         and len(package.properties) >= thresholds.min_package_property_count
         and len(package.checker_commands) >= thresholds.min_checker_command_count
+        and checker_availability_count >= thresholds.min_checker_availability_count
+        and checker_missing_count >= thresholds.min_missing_checker_count
         and deterministic_hash == int(thresholds.require_deterministic_hash)
         and checker_execution_disabled
+        == int(thresholds.require_checker_execution_disabled)
+        and checker_availability_execution_disabled
         == int(thresholds.require_checker_execution_disabled)
         and "Safety == TypeOK" in petri_tla.module
         and 'label "fires_boost_K"' in policy_prism.model
@@ -891,7 +921,13 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         "fail_closed_count": fail_closed_count,
         "package_property_count": len(package.properties),
         "checker_command_count": len(package.checker_commands),
+        "checker_availability_count": checker_availability_count,
+        "checker_available_count": checker_available_count,
+        "checker_missing_count": checker_missing_count,
         "checker_execution_disabled": checker_execution_disabled,
+        "checker_availability_execution_disabled": (
+            checker_availability_execution_disabled
+        ),
         "deterministic_hash": deterministic_hash,
         "artifact_sha256": artifact_hash,
         "package_sha256": package.package_hash,
@@ -904,9 +940,13 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
         "acceptance_thresholds_json": json.dumps(
             {
                 "min_artifact_count": thresholds.min_artifact_count,
+                "min_checker_availability_count": (
+                    thresholds.min_checker_availability_count
+                ),
                 "min_checker_command_count": thresholds.min_checker_command_count,
                 "min_fail_closed_count": thresholds.min_fail_closed_count,
                 "min_identifier_map_count": thresholds.min_identifier_map_count,
+                "min_missing_checker_count": thresholds.min_missing_checker_count,
                 "min_package_property_count": thresholds.min_package_property_count,
                 "require_checker_execution_disabled": (
                     thresholds.require_checker_execution_disabled
@@ -916,6 +956,10 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
             sort_keys=True,
         ),
         "checker_commands_json": json.dumps(checker_commands, sort_keys=True),
+        "checker_availability_json": json.dumps(
+            checker_availability_records,
+            sort_keys=True,
+        ),
     }
 
 
