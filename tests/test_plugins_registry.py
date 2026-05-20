@@ -769,6 +769,68 @@ class TestPluginMarketplaceCatalog:
         with pytest.raises(TypeError, match=diagnostic):
             registry.build_rust_plugin_registry((_manifest(),))
 
+    def test_runtime_handoff_rejects_malformed_registry_payload(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def malformed_registry(
+            manifests: tuple[PluginManifest, ...],
+            *,
+            include_incompatible: bool = False,
+        ) -> dict[str, object]:
+            assert manifests == (_manifest(),)
+            assert include_incompatible is False
+            return {
+                "schema": "scpn_rust_plugin_registry_v1",
+                "capabilities": (),
+            }
+
+        monkeypatch.setattr(
+            registry,
+            "build_rust_plugin_registry",
+            malformed_registry,
+        )
+
+        with pytest.raises(
+            TypeError, match="rust plugin registry payload is malformed"
+        ):
+            registry.build_rust_plugin_runtime_handoff((_manifest(),))
+
+    def test_runtime_handoff_keeps_blocked_policies_and_compatible_counts(self) -> None:
+        invalid = PluginManifest(
+            name="bad_monitor",
+            version="0.1.0",
+            package="bad_monitor",
+            capabilities=(
+                PluginCapability(
+                    kind="monitor",
+                    name="empty",
+                    target="bad.monitors:Empty",
+                ),
+            ),
+        )
+
+        handoff = build_rust_plugin_runtime_handoff(
+            (invalid,), include_incompatible=True
+        )
+
+        assert handoff["loading_permitted"] is False
+        assert handoff["load_policy"] == "metadata_only_review"
+        assert handoff["compatible_capability_count"] == 0
+        assert handoff["blocked_capability_count"] == 1
+        blocked = cast("list[dict[str, Any]]", handoff["blocked_capabilities"])
+        assert blocked[0]["compatible"] is False
+        assert blocked[0]["loading_permitted"] is False
+        assert blocked[0]["load_policy"] == "metadata_only_review"
+        assert blocked[0]["blocked_reason"] == "incompatible_manifest"
+
+        manifest_only = build_rust_plugin_runtime_handoff((_manifest(), invalid))
+        assert manifest_only["compatible_capability_count"] == 3
+        assert manifest_only["blocked_capability_count"] == 0
+        assert manifest_only["blocked_capabilities"] == []
+
     def test_marketplace_catalog_example_is_valid(self) -> None:
         example_path = (
             Path(__file__).resolve().parents[1]
@@ -853,6 +915,23 @@ class TestPluginDiscovery:
 
         with pytest.raises(ValueError, match="requires at least one capability"):
             discover_plugin_manifests()
+
+    def test_discovery_can_return_no_manifests(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class EmptyEntryPoints(tuple):
+            def select(self, *, group: str) -> tuple[tuple[()], ...]:
+                return ()
+
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        monkeypatch.setattr(
+            registry.metadata,
+            "entry_points",
+            lambda: EmptyEntryPoints(),
+        )
+
+        assert discover_plugin_manifests() == ()
 
     def test_discovery_accepts_manifest_objects(
         self, monkeypatch: pytest.MonkeyPatch

@@ -546,3 +546,23 @@ class TestValueAlignmentBehaviour:
 
         with pytest.raises(ValueError, match="ControlAction"):
             calibrate_value_alignment_replay_evidence(policy, {"bad": [object()]})
+
+    def test_mixed_blocked_and_approved_actions_fall_back_without_fallback_actions(
+        self,
+    ) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+            )
+        )
+
+        decision = guard.evaluate([_action("K", 2.0), _action("zeta", 0.2)])
+
+        assert decision.approved_actions == (_action("zeta", 0.2),)
+        assert decision.blocked_actions == (_action("K", 2.0),)
+        assert not decision.satisfied
+        assert decision.fallback_actions == ()
+        assert decision.actions_to_apply == ()
+        assert decision.violations[0].constraint == "limit-K"
+        assert decision.violations[0].knob == "K"
+        assert decision.violations[0].failed_bounds == ("max_abs_value",)

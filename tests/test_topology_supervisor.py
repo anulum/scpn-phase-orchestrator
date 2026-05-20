@@ -344,3 +344,54 @@ class TestHigherOrderTopologySupervisor:
         assert updated.shape == phases.shape
         assert np.all(np.isfinite(updated))
         assert 0.0 <= r_updated <= 1.0
+
+    def test_small_system_never_adds_simplices(self) -> None:
+        phases = np.array([0.0, 1.25], dtype=np.float64)
+        knm = np.array([[0.0, 0.25], [0.5, 0.0]], dtype=np.float64)
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=1.0,
+                coherence_floor=0.5,
+                simplex_threshold=0.2,
+                max_new_simplices=4,
+            )
+        )
+
+        result = supervisor.mutate(phases, knm)
+
+        assert result.added_simplices == ()
+        assert result.pruned_simplices == ()
+        assert result.hyperedges == ()
+
+    def test_tied_candidate_simplex_ordering_is_deterministic(self) -> None:
+        phases = np.array([0.0, 0.0, np.pi, np.pi], dtype=np.float64)
+        knm = np.full((4, 4), 0.4, dtype=np.float64)
+        np.fill_diagonal(knm, 0.0)
+        supervisor = HigherOrderTopologySupervisor(
+            TopologyMutationPolicy(
+                mutation_rate=1.0,
+                coherence_floor=0.1,
+                simplex_threshold=0.33,
+                max_new_simplices=2,
+                max_simplex_strength=0.2,
+            )
+        )
+
+        result = supervisor.mutate(phases, knm)
+        expected_nodes = sorted(
+            [
+                (0, 1, 2),
+                (0, 1, 3),
+                (0, 2, 3),
+                (1, 2, 3),
+            ],
+            reverse=True,
+        )
+
+        assert len(result.added_simplices) == 2
+        assert tuple(edge.nodes for edge in result.added_simplices) == tuple(
+            expected_nodes[:2]
+        )
+        assert all(
+            edge.strength == pytest.approx(0.2) for edge in result.added_simplices
+        )

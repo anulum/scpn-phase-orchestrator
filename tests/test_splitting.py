@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -111,6 +112,42 @@ class TestSplittingEngine:
         result = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=200)
         R, _ = compute_order_parameter(result)
         assert R > 0.99
+
+    def test_negative_dt_falls_back_to_python_reference(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        monkeypatch.setattr(
+            split_mod,
+            "_dispatch",
+            lambda: (_ for _ in ()).throw(
+                AssertionError("dispatch was used for negative dt"),
+            ),
+        )
+
+        n = 4
+        dt = -0.02
+        eng = SplittingEngine(n, dt=dt)
+        phases = np.array([0.0, 0.5, 1.0, 1.5])
+        omegas = np.array([1.0, 2.0, 3.0, 4.0])
+        knm = np.zeros((n, n), dtype=np.float64)
+        alpha = np.zeros((n, n), dtype=np.float64)
+        result = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        expected = (phases + dt * omegas) % (2 * np.pi)
+        np.testing.assert_allclose(result, expected, atol=1e-12)
+
+    def test_invalid_n_steps_rejected(self):
+        n = 4
+        eng = SplittingEngine(n, dt=0.01)
+        with pytest.raises(ValueError, match="n_steps"):
+            eng.run(
+                np.zeros(n),
+                np.ones(n),
+                _coupled_knm(n),
+                0.0,
+                0.0,
+                np.zeros((n, n)),
+                n_steps=0,
+            )
 
 
 class TestSplittingSymplecticProperties:

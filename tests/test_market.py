@@ -54,6 +54,10 @@ class TestExtractPhase:
         assert np.all(phase >= 0.0)
         assert np.all(phase < 2.0 * np.pi)
 
+    def test_invalid_series_shape_rejected(self) -> None:
+        with pytest.raises(ValueError, match="one- or two-dimensional"):
+            extract_phase(np.zeros((2, 2, 2), dtype=np.float64))
+
 
 class TestMarketOrderParameter:
     def test_output_shape(self, synced_returns):
@@ -96,6 +100,12 @@ class TestMarketPLV:
         assert np.all(plv >= -0.01)
         assert np.all(plv <= 1.01)
 
+    def test_too_long_window_returns_empty(self, monkeypatch):
+        monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "python")
+        phases = np.zeros((10, 3), dtype=np.float64)
+        plv = market_plv(phases, window=20)
+        assert plv.shape == (0, 3, 3)
+
 
 class TestDetectRegimes:
     def test_output_shape(self):
@@ -118,6 +128,12 @@ class TestDetectRegimes:
         regimes = detect_regimes(R)
         assert np.all(regimes == 1)
 
+    def test_threshold_order_rejected(self):
+        with pytest.raises(
+            ValueError, match="sync_threshold must be greater than or equal"
+        ):
+            detect_regimes(np.ones(10), sync_threshold=0.2, desync_threshold=0.7)
+
 
 class TestSyncWarning:
     def test_output_shape(self):
@@ -134,6 +150,10 @@ class TestSyncWarning:
         R = np.ones(100) * 0.5
         w = sync_warning(R, threshold=0.7, lookback=1)
         assert not np.any(w)
+
+    def test_invalid_lookback_rejected(self) -> None:
+        with pytest.raises(ValueError, match="lookback"):
+            sync_warning(np.ones(10), lookback=0)
 
 
 class TestMarketPipelineWiring:

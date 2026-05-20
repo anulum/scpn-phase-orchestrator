@@ -294,6 +294,30 @@ def test_bft_meta_orchestrator_rejects_invalid_non_mapping_proposal() -> None:
     with pytest.raises(ValueError, match="proposal must be a mapping"):
         build_bft_meta_orchestrator_manifest([1, 2, 3], {"node-a": "alpha"}, quorum=1)
 
+def test_bft_meta_orchestrator_reports_missing_signing_keys_and_quorum_block(
+    ) -> None:
+    keyring = {"node-a": "alpha"}
+    payload = {"policy": "hold", "actuation": False}
+    parent_hash = "f" * 64
+    proposal_with_key = sign_policy_proposal(
+        "node-a", payload, parent_hash, keyring["node-a"]
+    )
+    proposal_without_key = sign_policy_proposal("node-b", payload, parent_hash, "bravo")
+
+    manifest = build_bft_meta_orchestrator_manifest(
+        [proposal_with_key, proposal_without_key],
+        keyring,
+        quorum=2,
+    )
+
+    assert manifest["status"] == "blocked"
+    assert manifest["accepted_node_ids"] == []
+    assert manifest["rejected_node_ids"] == ["node-b"]
+    assert manifest["consensus_hash"] == ""
+    assert manifest["audit_chain_hash"] == ""
+    assert "node-b missing signing key" in manifest["blocked_reasons"]
+    assert "valid quorum not reached" in manifest["blocked_reasons"]
+    assert manifest["manifest_sha256"] == manifest["manifest_sha256"]
 
 def test_sign_policy_proposal_does_not_accept_nan_payload() -> None:
     keyring = {"node-a": "alpha"}

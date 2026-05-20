@@ -323,6 +323,38 @@ class TestFindCriticalCoupling:
         if not np.isnan(Kc):
             assert 0.0 < Kc < 20.0
 
+    def test_measurement_window_zero_returns_nan(self, monkeypatch):
+        """n_measure=0 keeps searching and returns a finite small positive Kc."""
+        from scpn_phase_orchestrator.upde import bifurcation as bif
+
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        calls: list[int] = []
+
+        def _steady_state_r(
+            _phases_init: np.ndarray,
+            _omegas: np.ndarray,
+            _K_scale: float,
+            _knm_template: np.ndarray,
+            _alpha: np.ndarray,
+            _dt: float,
+            _n_transient: int,
+            n_measure: int,
+        ) -> float:
+            calls.append(n_measure)
+            return 0.25
+
+        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _steady_state_r)
+
+        Kc = bif.find_critical_coupling(
+            np.array([0.1, -0.2, 0.3]),
+            n_transient=0,
+            n_measure=0,
+        )
+
+        assert np.isfinite(Kc)
+        assert Kc < 0.05
+        assert all(v == 0 for v in calls)
+
     def test_default_knm(self):
         omegas = np.array([1.0, 2.0, 3.0, 4.0])
         Kc = find_critical_coupling(

@@ -530,3 +530,29 @@ class TestValidationBoundaries:
         assert critical_coupling(omegas, knm) == 1.0
         assert sync_convergence_rate(knm, omegas, gamma_max=0.25) == 0.5
         assert [call[0] for call in calls] == ["fv", "fvec", "sg", "kc", "scr"]
+
+    @_python
+    def test_critical_coupling_empty_graph_returns_inf(self):
+        kc = critical_coupling(np.array([0.0, 1.0]), np.zeros((0, 0)))
+
+        assert kc == float("inf")
+
+    def test_spectral_eig_accepts_integer_matrices_as_floats(self):
+        knm = np.array(
+            [
+                [0, 1, 0],
+                [1, 0, 1],
+                [0, 1, 0],
+            ],
+            dtype=np.int64,
+        )
+        eigvals, fiedler = spectral_eig(knm)
+
+        assert eigvals.dtype.kind == "f"
+        assert fiedler.dtype.kind == "f"
+        np.testing.assert_allclose(
+            np.sort(eigvals),
+            np.array([0.0, 1.0, 3.0]),
+            atol=1e-12,
+        )
+        assert fiedler.shape == (3,)

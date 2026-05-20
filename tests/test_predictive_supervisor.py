@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.supervisor.predictive as predictive
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.predictive import (
     FEPHierarchyAssessment,
@@ -115,6 +116,34 @@ class TestPrediction:
         alpha = np.zeros((8, 8))
         pred = ps.predict(phases, omegas, knm, alpha)
         assert not pred.will_critical
+
+    def test_divergence_fallback_writes_constant_trajectory(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class ExplodingReduction:
+            def __init__(
+                self, omega_0: float, delta: float, k_eff: float, dt: float
+            ) -> None:
+                self._counter = 0
+
+            def step(self, z: complex) -> complex:
+                self._counter += 1
+                return z + 0.5
+
+        monkeypatch.setattr(predictive, "OttAntonsenReduction", ExplodingReduction)
+
+        ps = PredictiveSupervisor(4, dt=0.01, horizon=4, divergence_threshold=0.0)
+        phases = np.zeros(4)
+        omegas = np.ones(4)
+        knm = np.zeros((4, 4))
+        alpha = np.zeros((4, 4))
+
+        pred = ps.predict(phases, omegas, knm, alpha)
+
+        assert pred.R_predicted == [1.0] * 5
+        assert pred.will_degrade is False
+        assert pred.will_critical is False
+        assert pred.steps_to_degradation == 4
 
     def test_weak_coupling_predicts_degradation(self):
         ps = PredictiveSupervisor(8, dt=0.01, horizon=50)

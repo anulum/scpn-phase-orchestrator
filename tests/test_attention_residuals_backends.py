@@ -410,3 +410,24 @@ class TestBackendLoaderDispatch:
         assert active == "go"
         assert available == ["go", "python"]
         assert calls == ["fail", "fail", "fail", "go"]
+
+    def test_resolve_backends_falls_back_to_python_when_all_backends_fail(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+
+        def _fail() -> object:
+            calls.append("fail")
+            raise RuntimeError("backend unavailable")
+
+        monkeypatch.setitem(attnres_mod._LOADERS, "rust", _fail)
+        monkeypatch.setitem(attnres_mod._LOADERS, "mojo", _fail)
+        monkeypatch.setitem(attnres_mod._LOADERS, "julia", _fail)
+        monkeypatch.setitem(attnres_mod._LOADERS, "go", _fail)
+
+        active, available = attnres_mod._resolve_backends()
+
+        assert active == "python"
+        assert available == ["python"]
+        assert calls == ["fail", "fail", "fail", "fail"]

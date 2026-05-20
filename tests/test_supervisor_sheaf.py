@@ -362,6 +362,28 @@ class TestSheafCoherenceBehaviour:
         with pytest.raises(ValueError, match="result"):
             build_sheaf_obstruction_summary(result)  # type: ignore[arg-type]
 
+    def test_zero_top_k_yields_no_reported_residual_edges(self) -> None:
+        states = np.array([[0.0, 0.0], [1.0, -1.0]], dtype=np.float64)
+        result = sheaf_coherence(states, _identity_maps(n_nodes=2, n_channels=2))
+
+        summary = build_sheaf_obstruction_summary(result, top_k=0)
+
+        assert summary.top_residual_edges == ()
+        assert summary.to_audit_record()["top_residual_edges"] == []
+        assert summary.obstruction_score == result.obstruction_score
+
+    def test_top_residual_edges_tie_sort_is_deterministic(self) -> None:
+        states = np.array([[0.0], [1.0], [2.0]], dtype=np.float64)
+        result = sheaf_coherence(states, _identity_maps(n_nodes=3, n_channels=1))
+        summary = build_sheaf_obstruction_summary(result, top_k=4)
+
+        assert summary.top_residual_edges == (
+            (0, 2, 2.0, (-2.0,)),
+            (2, 0, 2.0, (2.0,)),
+            (0, 1, 1.0, (-1.0,)),
+            (1, 0, 1.0, (1.0,)),
+        )
+
 
 class TestSheafCoherencePipelineWiring:
     def test_supervisor_assesses_sheaf_engine_state(self) -> None:

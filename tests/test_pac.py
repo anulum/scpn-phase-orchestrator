@@ -99,6 +99,21 @@ class TestModulationIndex:
         assert modulation_index(theta, amp, n_bins=0) == 0.0
         assert modulation_index(theta, amp, n_bins=-2) == 0.0
 
+    def test_modulation_index_short_circuit_does_not_use_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        called: list[bool] = []
+
+        def _backend(_: np.ndarray, __: np.ndarray, ___: int) -> float:
+            called.append(True)
+            return 1.0
+
+        monkeypatch.setattr(pac_mod, "_dispatch", lambda _fn_name: _backend)
+        theta = np.linspace(0.0, TWO_PI, 16, endpoint=False)
+        amp = np.ones_like(theta)
+        assert modulation_index(theta, amp, n_bins=1) == 0.0
+        assert called == []
+
     @pytest.mark.parametrize(
         ("backend_value", "expected"),
         [
@@ -187,6 +202,29 @@ class TestPACMatrix:
         mat = pac_matrix(phases, amps)
         assert mat.shape == expected_shape
         assert np.all(mat == 0.0)
+
+    def test_n_bins_short_circuit_matrix_avoids_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        called: list[bool] = []
+
+        def _backend(
+            _phases_flat: np.ndarray,
+            _amps_flat: np.ndarray,
+            _t: int,
+            _n: int,
+            _n_bins: int,
+        ) -> np.ndarray:
+            called.append(True)
+            return np.full(4, 1.0, dtype=np.float64)
+
+        monkeypatch.setattr(pac_mod, "_dispatch", lambda _fn_name: _backend)
+        phases = np.ones((8, 2), dtype=np.float64)
+        amps = np.ones((8, 2), dtype=np.float64)
+        mat = pac_matrix(phases, amps, n_bins=0)
+        assert mat.shape == (2, 2)
+        assert np.allclose(mat, 0.0)
+        assert called == []
 
     @pytest.mark.parametrize(
         ("phases", "amps", "n_bins", "match"),

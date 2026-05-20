@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
@@ -77,6 +79,21 @@ class TestHodgeDecomposition:
         result = hodge_decomposition(knm, phases)
         assert result.gradient[0] == pytest.approx(0.0)
         assert result.curl[0] == pytest.approx(0.0)
+
+    def test_uniform_scale_scales_all_components(self):
+        """Scaling K_nm by a scalar scales every component linearly."""
+        rng = np.random.default_rng(123)
+        knm = rng.standard_normal((5, 5))
+        np.fill_diagonal(knm, 0.0)
+        phases = rng.uniform(0.0, 2 * math.pi, 5)
+        base = hodge_decomposition(knm, phases)
+        doubled = hodge_decomposition(2.5 * knm, phases)
+
+        np.testing.assert_allclose(doubled.gradient, 2.5 * base.gradient, rtol=1e-12)
+        np.testing.assert_allclose(doubled.curl, 2.5 * base.curl, rtol=1e-12)
+        np.testing.assert_allclose(
+            doubled.harmonic, 2.5 * base.harmonic, rtol=1e-12, atol=1e-15
+        )
 
 
 class TestHodgePipelineWiring:

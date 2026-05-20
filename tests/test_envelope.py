@@ -62,6 +62,22 @@ class TestExtractEnvelope:
         env = extract_envelope(amp, window=1)
         np.testing.assert_allclose(env, np.abs(amp))
 
+    def test_window_exceeds_length_still_deterministic(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.envelope as env_mod
+
+        called: list[bool] = []
+
+        def _backend(_: np.ndarray, __: int) -> np.ndarray:
+            called.append(True)
+            return np.array([123.0], dtype=np.float64)
+
+        monkeypatch.setattr(env_mod, "_dispatch", lambda _fn_name: _backend)
+        amp = np.array([1.0, 2.0, 3.0])
+        env = extract_envelope(amp, window=10)
+        expected = np.full_like(amp, np.sqrt(np.mean(np.square(amp))))
+        np.testing.assert_allclose(env, expected)
+        assert called == []
+
     def test_am_signal_envelope_tracks_modulation(self) -> None:
         """Amplitude-modulated sinusoid: envelope must track the modulation
         curve, not the carrier. This is the core use case."""

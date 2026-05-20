@@ -257,3 +257,35 @@ class TestBasinStabilityEdgeSemantics:
         assert np.allclose(result.R_final, 0.0)
         assert result.n_converged == result.n_samples
         assert result.S_B == 1.0
+
+    def test_steady_state_zero_measure_shortcuts_without_backend(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
+
+        monkeypatch.setattr(
+            basin_mod,
+            "_dispatch",
+            lambda: (_ for _ in ()).throw(
+                RuntimeError("backend should not run"),
+            ),
+        )
+        got = basin_mod.steady_state_r(
+            np.array([0.1, 0.2]),
+            np.array([1.0, -1.0]),
+            np.ones((2, 2)),
+            n_measure=0,
+        )
+        assert got == 0.0
+
+    def test_multi_basin_rejects_empty_threshold_tuple(self) -> None:
+        N = 4
+        omegas = np.zeros(N)
+        knm = np.ones((N, N))
+        np.fill_diagonal(knm, 0)
+        with pytest.raises(ValueError, match="at least one threshold"):
+            multi_basin_stability(
+                omegas,
+                knm,
+                n_samples=10,
+                n_measure=10,
+                R_thresholds=(),
+            )

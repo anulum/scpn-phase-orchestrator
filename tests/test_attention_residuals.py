@@ -138,6 +138,17 @@ def test_existing_zeros_stay_zero() -> None:
         assert k_mod[i, j] == 0.0
 
 
+def test_periodicity_in_phase_angles_is_preserved() -> None:
+    knm = _symmetric_knm(7, seed=9)
+    theta = np.linspace(0.0, TWO_PI, 7, endpoint=False)
+    shifted = theta + 4.0 * TWO_PI
+
+    out = attnres_modulate(knm, theta, lambda_=0.5)
+    shifted_out = attnres_modulate(knm, shifted, lambda_=0.5)
+
+    np.testing.assert_allclose(out, shifted_out, atol=1e-12)
+
+
 def test_block_size_restricts_attention() -> None:
     """With block_size = 2, pairs with |i - j| > 2 keep original K."""
     n = 12
