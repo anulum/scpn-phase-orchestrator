@@ -12,7 +12,7 @@
     "research_experimental_modules": 121,
     "runtime_serving_modules": 46,
     "rust_kernel_files": 91,
-    "test_files": 481
+    "test_files": 486
   },
   "documentation": {
     "public_pages": [
@@ -1177,6 +1177,7 @@
       "tests/test_adapters.py",
       "tests/test_adapters_coverage.py",
       "tests/test_adapters_network_validation.py",
+      "tests/test_adapters_slice_c.py",
       "tests/test_adjoint.py",
       "tests/test_api_docs_navigation.py",
       "tests/test_attention_residuals.py",
@@ -1229,6 +1230,7 @@
       "tests/test_chimera_backends.py",
       "tests/test_chimera_stability.py",
       "tests/test_cli.py",
+      "tests/test_cli_auto_coupling.py",
       "tests/test_closure_ethical.py",
       "tests/test_coherence_monitor_config_validation.py",
       "tests/test_compat.py",
@@ -1352,6 +1354,7 @@
       "tests/test_itpc_algorithm.py",
       "tests/test_itpc_backends.py",
       "tests/test_itpc_bridge_paths.py",
+      "tests/test_itpc_fallback_and_edges.py",
       "tests/test_itpc_stability.py",
       "tests/test_jax_engine.py",
       "tests/test_knm.py",
@@ -1497,6 +1500,7 @@
       "tests/test_recurrence.py",
       "tests/test_recurrence_algorithm.py",
       "tests/test_recurrence_backends.py",
+      "tests/test_recurrence_fallback_and_edges.py",
       "tests/test_recurrence_stability.py",
       "tests/test_redis_store.py",
       "tests/test_reduction_algorithm.py",
@@ -1559,6 +1563,7 @@
       "tests/test_stl_automata.py",
       "tests/test_stochastic.py",
       "tests/test_strange_loop_supervisor.py",
+      "tests/test_streamer.py",
       "tests/test_stress_scale.py",
       "tests/test_stuart_landau_binding.py",
       "tests/test_stuart_landau_cli.py",
