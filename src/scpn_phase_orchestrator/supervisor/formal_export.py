@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import isfinite
@@ -34,11 +35,13 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 )
 
 __all__ = [
+    "FormalCheckerAvailability",
     "FormalCheckerCommand",
     "FormalSafetyProperty",
     "FormalVerificationPackage",
     "PrismExport",
     "TLAExport",
+    "audit_formal_checker_availability",
     "build_formal_verification_package",
     "export_petri_net_prism",
     "export_petri_net_tla",
@@ -128,6 +131,23 @@ class FormalCheckerCommand:
     command: tuple[str, ...]
     execution_permitted: bool = False
 
+    def __post_init__(self) -> None:
+        _require_package_identifier(self.property_name, "checker property_name")
+        if self.checker not in {"prism", "tlc"}:
+            raise PolicyError("checker command checker must be 'prism' or 'tlc'")
+        _require_package_identifier(self.artifact_name, "checker artifact_name")
+        if not self.command:
+            raise PolicyError("checker command must not be empty")
+        for part in self.command:
+            if not isinstance(part, str) or not part.strip():
+                raise PolicyError("checker command parts must be non-empty strings")
+            if any(ord(char) < 32 for char in part):
+                raise PolicyError(
+                    "checker command parts must not contain control characters"
+                )
+        if self.execution_permitted:
+            raise PolicyError("formal checker command execution must stay disabled")
+
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe external checker command record."""
         return {
@@ -135,6 +155,72 @@ class FormalCheckerCommand:
             "checker": self.checker,
             "artifact_name": self.artifact_name,
             "command": list(self.command),
+            "execution_permitted": self.execution_permitted,
+        }
+
+
+@dataclass(frozen=True)
+class FormalCheckerAvailability:
+    """Non-executing readiness record for one external checker command."""
+
+    property_name: str
+    checker: str
+    artifact_name: str
+    executable: str
+    command: tuple[str, ...]
+    available: bool
+    resolved_path: str | None = None
+    status: str = "missing_executable"
+    execution_permitted: bool = False
+
+    def __post_init__(self) -> None:
+        _require_package_identifier(self.property_name, "availability property_name")
+        if self.checker not in {"prism", "tlc"}:
+            raise PolicyError("availability checker must be 'prism' or 'tlc'")
+        _require_package_identifier(self.artifact_name, "availability artifact_name")
+        if not isinstance(self.executable, str) or not self.executable.strip():
+            raise PolicyError("availability executable must be a non-empty string")
+        if any(ord(char) < 32 for char in self.executable):
+            raise PolicyError(
+                "availability executable must not contain control characters"
+            )
+        if self.resolved_path is not None and (
+            not isinstance(self.resolved_path, str)
+            or not self.resolved_path.strip()
+            or any(ord(char) < 32 for char in self.resolved_path)
+        ):
+            raise PolicyError(
+                "availability resolved_path must be None or a non-empty safe string"
+            )
+        if self.status not in {"ready_not_executed", "missing_executable"}:
+            raise PolicyError("availability status is unsupported")
+        if self.available != (self.status == "ready_not_executed"):
+            raise PolicyError("availability status must match available flag")
+        if not self.command:
+            raise PolicyError("availability command must not be empty")
+        for part in self.command:
+            if not isinstance(part, str) or not part.strip():
+                raise PolicyError(
+                    "availability command parts must be non-empty strings"
+                )
+            if any(ord(char) < 32 for char in part):
+                raise PolicyError(
+                    "availability command parts must not contain control characters"
+                )
+        if self.execution_permitted:
+            raise PolicyError("formal checker availability must not permit execution")
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe non-executing checker readiness record."""
+        return {
+            "property_name": self.property_name,
+            "checker": self.checker,
+            "artifact_name": self.artifact_name,
+            "executable": self.executable,
+            "command": list(self.command),
+            "available": self.available,
+            "resolved_path": self.resolved_path,
+            "status": self.status,
             "execution_permitted": self.execution_permitted,
         }
 
@@ -215,6 +301,48 @@ def _checker_matches_artifact(
     if property_.checker == "prism":
         return artifact_type == "prism"
     return artifact_type == "tla"
+
+
+def audit_formal_checker_availability(
+    package: FormalVerificationPackage,
+    *,
+    executable_paths: Mapping[str, str | None] | None = None,
+) -> tuple[FormalCheckerAvailability, ...]:
+    """Return non-executing external-checker readiness records.
+
+    The audit resolves only the first command token for each package checker
+    command. It never materialises artefacts, writes files, launches subprocesses,
+    or changes the package execution policy. Tests and CI may inject
+    ``executable_paths`` for deterministic readiness checks; production callers
+    can omit it to use ``shutil.which`` against the current host.
+    """
+
+    if not isinstance(package, FormalVerificationPackage):
+        raise PolicyError("checker availability audit requires a formal package")
+    records: list[FormalCheckerAvailability] = []
+    for command in package.checker_commands:
+        executable = command.command[0]
+        if executable_paths is None:
+            resolved_path = shutil.which(executable)
+        elif executable in executable_paths:
+            resolved_path = executable_paths[executable]
+        else:
+            resolved_path = None
+        available = resolved_path is not None
+        records.append(
+            FormalCheckerAvailability(
+                property_name=command.property_name,
+                checker=command.checker,
+                artifact_name=command.artifact_name,
+                executable=executable,
+                command=command.command,
+                available=available,
+                resolved_path=resolved_path,
+                status="ready_not_executed" if available else "missing_executable",
+                execution_permitted=False,
+            )
+        )
+    return tuple(records)
 
 
 def build_formal_verification_package(

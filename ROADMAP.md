@@ -348,6 +348,10 @@ sessions do not treat them as abstract research labels.
   - CLI formal package export is in place:
     `spo formal-export --export package` emits the no-execution JSON manifest
     for protocol PRISM/TLA and policy PRISM artefacts.
+  - External-checker readiness audits are in place:
+    `audit_formal_checker_availability()` records PRISM/TLC command
+    executable availability as deterministic, non-executing audit records with
+    ready/missing status, resolved path evidence, and execution disabled.
   - Acceptance: plasma, power, and medical-style policies have reproducible
     safety artefacts suitable for credibility reviews.
 - Neuromorphic and quantum tighter integration:

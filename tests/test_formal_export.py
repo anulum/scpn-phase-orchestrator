@@ -19,12 +19,15 @@ from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.supervisor import (
     CompoundCondition,
+    FormalCheckerAvailability,
+    FormalCheckerCommand,
     FormalSafetyProperty,
     FormalVerificationPackage,
     PolicyAction,
     PolicyCondition,
     PolicyRule,
     PolicySTLSpec,
+    audit_formal_checker_availability,
     build_formal_verification_package,
     export_petri_net_prism,
     export_petri_net_tla,
@@ -201,6 +204,124 @@ def test_formal_verification_package_records_hashes_and_checker_commands() -> No
             "execution_permitted": False,
         },
     ]
+
+
+def test_formal_checker_availability_audit_is_non_executing_and_deterministic() -> None:
+    prism_export = export_petri_net_prism(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    tla_export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="supervisor net",
+    )
+    package = build_formal_verification_package(
+        {
+            "petri_supervisor": prism_export,
+            "petri_supervisor_tla": tla_export,
+        },
+        (
+            FormalSafetyProperty(
+                name="petri_tokens_bounded",
+                artifact_name="petri_supervisor",
+                checker="prism",
+                expression='P>=1 [ G !"active_done" | F "active_done" ]',
+            ),
+            FormalSafetyProperty(
+                name="tla_type_ok",
+                artifact_name="petri_supervisor_tla",
+                checker="tlc",
+                expression="Safety",
+            ),
+        ),
+    )
+
+    audit = audit_formal_checker_availability(
+        package,
+        executable_paths={
+            "prism": "/opt/prism/bin/prism",
+            "tlc2.TLC": None,
+        },
+    )
+    repeated = audit_formal_checker_availability(
+        package,
+        executable_paths={
+            "prism": "/opt/prism/bin/prism",
+            "tlc2.TLC": None,
+        },
+    )
+
+    assert audit == repeated
+    assert all(isinstance(item, FormalCheckerAvailability) for item in audit)
+    assert [item.to_audit_record() for item in audit] == [
+        {
+            "property_name": "petri_tokens_bounded",
+            "checker": "prism",
+            "artifact_name": "petri_supervisor",
+            "executable": "prism",
+            "command": [
+                "prism",
+                "petri_supervisor.prism",
+                "-pf",
+                'P>=1 [ G !"active_done" | F "active_done" ]',
+            ],
+            "available": True,
+            "resolved_path": "/opt/prism/bin/prism",
+            "status": "ready_not_executed",
+            "execution_permitted": False,
+        },
+        {
+            "property_name": "tla_type_ok",
+            "checker": "tlc",
+            "artifact_name": "petri_supervisor_tla",
+            "executable": "tlc2.TLC",
+            "command": [
+                "tlc2.TLC",
+                "petri_supervisor_tla.tla",
+                "-config",
+                "petri_supervisor_tla.cfg",
+            ],
+            "available": False,
+            "resolved_path": None,
+            "status": "missing_executable",
+            "execution_permitted": False,
+        },
+    ]
+
+
+def test_formal_checker_availability_and_commands_fail_closed() -> None:
+    with pytest.raises(PolicyError, match="execution must stay disabled"):
+        FormalCheckerCommand(
+            property_name="unsafe_exec",
+            checker="prism",
+            artifact_name="petri_supervisor",
+            command=("prism", "petri_supervisor.prism"),
+            execution_permitted=True,
+        )
+    with pytest.raises(PolicyError, match="must not permit execution"):
+        FormalCheckerAvailability(
+            property_name="unsafe_availability",
+            checker="prism",
+            artifact_name="petri_supervisor",
+            executable="prism",
+            command=("prism", "petri_supervisor.prism"),
+            available=True,
+            resolved_path="/opt/prism/bin/prism",
+            status="ready_not_executed",
+            execution_permitted=True,
+        )
+    with pytest.raises(PolicyError, match="status must match"):
+        FormalCheckerAvailability(
+            property_name="mismatch",
+            checker="tlc",
+            artifact_name="petri_supervisor_tla",
+            executable="tlc2.TLC",
+            command=("tlc2.TLC", "petri_supervisor_tla.tla"),
+            available=True,
+            status="missing_executable",
+        )
 
 
 @pytest.mark.parametrize(

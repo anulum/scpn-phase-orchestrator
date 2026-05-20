@@ -43,11 +43,13 @@ from scpn_phase_orchestrator.supervisor.causal import (
 )
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.formal_export import (
+    FormalCheckerAvailability,
     FormalCheckerCommand,
     FormalSafetyProperty,
     FormalVerificationPackage,
     PrismExport,
     TLAExport,
+    audit_formal_checker_availability,
     build_formal_verification_package,
     export_petri_net_prism,
     export_petri_net_tla,
@@ -157,6 +159,7 @@ __all__ = [
     "FEPHierarchyChildAssessment",
     "FEPPredictionAssessment",
     "FEPPredictiveSupervisor",
+    "FormalCheckerAvailability",
     "FormalCheckerCommand",
     "FormalSafetyProperty",
     "FormalVerificationPackage",
@@ -212,6 +215,7 @@ __all__ = [
     "ValueConstraint",
     "ValueViolation",
     "assess_fep_hierarchy",
+    "audit_formal_checker_availability",
     "build_bft_meta_orchestrator_manifest",
     "build_formal_verification_package",
     "build_hierarchical_orchestration_plan",
