@@ -15,6 +15,7 @@ from benchmarks.reference_suite import (
     benchmark_auto_binding_proposal_quality,
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
+    benchmark_formal_export_artifact_quality,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
     benchmark_replay_policy_candidate_quality,
@@ -192,6 +193,36 @@ def test_bayesian_backend_fail_closed_reports_thresholds_and_records() -> None:
     assert all(record["sample_count"] == 0 for record in results[1:])
 
 
+def test_formal_export_artifact_quality_benchmark_shape() -> None:
+    out = benchmark_formal_export_artifact_quality()
+
+    assert out["suite"] == "formal_export_artifact_quality"
+    assert out["artifact_count"] == 5
+    assert out["identifier_map_count"] >= 12
+    assert out["fail_closed_count"] >= 4
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["artifact_sha256"])) == 64
+    assert int(out["petri_prism_bytes"]) > 0
+    assert int(out["petri_tla_bytes"]) > 0
+    assert int(out["policy_prism_bytes"]) > 0
+    assert int(out["policy_tla_bytes"]) > 0
+    assert int(out["stl_prism_bytes"]) > 0
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_formal_export_artifact_quality_reports_thresholds() -> None:
+    out = benchmark_formal_export_artifact_quality()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+
+    assert thresholds == {
+        "min_artifact_count": 5,
+        "min_fail_closed_count": 4,
+        "min_identifier_map_count": 12,
+        "require_deterministic_hash": True,
+    }
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -200,6 +231,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "auto_binding",
         "bayesian_backends",
         "bayesian_posterior",
+        "formal_export",
         "replay_policy",
         "kuramoto",
         "stuart_landau",

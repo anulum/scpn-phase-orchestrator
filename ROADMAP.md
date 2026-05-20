@@ -326,6 +326,11 @@ sessions do not treat them as abstract research labels.
 - Formal verification export:
   - Export Petri nets, supervisor transitions, policy DSL, and STL monitors to
     PRISM, SPIN, TLA+, SMT, or equivalent proof workflows.
+  - PRISM/TLA/STL export evidence is now benchmark-gated:
+    `benchmark_formal_export_artifact_quality()` emits Petri, policy, and STL
+    artefacts, records deterministic SHA-256 evidence, counts identifier maps,
+    and proves malformed nets, policy rules, and STL predicates fail closed
+    before text generation.
   - Acceptance: plasma, power, and medical-style policies have reproducible
     safety artefacts suitable for credibility reviews.
 - Neuromorphic and quantum tighter integration:

@@ -14,6 +14,7 @@ import sys
 import time
 from collections.abc import Iterable, Mapping
 from datetime import date
+from hashlib import sha256
 from pathlib import Path
 from typing import NamedTuple, TypedDict
 
@@ -32,12 +33,28 @@ from scpn_phase_orchestrator.autotune.reward import (
     PolicyProposalConfig,
     RewardObservation,
 )
+from scpn_phase_orchestrator.exceptions import PolicyError
+from scpn_phase_orchestrator.supervisor.formal_export import (
+    export_petri_net_prism,
+    export_petri_net_tla,
+    export_policy_rules_prism,
+    export_policy_rules_tla,
+    export_stl_specs_prism,
+)
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
+    Guard,
     Marking,
     PetriNet,
     Place,
     Transition,
+)
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    CompoundCondition,
+    PolicyAction,
+    PolicyCondition,
+    PolicyRule,
+    PolicySTLSpec,
 )
 from scpn_phase_orchestrator.upde.bayesian import (
     BayesianUPDEConfig,
@@ -98,6 +115,13 @@ class BayesianBackendFailClosedThresholds(NamedTuple):
     min_available_backends: int
     required_fail_closed_backends: frozenset[str]
     max_unexpected_reserved_successes: int
+
+
+class FormalExportThresholds(NamedTuple):
+    min_artifact_count: int
+    min_fail_closed_count: int
+    min_identifier_map_count: int
+    require_deterministic_hash: bool
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -579,6 +603,108 @@ def benchmark_bayesian_backend_fail_closed() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
+    """Benchmark formal exporter artefact generation and fail-closed guards."""
+    thresholds = FormalExportThresholds(
+        min_artifact_count=5,
+        min_fail_closed_count=4,
+        min_identifier_map_count=12,
+        require_deterministic_hash=True,
+    )
+    net, marking, rules, stl_specs = _formal_export_fixture()
+
+    t0 = time.perf_counter()
+    petri_prism = export_petri_net_prism(
+        net,
+        marking,
+        module_name="formal benchmark",
+    )
+    petri_tla = export_petri_net_tla(
+        net,
+        marking,
+        module_name="FormalBenchmark",
+    )
+    policy_prism = export_policy_rules_prism(
+        rules,
+        module_name="policy benchmark",
+    )
+    policy_tla = export_policy_rules_tla(
+        rules,
+        module_name="PolicyBenchmark",
+    )
+    stl_prism = export_stl_specs_prism(
+        stl_specs,
+        module_name="stl benchmark",
+    )
+    repeated = export_policy_rules_prism(
+        rules,
+        module_name="policy benchmark",
+    )
+    fail_closed_count = _formal_export_fail_closed_count()
+    elapsed = time.perf_counter() - t0
+
+    artifact_texts = (
+        petri_prism.model,
+        petri_tla.module,
+        policy_prism.model,
+        policy_tla.module,
+        stl_prism.model,
+    )
+    artifact_hash = sha256("\n---\n".join(artifact_texts).encode()).hexdigest()
+    repeated_hash = sha256(repeated.model.encode()).hexdigest()
+    deterministic_hash = int(
+        repeated_hash == sha256(policy_prism.model.encode()).hexdigest()
+    )
+    identifier_map_count = sum(
+        len(mapping)
+        for mapping in (
+            petri_prism.place_names,
+            petri_prism.transition_names,
+            petri_prism.metric_names,
+            policy_prism.rule_names,
+            policy_prism.action_names,
+            policy_prism.metric_names,
+            stl_prism.stl_names,
+            stl_prism.metric_names,
+        )
+    )
+    acceptance_passed = int(
+        len(artifact_texts) >= thresholds.min_artifact_count
+        and fail_closed_count >= thresholds.min_fail_closed_count
+        and identifier_map_count >= thresholds.min_identifier_map_count
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and "Safety == TypeOK" in petri_tla.module
+        and 'label "fires_boost_K"' in policy_prism.model
+        and 'label "stl_keep_sync_satisfied"' in stl_prism.model
+    )
+
+    return {
+        "suite": "formal_export_artifact_quality",
+        "artifact_count": len(artifact_texts),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(artifact_texts) / elapsed,
+        "identifier_map_count": identifier_map_count,
+        "fail_closed_count": fail_closed_count,
+        "deterministic_hash": deterministic_hash,
+        "artifact_sha256": artifact_hash,
+        "petri_prism_bytes": len(petri_prism.model.encode()),
+        "petri_tla_bytes": len(petri_tla.module.encode()),
+        "policy_prism_bytes": len(policy_prism.model.encode()),
+        "policy_tla_bytes": len(policy_tla.module.encode()),
+        "stl_prism_bytes": len(stl_prism.model.encode()),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_artifact_count": thresholds.min_artifact_count,
+                "min_fail_closed_count": thresholds.min_fail_closed_count,
+                "min_identifier_map_count": thresholds.min_identifier_map_count,
+                "require_deterministic_hash": (thresholds.require_deterministic_hash),
+            },
+            sort_keys=True,
+        ),
+    }
+
+
 def _deterministic_replay_observation(
     candidate: KnobPolicyCandidate,
 ) -> RewardObservation:
@@ -630,6 +756,98 @@ def _bayesian_backend_audit_fixture() -> tuple[
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros_like(knm)
     return phases, omega, knm, alpha, 0.01
+
+
+def _formal_export_fixture() -> tuple[
+    PetriNet,
+    Marking,
+    list[PolicyRule],
+    list[PolicySTLSpec],
+]:
+    net = PetriNet(
+        places=[
+            Place("warmup"),
+            Place("nominal"),
+            Place("recovery"),
+            Place("critical"),
+        ],
+        transitions=[
+            Transition(
+                name="start",
+                inputs=[Arc("warmup")],
+                outputs=[Arc("nominal")],
+                guard=Guard("stability_proxy", ">", 0.6),
+            ),
+            Transition(
+                name="escalate",
+                inputs=[Arc("nominal")],
+                outputs=[Arc("critical")],
+                guard=Guard("R_bad.0", ">=", 0.4),
+            ),
+            Transition(
+                name="recover",
+                inputs=[Arc("critical")],
+                outputs=[Arc("recovery")],
+                guard=Guard("R_good.0", ">=", 0.7),
+            ),
+        ],
+    )
+    rules = [
+        PolicyRule(
+            name="boost K",
+            regimes=["DEGRADED", "CRITICAL"],
+            condition=PolicyCondition("R_good", 0, "<", 0.6),
+            actions=[PolicyAction("K", "global", 0.1, 5.0)],
+            max_fires=2,
+        ),
+        PolicyRule(
+            name="damp bad",
+            regimes=["CRITICAL"],
+            condition=CompoundCondition(
+                conditions=[
+                    PolicyCondition("R_bad", 0, ">", 0.4),
+                    PolicyCondition("stability_proxy", None, "<=", 0.5),
+                ],
+                logic="AND",
+            ),
+            actions=[PolicyAction("alpha", "layer_0", -0.05, 3.0)],
+        ),
+    ]
+    stl_specs = [
+        PolicySTLSpec(
+            name="keep sync",
+            spec="always (R >= 0.3 and amplitude_spread < 0.2)",
+            severity="hard",
+        ),
+        PolicySTLSpec(
+            name="recover",
+            spec="eventually (R_good >= 0.8)",
+        ),
+    ]
+    return net, Marking(tokens={"warmup": 1}), rules, stl_specs
+
+
+def _formal_export_fail_closed_count() -> int:
+    failures = 0
+    malformed_rule = PolicyRule(
+        name="bad",
+        regimes=["DEGRADED"],
+        condition=PolicyCondition("R", 0, "!=", 0.1),
+        actions=[PolicyAction("K", "global", 0.1, 1.0)],
+    )
+    probes = (
+        lambda: export_petri_net_prism(PetriNet([], []), Marking()),
+        lambda: export_petri_net_tla(PetriNet([], []), Marking()),
+        lambda: export_policy_rules_prism([malformed_rule]),
+        lambda: export_policy_rules_tla([malformed_rule]),
+        lambda: export_stl_specs_prism([PolicySTLSpec("bad", "always (R != 0.5)")]),
+    )
+    for probe in probes:
+        try:
+            probe()
+        except PolicyError:
+            failures += 1
+    return failures
 
 
 def _audit_record_is_finite(value: object) -> bool:
@@ -862,6 +1080,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "replay_policy": benchmark_replay_policy_candidate_quality(),
             "bayesian_posterior": benchmark_bayesian_posterior_fit_quality(),
             "bayesian_backends": benchmark_bayesian_backend_fail_closed(),
+            "formal_export": benchmark_formal_export_artifact_quality(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),
