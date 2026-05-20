@@ -99,6 +99,7 @@ def test_constructor_rejects_invalid_thresholds(kwargs, match):
         (np.empty((0, 4)), "phases_trials"),
         (np.array([[0.0, np.nan], [1.0, 2.0]]), "phases_trials"),
         (np.array([[True, False], [False, True]]), "phases_trials"),
+        (np.array([[0.0, "not-a-phase"]], dtype=object), "phases_trials"),
     ],
 )
 def test_evaluate_rejects_invalid_phase_trials(phases, match):
@@ -106,7 +107,10 @@ def test_evaluate_rejects_invalid_phase_trials(phases, match):
         EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
 
 
-@pytest.mark.parametrize("pause_indices", [[0.5], [True], np.array([[0, 1]])])
+@pytest.mark.parametrize(
+    "pause_indices",
+    [[0.5], [True], np.array([[0, 1]]), ["not-an-index"], [math.inf]],
+)
 def test_evaluate_rejects_invalid_pause_indices(pause_indices):
     phases = _entrained_phases(n_trials=4, n_time=8)
     with pytest.raises((TypeError, ValueError), match="pause_indices"):

@@ -68,6 +68,28 @@ class TestEstimateCoupling:
         knm = estimate_coupling(phases, omegas, dt=0.01)
         assert np.all(np.isfinite(knm))
 
+    def test_lstsq_failure_fails_closed_to_zero_coupling(self, monkeypatch):
+        phases = np.array(
+            [
+                [0.0, 0.2, 0.5, 0.9],
+                [0.1, 0.3, 0.6, 1.0],
+                [0.4, 0.5, 0.7, 1.1],
+            ],
+            dtype=np.float64,
+        )
+
+        def raise_linalg_error(*_args, **_kwargs):
+            raise np.linalg.LinAlgError("singular regression design")
+
+        monkeypatch.setattr(np.linalg, "lstsq", raise_linalg_error)
+
+        knm = estimate_coupling(phases, np.ones(3), dt=0.01)
+
+        assert knm.shape == (3, 3)
+        np.testing.assert_array_equal(knm, np.zeros((3, 3), dtype=np.float64))
+        np.testing.assert_array_equal(np.diag(knm), 0.0)
+        assert np.all(np.isfinite(knm))
+
 
 class TestHarmonicCoupling:
     def test_returns_dict(self):
