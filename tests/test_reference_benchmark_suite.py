@@ -17,6 +17,7 @@ from benchmarks.reference_suite import (
     benchmark_bayesian_posterior_fit_quality,
     benchmark_domain_formal_safety_exports,
     benchmark_formal_export_artifact_quality,
+    benchmark_hybrid_cocompiler_review_gate,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
     benchmark_replay_policy_candidate_quality,
@@ -262,6 +263,38 @@ def test_domain_formal_safety_exports_reports_thresholds_and_domains() -> None:
     assert all(record["deterministic_hash"] == 1 for record in results)
 
 
+def test_hybrid_cocompiler_review_gate_benchmark_shape() -> None:
+    out = benchmark_hybrid_cocompiler_review_gate()
+
+    assert out["suite"] == "hybrid_cocompiler_review_gate"
+    assert out["manifest_count"] == 1
+    assert out["target_backend_count"] == 4
+    assert out["component_hash_count"] == 3
+    assert out["quantum_term_count"] == 3
+    assert out["neuromorphic_sample_count"] == 2
+    assert out["blocked_probe_count"] == 2
+    assert out["non_actuating"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["hybrid_manifest_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_hybrid_cocompiler_review_gate_reports_thresholds_and_backends() -> None:
+    out = benchmark_hybrid_cocompiler_review_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    backends = json.loads(str(out["target_backends_json"]))
+
+    assert thresholds == {
+        "min_blocked_probe_count": 2,
+        "min_neuromorphic_sample_count": 2,
+        "min_quantum_term_count": 3,
+        "min_target_backend_count": 4,
+        "require_non_actuating": True,
+    }
+    assert backends == ["qiskit_openqasm3", "pennylane_qasm", "lava", "pynn"]
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -272,6 +305,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "bayesian_posterior",
         "domain_formal_export",
         "formal_export",
+        "hybrid_cocompiler",
         "replay_policy",
         "kuramoto",
         "stuart_landau",

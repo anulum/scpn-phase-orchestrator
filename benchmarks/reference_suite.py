@@ -20,6 +20,9 @@ from typing import NamedTuple, TypedDict
 
 import numpy as np
 
+from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
+    build_hybrid_cocompiler_manifest,
+)
 from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_time_series_csv,
 )
@@ -137,6 +140,14 @@ class DomainFormalExportFixture(NamedTuple):
     rules: tuple[PolicyRule, ...]
     stl_specs: tuple[PolicySTLSpec, ...]
     required_labels: tuple[str, ...]
+
+
+class HybridCocompilerThresholds(NamedTuple):
+    min_target_backend_count: int
+    min_quantum_term_count: int
+    min_neuromorphic_sample_count: int
+    min_blocked_probe_count: int
+    require_non_actuating: bool
 
 
 class ReferenceSuiteResult(TypedDict):
@@ -825,6 +836,89 @@ def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_hybrid_cocompiler_review_gate() -> dict[str, float | int | str]:
+    """Benchmark hybrid quantum/neuromorphic review manifest gates."""
+    thresholds = HybridCocompilerThresholds(
+        min_target_backend_count=4,
+        min_quantum_term_count=3,
+        min_neuromorphic_sample_count=2,
+        min_blocked_probe_count=2,
+        require_non_actuating=True,
+    )
+    quantum_manifest = _hybrid_quantum_manifest()
+    neuromorphic_manifest = _hybrid_neuromorphic_manifest()
+
+    t0 = time.perf_counter()
+    manifest = build_hybrid_cocompiler_manifest(
+        quantum_manifest,
+        neuromorphic_manifest,
+        n_channel_semantics=("Q_control", "S_spike", "audit"),
+    )
+    repeated = build_hybrid_cocompiler_manifest(
+        quantum_manifest,
+        neuromorphic_manifest,
+        n_channel_semantics=("Q_control", "S_spike", "audit"),
+    )
+    blocked_probe_count = _hybrid_cocompiler_blocked_probe_count(
+        quantum_manifest,
+        neuromorphic_manifest,
+    )
+    elapsed = time.perf_counter() - t0
+
+    parity = manifest["co_simulation_parity"]
+    target_backends = manifest["target_backends"]
+    component_hashes = manifest["component_hashes"]
+    non_actuating = (
+        manifest["qpu_execution_permitted"] is False
+        and manifest["hardware_write_permitted"] is False
+        and manifest["actuation_permitted"] is False
+    )
+    component_hash_count = len(component_hashes)
+    deterministic_hash = int(
+        manifest["hybrid_manifest_sha256"] == repeated["hybrid_manifest_sha256"]
+    )
+    acceptance_passed = int(
+        manifest["status"] == "co_simulation_parity_passed"
+        and len(target_backends) >= thresholds.min_target_backend_count
+        and parity["quantum_term_count"] >= thresholds.min_quantum_term_count
+        and parity["neuromorphic_sample_count"]
+        >= thresholds.min_neuromorphic_sample_count
+        and blocked_probe_count >= thresholds.min_blocked_probe_count
+        and non_actuating == thresholds.require_non_actuating
+        and component_hash_count == 3
+        and deterministic_hash == 1
+    )
+
+    return {
+        "suite": "hybrid_cocompiler_review_gate",
+        "manifest_count": 1,
+        "wall_time_s": elapsed,
+        "steps_per_second": 1.0 / elapsed,
+        "target_backend_count": len(target_backends),
+        "component_hash_count": component_hash_count,
+        "quantum_term_count": parity["quantum_term_count"],
+        "neuromorphic_sample_count": parity["neuromorphic_sample_count"],
+        "blocked_probe_count": blocked_probe_count,
+        "non_actuating": int(non_actuating),
+        "deterministic_hash": deterministic_hash,
+        "hybrid_manifest_sha256": manifest["hybrid_manifest_sha256"],
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_blocked_probe_count": thresholds.min_blocked_probe_count,
+                "min_neuromorphic_sample_count": (
+                    thresholds.min_neuromorphic_sample_count
+                ),
+                "min_quantum_term_count": thresholds.min_quantum_term_count,
+                "min_target_backend_count": thresholds.min_target_backend_count,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "target_backends_json": json.dumps(target_backends, sort_keys=True),
+    }
+
+
 def _deterministic_replay_observation(
     candidate: KnobPolicyCandidate,
 ) -> RewardObservation:
@@ -1095,6 +1189,114 @@ def _domain_formal_export_fixtures() -> tuple[DomainFormalExportFixture, ...]:
     )
 
 
+def _hybrid_quantum_manifest() -> dict[str, object]:
+    return {
+        "manifest_kind": "quantum_compiler_manifest",
+        "schema_version": 1,
+        "status": "co_simulation_parity_passed",
+        "target_backends": ["qiskit_openqasm3", "pennylane_qasm"],
+        "n_qubits": 2,
+        "trotter_order": 2,
+        "dt": 0.125,
+        "qpu_execution_permitted": False,
+        "actuation_permitted": False,
+        "frequency_terms": [
+            {"qubit": 0, "omega": 1.0, "rz_angle": 0.125},
+            {"qubit": 1, "omega": -0.5, "rz_angle": -0.0625},
+        ],
+        "coupling_terms": [
+            {
+                "source": 0,
+                "target": 1,
+                "forward_coupling": 0.25,
+                "reverse_coupling": 0.5,
+                "symmetric_coupling": 0.375,
+                "xx_angle": 0.046875,
+                "yy_angle": 0.046875,
+            },
+        ],
+        "openqasm": "OPENQASM 3.0;\nqubit[2] q;\n",
+        "qasm_sha256": "a" * 64,
+        "co_simulation_parity": {
+            "engine": "deterministic_xy_term_reconstruction",
+            "max_abs_frequency_error": 0.0,
+            "max_abs_coupling_error": 0.0,
+            "term_count": 3,
+        },
+        "operator_commands": [
+            "review quantum_compiler_manifest.json",
+            "run Qiskit or PennyLane simulator parity before QPU handoff",
+        ],
+        "manifest_sha256": "b" * 64,
+    }
+
+
+def _hybrid_neuromorphic_manifest() -> dict[str, object]:
+    return {
+        "manifest_kind": "neuromorphic_schedule_manifest",
+        "schema_version": 1,
+        "status": "simulator_parity_passed",
+        "target_backends": ["lava", "pynn"],
+        "n_layers": 2,
+        "n_neurons_per_population": 32,
+        "tau_rc_s": 0.02,
+        "tau_ref_s": 0.002,
+        "input_scale": 2.0,
+        "threshold_hz": 20.0,
+        "actuation_permitted": False,
+        "hardware_write_permitted": False,
+        "populations": [
+            {"layer": 0, "R": 0.25, "psi": 0.1, "estimated_rate_hz": 5.0},
+            {"layer": 1, "R": 0.75, "psi": 0.3, "estimated_rate_hz": 15.0},
+        ],
+        "projections": [
+            {"source": 0, "target": 1, "weight": 0.4, "delay_ms": 1.0},
+        ],
+        "control_actions": [
+            {
+                "knob": "spike_rate_bias",
+                "scope": "layer_1",
+                "value": 15.0,
+                "ttl_s": 0.125,
+                "justification": "deterministic schedule parity",
+            },
+        ],
+        "simulator_parity": {
+            "engine": "numpy_lif_rate_estimate",
+            "max_abs_rate_error_hz": 0.0,
+            "sample_count": 2,
+        },
+        "operator_commands": [
+            "review neuromorphic_schedule_manifest.json",
+            "run Lava or PyNN simulator parity before hardware handoff",
+        ],
+        "schedule_sha256": "c" * 64,
+    }
+
+
+def _hybrid_cocompiler_blocked_probe_count(
+    quantum_manifest: dict[str, object],
+    neuromorphic_manifest: dict[str, object],
+) -> int:
+    blocked_count = 0
+    broken_quantum = dict(quantum_manifest)
+    broken_quantum["status"] = "co_simulation_parity_failed"
+    quantum_block = build_hybrid_cocompiler_manifest(
+        broken_quantum,
+        neuromorphic_manifest,
+    )
+    blocked_count += int(quantum_block["status"] == "blocked")
+
+    broken_neuromorphic = dict(neuromorphic_manifest)
+    broken_neuromorphic["hardware_write_permitted"] = True
+    neuromorphic_block = build_hybrid_cocompiler_manifest(
+        quantum_manifest,
+        broken_neuromorphic,
+    )
+    blocked_count += int(neuromorphic_block["status"] == "blocked")
+    return blocked_count
+
+
 def _audit_record_is_finite(value: object) -> bool:
     if isinstance(value, bool | str):
         return True
@@ -1327,6 +1529,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "bayesian_backends": benchmark_bayesian_backend_fail_closed(),
             "formal_export": benchmark_formal_export_artifact_quality(),
             "domain_formal_export": benchmark_domain_formal_safety_exports(),
+            "hybrid_cocompiler": benchmark_hybrid_cocompiler_review_gate(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),

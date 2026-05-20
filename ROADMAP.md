@@ -340,6 +340,11 @@ sessions do not treat them as abstract research labels.
 - Neuromorphic and quantum tighter integration:
   - Surface partner bridges by emitting Lava/BrainScaleS-style schedules and QPU
     control schedules from validated phase-control plans.
+  - Hybrid co-compiler review evidence is now benchmark-gated:
+    `benchmark_hybrid_cocompiler_review_gate()` links deterministic quantum
+    compiler and neuromorphic schedule manifests, records component hashes,
+    proves shared target-backend coverage, and verifies execution/write
+    permissions remain disabled under blocked probes.
   - Acceptance: execution stays disabled until real target evidence, hashes,
     parity reports, and operator approval exist.
 - Plugin ecosystem:
