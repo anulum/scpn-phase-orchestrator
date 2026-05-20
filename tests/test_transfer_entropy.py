@@ -209,3 +209,39 @@ class TestTEPipelineWiring:
         assert te.shape == (n, n)
         assert np.all(te >= 0.0)
         np.testing.assert_array_equal(np.diag(te), 0.0)
+
+
+def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
+    def fake_phase_te(src: np.ndarray, tgt: np.ndarray, bins: int) -> float:
+        assert src.shape == (3,)
+        assert tgt.shape == (3,)
+        assert bins == 6
+        return 0.75
+
+    def fake_matrix(
+        flat: np.ndarray, n_osc: int, n_time: int, bins: int
+    ) -> np.ndarray:
+        assert n_osc == 3
+        assert n_time == 3
+        assert bins == 6
+        return np.arange(n_osc * n_osc, dtype=np.float64).reshape((n_osc, n_osc))
+
+    def fake_loader():
+        return {"phase_te": fake_phase_te, "te_matrix": fake_matrix}
+
+    monkeypatch.setitem(te_mod._LOADERS, "rust", fake_loader)
+    previous = te_mod.ACTIVE_BACKEND
+    te_mod.ACTIVE_BACKEND = "rust"
+    try:
+        source = np.linspace(0.0, 1.0, 3)
+        target = np.linspace(0.1, 1.1, 3)
+        phase_value = phase_transfer_entropy(source, target, n_bins=6)
+        matrix_value = transfer_entropy_matrix(
+            np.stack([source, target, np.array([0.2, 0.4, 0.6])]), n_bins=6
+        )
+    finally:
+        te_mod.ACTIVE_BACKEND = previous
+
+    assert phase_value == 0.75
+    assert matrix_value.shape == (3, 3)
+    assert matrix_value[0, 1] == 1.0

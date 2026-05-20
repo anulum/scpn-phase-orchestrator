@@ -18,6 +18,7 @@ from click.testing import CliRunner
 import scpn_phase_orchestrator.runtime.cli as cli_module
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.plugins import PluginCapability, PluginManifest
+from scpn_phase_orchestrator.runtime.audit_stream import read_event_stream
 from scpn_phase_orchestrator.runtime.cli import main
 
 
@@ -1975,6 +1976,80 @@ def test_replay_verify_rejects_logs_without_header(runner, audit_log_path):
 
     assert result.exit_code == 1
     assert "ERROR: no header record in log" in result.output
+
+
+def test_run_creates_sidecar_audit_jsonl_for_audit_stream_output(
+    runner, valid_spec_path, tmp_path
+):
+    stream_path = tmp_path / "run_trace.spoa"
+    jsonl_path = stream_path.with_suffix(".jsonl")
+
+    result = runner.invoke(
+        main,
+        [
+            "run",
+            valid_spec_path,
+            "--steps",
+            "2",
+            "--audit-stream",
+            str(stream_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert stream_path.exists()
+    assert jsonl_path.exists()
+
+    jsonl_records = [
+        json.loads(line)
+        for line in jsonl_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(jsonl_records) == 3
+    assert jsonl_records[0]["header"] is True
+    assert jsonl_records[0]["binding_summary"]["name"] == "cli-test"
+
+    events = read_event_stream(stream_path)
+    assert len(events) == 3
+    assert events[0].event_type == "header"
+    assert events[1].event_type == "step"
+
+
+def test_watch_rejects_invalid_audit_stream_payload(runner, tmp_path):
+    stream_path = tmp_path / "corrupt.spoa"
+    stream_path.write_text("not an SPO audit stream", encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "watch",
+            str(stream_path),
+            "--from-start",
+            "--max-events",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "ERROR: not an SPO audit event stream" in result.output
+
+
+def test_watch_rejects_non_positive_poll_interval(runner, tmp_path):
+    stream_path = tmp_path / "run_trace.spoa"
+    stream_path.write_bytes(b"not read before poll validation")
+
+    result = runner.invoke(
+        main,
+        [
+            "watch",
+            str(stream_path),
+            "--poll-interval",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "ERROR: --poll-interval must be positive" in result.output
 
 
 @pytest.mark.parametrize(

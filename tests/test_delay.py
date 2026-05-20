@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.upde import delay as delay_mod
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -161,6 +162,56 @@ class TestDelayBufferEdgeCases:
         buf.push(np.array([4.0, 5.0, 6.0]))
         np.testing.assert_array_equal(buf.get_delayed(1), np.array([4.0, 5.0, 6.0]))
         assert buf.get_delayed(2) is None
+
+
+def test_rust_path_is_used_when_flagged(monkeypatch):
+    call = {}
+
+    def fake_rust_run(
+        phases64: np.ndarray,
+        omegas64: np.ndarray,
+        knm_flat: np.ndarray,
+        alpha_flat: np.ndarray,
+        n: int,
+        zeta: float,
+        psi: float,
+        dt: float,
+        delay_steps: int,
+        n_steps: int,
+    ) -> np.ndarray:
+        call.update(
+            {
+                "phases_shape": tuple(phases64.shape),
+                "omegas_shape": tuple(omegas64.shape),
+                "knm_size": int(knm_flat.size),
+                "alpha_size": int(alpha_flat.size),
+                "n": n,
+                "n_steps": n_steps,
+                "delay_steps": delay_steps,
+                "dt": dt,
+                "zeta": zeta,
+                "psi": psi,
+            }
+        )
+        return phases64 + 0.123
+
+    monkeypatch.setattr(delay_mod, "_HAS_RUST", True)
+    monkeypatch.setattr(delay_mod, "_rust_delayed_run", fake_rust_run, raising=False)
+    eng = delay_mod.DelayedEngine(2, dt=0.01, delay_steps=3)
+
+    phases = np.array([0.4, 1.1], dtype=np.float64)
+    omegas = np.ones(2, dtype=np.float64)
+    knm = np.array([[0.0, 0.5], [0.2, 0.0]], dtype=np.float64)
+    alpha = np.full((2, 2), 0.01, dtype=np.float64)
+
+    out = eng.run(phases, omegas, knm, 0.2, 0.3, alpha, n_steps=4)
+
+    assert np.allclose(out, phases + 0.123)
+    assert call["n"] == 2
+    assert call["n_steps"] == 4
+    assert call["delay_steps"] == 3
+    assert call["knm_size"] == 4
+    assert call["alpha_size"] == 4
 
 
 class TestDelayedEnginePipelineEndToEnd:

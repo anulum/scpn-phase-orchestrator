@@ -12,6 +12,7 @@ import json
 
 import pytest
 
+from scpn_phase_orchestrator.binding import loader as loader_mod
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 
 _SPEC_DATA = {
@@ -309,6 +310,45 @@ def test_boundaries_preserved(tmp_path):
     assert b.lower == 0.1
     assert b.upper == 1.0
     assert b.severity == "soft"
+
+
+def test_loader_helper_type_guards_cover_optional_scalars_and_collections():
+    """Cover low-miss guard helpers around optional/list-like field parsing."""
+    assert loader_mod._optional_list(None, "optional") == []
+    assert loader_mod._optional_number(None, "level") is None
+    assert loader_mod._optional_str_list(["P", "I"], "channels") == ["P", "I"]
+    assert loader_mod._optional_number_list([1, 2.0], "omegas") == [1.0, 2.0]
+
+    with pytest.raises(BindingLoadError, match="expected list in channels"):
+        loader_mod._optional_list("not-list", "channels")
+
+    with pytest.raises(BindingLoadError, match="expected string in role"):
+        loader_mod._require_str(123, "role")
+
+    with pytest.raises(BindingLoadError, match="expected integer in index"):
+        loader_mod._require_int(True, "index")
+
+    with pytest.raises(BindingLoadError, match="expected number in decay_alpha"):
+        loader_mod._require_number("nan", "decay_alpha")
+
+
+def test_loader_rejects_invalid_channel_group_id(tmp_path):
+    """Invalid channel-group identifiers must fail during parser ingestion."""
+    data = {
+        **_SPEC_DATA,
+        "channel_groups": {
+            "bad group": {
+                "channels": ["P", "I"],
+                "required": True,
+                "description": "space in identifier",
+            }
+        },
+    }
+    p = tmp_path / "spec.json"
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(BindingLoadError, match="invalid channel group identifier"):
+        load_binding_spec(p)
 
 
 def test_actuator_limits_tuple(tmp_path):

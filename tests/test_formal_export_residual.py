@@ -15,6 +15,9 @@ import pytest
 from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.supervisor import (
     CompoundCondition,
+    FormalCheckerAvailability,
+    FormalCheckerCommand,
+    FormalSafetyProperty,
     PolicyAction,
     PolicyCondition,
     PolicyRule,
@@ -180,3 +183,47 @@ def test_stl_export_rejects_bad_syntax_and_keeps_signals_safe() -> None:
         export_stl_specs_prism([PolicySTLSpec("until", "R >= 0.5 until R_good >= 1")])
     with pytest.raises(PolicyError, match="unsupported predicate syntax"):
         export_stl_specs_prism([PolicySTLSpec("bad predicate", "always (R != 0.5)")])
+
+
+def test_formal_checker_contracts_reject_execution_and_status_mismatches() -> None:
+    with pytest.raises(PolicyError, match="execution must stay disabled"):
+        FormalCheckerCommand(
+            property_name="unsafe",
+            checker="prism",
+            artifact_name="petri",
+            command=("prism", "petri.prism"),
+            execution_permitted=True,
+        )
+
+    with pytest.raises(PolicyError, match="must not permit execution"):
+        FormalCheckerAvailability(
+            property_name="unsafe",
+            checker="tlc",
+            artifact_name="petri_tla",
+            executable="tlc2.TLC",
+            command=("tlc2.TLC", "petri.tla", "-config", "petri.cfg"),
+            available=True,
+            status="ready_not_executed",
+            execution_permitted=True,
+        )
+
+    with pytest.raises(PolicyError, match="status must match available flag"):
+        FormalCheckerAvailability(
+            property_name="mismatch",
+            checker="prism",
+            artifact_name="petri",
+            executable="prism",
+            command=("prism", "petri.prism", "-pf", "P>=1 [F true]"),
+            available=True,
+            status="missing_executable",
+        )
+
+
+def test_formal_safety_property_rejects_control_characters() -> None:
+    with pytest.raises(PolicyError, match="control characters"):
+        FormalSafetyProperty(
+            name="bad_expr",
+            artifact_name="petri",
+            checker="prism",
+            expression="P>=1 [ F true ]\x00",
+        )

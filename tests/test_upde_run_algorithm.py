@@ -26,6 +26,8 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.upde import _ref_kernel as ref_kernel_mod
+from scpn_phase_orchestrator.upde import _run as run_mod
 from scpn_phase_orchestrator.upde import engine as eng_mod
 from scpn_phase_orchestrator.upde.engine import upde_run
 
@@ -138,6 +140,64 @@ class TestMethodDispatch:
             method=method,
         )
         assert np.all(np.isfinite(out))
+
+
+def test_upde_run_dispatches_to_non_python_backend(monkeypatch):
+    def backend_fn(*args, **kwargs):
+        phases, _, _, _, zeta, psi, dt, n_steps, method, n_substeps, atol, rtol = args
+        assert args[0].dtype == np.float64
+        assert args[1].dtype == np.float64
+        assert method == "euler"
+        assert n_steps == 5
+        assert n_substeps == 1
+        assert np.isclose(dt, 0.01)
+        return phases + 0.5 + zeta + psi + float(atol) + float(rtol)
+
+    monkeypatch.setattr(run_mod, "_dispatch", lambda: backend_fn)
+    monkeypatch.setattr(eng_mod, "ACTIVE_BACKEND", "rust")
+    phases, omegas, knm, alpha = _problem(np.random.default_rng(12), n=3)
+    out = upde_run(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta=0.1,
+        psi=0.2,
+        dt=0.01,
+        n_steps=5,
+        method="euler",
+        n_substeps=1,
+    )
+    assert np.allclose(out, (phases.astype(np.float64) + 0.5 + 0.1 + 0.2 + 1e-6 + 1e-3))
+
+
+def test_rk45_step_falls_back_after_failed_adaptation(monkeypatch):
+    def bad_dp_stages(*args):
+        phases = np.asarray(args[0], dtype=np.float64)
+        y5 = phases + 0.5
+        y4 = phases
+        return y5, y4
+
+    monkeypatch.setattr(ref_kernel_mod, "_dp_stages", bad_dp_stages)
+    phases = np.array([0.1, 0.2], dtype=np.float64)
+    omegas = np.array([1.0, 1.2], dtype=np.float64)
+    knm = np.array([[0.0, 0.5], [0.5, 0.0]], dtype=np.float64)
+    alpha = np.zeros((2, 2), dtype=np.float64)
+    out, last_dt = ref_kernel_mod._rk45_step(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta=0.0,
+        psi=0.0,
+        atol=1e-6,
+        rtol=1e-3,
+        dt_config=0.1,
+        last_dt=0.1,
+    )
+
+    assert np.allclose(out, phases + 0.5)
+    assert np.isclose(last_dt, 0.00016, rtol=1e-12, atol=0.0)
 
 
 class TestSubstepping:

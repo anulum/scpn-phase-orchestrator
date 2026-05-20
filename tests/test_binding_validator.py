@@ -346,6 +346,28 @@ def test_derived_channel_cannot_reference_itself(sample_binding_spec):
     assert any("derived_from must not include itself" in e for e in errors)
 
 
+def test_derived_channel_references_unknown_source(sample_binding_spec):
+    bad = replace(
+        sample_binding_spec,
+        channels={
+            "Risk": ChannelSpec(
+                role="risk",
+                required=False,
+                replay_semantics="derived",
+                derived_from=["UnknownSource"],
+                derive_rule="risk = lag(Risk)",
+            )
+        },
+    )
+
+    errors = validate_binding_spec(bad)
+
+    assert any(
+        "derived_from references unknown channel" in e and "UnknownSource" in e
+        for e in errors
+    )
+
+
 def test_channel_group_rejects_unknown_member(sample_binding_spec):
     bad = replace(
         sample_binding_spec,
