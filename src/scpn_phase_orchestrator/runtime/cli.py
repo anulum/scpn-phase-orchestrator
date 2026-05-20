@@ -72,6 +72,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_plan,
     build_plugin_execution_request_revocation,
     build_plugin_execution_request_revocation_list,
+    build_plugin_execution_request_storage_adapter_manifest,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
@@ -1169,6 +1170,90 @@ def plugins_persist_execution_request(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(bundle, indent=2, sort_keys=True))
+
+
+@plugins_group.command("storage-adapter-manifest")
+@click.argument(
+    "request_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--storage-uri",
+    required=True,
+    help="Deployment-owned URI for the request storage target.",
+)
+@click.option(
+    "--storage-backend",
+    required=True,
+    help=(
+        "Storage backend identifier: local_file, s3_object, gcs_object, "
+        "azure_blob, oci_object, or https_api."
+    ),
+)
+@click.option(
+    "--retention-policy",
+    default="retain_until_revoked",
+    show_default=True,
+    help="Retention policy identifier for the request bundle.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Deployment component creating the adapter manifest.",
+)
+@click.option(
+    "--revoked-request-hash",
+    "revoked_request_hashes",
+    multiple=True,
+    help="Revoked request hash to bind into the storage manifest.",
+)
+@click.option(
+    "--revocation-list",
+    "revocation_list_path",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Aggregate revocation-list JSON to bind into the storage manifest.",
+)
+def plugins_storage_adapter_manifest(
+    request_json: Path,
+    storage_uri: str,
+    storage_backend: str,
+    retention_policy: str,
+    created_by: str,
+    revoked_request_hashes: tuple[str, ...],
+    revocation_list_path: Path | None,
+) -> None:
+    """Emit a deterministic storage-adapter handoff manifest without writing."""
+    request_payload = _load_json_file(request_json, artifact="request")
+    request = _load_request_from_payload(request_payload)
+    direct_revocations = _normalize_approved_target_hashes(revoked_request_hashes)
+    revocation_list_hashes: tuple[str, ...] = ()
+
+    try:
+        if revocation_list_path is not None:
+            revocation_list = _load_revocation_list_from_payload(
+                _load_json_file(revocation_list_path, artifact="revocation list")
+            )
+            revocation_list_hashes = revocation_list.as_revoked_request_hashes()
+        normalized_revocations = tuple(
+            dict.fromkeys((*direct_revocations, *revocation_list_hashes))
+        )
+        storage_manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri=storage_uri,
+            storage_backend=storage_backend,
+            retention_policy=retention_policy,
+            created_by=created_by,
+            revoked_request_hashes=normalized_revocations,
+        )
+        adapter_manifest = build_plugin_execution_request_storage_adapter_manifest(
+            request,
+            storage_manifest,
+        )
+    except (PermissionError, TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(adapter_manifest.audit_record, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

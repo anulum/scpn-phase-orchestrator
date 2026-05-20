@@ -2347,6 +2347,65 @@ def test_plugins_persist_execution_request_rejects_revoked_request(
     assert "revoked" in result.output
 
 
+def test_plugins_storage_adapter_manifest_outputs_external_handoff(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "storage-adapter-manifest",
+            str(request_path),
+            "--storage-uri",
+            "s3://spo-prod/plugin-requests/request.json",
+            "--storage-backend",
+            "s3_object",
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    request_payload = json.loads(request_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_execution_request_storage_adapter_v1"
+    assert payload["request_hash"] == request_payload["request_hash"]
+    assert payload["storage_backend"] == "s3_object"
+    assert payload["storage_scheme"] == "s3"
+    assert payload["adapter_mode"] == "deployment_owned_external_write"
+    assert payload["write_performed"] is False
+    assert len(payload["bundle_hash"]) == 64
+    assert len(payload["adapter_hash"]) == 64
+
+
+def test_plugins_storage_adapter_manifest_rejects_credential_uri(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "storage-adapter-manifest",
+            str(request_path),
+            "--storage-uri",
+            "https://user:pass@storage.example.test/request.json",
+            "--storage-backend",
+            "https_api",
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "must not contain credentials" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,

@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionRequest,
     PluginExecutionRequestRevocation,
     PluginExecutionRequestRevocationList,
+    PluginExecutionRequestStorageAdapterManifest,
     PluginExecutionRequestStorageManifest,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
@@ -33,6 +34,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_request,
     build_plugin_execution_request_revocation,
     build_plugin_execution_request_revocation_list,
+    build_plugin_execution_request_storage_adapter_manifest,
     build_plugin_execution_request_storage_bundle,
     build_plugin_execution_request_storage_manifest,
     build_plugin_marketplace_catalog,
@@ -1448,6 +1450,150 @@ class TestPluginRuntimeExecution:
                 retention_policy="retain_until_revoked",
                 created_by="deployment_gate",
                 revoked_request_hashes=(str(request.audit_record["request_hash"]),),
+            )
+
+    def test_execution_request_storage_adapter_manifest_supports_external_handoff(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-16",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri="s3://spo-prod/plugin-requests/grid_pack.json",
+            storage_backend="s3_object",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+
+        adapter = build_plugin_execution_request_storage_adapter_manifest(
+            request,
+            manifest,
+        )
+        repeated = build_plugin_execution_request_storage_adapter_manifest(
+            request,
+            manifest,
+        )
+
+        assert adapter == repeated
+        assert isinstance(adapter, PluginExecutionRequestStorageAdapterManifest)
+        assert adapter.schema == "scpn_plugin_execution_request_storage_adapter_v1"
+        assert adapter.storage_backend == "s3_object"
+        assert adapter.storage_scheme == "s3"
+        assert adapter.adapter_mode == "deployment_owned_external_write"
+        assert adapter.write_performed is False
+        assert adapter.request_hash == request.audit_record["request_hash"]
+        assert adapter.storage_manifest_hash == manifest.manifest_hash
+        assert len(adapter.bundle_hash) == 64
+        assert len(adapter.adapter_hash) == 64
+
+    def test_execution_request_storage_adapter_rejects_bad_backend_uri(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-17",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+
+        with pytest.raises(ValueError, match="requires URI scheme"):
+            build_plugin_execution_request_storage_manifest(
+                request,
+                storage_uri="file:///var/lib/spo/plugin-requests/grid_pack.json",
+                storage_backend="s3_object",
+                retention_policy="retain_until_revoked",
+                created_by="deployment_gate",
+            )
+
+    def test_execution_request_storage_adapter_rejects_implicit_external_write(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-18",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri="https://storage.example.test/spo/plugin-requests/grid.json",
+            storage_backend="https_api",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+
+        with pytest.raises(PermissionError, match="must not write implicitly"):
+            build_plugin_execution_request_storage_adapter_manifest(
+                request,
+                manifest,
+                write_performed=True,
             )
 
     def test_execution_request_revocation_is_deterministic(

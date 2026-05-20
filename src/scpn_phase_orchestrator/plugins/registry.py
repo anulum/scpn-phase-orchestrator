@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 from typing import Any, Literal, TypeAlias
+from urllib.parse import urlparse
 
 from scpn_phase_orchestrator import __version__
 
@@ -29,6 +30,7 @@ __all__ = [
     "PluginExecutionRequest",
     "PluginExecutionRequestRevocation",
     "PluginExecutionRequestRevocationList",
+    "PluginExecutionRequestStorageAdapterManifest",
     "PluginExecutionRequestStorageManifest",
     "build_plugin_marketplace_catalog",
     "build_plugin_execution_plan",
@@ -36,6 +38,7 @@ __all__ = [
     "build_plugin_execution_request",
     "build_plugin_execution_request_revocation",
     "build_plugin_execution_request_revocation_list",
+    "build_plugin_execution_request_storage_adapter_manifest",
     "build_plugin_execution_request_storage_manifest",
     "build_plugin_execution_request_storage_bundle",
     "build_rust_plugin_runtime_handoff",
@@ -73,6 +76,17 @@ _DEFAULT_RUNTIME_LOAD_KINDS: tuple[PluginKind, ...] = (
 )
 _DEFAULT_RUNTIME_LOAD_POLICY: PluginRuntimeLoadPolicy
 _ENTRY_POINT_GROUP = "scpn_phase_orchestrator.plugins"
+_STORAGE_BACKEND_SCHEMES: dict[str, tuple[str, ...]] = {
+    "local_file": ("", "file"),
+    "s3_object": ("s3",),
+    "gcs_object": ("gs",),
+    "azure_blob": ("az", "azure"),
+    "oci_object": ("oci",),
+    "https_api": ("https",),
+}
+_NON_LOCAL_STORAGE_BACKENDS = frozenset(
+    backend for backend in _STORAGE_BACKEND_SCHEMES if backend != "local_file"
+)
 
 
 @dataclass(frozen=True)
@@ -404,6 +418,48 @@ class PluginExecutionRequestStorageManifest:
 
 
 @dataclass(frozen=True)
+class PluginExecutionRequestStorageAdapterManifest:
+    """Deterministic handoff record for deployment-owned request storage."""
+
+    schema: str
+    version: str
+    request_hash: str
+    storage_manifest_hash: str
+    storage_backend: str
+    storage_uri: str
+    storage_scheme: str
+    adapter_mode: str
+    bundle_hash: str
+    write_performed: bool
+    created_by: str
+    adapter_hash: str
+    audit_record: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if self.schema != "scpn_plugin_execution_request_storage_adapter_v1":
+            raise ValueError(
+                "storage adapter schema must be "
+                "scpn_plugin_execution_request_storage_adapter_v1"
+            )
+        if self.version != "1.0.0":
+            raise ValueError("storage adapter version must be 1.0.0")
+        _validate_sha256(self.request_hash, "storage adapter request hash")
+        _validate_sha256(
+            self.storage_manifest_hash,
+            "storage adapter manifest hash",
+        )
+        _validate_sha256(self.bundle_hash, "storage adapter bundle hash")
+        _validate_sha256(self.adapter_hash, "storage adapter hash")
+        _require_identifier(self.storage_backend, "storage backend")
+        _require_non_empty(self.storage_uri, "storage URI")
+        _require_identifier(self.created_by, "storage adapter creator")
+        if not isinstance(self.write_performed, bool):
+            raise TypeError("write_performed must be a boolean")
+        if self.audit_record is None:
+            raise ValueError("audit_record must be provided")
+
+
+@dataclass(frozen=True)
 class PluginExecutionRequestRevocation:
     """Operator lifecycle artefact that revokes an execution request hash."""
 
@@ -564,6 +620,7 @@ def build_plugin_execution_request_storage_manifest(
     )
     _require_non_empty(storage_uri, "storage URI")
     _require_identifier(storage_backend, "storage backend")
+    storage_scheme = _validate_storage_backend_uri(storage_backend, storage_uri)
     _require_identifier(retention_policy, "retention policy")
     _require_identifier(created_by, "storage manifest creator")
     normalised_revocations = tuple(
@@ -587,6 +644,7 @@ def build_plugin_execution_request_storage_manifest(
         "approval_reference": request.approval_reference,
         "storage_uri": storage_uri,
         "storage_backend": storage_backend,
+        "storage_scheme": storage_scheme,
         "retention_policy": retention_policy,
         "created_by": created_by,
         "revoked_request_hashes": list(normalised_revocations),
@@ -782,6 +840,7 @@ def validate_plugin_execution_request_storage_manifest(
         raise ValueError("storage manifest approval hash mismatch")
     if manifest.target_hash != request.target_hash:
         raise ValueError("storage manifest target hash mismatch")
+    _validate_storage_backend_uri(manifest.storage_backend, manifest.storage_uri)
     validate_plugin_execution_request(
         request,
         revoked_request_hashes=manifest.revoked_request_hashes,
@@ -813,6 +872,57 @@ def build_plugin_execution_request_storage_bundle(
     }
     bundle["bundle_hash"] = _record_hash(bundle)
     return bundle
+
+
+def build_plugin_execution_request_storage_adapter_manifest(
+    request: PluginExecutionRequest,
+    manifest: PluginExecutionRequestStorageManifest,
+    *,
+    write_performed: bool = False,
+) -> PluginExecutionRequestStorageAdapterManifest:
+    """Build a deterministic handoff manifest for local or external stores."""
+    validate_plugin_execution_request_storage_manifest(request, manifest)
+    bundle = build_plugin_execution_request_storage_bundle(request, manifest)
+    storage_scheme = _validate_storage_backend_uri(
+        manifest.storage_backend,
+        manifest.storage_uri,
+    )
+    adapter_mode = (
+        "local_file_atomic_write"
+        if manifest.storage_backend == "local_file"
+        else "deployment_owned_external_write"
+    )
+    if manifest.storage_backend in _NON_LOCAL_STORAGE_BACKENDS and write_performed:
+        raise PermissionError("non-local storage adapters must not write implicitly")
+    audit_record: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_storage_adapter_v1",
+        "version": "1.0.0",
+        "request_hash": manifest.request_hash,
+        "storage_manifest_hash": manifest.manifest_hash,
+        "storage_backend": manifest.storage_backend,
+        "storage_uri": manifest.storage_uri,
+        "storage_scheme": storage_scheme,
+        "adapter_mode": adapter_mode,
+        "bundle_hash": str(bundle["bundle_hash"]),
+        "write_performed": write_performed,
+        "created_by": manifest.created_by,
+    }
+    audit_record["adapter_hash"] = _record_hash(audit_record)
+    return PluginExecutionRequestStorageAdapterManifest(
+        schema="scpn_plugin_execution_request_storage_adapter_v1",
+        version="1.0.0",
+        request_hash=manifest.request_hash,
+        storage_manifest_hash=manifest.manifest_hash,
+        storage_backend=manifest.storage_backend,
+        storage_uri=manifest.storage_uri,
+        storage_scheme=storage_scheme,
+        adapter_mode=adapter_mode,
+        bundle_hash=str(bundle["bundle_hash"]),
+        write_performed=write_performed,
+        created_by=manifest.created_by,
+        adapter_hash=str(audit_record["adapter_hash"]),
+        audit_record=audit_record,
+    )
 
 
 def validate_plugin_execution_request_storage_bundle(
@@ -902,6 +1012,13 @@ def _validate_request_audit_record(record: dict[str, object]) -> None:
 def _validate_storage_manifest_audit_record(record: dict[str, object]) -> None:
     if record.get("schema") != "scpn_plugin_execution_request_storage_manifest_v1":
         raise ValueError("storage bundle manifest schema mismatch")
+    storage_backend = record.get("storage_backend")
+    storage_uri = record.get("storage_uri")
+    if not isinstance(storage_backend, str):
+        raise ValueError("storage bundle manifest storage_backend must be a string")
+    if not isinstance(storage_uri, str):
+        raise ValueError("storage bundle manifest storage_uri must be a string")
+    _validate_storage_backend_uri(storage_backend, storage_uri)
     manifest_hash = record.get("manifest_hash")
     if not isinstance(manifest_hash, str):
         raise ValueError("storage bundle manifest is missing manifest_hash")
@@ -919,6 +1036,37 @@ def _validate_storage_manifest_audit_record(record: dict[str, object]) -> None:
         "revocation_hash"
     ):
         raise ValueError("storage bundle revocation hash mismatch")
+
+
+def _validate_storage_backend_uri(storage_backend: str, storage_uri: str) -> str:
+    if storage_backend not in _STORAGE_BACKEND_SCHEMES:
+        allowed = ", ".join(sorted(_STORAGE_BACKEND_SCHEMES))
+        raise ValueError(
+            f"unsupported storage backend {storage_backend!r}; use {allowed}"
+        )
+    parsed = urlparse(storage_uri)
+    scheme = parsed.scheme.lower()
+    allowed_schemes = _STORAGE_BACKEND_SCHEMES[storage_backend]
+    if scheme not in allowed_schemes:
+        expected = " or ".join(repr(item or "path") for item in allowed_schemes)
+        raise ValueError(
+            f"storage backend {storage_backend!r} requires URI scheme {expected}"
+        )
+    if parsed.username or parsed.password or "@" in parsed.netloc:
+        raise ValueError("storage URI must not contain credentials")
+    if parsed.query or parsed.fragment:
+        raise ValueError("storage URI must not contain query or fragment components")
+    if storage_backend == "local_file":
+        if scheme == "file" and not parsed.path:
+            raise ValueError("local_file storage URI requires a file path")
+        if scheme == "" and not storage_uri:
+            raise ValueError("local_file storage URI requires a file path")
+        return scheme or "path"
+    if not parsed.netloc:
+        raise ValueError(f"storage backend {storage_backend!r} requires an authority")
+    if not parsed.path or parsed.path == "/":
+        raise ValueError(f"storage backend {storage_backend!r} requires an object path")
+    return scheme
 
 
 def compatibility_report(manifest: PluginManifest) -> PluginCompatibilityReport:

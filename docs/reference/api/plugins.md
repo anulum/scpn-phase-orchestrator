@@ -228,11 +228,28 @@ request, storage-manifest, and revocation hashes. The
 a local file atomically and refuses to overwrite an existing file unless the
 caller explicitly opts in.
 
+Non-local deployment stores use
+`build_plugin_execution_request_storage_adapter_manifest()` as a deterministic
+handoff contract. The adapter manifest validates the backend/URI pair for
+`s3_object`, `gcs_object`, `azure_blob`, `oci_object`, and `https_api`, rejects
+credential-bearing URIs, binds the storage-manifest hash and bundle hash, and
+marks the write mode as deployment-owned. It does not perform object-store or
+HTTP writes from the SPO CLI.
+
 Operators can persist the same bundle from reviewed request JSON:
 
 ```bash
 spo plugins persist-execution-request REQUEST_JSON bundle.json \
   --storage-uri file:///var/lib/spo/plugin-requests/bundle.json \
+  --created-by deployment_gate
+```
+
+Operators can also emit an external storage handoff without writing:
+
+```bash
+spo plugins storage-adapter-manifest REQUEST_JSON \
+  --storage-uri s3://spo-prod/plugin-requests/request.json \
+  --storage-backend s3_object \
   --created-by deployment_gate
 ```
 

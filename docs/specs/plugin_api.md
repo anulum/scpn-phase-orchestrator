@@ -264,11 +264,29 @@ atomically. Existing bundles are not overwritten unless `overwrite=True`, so a
 deployment cannot silently replace an approved request without making that
 rotation explicit.
 
+Non-local deployment persistence is represented by
+`build_plugin_execution_request_storage_adapter_manifest()`. It validates
+backend/URI compatibility for `s3_object`, `gcs_object`, `azure_blob`,
+`oci_object`, and `https_api`, rejects URI credentials, binds the storage
+manifest hash plus bundle hash, and records
+`adapter_mode=deployment_owned_external_write`. SPO emits this handoff manifest
+only; deployment-specific writers must consume it and perform object-store or
+HTTPS writes under their own credentials and audit controls.
+
 The CLI surface for that adapter is:
 
 ```bash
 spo plugins persist-execution-request REQUEST_JSON OUTPUT_JSON \
   --storage-uri file:///var/lib/spo/plugin-requests/request.json \
+  --created-by deployment_gate
+```
+
+The CLI surface for external handoff manifests is:
+
+```bash
+spo plugins storage-adapter-manifest REQUEST_JSON \
+  --storage-uri s3://spo-prod/plugin-requests/request.json \
+  --storage-backend s3_object \
   --created-by deployment_gate
 ```
 
