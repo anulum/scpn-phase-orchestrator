@@ -10,11 +10,17 @@ Run:
 python tools/check_github_action_refs.py .github/workflows/publish.yml
 python tools/check_version_sync.py
 GITHUB_REF_NAME=vX.Y.Z python tools/check_release_tag_version.py
+python tools/check_meta_distribution.py
 ```
 
 The action-reference guard checks every remote `owner/repo@ref` action in the
 workflow, requires full 40-character commit SHAs, and verifies each ref resolves
 through the GitHub API. Local actions and `docker://` actions are ignored.
+
+The `scpn-meta` distribution guard emits non-publishing JSON evidence for the
+optional meta-transfer console surface. It verifies package metadata, the
+`spo` and `scpn-meta` entry points, the importable Click target, and that
+publishing remains disabled unless an explicit future publication step is added.
 
 Download-and-run installer steps must also be pinned to explicit tool versions.
 For example, the Kani workflow installs `kani-verifier` with a fixed

@@ -59,6 +59,14 @@ def test_maturin_step_uses_matrix_interpreter() -> None:
     assert "-i ${{ matrix.python_interpreter }}" in args
 
 
+def test_pre_publish_gate_runs_meta_distribution_evidence_guard() -> None:
+    workflow = _publish_workflow()
+    steps = workflow["jobs"]["preflight"]["steps"]
+    commands = [str(step.get("run", "")) for step in steps]
+
+    assert "python tools/check_meta_distribution.py" in commands
+
+
 def test_dockerfile_base_digests_match_known_resolving_manifests() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text()
 

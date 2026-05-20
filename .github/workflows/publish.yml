@@ -53,6 +53,7 @@ jobs:
           --ignore-glob=tests/test_nn_physics_validation*.py
       - run: python tools/check_version_sync.py
       - run: python tools/check_release_tag_version.py
+      - run: python tools/check_meta_distribution.py
       - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
         working-directory: spo-kernel
       - run: cargo test --workspace --exclude spo-ffi

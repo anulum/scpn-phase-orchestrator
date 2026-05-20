@@ -613,6 +613,9 @@ Near-term candidate tracks:
     `tools/check_meta_distribution.py` emits JSON release evidence for the
     package name, version, `spo` entry point, narrow `scpn-meta` entry point,
     importable Click command target, and disabled publication posture.
+  - Pre-publish enforcement is in place:
+    the PyPI publish preflight runs `tools/check_meta_distribution.py`, and
+    workflow hygiene tests keep the guard wired into release automation.
   - Package-manifest reference gates are in place:
     `benchmark_meta_transfer_package_manifest_quality()` verifies deterministic
     package and manifest hashes, training-summary coverage, digest linkage,
