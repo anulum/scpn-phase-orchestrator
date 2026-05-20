@@ -333,6 +333,19 @@ The lifecycle record is metadata-only. It reports `approved`, `stored`, or
 revocation list, then hashing the consolidated status record. It does not load
 plugin modules, execute targets, delete bundles, or mutate revocation state.
 
+Batch review is represented by
+`build_plugin_execution_request_lifecycle_summary()` and exposed through:
+
+```bash
+spo plugins lifecycle-summary LIFECYCLE_JSON ... \
+  --created-by deployment_gate
+```
+
+The summary validates every lifecycle record hash, rejects duplicate request
+hashes, reports status counts, and emits `storage_missing_request_hashes` plus
+`renewal_required_request_hashes` so operators can plan persistence completion
+and approval renewal without scanning individual JSON files manually.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

@@ -2516,6 +2516,85 @@ def test_plugins_lifecycle_status_reports_revoked_request(
     assert payload["revocation_reference"] == "REV-2026-05-20-40"
 
 
+def test_plugins_lifecycle_summary_outputs_review_queues(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle_result.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle_result.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    lifecycle_payload = json.loads(lifecycle_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_execution_request_lifecycle_summary_v1"
+    assert payload["request_count"] == 1
+    assert payload["status_counts"] == {"approved": 1, "revoked": 0, "stored": 0}
+    assert payload["approved_request_hashes"] == [lifecycle_payload["request_hash"]]
+    assert payload["storage_missing_request_hashes"] == [
+        lifecycle_payload["request_hash"]
+    ]
+    assert payload["renewal_required_request_hashes"] == []
+    assert len(payload["summary_hash"]) == 64
+
+
+def test_plugins_lifecycle_summary_rejects_duplicate_request_hash(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle_result.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle_result.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "duplicate request hashes" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,

@@ -31,6 +31,7 @@ __all__ = [
     "PluginExecutionRequestRevocation",
     "PluginExecutionRequestRevocationList",
     "PluginExecutionRequestLifecycleRecord",
+    "PluginExecutionRequestLifecycleSummary",
     "PluginExecutionRequestStorageAdapterManifest",
     "PluginExecutionRequestStorageManifest",
     "build_plugin_marketplace_catalog",
@@ -40,6 +41,7 @@ __all__ = [
     "build_plugin_execution_request_revocation",
     "build_plugin_execution_request_revocation_list",
     "build_plugin_execution_request_lifecycle_record",
+    "build_plugin_execution_request_lifecycle_summary",
     "build_plugin_execution_request_storage_adapter_manifest",
     "build_plugin_execution_request_storage_manifest",
     "build_plugin_execution_request_storage_bundle",
@@ -53,6 +55,7 @@ __all__ = [
     "execute_plugin_execution_request",
     "load_plugin_capability",
     "validate_plugin_execution_request",
+    "validate_plugin_execution_request_lifecycle_record",
     "validate_plugin_execution_request_revocation_list",
     "validate_plugin_execution_request_storage_bundle",
     "validate_plugin_execution_request_storage_manifest",
@@ -603,6 +606,50 @@ class PluginExecutionRequestLifecycleRecord:
             raise ValueError("audit_record must be provided")
 
 
+@dataclass(frozen=True)
+class PluginExecutionRequestLifecycleSummary:
+    """Deterministic operator summary for lifecycle-review batches."""
+
+    schema: str
+    version: str
+    request_count: int
+    status_counts: dict[str, int]
+    lifecycle_hashes: tuple[str, ...]
+    approved_request_hashes: tuple[str, ...]
+    stored_request_hashes: tuple[str, ...]
+    revoked_request_hashes: tuple[str, ...]
+    storage_missing_request_hashes: tuple[str, ...]
+    renewal_required_request_hashes: tuple[str, ...]
+    created_by: str
+    summary_hash: str
+    audit_record: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if self.schema != "scpn_plugin_execution_request_lifecycle_summary_v1":
+            raise ValueError(
+                "lifecycle summary schema must be "
+                "scpn_plugin_execution_request_lifecycle_summary_v1"
+            )
+        if self.version != "1.0.0":
+            raise ValueError("lifecycle summary version must be 1.0.0")
+        if self.request_count < 1:
+            raise ValueError("lifecycle summary requires at least one request")
+        _require_identifier(self.created_by, "lifecycle summary creator")
+        _validate_sha256(self.summary_hash, "lifecycle summary hash")
+        for lifecycle_hash in self.lifecycle_hashes:
+            _validate_sha256(lifecycle_hash, "lifecycle hash")
+        for request_hash in (
+            *self.approved_request_hashes,
+            *self.stored_request_hashes,
+            *self.revoked_request_hashes,
+            *self.storage_missing_request_hashes,
+            *self.renewal_required_request_hashes,
+        ):
+            _validate_sha256(request_hash, "lifecycle summary request hash")
+        if self.audit_record is None:
+            raise ValueError("audit_record must be provided")
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -659,6 +706,47 @@ def validate_plugin_execution_request(
     if request.audit_record != expected_record:
         raise ValueError("request audit record mismatch")
     return request
+
+
+def validate_plugin_execution_request_lifecycle_record(
+    lifecycle: PluginExecutionRequestLifecycleRecord,
+) -> PluginExecutionRequestLifecycleRecord:
+    """Validate a stored plugin execution request lifecycle record."""
+    record = lifecycle.audit_record
+    if record.get("schema") != "scpn_plugin_execution_request_lifecycle_v1":
+        raise ValueError("lifecycle schema mismatch")
+    if record.get("version") != "1.0.0":
+        raise ValueError("lifecycle version must be 1.0.0")
+    expected_hash = record.get("lifecycle_hash")
+    if not isinstance(expected_hash, str):
+        raise ValueError("lifecycle record is missing lifecycle_hash")
+    _validate_sha256(expected_hash, "lifecycle hash")
+    payload = dict(record)
+    payload.pop("lifecycle_hash", None)
+    if _record_hash(payload) != expected_hash:
+        raise ValueError("lifecycle hash mismatch")
+    field_checks = {
+        "request_hash": lifecycle.request_hash,
+        "status": lifecycle.status,
+        "plugin": lifecycle.plugin,
+        "kind": lifecycle.kind,
+        "name": lifecycle.name,
+        "operator_identity": lifecycle.operator_identity,
+        "approval_reference": lifecycle.approval_reference,
+        "storage_manifest_hash": lifecycle.storage_manifest_hash,
+        "storage_backend": lifecycle.storage_backend,
+        "storage_uri": lifecycle.storage_uri,
+        "revoked": lifecycle.revoked,
+        "revocation_list_hash": lifecycle.revocation_list_hash,
+        "revocation_hash": lifecycle.revocation_hash,
+        "revoked_by": lifecycle.revoked_by,
+        "revocation_reference": lifecycle.revocation_reference,
+        "created_by": lifecycle.created_by,
+    }
+    for field_name, expected in field_checks.items():
+        if record.get(field_name) != expected:
+            raise ValueError(f"lifecycle {field_name} field mismatch")
+    return lifecycle
 
 
 def build_plugin_execution_request_storage_manifest(
@@ -973,6 +1061,69 @@ def build_plugin_execution_request_lifecycle_record(
         revocation_reference=revocation_reference,
         created_by=created_by,
         lifecycle_hash=str(audit_record["lifecycle_hash"]),
+        audit_record=audit_record,
+    )
+
+
+def build_plugin_execution_request_lifecycle_summary(
+    lifecycle_records: tuple[PluginExecutionRequestLifecycleRecord, ...],
+    *,
+    created_by: str,
+) -> PluginExecutionRequestLifecycleSummary:
+    """Build a deterministic batch summary for operator lifecycle review."""
+    _require_identifier(created_by, "lifecycle summary creator")
+    if not lifecycle_records:
+        raise ValueError("lifecycle summary requires at least one record")
+    validated = tuple(
+        validate_plugin_execution_request_lifecycle_record(record)
+        for record in lifecycle_records
+    )
+    request_hashes = tuple(record.request_hash for record in validated)
+    if len(set(request_hashes)) != len(request_hashes):
+        raise ValueError("lifecycle summary contains duplicate request hashes")
+    records = tuple(sorted(validated, key=lambda item: item.request_hash))
+    approved = tuple(
+        record.request_hash for record in records if record.status == "approved"
+    )
+    stored = tuple(
+        record.request_hash for record in records if record.status == "stored"
+    )
+    revoked = tuple(
+        record.request_hash for record in records if record.status == "revoked"
+    )
+    status_counts = {
+        "approved": len(approved),
+        "stored": len(stored),
+        "revoked": len(revoked),
+    }
+    audit_record: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_summary_v1",
+        "version": "1.0.0",
+        "request_count": len(records),
+        "status_counts": status_counts,
+        "lifecycle_hashes": [record.lifecycle_hash for record in records],
+        "request_hashes": [record.request_hash for record in records],
+        "approved_request_hashes": list(approved),
+        "stored_request_hashes": list(stored),
+        "revoked_request_hashes": list(revoked),
+        "storage_missing_request_hashes": list(approved),
+        "renewal_required_request_hashes": list(revoked),
+        "created_by": created_by,
+    }
+    audit_record["summary_hash"] = _record_hash(audit_record)
+    return PluginExecutionRequestLifecycleSummary(
+        schema="scpn_plugin_execution_request_lifecycle_summary_v1",
+        version="1.0.0",
+        request_count=len(records),
+        status_counts=status_counts,
+        lifecycle_hashes=tuple(record.lifecycle_hash for record in records),
+        approved_request_hashes=approved,
+        stored_request_hashes=stored,
+        revoked_request_hashes=revoked,
+        storage_missing_request_hashes=approved,
+        renewal_required_request_hashes=revoked,
+        created_by=created_by,
+        summary_hash=str(audit_record["summary_hash"]),
         audit_record=audit_record,
     )
 

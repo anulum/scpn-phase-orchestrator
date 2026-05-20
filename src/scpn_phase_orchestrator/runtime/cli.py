@@ -64,6 +64,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionApproval,
     PluginExecutionPlan,
     PluginExecutionRequest,
+    PluginExecutionRequestLifecycleRecord,
     PluginExecutionRequestRevocation,
     PluginExecutionRequestRevocationList,
     PluginExecutionRequestStorageManifest,
@@ -72,6 +73,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_execution_request_lifecycle_record,
+    build_plugin_execution_request_lifecycle_summary,
     build_plugin_execution_request_revocation,
     build_plugin_execution_request_revocation_list,
     build_plugin_execution_request_storage_adapter_manifest,
@@ -932,6 +934,99 @@ def _load_storage_manifest_from_payload(
     )
 
 
+def _load_lifecycle_from_payload(
+    lifecycle_payload: dict[str, object],
+) -> PluginExecutionRequestLifecycleRecord:
+    if (
+        lifecycle_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_v1"
+    ):
+        raise click.ClickException(
+            "lifecycle schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_v1"
+        )
+    request_hash = _require_sha256(
+        lifecycle_payload.get("request_hash"), "request_hash"
+    )
+    lifecycle_hash = _require_sha256(
+        lifecycle_payload.get("lifecycle_hash"), "lifecycle_hash"
+    )
+    status = lifecycle_payload.get("status")
+    plugin = lifecycle_payload.get("plugin")
+    kind = lifecycle_payload.get("kind")
+    name = lifecycle_payload.get("name")
+    operator_identity = lifecycle_payload.get("operator_identity")
+    approval_reference = lifecycle_payload.get("approval_reference")
+    storage_manifest_hash = lifecycle_payload.get("storage_manifest_hash")
+    storage_backend = lifecycle_payload.get("storage_backend")
+    storage_uri = lifecycle_payload.get("storage_uri")
+    revoked = lifecycle_payload.get("revoked")
+    revocation_list_hash = lifecycle_payload.get("revocation_list_hash")
+    revocation_hash = lifecycle_payload.get("revocation_hash")
+    revoked_by = lifecycle_payload.get("revoked_by")
+    revocation_reference = lifecycle_payload.get("revocation_reference")
+    created_by = lifecycle_payload.get("created_by")
+    version = lifecycle_payload.get("version")
+    for field_name, value in (
+        ("plugin", plugin),
+        ("kind", kind),
+        ("name", name),
+        ("operator_identity", operator_identity),
+        ("approval_reference", approval_reference),
+        ("created_by", created_by),
+        ("version", version),
+    ):
+        if not isinstance(value, str) or not value:
+            raise click.ClickException(
+                f"lifecycle schema mismatch: {field_name} must be non-empty"
+            )
+    if status not in {"approved", "stored", "revoked"}:
+        raise click.ClickException("lifecycle schema mismatch: unsupported status")
+    if kind not in _PLUGIN_KIND_OPTIONS:
+        raise click.ClickException(
+            f"lifecycle schema mismatch: unsupported kind {kind!r}"
+        )
+    if not isinstance(revoked, bool):
+        raise click.ClickException("lifecycle schema mismatch: revoked must be boolean")
+
+    def optional_hash(value: object, field_name: str) -> str | None:
+        if value is None:
+            return None
+        return _require_sha256(value, field_name)
+
+    return PluginExecutionRequestLifecycleRecord(
+        schema="scpn_plugin_execution_request_lifecycle_v1",
+        version=str(version),
+        request_hash=request_hash,
+        status=cast(Literal["approved", "stored", "revoked"], str(status)),
+        plugin=str(plugin),
+        kind=cast(
+            Literal["actuator", "bridge", "domainpack", "extractor", "monitor"],
+            str(kind),
+        ),
+        name=str(name),
+        operator_identity=str(operator_identity),
+        approval_reference=str(approval_reference),
+        storage_manifest_hash=optional_hash(
+            storage_manifest_hash, "storage_manifest_hash"
+        ),
+        storage_backend=str(storage_backend) if storage_backend is not None else None,
+        storage_uri=str(storage_uri) if storage_uri is not None else None,
+        revoked=revoked,
+        revocation_list_hash=optional_hash(
+            revocation_list_hash, "revocation_list_hash"
+        ),
+        revocation_hash=optional_hash(revocation_hash, "revocation_hash"),
+        revoked_by=str(revoked_by) if revoked_by is not None else None,
+        revocation_reference=(
+            str(revocation_reference) if revocation_reference is not None else None
+        ),
+        created_by=str(created_by),
+        lifecycle_hash=lifecycle_hash,
+        audit_record=lifecycle_payload,
+    )
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -1409,6 +1504,38 @@ def plugins_lifecycle_status(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(lifecycle_record.audit_record, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-summary")
+@click.argument(
+    "lifecycle_json",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the lifecycle summary.",
+)
+def plugins_lifecycle_summary(
+    lifecycle_json: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit a deterministic batch summary for lifecycle-status records."""
+    lifecycle_records = tuple(
+        _load_lifecycle_from_payload(_load_json_file(path, artifact="lifecycle"))
+        for path in lifecycle_json
+    )
+    try:
+        summary = build_plugin_execution_request_lifecycle_summary(
+            lifecycle_records,
+            created_by=created_by,
+        )
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(summary.audit_record, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

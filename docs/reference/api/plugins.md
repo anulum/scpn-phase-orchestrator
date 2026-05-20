@@ -297,6 +297,17 @@ spo plugins lifecycle-status REQUEST_JSON \
   --created-by deployment_gate
 ```
 
+Batch lifecycle review is represented by
+`build_plugin_execution_request_lifecycle_summary()`. It validates each
+lifecycle record, rejects duplicate request hashes, and emits deterministic
+status counts plus storage-missing and renewal-required queues for operator
+planning.
+
+```bash
+spo plugins lifecycle-summary LIFECYCLE_JSON ... \
+  --created-by deployment_gate
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

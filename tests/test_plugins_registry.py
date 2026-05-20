@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionPlan,
     PluginExecutionRequest,
     PluginExecutionRequestLifecycleRecord,
+    PluginExecutionRequestLifecycleSummary,
     PluginExecutionRequestRevocation,
     PluginExecutionRequestRevocationList,
     PluginExecutionRequestStorageAdapterManifest,
@@ -34,6 +35,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_plan,
     build_plugin_execution_request,
     build_plugin_execution_request_lifecycle_record,
+    build_plugin_execution_request_lifecycle_summary,
     build_plugin_execution_request_revocation,
     build_plugin_execution_request_revocation_list,
     build_plugin_execution_request_storage_adapter_manifest,
@@ -48,6 +50,7 @@ from scpn_phase_orchestrator.plugins import (
     execute_plugin_execution_request,
     load_plugin_capability,
     validate_plugin_execution_request,
+    validate_plugin_execution_request_lifecycle_record,
     validate_plugin_execution_request_revocation_list,
     validate_plugin_execution_request_storage_bundle,
     validate_plugin_execution_request_storage_manifest,
@@ -1710,6 +1713,199 @@ class TestPluginRuntimeExecution:
         assert lifecycle.revocation_hash == revocation.revocation_hash
         assert lifecycle.revoked_by == "deployment_gate"
         assert lifecycle.revocation_reference == "REV-2026-05-20-20"
+
+    def test_execution_request_lifecycle_record_rejects_tampering(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            approved_plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-21",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(approved_plan, approval)
+        lifecycle = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+        )
+        tampered = replace(
+            lifecycle,
+            audit_record={**lifecycle.audit_record, "status": "revoked"},
+        )
+
+        with pytest.raises(ValueError, match="lifecycle hash mismatch"):
+            validate_plugin_execution_request_lifecycle_record(tampered)
+
+    def test_execution_request_lifecycle_summary_builds_review_queues(
+        self,
+    ) -> None:
+        first_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        first_approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(first_plan.target_hash,),
+            ),
+        )
+        first_approval = build_plugin_execution_approval(
+            first_approved_plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-22",
+            approval_reason="operator approved",
+        )
+        first_request = build_plugin_execution_request(
+            first_approved_plan,
+            first_approval,
+        )
+        first_manifest = build_plugin_execution_request_storage_manifest(
+            first_request,
+            storage_uri="file:///var/lib/spo/plugin-requests/breaker.json",
+            storage_backend="local_file",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+        stored = build_plugin_execution_request_lifecycle_record(
+            first_request,
+            created_by="deployment_gate",
+            storage_manifest=first_manifest,
+        )
+        second_plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        second_approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(second_plan.target_hash,),
+            ),
+        )
+        second_approval = build_plugin_execution_approval(
+            second_approved_plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-23",
+            approval_reason="operator approved",
+        )
+        second_request = build_plugin_execution_request(
+            second_approved_plan,
+            second_approval,
+        )
+        revocation = build_plugin_execution_request_revocation(
+            second_request,
+            revoked_by="deployment_gate",
+            revocation_reference="REV-2026-05-20-23",
+            revocation_reason="operator rotation",
+        )
+        revocation_list = build_plugin_execution_request_revocation_list(
+            (revocation,),
+            created_by="deployment_gate",
+        )
+        revoked = build_plugin_execution_request_lifecycle_record(
+            second_request,
+            created_by="deployment_gate",
+            revocation_list=revocation_list,
+        )
+
+        summary = build_plugin_execution_request_lifecycle_summary(
+            (revoked, stored),
+            created_by="deployment_gate",
+        )
+        repeated = build_plugin_execution_request_lifecycle_summary(
+            (stored, revoked),
+            created_by="deployment_gate",
+        )
+
+        assert summary == repeated
+        assert isinstance(summary, PluginExecutionRequestLifecycleSummary)
+        assert summary.request_count == 2
+        assert summary.status_counts == {"approved": 0, "stored": 1, "revoked": 1}
+        assert summary.stored_request_hashes == (stored.request_hash,)
+        assert summary.revoked_request_hashes == (revoked.request_hash,)
+        assert summary.renewal_required_request_hashes == (revoked.request_hash,)
+        assert summary.storage_missing_request_hashes == ()
+        assert len(summary.summary_hash) == 64
+
+    def test_execution_request_lifecycle_summary_rejects_duplicates(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            approved_plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-24",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(approved_plan, approval)
+        lifecycle = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+        )
+
+        with pytest.raises(ValueError, match="duplicate request hashes"):
+            build_plugin_execution_request_lifecycle_summary(
+                (lifecycle, lifecycle),
+                created_by="deployment_gate",
+            )
 
     def test_execution_request_revocation_is_deterministic(
         self,
