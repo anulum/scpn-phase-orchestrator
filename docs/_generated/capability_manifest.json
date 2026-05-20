@@ -12,7 +12,7 @@
     "research_experimental_modules": 121,
     "runtime_serving_modules": 46,
     "rust_kernel_files": 91,
-    "test_files": 480
+    "test_files": 481
   },
   "documentation": {
     "public_pages": [
@@ -715,7 +715,7 @@
     "name": "scpn-phase-orchestrator",
     "readme": "README.md",
     "requires_python": ">=3.10",
-    "version": "0.5.11"
+    "version": "0.6.0"
   },
   "project_label": "SCPN Phase Orchestrator",
   "python_package_modules": [
@@ -1222,6 +1222,7 @@
       "tests/test_cardiac_fep_hierarchy_demo.py",
       "tests/test_cardiac_hierarchy_sync_demo.py",
       "tests/test_causal_supervisor.py",
+      "tests/test_check_tracked_ignored.py",
       "tests/test_chemical_reactor_morphogenetic_field_demo.py",
       "tests/test_chimera.py",
       "tests/test_chimera_algorithm.py",
