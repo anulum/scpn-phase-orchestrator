@@ -21,6 +21,7 @@ from benchmarks.reference_suite import (
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_hybrid_operator_handoff_package_gate,
     benchmark_hybrid_target_readiness_gate,
+    benchmark_integrated_information_replay_corpus_gate,
     benchmark_intergenerational_policy_inheritance_gate,
     benchmark_kuramoto_reference,
     benchmark_meta_transfer_audit_corpus_quality,
@@ -933,6 +934,44 @@ def test_morphogenetic_domain_demo_gate_reports_domain_records() -> None:
     assert all(record["snapshot_top_edge_count"] >= 6 for record in records)
 
 
+def test_integrated_information_replay_corpus_gate_benchmark_shape() -> None:
+    out = benchmark_integrated_information_replay_corpus_gate()
+
+    assert out["suite"] == "integrated_information_replay_corpus_gate"
+    assert out["record_count"] == 12
+    assert out["domain_count"] == 3
+    assert out["ordering_evidence_count"] >= 6
+    assert out["non_actuating"] == 1
+    assert out["claim_boundary"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["corpus_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_integrated_information_replay_corpus_gate_reports_domains() -> None:
+    out = benchmark_integrated_information_replay_corpus_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    domains = json.loads(str(out["domains_json"]))
+    records = json.loads(str(out["replay_records_json"]))
+
+    assert thresholds == {
+        "min_domain_count": 3,
+        "min_ordering_evidence_count": 6,
+        "min_record_count": 12,
+        "require_claim_boundary": True,
+        "require_deterministic_hash": True,
+        "require_non_actuating": True,
+    }
+    assert domains == ["cyber_industrial", "infrastructure", "physiology"]
+    assert all(record["non_actuating"] is True for record in records)
+    assert all(
+        record["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
+        for record in records
+    )
+    assert all(record["phi"] >= 0.0 for record in records)
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -1000,6 +1039,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "hybrid_cocompiler",
         "hybrid_operator_handoff",
         "hybrid_target_readiness",
+        "integrated_information_replay_corpus",
         "intergenerational_inheritance",
         "meta_transfer",
         "meta_transfer_corpus",

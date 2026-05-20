@@ -30,40 +30,43 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Benchmark key | Suite ID | Record size | Wall time (s) | Steps/s | Acceptance |
 |---------------|----------|-------------|---------------|---------|------------|
-| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.048602505994495004 | 82.30028304411017 | 1 |
-| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.016700248001143336 | 179.63805087173634 | 1 |
-| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.01364164799451828 | 659.7443361400715 | 1 |
-| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.4916962899733335 | 38.52797003643948 | 1 |
-| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.30395874299574643 | 9.869760515630182 | 1 |
-| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0007548140129074454 | 6624.148352440689 | 1 |
-| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.0003088050289079547 | 9714.867696970725 | 1 |
-| `domain_formal_export` | `domain_formal_safety_exports` | 3 | 0.0004186179721727967 | 21499.315839896593 | 1 |
-| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00014004396507516503 | 7140.614730975915 | 1 |
-| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.0001308770151808858 | 15281.522101002913 | 1 |
-| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.00024367199512198567 | 8207.754850937103 | 1 |
-| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.00012613798025995493 | 15855.65264227511 | 1 |
-| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | 2 | 0.0001397490268573165 | 14311.369781787436 | 1 |
-| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00023807201068848372 | 12601.229314291331 | 1 |
-| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.0003523879568092525 | 14188.907150156947 | 1 |
-| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | 2 | 0.0002548940246924758 | 7846.398135118928 | 1 |
-| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | 2 | 0.00037515099393203855 | 5331.186728409189 | 1 |
-| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | 3 | 0.03891184303211048 | 77.09735047821731 | 1 |
-| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.0019246080191805959 | 3117.517925834325 | 1 |
-| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.0003722459659911692 | 10745.583204237844 | 1 |
-| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | 2 | 0.0002703199861571193 | 11097.958544050445 | 1 |
-| `kuramoto` | `kuramoto_reference_strogatz_2000` | 64 | 0.143779878038913 | 6955.076145838411 | n/a |
-| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 64 | 0.29033861600328237 | 3444.254208295512 | n/a |
-| `petri_reachability` | `petri_net_reachability` | n/a | 0.027238421025685966 | 183564.23800355298 | n/a |
+| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.04302795702824369 | 92.96281478979787 | 1 |
+| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.014022487972397357 | 213.94206262864097 | 1 |
+| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.012101989996153861 | 743.6793455341059 | 1 |
+| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.2084477890166454 | 43.46944513582813 | 1 |
+| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.2760652529541403 | 10.866996001479249 | 1 |
+| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0005927919992245734 | 8434.661747359041 | 1 |
+| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.00026885600527748466 | 11158.389402177267 | 1 |
+| `domain_formal_export` | `domain_formal_safety_exports` | n/a | 0.00037443102337419987 | 24036.46983867989 | 1 |
+| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00011081801494583488 | 9023.803580029615 | 1 |
+| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.00011624401668086648 | 17205.1866161056 | 1 |
+| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.0001997430226765573 | 10012.865396748242 | 1 |
+| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.0001124640111811459 | 17783.46671966553 | 1 |
+| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | n/a | 0.00012341002002358437 | 16206.139498379374 | 1 |
+| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00016455200966447592 | 18231.317904394156 | 1 |
+| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.0003443920286372304 | 14518.338359296962 | 1 |
+| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | 2 | 0.0002592519740574062 | 7714.502492301716 | 1 |
+| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | 2 | 0.00038280599983409047 | 5224.578509393289 | 1 |
+| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | 3 | 0.03629202296724543 | 82.66279349342373 | 1 |
+| `integrated_information_replay_corpus` | `integrated_information_replay_corpus_gate` | 12 | 0.03229943901533261 | 371.5234804636568 | 1 |
+| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.0019683210412040353 | 3048.2832192505343 | 1 |
+| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.00038965698331594467 | 10265.43901756969 | 1 |
+| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | n/a | 0.0002526720054447651 | 11873.100048100934 | 1 |
+| `kuramoto` | `kuramoto_reference_strogatz_2000` | 1000 | 0.12400957400677726 | 8063.893517974257 | n/a |
+| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 1000 | 0.2453802530071698 | 4075.3075593690123 | n/a |
+| `petri_reachability` | `petri_net_reachability` | 5000 | 0.022965986980125308 | 217713.26459110962 | n/a |
 
 ## Benchmark Record Details
 
-Each record below is copied from the current JSON artefact using stable key ordering. Long JSON-valued fields are preserved as fenced JSON so operators can audit thresholds and evidence without opening the raw artefact first.
+Each record below is copied from the current JSON artefact using stable key
+ordering. JSON-valued fields are preserved as fenced JSON so operators can
+audit thresholds and evidence without opening the raw artefact first.
 
 ### `auto_binding`
 
 - Suite: `auto_binding_synthetic_quality`
-- Wall time (s): `0.048602505994495004`
-- Steps/s: `82.30028304411017`
+- Wall time (s): `0.04302795702824369`
+- Steps/s: `92.96281478979787`
 
 | Metric | Value |
 |--------|-------|
@@ -170,8 +173,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `semantic_retrieval`
 
 - Suite: `semantic_retrieval_ranking_quality`
-- Wall time (s): `0.016700248001143336`
-- Steps/s: `179.63805087173634`
+- Wall time (s): `0.014022487972397357`
+- Steps/s: `213.94206262864097`
 
 | Metric | Value |
 |--------|-------|
@@ -250,8 +253,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `replay_policy`
 
 - Suite: `replay_policy_candidate_quality`
-- Wall time (s): `0.01364164799451828`
-- Steps/s: `659.7443361400715`
+- Wall time (s): `0.012101989996153861`
+- Steps/s: `743.6793455341059`
 
 | Metric | Value |
 |--------|-------|
@@ -436,8 +439,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `bayesian_posterior`
 
 - Suite: `bayesian_posterior_fit_quality`
-- Wall time (s): `2.4916962899733335`
-- Steps/s: `38.52797003643948`
+- Wall time (s): `2.2084477890166454`
+- Steps/s: `43.46944513582813`
 
 | Metric | Value |
 |--------|-------|
@@ -467,8 +470,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `bayesian_backends`
 
 - Suite: `bayesian_backend_fail_closed`
-- Wall time (s): `0.30395874299574643`
-- Steps/s: `9.869760515630182`
+- Wall time (s): `0.2760652529541403`
+- Steps/s: `10.866996001479249`
 
 | Metric | Value |
 |--------|-------|
@@ -526,8 +529,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `formal_export`
 
 - Suite: `formal_export_artifact_quality`
-- Wall time (s): `0.0007548140129074454`
-- Steps/s: `6624.148352440689`
+- Wall time (s): `0.0005927919992245734`
+- Steps/s: `8434.661747359041`
 
 | Metric | Value |
 |--------|-------|
@@ -668,8 +671,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `stl_closed_loop`
 
 - Suite: `stl_closed_loop_plan_quality`
-- Wall time (s): `0.0003088050289079547`
-- Steps/s: `9714.867696970725`
+- Wall time (s): `0.00026885600527748466`
+- Steps/s: `11158.389402177267`
 
 | Metric | Value |
 |--------|-------|
@@ -819,8 +822,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `domain_formal_export`
 
 - Suite: `domain_formal_safety_exports`
-- Wall time (s): `0.0004186179721727967`
-- Steps/s: `21499.315839896593`
+- Wall time (s): `0.00037443102337419987`
+- Steps/s: `24036.46983867989`
 
 | Metric | Value |
 |--------|-------|
@@ -883,8 +886,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_cocompiler`
 
 - Suite: `hybrid_cocompiler_review_gate`
-- Wall time (s): `0.00014004396507516503`
-- Steps/s: `7140.614730975915`
+- Wall time (s): `0.00011081801494583488`
+- Steps/s: `9023.803580029615`
 
 | Metric | Value |
 |--------|-------|
@@ -925,8 +928,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `quantum_target_readiness`
 
 - Suite: `quantum_target_readiness_gate`
-- Wall time (s): `0.0001308770151808858`
-- Steps/s: `15281.522101002913`
+- Wall time (s): `0.00011624401668086648`
+- Steps/s: `17205.1866161056`
 
 | Metric | Value |
 |--------|-------|
@@ -1012,8 +1015,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `neuromorphic_target_readiness`
 
 - Suite: `neuromorphic_target_readiness_gate`
-- Wall time (s): `0.00024367199512198567`
-- Steps/s: `8207.754850937103`
+- Wall time (s): `0.0001997430226765573`
+- Steps/s: `10012.865396748242`
 
 | Metric | Value |
 |--------|-------|
@@ -1102,8 +1105,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_target_readiness`
 
 - Suite: `hybrid_target_readiness_gate`
-- Wall time (s): `0.00012613798025995493`
-- Steps/s: `15855.65264227511`
+- Wall time (s): `0.0001124640111811459`
+- Steps/s: `17783.46671966553`
 
 | Metric | Value |
 |--------|-------|
@@ -1199,8 +1202,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `hybrid_operator_handoff`
 
 - Suite: `hybrid_operator_handoff_package_gate`
-- Wall time (s): `0.0001397490268573165`
-- Steps/s: `14311.369781787436`
+- Wall time (s): `0.00012341002002358437`
+- Steps/s: `16206.139498379374`
 
 | Metric | Value |
 |--------|-------|
@@ -1309,8 +1312,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `value_alignment_replay_calibration`
 
 - Suite: `value_alignment_replay_calibration_gate`
-- Wall time (s): `0.00023807201068848372`
-- Steps/s: `12601.229314291331`
+- Wall time (s): `0.00016455200966447592`
+- Steps/s: `18231.317904394156`
 
 | Metric | Value |
 |--------|-------|
@@ -1435,8 +1438,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `autopoietic_lineage`
 
 - Suite: `autopoietic_lineage_sandbox_gate`
-- Wall time (s): `0.0003523879568092525`
-- Steps/s: `14188.907150156947`
+- Wall time (s): `0.0003443920286372304`
+- Steps/s: `14518.338359296962`
 
 | Metric | Value |
 |--------|-------|
@@ -1650,8 +1653,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `intergenerational_inheritance`
 
 - Suite: `intergenerational_policy_inheritance_gate`
-- Wall time (s): `0.0002548940246924758`
-- Steps/s: `7846.398135118928`
+- Wall time (s): `0.0002592519740574062`
+- Steps/s: `7714.502492301716`
 
 | Metric | Value |
 |--------|-------|
@@ -1767,8 +1770,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `temporal_causal_hypergraph`
 
 - Suite: `temporal_causal_hypergraph_experiment_gate`
-- Wall time (s): `0.00037515099393203855`
-- Steps/s: `5331.186728409189`
+- Wall time (s): `0.00038280599983409047`
+- Steps/s: `5224.578509393289`
 
 | Metric | Value |
 |--------|-------|
@@ -1919,8 +1922,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `morphogenetic_domain_demos`
 
 - Suite: `morphogenetic_domain_demo_gate`
-- Wall time (s): `0.03891184303211048`
-- Steps/s: `77.09735047821731`
+- Wall time (s): `0.03629202296724543`
+- Steps/s: `82.66279349342373`
 
 | Metric | Value |
 |--------|-------|
@@ -1989,11 +1992,350 @@ Each record below is copied from the current JSON artefact using stable key orde
 ]
 ```
 
+### `integrated_information_replay_corpus`
+
+- Suite: `integrated_information_replay_corpus_gate`
+- Wall time (s): `0.03229943901533261`
+- Steps/s: `371.5234804636568`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `claim_boundary` | `1` |
+| `corpus_sha256` | `004c3939c45cbf6b12a6c9baeb9a792696614f023a0c59bc0e9d97279eaf8b24` |
+| `deterministic_hash` | `1` |
+| `domain_count` | `3` |
+| `non_actuating` | `1` |
+| `ordering_evidence_count` | `6` |
+| `record_count` | `12` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_domain_count": 3,
+  "min_ordering_evidence_count": 6,
+  "min_record_count": 12,
+  "require_claim_boundary": true,
+  "require_deterministic_hash": true,
+  "require_non_actuating": true
+}
+```
+
+`domains_json`:
+
+```json
+[
+  "cyber_industrial",
+  "infrastructure",
+  "physiology"
+]
+```
+
+`replay_records_json`:
+
+```json
+[
+  {
+    "case_name": "cardiac_respiratory_lock",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "physiology",
+    "expected_relationship": "cardiac_respiratory_lock > cardiac_respiratory_recovery in engineering proxy integration.",
+    "minimum_partition": [
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 4,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.21205869656204718,
+    "phi": 0.44096366290559985,
+    "total_integration": 0.47158338643364467
+  },
+  {
+    "case_name": "cardiac_respiratory_recovery",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "physiology",
+    "expected_relationship": "cardiac_respiratory_recovery < cardiac_respiratory_lock in engineering proxy integration.",
+    "minimum_partition": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        3
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 4,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.048910957729649485,
+    "phi": 0.1017074773463796,
+    "total_integration": 0.10884102086330437
+  },
+  {
+    "case_name": "eeg_sleep_spindle",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "physiology",
+    "expected_relationship": "eeg_sleep_spindle > eeg_sleep_baseline in engineering proxy integration.",
+    "minimum_partition": [
+      [
+        0
+      ],
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 4,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.43912138463466466,
+    "phi": 0.9131272490492912,
+    "total_integration": 1.0079023062880308
+  },
+  {
+    "case_name": "eeg_sleep_baseline",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "physiology",
+    "expected_relationship": "eeg_sleep_baseline < eeg_sleep_spindle in engineering proxy integration.",
+    "minimum_partition": [
+      [
+        0,
+        3
+      ],
+      [
+        1,
+        2
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 4,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.05592197906196478,
+    "phi": 0.11628648635439953,
+    "total_integration": 0.2156371949797753
+  },
+  {
+    "case_name": "power_grid_islanding",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "infrastructure",
+    "expected_relationship": "power_grid_islanding < power_grid_resynchronisation in engineering-information proxy integration",
+    "minimum_partition": [
+      [
+        0
+      ],
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.0,
+    "phi": 0.0,
+    "total_integration": 0.32029448973968233
+  },
+  {
+    "case_name": "power_grid_resynchronisation",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "infrastructure",
+    "expected_relationship": "power_grid_resynchronisation > power_grid_islanding in engineering-information proxy integration",
+    "minimum_partition": [
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        3,
+        4,
+        5
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.1712200819054804,
+    "phi": 0.35604215108407994,
+    "total_integration": 0.47754008544108995
+  },
+  {
+    "case_name": "traffic_spillback_fragmentation",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "infrastructure",
+    "expected_relationship": "traffic_spillback_fragmentation < traffic_platoon_recovery in engineering-information proxy integration",
+    "minimum_partition": [
+      [
+        0
+      ],
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.0,
+    "phi": 0.0,
+    "total_integration": 0.32032177007594664
+  },
+  {
+    "case_name": "traffic_platoon_recovery",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "infrastructure",
+    "expected_relationship": "traffic_platoon_recovery > traffic_spillback_fragmentation in engineering-information proxy integration",
+    "minimum_partition": [
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        3,
+        4,
+        5
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.12903508602483743,
+    "phi": 0.26832091821427817,
+    "total_integration": 0.48635445391861476
+  },
+  {
+    "case_name": "cyber_disruption",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "cyber_industrial",
+    "expected_relationship": "cyber_disruption < cyber_recontainment in engineering proxy integration",
+    "minimum_partition": [
+      [
+        0,
+        4,
+        5
+      ],
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.04625170926710428,
+    "phi": 0.09617772562371486,
+    "total_integration": 0.10259992143087594
+  },
+  {
+    "case_name": "cyber_recontainment",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "cyber_industrial",
+    "expected_relationship": "cyber_recontainment > cyber_disruption in engineering proxy integration",
+    "minimum_partition": [
+      [
+        0,
+        5
+      ],
+      [
+        1,
+        2,
+        3,
+        4
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.1844030700600674,
+    "phi": 0.3834554042962013,
+    "total_integration": 0.4014770029901035
+  },
+  {
+    "case_name": "spc_fragmentation",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "cyber_industrial",
+    "expected_relationship": "spc_fragmentation < spc_recovery in engineering proxy integration",
+    "minimum_partition": [
+      [
+        0,
+        2,
+        4
+      ],
+      [
+        1,
+        3,
+        5
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.044657360796357355,
+    "phi": 0.09286237118172999,
+    "total_integration": 0.09992210941069486
+  },
+  {
+    "case_name": "spc_recovery",
+    "claim_boundary": "engineering_proxy_not_theoretical_iit",
+    "domain": "cyber_industrial",
+    "expected_relationship": "spc_recovery > spc_fragmentation in engineering proxy integration",
+    "minimum_partition": [
+      [
+        0,
+        4,
+        5
+      ],
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "n_bins": 8,
+    "n_oscillators": 6,
+    "n_samples": 256,
+    "non_actuating": true,
+    "normalised_phi": 0.19783580418940888,
+    "phi": 0.41138798966309453,
+    "total_integration": 0.43156895842705706
+  }
+]
+```
+
 ### `meta_transfer_corpus`
 
 - Suite: `meta_transfer_audit_corpus_quality`
-- Wall time (s): `0.0019246080191805959`
-- Steps/s: `3117.517925834325`
+- Wall time (s): `0.0019683210412040353`
+- Steps/s: `3048.2832192505343`
 
 | Metric | Value |
 |--------|-------|
@@ -2094,8 +2436,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `meta_transfer`
 
 - Suite: `meta_transfer_package_manifest_quality`
-- Wall time (s): `0.0003722459659911692`
-- Steps/s: `10745.583204237844`
+- Wall time (s): `0.00038965698331594467`
+- Steps/s: `10265.43901756969`
 
 | Metric | Value |
 |--------|-------|
@@ -2171,8 +2513,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `plugin_ecosystem`
 
 - Suite: `plugin_ecosystem_catalog_quality`
-- Wall time (s): `0.0002703199861571193`
-- Steps/s: `11097.958544050445`
+- Wall time (s): `0.0002526720054447651`
+- Steps/s: `11873.100048100934`
 
 | Metric | Value |
 |--------|-------|
@@ -2238,8 +2580,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `kuramoto`
 
 - Suite: `kuramoto_reference_strogatz_2000`
-- Wall time (s): `0.143779878038913`
-- Steps/s: `6955.076145838411`
+- Wall time (s): `0.12400957400677726`
+- Steps/s: `8063.893517974257`
 
 | Metric | Value |
 |--------|-------|
@@ -2250,8 +2592,8 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `stuart_landau`
 
 - Suite: `stuart_landau_reference_pikovsky_2001`
-- Wall time (s): `0.29033861600328237`
-- Steps/s: `3444.254208295512`
+- Wall time (s): `0.2453802530071698`
+- Steps/s: `4075.3075593690123`
 
 | Metric | Value |
 |--------|-------|
@@ -2262,11 +2604,10 @@ Each record below is copied from the current JSON artefact using stable key orde
 ### `petri_reachability`
 
 - Suite: `petri_net_reachability`
-- Wall time (s): `0.027238421025685966`
-- Steps/s: `183564.23800355298`
+- Wall time (s): `0.022965986980125308`
+- Steps/s: `217713.26459110962`
 
 | Metric | Value |
 |--------|-------|
 | `n_steps` | `5000` |
 | `reachable_markings` | `4` |
-

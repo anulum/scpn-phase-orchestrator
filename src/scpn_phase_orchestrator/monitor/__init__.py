@@ -62,6 +62,9 @@ __all__ = [
     "entropy_production_rate",
     "itpc_persistence",
     "benchmark_integrated_information_approximations",
+    "build_cyber_industrial_integrated_information_replays",
+    "build_infrastructure_integrated_information_replays",
+    "build_physiology_integrated_information_replays",
     "integrated_information",
     "kaplan_yorke_dimension",
     "lyapunov_spectrum",
@@ -123,6 +126,18 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "benchmark_integrated_information_approximations": (
         ".information_integration",
         "benchmark_integrated_information_approximations",
+    ),
+    "build_cyber_industrial_integrated_information_replays": (
+        ".information_replay_cyber_industrial",
+        "build_cyber_industrial_integrated_information_replays",
+    ),
+    "build_infrastructure_integrated_information_replays": (
+        ".information_replay_infrastructure",
+        "build_infrastructure_integrated_information_replays",
+    ),
+    "build_physiology_integrated_information_replays": (
+        ".information_replay_physiology",
+        "build_physiology_integrated_information_replays",
     ),
     "integrated_information": (
         ".information_integration",

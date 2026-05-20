@@ -297,6 +297,15 @@ class MorphogeneticDomainDemoThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class IntegratedInformationReplayCorpusThresholds(NamedTuple):
+    min_domain_count: int
+    min_record_count: int
+    min_ordering_evidence_count: int
+    require_non_actuating: bool
+    require_claim_boundary: bool
+    require_deterministic_hash: bool
+
+
 class PluginEcosystemThresholds(NamedTuple):
     min_plugin_count: int
     min_capability_count: int
@@ -2738,6 +2747,87 @@ def benchmark_morphogenetic_domain_demo_gate() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_integrated_information_replay_corpus_gate() -> (
+    dict[str, float | int | str]
+):
+    """Benchmark empirical replay corpus coverage for the Phi proxy monitor."""
+    thresholds = IntegratedInformationReplayCorpusThresholds(
+        min_domain_count=3,
+        min_record_count=12,
+        min_ordering_evidence_count=6,
+        require_non_actuating=True,
+        require_claim_boundary=True,
+        require_deterministic_hash=True,
+    )
+
+    t0 = time.perf_counter()
+    corpus_builders = _integrated_information_replay_corpus_builders()
+    corpus = [builder() for builder in corpus_builders]
+    repeated = [builder() for builder in corpus_builders]
+    elapsed = time.perf_counter() - t0
+
+    records = [
+        _integrated_information_replay_record(record)
+        for domain_records in corpus
+        for record in domain_records
+    ]
+    repeated_records = [
+        _integrated_information_replay_record(record)
+        for domain_records in repeated
+        for record in domain_records
+    ]
+    domains = sorted({str(record["domain"]) for record in records})
+    ordering_evidence_count = sum(
+        int(">" in str(record["expected_relationship"]))
+        for record in records
+    )
+    non_actuating = int(all(record["non_actuating"] is True for record in records))
+    claim_boundary = int(
+        all(
+            record["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
+            for record in records
+        )
+    )
+    deterministic_hash = int(records == repeated_records)
+    acceptance_passed = int(
+        len(domains) >= thresholds.min_domain_count
+        and len(records) >= thresholds.min_record_count
+        and ordering_evidence_count >= thresholds.min_ordering_evidence_count
+        and non_actuating == int(thresholds.require_non_actuating)
+        and claim_boundary == int(thresholds.require_claim_boundary)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "integrated_information_replay_corpus_gate",
+        "record_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed,
+        "domain_count": len(domains),
+        "ordering_evidence_count": ordering_evidence_count,
+        "non_actuating": non_actuating,
+        "claim_boundary": claim_boundary,
+        "deterministic_hash": deterministic_hash,
+        "corpus_sha256": _stable_record_hash(records),
+        "acceptance_passed": acceptance_passed,
+        "domains_json": json.dumps(domains, sort_keys=True),
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_domain_count": thresholds.min_domain_count,
+                "min_ordering_evidence_count": (
+                    thresholds.min_ordering_evidence_count
+                ),
+                "min_record_count": thresholds.min_record_count,
+                "require_claim_boundary": thresholds.require_claim_boundary,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "replay_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3805,6 +3895,68 @@ def _morphogenetic_demo_runners() -> tuple[object, ...]:
     return tuple(importlib.import_module(module).run_demo for module in modules)
 
 
+def _integrated_information_replay_record(
+    payload: Mapping[str, object],
+) -> dict[str, object]:
+    required = {
+        "case_name",
+        "claim_boundary",
+        "description",
+        "domain",
+        "expected_relationship",
+        "minimum_partition",
+        "n_bins",
+        "n_oscillators",
+        "n_samples",
+        "non_actuating",
+        "normalised_phi",
+        "phi",
+        "total_integration",
+    }
+    missing = required - set(payload.keys())
+    if missing:
+        raise ValueError(f"integrated-information replay missing {sorted(missing)}")
+    minimum_partition = payload["minimum_partition"]
+    if (
+        not isinstance(minimum_partition, list)
+        or len(minimum_partition) != 2
+        or any(not isinstance(part, list) for part in minimum_partition)
+    ):
+        raise ValueError("integrated-information replay partition must be list pair")
+    return {
+        "case_name": str(payload["case_name"]),
+        "claim_boundary": str(payload["claim_boundary"]),
+        "domain": str(payload["domain"]),
+        "expected_relationship": str(payload["expected_relationship"]),
+        "minimum_partition": minimum_partition,
+        "n_bins": int(payload["n_bins"]),
+        "n_oscillators": int(payload["n_oscillators"]),
+        "n_samples": int(payload["n_samples"]),
+        "non_actuating": bool(payload["non_actuating"]),
+        "normalised_phi": float(payload["normalised_phi"]),
+        "phi": float(payload["phi"]),
+        "total_integration": float(payload["total_integration"]),
+    }
+
+
+def _integrated_information_replay_corpus_builders() -> tuple[object, ...]:
+    from scpn_phase_orchestrator.monitor.information_replay_cyber_industrial import (
+        build_cyber_industrial_integrated_information_replays,
+    )
+    from scpn_phase_orchestrator.monitor.information_replay_infrastructure import (
+        build_infrastructure_integrated_information_replays,
+    )
+    from scpn_phase_orchestrator.monitor.information_replay_physiology import (
+        build_physiology_integrated_information_replays,
+    )
+
+    return (
+        build_physiology_integrated_information_replays,
+        build_infrastructure_integrated_information_replays,
+        build_cyber_industrial_integrated_information_replays,
+    )
+
+
 def _stable_record_hash(records: object) -> str:
     canonical = json.dumps(records, sort_keys=True, separators=(",", ":"))
     return sha256(canonical.encode("utf-8")).hexdigest()
@@ -3842,6 +3994,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
                 benchmark_temporal_causal_hypergraph_experiment_gate()
             ),
             "morphogenetic_domain_demos": benchmark_morphogenetic_domain_demo_gate(),
+            "integrated_information_replay_corpus": (
+                benchmark_integrated_information_replay_corpus_gate()
+            ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

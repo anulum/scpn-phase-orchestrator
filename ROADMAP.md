@@ -865,7 +865,11 @@ Speculative research watchlist:
     independent/modular/phase-lag/noisy-lock/locked synthetic calibration
     cases with ordering margins, explicitly without hardware performance
     claims.
-  - Remaining scope: broader empirical replay benchmark corpus.
+  - Broader empirical replay benchmark corpus is in place:
+    physiology, infrastructure, and cyber-industrial replay builders emit
+    deterministic non-actuating proxy records with claim-boundary metadata,
+    coherent-vs-fragmented ordering evidence, and reference-suite gates.
+  - Remaining scope: richer Studio UI rendering.
 - Topos-theoretic semantic binding: categorical validation prototype for binding and policy composition with explicit proof obligations.
 - Multiverse counterfactual simulator: vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation.
 - Entanglement-aware hybrid order parameters: quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi`.
