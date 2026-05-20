@@ -124,6 +124,21 @@ class FormalExportThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class DomainFormalExportThresholds(NamedTuple):
+    min_domain_count: int
+    min_artifacts_per_domain: int
+    min_rules_per_domain: int
+    min_stl_specs_per_domain: int
+    require_deterministic_hash: bool
+
+
+class DomainFormalExportFixture(NamedTuple):
+    domain: str
+    rules: tuple[PolicyRule, ...]
+    stl_specs: tuple[PolicySTLSpec, ...]
+    required_labels: tuple[str, ...]
+
+
 class ReferenceSuiteResult(TypedDict):
     metadata: dict[str, str]
     benchmarks: dict[str, BenchmarkRecord]
@@ -705,6 +720,111 @@ def benchmark_formal_export_artifact_quality() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_domain_formal_safety_exports() -> dict[str, float | int | str]:
+    """Benchmark domain-style policy/STL formal safety artefacts."""
+    thresholds = DomainFormalExportThresholds(
+        min_domain_count=3,
+        min_artifacts_per_domain=3,
+        min_rules_per_domain=2,
+        min_stl_specs_per_domain=2,
+        require_deterministic_hash=True,
+    )
+    fixtures = _domain_formal_export_fixtures()
+    domain_results: list[dict[str, float | int | str | bool]] = []
+    artifact_texts: list[str] = []
+
+    t0 = time.perf_counter()
+    for fixture in fixtures:
+        rules = list(fixture.rules)
+        stl_specs = list(fixture.stl_specs)
+        policy_prism = export_policy_rules_prism(
+            rules,
+            module_name=f"{fixture.domain} policy",
+        )
+        policy_tla = export_policy_rules_tla(
+            rules,
+            module_name=f"{fixture.domain} policy",
+        )
+        stl_prism = export_stl_specs_prism(
+            stl_specs,
+            module_name=f"{fixture.domain} stl",
+        )
+        repeated = export_policy_rules_prism(
+            rules,
+            module_name=f"{fixture.domain} policy",
+        )
+        texts = (policy_prism.model, policy_tla.module, stl_prism.model)
+        deterministic_hash = int(
+            sha256(policy_prism.model.encode()).hexdigest()
+            == sha256(repeated.model.encode()).hexdigest()
+        )
+        required_labels_present = all(
+            label in "\n".join(texts) for label in fixture.required_labels
+        )
+        identifier_map_count = sum(
+            len(mapping)
+            for mapping in (
+                policy_prism.rule_names,
+                policy_prism.action_names,
+                policy_prism.metric_names,
+                stl_prism.stl_names,
+                stl_prism.metric_names,
+            )
+        )
+        artifact_count = len(texts)
+        accepted = (
+            artifact_count >= thresholds.min_artifacts_per_domain
+            and len(rules) >= thresholds.min_rules_per_domain
+            and len(stl_specs) >= thresholds.min_stl_specs_per_domain
+            and deterministic_hash == int(thresholds.require_deterministic_hash)
+            and required_labels_present
+        )
+        domain_results.append(
+            {
+                "domain": fixture.domain,
+                "artifact_count": artifact_count,
+                "rule_count": len(rules),
+                "stl_spec_count": len(stl_specs),
+                "identifier_map_count": identifier_map_count,
+                "deterministic_hash": deterministic_hash,
+                "required_labels_present": required_labels_present,
+                "accepted": accepted,
+            }
+        )
+        artifact_texts.extend(texts)
+    elapsed = time.perf_counter() - t0
+
+    accepted_domain_count = sum(result["accepted"] is True for result in domain_results)
+    artifact_hash = sha256("\n---\n".join(artifact_texts).encode()).hexdigest()
+    acceptance_passed = int(
+        len(fixtures) >= thresholds.min_domain_count
+        and accepted_domain_count == len(fixtures)
+    )
+
+    return {
+        "suite": "domain_formal_safety_exports",
+        "domain_count": len(fixtures),
+        "artifact_count": len(artifact_texts),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(artifact_texts) / elapsed,
+        "accepted_domain_count": accepted_domain_count,
+        "failed_domain_count": len(fixtures) - accepted_domain_count,
+        "artifact_sha256": artifact_hash,
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_artifacts_per_domain": thresholds.min_artifacts_per_domain,
+                "min_domain_count": thresholds.min_domain_count,
+                "min_rules_per_domain": thresholds.min_rules_per_domain,
+                "min_stl_specs_per_domain": thresholds.min_stl_specs_per_domain,
+                "require_deterministic_hash": (thresholds.require_deterministic_hash),
+            },
+            sort_keys=True,
+        ),
+        "domain_results_json": json.dumps(domain_results, sort_keys=True),
+    }
+
+
 def _deterministic_replay_observation(
     candidate: KnobPolicyCandidate,
 ) -> RewardObservation:
@@ -848,6 +968,131 @@ def _formal_export_fail_closed_count() -> int:
         except PolicyError:
             failures += 1
     return failures
+
+
+def _domain_formal_export_fixtures() -> tuple[DomainFormalExportFixture, ...]:
+    return (
+        DomainFormalExportFixture(
+            domain="plasma_control",
+            rules=(
+                PolicyRule(
+                    name="suppress edge-localised mode",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("R_bad", 0, ">", 0.35),
+                            PolicyCondition("stability_proxy", None, "<=", 0.55),
+                        ],
+                        logic="AND",
+                    ),
+                    actions=(PolicyAction("alpha", "edge_mode", -0.04, 2.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="recover coherent island",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 0, "<", 0.72),
+                    actions=(PolicyAction("K", "island", 0.08, 3.0),),
+                    max_fires=3,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded plasma instability",
+                    "always (R_bad <= 0.7 and stability_proxy >= 0.2)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "plasma recovery",
+                    "eventually (R_good >= 0.72)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_suppress_edge_localised_mode"',
+                'label "stl_bounded_plasma_instability_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="power_grid",
+            rules=(
+                PolicyRule(
+                    name="shed oscillatory tie line",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("phase_error", None, ">", 0.45),
+                            PolicyCondition("R_bad", 0, ">=", 0.3),
+                        ],
+                        logic="OR",
+                    ),
+                    actions=(PolicyAction("K", "tie_line", -0.06, 4.0),),
+                    max_fires=2,
+                ),
+                PolicyRule(
+                    name="restore generator lock",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 0, "<", 0.8),
+                    actions=(PolicyAction("K", "generator_cluster", 0.05, 5.0),),
+                    max_fires=3,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded grid phase error",
+                    "always (phase_error <= 0.9 and R_bad <= 0.65)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "grid resynchronises",
+                    "eventually (R_good >= 0.8)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_shed_oscillatory_tie_line"',
+                'label "stl_bounded_grid_phase_error_satisfied"',
+            ),
+        ),
+        DomainFormalExportFixture(
+            domain="medical_cardiac",
+            rules=(
+                PolicyRule(
+                    name="limit arrhythmia drive",
+                    regimes=["DEGRADED", "CRITICAL"],
+                    condition=CompoundCondition(
+                        conditions=[
+                            PolicyCondition("R_bad", 0, ">", 0.25),
+                            PolicyCondition("phase_error", None, ">", 0.35),
+                        ],
+                        logic="AND",
+                    ),
+                    actions=(PolicyAction("zeta", "pacemaker_guard", -0.02, 1.5),),
+                    max_fires=1,
+                ),
+                PolicyRule(
+                    name="restore sinus synchrony",
+                    regimes=["RECOVERY"],
+                    condition=PolicyCondition("R_good", 0, "<", 0.75),
+                    actions=(PolicyAction("K", "atrium_ventricle", 0.03, 2.5),),
+                    max_fires=2,
+                ),
+            ),
+            stl_specs=(
+                PolicySTLSpec(
+                    "bounded arrhythmia proxy",
+                    "always (R_bad <= 0.55 and phase_error <= 0.75)",
+                    "hard",
+                ),
+                PolicySTLSpec(
+                    "sinus synchrony recovers",
+                    "eventually (R_good >= 0.75)",
+                ),
+            ),
+            required_labels=(
+                'label "fires_limit_arrhythmia_drive"',
+                'label "stl_bounded_arrhythmia_proxy_satisfied"',
+            ),
+        ),
+    )
 
 
 def _audit_record_is_finite(value: object) -> bool:
@@ -1081,6 +1326,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "bayesian_posterior": benchmark_bayesian_posterior_fit_quality(),
             "bayesian_backends": benchmark_bayesian_backend_fail_closed(),
             "formal_export": benchmark_formal_export_artifact_quality(),
+            "domain_formal_export": benchmark_domain_formal_safety_exports(),
             "kuramoto": benchmark_kuramoto_reference(),
             "stuart_landau": benchmark_stuart_landau_reference(),
             "petri_reachability": benchmark_petri_reachability(),

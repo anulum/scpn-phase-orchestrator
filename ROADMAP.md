@@ -331,6 +331,10 @@ sessions do not treat them as abstract research labels.
     artefacts, records deterministic SHA-256 evidence, counts identifier maps,
     and proves malformed nets, policy rules, and STL predicates fail closed
     before text generation.
+  - Domain-style formal safety evidence is now benchmark-gated:
+    `benchmark_domain_formal_safety_exports()` emits deterministic policy
+    PRISM, policy TLA, and STL PRISM artefacts for plasma-control, power-grid,
+    and medical/cardiac-style profiles with per-domain acceptance results.
   - Acceptance: plasma, power, and medical-style policies have reproducible
     safety artefacts suitable for credibility reviews.
 - Neuromorphic and quantum tighter integration:

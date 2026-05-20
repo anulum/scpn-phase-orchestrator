@@ -30,14 +30,15 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
 |----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.04587314499076456 | 87.19698640250854 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.0033913859515450895 | 884.5940989503783 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
-| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.449690086999908 | 39.188630639220776 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
-| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.29651240998646244 | 10.117620372573843 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
-| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 5 fail-closed probes | 0.00039809197187423706 | 12559.911661769385 | identifier maps = 22; fail-closed = 5; deterministic hash = yes; SHA-256 = 74217fecfc92b3cf0d3d87f7b58c4278d4c758a1309f11c6d99bac429a57e378 |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.13418300496414304 | 7452.508611408906 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.2622191390255466 | 3813.604162214015 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.01971082400996238 | 253667.7308606107 | reachable markings = 4 |
+| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.04621123801916838 | 86.5590313408354 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
+| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 learners | 3 acceptance gates | 0.003315459005534649 | 904.8520868428659 | accepted learners = 3/3; min coherence improvement = 0.05827974999403174; unsafe acceptances = 0; non-actuating = yes |
+| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.3303233479964547 | 41.19599972361692 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
+| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.2994620510144159 | 10.017963844960047 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
+| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 5 fail-closed probes | 0.000587422982789576 | 8511.754130313075 | identifier maps = 22; fail-closed = 5; deterministic hash = yes; SHA-256 = 74217fecfc92b3cf0d3d87f7b58c4278d4c758a1309f11c6d99bac429a57e378 |
+| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.0005254819989204407 | 17127.132838974037 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
+| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.1341115339891985 | 7456.480216537834 | final `R` = 1.0 |
+| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.2559770059888251 | 3906.600892283488 | final mean amplitude = 3.6193922141707704 |
+| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.019981371995527297 | 250233.06713469015 | reachable markings = 4 |
 
 ## Auto-Binding Acceptance Gates
 
@@ -119,6 +120,20 @@ closed before text generation.
 | Policy PRISM bytes | 1116 | > 0 |
 | Policy TLA bytes | 1370 | > 0 |
 | STL PRISM bytes | 808 | > 0 |
+
+## Domain Formal-Safety Gates
+
+The domain formal-safety benchmark emits policy PRISM, policy TLA, and STL
+PRISM artefacts for plasma-control, power-grid, and medical/cardiac-style
+profiles. Each domain must provide at least two policy rules, at least two STL
+specifications, three deterministic artefacts, and required reachability/STL
+labels.
+
+| Domain profile | Artefacts | Rules | STL specs | Identifier maps | Accepted |
+|----------------|----------:|------:|----------:|----------------:|----------|
+| `plasma_control` | 3 | 2 | 2 | 12 | yes |
+| `power_grid` | 3 | 2 | 2 | 12 | yes |
+| `medical_cardiac` | 3 | 2 | 2 | 12 | yes |
 
 ## Use Policy
 

@@ -15,6 +15,7 @@ from benchmarks.reference_suite import (
     benchmark_auto_binding_proposal_quality,
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
+    benchmark_domain_formal_safety_exports,
     benchmark_formal_export_artifact_quality,
     benchmark_kuramoto_reference,
     benchmark_petri_reachability,
@@ -223,6 +224,44 @@ def test_formal_export_artifact_quality_reports_thresholds() -> None:
     }
 
 
+def test_domain_formal_safety_exports_benchmark_shape() -> None:
+    out = benchmark_domain_formal_safety_exports()
+
+    assert out["suite"] == "domain_formal_safety_exports"
+    assert out["domain_count"] == 3
+    assert out["artifact_count"] == 9
+    assert out["accepted_domain_count"] == 3
+    assert out["failed_domain_count"] == 0
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["artifact_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_domain_formal_safety_exports_reports_thresholds_and_domains() -> None:
+    out = benchmark_domain_formal_safety_exports()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    results = json.loads(str(out["domain_results_json"]))
+
+    assert thresholds == {
+        "min_artifacts_per_domain": 3,
+        "min_domain_count": 3,
+        "min_rules_per_domain": 2,
+        "min_stl_specs_per_domain": 2,
+        "require_deterministic_hash": True,
+    }
+    assert [record["domain"] for record in results] == [
+        "plasma_control",
+        "power_grid",
+        "medical_cardiac",
+    ]
+    assert all(record["accepted"] is True for record in results)
+    assert all(record["artifact_count"] == 3 for record in results)
+    assert all(record["rule_count"] == 2 for record in results)
+    assert all(record["stl_spec_count"] == 2 for record in results)
+    assert all(record["required_labels_present"] is True for record in results)
+    assert all(record["deterministic_hash"] == 1 for record in results)
+
+
 def test_reference_suite_aggregates_all_benchmarks() -> None:
     out = run_reference_suite(snapshot_date="2026-05-06")
     assert set(out.keys()) == {"metadata", "benchmarks"}
@@ -231,6 +270,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "auto_binding",
         "bayesian_backends",
         "bayesian_posterior",
+        "domain_formal_export",
         "formal_export",
         "replay_policy",
         "kuramoto",
