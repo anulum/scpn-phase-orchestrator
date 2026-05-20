@@ -320,6 +320,79 @@ class TestCompilerManifestValidation:
         assert manifest["status"] == "co_simulation_parity_failed"
         assert manifest["co_simulation_parity"]["max_abs_frequency_error"] == 0.75
 
+    def test_qpu_target_readiness_blocks_without_operator_preconditions(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+
+        readiness = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="qiskit_openqasm3",
+            provider="ibm_quantum",
+        )
+        repeated = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="qiskit_openqasm3",
+            provider="ibm_quantum",
+        )
+
+        assert readiness["schema"] == "scpn_quantum_target_readiness_v1"
+        assert readiness["status"] == "blocked"
+        assert readiness["manifest_sha256"] == manifest["manifest_sha256"]
+        assert readiness["qpu_execution_permitted"] is False
+        assert readiness["actuation_permitted"] is False
+        assert readiness["blocked_reasons"] == [
+            "credentials_not_configured",
+            "operator_approval_missing",
+        ]
+        assert readiness["readiness_sha256"] == repeated["readiness_sha256"]
+
+    def test_qpu_target_readiness_can_be_ready_but_never_executing(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+
+        readiness = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="pennylane_qasm",
+            provider="pennylane",
+            credentials_configured=True,
+            operator_approved=True,
+        )
+
+        assert readiness["status"] == "ready_not_executed"
+        assert readiness["blocked_reasons"] == []
+        assert readiness["qpu_execution_permitted"] is False
+        assert readiness["actuation_permitted"] is False
+        assert len(str(readiness["readiness_sha256"])) == 64
+
+    def test_qpu_target_readiness_rejects_bad_manifest_and_target(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+
+        with pytest.raises(ValueError, match="target_backend"):
+            bridge.audit_qpu_target_readiness(
+                manifest,
+                target_backend="dwave",
+                provider="ibm_quantum",
+            )
+        with pytest.raises(ValueError, match="quantum_compiler_manifest"):
+            bridge.audit_qpu_target_readiness(
+                {"manifest_kind": "other", "target_backends": ["qiskit_openqasm3"]},
+                target_backend="qiskit_openqasm3",
+                provider="ibm_quantum",
+            )
+
 
 class TestSolveQUPDEValidation:
     def test_rejects_invalid_t_max(self):

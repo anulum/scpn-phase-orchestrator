@@ -76,6 +76,14 @@ def _require_finite_real(value: object, *, name: str) -> float:
     return parsed
 
 
+def _require_non_empty_text(value: object, *, name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+    if any(ord(char) < 32 for char in value):
+        raise ValueError(f"{name} must not contain control characters")
+    return value.strip()
+
+
 def _finite_array(value: object, *, name: str) -> FloatArray:
     try:
         array = np.asarray(value, dtype=np.float64)
@@ -298,6 +306,77 @@ class QuantumControlBridge:
         canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
         manifest["manifest_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
         return manifest
+
+    def audit_qpu_target_readiness(
+        self,
+        manifest: dict[str, object],
+        *,
+        target_backend: str,
+        provider: str,
+        credentials_configured: bool = False,
+        operator_approved: bool = False,
+    ) -> dict[str, object]:
+        """Return non-executing QPU target-readiness evidence.
+
+        The audit validates that a quantum compiler manifest is suitable for a
+        named target backend and records whether operator preconditions are in
+        place. It never runs a simulator, submits a QPU job, or flips the
+        manifest execution/actuation permissions.
+        """
+        manifest_record = _require_mapping(manifest, name="manifest")
+        target_backend = _require_non_empty_text(
+            target_backend,
+            name="target_backend",
+        )
+        provider = _require_non_empty_text(provider, name="provider")
+        if not isinstance(credentials_configured, bool):
+            raise ValueError("credentials_configured must be a boolean")
+        if not isinstance(operator_approved, bool):
+            raise ValueError("operator_approved must be a boolean")
+        if manifest_record.get("manifest_kind") != "quantum_compiler_manifest":
+            raise ValueError("manifest must be a quantum_compiler_manifest")
+
+        target_backends = manifest_record.get("target_backends")
+        if not isinstance(target_backends, list) or not all(
+            isinstance(item, str) for item in target_backends
+        ):
+            raise ValueError("manifest target_backends must be a list of strings")
+        if target_backend not in target_backends:
+            raise ValueError("target_backend is not declared by manifest")
+
+        blocked_reasons: list[str] = []
+        if manifest_record.get("status") != "co_simulation_parity_passed":
+            blocked_reasons.append("co_simulation_parity_not_passed")
+        if manifest_record.get("qpu_execution_permitted") is not False:
+            blocked_reasons.append("qpu_execution_permission_must_remain_false")
+        if manifest_record.get("actuation_permitted") is not False:
+            blocked_reasons.append("actuation_permission_must_remain_false")
+        if not credentials_configured:
+            blocked_reasons.append("credentials_not_configured")
+        if not operator_approved:
+            blocked_reasons.append("operator_approval_missing")
+
+        manifest_sha = str(manifest_record.get("manifest_sha256", ""))
+        record: dict[str, object] = {
+            "schema": "scpn_quantum_target_readiness_v1",
+            "provider": provider,
+            "target_backend": target_backend,
+            "manifest_sha256": manifest_sha,
+            "status": "blocked" if blocked_reasons else "ready_not_executed",
+            "blocked_reasons": blocked_reasons,
+            "credentials_configured": credentials_configured,
+            "operator_approved": operator_approved,
+            "qpu_execution_permitted": False,
+            "actuation_permitted": False,
+            "operator_commands": [
+                "review quantum_compiler_manifest.json",
+                "run simulator parity outside SPO before target handoff",
+                "submit QPU job only from an approved external operator workflow",
+            ],
+        }
+        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+        record["readiness_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+        return record
 
     def build_hamiltonian(self, knm: FloatArray, omegas: FloatArray) -> object:
         """Build Kuramoto XY Hamiltonian as SparsePauliOp.

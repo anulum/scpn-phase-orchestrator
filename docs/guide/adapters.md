@@ -66,6 +66,22 @@ term reconstruction, and SHA-256 hashes for the QASM and manifest payloads. The
 manifest keeps QPU execution and live actuation disabled until an operator runs
 external simulator parity and target handoff checks.
 
+Use `audit_qpu_target_readiness()` to produce a non-executing target-readiness
+record for a reviewed manifest:
+
+```python
+readiness = bridge.audit_qpu_target_readiness(
+    compiler_manifest,
+    target_backend="qiskit_openqasm3",
+    provider="ibm_quantum",
+)
+```
+
+The readiness record validates the requested backend against the manifest,
+records missing credentials and operator approval as blockers, and keeps
+`qpu_execution_permitted=false` plus `actuation_permitted=false` even when all
+preconditions are present. It is release/operator evidence, not a QPU submitter.
+
 ### SCPNControlBridge
 
 Generic bridge for the SCPN ecosystem. Imports Knm matrices and omega vectors,

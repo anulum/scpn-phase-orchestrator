@@ -627,7 +627,10 @@ Near-term candidate tracks:
 - Quantum-native compiler target: deterministic OpenQASM 3 compiler manifests
   are in place for Qiskit/PennyLane handoff, with Z-frequency terms,
   symmetrised XY coupling terms, co-simulation parity evidence, SHA-256 hashes,
-  and QPU execution disabled. Real QPU target execution remains open.
+  and QPU execution disabled. Non-executing QPU target-readiness audits now
+  validate requested backends, credentials posture, operator approval, stable
+  readiness hashes, and disabled execution/actuation before any external
+  handoff. Real QPU target execution remains open.
 - Neuromorphic compiler target: deterministic Lava/PyNN schedule manifests
   from `UPDEState` are in place with population records, projections,
   control-action review records, simulator parity evidence, SHA-256 coverage,
