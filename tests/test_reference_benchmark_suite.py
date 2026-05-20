@@ -18,6 +18,7 @@ from benchmarks.reference_suite import (
     benchmark_domain_formal_safety_exports,
     benchmark_formal_export_artifact_quality,
     benchmark_hybrid_cocompiler_review_gate,
+    benchmark_hybrid_target_readiness_gate,
     benchmark_kuramoto_reference,
     benchmark_meta_transfer_audit_corpus_quality,
     benchmark_meta_transfer_package_manifest_quality,
@@ -624,6 +625,58 @@ def test_neuromorphic_target_readiness_gate_reports_thresholds_and_records() -> 
     assert all(record["actuation_permitted"] is False for record in records)
 
 
+def test_hybrid_target_readiness_gate_benchmark_shape() -> None:
+    out = benchmark_hybrid_target_readiness_gate()
+
+    assert out["suite"] == "hybrid_target_readiness_gate"
+    assert out["record_count"] == 2
+    assert out["ready_count"] == 1
+    assert out["blocked_count"] == 1
+    assert out["blocked_reason_count"] == 1
+    assert out["operator_command_count"] == 6
+    assert out["non_executing"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["component_hash_linked"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["hybrid_manifest_sha256"])) == 64
+    assert len(str(out["ready_readiness_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_hybrid_target_readiness_gate_reports_thresholds_and_records() -> None:
+    out = benchmark_hybrid_target_readiness_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["readiness_records_json"]))
+
+    assert thresholds == {
+        "min_blocked_count": 1,
+        "min_blocked_reason_count": 1,
+        "min_operator_command_count": 6,
+        "min_ready_count": 1,
+        "require_component_hash_linked": True,
+        "require_deterministic_hash": True,
+        "require_non_executing": True,
+    }
+    assert [record["schema"] for record in records] == [
+        "scpn_hybrid_target_readiness_v1",
+        "scpn_hybrid_target_readiness_v1",
+    ]
+    assert [record["status"] for record in records] == [
+        "blocked",
+        "ready_not_executed",
+    ]
+    assert records[0]["blocked_reasons"] == ["hybrid_operator_approval_missing"]
+    assert records[1]["blocked_reasons"] == []
+    assert all(record["qpu_execution_permitted"] is False for record in records)
+    assert all(record["hardware_write_permitted"] is False for record in records)
+    assert all(record["actuation_permitted"] is False for record in records)
+    assert records[1]["component_statuses"] == {
+        "hybrid": "co_simulation_parity_passed",
+        "neuromorphic": "ready_not_executed",
+        "quantum": "ready_not_executed",
+    }
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -688,6 +741,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "domain_formal_export",
         "formal_export",
         "hybrid_cocompiler",
+        "hybrid_target_readiness",
         "meta_transfer",
         "meta_transfer_corpus",
         "neuromorphic_target_readiness",

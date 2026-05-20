@@ -674,8 +674,9 @@ Speculative research watchlist:
   schedule artefacts under shared N-channel audit semantics, component hashes,
   parity status, disabled execution gates, and non-executing hybrid
   target-readiness audits that link quantum and neuromorphic readiness hashes
-  before any external operator handoff. Real hybrid target execution remains
-  open.
+  before any external operator handoff. Reference-suite gates now enforce
+  component-hash linkage, ready/blocked evidence, deterministic hashes, and
+  non-executing permissions. Real hybrid target execution remains open.
 - Value-alignment supervisor guard encoded as binding-spec objectives and Petri-net guard conditions.
   - Foundation is in place: value-alignment guard support exists.
   - Binding-spec templates are in place: `value_alignment` maps can be loaded

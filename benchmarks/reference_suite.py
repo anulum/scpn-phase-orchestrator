@@ -22,6 +22,7 @@ from typing import NamedTuple, TypedDict
 import numpy as np
 
 from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
+    audit_hybrid_target_readiness,
     build_hybrid_cocompiler_manifest,
 )
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
@@ -214,6 +215,16 @@ class NeuromorphicTargetReadinessThresholds(NamedTuple):
     min_operator_command_count: int
     require_non_executing: bool
     require_deterministic_hash: bool
+
+
+class HybridTargetReadinessThresholds(NamedTuple):
+    min_ready_count: int
+    min_blocked_count: int
+    min_blocked_reason_count: int
+    min_operator_command_count: int
+    require_non_executing: bool
+    require_deterministic_hash: bool
+    require_component_hash_linked: bool
 
 
 class PluginEcosystemThresholds(NamedTuple):
@@ -1865,6 +1876,129 @@ def benchmark_neuromorphic_target_readiness_gate() -> dict[str, float | int | st
     }
 
 
+def benchmark_hybrid_target_readiness_gate() -> dict[str, float | int | str]:
+    """Benchmark non-executing hybrid target-readiness audit gates."""
+    thresholds = HybridTargetReadinessThresholds(
+        min_ready_count=1,
+        min_blocked_count=1,
+        min_blocked_reason_count=1,
+        min_operator_command_count=6,
+        require_non_executing=True,
+        require_deterministic_hash=True,
+        require_component_hash_linked=True,
+    )
+    quantum_manifest = _hybrid_quantum_manifest()
+    neuromorphic_manifest = _hybrid_neuromorphic_manifest()
+
+    t0 = time.perf_counter()
+    hybrid_manifest = build_hybrid_cocompiler_manifest(
+        quantum_manifest,
+        neuromorphic_manifest,
+        n_channel_semantics=("Q_control", "S_spike", "audit"),
+    )
+    quantum_readiness = _hybrid_quantum_readiness_record(
+        manifest_sha256=str(quantum_manifest["manifest_sha256"]),
+    )
+    neuromorphic_readiness = _hybrid_neuromorphic_readiness_record(
+        manifest_sha256=str(neuromorphic_manifest["schedule_sha256"]),
+    )
+    blocked = audit_hybrid_target_readiness(
+        hybrid_manifest,
+        quantum_readiness,
+        neuromorphic_readiness,
+        hybrid_operator_approved=False,
+    )
+    ready = audit_hybrid_target_readiness(
+        hybrid_manifest,
+        quantum_readiness,
+        neuromorphic_readiness,
+        hybrid_operator_approved=True,
+    )
+    repeated_ready = audit_hybrid_target_readiness(
+        hybrid_manifest,
+        quantum_readiness,
+        neuromorphic_readiness,
+        hybrid_operator_approved=True,
+    )
+    elapsed = time.perf_counter() - t0
+
+    records = [blocked, ready]
+    ready_count = sum(record["status"] == "ready_not_executed" for record in records)
+    blocked_count = sum(record["status"] == "blocked" for record in records)
+    blocked_reason_count = sum(
+        len(record["blocked_reasons"])
+        for record in records
+        if isinstance(record["blocked_reasons"], list)
+    )
+    operator_command_count = sum(
+        len(record["operator_commands"])
+        for record in records
+        if isinstance(record["operator_commands"], list)
+    )
+    non_executing = all(
+        record["qpu_execution_permitted"] is False
+        and record["hardware_write_permitted"] is False
+        and record["actuation_permitted"] is False
+        for record in records
+    )
+    deterministic_hash = int(
+        ready["readiness_sha256"] == repeated_ready["readiness_sha256"]
+    )
+    component_hashes = hybrid_manifest["component_hashes"]
+    component_hash_linked = int(
+        isinstance(component_hashes, dict)
+        and quantum_readiness["manifest_sha256"]
+        == component_hashes["quantum_manifest_sha256"]
+        and neuromorphic_readiness["manifest_sha256"]
+        == component_hashes["neuromorphic_schedule_sha256"]
+        and ready["quantum_readiness_sha256"]
+        == quantum_readiness["readiness_sha256"]
+        and ready["neuromorphic_readiness_sha256"]
+        == neuromorphic_readiness["readiness_sha256"]
+    )
+    acceptance_passed = int(
+        ready_count >= thresholds.min_ready_count
+        and blocked_count >= thresholds.min_blocked_count
+        and blocked_reason_count >= thresholds.min_blocked_reason_count
+        and operator_command_count >= thresholds.min_operator_command_count
+        and non_executing == thresholds.require_non_executing
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+        and component_hash_linked == int(thresholds.require_component_hash_linked)
+    )
+
+    return {
+        "suite": "hybrid_target_readiness_gate",
+        "record_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed,
+        "ready_count": ready_count,
+        "blocked_count": blocked_count,
+        "blocked_reason_count": blocked_reason_count,
+        "operator_command_count": operator_command_count,
+        "non_executing": int(non_executing),
+        "deterministic_hash": deterministic_hash,
+        "component_hash_linked": component_hash_linked,
+        "hybrid_manifest_sha256": str(hybrid_manifest["hybrid_manifest_sha256"]),
+        "ready_readiness_sha256": str(ready["readiness_sha256"]),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_blocked_count": thresholds.min_blocked_count,
+                "min_blocked_reason_count": thresholds.min_blocked_reason_count,
+                "min_operator_command_count": thresholds.min_operator_command_count,
+                "min_ready_count": thresholds.min_ready_count,
+                "require_component_hash_linked": (
+                    thresholds.require_component_hash_linked
+                ),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_executing": thresholds.require_non_executing,
+            },
+            sort_keys=True,
+        ),
+        "readiness_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -2345,6 +2479,56 @@ def _hybrid_neuromorphic_manifest() -> dict[str, object]:
         ],
         "schedule_sha256": "c" * 64,
     }
+
+
+def _hybrid_quantum_readiness_record(*, manifest_sha256: str) -> dict[str, object]:
+    record: dict[str, object] = {
+        "schema": "scpn_quantum_target_readiness_v1",
+        "provider": "pennylane",
+        "target_backend": "pennylane_qasm",
+        "manifest_sha256": manifest_sha256,
+        "status": "ready_not_executed",
+        "blocked_reasons": [],
+        "credentials_configured": True,
+        "operator_approved": True,
+        "qpu_execution_permitted": False,
+        "actuation_permitted": False,
+        "operator_commands": [
+            "review quantum_compiler_manifest.json",
+            "run simulator parity outside SPO before target handoff",
+            "submit QPU job only from an approved external operator workflow",
+        ],
+    }
+    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+    record["readiness_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+    return record
+
+
+def _hybrid_neuromorphic_readiness_record(
+    *,
+    manifest_sha256: str,
+) -> dict[str, object]:
+    record: dict[str, object] = {
+        "schema": "scpn_neuromorphic_target_readiness_v1",
+        "target_backend": "pynn",
+        "hardware_site": "brainscales_review_lane",
+        "manifest_sha256": manifest_sha256,
+        "status": "ready_not_executed",
+        "blocked_reasons": [],
+        "credentials_configured": True,
+        "operator_approved": True,
+        "external_simulator_parity_verified": True,
+        "hardware_write_permitted": False,
+        "actuation_permitted": False,
+        "operator_commands": [
+            "review neuromorphic_schedule_manifest.json",
+            "run target simulator parity outside SPO before hardware handoff",
+            "submit neuromorphic hardware job only from an approved operator workflow",
+        ],
+    }
+    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+    record["readiness_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+    return record
 
 
 def _hybrid_cocompiler_blocked_probe_count(
@@ -2865,6 +3049,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "neuromorphic_target_readiness": (
                 benchmark_neuromorphic_target_readiness_gate()
             ),
+            "hybrid_target_readiness": benchmark_hybrid_target_readiness_gate(),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),
