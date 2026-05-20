@@ -193,6 +193,24 @@ class TestMain:
 
         assert any("tools/check_product_boundaries.py" in c for c in calls)
 
+    def test_includes_tracked_ignored_gate(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            calls.append(list(cmd))
+            return _completed(0)
+
+        with (
+            patch.object(mod.shutil, "which", return_value=None),
+            patch.object(mod.subprocess, "run", side_effect=fake_run),
+            patch.object(sys, "argv", ["preflight", "--no-tests"]),
+        ):
+            mod.main()
+
+        assert any("tools/check_tracked_ignored.py" in c for c in calls)
+
     def test_without_cargo_skips_rust_gates(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:

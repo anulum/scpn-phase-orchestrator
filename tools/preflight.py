@@ -40,6 +40,11 @@ PYTHON_GATES: list[tuple[str, list[str], Path]] = [
         ROOT,
     ),
     (
+        "tracked-ignored",
+        [_PY, "tools/check_tracked_ignored.py"],
+        ROOT,
+    ),
+    (
         "ndarray-hygiene",
         [_PY, "tools/check_ndarray_type_hygiene.py"],
         ROOT,

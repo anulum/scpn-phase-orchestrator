@@ -51,3 +51,10 @@ repos:
         language: system
         pass_filenames: false
         files: (pyproject\.toml|CITATION\.cff|Cargo\.toml)
+
+      - id: tracked-ignored
+        name: tracked ignored file guard
+        entry: python tools/check_tracked_ignored.py
+        language: system
+        pass_filenames: false
+        always_run: true

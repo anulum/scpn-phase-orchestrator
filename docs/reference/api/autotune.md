@@ -39,7 +39,12 @@ effectively filtering out noise and revealing the underlying topology.
 
 Identifies natural frequencies $\omega_i$ from phase time-series.
 
-::: scpn_phase_orchestrator.autotune.freq_id
+The dedicated frequency-identification reference page owns the full
+mkdocstrings inventory for `scpn_phase_orchestrator.autotune.freq_id`. This
+aggregate page links to that surface instead of declaring a second primary
+mkdocstrings target for the same dataclasses.
+
+See [Frequency Identification](autotune_freq_id.md).
 
 ## Coupling Estimation
 
