@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from types import SimpleNamespace
 from typing import get_type_hints
 
@@ -513,3 +514,117 @@ class TestMetaTransferBehaviour:
 
         with pytest.raises(ValueError, match=r"line 2: features/metrics"):
             records_from_audit_jsonl(audit_path)
+
+    def test_records_from_audit_jsonl_rejects_malformed_json_line(
+        self,
+        tmp_path,
+    ) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text(
+            "{not-json\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(json.JSONDecodeError):
+            records_from_audit_jsonl(audit_path)
+
+    def test_records_from_audit_directory_handles_nested_custom_pattern(
+        self,
+        tmp_path,
+    ) -> None:
+        root = tmp_path / "replays"
+        root_nested_file = (
+            root / "2026" / "run_a" / "nested" / "audit.jsonl"
+        )
+        root_nested_file.parent.mkdir(parents=True)
+        top_level = root / "top.jsonl"
+        top_level.write_text(
+            json.dumps(
+                {
+                    "domain": "top",
+                    "metrics": {"R_global": 0.5},
+                    "actions": [{"knob": "K", "value": 0.03}],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        root_nested_file.write_text(
+            json.dumps(
+                {
+                    "domain": "nested",
+                    "features": {"R_global": 0.7},
+                    "knobs": {"zeta": 0.04},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        records = records_from_audit_directory(
+            root,
+            pattern="**/run_a/**/*.jsonl",
+            min_records=1,
+        )
+
+        assert [record.domain for record in records] == ["nested"]
+
+    def test_records_from_audit_directory_rejects_missing_root(self) -> None:
+        with pytest.raises(ValueError, match="audit directory must exist"):
+            records_from_audit_directory("/definitely/missing/replay/history")
+
+    def test_replay_proposal_neighbour_count_caps_dataset_size(self) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+
+        proposal = model.propose(
+            {"R_global": 0.42, "stability_proxy": 0.31, "event_rate": 0.78},
+            k_neighbours=99,
+        )
+
+        assert len(proposal.neighbours) == 3
+        assert proposal.feature_keys == ("R_global", "event_rate", "stability_proxy")
+
+    def test_meta_transfer_package_manifest_is_deterministic_and_fail_closed(
+        self,
+    ) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+        first = model.to_package_manifest()
+        second = model.to_package_manifest()
+
+        assert first == second
+        assert first.to_audit_record()["schema"] == "scpn_meta_package_manifest_v1"
+        assert first.to_audit_record()["execution_permitted"] is False
+        assert first.package_sha256 == sha256(
+            model.to_json_package().encode("utf-8")
+        ).hexdigest()
+        assert first.package_name == "scpn-meta"
+        assert first.console_script == "scpn-meta"
+
+    def test_to_package_manifest_rejects_invalid_package_identifier(self) -> None:
+        model = CrossDomainMetaTransfer.fit(_records())
+
+        with pytest.raises(ValueError, match="package_name"):
+            model.to_package_manifest(package_name="1-meta-transfer")
+
+    def test_meta_package_manifest_enforces_execution_disabled(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match="meta package manifest execution must remain disabled",
+        ):
+            MetaPackageManifest(
+                package_name="scpn-meta",
+                import_target="scpn_phase_orchestrator.meta",
+                console_script="scpn-meta",
+                package_sha256="0" * 64,
+                training_summary=MetaTrainingSummary(
+                    record_count=1,
+                    domain_count=1,
+                    domains=("alpha",),
+                    feature_keys=("R_global",),
+                    knob_keys=("K",),
+                    reward_mean=0.5,
+                    reward_min=0.5,
+                    reward_max=0.5,
+                ),
+                execution_permitted=True,
+            )

@@ -280,7 +280,7 @@ class TestQuantumBridgeDependencyShim:
             quantum_to_orchestrator_phases=fake_quantum_to_orchestrator_phases,
         )
 
-        bridge = QuantumControlBridge(n_oscillators=4)
+        bridge = QuantumControlBridge(n_oscillators=2)
         payload = bridge.quantum_to_orchestrator(
             np.array([0.8, 1.1], dtype=np.float64),
         )
@@ -292,9 +292,21 @@ class TestQuantumBridgeDependencyShim:
         monkeypatch: pytest.MonkeyPatch,
     ):
         _install_fake_quantum_module(monkeypatch)
-        bridge = QuantumControlBridge(n_oscillators=4)
+        bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ImportError, match="quantum_to_orchestrator_phases"):
             bridge.quantum_to_orchestrator(np.array([0.8, 1.1]))
+
+    def test_quantum_to_orchestrator_rejects_invalid_payload_shape(self):
+        bridge = QuantumControlBridge(3)
+        with pytest.raises(ValueError, match="quantum_theta shape"):
+            bridge.quantum_to_orchestrator(np.array([0.0, 0.1]))
+
+    def test_quantum_to_orchestrator_rejects_non_finite_phases(self):
+        bridge = QuantumControlBridge(2)
+        with pytest.raises(
+            ValueError, match="quantum_theta must contain finite values"
+        ):
+            bridge.quantum_to_orchestrator(np.array([0.0, float("nan")]))
 
     def test_build_hamiltonian_rejects_invalid_shapes_without_dependency(self):
         bridge = QuantumControlBridge(3)
@@ -408,6 +420,7 @@ class TestQuantumBridgeLive:
         state = _make_state()
 
         q_phases = bridge.orchestrator_to_quantum(state)
+        bridge = QuantumControlBridge(n_oscillators=len(q_phases))
         assert isinstance(q_phases, np.ndarray)
         assert q_phases.ndim == 1
 

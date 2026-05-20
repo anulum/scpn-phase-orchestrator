@@ -372,6 +372,117 @@ class TestCompilerManifestValidation:
         assert readiness["actuation_permitted"] is False
         assert len(str(readiness["readiness_sha256"])) == 64
 
+    def test_qpu_target_readiness_rejects_invalid_provider_and_target_metadata(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+
+        bad_manifest = dict(manifest)
+        bad_manifest["target_backends"] = "qiskit_openqasm3"
+        with pytest.raises(
+            ValueError, match="target_backends must be a list of strings"
+        ):
+            bridge.audit_qpu_target_readiness(
+                bad_manifest,
+                target_backend="qiskit_openqasm3",
+                provider="ibm_quantum",
+            )
+
+        with pytest.raises(ValueError, match="target_backend"):
+            bridge.audit_qpu_target_readiness(
+                manifest,
+                target_backend="   ",
+                provider="ibm_quantum",
+            )
+        with pytest.raises(ValueError, match="provider"):
+            bridge.audit_qpu_target_readiness(
+                manifest,
+                target_backend="qiskit_openqasm3",
+                provider="\x01",
+            )
+
+    def test_qpu_target_readiness_rejects_bad_flag_types(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+
+        with pytest.raises(
+            ValueError, match="credentials_configured must be a boolean"
+        ):
+            bridge.audit_qpu_target_readiness(
+                manifest,
+                target_backend="qiskit_openqasm3",
+                provider="ibm_quantum",
+                credentials_configured="yes",
+            )
+        with pytest.raises(ValueError, match="operator_approved must be a boolean"):
+            bridge.audit_qpu_target_readiness(
+                manifest,
+                target_backend="qiskit_openqasm3",
+                provider="ibm_quantum",
+                credentials_configured=True,
+                operator_approved=1,
+            )
+
+    def test_qpu_target_readiness_blocks_if_execution_permissions_escape_sandbox(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+        manifest["qpu_execution_permitted"] = True
+        manifest["actuation_permitted"] = True
+
+        readiness = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="qiskit_openqasm3",
+            provider="ibm_quantum",
+            credentials_configured=True,
+            operator_approved=True,
+        )
+
+        assert readiness["status"] == "blocked"
+        assert (
+            "qpu_execution_permission_must_remain_false"
+            in readiness["blocked_reasons"]
+        )
+        assert "actuation_permission_must_remain_false" in readiness["blocked_reasons"]
+        assert readiness["qpu_execution_permitted"] is False
+        assert readiness["actuation_permitted"] is False
+
+    def test_qpu_target_readiness_record_is_deterministic(self):
+        bridge = QuantumControlBridge(n_oscillators=2)
+        manifest = bridge.build_quantum_compiler_manifest(
+            knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
+            omegas=np.array([0.1, 0.2]),
+            dt=0.05,
+        )
+
+        readiness_a = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="qiskit_openqasm3",
+            provider="ibm_quantum",
+            credentials_configured=True,
+            operator_approved=True,
+        )
+        readiness_b = bridge.audit_qpu_target_readiness(
+            manifest,
+            target_backend="qiskit_openqasm3",
+            provider="ibm_quantum",
+            credentials_configured=True,
+            operator_approved=True,
+        )
+
+        assert readiness_a["readiness_sha256"] == readiness_b["readiness_sha256"]
+        assert readiness_a["status"] == readiness_b["status"]
+
     def test_qpu_target_readiness_rejects_bad_manifest_and_target(self):
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(

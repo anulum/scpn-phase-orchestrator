@@ -294,6 +294,28 @@ def test_render_markdown_includes_missing_sections() -> None:
     assert "- No auxiliary events recorded." in markdown
 
 
+def test_render_markdown_notifies_absent_regime_transitions() -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 0,
+                "regime": "stable",
+                "stability": 0.82,
+                "layers": [{"R": 0.55}],
+            },
+            {
+                "step": 1,
+                "regime": "stable",
+                "stability": 0.80,
+                "layers": [{"R": 0.49}],
+            },
+        ]
+    )
+    markdown = render_markdown(report)
+
+    assert "- No regime transitions recorded." in markdown
+
+
 def test_action_explanation_uses_layer_fallback_evidence() -> None:
     report = build_explainability_report(
         [
@@ -321,6 +343,31 @@ def test_action_explanation_uses_layer_fallback_evidence() -> None:
         "no layer R values recorded",
         "stability proxy=0.750",
     )
+
+
+def test_action_explanation_skips_non_mapping_action_payloads() -> None:
+    report = build_explainability_report(
+        [
+            {
+                "step": 2,
+                "regime": "watch",
+                "stability": 0.5,
+                "layers": [{"R": 0.44}],
+                "actions": [
+                    "not-a-dict-action",
+                    {
+                        "knob": "kappa",
+                        "scope": "local",
+                        "value": 0.4,
+                        "ttl_s": 8.0,
+                    },
+                ],
+            }
+        ]
+    )
+
+    assert len(report.action_explanations) == 1
+    assert report.action_explanations[0].knob == "kappa"
 
 
 def test_render_markdown_renders_scores_and_bounds() -> None:

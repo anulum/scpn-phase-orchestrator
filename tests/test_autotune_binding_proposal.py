@@ -329,6 +329,42 @@ def test_event_log_scoring_reflects_diversity_and_span() -> None:
     assert proposal.binding.provenance["time_span_s"] == pytest.approx(1.25)
 
 
+def test_event_log_proposal_is_deterministic_for_duplicate_sources() -> None:
+    events = [
+        {"time": 2.0, "source": "sensor_z", "event": "trip"},
+        {"time": 0.0, "source": "sensor_a", "event": "open"},
+        {"time": 1.0, "source": "sensor_z", "event": "reset"},
+        {"time": 1.5, "source": "sensor_b", "event": "close"},
+    ]
+
+    first = propose_binding_from_event_log(
+        json.dumps(events),
+        project_name="event_determinism_replay",
+    )
+    second = propose_binding_from_event_log(
+        json.dumps(events),
+        project_name="event_determinism_replay",
+    )
+
+    assert first.binding.yaml_sha256 == second.binding.yaml_sha256
+    assert first.binding.provenance["source_names"] == (
+        "sensor_a",
+        "sensor_b",
+        "sensor_z",
+    )
+    assert first.binding.confidence_factors["event_density"] == (
+        second.binding.confidence_factors["event_density"]
+    )
+
+
+def test_event_log_rejects_malformed_json_payload() -> None:
+    with pytest.raises(json.JSONDecodeError):
+        propose_binding_from_event_log(
+            "{not-valid-json",
+            project_name="bad_event_json",
+        )
+
+
 def test_event_log_proposal_records_low_confidence_for_sparse_sources() -> None:
     events = [
         {"time": 0.0, "source": "breaker", "event": "open"},
@@ -475,6 +511,31 @@ def test_graph_proposal_edge_density_is_clamped_to_one() -> None:
     assert proposal.binding.confidence_factors["topology_integrity"] == 1.0
     assert proposal.binding.provenance["node_count"] == 3
     assert proposal.binding.provenance["edge_count"] == 5
+
+
+def test_graph_proposal_is_deterministic_for_repeated_submissions() -> None:
+    graph = {
+        "nodes": [{"id": "z"}, {"id": "a"}, {"id": "m"}],
+        "edges": [
+            {"source": "z", "target": "a"},
+            {"source": "a", "target": "m"},
+            {"source": "m", "target": "z"},
+            {"source": "z", "target": "m"},
+        ],
+    }
+
+    first = propose_binding_from_graph(
+        json.dumps(graph),
+        project_name="graph_determinism_replay",
+    )
+    second = propose_binding_from_graph(
+        json.dumps(graph),
+        project_name="graph_determinism_replay",
+    )
+
+    assert first.binding.yaml_sha256 == second.binding.yaml_sha256
+    assert first.binding.yaml_text == second.binding.yaml_text
+    assert first.binding.confidence_factors["topology_integrity"] == 1.0
 
 
 @pytest.mark.parametrize(

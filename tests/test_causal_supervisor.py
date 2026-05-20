@@ -615,6 +615,49 @@ def test_temporal_causal_hypergraph_experiment_blocks_without_baseline_win() -> 
         )
 
 
+def test_temporal_causal_hypergraph_experiment_rejects_negative_baseline_margin(
+) -> None:
+    trace = {
+        "driver": [0.0, 1.0, 2.0, 3.0],
+        "response": [0.0, 0.0, 2.0, 6.0],
+    }
+
+    with pytest.raises(ValueError, match="required_baseline_margin must be finite"):
+        build_temporal_causal_hypergraph_experiment(
+            trace,
+            [
+                {
+                    "sources": ["driver"],
+                    "target": "response",
+                    "time_offsets": [0],
+                    "score": 0.3,
+                }
+            ],
+            required_baseline_margin=-0.1,
+        )
+
+
+def test_temporal_causal_hypergraph_experiment_rejects_non_finite_candidate_score(
+) -> None:
+    trace = {
+        "driver": [0.0, 1.0, 2.0, 3.0],
+        "response": [0.0, 0.0, 2.0, 6.0],
+    }
+
+    with pytest.raises(ValueError, match="score must be finite"):
+        build_temporal_causal_hypergraph_experiment(
+            trace,
+            [
+                {
+                    "sources": ["driver"],
+                    "target": "response",
+                    "time_offsets": [0],
+                    "score": float("inf"),
+                }
+            ],
+        )
+
+
 def test_counterfactual_audit_record_is_deterministic_and_ordered() -> None:
     rollout = CounterfactualRollout(
         baseline_R=[0.35, 0.40, 0.45],

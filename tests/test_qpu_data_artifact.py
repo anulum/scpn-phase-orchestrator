@@ -162,6 +162,11 @@ def test_hash_mismatch_in_manifest_is_rejected_with_precise_message() -> None:
             validate_qpu_data_artifact(tampered)
 
 
+def test_validate_rejects_non_mapping_payload() -> None:
+    with pytest.raises(ValueError, match="artifact payload must be a mapping"):
+        validate_qpu_data_artifact([1, 2, 3])
+
+
 def test_metadata_and_provenance_are_normalised_and_layer_ids_strified() -> None:
     payload = emit_qpu_data_artifact(
         domain="  unit ",
@@ -355,6 +360,25 @@ def test_reading_tampered_json_file_reports_digest_mismatch(tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="artifact_sha256"):
         read_qpu_data_artifact(path)
+
+
+def test_read_qpu_data_artifact_rejects_non_mapping_payload(tmp_path: Path) -> None:
+    path = tmp_path / "non-mapping-qpu-data-artifact.json"
+    path.write_text("[1, 2, 3]", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="artifact payload must be a mapping"):
+        read_qpu_data_artifact(path)
+
+
+def test_compile_domain_to_qpu_artifact_rejects_synthetic_payload_by_default() -> None:
+    with pytest.raises(
+        ValueError, match="synthetic artifacts are not publication-safe"
+    ):
+        compile_domain_to_qpu_artifact(
+            REPO_ROOT / "domainpacks" / "minimal_domain",
+            source_mode="synthetic",
+            replay_id="unit:replay:1",
+        )
 
 
 def test_compile_domain_to_qpu_artifact_accepts_binding_spec_path_inputs() -> None:

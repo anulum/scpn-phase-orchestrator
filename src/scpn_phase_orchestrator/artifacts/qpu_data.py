@@ -223,6 +223,8 @@ class QPUDataArtifact:
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> QPUDataArtifact:
         """Load and validate an artifact mapping."""
+        if not isinstance(data, Mapping):
+            raise ValueError("artifact payload must be a mapping")
         missing = _REQUIRED_FIELDS - data.keys()
         if missing:
             raise ValueError(f"artifact missing required fields: {sorted(missing)}")
@@ -361,6 +363,8 @@ def validate_qpu_data_artifact(
     require_publication_safe: bool = True,
 ) -> QPUDataArtifact:
     """Validate a QPU artifact and optionally enforce publication safety."""
+    if not isinstance(artifact, (QPUDataArtifact, Mapping)):
+        raise ValueError("artifact payload must be a mapping")
     parsed = (
         artifact
         if isinstance(artifact, QPUDataArtifact)
