@@ -16,7 +16,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
-from starlette.websockets import WebSocketDisconnect
 
 from scpn_phase_orchestrator.apps.queuewaves.config import (
     QueueWavesConfig,
@@ -29,8 +28,10 @@ from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
 
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
+pytest.importorskip("starlette")
 
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from scpn_phase_orchestrator.apps.queuewaves import server as server_mod
 from scpn_phase_orchestrator.apps.queuewaves.server import create_app
