@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.supervisor import (
     ValueAlignmentGuard,
     ValueAlignmentPolicy,
     ValueConstraint,
+    calibrate_value_alignment_replay_evidence,
     value_alignment_policy_from_binding_spec,
     value_alignment_policy_from_template,
 )
@@ -490,3 +491,58 @@ class TestValueAlignmentBehaviour:
 
         assert decision.satisfied
         assert decision.alignment_score == pytest.approx(1.0)
+
+    def test_replay_calibration_evidence_is_deterministic_and_review_only(
+        self,
+    ) -> None:
+        fallback = ControlAction(
+            knob="zeta",
+            scope="global",
+            value=0.0,
+            ttl_s=1.0,
+            justification="alignment fallback: hold",
+        )
+        policy = ValueAlignmentPolicy(
+            constraints=(ValueConstraint("prefer-small", max_abs_value=1.0),),
+            fallback_actions=(fallback,),
+            minimum_score=0.96,
+        )
+        replay_cases = {
+            "approved_nominal": [_action(value=0.01)],
+            "blocked_hard_limit": [_action(value=1.2)],
+            "fallback_low_margin": [_action(value=0.05)],
+        }
+
+        first = calibrate_value_alignment_replay_evidence(policy, replay_cases)
+        second = calibrate_value_alignment_replay_evidence(policy, replay_cases)
+
+        assert first == second
+        assert first["schema"] == "scpn_value_alignment_replay_calibration_v1"
+        assert first["replay_case_count"] == 3
+        assert first["approved_case_count"] == 1
+        assert first["blocked_case_count"] == 1
+        assert first["threshold_fallback_case_count"] == 1
+        assert first["fallback_applied_case_count"] == 2
+        assert first["calibration_actuation_permitted"] is False
+        assert len(str(first["calibration_sha256"])) == 64
+        assert [record["case_id"] for record in first["decision_records"]] == [
+            "approved_nominal",
+            "blocked_hard_limit",
+            "fallback_low_margin",
+        ]
+        assert first["decision_records"][1]["violation_count"] == 1
+        assert first["decision_records"][2]["score_counterfactual_count"] == 1
+
+    def test_replay_calibration_rejects_empty_or_malformed_corpus(self) -> None:
+        policy = ValueAlignmentPolicy(
+            constraints=(ValueConstraint("prefer-small", max_abs_value=1.0),)
+        )
+
+        with pytest.raises(ValueError, match="at least one replay case"):
+            calibrate_value_alignment_replay_evidence(policy, {})
+
+        with pytest.raises(ValueError, match="case id"):
+            calibrate_value_alignment_replay_evidence(policy, {"": [_action()]})
+
+        with pytest.raises(ValueError, match="ControlAction"):
+            calibrate_value_alignment_replay_evidence(policy, {"bad": [object()]})

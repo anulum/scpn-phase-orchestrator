@@ -31,6 +31,7 @@ from benchmarks.reference_suite import (
     benchmark_semantic_retrieval_ranking_quality,
     benchmark_stl_closed_loop_plan_quality,
     benchmark_stuart_landau_reference,
+    benchmark_value_alignment_replay_calibration_gate,
     build_benchmark_metadata,
     run_reference_suite,
 )
@@ -725,6 +726,48 @@ def test_hybrid_operator_handoff_package_gate_reports_thresholds_and_records() -
     assert all(package["actuation_permitted"] is False for package in packages)
 
 
+def test_value_alignment_replay_calibration_gate_benchmark_shape() -> None:
+    out = benchmark_value_alignment_replay_calibration_gate()
+
+    assert out["suite"] == "value_alignment_replay_calibration_gate"
+    assert out["record_count"] == 1
+    assert out["replay_case_count"] == 3
+    assert out["approved_case_count"] == 1
+    assert out["blocked_case_count"] == 1
+    assert out["threshold_fallback_case_count"] == 1
+    assert out["fallback_applied_case_count"] == 2
+    assert out["review_only"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["calibration_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_value_alignment_replay_calibration_gate_reports_thresholds_and_records(
+) -> None:
+    out = benchmark_value_alignment_replay_calibration_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["calibration_records_json"]))
+
+    assert thresholds == {
+        "min_approved_case_count": 1,
+        "min_blocked_case_count": 1,
+        "min_fallback_applied_case_count": 2,
+        "min_replay_case_count": 3,
+        "min_threshold_fallback_case_count": 1,
+        "require_deterministic_hash": True,
+        "require_review_only": True,
+    }
+    assert [record["case_id"] for record in records] == [
+        "approved_nominal_replay",
+        "blocked_hard_limit_replay",
+        "fallback_low_margin_replay",
+    ]
+    assert [record["satisfied"] for record in records] == [True, False, False]
+    assert records[1]["violation_count"] == 1
+    assert records[2]["score_counterfactual_count"] == 1
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -799,6 +842,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "replay_policy",
         "semantic_retrieval",
         "stl_closed_loop",
+        "value_alignment_replay_calibration",
         "kuramoto",
         "stuart_landau",
         "petri_reachability",

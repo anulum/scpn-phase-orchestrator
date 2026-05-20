@@ -369,6 +369,13 @@ sessions do not treat them as abstract research labels.
     permissions remain disabled under blocked probes.
   - Acceptance: execution stays disabled until real target evidence, hashes,
     parity reports, and operator approval exist.
+- Value-alignment supervisor guard:
+  - Deterministic replay calibration is now benchmark-gated:
+    `benchmark_value_alignment_replay_calibration_gate()` records approved,
+    hard-blocked, and score-threshold fallback replay cases with stable
+    SHA-256 evidence while keeping calibration review-only and non-actuating.
+  - Acceptance: replay evidence exists for guard behaviour before any real
+    deployment calibration or live enforcement claim.
 - Plugin ecosystem:
   - Standardise Python and Rust extension interfaces for custom extractors,
     monitors, actuators, and bridges.

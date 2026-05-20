@@ -21,6 +21,7 @@ from typing import NamedTuple, TypedDict
 
 import numpy as np
 
+from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.adapters.hybrid_cocompiler import (
     audit_hybrid_target_readiness,
     build_hybrid_cocompiler_manifest,
@@ -58,6 +59,11 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
+)
+from scpn_phase_orchestrator.supervisor.alignment import (
+    ValueAlignmentPolicy,
+    ValueConstraint,
+    calibrate_value_alignment_replay_evidence,
 )
 from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalSafetyProperty,
@@ -236,6 +242,16 @@ class HybridOperatorHandoffThresholds(NamedTuple):
     require_non_executing: bool
     require_deterministic_hash: bool
     require_hash_chain_linked: bool
+
+
+class ValueAlignmentReplayCalibrationThresholds(NamedTuple):
+    min_replay_case_count: int
+    min_approved_case_count: int
+    min_blocked_case_count: int
+    min_threshold_fallback_case_count: int
+    min_fallback_applied_case_count: int
+    require_review_only: bool
+    require_deterministic_hash: bool
 
 
 class PluginEcosystemThresholds(NamedTuple):
@@ -2133,6 +2149,128 @@ def benchmark_hybrid_operator_handoff_package_gate() -> dict[str, float | int | 
     }
 
 
+def benchmark_value_alignment_replay_calibration_gate() -> dict[str, float | int | str]:
+    """Benchmark deterministic replay calibration for value-alignment guards."""
+    thresholds = ValueAlignmentReplayCalibrationThresholds(
+        min_replay_case_count=3,
+        min_approved_case_count=1,
+        min_blocked_case_count=1,
+        min_threshold_fallback_case_count=1,
+        min_fallback_applied_case_count=2,
+        require_review_only=True,
+        require_deterministic_hash=True,
+    )
+    fallback = ControlAction(
+        knob="zeta",
+        scope="global",
+        value=0.0,
+        ttl_s=1.0,
+        justification="alignment fallback: hold review path",
+    )
+    policy = ValueAlignmentPolicy(
+        constraints=(
+            ValueConstraint(
+                "bounded-production-review",
+                knob="K",
+                scope="global",
+                max_abs_value=1.0,
+            ),
+        ),
+        fallback_actions=(fallback,),
+        minimum_score=0.96,
+    )
+    replay_cases = {
+        "approved_nominal_replay": [
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=0.01,
+                ttl_s=5.0,
+                justification="nominal replay candidate",
+            )
+        ],
+        "blocked_hard_limit_replay": [
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=1.2,
+                ttl_s=5.0,
+                justification="unsafe replay candidate",
+            )
+        ],
+        "fallback_low_margin_replay": [
+            ControlAction(
+                knob="K",
+                scope="global",
+                value=0.05,
+                ttl_s=5.0,
+                justification="low-margin replay candidate",
+            )
+        ],
+    }
+
+    t0 = time.perf_counter()
+    calibration = calibrate_value_alignment_replay_evidence(policy, replay_cases)
+    repeated = calibrate_value_alignment_replay_evidence(policy, replay_cases)
+    elapsed = time.perf_counter() - t0
+
+    review_only = int(calibration["calibration_actuation_permitted"] is False)
+    deterministic_hash = int(
+        calibration["calibration_sha256"] == repeated["calibration_sha256"]
+    )
+    replay_case_count = int(calibration["replay_case_count"])
+    approved_case_count = int(calibration["approved_case_count"])
+    blocked_case_count = int(calibration["blocked_case_count"])
+    threshold_fallback_case_count = int(calibration["threshold_fallback_case_count"])
+    fallback_applied_case_count = int(calibration["fallback_applied_case_count"])
+    acceptance_passed = int(
+        replay_case_count >= thresholds.min_replay_case_count
+        and approved_case_count >= thresholds.min_approved_case_count
+        and blocked_case_count >= thresholds.min_blocked_case_count
+        and threshold_fallback_case_count
+        >= thresholds.min_threshold_fallback_case_count
+        and fallback_applied_case_count >= thresholds.min_fallback_applied_case_count
+        and review_only == int(thresholds.require_review_only)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "value_alignment_replay_calibration_gate",
+        "record_count": 1,
+        "wall_time_s": elapsed,
+        "steps_per_second": replay_case_count / elapsed,
+        "replay_case_count": replay_case_count,
+        "approved_case_count": approved_case_count,
+        "blocked_case_count": blocked_case_count,
+        "threshold_fallback_case_count": threshold_fallback_case_count,
+        "fallback_applied_case_count": fallback_applied_case_count,
+        "review_only": review_only,
+        "deterministic_hash": deterministic_hash,
+        "calibration_sha256": str(calibration["calibration_sha256"]),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_approved_case_count": thresholds.min_approved_case_count,
+                "min_blocked_case_count": thresholds.min_blocked_case_count,
+                "min_fallback_applied_case_count": (
+                    thresholds.min_fallback_applied_case_count
+                ),
+                "min_replay_case_count": thresholds.min_replay_case_count,
+                "min_threshold_fallback_case_count": (
+                    thresholds.min_threshold_fallback_case_count
+                ),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_review_only": thresholds.require_review_only,
+            },
+            sort_keys=True,
+        ),
+        "calibration_records_json": json.dumps(
+            calibration["decision_records"],
+            sort_keys=True,
+        ),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3186,6 +3324,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "hybrid_target_readiness": benchmark_hybrid_target_readiness_gate(),
             "hybrid_operator_handoff": (
                 benchmark_hybrid_operator_handoff_package_gate()
+            ),
+            "value_alignment_replay_calibration": (
+                benchmark_value_alignment_replay_calibration_gate()
             ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),

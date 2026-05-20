@@ -10,8 +10,10 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import TypeAlias
 
 import numpy as np
@@ -25,6 +27,7 @@ __all__ = [
     "ValueScoreCounterfactual",
     "ValueConstraint",
     "ValueViolation",
+    "calibrate_value_alignment_replay_evidence",
     "value_alignment_policy_from_binding_spec",
     "value_alignment_policy_from_template",
 ]
@@ -266,6 +269,88 @@ class ValueAlignmentGuard:
         return float(np.clip(sum(weighted_scores) / total_weight, 0.0, 1.0))
 
 
+def calibrate_value_alignment_replay_evidence(
+    policy: ValueAlignmentPolicy,
+    replay_cases: Mapping[str, list[ControlAction] | ActionTuple],
+    *,
+    evidence_label: str = "value_alignment_replay_calibration",
+) -> dict[str, object]:
+    """Calibrate a value-alignment policy against replayed action proposals.
+
+    The returned artifact is deterministic and review-only: it records what the
+    guard would approve, block, or divert to fallback on replayed cases, but it
+    never authorises live actuation. This gives production reviewers evidence
+    for guard behaviour before any deployment-tier enforcement is claimed.
+    """
+
+    if not isinstance(policy, ValueAlignmentPolicy):
+        raise ValueError("policy must be a ValueAlignmentPolicy")
+    if not replay_cases:
+        raise ValueError(
+            "value-alignment calibration requires at least one replay case"
+        )
+    if not isinstance(evidence_label, str) or not evidence_label:
+        raise ValueError("evidence_label must be a non-empty string")
+
+    guard = ValueAlignmentGuard(policy)
+    records: list[dict[str, object]] = []
+    approved_case_count = 0
+    blocked_case_count = 0
+    threshold_fallback_case_count = 0
+    fallback_applied_case_count = 0
+
+    for case_id, actions in replay_cases.items():
+        if not isinstance(case_id, str) or not case_id:
+            raise ValueError(
+                "value-alignment replay case id must be a non-empty string"
+            )
+        proposed_actions = _validated_replay_actions(actions, case_id)
+        decision = guard.evaluate(proposed_actions)
+        audit_record = decision.to_audit_record()
+
+        if decision.satisfied:
+            approved_case_count += 1
+        if decision.violations:
+            blocked_case_count += 1
+        if decision.score_counterfactuals:
+            threshold_fallback_case_count += 1
+        if not decision.satisfied and decision.fallback_actions:
+            fallback_applied_case_count += 1
+
+        records.append(
+            {
+                "case_id": case_id,
+                "proposed_action_count": len(proposed_actions),
+                "satisfied": decision.satisfied,
+                "alignment_score": decision.alignment_score,
+                "minimum_score": decision.minimum_score,
+                "approved_count": len(decision.approved_actions),
+                "blocked_count": len(decision.blocked_actions),
+                "fallback_count": len(decision.fallback_actions),
+                "violation_count": len(decision.violations),
+                "score_counterfactual_count": len(decision.score_counterfactuals),
+                "actions_to_apply": audit_record["actions_to_apply"],
+                "violations": audit_record["violations"],
+                "score_counterfactuals": audit_record["score_counterfactuals"],
+            }
+        )
+
+    artifact: dict[str, object] = {
+        "schema": "scpn_value_alignment_replay_calibration_v1",
+        "evidence_label": evidence_label,
+        "replay_case_count": len(records),
+        "approved_case_count": approved_case_count,
+        "blocked_case_count": blocked_case_count,
+        "threshold_fallback_case_count": threshold_fallback_case_count,
+        "fallback_applied_case_count": fallback_applied_case_count,
+        "calibration_actuation_permitted": False,
+        "decision_records": records,
+    }
+    canonical = json.dumps(artifact, sort_keys=True, separators=(",", ":"))
+    artifact["calibration_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()
+    return artifact
+
+
 def value_alignment_policy_from_binding_spec(
     spec: object,
 ) -> ValueAlignmentPolicy | None:
@@ -390,6 +475,22 @@ def _optional_template_float(value: object) -> float | None:
     if value is None:
         return None
     return _template_float(value)
+
+
+def _validated_replay_actions(
+    actions: list[ControlAction] | ActionTuple,
+    case_id: str,
+) -> ActionTuple:
+    if not isinstance(actions, list | tuple):
+        raise ValueError(f"value-alignment replay case {case_id!r} must be a sequence")
+    proposed = tuple(actions)
+    if not proposed:
+        raise ValueError(f"value-alignment replay case {case_id!r} must not be empty")
+    if not all(isinstance(action, ControlAction) for action in proposed):
+        raise ValueError(
+            f"value-alignment replay case {case_id!r} must contain ControlAction"
+        )
+    return proposed
 
 
 def _constraint_margin(action: ControlAction, constraint: ValueConstraint) -> float:

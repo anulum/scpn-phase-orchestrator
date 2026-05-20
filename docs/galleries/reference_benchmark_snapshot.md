@@ -20,7 +20,7 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 | Suite version | `reference_suite_v1` |
 | Command | `PYTHONPATH=src python benchmarks/reference_suite.py` |
 | Backend | `python_numpy` |
-| Python | `CPython 3.12.3` |
+| Python | `3.12.3` |
 | NumPy | `2.2.6` |
 | Platform | `Linux-6.17.0-23-generic-x86_64-with-glibc2.39` |
 | Executable | `/media/anulum/724AA8E84AA8AA75/aaa_God_of_the_Math_Collection/03_CODE/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python` |
@@ -28,359 +28,1684 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 ## Historical Results
 
-| Suite ID | Reference surface | Size | Steps | Wall time (s) | Steps/s | Summary value |
-|----------|-------------------|------|-------|---------------|---------|---------------|
-| `auto_binding_synthetic_quality` | Synthetic auto-binding extractor/K proposal quality | 4 fixtures | 4 domain gates | 0.04307294404134154 | 92.86572090732382 | validation errors = 0; extractor coverage = 1.0; expected edge recall = 1.0; proposed edges = 33; accepted domains = 4/4 |
-| `semantic_retrieval_ranking_quality` | Symbolic compiler retrieval ranking quality | 3 evidence records | 3 ranked records | 0.015583062020596117 | 192.51672078535677 | top source = domainpack; top domainpack = power_grid; feature-complete = 3; retrieval score = 1.0; SHA-256 = 88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d |
-| `replay_policy_candidate_quality` | Replay-only PPO/SAC/hybrid policy candidate quality | 3 scenarios | 9 learner gates | 0.01423552498454228 | 632.221151645106 | accepted scenarios = 3/3; accepted learners = 9/9; min coherence improvement = 0.035689587760827646; unsafe acceptances = 0; non-actuating = yes |
-| `bayesian_posterior_fit_quality` | Bayesian posterior fit from observed Kuramoto phases | 96 samples | 128 posterior rollouts | 2.1922598049859516 | 43.790430213455096 | residual RMSE = 3.904347277377099e-07; omega max error = 0.007744271156763904; K max error = 0.029439030191471344; interval width = 0.002121338455159605; accepted = yes |
-| `bayesian_backend_fail_closed` | Bayesian backend availability and fail-closed gate | 3 backends | 3 backend probes | 0.2778991900268011 | 10.79528155411563 | available backends = 1; fail-closed backends = 2; unexpected reserved successes = 0; accepted = yes |
-| `formal_export_artifact_quality` | PRISM/TLA/STL formal-export artefact quality | 5 artefacts | 3 package properties | 0.0005473069613799453 | 9135.641153537157 | identifier maps = 22; fail-closed = 5; checker commands = 3; checker readiness = 2 ready/1 missing; checker execution disabled = yes; package SHA-256 = b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92 |
-| `stl_closed_loop_plan_quality` | Offline STL closed-loop synthesis plan quality | 3 plans | 1 projected action | 0.0003578549949452281 | 8383.283850653443 | projected actions = 1; rejected candidates = 1; blocked reasons = 3; non-actuating = yes; SHA-256 = c5e8bc18e6edef4cd0913b4d3fef1acf7f27865ffc64ef2903e15457d64a4c28 |
-| `domain_formal_safety_exports` | Plasma, power-grid, and medical-style formal safety artefacts | 3 domains | 9 artefacts | 0.0006097939913161099 | 14759.0827856067 | accepted domains = 3/3; SHA-256 = ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b |
-| `hybrid_cocompiler_review_gate` | Hybrid quantum/neuromorphic review manifest gate | 1 manifest | 2 blocked probes | 0.00011891900794580579 | 8409.084613754294 | target backends = 4; component hashes = 3; non-actuating = yes; SHA-256 = e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7 |
-| `quantum_target_readiness_gate` | Non-executing QPU target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.0001809889799915254 | 11050.39654952278 | ready = 1; blocked = 1; blocked reasons = 2; non-executing = yes; readiness SHA-256 = aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c |
-| `neuromorphic_target_readiness_gate` | Non-executing neuromorphic hardware target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.00024182797642424703 | 8270.341709725644 | ready = 1; blocked = 1; blocked reasons = 3; non-executing = yes; readiness SHA-256 = fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0 |
-| `hybrid_target_readiness_gate` | Non-executing hybrid target-readiness audit gate | 2 readiness records | 1 blocked / 1 ready | 0.00011475704377517104 | 17428.124097709828 | ready = 1; blocked = 1; blocked reasons = 1; component hash linked = 1; non-executing = yes; readiness SHA-256 = 5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64 |
-| `hybrid_operator_handoff_package_gate` | Non-executing hybrid operator handoff package gate | 2 packages | 1 blocked / 1 ready | 0.0001218619872815907 | 16412.008737216234 | ready packages = 1; blocked packages = 1; blocked reasons = 1; hash chain linked = 1; non-executing = yes; package SHA-256 = c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5 |
-| `meta_transfer_audit_corpus_quality` | Cross-domain meta-transfer audit-corpus proposal gate | 6 records | 3 neighbours | 0.0032925489940680563 | 1822.296345721737 | domains = 4; top neighbour = power_grid; confidence = 0.9977061617091371; deterministic hash = yes; proposal SHA-256 = bfef70f740fbdedc765080f9c9bb0156ec046fd0351dab4f4117c7c259a781fb |
-| `meta_transfer_package_manifest_quality` | Cross-domain meta-transfer package manifest gate | 4 records | 4 domain gates | 0.00042936898535117507 | 9315.99658212028 | feature keys = 5; knobs = 4; digest linked = yes; execution disabled = yes; manifest SHA-256 = bf551f9836e581eba6469309784c56e3b3fd5cbfee23e55cee6018f0163df6af |
-| `plugin_ecosystem_catalog_quality` | Python/Rust plugin marketplace capability gate | 3 manifests | 6 handoff target hashes | 0.0002764470409601927 | 10851.988104412334 | compatible plugins = 2/3; incompatible monitor rejection = 1; required kinds = 4/4; loading disabled = yes; handoff SHA-256 = db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77 |
-| `kuramoto_reference_strogatz_2000` | Strogatz-style all-to-all Kuramoto reference | 64 oscillators | 1000 | 0.13140711496816948 | 7609.938017756712 | final `R` = 1.0 |
-| `stuart_landau_reference_pikovsky_2001` | Pikovsky-style coupled amplitude/phase reference | 64 oscillators | 1000 | 0.2567110530217178 | 3895.4302443510283 | final mean amplitude = 3.6193922141707704 |
-| `petri_net_reachability` | Supervisor reachability traversal | 4 places | 5000 | 0.018718710052780807 | 267112.42312646494 | reachable markings = 4 |
+| Benchmark key | Suite ID | Record size | Wall time (s) | Steps/s | Acceptance |
+|---------------|----------|-------------|---------------|---------|------------|
+| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.04993373603792861 | 80.1061630349807 | 1 |
+| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.018362015020102262 | 163.38076168196557 | 1 |
+| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.012196525000035763 | 737.9151028652514 | 1 |
+| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.384671530977357 | 40.25711665231078 | 1 |
+| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.27298261801479384 | 10.98971070691915 | 1 |
+| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0005459249950945377 | 9158.767312227847 | 1 |
+| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.0002653890405781567 | 11304.159333273237 | 1 |
+| `domain_formal_export` | `domain_formal_safety_exports` | 3 | 0.0004378690500743687 | 20554.09031186703 | 1 |
+| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00013595097698271275 | 7355.592598110994 | 1 |
+| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.00012274103937670588 | 16294.468501784297 | 1 |
+| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.00017914100317284465 | 11164.389863722572 | 1 |
+| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.00010763999307528138 | 18580.454558383684 | 1 |
+| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | 2 | 0.00012861599680036306 | 15550.165218595532 | 1 |
+| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00019046897068619728 | 15750.59700901403 | 1 |
+| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.002550885023083538 | 2352.124829502168 | 1 |
+| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.00037455803249031305 | 10679.253020967984 | 1 |
+| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | 2 | 0.00025290600024163723 | 11862.114766489018 | 1 |
+| `kuramoto` | `kuramoto_reference_strogatz_2000` | 64 | 0.13605953101068735 | 7349.723996339888 | n/a |
+| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 64 | 0.26331308600492775 | 3797.7603588652846 | n/a |
+| `petri_reachability` | `petri_net_reachability` | n/a | 0.01994006196036935 | 250751.47760009192 | n/a |
 
-## Auto-Binding Acceptance Gates
+## Benchmark Record Details
 
-The auto-binding benchmark now evaluates larger deterministic domain-like
-datasets instead of only toy smoke fixtures. Each fixture has explicit
-domain-specific thresholds for minimum extractor coverage, expected-edge recall,
-maximum validation errors, minimum sample count, and maximum proposed-edge
-multiplier. The 2026-05-20 snapshot passed all four gates:
+Each record below is copied from the current JSON artefact using stable key ordering. Long JSON-valued fields are preserved as fenced JSON so operators can audit thresholds and evidence without opening the raw artefact first.
 
-| Domain fixture | Samples | Expected-edge recall | Extractor coverage | Proposed-edge multiplier | Accepted |
-|----------------|--------:|---------------------:|-------------------:|-------------------------:|----------|
-| `phase_chain` | 128 | 1.0 | 1.0 | 6.0 | yes |
-| `industrial_sensor_chain` | 128 | 1.0 | 1.0 | 6.0 | yes |
-| `cardiac_rhythm_surrogate` | 160 | 1.0 | 1.0 | 4.5 | yes |
-| `power_grid_surrogate` | 192 | 1.0 | 1.0 | 6.0 | yes |
+### `auto_binding`
 
-## Semantic Retrieval Ranking Acceptance Gates
+- Suite: `auto_binding_synthetic_quality`
+- Wall time (s): `0.04993373603792861`
+- Steps/s: `80.1061630349807`
 
-The semantic retrieval benchmark uses a deterministic synthetic domainpack/docs
-corpus to exercise symbolic-to-binding retrieval ranking. The gate requires
-ranked evidence records, complete ranking features, domainpack precedence for
-the best matching power-grid corpus item, positive retrieval score, and a stable
-ranking hash.
+| Metric | Value |
+|--------|-------|
+| `accepted_domain_count` | `4` |
+| `domain_acceptance_passed` | `1` |
+| `expected_edge_recall` | `1.0` |
+| `extractor_coverage` | `1.0` |
+| `failed_domain_count` | `0` |
+| `fixture_count` | `4` |
+| `large_fixture_count` | `4` |
+| `max_domain_validation_errors` | `0` |
+| `min_domain_expected_edge_recall` | `1.0` |
+| `min_domain_extractor_coverage` | `1.0` |
+| `min_sample_count` | `128` |
+| `proposed_edge_count` | `33` |
+| `validation_error_count` | `0` |
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Evidence records | 3 | >= 3 |
-| Ranked records | 3 | >= 3 |
-| Feature-complete records | 3 | >= 3 |
-| Domainpack top-rank flag | 1 | required |
-| Top source | `domainpack` | domainpack |
-| Top domainpack | `power_grid` | power_grid |
-| Retrieval score | 1.0 | > 0 |
-| Deterministic hash | 1 | required |
-| Ranking SHA-256 | `88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d` | stable |
+`domain_acceptance_results_json`:
 
-## Replay-Policy Acceptance Gates
+```json
+[
+  {
+    "accepted": true,
+    "domain": "phase_chain",
+    "expected_edge_recall": 1.0,
+    "extractor_coverage": 1.0,
+    "proposed_edge_count": 6,
+    "proposed_edge_multiplier": 6.0,
+    "sample_count": 128,
+    "source_column_count": 3,
+    "validation_error_count": 0
+  },
+  {
+    "accepted": true,
+    "domain": "industrial_sensor_chain",
+    "expected_edge_recall": 1.0,
+    "extractor_coverage": 1.0,
+    "proposed_edge_count": 6,
+    "proposed_edge_multiplier": 6.0,
+    "sample_count": 128,
+    "source_column_count": 3,
+    "validation_error_count": 0
+  },
+  {
+    "accepted": true,
+    "domain": "cardiac_rhythm_surrogate",
+    "expected_edge_recall": 1.0,
+    "extractor_coverage": 1.0,
+    "proposed_edge_count": 9,
+    "proposed_edge_multiplier": 4.5,
+    "sample_count": 160,
+    "source_column_count": 4,
+    "validation_error_count": 0
+  },
+  {
+    "accepted": true,
+    "domain": "power_grid_surrogate",
+    "expected_edge_recall": 1.0,
+    "extractor_coverage": 1.0,
+    "proposed_edge_count": 12,
+    "proposed_edge_multiplier": 6.0,
+    "sample_count": 192,
+    "source_column_count": 4,
+    "validation_error_count": 0
+  }
+]
+```
 
-The replay-policy benchmark evaluates deterministic PPO-like, SAC-like, and
-hybrid-physics learner proposals across deterministic replay scenarios against
-a simulator-backed coherence surface. All proposals remain review-only
-(`actuation_permitted = false`) and must pass minimum acceptance rate, minimum
-coherence improvement, zero unsafe accepted candidates, and non-actuating output
-gates.
+`domain_acceptance_thresholds_json`:
 
-| Replay scenario | Learners | Baseline coherence | Minimum coherence improvement | Unsafe acceptances | Accepted |
-|-----------------|---------:|-------------------:|------------------------------:|-------------------:|----------|
-| `two_channel_low_coupling` | 3 | 0.793 | 0.05827974999403174 | 0 | yes |
-| `three_channel_cross_gain` | 3 | 0.7758666666666668 | 0.05663105080295605 | 0 | yes |
-| `stability_recovery` | 3 | 0.8022666666666668 | 0.035689587760827646 | 0 | yes |
+```json
+{
+  "cardiac_rhythm_surrogate": {
+    "max_proposed_edge_multiplier": 6.0,
+    "max_validation_errors": 0,
+    "min_expected_edge_recall": 1.0,
+    "min_extractor_coverage": 1.0,
+    "min_sample_count": 128
+  },
+  "industrial_sensor_chain": {
+    "max_proposed_edge_multiplier": 8.0,
+    "max_validation_errors": 0,
+    "min_expected_edge_recall": 1.0,
+    "min_extractor_coverage": 1.0,
+    "min_sample_count": 96
+  },
+  "phase_chain": {
+    "max_proposed_edge_multiplier": 8.0,
+    "max_validation_errors": 0,
+    "min_expected_edge_recall": 1.0,
+    "min_extractor_coverage": 1.0,
+    "min_sample_count": 96
+  },
+  "power_grid_surrogate": {
+    "max_proposed_edge_multiplier": 8.0,
+    "max_validation_errors": 0,
+    "min_expected_edge_recall": 1.0,
+    "min_extractor_coverage": 1.0,
+    "min_sample_count": 160
+  }
+}
+```
 
-## Bayesian Posterior-Fit Acceptance Gates
+### `semantic_retrieval`
 
-The Bayesian posterior benchmark fits Gaussian `omega` and `K_nm`
-distributions from a deterministic Kuramoto trajectory, then runs the fitted
-posterior through the existing Bayesian UPDE rollout path. The gate requires
-finite audit diagnostics, non-negative zero-diagonal coupling, bounded residual
-error, bounded parameter-recovery error, bounded credible interval width, and
-at least 96 posterior rollout samples.
+- Suite: `semantic_retrieval_ranking_quality`
+- Wall time (s): `0.018362015020102262`
+- Steps/s: `163.38076168196557`
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Residual RMSE | 3.904347277377099e-07 | <= 0.0025 |
-| Max omega mean absolute error | 0.007744271156763904 | <= 0.03 |
-| Max `K_nm` mean absolute error | 0.029439030191471344 | <= 0.06 |
-| Credible interval width | 0.002121338455159605 | <= 0.01 |
-| Posterior rollout samples | 128 | >= 96 |
-| Finite audit record | 1 | required |
-| Zero-diagonal coupling | 1 | required |
-| Non-negative coupling | 1 | required |
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `deterministic_hash` | `1` |
+| `domainpack_top_rank` | `1` |
+| `evidence_count` | `3` |
+| `feature_complete_count` | `3` |
+| `ranked_record_count` | `3` |
+| `ranking_sha256` | `88f658e0c7222d27a3e1125be74fda54ff07f272ac1deb90f545393df8a55b2d` |
+| `retrieval_score` | `1.0` |
+| `top_domainpack` | `power_grid` |
+| `top_source` | `domainpack` |
 
-## Bayesian Backend Fail-Closed Gates
+`acceptance_thresholds_json`:
 
-The backend benchmark probes the shipped NumPy implementation and the reserved
-sampler names through the same `bayesian_upde_run()` execution path. NumPy must
-complete with samples; reserved names must fail closed until they have real,
-validated sampler implementations.
+```json
+{
+  "min_evidence_count": 3,
+  "min_feature_complete_count": 3,
+  "min_ranked_record_count": 3,
+  "require_deterministic_hash": true,
+  "require_domainpack_top_rank": true
+}
+```
 
-| Backend | Available | Fail closed | Sample count |
-|---------|-----------|-------------|-------------:|
-| `numpy` | yes | no | 16 |
-| `numpyro` | no | yes | 0 |
-| `blackjax` | no | yes | 0 |
+`ranking_projection_json`:
 
-## Formal-Export Acceptance Gates
+```json
+[
+  {
+    "domainpack": "power_grid",
+    "rank": 1,
+    "ranking_features": {
+      "matched_term_count": 6.0,
+      "name_match_count": 2.0,
+      "phrase_match": 1.0,
+      "prompt_term_count": 7.0,
+      "source_priority": 1.0,
+      "term_density": 0.75
+    },
+    "score": 1.0,
+    "source": "domainpack"
+  },
+  {
+    "domainpack": "power_grid",
+    "rank": 2,
+    "ranking_features": {
+      "matched_term_count": 5.0,
+      "name_match_count": 2.0,
+      "phrase_match": 0.0,
+      "prompt_term_count": 7.0,
+      "source_priority": 0.75,
+      "term_density": 0.714286
+    },
+    "score": 1.0,
+    "source": "docs"
+  },
+  {
+    "domainpack": "grid_notes",
+    "rank": 3,
+    "ranking_features": {
+      "matched_term_count": 3.0,
+      "name_match_count": 1.0,
+      "phrase_match": 0.0,
+      "prompt_term_count": 7.0,
+      "source_priority": 1.0,
+      "term_density": 0.6
+    },
+    "score": 0.571,
+    "source": "domainpack"
+  }
+]
+```
 
-The formal-export benchmark emits deterministic PRISM/TLA/STL artefacts for a
-bounded Petri protocol, policy-rule set, and STL monitor set. It also probes
-malformed nets, rules, and STL predicates to ensure unsupported shapes fail
-closed before text generation. External checker readiness is recorded as a
-non-executing audit: commands are generated, executable availability is
-reported, and missing tools remain fail-closed instead of being invoked.
+### `replay_policy`
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Artefact count | 5 | >= 5 |
-| Identifier-map entries | 22 | >= 12 |
-| Fail-closed malformed probes | 5 | >= 4 |
-| Formal package properties | 3 | >= 3 |
-| Formal checker commands | 3 | >= 3 |
-| Checker readiness records | 3 | >= 3 |
-| Ready checker records | 2 | evidence |
-| Missing checker records | 1 | >= 1 fail-closed |
-| Checker execution disabled | 1 | required |
-| Checker-readiness execution disabled | 1 | required |
-| Deterministic hash | 1 | required |
-| Package SHA-256 | `b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92` | stable |
-| Petri PRISM bytes | 1012 | > 0 |
-| Petri TLA bytes | 1281 | > 0 |
-| Policy PRISM bytes | 1116 | > 0 |
-| Policy TLA bytes | 1370 | > 0 |
-| STL PRISM bytes | 808 | > 0 |
+- Suite: `replay_policy_candidate_quality`
+- Wall time (s): `0.012196525000035763`
+- Steps/s: `737.9151028652514`
 
-## STL Closed-Loop Plan Acceptance Gates
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `acceptance_rate` | `1.0` |
+| `accepted_learner_count` | `9` |
+| `accepted_scenario_count` | `3` |
+| `failed_learner_count` | `0` |
+| `failed_scenario_count` | `0` |
+| `learner_count` | `9` |
+| `min_coherence_improvement` | `0.035689587760827646` |
+| `non_actuating_proposals` | `1` |
+| `scenario_count` | `3` |
+| `unsafe_acceptance_count` | `0` |
 
-The STL closed-loop benchmark evaluates offline synthesis plans for builtin STL
-monitor automata. The gate requires deterministic non-actuating plans, at least
-one policy-projected bounded action, fail-closed blockers for unmapped
-candidates, no-action behaviour for already satisfied monitors, and a stable
-plan hash. These records are review artefacts; they do not mutate runtime state
-or bypass the safety/actuation stack.
+`acceptance_thresholds_json`:
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Plan count | 3 | >= 3 |
-| Projected actions | 1 | >= 1 |
-| Rejected candidates | 1 | evidence |
-| Blocked reasons | 3 | >= 3 |
-| Non-actuating flag | 1 | required |
-| Deterministic hash | 1 | required |
-| Plan SHA-256 | `c5e8bc18e6edef4cd0913b4d3fef1acf7f27865ffc64ef2903e15457d64a4c28` | stable |
+```json
+{
+  "max_unsafe_acceptances": 0,
+  "min_acceptance_rate": 1.0,
+  "min_reward_improvement": 0.03,
+  "require_non_actuating": true
+}
+```
 
-## Domain Formal-Safety Gates
+`learner_results_json`:
 
-The domain formal-safety benchmark emits policy PRISM, policy TLA, and STL
-PRISM artefacts for plasma-control, power-grid, and medical/cardiac-style
-profiles. Each domain must provide at least two policy rules, at least two STL
-specifications, three deterministic artefacts, and required reachability/STL
-labels.
+```json
+[
+  {
+    "accepted": true,
+    "baseline_coherence": 0.793,
+    "candidate_count": 15,
+    "coherence_improvement": 0.07238329088310769,
+    "learner_kind": "ppo_like_replay",
+    "non_actuating": true,
+    "scenario": "two_channel_low_coupling",
+    "selected_coherence": 0.8653832908831077,
+    "selected_reward": 0.045987924741706335,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.793,
+    "candidate_count": 15,
+    "coherence_improvement": 0.05827974999403174,
+    "learner_kind": "sac_like_replay",
+    "non_actuating": true,
+    "scenario": "two_channel_low_coupling",
+    "selected_coherence": 0.8512797499940318,
+    "selected_reward": 0.018004243518109142,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.793,
+    "candidate_count": 15,
+    "coherence_improvement": 0.06514791193605085,
+    "learner_kind": "hybrid_physics_replay",
+    "non_actuating": true,
+    "scenario": "two_channel_low_coupling",
+    "selected_coherence": 0.8581479119360509,
+    "selected_reward": 0.03163434231578084,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.7758666666666668,
+    "candidate_count": 19,
+    "coherence_improvement": 0.07718264853032819,
+    "learner_kind": "ppo_like_replay",
+    "non_actuating": true,
+    "scenario": "three_channel_cross_gain",
+    "selected_coherence": 0.853049315196995,
+    "selected_reward": 0.023418598054388028,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.7758666666666668,
+    "candidate_count": 19,
+    "coherence_improvement": 0.05663105080295605,
+    "learner_kind": "sac_like_replay",
+    "non_actuating": true,
+    "scenario": "three_channel_cross_gain",
+    "selected_coherence": 0.8324977174696229,
+    "selected_reward": -0.017374398102880793,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.7758666666666668,
+    "candidate_count": 19,
+    "coherence_improvement": 0.061527857552854504,
+    "learner_kind": "hybrid_physics_replay",
+    "non_actuating": true,
+    "scenario": "three_channel_cross_gain",
+    "selected_coherence": 0.8373945242195213,
+    "selected_reward": -0.0076507358184341595,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.8022666666666668,
+    "candidate_count": 19,
+    "coherence_improvement": 0.035689587760827646,
+    "learner_kind": "ppo_like_replay",
+    "non_actuating": true,
+    "scenario": "stability_recovery",
+    "selected_coherence": 0.8379562544274944,
+    "selected_reward": -0.006387791469199769,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.8022666666666668,
+    "candidate_count": 19,
+    "coherence_improvement": 0.05407478748318795,
+    "learner_kind": "sac_like_replay",
+    "non_actuating": true,
+    "scenario": "stability_recovery",
+    "selected_coherence": 0.8563414541498547,
+    "selected_reward": 0.030096797533982787,
+    "unsafe_selected": false
+  },
+  {
+    "accepted": true,
+    "baseline_coherence": 0.8022666666666668,
+    "candidate_count": 19,
+    "coherence_improvement": 0.05829449368932327,
+    "learner_kind": "hybrid_physics_replay",
+    "non_actuating": true,
+    "scenario": "stability_recovery",
+    "selected_coherence": 0.8605611603559901,
+    "selected_reward": 0.03846568477559855,
+    "unsafe_selected": false
+  }
+]
+```
 
-| Domain profile | Artefacts | Rules | STL specs | Identifier maps | Accepted |
-|----------------|----------:|------:|----------:|----------------:|----------|
-| `plasma_control` | 3 | 2 | 2 | 12 | yes |
-| `power_grid` | 3 | 2 | 2 | 12 | yes |
-| `medical_cardiac` | 3 | 2 | 2 | 12 | yes |
+`scenario_results_json`:
 
-## Hybrid Co-Compiler Review Gates
+```json
+[
+  {
+    "accepted": true,
+    "accepted_learner_count": 3,
+    "baseline_coherence": 0.793,
+    "failed_learner_count": 0,
+    "learner_count": 3,
+    "min_coherence_improvement": 0.05827974999403174,
+    "non_actuating_proposals": true,
+    "scenario": "two_channel_low_coupling",
+    "unsafe_acceptance_count": 0
+  },
+  {
+    "accepted": true,
+    "accepted_learner_count": 3,
+    "baseline_coherence": 0.7758666666666668,
+    "failed_learner_count": 0,
+    "learner_count": 3,
+    "min_coherence_improvement": 0.05663105080295605,
+    "non_actuating_proposals": true,
+    "scenario": "three_channel_cross_gain",
+    "unsafe_acceptance_count": 0
+  },
+  {
+    "accepted": true,
+    "accepted_learner_count": 3,
+    "baseline_coherence": 0.8022666666666668,
+    "failed_learner_count": 0,
+    "learner_count": 3,
+    "min_coherence_improvement": 0.035689587760827646,
+    "non_actuating_proposals": true,
+    "scenario": "stability_recovery",
+    "unsafe_acceptance_count": 0
+  }
+]
+```
 
-The hybrid co-compiler benchmark combines a deterministic quantum compiler
-manifest and a deterministic neuromorphic schedule manifest under one shared
-audit envelope. It requires simulator parity, component hashes, linked target
-backends, and forced non-actuation; permission leaks and parity failures must
-produce blocked review manifests.
+### `bayesian_posterior`
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Target backends | 4 | >= 4 |
-| Component hashes | 3 | = 3 |
-| Quantum term count | 3 | >= 3 |
-| Neuromorphic sample count | 2 | >= 2 |
-| Blocked probes | 2 | >= 2 |
-| Non-actuating flags | 1 | required |
-| Deterministic hash | 1 | required |
+- Suite: `bayesian_posterior_fit_quality`
+- Wall time (s): `2.384671530977357`
+- Steps/s: `40.25711665231078`
 
-## Quantum Target-Readiness Gates
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `credible_interval_width` | `0.002121338455159605` |
+| `finite_audit_record` | `1` |
+| `knm_mean_abs_error` | `0.029439030191471344` |
+| `non_negative_coupling` | `1` |
+| `omega_mean_abs_error` | `0.007744271156763904` |
+| `residual_rmse` | `3.904347277377099e-07` |
+| `rollout_sample_count` | `128` |
+| `sample_count` | `96` |
+| `zero_diagonal_coupling` | `1` |
 
-The quantum target-readiness benchmark validates the non-executing handoff audit
-for declared QPU backends. The gate requires one blocked record, one
-ready-not-executed record, credential and operator-approval blockers, stable
-readiness hashes, operator commands, and forced disabled QPU execution and
-actuation. These records are target-readiness evidence only; they do not submit
-jobs, run simulators, or permit external actuation.
+`acceptance_thresholds_json`:
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Readiness records | 2 | >= 2 |
-| Ready-not-executed records | 1 | >= 1 |
-| Blocked records | 1 | >= 1 |
-| Blocked reasons | 2 | >= 2 |
-| Operator commands | 6 | >= 6 |
-| Non-executing flag | 1 | required |
-| Deterministic hash | 1 | required |
-| Manifest SHA-256 | `e323283dbcdc138915a6d2a9728fdcce9dfa9600245428298d60c21b3a5ac30d` | stable |
-| Ready readiness SHA-256 | `aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c` | stable |
+```json
+{
+  "max_credible_interval_width": 0.01,
+  "max_knm_mean_abs_error": 0.06,
+  "max_omega_mean_abs_error": 0.03,
+  "max_residual_rmse": 0.0025,
+  "min_rollout_sample_count": 96
+}
+```
 
-## Neuromorphic Target-Readiness Gates
+### `bayesian_backends`
 
-The neuromorphic target-readiness benchmark validates the non-executing hardware
-handoff audit for declared Lava/PyNN-style targets. The gate requires one
-blocked record, one ready-not-executed record, credential, operator-approval,
-and external simulator-parity blockers, stable readiness hashes, operator
-commands, and forced disabled hardware writes and actuation. These records are
-target-readiness evidence only; they do not submit jobs, run external
-simulators, or permit hardware actuation.
+- Suite: `bayesian_backend_fail_closed`
+- Wall time (s): `0.27298261801479384`
+- Steps/s: `10.98971070691915`
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Readiness records | 2 | >= 2 |
-| Ready-not-executed records | 1 | >= 1 |
-| Blocked records | 1 | >= 1 |
-| Blocked reasons | 3 | >= 3 |
-| Operator commands | 6 | >= 6 |
-| Non-executing flag | 1 | required |
-| Deterministic hash | 1 | required |
-| Manifest SHA-256 | `b6d66744f1488a0711c5b40a7fef273c3ab81e8a8eb030ab873e4e75f831600a` | stable |
-| Ready readiness SHA-256 | `fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0` | stable |
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `available_backend_count` | `1` |
+| `backend_count` | `3` |
+| `fail_closed_backend_count` | `2` |
+| `numpy_sample_count` | `16` |
+| `unexpected_reserved_success_count` | `0` |
 
-## Hybrid Target-Readiness Gates
+`acceptance_thresholds_json`:
 
-The hybrid target-readiness benchmark validates the non-executing handoff audit
-that links the quantum and neuromorphic readiness records to the combined
-co-compiler manifest. The gate requires one blocked record, one
-ready-not-executed record, explicit hybrid operator approval for readiness,
-component-hash linkage, stable readiness hashes, operator commands, and forced
-disabled QPU execution, hardware writes, and actuation. These records are
-readiness evidence only; they do not submit jobs, run external simulators, or
-permit hybrid actuation.
+```json
+{
+  "max_unexpected_reserved_successes": 0,
+  "min_available_backends": 1,
+  "required_fail_closed_backends": [
+    "blackjax",
+    "numpyro"
+  ]
+}
+```
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Readiness records | 2 | >= 2 |
-| Ready-not-executed records | 1 | >= 1 |
-| Blocked records | 1 | >= 1 |
-| Blocked reasons | 1 | >= 1 |
-| Operator commands | 6 | >= 6 |
-| Component hash linked | 1 | required |
-| Non-executing flag | 1 | required |
-| Deterministic hash | 1 | required |
-| Hybrid manifest SHA-256 | `e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7` | stable |
-| Ready readiness SHA-256 | `5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64` | stable |
+`backend_results_json`:
 
-## Hybrid Operator Handoff Package Gates
+```json
+[
+  {
+    "available": true,
+    "backend": "numpy",
+    "fail_closed": false,
+    "kind": "bayesian_backend_status",
+    "reason": "executed",
+    "sample_count": 16
+  },
+  {
+    "available": false,
+    "backend": "numpyro",
+    "fail_closed": true,
+    "kind": "bayesian_backend_status",
+    "reason": "numpyro Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation",
+    "sample_count": 0
+  },
+  {
+    "available": false,
+    "backend": "blackjax",
+    "fail_closed": true,
+    "kind": "bayesian_backend_status",
+    "reason": "blackjax Bayesian UPDE backend is not implemented; use backend='numpy' for reproducible Monte Carlo propagation",
+    "sample_count": 0
+  }
+]
+```
 
-The hybrid operator handoff benchmark validates deterministic, non-executing
-packages prepared for external approved operator workflows. The gate requires
-one blocked package, one ready-not-executed package, blocked-reason preservation,
-operator commands, package-hash determinism, manifest/readiness hash-chain
-linkage, and forced disabled execution, QPU execution, hardware writes, and
-actuation. These packages are review artefacts only; they do not submit jobs,
-run external simulators, or permit hybrid actuation.
+### `formal_export`
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Packages | 2 | >= 2 |
-| Ready-not-executed packages | 1 | >= 1 |
-| Blocked packages | 1 | >= 1 |
-| Blocked reasons | 1 | >= 1 |
-| Operator commands | 8 | >= 8 |
-| Hash chain linked | 1 | required |
-| Non-executing flag | 1 | required |
-| Deterministic hash | 1 | required |
-| Ready package SHA-256 | `c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5` | stable |
+- Suite: `formal_export_artifact_quality`
+- Wall time (s): `0.0005459249950945377`
+- Steps/s: `9158.767312227847`
 
-## Meta-Transfer Audit-Corpus Gates
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `artifact_count` | `5` |
+| `artifact_sha256` | `74217fecfc92b3cf0d3d87f7b58c4278d4c758a1309f11c6d99bac429a57e378` |
+| `checker_availability_count` | `3` |
+| `checker_availability_execution_disabled` | `1` |
+| `checker_available_count` | `2` |
+| `checker_command_count` | `3` |
+| `checker_execution_disabled` | `1` |
+| `checker_missing_count` | `1` |
+| `deterministic_hash` | `1` |
+| `fail_closed_count` | `5` |
+| `identifier_map_count` | `22` |
+| `package_property_count` | `3` |
+| `package_sha256` | `b1d5207b71b84ecc674b0d203206371f0861bd8cc03667592dfa060bac171a92` |
+| `petri_prism_bytes` | `1012` |
+| `petri_tla_bytes` | `1281` |
+| `policy_prism_bytes` | `1116` |
+| `policy_tla_bytes` | `1370` |
+| `stl_prism_bytes` | `808` |
 
-The meta-transfer audit-corpus benchmark loads a deterministic nested JSONL
-corpus with mixed SPO audit shapes, fits a review-only cross-domain transfer
-model, and verifies proposal quality against a held-out power-grid-like query.
-The gate requires recursive corpus discovery, multi-domain coverage,
-feature/knob coverage, enough nearest-neighbour evidence, high confidence, a
-required top-domain match, and a stable proposal hash. It does not actuate,
-train online, load plugins, or execute a packaged model.
+`acceptance_thresholds_json`:
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Training records | 6 | >= 6 |
-| Domains | 4 | >= 4 |
-| Feature keys | 5 | >= 5 |
-| Knobs | 4 | >= 4 |
-| Proposal knobs | 4 | >= 4 |
-| Neighbours | 3 | >= 3 |
-| Top neighbour domain | `power_grid` | `power_grid` |
-| Confidence | 0.9977061617091371 | >= 0.97 |
-| Deterministic hash | 1 | required |
-| Proposal SHA-256 | `bfef70f740fbdedc765080f9c9bb0156ec046fd0351dab4f4117c7c259a781fb` | stable |
+```json
+{
+  "min_artifact_count": 5,
+  "min_checker_availability_count": 3,
+  "min_checker_command_count": 3,
+  "min_fail_closed_count": 4,
+  "min_identifier_map_count": 12,
+  "min_missing_checker_count": 1,
+  "min_package_property_count": 3,
+  "require_checker_execution_disabled": true,
+  "require_deterministic_hash": true
+}
+```
 
-## Meta-Transfer Package Manifest Gates
+`checker_availability_json`:
 
-The meta-transfer manifest benchmark packages a deterministic synthetic
-multi-domain replay corpus into the review-only `scpn-meta` manifest surface.
-The gate requires training-summary coverage, digest linkage between the JSON
-package and manifest, public import/console metadata, disabled execution, and a
-stable manifest hash. It does not build, install, upload, or execute an optional
-package.
+```json
+[
+  {
+    "artifact_name": "petri_prism",
+    "available": true,
+    "checker": "prism",
+    "command": [
+      "prism",
+      "petri_prism.prism",
+      "-pf",
+      "P>=1 [ F \"active_done\" ]"
+    ],
+    "executable": "prism",
+    "execution_permitted": false,
+    "property_name": "petri_reaches_done",
+    "resolved_path": "/opt/prism/bin/prism",
+    "status": "ready_not_executed"
+  },
+  {
+    "artifact_name": "petri_tla",
+    "available": false,
+    "checker": "tlc",
+    "command": [
+      "tlc2.TLC",
+      "petri_tla.tla",
+      "-config",
+      "petri_tla.cfg"
+    ],
+    "executable": "tlc2.TLC",
+    "execution_permitted": false,
+    "property_name": "petri_type_ok",
+    "resolved_path": null,
+    "status": "missing_executable"
+  },
+  {
+    "artifact_name": "policy_prism",
+    "available": true,
+    "checker": "prism",
+    "command": [
+      "prism",
+      "policy_prism.prism",
+      "-pf",
+      "P>=1 [ F \"fires_boost_K\" ]"
+    ],
+    "executable": "prism",
+    "execution_permitted": false,
+    "property_name": "policy_boost_fires",
+    "resolved_path": "/opt/prism/bin/prism",
+    "status": "ready_not_executed"
+  }
+]
+```
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Training records | 4 | >= 4 |
-| Domains | 4 | >= 4 |
-| Feature keys | 5 | >= 5 |
-| Knobs | 4 | >= 4 |
-| Package bytes | 1950 | > 0 |
-| Package digest matches manifest | 1 | required |
-| Execution disabled | 1 | required |
-| Deterministic hash | 1 | required |
-| Package name | `scpn-meta` | `scpn-meta` |
-| Import target | `scpn_phase_orchestrator.meta` | public meta facade |
-| Console script | `scpn-meta` | proposed optional entry point |
-| Package SHA-256 | `533acf3b37aa233b7a53da1903c99865a7e34055d3d5bcacef3501c3b9fd273f` | stable |
-| Manifest SHA-256 | `bf551f9836e581eba6469309784c56e3b3fd5cbfee23e55cee6018f0163df6af` | stable |
+`checker_commands_json`:
 
-## Plugin Ecosystem Catalog Gates
+```json
+[
+  {
+    "artifact_name": "petri_prism",
+    "checker": "prism",
+    "command": [
+      "prism",
+      "petri_prism.prism",
+      "-pf",
+      "P>=1 [ F \"active_done\" ]"
+    ],
+    "execution_permitted": false,
+    "property_name": "petri_reaches_done"
+  },
+  {
+    "artifact_name": "petri_tla",
+    "checker": "tlc",
+    "command": [
+      "tlc2.TLC",
+      "petri_tla.tla",
+      "-config",
+      "petri_tla.cfg"
+    ],
+    "execution_permitted": false,
+    "property_name": "petri_type_ok"
+  },
+  {
+    "artifact_name": "policy_prism",
+    "checker": "prism",
+    "command": [
+      "prism",
+      "policy_prism.prism",
+      "-pf",
+      "P>=1 [ F \"fires_boost_K\" ]"
+    ],
+    "execution_permitted": false,
+    "property_name": "policy_boost_fires"
+  }
+]
+```
 
-The plugin ecosystem benchmark packages validated Python plugin manifests into
-the marketplace catalogue and Rust-facing registry. It requires extractor,
-monitor, actuator, and bridge capabilities to appear in compatible metadata,
-requires incompatible manifests to remain visible to review jobs, and requires a
-deterministic registry hash for release evidence.
+### `stl_closed_loop`
 
-| Metric | Snapshot value | Gate |
-|--------|---------------:|------|
-| Compatible plugin count | 2 | >= 2 |
-| Full plugin count | 3 | >= 3 |
-| Incompatible plugin count | 1 | >= 1 |
-| Compatible capability count | 5 | >= 5 |
-| Handoff target hashes | 6 | >= 5 |
-| Blocked handoff capabilities | 1 | >= 1 |
-| Handoff loading disabled | 1 | required |
-| Required capability kinds observed | 4 | = 4 |
-| Extractor capabilities | 1 | >= 1 |
-| Monitor capabilities | 2 | >= 1 |
-| Actuator capabilities | 1 | >= 1 |
-| Bridge capabilities | 1 | >= 1 |
-| Deterministic hash | 1 | required |
-| Registry SHA-256 | `4dc86c339a42dba16bfe99c79fd6197051c87c97c7fbbf2a93dd86c1585ff25b` | stable |
-| Handoff SHA-256 | `db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77` | stable |
+- Suite: `stl_closed_loop_plan_quality`
+- Wall time (s): `0.0002653890405781567`
+- Steps/s: `11304.159333273237`
 
-## Use Policy
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `blocked_reason_count` | `3` |
+| `deterministic_hash` | `1` |
+| `non_actuating` | `1` |
+| `plan_count` | `3` |
+| `plan_sha256` | `c5e8bc18e6edef4cd0913b4d3fef1acf7f27865ffc64ef2903e15457d64a4c28` |
+| `projected_action_count` | `1` |
+| `rejected_candidate_count` | `1` |
 
-- Re-run `PYTHONPATH=src python benchmarks/reference_suite.py` before using the
-  values for a release note, paper table, or performance claim.
-- Keep the command, backend, versions, platform, and snapshot date next to any
-  copied result.
-- Do not compare this page against a different host or backend without adding a
-  separate dated artefact.
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_blocked_reason_count": 3,
+  "min_plan_count": 3,
+  "min_projected_action_count": 1,
+  "require_deterministic_hash": true,
+  "require_non_actuating": true
+}
+```
+
+`plans_json`:
+
+```json
+[
+  {
+    "actuating": false,
+    "blocked_reasons": [],
+    "controller_synthesis": {
+      "actuating": false,
+      "candidates": [
+        {
+          "action": "raise_coupling",
+          "direction": "increase",
+          "rationale": "R >= 0.8 violated at t=2 with robustness -0.05",
+          "robustness": -0.050000000000000044,
+          "signal": "R",
+          "time_index": 2
+        }
+      ],
+      "satisfied": false,
+      "source_backend": "builtin",
+      "spec": "eventually (R >= 0.8)"
+    },
+    "feedback_signals": [
+      "R"
+    ],
+    "horizon_steps": 4,
+    "next_review_end_index": 6,
+    "next_review_start_index": 3,
+    "projected_action_plan": {
+      "actuating": false,
+      "approved_actions": [
+        {
+          "justification": "STL candidate raise_coupling: R >= 0.8 violated at t=2 with robustness -0.05",
+          "knob": "K",
+          "scope": "global",
+          "ttl_s": 0.5,
+          "value": 0.9500000000000001
+        }
+      ],
+      "rejected_candidates": [],
+      "spec": "eventually (R >= 0.8)"
+    },
+    "satisfied": false,
+    "spec": "eventually (R >= 0.8)",
+    "trace_length": 3
+  },
+  {
+    "actuating": false,
+    "blocked_reasons": [
+      "no_projected_actions",
+      "unprojected_candidates"
+    ],
+    "controller_synthesis": {
+      "actuating": false,
+      "candidates": [
+        {
+          "action": "increase_R",
+          "direction": "increase",
+          "rationale": "R >= 0.8 violated at t=2 with robustness -0.05",
+          "robustness": -0.050000000000000044,
+          "signal": "R",
+          "time_index": 2
+        }
+      ],
+      "satisfied": false,
+      "source_backend": "builtin",
+      "spec": "eventually (R >= 0.8)"
+    },
+    "feedback_signals": [
+      "R"
+    ],
+    "horizon_steps": 1,
+    "next_review_end_index": 3,
+    "next_review_start_index": 3,
+    "projected_action_plan": {
+      "actuating": false,
+      "approved_actions": [],
+      "rejected_candidates": [
+        {
+          "action": "increase_R",
+          "reason": "projection_template_missing",
+          "signal": "R"
+        }
+      ],
+      "spec": "eventually (R >= 0.8)"
+    },
+    "satisfied": false,
+    "spec": "eventually (R >= 0.8)",
+    "trace_length": 3
+  },
+  {
+    "actuating": false,
+    "blocked_reasons": [
+      "stl_satisfied_no_control_needed"
+    ],
+    "controller_synthesis": {
+      "actuating": false,
+      "candidates": [],
+      "satisfied": true,
+      "source_backend": "builtin",
+      "spec": "always (R >= 0.3)"
+    },
+    "feedback_signals": [
+      "R"
+    ],
+    "horizon_steps": 2,
+    "next_review_end_index": 3,
+    "next_review_start_index": 2,
+    "projected_action_plan": {
+      "actuating": false,
+      "approved_actions": [],
+      "rejected_candidates": [],
+      "spec": "always (R >= 0.3)"
+    },
+    "satisfied": true,
+    "spec": "always (R >= 0.3)",
+    "trace_length": 2
+  }
+]
+```
+
+### `domain_formal_export`
+
+- Suite: `domain_formal_safety_exports`
+- Wall time (s): `0.0004378690500743687`
+- Steps/s: `20554.09031186703`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `accepted_domain_count` | `3` |
+| `artifact_count` | `9` |
+| `artifact_sha256` | `ca29f17d051e8206fcd9b7a56063a79dd6e6d16746b7ce800482e4e7297c504b` |
+| `domain_count` | `3` |
+| `failed_domain_count` | `0` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_artifacts_per_domain": 3,
+  "min_domain_count": 3,
+  "min_rules_per_domain": 2,
+  "min_stl_specs_per_domain": 2,
+  "require_deterministic_hash": true
+}
+```
+
+`domain_results_json`:
+
+```json
+[
+  {
+    "accepted": true,
+    "artifact_count": 3,
+    "deterministic_hash": 1,
+    "domain": "plasma_control",
+    "identifier_map_count": 12,
+    "required_labels_present": true,
+    "rule_count": 2,
+    "stl_spec_count": 2
+  },
+  {
+    "accepted": true,
+    "artifact_count": 3,
+    "deterministic_hash": 1,
+    "domain": "power_grid",
+    "identifier_map_count": 12,
+    "required_labels_present": true,
+    "rule_count": 2,
+    "stl_spec_count": 2
+  },
+  {
+    "accepted": true,
+    "artifact_count": 3,
+    "deterministic_hash": 1,
+    "domain": "medical_cardiac",
+    "identifier_map_count": 12,
+    "required_labels_present": true,
+    "rule_count": 2,
+    "stl_spec_count": 2
+  }
+]
+```
+
+### `hybrid_cocompiler`
+
+- Suite: `hybrid_cocompiler_review_gate`
+- Wall time (s): `0.00013595097698271275`
+- Steps/s: `7355.592598110994`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `blocked_probe_count` | `2` |
+| `component_hash_count` | `3` |
+| `deterministic_hash` | `1` |
+| `hybrid_manifest_sha256` | `e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7` |
+| `manifest_count` | `1` |
+| `neuromorphic_sample_count` | `2` |
+| `non_actuating` | `1` |
+| `quantum_term_count` | `3` |
+| `target_backend_count` | `4` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_blocked_probe_count": 2,
+  "min_neuromorphic_sample_count": 2,
+  "min_quantum_term_count": 3,
+  "min_target_backend_count": 4,
+  "require_non_actuating": true
+}
+```
+
+`target_backends_json`:
+
+```json
+[
+  "qiskit_openqasm3",
+  "pennylane_qasm",
+  "lava",
+  "pynn"
+]
+```
+
+### `quantum_target_readiness`
+
+- Suite: `quantum_target_readiness_gate`
+- Wall time (s): `0.00012274103937670588`
+- Steps/s: `16294.468501784297`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `blocked_count` | `1` |
+| `blocked_reason_count` | `2` |
+| `deterministic_hash` | `1` |
+| `manifest_sha256` | `e323283dbcdc138915a6d2a9728fdcce9dfa9600245428298d60c21b3a5ac30d` |
+| `non_executing` | `1` |
+| `operator_command_count` | `6` |
+| `ready_count` | `1` |
+| `ready_readiness_sha256` | `aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c` |
+| `record_count` | `2` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_blocked_count": 1,
+  "min_blocked_reason_count": 2,
+  "min_operator_command_count": 6,
+  "min_ready_count": 1,
+  "require_deterministic_hash": true,
+  "require_non_executing": true
+}
+```
+
+`readiness_records_json`:
+
+```json
+[
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [
+      "credentials_not_configured",
+      "operator_approval_missing"
+    ],
+    "credentials_configured": false,
+    "manifest_sha256": "e323283dbcdc138915a6d2a9728fdcce9dfa9600245428298d60c21b3a5ac30d",
+    "operator_approved": false,
+    "operator_commands": [
+      "review quantum_compiler_manifest.json",
+      "run simulator parity outside SPO before target handoff",
+      "submit QPU job only from an approved external operator workflow"
+    ],
+    "provider": "ibm_quantum",
+    "qpu_execution_permitted": false,
+    "readiness_sha256": "c3b3fed3ff885d7b3738e2d46914be184671614cbb09bf5ba4c52be728fc875d",
+    "schema": "scpn_quantum_target_readiness_v1",
+    "status": "blocked",
+    "target_backend": "qiskit_openqasm3"
+  },
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [],
+    "credentials_configured": true,
+    "manifest_sha256": "e323283dbcdc138915a6d2a9728fdcce9dfa9600245428298d60c21b3a5ac30d",
+    "operator_approved": true,
+    "operator_commands": [
+      "review quantum_compiler_manifest.json",
+      "run simulator parity outside SPO before target handoff",
+      "submit QPU job only from an approved external operator workflow"
+    ],
+    "provider": "pennylane",
+    "qpu_execution_permitted": false,
+    "readiness_sha256": "aa0f85ce5bbfd35acf04d96e29d3bb64edf7ce5b091193263b13712d98f6134c",
+    "schema": "scpn_quantum_target_readiness_v1",
+    "status": "ready_not_executed",
+    "target_backend": "pennylane_qasm"
+  }
+]
+```
+
+`target_backends_json`:
+
+```json
+[
+  "qiskit_openqasm3",
+  "pennylane_qasm"
+]
+```
+
+### `neuromorphic_target_readiness`
+
+- Suite: `neuromorphic_target_readiness_gate`
+- Wall time (s): `0.00017914100317284465`
+- Steps/s: `11164.389863722572`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `blocked_count` | `1` |
+| `blocked_reason_count` | `3` |
+| `deterministic_hash` | `1` |
+| `manifest_sha256` | `b6d66744f1488a0711c5b40a7fef273c3ab81e8a8eb030ab873e4e75f831600a` |
+| `non_executing` | `1` |
+| `operator_command_count` | `6` |
+| `ready_count` | `1` |
+| `ready_readiness_sha256` | `fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0` |
+| `record_count` | `2` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_blocked_count": 1,
+  "min_blocked_reason_count": 3,
+  "min_operator_command_count": 6,
+  "min_ready_count": 1,
+  "require_deterministic_hash": true,
+  "require_non_executing": true
+}
+```
+
+`readiness_records_json`:
+
+```json
+[
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [
+      "credentials_not_configured",
+      "operator_approval_missing",
+      "external_simulator_parity_not_verified"
+    ],
+    "credentials_configured": false,
+    "external_simulator_parity_verified": false,
+    "hardware_site": "lab_lava_cluster",
+    "hardware_write_permitted": false,
+    "manifest_sha256": "b6d66744f1488a0711c5b40a7fef273c3ab81e8a8eb030ab873e4e75f831600a",
+    "operator_approved": false,
+    "operator_commands": [
+      "review neuromorphic_schedule_manifest.json",
+      "run target simulator parity outside SPO before hardware handoff",
+      "submit neuromorphic hardware job only from an approved operator workflow"
+    ],
+    "readiness_sha256": "b766c4400035c3f63fa06d2b5ef34d8aca57daf845eb3c5a201106a03f62aa7f",
+    "schema": "scpn_neuromorphic_target_readiness_v1",
+    "status": "blocked",
+    "target_backend": "lava"
+  },
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [],
+    "credentials_configured": true,
+    "external_simulator_parity_verified": true,
+    "hardware_site": "brainscales_review_lane",
+    "hardware_write_permitted": false,
+    "manifest_sha256": "b6d66744f1488a0711c5b40a7fef273c3ab81e8a8eb030ab873e4e75f831600a",
+    "operator_approved": true,
+    "operator_commands": [
+      "review neuromorphic_schedule_manifest.json",
+      "run target simulator parity outside SPO before hardware handoff",
+      "submit neuromorphic hardware job only from an approved operator workflow"
+    ],
+    "readiness_sha256": "fbff4ea82152b5fb51733f179661b8ec117b1afc076c80972e610af7717368d0",
+    "schema": "scpn_neuromorphic_target_readiness_v1",
+    "status": "ready_not_executed",
+    "target_backend": "pynn"
+  }
+]
+```
+
+`target_backends_json`:
+
+```json
+[
+  "lava",
+  "pynn"
+]
+```
+
+### `hybrid_target_readiness`
+
+- Suite: `hybrid_target_readiness_gate`
+- Wall time (s): `0.00010763999307528138`
+- Steps/s: `18580.454558383684`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `blocked_count` | `1` |
+| `blocked_reason_count` | `1` |
+| `component_hash_linked` | `1` |
+| `deterministic_hash` | `1` |
+| `hybrid_manifest_sha256` | `e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7` |
+| `non_executing` | `1` |
+| `operator_command_count` | `6` |
+| `ready_count` | `1` |
+| `ready_readiness_sha256` | `5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64` |
+| `record_count` | `2` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_blocked_count": 1,
+  "min_blocked_reason_count": 1,
+  "min_operator_command_count": 6,
+  "min_ready_count": 1,
+  "require_component_hash_linked": true,
+  "require_deterministic_hash": true,
+  "require_non_executing": true
+}
+```
+
+`readiness_records_json`:
+
+```json
+[
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [
+      "hybrid_operator_approval_missing"
+    ],
+    "component_manifest_hashes": {
+      "neuromorphic_schedule_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "quantum_manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "component_statuses": {
+      "hybrid": "co_simulation_parity_passed",
+      "neuromorphic": "ready_not_executed",
+      "quantum": "ready_not_executed"
+    },
+    "hardware_write_permitted": false,
+    "hybrid_manifest_sha256": "e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7",
+    "hybrid_operator_approved": false,
+    "neuromorphic_readiness_sha256": "c0aa614538ae1f3e971ea369f399c83d092fae7708aa965dd27bac995e5bfd4c",
+    "operator_commands": [
+      "review hybrid_neuromorphic_quantum_cocompiler.json",
+      "verify quantum and neuromorphic readiness hashes before handoff",
+      "submit hybrid execution only from an approved external operator workflow"
+    ],
+    "qpu_execution_permitted": false,
+    "quantum_readiness_sha256": "b7dc2e801b17cd78c8b4af4382c4d636dd77c4b958c3cecdde4938933d1f9475",
+    "readiness_sha256": "67f184c426a68a3c63a8e7175f0dbdf09e941b6070c93283ea486a3d5fef735d",
+    "schema": "scpn_hybrid_target_readiness_v1",
+    "status": "blocked"
+  },
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [],
+    "component_manifest_hashes": {
+      "neuromorphic_schedule_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "quantum_manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "component_statuses": {
+      "hybrid": "co_simulation_parity_passed",
+      "neuromorphic": "ready_not_executed",
+      "quantum": "ready_not_executed"
+    },
+    "hardware_write_permitted": false,
+    "hybrid_manifest_sha256": "e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7",
+    "hybrid_operator_approved": true,
+    "neuromorphic_readiness_sha256": "c0aa614538ae1f3e971ea369f399c83d092fae7708aa965dd27bac995e5bfd4c",
+    "operator_commands": [
+      "review hybrid_neuromorphic_quantum_cocompiler.json",
+      "verify quantum and neuromorphic readiness hashes before handoff",
+      "submit hybrid execution only from an approved external operator workflow"
+    ],
+    "qpu_execution_permitted": false,
+    "quantum_readiness_sha256": "b7dc2e801b17cd78c8b4af4382c4d636dd77c4b958c3cecdde4938933d1f9475",
+    "readiness_sha256": "5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64",
+    "schema": "scpn_hybrid_target_readiness_v1",
+    "status": "ready_not_executed"
+  }
+]
+```
+
+### `hybrid_operator_handoff`
+
+- Suite: `hybrid_operator_handoff_package_gate`
+- Wall time (s): `0.00012861599680036306`
+- Steps/s: `15550.165218595532`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `blocked_package_count` | `1` |
+| `blocked_reason_count` | `1` |
+| `deterministic_hash` | `1` |
+| `hash_chain_linked` | `1` |
+| `non_executing` | `1` |
+| `operator_command_count` | `8` |
+| `package_count` | `2` |
+| `ready_package_count` | `1` |
+| `ready_package_sha256` | `c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_blocked_package_count": 1,
+  "min_blocked_reason_count": 1,
+  "min_operator_command_count": 8,
+  "min_ready_package_count": 1,
+  "require_deterministic_hash": true,
+  "require_hash_chain_linked": true,
+  "require_non_executing": true
+}
+```
+
+`packages_json`:
+
+```json
+[
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [
+      "hybrid_operator_approval_missing"
+    ],
+    "component_manifest_hashes": {
+      "neuromorphic_schedule_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "quantum_manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "quantum_qasm_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "component_statuses": {
+      "hybrid": "co_simulation_parity_passed",
+      "neuromorphic": "ready_not_executed",
+      "quantum": "ready_not_executed"
+    },
+    "execution_permitted": false,
+    "hardware_write_permitted": false,
+    "hybrid_manifest_sha256": "e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7",
+    "hybrid_readiness_sha256": "67f184c426a68a3c63a8e7175f0dbdf09e941b6070c93283ea486a3d5fef735d",
+    "operator_commands": [
+      "review hybrid_neuromorphic_quantum_cocompiler.json",
+      "review scpn_hybrid_target_readiness_v1.json",
+      "verify package_sha256 before external operator handoff",
+      "execute only outside SPO from an approved operator workflow"
+    ],
+    "package_sha256": "ad392e2aae056e4a5e673d00dcf93f166f32f39db53c5c6cbf8e8ab2678f9afd",
+    "qpu_execution_permitted": false,
+    "schema": "scpn_hybrid_operator_handoff_package_v1",
+    "status": "blocked",
+    "target_backends": [
+      "qiskit_openqasm3",
+      "pennylane_qasm",
+      "lava",
+      "pynn"
+    ]
+  },
+  {
+    "actuation_permitted": false,
+    "blocked_reasons": [],
+    "component_manifest_hashes": {
+      "neuromorphic_schedule_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "quantum_manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "quantum_qasm_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "component_statuses": {
+      "hybrid": "co_simulation_parity_passed",
+      "neuromorphic": "ready_not_executed",
+      "quantum": "ready_not_executed"
+    },
+    "execution_permitted": false,
+    "hardware_write_permitted": false,
+    "hybrid_manifest_sha256": "e5510f11f3339e62ad54b723a53e737835b5c5c4d2a0274f3539533099073fa7",
+    "hybrid_readiness_sha256": "5dbf280c524594e46047c0fb342383df767713c6ebdd71d43eb5fdc5a0b5cc64",
+    "operator_commands": [
+      "review hybrid_neuromorphic_quantum_cocompiler.json",
+      "review scpn_hybrid_target_readiness_v1.json",
+      "verify package_sha256 before external operator handoff",
+      "execute only outside SPO from an approved operator workflow"
+    ],
+    "package_sha256": "c742f1c3a2ba7bfad9e1266f743c43120df8cf5c9e12da865dbcf0436b879eb5",
+    "qpu_execution_permitted": false,
+    "schema": "scpn_hybrid_operator_handoff_package_v1",
+    "status": "ready_not_executed",
+    "target_backends": [
+      "qiskit_openqasm3",
+      "pennylane_qasm",
+      "lava",
+      "pynn"
+    ]
+  }
+]
+```
+
+### `value_alignment_replay_calibration`
+
+- Suite: `value_alignment_replay_calibration_gate`
+- Wall time (s): `0.00019046897068619728`
+- Steps/s: `15750.59700901403`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `approved_case_count` | `1` |
+| `blocked_case_count` | `1` |
+| `calibration_sha256` | `9fd4f9d06491a7a0ea80bcb427a3193dc558b0a24110a7f861171920ce652322` |
+| `deterministic_hash` | `1` |
+| `fallback_applied_case_count` | `2` |
+| `record_count` | `1` |
+| `replay_case_count` | `3` |
+| `review_only` | `1` |
+| `threshold_fallback_case_count` | `1` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_approved_case_count": 1,
+  "min_blocked_case_count": 1,
+  "min_fallback_applied_case_count": 2,
+  "min_replay_case_count": 3,
+  "min_threshold_fallback_case_count": 1,
+  "require_deterministic_hash": true,
+  "require_review_only": true
+}
+```
+
+`calibration_records_json`:
+
+```json
+[
+  {
+    "actions_to_apply": [
+      {
+        "justification": "nominal replay candidate",
+        "knob": "K",
+        "scope": "global",
+        "ttl_s": 5.0,
+        "value": 0.01
+      }
+    ],
+    "alignment_score": 0.99,
+    "approved_count": 1,
+    "blocked_count": 0,
+    "case_id": "approved_nominal_replay",
+    "fallback_count": 1,
+    "minimum_score": 0.96,
+    "proposed_action_count": 1,
+    "satisfied": true,
+    "score_counterfactual_count": 0,
+    "score_counterfactuals": [],
+    "violation_count": 0,
+    "violations": []
+  },
+  {
+    "actions_to_apply": [
+      {
+        "justification": "alignment fallback: hold review path",
+        "knob": "zeta",
+        "scope": "global",
+        "ttl_s": 1.0,
+        "value": 0.0
+      }
+    ],
+    "alignment_score": 0.0,
+    "approved_count": 0,
+    "blocked_count": 1,
+    "case_id": "blocked_hard_limit_replay",
+    "fallback_count": 1,
+    "minimum_score": 0.96,
+    "proposed_action_count": 1,
+    "satisfied": false,
+    "score_counterfactual_count": 0,
+    "score_counterfactuals": [],
+    "violation_count": 1,
+    "violations": [
+      {
+        "constraint": "bounded-production-review",
+        "counterfactual": "blocked_action_prevents_constraint_violation",
+        "failed_bounds": [
+          "max_abs_value"
+        ],
+        "knob": "K",
+        "proposed_value": 1.2,
+        "scope": "global"
+      }
+    ]
+  },
+  {
+    "actions_to_apply": [
+      {
+        "justification": "alignment fallback: hold review path",
+        "knob": "zeta",
+        "scope": "global",
+        "ttl_s": 1.0,
+        "value": 0.0
+      }
+    ],
+    "alignment_score": 0.95,
+    "approved_count": 1,
+    "blocked_count": 0,
+    "case_id": "fallback_low_margin_replay",
+    "fallback_count": 1,
+    "minimum_score": 0.96,
+    "proposed_action_count": 1,
+    "satisfied": false,
+    "score_counterfactual_count": 1,
+    "score_counterfactuals": [
+      {
+        "counterfactual": "fallback_applied_because_alignment_score_below_policy_minimum",
+        "observed_score": 0.95,
+        "required_score": 0.96
+      }
+    ],
+    "violation_count": 0,
+    "violations": []
+  }
+]
+```
+
+### `meta_transfer_corpus`
+
+- Suite: `meta_transfer_audit_corpus_quality`
+- Wall time (s): `0.002550885023083538`
+- Steps/s: `2352.124829502168`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `confidence` | `0.9977061617091371` |
+| `deterministic_hash` | `1` |
+| `domain_count` | `4` |
+| `feature_key_count` | `5` |
+| `knob_count` | `4` |
+| `neighbour_count` | `3` |
+| `proposal_knob_count` | `4` |
+| `proposal_sha256` | `bfef70f740fbdedc765080f9c9bb0156ec046fd0351dab4f4117c7c259a781fb` |
+| `record_count` | `6` |
+| `top_neighbour_domain` | `power_grid` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_confidence": 0.97,
+  "min_domain_count": 4,
+  "min_feature_key_count": 5,
+  "min_knob_count": 4,
+  "min_neighbour_count": 3,
+  "min_record_count": 6,
+  "require_deterministic_hash": true,
+  "required_top_domain": "power_grid"
+}
+```
+
+`proposal_json`:
+
+```json
+{
+  "confidence": 0.9977061617091371,
+  "feature_keys": [
+    "coherence",
+    "event_rate",
+    "load_variance",
+    "phase_spread",
+    "safety_margin"
+  ],
+  "knobs": {
+    "K": 0.41749872361915147,
+    "Psi": 0.023185338382920508,
+    "alpha": 0.01,
+    "zeta": 0.06318533838292051
+  },
+  "method": "cosine_nearest_policy_transfer",
+  "neighbours": [
+    {
+      "domain": "power_grid",
+      "similarity": 0.9999872402392453
+    },
+    {
+      "domain": "power_grid",
+      "similarity": 0.9999072410625022
+    },
+    {
+      "domain": "manufacturing_spc",
+      "similarity": 0.9932240038256637
+    }
+  ]
+}
+```
+
+`training_summary_json`:
+
+```json
+{
+  "domain_count": 4,
+  "domains": [
+    "cardiac_rhythm",
+    "manufacturing_spc",
+    "power_grid",
+    "traffic_flow"
+  ],
+  "feature_keys": [
+    "coherence",
+    "event_rate",
+    "load_variance",
+    "phase_spread",
+    "safety_margin"
+  ],
+  "knob_keys": [
+    "K",
+    "Psi",
+    "alpha",
+    "zeta"
+  ],
+  "record_count": 6,
+  "reward_max": 0.94,
+  "reward_mean": 0.8866666666666667,
+  "reward_min": 0.82
+}
+```
+
+### `meta_transfer`
+
+- Suite: `meta_transfer_package_manifest_quality`
+- Wall time (s): `0.00037455803249031305`
+- Steps/s: `10679.253020967984`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `console_script` | `scpn-meta` |
+| `deterministic_hash` | `1` |
+| `domain_count` | `4` |
+| `execution_disabled` | `1` |
+| `feature_key_count` | `5` |
+| `import_target` | `scpn_phase_orchestrator.meta` |
+| `knob_count` | `4` |
+| `manifest_schema` | `scpn_meta_package_manifest_v1` |
+| `manifest_sha256` | `bf551f9836e581eba6469309784c56e3b3fd5cbfee23e55cee6018f0163df6af` |
+| `package_bytes` | `1950` |
+| `package_digest_matches` | `1` |
+| `package_name` | `scpn-meta` |
+| `package_sha256` | `533acf3b37aa233b7a53da1903c99865a7e34055d3d5bcacef3501c3b9fd273f` |
+| `record_count` | `4` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_domain_count": 4,
+  "min_feature_key_count": 5,
+  "min_knob_count": 4,
+  "min_record_count": 4,
+  "require_deterministic_hash": true,
+  "require_execution_disabled": true,
+  "require_package_digest_match": true
+}
+```
+
+`manifest_json`:
+
+```json
+{
+  "console_script": "scpn-meta",
+  "execution_permitted": false,
+  "import_target": "scpn_phase_orchestrator.meta",
+  "package_name": "scpn-meta",
+  "package_sha256": "533acf3b37aa233b7a53da1903c99865a7e34055d3d5bcacef3501c3b9fd273f",
+  "schema": "scpn_meta_package_manifest_v1",
+  "training_summary": {
+    "domain_count": 4,
+    "domains": [
+      "cardiac_rhythm",
+      "manufacturing_spc",
+      "power_grid",
+      "traffic_flow"
+    ],
+    "feature_keys": [
+      "coherence",
+      "event_rate",
+      "load_variance",
+      "phase_spread",
+      "safety_margin"
+    ],
+    "knob_keys": [
+      "K",
+      "Psi",
+      "alpha",
+      "zeta"
+    ],
+    "record_count": 4,
+    "reward_max": 0.94,
+    "reward_mean": 0.9,
+    "reward_min": 0.86
+  }
+}
+```
+
+### `plugin_ecosystem`
+
+- Suite: `plugin_ecosystem_catalog_quality`
+- Wall time (s): `0.00025290600024163723`
+- Steps/s: `11862.114766489018`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `capability_count` | `5` |
+| `compatible_count` | `2` |
+| `deterministic_hash` | `1` |
+| `full_plugin_count` | `3` |
+| `handoff_blocked_count` | `1` |
+| `handoff_loading_disabled` | `1` |
+| `handoff_sha256` | `db0fd80e5a3d3468412f0314558b017f9a2f4473d5d7a9ab768e40d86eaf3f77` |
+| `handoff_target_hash_count` | `6` |
+| `incompatible_count` | `1` |
+| `observed_kind_count` | `4` |
+| `plugin_count` | `2` |
+| `registry_sha256` | `4dc86c339a42dba16bfe99c79fd6197051c87c97c7fbbf2a93dd86c1585ff25b` |
+| `required_kind_count` | `4` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_blocked_handoff_count": 1,
+  "min_capability_count": 5,
+  "min_handoff_target_hash_count": 5,
+  "min_incompatible_count": 1,
+  "min_plugin_count": 2,
+  "require_deterministic_hash": true,
+  "require_loading_disabled": true,
+  "required_capability_kinds": [
+    "actuator",
+    "bridge",
+    "extractor",
+    "monitor"
+  ]
+}
+```
+
+`capability_counts_json`:
+
+```json
+{
+  "actuator": 1,
+  "bridge": 1,
+  "domainpack": 0,
+  "extractor": 1,
+  "monitor": 2
+}
+```
+
+`handoff_dispatch_groups_json`:
+
+```json
+{
+  "actuator": 1,
+  "bridge": 1,
+  "domainpack": 0,
+  "extractor": 1,
+  "monitor": 2
+}
+```
+
+### `kuramoto`
+
+- Suite: `kuramoto_reference_strogatz_2000`
+- Wall time (s): `0.13605953101068735`
+- Steps/s: `7349.723996339888`
+
+| Metric | Value |
+|--------|-------|
+| `final_order_parameter` | `1.0` |
+| `n_oscillators` | `64` |
+| `n_steps` | `1000` |
+
+### `stuart_landau`
+
+- Suite: `stuart_landau_reference_pikovsky_2001`
+- Wall time (s): `0.26331308600492775`
+- Steps/s: `3797.7603588652846`
+
+| Metric | Value |
+|--------|-------|
+| `final_mean_amplitude` | `3.6193922141707704` |
+| `n_oscillators` | `64` |
+| `n_steps` | `1000` |
+
+### `petri_reachability`
+
+- Suite: `petri_net_reachability`
+- Wall time (s): `0.01994006196036935`
+- Steps/s: `250751.47760009192`
+
+| Metric | Value |
+|--------|-------|
+| `n_steps` | `5000` |
+| `reachable_markings` | `4` |
+

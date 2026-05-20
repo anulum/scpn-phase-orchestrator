@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.supervisor.alignment import (
     ValueConstraint,
     ValueScoreCounterfactual,
     ValueViolation,
+    calibrate_value_alignment_replay_evidence,
     value_alignment_policy_from_binding_spec,
     value_alignment_policy_from_template,
 )
@@ -214,6 +215,7 @@ __all__ = [
     "ValueScoreCounterfactual",
     "ValueConstraint",
     "ValueViolation",
+    "calibrate_value_alignment_replay_evidence",
     "assess_fep_hierarchy",
     "audit_formal_checker_availability",
     "build_bft_meta_orchestrator_manifest",
