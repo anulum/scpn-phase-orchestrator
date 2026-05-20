@@ -17,6 +17,7 @@ from benchmarks.reference_suite import (
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
     benchmark_domain_formal_safety_exports,
+    benchmark_evolutionary_mutation_grammar_gate,
     benchmark_evolutionary_supervisor_search,
     benchmark_federated_meta_orchestrator,
     benchmark_formal_export_artifact_quality,
@@ -223,6 +224,55 @@ def test_evolutionary_supervisor_search_reports_thresholds_and_records() -> None
         "accepted_for_review",
         "rejected",
     }
+
+
+def test_evolutionary_mutation_grammar_gate_shape() -> None:
+    out = benchmark_evolutionary_mutation_grammar_gate()
+
+    assert out["suite"] == "evolutionary_mutation_grammar_gate"
+    assert out["grammar_count"] == 3
+    assert out["candidate_count"] >= 20
+    assert out["mutation_kind_count"] >= 9
+    assert out["non_actuating"] == 1
+    assert out["execution_disabled"] == 1
+    assert out["operator_review_required"] == 1
+    assert out["live_merge_disabled"] == 1
+    assert out["hot_patch_disabled"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["grammar_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_evolutionary_mutation_grammar_gate_reports_records() -> None:
+    out = benchmark_evolutionary_mutation_grammar_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["grammar_records_json"]))
+    mutation_kinds = json.loads(str(out["mutation_kinds_json"]))
+
+    assert thresholds == {
+        "min_candidate_count": 20,
+        "min_grammar_count": 3,
+        "min_mutation_kind_count": 9,
+        "require_deterministic_hash": True,
+        "require_execution_disabled": True,
+        "require_hot_patch_disabled": True,
+        "require_live_merge_disabled": True,
+        "require_non_actuating": True,
+        "require_operator_review": True,
+    }
+    assert {record["grammar"] for record in records} == {
+        "petri_net",
+        "policy_dsl",
+        "topology",
+    }
+    assert {"action", "condition", "add_arc", "token_bound", "community_bridge"} <= set(
+        mutation_kinds
+    )
+    assert all(
+        record["candidate_hash_count"] == record["candidate_count"]
+        for record in records
+    )
 
 
 def test_federated_meta_orchestrator_benchmark_shape() -> None:
@@ -1476,6 +1526,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
     assert set(out["benchmarks"].keys()) == {
         "auto_binding",
         "evolutionary_supervisor_search",
+        "evolutionary_mutation_grammars",
         "federated_meta_orchestrator",
         "autopoietic_lineage",
         "bayesian_backends",

@@ -423,6 +423,18 @@ class EvolutionarySupervisorSearchThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class EvolutionaryMutationGrammarThresholds(NamedTuple):
+    min_grammar_count: int
+    min_candidate_count: int
+    min_mutation_kind_count: int
+    require_non_actuating: bool
+    require_execution_disabled: bool
+    require_operator_review: bool
+    require_live_merge_disabled: bool
+    require_hot_patch_disabled: bool
+    require_deterministic_hash: bool
+
+
 class FederatedMetaOrchestratorThresholds(NamedTuple):
     min_node_count: int
     min_accepted_node_count: int
@@ -3421,6 +3433,94 @@ def benchmark_evolutionary_supervisor_search() -> dict[str, float | int | str]:
     }
 
 
+def benchmark_evolutionary_mutation_grammar_gate() -> dict[str, float | int | str]:
+    """Benchmark richer offline policy, Petri-net, and topology mutation grammars."""
+    thresholds = EvolutionaryMutationGrammarThresholds(
+        min_grammar_count=3,
+        min_candidate_count=20,
+        min_mutation_kind_count=9,
+        require_non_actuating=True,
+        require_execution_disabled=True,
+        require_operator_review=True,
+        require_live_merge_disabled=True,
+        require_hot_patch_disabled=True,
+        require_deterministic_hash=True,
+    )
+
+    t0 = time.perf_counter()
+    records = _build_evolutionary_mutation_grammar_records()
+    repeated_records = _build_evolutionary_mutation_grammar_records()
+    elapsed = time.perf_counter() - t0
+
+    candidate_count = sum(int(record["candidate_count"]) for record in records)
+    mutation_kinds = sorted(
+        {
+            str(kind)
+            for record in records
+            for kind in record["mutation_kinds"]
+            if isinstance(record["mutation_kinds"], list)
+        }
+    )
+    non_actuating = int(all(record["non_actuating"] is True for record in records))
+    execution_disabled = int(
+        all(record["execution_disabled"] is True for record in records)
+    )
+    operator_review_required = int(
+        all(record["operator_review_required"] is True for record in records)
+    )
+    live_merge_disabled = int(
+        all(record["live_merge_permitted"] is False for record in records)
+    )
+    hot_patch_disabled = int(
+        all(record["hot_patch_permitted"] is False for record in records)
+    )
+    deterministic_hash = int(records == repeated_records)
+    acceptance_passed = int(
+        len(records) >= thresholds.min_grammar_count
+        and candidate_count >= thresholds.min_candidate_count
+        and len(mutation_kinds) >= thresholds.min_mutation_kind_count
+        and non_actuating == int(thresholds.require_non_actuating)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and operator_review_required == int(thresholds.require_operator_review)
+        and live_merge_disabled == int(thresholds.require_live_merge_disabled)
+        and hot_patch_disabled == int(thresholds.require_hot_patch_disabled)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "evolutionary_mutation_grammar_gate",
+        "wall_time_s": elapsed,
+        "steps_per_second": candidate_count / elapsed if elapsed > 0.0 else 0.0,
+        "grammar_count": len(records),
+        "candidate_count": candidate_count,
+        "mutation_kind_count": len(mutation_kinds),
+        "non_actuating": non_actuating,
+        "execution_disabled": execution_disabled,
+        "operator_review_required": operator_review_required,
+        "live_merge_disabled": live_merge_disabled,
+        "hot_patch_disabled": hot_patch_disabled,
+        "deterministic_hash": deterministic_hash,
+        "grammar_sha256": _stable_record_hash(records),
+        "acceptance_passed": acceptance_passed,
+        "mutation_kinds_json": json.dumps(mutation_kinds, sort_keys=True),
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_candidate_count": thresholds.min_candidate_count,
+                "min_grammar_count": thresholds.min_grammar_count,
+                "min_mutation_kind_count": thresholds.min_mutation_kind_count,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_hot_patch_disabled": thresholds.require_hot_patch_disabled,
+                "require_live_merge_disabled": thresholds.require_live_merge_disabled,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_operator_review": thresholds.require_operator_review,
+            },
+            sort_keys=True,
+        ),
+        "grammar_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_federated_meta_orchestrator() -> dict[str, float | int | str]:
     """Benchmark offline federated aggregation and privacy gate evidence."""
     thresholds = FederatedMetaOrchestratorThresholds(
@@ -5722,6 +5822,147 @@ def _stable_record_hash(records: object) -> str:
     return sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _build_evolutionary_mutation_grammar_records() -> list[dict[str, object]]:
+    from scpn_phase_orchestrator.supervisor.evolutionary_petri_grammar import (
+        run_offline_evolutionary_petri_mutation_grammar,
+    )
+    from scpn_phase_orchestrator.supervisor.evolutionary_policy_dsl import (
+        run_offline_evolutionary_policy_dsl_search,
+    )
+    from scpn_phase_orchestrator.supervisor.evolutionary_topology_grammar import (
+        run_offline_evolutionary_topology_mutation_search,
+    )
+
+    policy_report = run_offline_evolutionary_policy_dsl_search(
+        (
+            "rule throttle_guard: if R < 0.95 and K > 0.10 then set K += 0.04\n"
+            "rule recovery_guard: if R >= 0.20 then set K -= 0.03\n"
+            "rule safety_guard: if R < 0.40 then set K = 0.12"
+        ),
+        generation_count=1,
+        population_size=6,
+        mutation_step=0.02,
+    ).to_audit_record()
+    petri_report = run_offline_evolutionary_petri_mutation_grammar(
+        {
+            "places": [
+                {"name": "idle", "token_bound": 2},
+                {"name": "nominal", "token_bound": 4},
+                {"name": "degraded", "token_bound": 3},
+            ],
+            "transitions": [
+                {"name": "to_nominal", "guard_weights": {"R": 0.8}},
+                {"name": "to_degraded", "guard_weights": {"R": 0.2}},
+            ],
+            "arcs": [
+                {
+                    "place": "idle",
+                    "transition": "to_nominal",
+                    "direction": "input",
+                    "weight": 1,
+                }
+            ],
+        },
+        generation_count=1,
+        candidates_per_generation=6,
+        mutation_step=0.12,
+        max_arc_weight=4,
+        max_token_bound=32,
+    ).to_audit_record()
+    topology_report = run_offline_evolutionary_topology_mutation_search(
+        [
+            {"node_id": 0, "community": "alpha"},
+            {"node_id": 1, "community": "alpha"},
+            {"node_id": 2, "community": "beta"},
+            {"node_id": 3, "community": "beta"},
+        ],
+        [
+            {"nodes": [0, 1], "weight": 0.28},
+            {"nodes": [2, 3], "weight": 0.35},
+        ],
+        generation_count=1,
+        population_size=8,
+        mutation_step=0.03,
+        max_add_candidates=1,
+    ).to_audit_record()
+    return [
+        _evolutionary_mutation_grammar_record(
+            "policy_dsl",
+            policy_report,
+            candidate_kind_key=("mutation_plan", "component"),
+            hash_key="report_hash",
+        ),
+        _evolutionary_mutation_grammar_record(
+            "petri_net",
+            petri_report,
+            candidate_kind_key=("mutation_type",),
+            hash_key="plan_hash",
+        ),
+        _evolutionary_mutation_grammar_record(
+            "topology",
+            topology_report,
+            candidate_kind_key=("plan", "operation"),
+            hash_key="report_hash",
+        ),
+    ]
+
+
+def _evolutionary_mutation_grammar_record(
+    grammar: str,
+    report: Mapping[str, object],
+    *,
+    candidate_kind_key: tuple[str, ...],
+    hash_key: str,
+) -> dict[str, object]:
+    candidates = report.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        raise ValueError(f"{grammar} grammar report must include candidates")
+    mutation_kinds = sorted(
+        {
+            _nested_str(candidate, candidate_kind_key)
+            for candidate in candidates
+            if isinstance(candidate, Mapping)
+        }
+    )
+    candidate_hashes = [
+        str(candidate.get("candidate_hash", ""))
+        for candidate in candidates
+        if isinstance(candidate, Mapping)
+    ]
+    if not all(len(candidate_hash) == 64 for candidate_hash in candidate_hashes):
+        raise ValueError(f"{grammar} grammar candidate hashes must be SHA-256 values")
+    report_hash = str(report.get(hash_key, ""))
+    if len(report_hash) != 64:
+        raise ValueError(f"{grammar} grammar report hash must be a SHA-256 value")
+
+    return {
+        "grammar": grammar,
+        "schema_name": str(report["schema_name"]),
+        "schema_version": str(report["schema_version"]),
+        "candidate_count": int(report["candidate_count"]),
+        "accepted_count": int(report["accepted_count"]),
+        "rejected_count": int(report["rejected_count"]),
+        "mutation_kinds": mutation_kinds,
+        "candidate_hash_count": len(candidate_hashes),
+        "report_hash": report_hash,
+        "operator_review_required": bool(report["operator_review_required"]),
+        "execution_disabled": bool(report["execution_disabled"]),
+        "live_merge_permitted": bool(report["live_merge_permitted"]),
+        "hot_patch_permitted": bool(report["hot_patch_permitted"]),
+        "actuation_permitted": bool(report["actuation_permitted"]),
+        "non_actuating": bool(report.get("non_actuating", True)),
+    }
+
+
+def _nested_str(payload: Mapping[str, object], path: tuple[str, ...]) -> str:
+    value: object = payload
+    for key in path:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"nested path {path!r} does not resolve to a mapping")
+        value = value[key]
+    return str(value)
+
+
 def _load_sheaf_obstruction_demo(module_path: str) -> Mapping[str, object]:
     module = importlib.import_module(module_path)
     payload = module.run_demo()
@@ -5845,6 +6086,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             ),
             "evolutionary_supervisor_search": (
                 benchmark_evolutionary_supervisor_search()
+            ),
+            "evolutionary_mutation_grammars": (
+                benchmark_evolutionary_mutation_grammar_gate()
             ),
             "federated_meta_orchestrator": benchmark_federated_meta_orchestrator(),
             "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),

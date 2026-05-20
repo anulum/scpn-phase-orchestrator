@@ -673,8 +673,17 @@ Speculative research watchlist:
     rejected candidates, counterfactual filter evidence, deterministic hashes,
     operator review, non-actuation, disabled execution, disabled live merge,
     and disabled hot patching.
-  - Remaining scope: richer policy DSL, Petri-net, and topology-mutation
-    grammars plus maintained operator UI surfacing.
+  - Richer mutation grammars are in place:
+    `evolutionary_policy_dsl.py`, `evolutionary_petri_grammar.py`, and
+    `evolutionary_topology_grammar.py` generate deterministic, review-only
+    policy-rule, Petri-net, and topology candidates with stable hashes,
+    fail-closed validation, disabled execution, disabled live merge, disabled
+    hot patching, and no actuation.
+  - Reference-suite gates now enforce grammar count, candidate count,
+    mutation-kind coverage, deterministic hashes, operator review,
+    non-actuation, disabled execution, disabled live merge, and disabled hot
+    patching across all three grammar families.
+  - Remaining scope: maintained operator UI surfacing.
 - Information-geometry control layer using Fisher-Rao or Wasserstein metrics as
   supervisor control primitives.
   - Foundation is in place: dependency-free NumPy/JAX-compatible Fisher-Rao
