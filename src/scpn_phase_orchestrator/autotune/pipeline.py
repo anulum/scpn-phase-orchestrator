@@ -19,6 +19,7 @@ inferred parameters.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Integral
 from typing import TypeAlias
 
 import numpy as np
@@ -66,6 +67,10 @@ def identify_binding_spec(
 
     if n_layers is None:
         n_layers = n_ch
+    elif isinstance(n_layers, bool) or not isinstance(n_layers, Integral):
+        raise TypeError(f"n_layers must be an integer, got {n_layers!r}")
+    elif n_layers <= 0:
+        raise ValueError("n_layers must be a positive integer")
 
     # Step 1: extract phases and frequencies per channel
     channel_phases = []
@@ -90,7 +95,7 @@ def identify_binding_spec(
 
     # Step 3: K_c from universal prior
     prior = UniversalPrior()
-    kc_result = prior.estimate_Kc(np.array(omegas), n_layers)
+    kc_result = prior.estimate_Kc(np.array(omegas), n_ch)
 
     return AutoTuneResult(
         omegas=omegas,

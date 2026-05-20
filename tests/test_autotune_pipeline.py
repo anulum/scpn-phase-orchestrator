@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import get_type_hints
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.autotune.freq_id import (
     FrequencyResult,
@@ -70,6 +71,15 @@ class TestAutoTunePipeline:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0, n_layers=4)
         assert result.n_layers == 4
+        assert len(result.omegas) == 2
+        assert result.K_c_estimate >= 0
+
+    def test_n_layers_override_rejects_invalid_values(self):
+        data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
+        with pytest.raises(ValueError, match="n_layers must be a positive integer"):
+            identify_binding_spec(data, fs=200.0, n_layers=0)
+        with pytest.raises(TypeError, match="n_layers must be an integer"):
+            identify_binding_spec(data, fs=200.0, n_layers=True)
 
     def test_alpha_zero(self):
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
