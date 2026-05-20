@@ -66,6 +66,18 @@ from scpn_phase_orchestrator.binding.semantic import (
     SemanticDomainCompiler,
     compile_symbolic_binding,
 )
+from scpn_phase_orchestrator.binding.topos_examples import (
+    ToposDomainObligation,
+    ToposProofObligation,
+    build_topos_domain_obligation_examples,
+)
+from scpn_phase_orchestrator.binding.topos_semantic import (
+    SymbolicBindingMorphism,
+    SymbolicBindingObject,
+    SymbolicBindingObligation,
+    SymbolicBindingValidationReport,
+    validate_symbolic_binding_functor,
+)
 from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
@@ -99,11 +111,18 @@ __all__ = [
     "GeneratedBindingArtifacts",
     "RetrievalEvidence",
     "SemanticDomainCompiler",
+    "SymbolicBindingMorphism",
+    "SymbolicBindingObject",
+    "SymbolicBindingObligation",
+    "SymbolicBindingValidationReport",
+    "ToposDomainObligation",
+    "ToposProofObligation",
     "build_digital_twin_adapter_manifest",
     "build_channel_algebra_report",
     "build_digital_twin_binding_contract",
     "build_digital_twin_operator_evidence",
     "build_digital_twin_sync_envelope",
+    "build_topos_domain_obligation_examples",
     "compile_symbolic_binding",
     "format_resolved_binding_config",
     "load_binding_spec",
@@ -111,5 +130,6 @@ __all__ = [
     "resolved_binding_config",
     "validate_binding_spec",
     "validate_digital_twin_sync_envelope",
+    "validate_symbolic_binding_functor",
     "write_digital_twin_sync_jsonl",
 ]

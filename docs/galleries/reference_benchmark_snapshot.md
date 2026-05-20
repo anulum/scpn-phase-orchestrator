@@ -30,31 +30,32 @@ fresh validation unless the command is rerun and the JSON artefact is updated.
 
 | Benchmark key | Suite ID | Record size | Wall time (s) | Steps/s | Acceptance |
 |---------------|----------|-------------|---------------|---------|------------|
-| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.04302795702824369 | 92.96281478979787 | 1 |
-| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.014022487972397357 | 213.94206262864097 | 1 |
-| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.012101989996153861 | 743.6793455341059 | 1 |
-| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.2084477890166454 | 43.46944513582813 | 1 |
-| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.2760652529541403 | 10.866996001479249 | 1 |
-| `formal_export` | `formal_export_artifact_quality` | n/a | 0.0005927919992245734 | 8434.661747359041 | 1 |
-| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.00026885600527748466 | 11158.389402177267 | 1 |
-| `domain_formal_export` | `domain_formal_safety_exports` | n/a | 0.00037443102337419987 | 24036.46983867989 | 1 |
-| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00011081801494583488 | 9023.803580029615 | 1 |
-| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.00011624401668086648 | 17205.1866161056 | 1 |
-| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.0001997430226765573 | 10012.865396748242 | 1 |
-| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.0001124640111811459 | 17783.46671966553 | 1 |
-| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | n/a | 0.00012341002002358437 | 16206.139498379374 | 1 |
-| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.00016455200966447592 | 18231.317904394156 | 1 |
-| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.0003443920286372304 | 14518.338359296962 | 1 |
-| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | 2 | 0.0002592519740574062 | 7714.502492301716 | 1 |
-| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | 2 | 0.00038280599983409047 | 5224.578509393289 | 1 |
-| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | 3 | 0.03629202296724543 | 82.66279349342373 | 1 |
-| `integrated_information_replay_corpus` | `integrated_information_replay_corpus_gate` | 12 | 0.03229943901533261 | 371.5234804636568 | 1 |
-| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.0019683210412040353 | 3048.2832192505343 | 1 |
-| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.00038965698331594467 | 10265.43901756969 | 1 |
-| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | n/a | 0.0002526720054447651 | 11873.100048100934 | 1 |
-| `kuramoto` | `kuramoto_reference_strogatz_2000` | 1000 | 0.12400957400677726 | 8063.893517974257 | n/a |
-| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 1000 | 0.2453802530071698 | 4075.3075593690123 | n/a |
-| `petri_reachability` | `petri_net_reachability` | 5000 | 0.022965986980125308 | 217713.26459110962 | n/a |
+| `auto_binding` | `auto_binding_synthetic_quality` | 4 | 0.057216571003664285 | 69.9098168560963 | 1 |
+| `semantic_retrieval` | `semantic_retrieval_ranking_quality` | n/a | 0.02063438598997891 | 145.38838235637107 | 1 |
+| `replay_policy` | `replay_policy_candidate_quality` | n/a | 0.012894693005364388 | 697.9615564523997 | 1 |
+| `bayesian_posterior` | `bayesian_posterior_fit_quality` | n/a | 2.626745301007759 | 36.547129241335014 | 1 |
+| `bayesian_backends` | `bayesian_backend_fail_closed` | n/a | 0.31860462098848075 | 9.416059285933791 | 1 |
+| `formal_export` | `formal_export_artifact_quality` | n/a | 0.000836762017570436 | 5975.414628065519 | 1 |
+| `stl_closed_loop` | `stl_closed_loop_plan_quality` | n/a | 0.0004311520024202764 | 6958.102903754286 | 1 |
+| `domain_formal_export` | `domain_formal_safety_exports` | n/a | 0.000577141996473074 | 15594.0826607649 | 1 |
+| `hybrid_cocompiler` | `hybrid_cocompiler_review_gate` | 1 | 0.00017991801723837852 | 5558.087040694048 | 1 |
+| `quantum_target_readiness` | `quantum_target_readiness_gate` | 2 | 0.0002282179775647819 | 8763.551501687813 | 1 |
+| `neuromorphic_target_readiness` | `neuromorphic_target_readiness_gate` | 2 | 0.0003198320046067238 | 6253.282883491499 | 1 |
+| `hybrid_target_readiness` | `hybrid_target_readiness_gate` | 2 | 0.00019108201377093792 | 10466.709872534242 | 1 |
+| `hybrid_operator_handoff` | `hybrid_operator_handoff_package_gate` | n/a | 0.00024994899285957217 | 8001.632561582882 | 1 |
+| `value_alignment_replay_calibration` | `value_alignment_replay_calibration_gate` | 1 | 0.0003521619946695864 | 8518.806814502314 | 1 |
+| `autopoietic_lineage` | `autopoietic_lineage_sandbox_gate` | 2 | 0.000836534018162638 | 5977.043242045305 | 1 |
+| `intergenerational_inheritance` | `intergenerational_policy_inheritance_gate` | 2 | 0.0004973949980922043 | 4020.949160468339 | 1 |
+| `temporal_causal_hypergraph` | `temporal_causal_hypergraph_experiment_gate` | 2 | 0.000703066005371511 | 2844.683123234168 | 1 |
+| `morphogenetic_domain_demos` | `morphogenetic_domain_demo_gate` | 3 | 0.04686458600917831 | 64.01422172837412 | 1 |
+| `integrated_information_replay_corpus` | `integrated_information_replay_corpus_gate` | 12 | 0.04354794800747186 | 275.55833395275175 | 1 |
+| `topos_semantic_binding` | `topos_semantic_binding_gate` | 6 | 0.07874929602257907 | 76.19115729338932 | 1 |
+| `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | 6 | 0.0019806750351563096 | 3029.2702707420635 | 1 |
+| `meta_transfer` | `meta_transfer_package_manifest_quality` | 4 | 0.0004065890097990632 | 9837.944222783604 | 1 |
+| `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | n/a | 0.0002818969660438597 | 10642.186193423722 | 1 |
+| `kuramoto` | `kuramoto_reference_strogatz_2000` | 1000 | 0.14575366297503933 | 6860.891037580664 | n/a |
+| `stuart_landau` | `stuart_landau_reference_pikovsky_2001` | 1000 | 0.2844291899818927 | 3515.813549459048 | n/a |
+| `petri_reachability` | `petri_net_reachability` | 5000 | 0.020882676006294787 | 239432.91551776318 | n/a |
 
 ## Benchmark Record Details
 
@@ -65,8 +66,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `auto_binding`
 
 - Suite: `auto_binding_synthetic_quality`
-- Wall time (s): `0.04302795702824369`
-- Steps/s: `92.96281478979787`
+- Wall time (s): `0.057216571003664285`
+- Steps/s: `69.9098168560963`
 
 | Metric | Value |
 |--------|-------|
@@ -173,8 +174,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `semantic_retrieval`
 
 - Suite: `semantic_retrieval_ranking_quality`
-- Wall time (s): `0.014022487972397357`
-- Steps/s: `213.94206262864097`
+- Wall time (s): `0.02063438598997891`
+- Steps/s: `145.38838235637107`
 
 | Metric | Value |
 |--------|-------|
@@ -253,8 +254,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `replay_policy`
 
 - Suite: `replay_policy_candidate_quality`
-- Wall time (s): `0.012101989996153861`
-- Steps/s: `743.6793455341059`
+- Wall time (s): `0.012894693005364388`
+- Steps/s: `697.9615564523997`
 
 | Metric | Value |
 |--------|-------|
@@ -439,8 +440,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `bayesian_posterior`
 
 - Suite: `bayesian_posterior_fit_quality`
-- Wall time (s): `2.2084477890166454`
-- Steps/s: `43.46944513582813`
+- Wall time (s): `2.626745301007759`
+- Steps/s: `36.547129241335014`
 
 | Metric | Value |
 |--------|-------|
@@ -470,8 +471,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `bayesian_backends`
 
 - Suite: `bayesian_backend_fail_closed`
-- Wall time (s): `0.2760652529541403`
-- Steps/s: `10.866996001479249`
+- Wall time (s): `0.31860462098848075`
+- Steps/s: `9.416059285933791`
 
 | Metric | Value |
 |--------|-------|
@@ -529,8 +530,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `formal_export`
 
 - Suite: `formal_export_artifact_quality`
-- Wall time (s): `0.0005927919992245734`
-- Steps/s: `8434.661747359041`
+- Wall time (s): `0.000836762017570436`
+- Steps/s: `5975.414628065519`
 
 | Metric | Value |
 |--------|-------|
@@ -671,8 +672,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `stl_closed_loop`
 
 - Suite: `stl_closed_loop_plan_quality`
-- Wall time (s): `0.00026885600527748466`
-- Steps/s: `11158.389402177267`
+- Wall time (s): `0.0004311520024202764`
+- Steps/s: `6958.102903754286`
 
 | Metric | Value |
 |--------|-------|
@@ -822,8 +823,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `domain_formal_export`
 
 - Suite: `domain_formal_safety_exports`
-- Wall time (s): `0.00037443102337419987`
-- Steps/s: `24036.46983867989`
+- Wall time (s): `0.000577141996473074`
+- Steps/s: `15594.0826607649`
 
 | Metric | Value |
 |--------|-------|
@@ -886,8 +887,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `hybrid_cocompiler`
 
 - Suite: `hybrid_cocompiler_review_gate`
-- Wall time (s): `0.00011081801494583488`
-- Steps/s: `9023.803580029615`
+- Wall time (s): `0.00017991801723837852`
+- Steps/s: `5558.087040694048`
 
 | Metric | Value |
 |--------|-------|
@@ -928,8 +929,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `quantum_target_readiness`
 
 - Suite: `quantum_target_readiness_gate`
-- Wall time (s): `0.00011624401668086648`
-- Steps/s: `17205.1866161056`
+- Wall time (s): `0.0002282179775647819`
+- Steps/s: `8763.551501687813`
 
 | Metric | Value |
 |--------|-------|
@@ -1015,8 +1016,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `neuromorphic_target_readiness`
 
 - Suite: `neuromorphic_target_readiness_gate`
-- Wall time (s): `0.0001997430226765573`
-- Steps/s: `10012.865396748242`
+- Wall time (s): `0.0003198320046067238`
+- Steps/s: `6253.282883491499`
 
 | Metric | Value |
 |--------|-------|
@@ -1105,8 +1106,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `hybrid_target_readiness`
 
 - Suite: `hybrid_target_readiness_gate`
-- Wall time (s): `0.0001124640111811459`
-- Steps/s: `17783.46671966553`
+- Wall time (s): `0.00019108201377093792`
+- Steps/s: `10466.709872534242`
 
 | Metric | Value |
 |--------|-------|
@@ -1202,8 +1203,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `hybrid_operator_handoff`
 
 - Suite: `hybrid_operator_handoff_package_gate`
-- Wall time (s): `0.00012341002002358437`
-- Steps/s: `16206.139498379374`
+- Wall time (s): `0.00024994899285957217`
+- Steps/s: `8001.632561582882`
 
 | Metric | Value |
 |--------|-------|
@@ -1312,8 +1313,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `value_alignment_replay_calibration`
 
 - Suite: `value_alignment_replay_calibration_gate`
-- Wall time (s): `0.00016455200966447592`
-- Steps/s: `18231.317904394156`
+- Wall time (s): `0.0003521619946695864`
+- Steps/s: `8518.806814502314`
 
 | Metric | Value |
 |--------|-------|
@@ -1438,8 +1439,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `autopoietic_lineage`
 
 - Suite: `autopoietic_lineage_sandbox_gate`
-- Wall time (s): `0.0003443920286372304`
-- Steps/s: `14518.338359296962`
+- Wall time (s): `0.000836534018162638`
+- Steps/s: `5977.043242045305`
 
 | Metric | Value |
 |--------|-------|
@@ -1653,8 +1654,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `intergenerational_inheritance`
 
 - Suite: `intergenerational_policy_inheritance_gate`
-- Wall time (s): `0.0002592519740574062`
-- Steps/s: `7714.502492301716`
+- Wall time (s): `0.0004973949980922043`
+- Steps/s: `4020.949160468339`
 
 | Metric | Value |
 |--------|-------|
@@ -1770,8 +1771,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `temporal_causal_hypergraph`
 
 - Suite: `temporal_causal_hypergraph_experiment_gate`
-- Wall time (s): `0.00038280599983409047`
-- Steps/s: `5224.578509393289`
+- Wall time (s): `0.000703066005371511`
+- Steps/s: `2844.683123234168`
 
 | Metric | Value |
 |--------|-------|
@@ -1922,8 +1923,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `morphogenetic_domain_demos`
 
 - Suite: `morphogenetic_domain_demo_gate`
-- Wall time (s): `0.03629202296724543`
-- Steps/s: `82.66279349342373`
+- Wall time (s): `0.04686458600917831`
+- Steps/s: `64.01422172837412`
 
 | Metric | Value |
 |--------|-------|
@@ -1995,8 +1996,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `integrated_information_replay_corpus`
 
 - Suite: `integrated_information_replay_corpus_gate`
-- Wall time (s): `0.03229943901533261`
-- Steps/s: `371.5234804636568`
+- Wall time (s): `0.04354794800747186`
+- Steps/s: `275.55833395275175`
 
 | Metric | Value |
 |--------|-------|
@@ -2331,11 +2332,150 @@ audit thresholds and evidence without opening the raw artefact first.
 ]
 ```
 
+### `topos_semantic_binding`
+
+- Suite: `topos_semantic_binding_gate`
+- Wall time (s): `0.07874929602257907`
+- Steps/s: `76.19115729338932`
+
+| Metric | Value |
+|--------|-------|
+| `acceptance_passed` | `1` |
+| `deterministic_hash` | `1` |
+| `domain_example_count` | `3` |
+| `non_actuating` | `1` |
+| `obligation_count` | `30` |
+| `policy_object_count` | `2` |
+| `proof_boundary` | `1` |
+| `record_count` | `6` |
+| `semantic_report_count` | `2` |
+| `topos_sha256` | `b51f959193a18f8a8882b9b319a181786a77993e7d18f1a22277fae68c639ad2` |
+
+`acceptance_thresholds_json`:
+
+```json
+{
+  "min_domain_example_count": 3,
+  "min_obligation_count": 12,
+  "min_policy_object_count": 2,
+  "min_semantic_report_count": 2,
+  "require_deterministic_hash": true,
+  "require_non_actuating": true,
+  "require_proof_boundary": true
+}
+```
+
+`topos_records_json`:
+
+```json
+[
+  {
+    "kind": "symbolic_binding_functor",
+    "morphism_count": 2,
+    "non_actuating": true,
+    "object_count": 2,
+    "obligation_names": [
+      "artifacts_input_type",
+      "audit_record_boundary_stability",
+      "audit_record_non_actuation_boundary",
+      "audit_record_preserves_schema_status",
+      "binding_layer_and_family_presence",
+      "layer_indexes_map_to_stable_object_names",
+      "retrieval_evidence_to_evidence_morphisms",
+      "schema_validation_has_no_errors"
+    ],
+    "passed": true,
+    "proof_boundary": "categorical_validation_prototype_not_formal_topos_proof",
+    "report_hash": "d69edfdfc836eed2a46d81b4ca0f12da02098f764e5e82e33243d9a09bf47a8a"
+  },
+  {
+    "kind": "symbolic_binding_functor",
+    "morphism_count": 2,
+    "non_actuating": true,
+    "object_count": 2,
+    "obligation_names": [
+      "artifacts_input_type",
+      "audit_record_boundary_stability",
+      "audit_record_non_actuation_boundary",
+      "audit_record_preserves_schema_status",
+      "binding_layer_and_family_presence",
+      "layer_indexes_map_to_stable_object_names",
+      "retrieval_evidence_to_evidence_morphisms",
+      "schema_validation_has_no_errors"
+    ],
+    "passed": true,
+    "proof_boundary": "categorical_validation_prototype_not_formal_topos_proof",
+    "report_hash": "d69edfdfc836eed2a46d81b4ca0f12da02098f764e5e82e33243d9a09bf47a8a"
+  },
+  {
+    "kind": "policy_composition_category",
+    "morphism_count": 3,
+    "non_actuating": true,
+    "object_count": 2,
+    "obligation_names": [
+      "rule.topos_guard_low_coherence.actions",
+      "rule.topos_guard_low_coherence.condition",
+      "rule.topos_guard_low_coherence.regimes",
+      "rule.topos_guard_stability.actions",
+      "rule.topos_guard_stability.condition",
+      "rule.topos_guard_stability.regimes",
+      "rule_names_unique",
+      "rules_collection_valid"
+    ],
+    "passed": true,
+    "proof_boundary": "categorical_validation_prototype_not_formal_topos_proof",
+    "report_hash": "aeb642480a930cfd53ce9b65d0e2fc4686b72789924221b1de50023a2917eb6f"
+  },
+  {
+    "domain": "power_grid",
+    "kind": "domain_example",
+    "morphism_count": 2,
+    "non_actuating": true,
+    "object_count": 25,
+    "obligation_names": [
+      "power_grid_coherence_guard",
+      "grid_frequency_protective_limit"
+    ],
+    "passed": true,
+    "proof_boundary": "categorical_validation_prototype_not_formal_topos_proof",
+    "report_hash": "3f8580488c3f7085ce7aa7b603fa844fecd961733470c0ba9912c12028ab180d"
+  },
+  {
+    "domain": "cardiac_rhythm",
+    "kind": "domain_example",
+    "morphism_count": 2,
+    "non_actuating": true,
+    "object_count": 23,
+    "obligation_names": [
+      "cardiac_rhythm_variability_guard",
+      "cardiac_synchrony_cat_proof"
+    ],
+    "passed": true,
+    "proof_boundary": "categorical_validation_prototype_not_formal_topos_proof",
+    "report_hash": "3741e9afe6e8c6ea5b7ec1bc2719b28aee475faaf4de0fa16f8112dde7711a59"
+  },
+  {
+    "domain": "cyber_industrial",
+    "kind": "domain_example",
+    "morphism_count": 2,
+    "non_actuating": true,
+    "object_count": 27,
+    "obligation_names": [
+      "cyber_industrial_boundary_containment",
+      "industrial_attack_mitigation_guard"
+    ],
+    "passed": true,
+    "proof_boundary": "categorical_validation_prototype_not_formal_topos_proof",
+    "report_hash": "a322bd56cb445e0ec56d982025bff40840055360d0af05fc72372cbb6a380494"
+  }
+]
+```
+
 ### `meta_transfer_corpus`
 
 - Suite: `meta_transfer_audit_corpus_quality`
-- Wall time (s): `0.0019683210412040353`
-- Steps/s: `3048.2832192505343`
+- Wall time (s): `0.0019806750351563096`
+- Steps/s: `3029.2702707420635`
 
 | Metric | Value |
 |--------|-------|
@@ -2436,8 +2576,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `meta_transfer`
 
 - Suite: `meta_transfer_package_manifest_quality`
-- Wall time (s): `0.00038965698331594467`
-- Steps/s: `10265.43901756969`
+- Wall time (s): `0.0004065890097990632`
+- Steps/s: `9837.944222783604`
 
 | Metric | Value |
 |--------|-------|
@@ -2513,8 +2653,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `plugin_ecosystem`
 
 - Suite: `plugin_ecosystem_catalog_quality`
-- Wall time (s): `0.0002526720054447651`
-- Steps/s: `11873.100048100934`
+- Wall time (s): `0.0002818969660438597`
+- Steps/s: `10642.186193423722`
 
 | Metric | Value |
 |--------|-------|
@@ -2580,8 +2720,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `kuramoto`
 
 - Suite: `kuramoto_reference_strogatz_2000`
-- Wall time (s): `0.12400957400677726`
-- Steps/s: `8063.893517974257`
+- Wall time (s): `0.14575366297503933`
+- Steps/s: `6860.891037580664`
 
 | Metric | Value |
 |--------|-------|
@@ -2592,8 +2732,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `stuart_landau`
 
 - Suite: `stuart_landau_reference_pikovsky_2001`
-- Wall time (s): `0.2453802530071698`
-- Steps/s: `4075.3075593690123`
+- Wall time (s): `0.2844291899818927`
+- Steps/s: `3515.813549459048`
 
 | Metric | Value |
 |--------|-------|
@@ -2604,8 +2744,8 @@ audit thresholds and evidence without opening the raw artefact first.
 ### `petri_reachability`
 
 - Suite: `petri_net_reachability`
-- Wall time (s): `0.022965986980125308`
-- Steps/s: `217713.26459110962`
+- Wall time (s): `0.020882676006294787`
+- Steps/s: `239432.91551776318`
 
 | Metric | Value |
 |--------|-------|

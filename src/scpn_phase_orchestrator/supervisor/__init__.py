@@ -150,6 +150,13 @@ from scpn_phase_orchestrator.supervisor.topology import (
     TopologyMutationPolicy,
     TopologyMutationResult,
 )
+from scpn_phase_orchestrator.supervisor.topos_policy import (
+    PolicyCompositionMorphism,
+    PolicyCompositionObject,
+    PolicyCompositionObligation,
+    PolicyCompositionValidationReport,
+    validate_policy_composition_category,
+)
 
 __all__ = [
     "Arc",
@@ -190,6 +197,10 @@ __all__ = [
     "PetriNetAdapter",
     "Place",
     "PolicyAction",
+    "PolicyCompositionMorphism",
+    "PolicyCompositionObject",
+    "PolicyCompositionObligation",
+    "PolicyCompositionValidationReport",
     "PolicyDryRunReport",
     "PolicyDryRunStep",
     "PolicyCondition",
@@ -254,6 +265,7 @@ __all__ = [
     "sign_policy_proposal",
     "synthesise_policy_stl_automata",
     "synthesize_policy_stl_automata",
+    "validate_policy_composition_category",
     "value_alignment_policy_from_binding_spec",
     "value_alignment_policy_from_template",
 ]

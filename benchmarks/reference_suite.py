@@ -306,6 +306,16 @@ class IntegratedInformationReplayCorpusThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class ToposSemanticBindingThresholds(NamedTuple):
+    min_semantic_report_count: int
+    min_policy_object_count: int
+    min_domain_example_count: int
+    min_obligation_count: int
+    require_non_actuating: bool
+    require_proof_boundary: bool
+    require_deterministic_hash: bool
+
+
 class PluginEcosystemThresholds(NamedTuple):
     min_plugin_count: int
     min_capability_count: int
@@ -2828,6 +2838,86 @@ def benchmark_integrated_information_replay_corpus_gate() -> (
     }
 
 
+def benchmark_topos_semantic_binding_gate() -> dict[str, float | int | str]:
+    """Benchmark categorical proof-obligation surfaces for semantic binding."""
+    thresholds = ToposSemanticBindingThresholds(
+        min_semantic_report_count=2,
+        min_policy_object_count=2,
+        min_domain_example_count=3,
+        min_obligation_count=12,
+        require_non_actuating=True,
+        require_proof_boundary=True,
+        require_deterministic_hash=True,
+    )
+
+    t0 = time.perf_counter()
+    semantic_reports = _topos_semantic_validation_reports()
+    policy_report = _topos_policy_validation_report()
+    domain_examples = _topos_domain_examples()
+    repeated_records = _topos_semantic_binding_records()
+    elapsed = time.perf_counter() - t0
+
+    semantic_records = [
+        _topos_validation_report_record(report.to_audit_record())
+        for report in semantic_reports
+    ]
+    policy_record = _topos_validation_report_record(policy_report.to_audit_record())
+    domain_records = [_topos_domain_example_record(item) for item in domain_examples]
+    records = [*semantic_records, policy_record, *domain_records]
+    obligation_count = sum(
+        len(record.get("obligation_names", ())) for record in records
+    )
+    non_actuating = int(all(record["non_actuating"] is True for record in records))
+    proof_boundary = int(
+        all(
+            record["proof_boundary"]
+            == "categorical_validation_prototype_not_formal_topos_proof"
+            for record in records
+        )
+    )
+    deterministic_hash = int(records == repeated_records)
+    acceptance_passed = int(
+        len(semantic_records) >= thresholds.min_semantic_report_count
+        and int(policy_record["object_count"]) >= thresholds.min_policy_object_count
+        and len(domain_records) >= thresholds.min_domain_example_count
+        and obligation_count >= thresholds.min_obligation_count
+        and non_actuating == int(thresholds.require_non_actuating)
+        and proof_boundary == int(thresholds.require_proof_boundary)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    return {
+        "suite": "topos_semantic_binding_gate",
+        "record_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed,
+        "semantic_report_count": len(semantic_records),
+        "policy_object_count": int(policy_record["object_count"]),
+        "domain_example_count": len(domain_records),
+        "obligation_count": obligation_count,
+        "non_actuating": non_actuating,
+        "proof_boundary": proof_boundary,
+        "deterministic_hash": deterministic_hash,
+        "topos_sha256": _stable_record_hash(records),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_domain_example_count": thresholds.min_domain_example_count,
+                "min_obligation_count": thresholds.min_obligation_count,
+                "min_policy_object_count": thresholds.min_policy_object_count,
+                "min_semantic_report_count": (
+                    thresholds.min_semantic_report_count
+                ),
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_non_actuating": thresholds.require_non_actuating,
+                "require_proof_boundary": thresholds.require_proof_boundary,
+            },
+            sort_keys=True,
+        ),
+        "topos_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -3957,6 +4047,128 @@ def _integrated_information_replay_corpus_builders() -> tuple[object, ...]:
     )
 
 
+def _topos_semantic_validation_reports() -> tuple[object, ...]:
+    from scpn_phase_orchestrator.binding.topos_semantic import (
+        validate_symbolic_binding_functor,
+    )
+
+    prompts = (
+        ("A 2 layer power grid semantic control prompt", "topos_power_grid"),
+        ("A 2 layer cardiac rhythm semantic control prompt", "topos_cardiac"),
+    )
+    return tuple(
+        validate_symbolic_binding_functor(
+            compile_symbolic_binding(
+                prompt,
+                name=name,
+                oscillators_per_layer=2,
+                dry_run_steps=1,
+                retrieval_root=None,
+                docs_root=None,
+            )
+        )
+        for prompt, name in prompts
+    )
+
+
+def _topos_policy_validation_report() -> object:
+    from scpn_phase_orchestrator.supervisor.topos_policy import (
+        validate_policy_composition_category,
+    )
+
+    rules = (
+        PolicyRule(
+            name="topos_guard_low_coherence",
+            regimes=["NOMINAL", "CRITICAL"],
+            condition=PolicyCondition(metric="R", layer=0, op="<", threshold=0.4),
+            actions=[
+                PolicyAction(knob="K", scope="layer_0", value=0.05, ttl_s=5.0)
+            ],
+        ),
+        PolicyRule(
+            name="topos_guard_stability",
+            regimes=["NOMINAL"],
+            condition=CompoundCondition(
+                logic="AND",
+                conditions=[
+                    PolicyCondition(
+                        metric="stability_proxy",
+                        layer=None,
+                        op="<",
+                        threshold=0.7,
+                    ),
+                    PolicyCondition(metric="R", layer=1, op=">", threshold=0.2),
+                ],
+            ),
+            actions=[
+                PolicyAction(knob="zeta", scope="global", value=0.1, ttl_s=10.0)
+            ],
+        ),
+    )
+    return validate_policy_composition_category(rules)
+
+
+def _topos_domain_examples() -> tuple[Mapping[str, object], ...]:
+    from scpn_phase_orchestrator.binding.topos_examples import (
+        build_topos_domain_obligation_examples,
+    )
+
+    return build_topos_domain_obligation_examples()
+
+
+def _topos_validation_report_record(
+    payload: Mapping[str, object],
+) -> dict[str, object]:
+    obligations = payload["obligation_records"]
+    if not isinstance(obligations, list):
+        raise ValueError("topos validation report obligations must be a list")
+    obligation_names = [str(item["name"]) for item in obligations]
+    return {
+        "kind": str(payload["schema_name"]),
+        "object_count": int(payload["object_count"]),
+        "morphism_count": int(payload["morphism_count"]),
+        "obligation_names": obligation_names,
+        "passed": bool(payload["passed"]),
+        "non_actuating": bool(payload["non_actuating"]),
+        "proof_boundary": str(payload["proof_boundary"]),
+        "report_hash": str(payload["report_hash"]),
+    }
+
+
+def _topos_domain_example_record(
+    payload: Mapping[str, object],
+) -> dict[str, object]:
+    obligation_names = payload["obligation_names"]
+    if not isinstance(obligation_names, list):
+        raise ValueError("topos domain example obligation_names must be a list")
+    return {
+        "kind": "domain_example",
+        "domain": str(payload["domain"]),
+        "object_count": int(payload["binding_object_count"])
+        + int(payload["policy_object_count"]),
+        "morphism_count": len(obligation_names),
+        "obligation_names": [str(name) for name in obligation_names],
+        "passed": bool(payload["passed"]),
+        "non_actuating": bool(payload["non_actuating"]),
+        "proof_boundary": str(payload["proof_boundary"]),
+        "report_hash": str(payload["example_hash"]),
+    }
+
+
+def _topos_semantic_binding_records() -> list[dict[str, object]]:
+    semantic_records = [
+        _topos_validation_report_record(report.to_audit_record())
+        for report in _topos_semantic_validation_reports()
+    ]
+    policy_record = _topos_validation_report_record(
+        _topos_policy_validation_report().to_audit_record()
+    )
+    domain_records = [
+        _topos_domain_example_record(item) for item in _topos_domain_examples()
+    ]
+    return [*semantic_records, policy_record, *domain_records]
+
+
 def _stable_record_hash(records: object) -> str:
     canonical = json.dumps(records, sort_keys=True, separators=(",", ":"))
     return sha256(canonical.encode("utf-8")).hexdigest()
@@ -3997,6 +4209,7 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "integrated_information_replay_corpus": (
                 benchmark_integrated_information_replay_corpus_gate()
             ),
+            "topos_semantic_binding": benchmark_topos_semantic_binding_gate(),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),
             "plugin_ecosystem": benchmark_plugin_ecosystem_catalog_quality(),

@@ -143,7 +143,7 @@ into the active roadmap.
 | Strange-loop meta-orchestrator | monitor foundation is implemented; long-run drift scenarios and studio surfacing remain open |
 | Morphogenetic field topology | field foundation, dependency-free snapshot visualisation, passive SVG rendering, plus swarm-robotics split-flock, power-grid stressed-replay, traffic-flow corridor-spillback, plasma-control edge-localised, network-security lateral-movement, chemical-reactor thermal-stability, manufacturing-SPC tool-wear, and robotic-CPG gait demos are implemented with reference-suite gates; richer Studio UI rendering remains open |
 | Integrated-information monitor | monitor foundation, audit-report summary integration, expanded deterministic approximation benchmark cases, and physiology/infrastructure/cyber-industrial empirical replay corpus gates are implemented; richer Studio UI rendering remains open |
-| Topos-theoretic semantic binding | categorical validation prototype for binding and policy composition with explicit proof obligations |
+| Topos-theoretic semantic binding | symbolic-binding functor validation, policy-composition category validation, deterministic domain obligation examples, and reference-suite proof-boundary gates are implemented; richer Studio UI surfacing and optional external categorical proof-tool export remain open |
 | Multiverse counterfactual simulator | vectorised JAX branch rollouts over knob/topology ensembles before committing high-risk actuation |
 | Entanglement-aware hybrid order parameters | quantum co-simulation monitor that reports entanglement entropy alongside classical `R` and `Psi` |
 

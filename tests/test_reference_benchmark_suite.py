@@ -36,6 +36,7 @@ from benchmarks.reference_suite import (
     benchmark_stl_closed_loop_plan_quality,
     benchmark_stuart_landau_reference,
     benchmark_temporal_causal_hypergraph_experiment_gate,
+    benchmark_topos_semantic_binding_gate,
     benchmark_value_alignment_replay_calibration_gate,
     build_benchmark_metadata,
     run_reference_suite,
@@ -972,6 +973,47 @@ def test_integrated_information_replay_corpus_gate_reports_domains() -> None:
     assert all(record["phi"] >= 0.0 for record in records)
 
 
+def test_topos_semantic_binding_gate_benchmark_shape() -> None:
+    out = benchmark_topos_semantic_binding_gate()
+
+    assert out["suite"] == "topos_semantic_binding_gate"
+    assert out["record_count"] == 6
+    assert out["semantic_report_count"] == 2
+    assert out["policy_object_count"] >= 2
+    assert out["domain_example_count"] == 3
+    assert out["obligation_count"] >= 12
+    assert out["non_actuating"] == 1
+    assert out["proof_boundary"] == 1
+    assert out["deterministic_hash"] == 1
+    assert out["acceptance_passed"] == 1
+    assert len(str(out["topos_sha256"])) == 64
+    assert float(out["steps_per_second"]) > 0.0
+
+
+def test_topos_semantic_binding_gate_reports_obligations() -> None:
+    out = benchmark_topos_semantic_binding_gate()
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = json.loads(str(out["topos_records_json"]))
+
+    assert thresholds == {
+        "min_domain_example_count": 3,
+        "min_obligation_count": 12,
+        "min_policy_object_count": 2,
+        "min_semantic_report_count": 2,
+        "require_deterministic_hash": True,
+        "require_non_actuating": True,
+        "require_proof_boundary": True,
+    }
+    assert {record["kind"] for record in records} >= {
+        "domain_example",
+        "policy_composition_category",
+        "symbolic_binding_functor",
+    }
+    assert all(record["passed"] is True for record in records)
+    assert all(record["non_actuating"] is True for record in records)
+    assert all(record["obligation_names"] for record in records)
+
+
 def test_plugin_ecosystem_catalog_quality_benchmark_shape() -> None:
     out = benchmark_plugin_ecosystem_catalog_quality()
 
@@ -1051,6 +1093,7 @@ def test_reference_suite_aggregates_all_benchmarks() -> None:
         "semantic_retrieval",
         "stl_closed_loop",
         "temporal_causal_hypergraph",
+        "topos_semantic_binding",
         "value_alignment_replay_calibration",
         "kuramoto",
         "stuart_landau",
