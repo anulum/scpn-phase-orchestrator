@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from runpy import run_path
 from typing import Any, cast, get_type_hints
@@ -18,10 +18,12 @@ import pytest
 from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginCompatibilityReport,
+    PluginExecutionApproval,
     PluginExecutionPlan,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
+    build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
@@ -1096,6 +1098,140 @@ class TestPluginRuntimeExecution:
         assert "argument_count" in plan.audit_record
         assert "keyword_names" in plan.audit_record
         assert "argument_values" not in plan.audit_record
+
+    def test_runtime_execution_approval_is_deterministic_and_metadata_only(
+        self,
+    ) -> None:
+        operator = "operator_alpha"
+        reference = "CHG-2026-05-19-OP-1"
+        reason = "operator approved for production"
+        private_argument = "PRIVATE_ARGUMENT_XYZ_123"
+        private_keyword_value = "PRIVATE_KEYWORD_VALUE_456"
+
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(private_argument,),
+            kwargs={"multiplier": private_keyword_value},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+
+        first = build_plugin_execution_approval(
+            plan,
+            operator_identity=operator,
+            approval_reference=reference,
+            approval_reason=reason,
+        )
+        second = build_plugin_execution_approval(
+            plan,
+            operator_identity=operator,
+            approval_reference=reference,
+            approval_reason=reason,
+        )
+
+        assert first == second
+        assert isinstance(first, PluginExecutionApproval)
+        assert first.approved is True
+        assert first.schema == "scpn_plugin_execution_approval_v1"
+        assert first.version == "1.0.0"
+        assert first.plan_hash == plan.plan_hash
+        assert first.target_hash == plan.target_hash
+        assert first.plugin == "grid_pack"
+        assert first.kind == "monitor"
+        assert first.name == "frequency_drift"
+        assert first.operator_identity == operator
+        assert first.approval_reference == reference
+        assert first.approval_reason == reason
+        assert first.execution_permitted is True
+        assert len(first.approval_hash) == 64
+        assert "argument_values" not in first.audit_record
+        assert private_argument not in str(first.audit_record)
+        assert private_keyword_value not in str(first.audit_record)
+
+    def test_runtime_execution_approval_rejects_unapproved_target_hash(
+        self,
+    ) -> None:
+        approved = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        unapproved = replace(
+            approved,
+            audit_record={
+                **approved.audit_record,
+                "require_target_hash_approval": True,
+                "target_hash_approved": False,
+            },
+        )
+
+        with pytest.raises(PermissionError, match="is not approved"):
+            build_plugin_execution_approval(
+                unapproved,
+                operator_identity="operator_alpha",
+                approval_reference="RFC-2026-05-20-01",
+                approval_reason="recheck required",
+            )
+
+    def test_runtime_execution_approval_rejects_disabled_plan(self) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        disabled_plan = replace(
+            plan,
+            audit_record={**plan.audit_record, "execution_permitted": False},
+        )
+
+        with pytest.raises(
+            PermissionError,
+            match="execution must be permitted",
+        ):
+            build_plugin_execution_approval(
+                disabled_plan,
+                operator_identity="operator_alpha",
+                approval_reference="RFC-2026-05-20-02",
+                approval_reason="plan disabled",
+            )
+
+    def test_runtime_execution_approval_rejects_argument_value_leaks(self) -> None:
+        private_argument = "PRIVATE_ARGUMENT_XYZ_123"
+        private_keyword_value = "PRIVATE_KEYWORD_VALUE_456"
+
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(private_argument,),
+            kwargs={"multiplier": private_keyword_value},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="RFC-2026-05-20-03",
+            approval_reason="operator approved",
+        )
+
+        assert private_argument not in str(approval)
+        assert private_keyword_value not in str(approval.audit_record)
+        assert private_keyword_value not in str(approval)
 
     def test_runtime_execution_is_disabled_by_default_without_importing_target(
         self,

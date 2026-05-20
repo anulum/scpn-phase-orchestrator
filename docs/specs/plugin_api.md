@@ -178,6 +178,11 @@ This approval check happens before the implementation module is imported. It is
 the intended guard for promoting reviewed plugin metadata into an owned runtime
 path.
 
+For traceability, keep operator ownership in a deployment artefact alongside
+that approval check. The deployment record should include the reviewer/operator
+identity or reference, the `plan_hash`, and the `target_hash`. Missing or altered
+identity/hash pairing should keep execution in fail-closed mode.
+
 ## Review-only runtime execution planning
 
 Runtime planning is a separate non-executing boundary.
@@ -191,12 +196,24 @@ state:
 - required capability identity and kind
 - compatible/incompatible status and rejection reasons
 - target hashes precomputed from manifest and policy
+- reviewed `plan_hash` for immutable operator sign-off
 - positional argument count and keyword argument names for each candidate call
 - policy flags that gate loading and execution
 
 Reviewers can approve execution using policy outputs and reviewed target hashes
 before any `load_plugin_capability`/`execute_plugin_capability` path is enabled.
 If an approved hash is missing or invalid, the surface must fail closed.
+
+Execution-path fail-closed conditions are enforced before import:
+
+- execution disabled by policy
+- missing capability declaration
+- unsupported capability kind
+- target outside plugin package when package boundary is required
+- missing approval hash when `require_target_hash_approval=True`
+
+No payload values are stored in the plan artifact; only argument count and keyword
+names remain.
 
 No argument values are part of this plan output. Argument payloads are only
 handled at execution time and remain outside deterministic plan artifacts. The

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -1398,6 +1399,64 @@ def _lookup_target_hash(
     return plan.target_hash
 
 
+def _write_plan_payload(
+    path: Path,
+    manifest: PluginManifest,
+    kind: str,
+    name: str,
+    *,
+    execution_permitted: bool = True,
+    require_target_hash_approval: bool = False,
+    approved_target_hashes: tuple[str, ...] = (),
+) -> dict[str, object]:
+    policy = PluginRuntimeExecutionPolicy(
+        loading_permitted=True,
+        execution_permitted=True,
+        require_target_hash_approval=require_target_hash_approval,
+        approved_target_hashes=approved_target_hashes,
+    )
+    plan = build_plugin_execution_plan(
+        manifest,
+        kind,
+        name,
+        policy=policy,
+    )
+    payload: dict[str, object] = {
+        **plan.audit_record,
+        "manifest": manifest.to_audit_record(),
+        "capability": {
+            "kind": plan.capability.kind,
+            "name": plan.capability.name,
+            "target": plan.capability.target,
+            "version": plan.capability.version,
+            "channels": list(plan.capability.channels),
+            "knobs": list(plan.capability.knobs),
+        },
+    }
+    if not execution_permitted:
+        payload["execution_permitted"] = False
+        payload["plan_hash"] = _normalize_plan_hash(payload)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return payload
+
+
+def _recompute_plan_hash(plan_payload: dict[str, object]) -> str:
+    canonical_payload = dict(plan_payload)
+    canonical_payload.pop("plan_hash", None)
+    canonical_payload.pop("manifest", None)
+    canonical_payload.pop("capability", None)
+    canonical_payload.pop("compatible", None)
+    canonical_payload.pop("compatibility_reasons", None)
+    canonical = json.dumps(canonical_payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _normalize_plan_hash(plan_payload: dict[str, object]) -> str:
+    payload = dict(plan_payload)
+    payload["plan_hash"] = _recompute_plan_hash(plan_payload)
+    return payload["plan_hash"]
+
+
 def test_plugins_plan_execution_outputs_non_executing_plan(
     runner,
     monkeypatch: pytest.MonkeyPatch,
@@ -1605,6 +1664,307 @@ def test_plugins_plan_execution_fails_on_missing_capability(
 
     assert result.exit_code == 1
     assert "does not expose actuator:'missing_capability'" in result.output
+
+
+def test_plugins_approve_execution_plan_outputs_deterministic_approval(
+    runner,
+    tmp_path: Path,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    plan_path = tmp_path / "plan.json"
+    _write_plan_payload(plan_path, manifest, "actuator", "phase_driver")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(plan_path),
+            "--operator-id",
+            "operator_42",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_execution_approval_v1"
+    assert payload["operator_identity"] == "operator_42"
+    assert payload["approval_reference"] == "RFC-2026-05-20-01"
+    assert payload["approval_reason"] == "Production change window"
+    assert payload["approved"] is True
+    assert payload["execution_permitted"] is True
+    assert len(payload["approval_hash"]) == 64
+
+
+def test_plugins_approve_execution_plan_rejects_malformed_json(
+    runner,
+    tmp_path: Path,
+):
+    path = tmp_path / "plan.json"
+    path.write_text("{bad-json", encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(path),
+            "--operator-id",
+            "operator_42",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "malformed plan JSON" in result.output
+
+
+def test_plugins_approve_execution_plan_rejects_schema_mismatch(
+    runner,
+    tmp_path: Path,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    plan_path = tmp_path / "plan.json"
+    payload = _write_plan_payload(plan_path, manifest, "actuator", "phase_driver")
+    payload["schema"] = "unsupported_schema_v1"
+    payload["plan_hash"] = _normalize_plan_hash(payload)
+    plan_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(plan_path),
+            "--operator-id",
+            "operator_42",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "plan schema mismatch" in result.output
+
+
+def test_plugins_approve_execution_plan_rejects_missing_hashes(
+    runner,
+    tmp_path: Path,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    plan_path = tmp_path / "plan.json"
+    payload = _write_plan_payload(plan_path, manifest, "actuator", "phase_driver")
+    payload.pop("plan_hash")
+    plan_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(plan_path),
+            "--operator-id",
+            "operator_42",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "missing required field plan_hash" in result.output
+
+
+def test_plugins_approve_execution_plan_rejects_disabled_plan(
+    runner,
+    tmp_path: Path,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    plan_path = tmp_path / "plan.json"
+    payload = _write_plan_payload(
+        plan_path,
+        manifest,
+        "actuator",
+        "phase_driver",
+        execution_permitted=False,
+    )
+    payload["plan_hash"] = _normalize_plan_hash(payload)
+    plan_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(plan_path),
+            "--operator-id",
+            "operator_42",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "execution must be permitted" in result.output
+
+
+def test_plugins_approve_execution_plan_rejects_unapproved_target_hash(
+    runner,
+    tmp_path: Path,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    plan_path = tmp_path / "plan.json"
+    payload = _write_plan_payload(
+        plan_path,
+        manifest,
+        "actuator",
+        "phase_driver",
+    )
+    payload["require_target_hash_approval"] = True
+    payload["target_hash_approved"] = False
+    payload["plan_hash"] = _normalize_plan_hash(payload)
+    plan_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(plan_path),
+            "--operator-id",
+            "operator_42",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "is not approved" in result.output
+
+
+def test_plugins_approve_execution_plan_rejects_missing_operator_metadata(
+    runner,
+    tmp_path: Path,
+):
+    manifest = PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=(
+            PluginCapability(
+                kind="actuator",
+                name="phase_driver",
+                target="cli_plugin.actuators:PhaseDriver",
+                knobs=("Psi",),
+            ),
+        ),
+    )
+    plan_path = tmp_path / "plan.json"
+    _write_plan_payload(plan_path, manifest, "actuator", "phase_driver")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "approve-execution-plan",
+            str(plan_path),
+            "--operator-id",
+            "",
+            "--approval-reference",
+            "RFC-2026-05-20-01",
+            "--approval-reason",
+            "Production change window",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "operator identity is required" in result.output
 
 
 def _write_meta_audit_record(

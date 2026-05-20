@@ -24,8 +24,10 @@ __all__ = [
     "PluginCompatibilityReport",
     "PluginManifest",
     "PluginExecutionPlan",
+    "PluginExecutionApproval",
     "build_plugin_marketplace_catalog",
     "build_plugin_execution_plan",
+    "build_plugin_execution_approval",
     "build_rust_plugin_runtime_handoff",
     "build_rust_plugin_registry",
     "compatibility_report",
@@ -249,6 +251,26 @@ class PluginExecutionPlan:
     audit_record: dict[str, object]
 
 
+@dataclass(frozen=True)
+class PluginExecutionApproval:
+    """Operator approval artefact for a plugin execution plan."""
+
+    schema: str
+    version: str
+    plan_hash: str
+    target_hash: str
+    plugin: str
+    kind: PluginKind
+    name: str
+    operator_identity: str
+    approval_reference: str
+    approval_reason: str
+    approved: bool
+    execution_permitted: bool
+    approval_hash: str
+    audit_record: dict[str, object]
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -437,6 +459,67 @@ def build_plugin_execution_plan(
         keyword_names=keyword_names,
         target_hash=target_hash,
         plan_hash=str(audit_record["plan_hash"]),
+        audit_record=audit_record,
+    )
+
+
+def build_plugin_execution_approval(
+    plan: PluginExecutionPlan,
+    *,
+    operator_identity: str,
+    approval_reference: str,
+    approval_reason: str,
+) -> PluginExecutionApproval:
+    """Build a deterministic operator approval artefact for an execution plan."""
+    _validate_sha256(plan.plan_hash, "plan hash")
+    _validate_sha256(plan.target_hash, "target hash")
+    _require_identifier(operator_identity, "operator identity")
+    _require_identifier(approval_reference, "approval reference")
+    _require_non_empty(approval_reason, "approval reason")
+
+    execution_permitted = bool(plan.audit_record.get("execution_permitted"))
+    if not execution_permitted:
+        raise PermissionError("plugin runtime execution must be permitted for approval")
+
+    require_target_hash_approval = bool(
+        plan.audit_record.get("require_target_hash_approval")
+    )
+    if require_target_hash_approval and not bool(
+        plan.audit_record.get("target_hash_approved")
+    ):
+        raise PermissionError(
+            f"plugin runtime target hash {plan.target_hash} is not approved"
+        )
+
+    audit_record = {
+        "schema": "scpn_plugin_execution_approval_v1",
+        "version": "1.0.0",
+        "plan_hash": plan.plan_hash,
+        "target_hash": plan.target_hash,
+        "plugin": plan.manifest.name,
+        "kind": plan.capability.kind,
+        "name": plan.capability.name,
+        "operator_identity": operator_identity,
+        "approval_reference": approval_reference,
+        "approval_reason": approval_reason,
+        "approved": True,
+        "execution_permitted": execution_permitted,
+    }
+    audit_record["approval_hash"] = _record_hash(audit_record)
+    return PluginExecutionApproval(
+        schema="scpn_plugin_execution_approval_v1",
+        version="1.0.0",
+        plan_hash=plan.plan_hash,
+        target_hash=plan.target_hash,
+        plugin=plan.manifest.name,
+        kind=plan.capability.kind,
+        name=plan.capability.name,
+        operator_identity=operator_identity,
+        approval_reference=approval_reference,
+        approval_reason=approval_reason,
+        approved=True,
+        execution_permitted=execution_permitted,
+        approval_hash=str(audit_record["approval_hash"]),
         audit_record=audit_record,
     )
 

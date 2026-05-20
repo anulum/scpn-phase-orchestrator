@@ -149,19 +149,49 @@ not copied into the audit record.
 `build_plugin_execution_plan()` is a planning-only stage and does **not** load
 modules, resolve callables, or execute any capability implementation.
 
-The plan uses schema `scpn_plugin_runtime_execution_plan_v1` and records
+The plan uses schema `scpn_plugin_runtime_execution_plan_v1` and records only
 immutable review metadata:
 
-- manifest compatibility state
-- sorted target set
-- deterministic target hashes
+- manifest compatibility state and manifest identity
+- target hash and load hash values
+- immutable `plan_hash`
 - invocation shape only: positional argument count and keyword names
-- load/execution policy flags
+- load/execution policy flags and policy hash-approval intent
 - blocked reasons and fallback status
 
-The plan builder is explicit fail-closed: incompatible manifests, unsupported
-kinds, out-of-package targets, disabled execution policy, or missing target-hash
-approval stop before loading or invocation.
+The plan builder is explicit fail-closed:
+
+- execution disabled by policy
+- invalid capability kind
+- missing compatibility declaration
+- out-of-package target
+- unsupported kind for the active policy
+- missing target hash approval when required
+
+No module import occurs before these checks complete. Tests in this checkout call
+`build_plugin_execution_plan()` with a monkeypatched import guard to confirm no
+target import happens during planning.
+
+Argument payloads are not copied into the plan record. The audit shape contains
+`argument_count` and `keyword_names` only.
+
+### Operator approval binding
+
+Execution approval must be held in an operator-owned artefact that binds:
+
+- operator identity/reference
+- reviewed `plan_hash`
+- reviewed `target_hash`
+
+Use the reviewed `plan_hash`/`target_hash` pair as the invariant approval key and
+enable execution only when all three conditions are met:
+
+- `loading_permitted=True`
+- `execution_permitted=True`
+- `require_target_hash_approval=True` with the approved `target_hash`
+
+If the operator hash pairing is absent or mismatched, deployment should keep
+runtime loading disabled until approval is re-issued.
 
 Deployments can also require a pre-approved target hash before import:
 

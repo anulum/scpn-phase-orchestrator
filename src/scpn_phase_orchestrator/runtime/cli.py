@@ -18,6 +18,7 @@ is invoked for that runtime path.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -59,8 +60,10 @@ from scpn_phase_orchestrator.meta import CrossDomainMetaTransfer
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.plugins import (
     PluginCapability,
+    PluginExecutionPlan,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
+    build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
@@ -377,6 +380,141 @@ def _normalize_approved_target_hashes(
     return tuple(dict.fromkeys(normalized))
 
 
+def _require_sha256(value: object, field_name: str) -> str:
+    if not isinstance(value, str):
+        raise click.ClickException(
+            f"{field_name} must be a 64-character SHA-256 digest"
+        )
+    if re.fullmatch(r"[0-9a-fA-F]{64}", value) is None:
+        raise click.ClickException(
+            f"{field_name} {value!r} is not a valid SHA-256 digest"
+        )
+    return value.lower()
+
+
+def _load_json_file(path: Path) -> dict[str, object]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise click.ClickException(f"cannot read plan file {path!s}: {exc}") from exc
+
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise click.ClickException(f"malformed plan JSON: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise click.ClickException("plan payload must be a JSON object")
+    return payload
+
+
+def _record_hash(record: dict[str, object]) -> str:
+    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _build_plan_payload_for_hash(plan_payload: dict[str, object]) -> dict[str, object]:
+    if "plan_hash" not in plan_payload:
+        raise click.ClickException("plan payload is missing required field plan_hash")
+    if "target_hash" not in plan_payload:
+        raise click.ClickException("plan payload is missing required field target_hash")
+    payload_without_plan_hash = dict(plan_payload)
+    payload_without_plan_hash.pop("plan_hash", None)
+    payload_without_plan_hash.pop("manifest", None)
+    payload_without_plan_hash.pop("capability", None)
+    payload_without_plan_hash.pop("compatible", None)
+    payload_without_plan_hash.pop("compatibility_reasons", None)
+    return payload_without_plan_hash
+
+
+def _load_plan_from_payload(
+    plan_payload: dict[str, object],
+) -> tuple[PluginExecutionPlan, dict[str, object]]:
+    if plan_payload.get("schema") != "scpn_plugin_runtime_execution_plan_v1":
+        raise click.ClickException(
+            "plan schema mismatch: expected scpn_plugin_runtime_execution_plan_v1"
+        )
+
+    manifest_payload = plan_payload.get("manifest")
+    capability_payload = plan_payload.get("capability")
+    if not isinstance(manifest_payload, dict):
+        raise click.ClickException("plan payload is missing manifest object")
+    if not isinstance(capability_payload, dict):
+        raise click.ClickException("plan payload is missing capability object")
+
+    try:
+        manifest = PluginManifest.from_mapping(manifest_payload)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise click.ClickException(f"manifest schema mismatch: {exc}") from exc
+
+    kind = capability_payload.get("kind")
+    name = capability_payload.get("name")
+    if not isinstance(kind, str) or not isinstance(name, str):
+        raise click.ClickException(
+            "capability schema mismatch: kind and name are required"
+        )
+
+    try:
+        capability = _find_capability(manifest, kind, name)
+    except click.ClickException as exc:
+        raise click.ClickException(f"capability schema mismatch: {exc}") from exc
+
+    if (
+        not isinstance(plan_payload.get("argument_count"), int)
+        or plan_payload["argument_count"] < 0
+    ):
+        raise click.ClickException(
+            "plan schema mismatch: argument_count must be a non-negative integer"
+        )
+    raw_keyword_names = plan_payload.get("keyword_names")
+    if not isinstance(raw_keyword_names, list):
+        raise click.ClickException(
+            "plan schema mismatch: keyword_names must be a list"
+        )
+    if not all(isinstance(name, str) for name in raw_keyword_names):
+        raise click.ClickException(
+            "plan schema mismatch: keyword_names must contain strings"
+        )
+
+    expected_plan_hash = _record_hash(
+        _build_plan_payload_for_hash(plan_payload),
+    )
+    plan_hash = _require_sha256(plan_payload.get("plan_hash"), "plan_hash")
+    if expected_plan_hash != plan_hash:
+        raise click.ClickException("plan hash mismatch")
+
+    target_hash = _require_sha256(plan_payload.get("target_hash"), "target_hash")
+
+    audit_record = dict(plan_payload)
+    audit_record["target_hash"] = target_hash
+    execution_permitted = plan_payload.get("execution_permitted")
+    if not isinstance(execution_permitted, bool):
+        raise click.ClickException(
+            "plan schema mismatch: execution_permitted must be a boolean"
+        )
+    if not execution_permitted:
+        raise click.ClickException(
+            "plugin runtime execution must be permitted for approval"
+        )
+
+    if plan_payload.get("require_target_hash_approval") is True:
+        target_hash_approved = plan_payload.get("target_hash_approved")
+        if target_hash_approved is not True:
+            raise click.ClickException(
+                f"plugin runtime target hash {target_hash} is not approved"
+            )
+
+    return PluginExecutionPlan(
+        manifest=manifest,
+        capability=capability,
+        argument_count=cast(int, plan_payload["argument_count"]),
+        keyword_names=tuple(raw_keyword_names),
+        target_hash=target_hash,
+        plan_hash=plan_hash,
+        audit_record=cast(dict[str, object], audit_record),
+    ), audit_record
+
+
 @main.group("plugins")
 def plugins_group() -> None:
     """Inspect extension plugin manifests."""
@@ -478,6 +616,58 @@ def plugins_plan_execution(
         "compatibility_reasons": list(compatibility.reasons),
     }
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@plugins_group.command("approve-execution-plan")
+@click.argument(
+    "plan_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--operator-id",
+    required=True,
+    type=str,
+    help="Operator identity approving the plan",
+)
+@click.option(
+    "--approval-reference",
+    required=True,
+    type=str,
+    help="Reference for the approval decision",
+)
+@click.option(
+    "--approval-reason",
+    required=True,
+    type=str,
+    help="Human reason for this approval",
+)
+def plugins_approve_execution_plan(
+    plan_json: Path,
+    operator_id: str,
+    approval_reference: str,
+    approval_reason: str,
+) -> None:
+    """Emit a deterministic operator approval artefact for a stored execution plan."""
+    if not operator_id:
+        raise click.ClickException("operator identity is required")
+    if not approval_reference:
+        raise click.ClickException("approval reference is required")
+    if not approval_reason:
+        raise click.ClickException("approval reason is required")
+
+    plan_payload = _load_json_file(plan_json)
+    plan, _audit_record = _load_plan_from_payload(plan_payload)
+    try:
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity=operator_id,
+            approval_reference=approval_reference,
+            approval_reason=approval_reason,
+        )
+    except (LookupError, PermissionError, TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(approval.audit_record, indent=2, sort_keys=True))
 
 
 @main.command("meta-transfer-manifest")
