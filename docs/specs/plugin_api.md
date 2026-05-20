@@ -318,6 +318,21 @@ validated aggregate revoked-hash set into the storage manifest. If the request
 being persisted is already present in that list, persistence fails before any
 bundle is written.
 
+Lifecycle UX is represented by
+`build_plugin_execution_request_lifecycle_record()` and exposed through:
+
+```bash
+spo plugins lifecycle-status REQUEST_JSON \
+  --storage-bundle bundle.json \
+  --revocation-list REVOCATION_LIST_JSON \
+  --created-by deployment_gate
+```
+
+The lifecycle record is metadata-only. It reports `approved`, `stored`, or
+`revoked` by validating the request, optional storage bundle, and optional
+revocation list, then hashing the consolidated status record. It does not load
+plugin modules, execute targets, delete bundles, or mutate revocation state.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

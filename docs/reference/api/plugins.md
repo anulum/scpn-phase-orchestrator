@@ -284,6 +284,19 @@ spo plugins persist-execution-request REQUEST_JSON bundle.json \
   --revocation-list REVOCATION_LIST_JSON
 ```
 
+Operator lifecycle status is represented by
+`build_plugin_execution_request_lifecycle_record()`. It consumes a request plus
+optional storage bundle and revocation list evidence, then emits one
+deterministic `approved`, `stored`, or `revoked` status record without loading
+or executing plugin targets.
+
+```bash
+spo plugins lifecycle-status REQUEST_JSON \
+  --storage-bundle bundle.json \
+  --revocation-list REVOCATION_LIST_JSON \
+  --created-by deployment_gate
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

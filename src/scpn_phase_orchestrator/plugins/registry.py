@@ -30,6 +30,7 @@ __all__ = [
     "PluginExecutionRequest",
     "PluginExecutionRequestRevocation",
     "PluginExecutionRequestRevocationList",
+    "PluginExecutionRequestLifecycleRecord",
     "PluginExecutionRequestStorageAdapterManifest",
     "PluginExecutionRequestStorageManifest",
     "build_plugin_marketplace_catalog",
@@ -38,6 +39,7 @@ __all__ = [
     "build_plugin_execution_request",
     "build_plugin_execution_request_revocation",
     "build_plugin_execution_request_revocation_list",
+    "build_plugin_execution_request_lifecycle_record",
     "build_plugin_execution_request_storage_adapter_manifest",
     "build_plugin_execution_request_storage_manifest",
     "build_plugin_execution_request_storage_bundle",
@@ -546,6 +548,61 @@ class PluginExecutionRequestRevocationList:
         return self.request_hashes
 
 
+@dataclass(frozen=True)
+class PluginExecutionRequestLifecycleRecord:
+    """Operator-facing lifecycle status for one approved execution request."""
+
+    schema: str
+    version: str
+    request_hash: str
+    status: Literal["approved", "stored", "revoked"]
+    plugin: str
+    kind: PluginKind
+    name: str
+    operator_identity: str
+    approval_reference: str
+    storage_manifest_hash: str | None
+    storage_backend: str | None
+    storage_uri: str | None
+    revoked: bool
+    revocation_list_hash: str | None
+    revocation_hash: str | None
+    revoked_by: str | None
+    revocation_reference: str | None
+    created_by: str
+    lifecycle_hash: str
+    audit_record: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if self.schema != "scpn_plugin_execution_request_lifecycle_v1":
+            raise ValueError(
+                "lifecycle schema must be "
+                "scpn_plugin_execution_request_lifecycle_v1"
+            )
+        if self.version != "1.0.0":
+            raise ValueError("lifecycle version must be 1.0.0")
+        _validate_sha256(self.request_hash, "lifecycle request hash")
+        _validate_sha256(self.lifecycle_hash, "lifecycle hash")
+        if self.status not in {"approved", "stored", "revoked"}:
+            raise ValueError("unsupported lifecycle status")
+        _require_identifier(self.plugin, "plugin")
+        _require_identifier(self.name, "capability name")
+        _require_identifier(self.created_by, "lifecycle creator")
+        if self.kind not in _VALID_KINDS:
+            raise ValueError(f"unsupported plugin capability kind: {self.kind}")
+        if not isinstance(self.revoked, bool):
+            raise TypeError("revoked must be a boolean")
+        for value, field_name in (
+            (self.storage_manifest_hash, "storage manifest hash"),
+            (self.revocation_list_hash, "revocation list hash"),
+            (self.revocation_hash, "revocation hash"),
+        ):
+            if value is not None:
+                _validate_sha256(value, field_name)
+        if self.audit_record is None:
+            raise ValueError("audit_record must be provided")
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -824,6 +881,100 @@ def validate_plugin_execution_request_revocation_list(
         if _record_hash(revocation_payload) != revocation_hash:
             raise ValueError("revocation audit record mismatch")
     return revocation_list
+
+
+def build_plugin_execution_request_lifecycle_record(
+    request: PluginExecutionRequest,
+    *,
+    created_by: str,
+    storage_manifest: PluginExecutionRequestStorageManifest | None = None,
+    revocation_list: PluginExecutionRequestRevocationList | None = None,
+) -> PluginExecutionRequestLifecycleRecord:
+    """Build a deterministic operator lifecycle status record."""
+    validate_plugin_execution_request(request)
+    _require_identifier(created_by, "lifecycle creator")
+    request_hash = str(request.audit_record["request_hash"])
+    storage_manifest_hash: str | None = None
+    storage_backend: str | None = None
+    storage_uri: str | None = None
+    if storage_manifest is not None:
+        validate_plugin_execution_request_storage_manifest(request, storage_manifest)
+        storage_manifest_hash = storage_manifest.manifest_hash
+        storage_backend = storage_manifest.storage_backend
+        storage_uri = storage_manifest.storage_uri
+
+    revocation_list_hash: str | None = None
+    revocation_hash: str | None = None
+    revoked_by: str | None = None
+    revocation_reference: str | None = None
+    if revocation_list is not None:
+        validate_plugin_execution_request_revocation_list(revocation_list)
+        revocation_list_hash = revocation_list.revocation_list_hash
+        for revocation in revocation_list.audit_record["revocations"]:
+            if not isinstance(revocation, dict):
+                raise ValueError("revocation list revocations must be object records")
+            if revocation.get("request_hash") == request_hash:
+                revocation_hash = str(revocation["revocation_hash"])
+                revoked_by = str(revocation["revoked_by"])
+                revocation_reference = str(revocation["revocation_reference"])
+                break
+
+    revoked = revocation_hash is not None
+    status: Literal["approved", "stored", "revoked"]
+    if revoked:
+        status = "revoked"
+    elif storage_manifest is not None:
+        status = "stored"
+    else:
+        status = "approved"
+    audit_record: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_v1",
+        "version": "1.0.0",
+        "request_hash": request_hash,
+        "plan_hash": request.plan_hash,
+        "approval_hash": request.approval_hash,
+        "target_hash": request.target_hash,
+        "plugin": request.plugin,
+        "kind": request.kind,
+        "name": request.name,
+        "operator_identity": request.operator_identity,
+        "approval_reference": request.approval_reference,
+        "status": status,
+        "loading_permitted": request.loading_permitted,
+        "execution_permitted": request.execution_permitted,
+        "storage_manifest_hash": storage_manifest_hash,
+        "storage_backend": storage_backend,
+        "storage_uri": storage_uri,
+        "revoked": revoked,
+        "revocation_list_hash": revocation_list_hash,
+        "revocation_hash": revocation_hash,
+        "revoked_by": revoked_by,
+        "revocation_reference": revocation_reference,
+        "created_by": created_by,
+    }
+    audit_record["lifecycle_hash"] = _record_hash(audit_record)
+    return PluginExecutionRequestLifecycleRecord(
+        schema="scpn_plugin_execution_request_lifecycle_v1",
+        version="1.0.0",
+        request_hash=request_hash,
+        status=status,
+        plugin=request.plugin,
+        kind=request.kind,
+        name=request.name,
+        operator_identity=request.operator_identity,
+        approval_reference=request.approval_reference,
+        storage_manifest_hash=storage_manifest_hash,
+        storage_backend=storage_backend,
+        storage_uri=storage_uri,
+        revoked=revoked,
+        revocation_list_hash=revocation_list_hash,
+        revocation_hash=revocation_hash,
+        revoked_by=revoked_by,
+        revocation_reference=revocation_reference,
+        created_by=created_by,
+        lifecycle_hash=str(audit_record["lifecycle_hash"]),
+        audit_record=audit_record,
+    )
 
 
 def validate_plugin_execution_request_storage_manifest(

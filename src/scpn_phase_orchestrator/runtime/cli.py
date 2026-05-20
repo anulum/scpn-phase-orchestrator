@@ -66,10 +66,12 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionRequest,
     PluginExecutionRequestRevocation,
     PluginExecutionRequestRevocationList,
+    PluginExecutionRequestStorageManifest,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     build_plugin_execution_approval,
     build_plugin_execution_plan,
+    build_plugin_execution_request_lifecycle_record,
     build_plugin_execution_request_revocation,
     build_plugin_execution_request_revocation_list,
     build_plugin_execution_request_storage_adapter_manifest,
@@ -840,6 +842,96 @@ def _load_revocation_list_from_payload(
     )
 
 
+def _load_storage_manifest_from_payload(
+    manifest_payload: dict[str, object],
+) -> PluginExecutionRequestStorageManifest:
+    if (
+        manifest_payload.get("schema")
+        != "scpn_plugin_execution_request_storage_manifest_v1"
+    ):
+        raise click.ClickException(
+            "storage manifest schema mismatch: expected "
+            "scpn_plugin_execution_request_storage_manifest_v1"
+        )
+    request_hash = _require_sha256(manifest_payload.get("request_hash"), "request_hash")
+    plan_hash = _require_sha256(manifest_payload.get("plan_hash"), "plan_hash")
+    approval_hash = _require_sha256(
+        manifest_payload.get("approval_hash"), "approval_hash"
+    )
+    target_hash = _require_sha256(manifest_payload.get("target_hash"), "target_hash")
+    revocation_hash = _require_sha256(
+        manifest_payload.get("revocation_hash"), "revocation_hash"
+    )
+    manifest_hash = _require_sha256(
+        manifest_payload.get("manifest_hash"), "manifest_hash"
+    )
+    plugin = manifest_payload.get("plugin")
+    kind = manifest_payload.get("kind")
+    name = manifest_payload.get("name")
+    operator_identity = manifest_payload.get("operator_identity")
+    approval_reference = manifest_payload.get("approval_reference")
+    storage_uri = manifest_payload.get("storage_uri")
+    storage_backend = manifest_payload.get("storage_backend")
+    retention_policy = manifest_payload.get("retention_policy")
+    created_by = manifest_payload.get("created_by")
+    revoked_request_hashes = manifest_payload.get("revoked_request_hashes")
+    version = manifest_payload.get("version")
+    for field_name, value in (
+        ("plugin", plugin),
+        ("kind", kind),
+        ("name", name),
+        ("operator_identity", operator_identity),
+        ("approval_reference", approval_reference),
+        ("storage_uri", storage_uri),
+        ("storage_backend", storage_backend),
+        ("retention_policy", retention_policy),
+        ("created_by", created_by),
+        ("version", version),
+    ):
+        if not isinstance(value, str) or not value:
+            raise click.ClickException(
+                f"storage manifest schema mismatch: {field_name} must be non-empty"
+            )
+    if kind not in _PLUGIN_KIND_OPTIONS:
+        raise click.ClickException(
+            f"storage manifest schema mismatch: unsupported kind {kind!r}"
+        )
+    if not isinstance(revoked_request_hashes, list) or not all(
+        isinstance(item, str) for item in revoked_request_hashes
+    ):
+        raise click.ClickException(
+            "storage manifest revoked_request_hashes must be a string list"
+        )
+    normalized_revocations = tuple(
+        _require_sha256(item, "revoked request hash")
+        for item in revoked_request_hashes
+    )
+    return PluginExecutionRequestStorageManifest(
+        schema="scpn_plugin_execution_request_storage_manifest_v1",
+        version=str(version),
+        request_hash=request_hash,
+        plan_hash=plan_hash,
+        approval_hash=approval_hash,
+        target_hash=target_hash,
+        plugin=str(plugin),
+        kind=cast(
+            Literal["actuator", "bridge", "domainpack", "extractor", "monitor"],
+            str(kind),
+        ),
+        name=str(name),
+        operator_identity=str(operator_identity),
+        approval_reference=str(approval_reference),
+        storage_uri=str(storage_uri),
+        storage_backend=str(storage_backend),
+        retention_policy=str(retention_policy),
+        created_by=str(created_by),
+        revoked_request_hashes=normalized_revocations,
+        revocation_hash=revocation_hash,
+        manifest_hash=manifest_hash,
+        audit_record=manifest_payload,
+    )
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -1254,6 +1346,69 @@ def plugins_storage_adapter_manifest(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(adapter_manifest.audit_record, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-status")
+@click.argument(
+    "request_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--storage-bundle",
+    "storage_bundle_path",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Persisted request bundle JSON to include storage status.",
+)
+@click.option(
+    "--revocation-list",
+    "revocation_list_path",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Aggregate revocation-list JSON to include lifecycle status.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the lifecycle status.",
+)
+def plugins_lifecycle_status(
+    request_json: Path,
+    storage_bundle_path: Path | None,
+    revocation_list_path: Path | None,
+    created_by: str,
+) -> None:
+    """Emit an operator lifecycle status record for an execution request."""
+    request_payload = _load_json_file(request_json, artifact="request")
+    request = _load_request_from_payload(request_payload)
+    storage_manifest: PluginExecutionRequestStorageManifest | None = None
+    revocation_list: PluginExecutionRequestRevocationList | None = None
+
+    try:
+        if storage_bundle_path is not None:
+            bundle = _load_json_file(storage_bundle_path, artifact="storage bundle")
+            manifest_payload = bundle.get("storage_manifest")
+            if not isinstance(manifest_payload, dict):
+                raise click.ClickException(
+                    "storage bundle storage_manifest must be an object"
+                )
+            storage_manifest = _load_storage_manifest_from_payload(
+                cast(dict[str, object], manifest_payload)
+            )
+        if revocation_list_path is not None:
+            revocation_list = _load_revocation_list_from_payload(
+                _load_json_file(revocation_list_path, artifact="revocation list")
+            )
+        lifecycle_record = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by=created_by,
+            storage_manifest=storage_manifest,
+            revocation_list=revocation_list,
+        )
+    except (PermissionError, TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(lifecycle_record.audit_record, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

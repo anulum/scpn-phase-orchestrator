@@ -2406,6 +2406,116 @@ def test_plugins_storage_adapter_manifest_rejects_credential_uri(
     assert "must not contain credentials" in result.output
 
 
+def test_plugins_lifecycle_status_reports_stored_request(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    bundle_path = tmp_path / "bundle.json"
+    persist_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "persist-execution-request",
+            str(request_path),
+            str(bundle_path),
+            "--storage-uri",
+            f"file://{bundle_path}",
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert persist_result.exit_code == 0
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--storage-bundle",
+            str(bundle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    request_payload = json.loads(request_path.read_text(encoding="utf-8"))
+    bundle_payload = json.loads(bundle_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_execution_request_lifecycle_v1"
+    assert payload["request_hash"] == request_payload["request_hash"]
+    assert payload["status"] == "stored"
+    assert payload["revoked"] is False
+    assert payload["storage_manifest_hash"] == bundle_payload["storage_manifest"][
+        "manifest_hash"
+    ]
+    assert len(payload["lifecycle_hash"]) == 64
+
+
+def test_plugins_lifecycle_status_reports_revoked_request(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    revocation_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revoke-execution-request",
+            str(request_path),
+            "--revoked-by",
+            "deployment_gate",
+            "--revocation-reference",
+            "REV-2026-05-20-40",
+            "--revocation-reason",
+            "operator rotation",
+        ],
+    )
+    assert revocation_result.exit_code == 0
+    revocation_path = tmp_path / "revocation.json"
+    revocation_path.write_text(revocation_result.output, encoding="utf-8")
+    revocation_list_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert revocation_list_result.exit_code == 0
+    revocation_list_path = tmp_path / "revocation-list.json"
+    revocation_list_path.write_text(
+        revocation_list_result.output,
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--revocation-list",
+            str(revocation_list_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    revocation_payload = json.loads(revocation_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert payload["status"] == "revoked"
+    assert payload["revoked"] is True
+    assert payload["revocation_hash"] == revocation_payload["revocation_hash"]
+    assert payload["revoked_by"] == "deployment_gate"
+    assert payload["revocation_reference"] == "REV-2026-05-20-40"
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,

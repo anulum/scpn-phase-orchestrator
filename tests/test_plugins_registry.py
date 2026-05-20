@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionApproval,
     PluginExecutionPlan,
     PluginExecutionRequest,
+    PluginExecutionRequestLifecycleRecord,
     PluginExecutionRequestRevocation,
     PluginExecutionRequestRevocationList,
     PluginExecutionRequestStorageAdapterManifest,
@@ -32,6 +33,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_execution_request,
+    build_plugin_execution_request_lifecycle_record,
     build_plugin_execution_request_revocation,
     build_plugin_execution_request_revocation_list,
     build_plugin_execution_request_storage_adapter_manifest,
@@ -1595,6 +1597,119 @@ class TestPluginRuntimeExecution:
                 manifest,
                 write_performed=True,
             )
+
+    def test_execution_request_lifecycle_record_tracks_stored_status(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-19",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        storage_manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri="file:///var/lib/spo/plugin-requests/grid_pack.json",
+            storage_backend="local_file",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+
+        lifecycle = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+            storage_manifest=storage_manifest,
+        )
+        repeated = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+            storage_manifest=storage_manifest,
+        )
+
+        assert lifecycle == repeated
+        assert isinstance(lifecycle, PluginExecutionRequestLifecycleRecord)
+        assert lifecycle.schema == "scpn_plugin_execution_request_lifecycle_v1"
+        assert lifecycle.status == "stored"
+        assert lifecycle.revoked is False
+        assert lifecycle.storage_manifest_hash == storage_manifest.manifest_hash
+        assert lifecycle.storage_backend == "local_file"
+        assert lifecycle.revocation_hash is None
+        assert len(lifecycle.lifecycle_hash) == 64
+
+    def test_execution_request_lifecycle_record_tracks_revoked_status(
+        self,
+    ) -> None:
+        draft_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(draft_plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-20",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(plan, approval)
+        revocation = build_plugin_execution_request_revocation(
+            request,
+            revoked_by="deployment_gate",
+            revocation_reference="REV-2026-05-20-20",
+            revocation_reason="operator rotation",
+        )
+        revocation_list = build_plugin_execution_request_revocation_list(
+            (revocation,),
+            created_by="deployment_gate",
+        )
+
+        lifecycle = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+            revocation_list=revocation_list,
+        )
+
+        assert lifecycle.status == "revoked"
+        assert lifecycle.revoked is True
+        assert lifecycle.revocation_list_hash == revocation_list.revocation_list_hash
+        assert lifecycle.revocation_hash == revocation.revocation_hash
+        assert lifecycle.revoked_by == "deployment_gate"
+        assert lifecycle.revocation_reference == "REV-2026-05-20-20"
 
     def test_execution_request_revocation_is_deterministic(
         self,
