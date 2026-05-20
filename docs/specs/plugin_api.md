@@ -346,6 +346,22 @@ hashes, reports status counts, and emits `storage_missing_request_hashes` plus
 `renewal_required_request_hashes` so operators can plan persistence completion
 and approval renewal without scanning individual JSON files manually.
 
+Operator dashboard policy is represented by
+`build_plugin_execution_request_lifecycle_policy_report()` and exposed through:
+
+```bash
+spo plugins lifecycle-policy-report SUMMARY_JSON \
+  --storage-adapter ADAPTER_JSON \
+  --created-by deployment_gate
+```
+
+The policy report validates the lifecycle summary hash, validates supplied
+storage-adapter manifests, rejects duplicate or out-of-summary adapter request
+hashes, and emits action counts for `persist_request`,
+`register_storage_adapter`, `renew_approval`, and `confirm_external_write`.
+The report is still metadata-only: it does not perform persistence, contact
+remote stores, renew approvals, or execute plugin targets.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).

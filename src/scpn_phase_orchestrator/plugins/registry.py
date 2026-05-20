@@ -31,6 +31,7 @@ __all__ = [
     "PluginExecutionRequestRevocation",
     "PluginExecutionRequestRevocationList",
     "PluginExecutionRequestLifecycleRecord",
+    "PluginExecutionRequestLifecyclePolicyReport",
     "PluginExecutionRequestLifecycleSummary",
     "PluginExecutionRequestStorageAdapterManifest",
     "PluginExecutionRequestStorageManifest",
@@ -40,6 +41,7 @@ __all__ = [
     "build_plugin_execution_request",
     "build_plugin_execution_request_revocation",
     "build_plugin_execution_request_revocation_list",
+    "build_plugin_execution_request_lifecycle_policy_report",
     "build_plugin_execution_request_lifecycle_record",
     "build_plugin_execution_request_lifecycle_summary",
     "build_plugin_execution_request_storage_adapter_manifest",
@@ -57,6 +59,7 @@ __all__ = [
     "validate_plugin_execution_request",
     "validate_plugin_execution_request_lifecycle_record",
     "validate_plugin_execution_request_revocation_list",
+    "validate_plugin_execution_request_storage_adapter_manifest",
     "validate_plugin_execution_request_storage_bundle",
     "validate_plugin_execution_request_storage_manifest",
     "validate_plugin_manifest",
@@ -650,6 +653,54 @@ class PluginExecutionRequestLifecycleSummary:
             raise ValueError("audit_record must be provided")
 
 
+@dataclass(frozen=True)
+class PluginExecutionRequestLifecyclePolicyReport:
+    """Deterministic operator policy report for plugin lifecycle batches."""
+
+    schema: str
+    version: str
+    summary_hash: str
+    request_count: int
+    policy_action_counts: dict[str, int]
+    storage_missing_request_hashes: tuple[str, ...]
+    renewal_required_request_hashes: tuple[str, ...]
+    missing_adapter_request_hashes: tuple[str, ...]
+    local_storage_request_hashes: tuple[str, ...]
+    non_local_storage_request_hashes: tuple[str, ...]
+    external_write_followup_request_hashes: tuple[str, ...]
+    storage_adapter_hashes: tuple[str, ...]
+    created_by: str
+    policy_hash: str
+    audit_record: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if self.schema != "scpn_plugin_execution_request_lifecycle_policy_v1":
+            raise ValueError(
+                "lifecycle policy schema must be "
+                "scpn_plugin_execution_request_lifecycle_policy_v1"
+            )
+        if self.version != "1.0.0":
+            raise ValueError("lifecycle policy version must be 1.0.0")
+        if self.request_count < 1:
+            raise ValueError("lifecycle policy requires at least one request")
+        _validate_sha256(self.summary_hash, "lifecycle summary hash")
+        _validate_sha256(self.policy_hash, "lifecycle policy hash")
+        _require_identifier(self.created_by, "lifecycle policy creator")
+        for adapter_hash in self.storage_adapter_hashes:
+            _validate_sha256(adapter_hash, "storage adapter hash")
+        for request_hash in (
+            *self.storage_missing_request_hashes,
+            *self.renewal_required_request_hashes,
+            *self.missing_adapter_request_hashes,
+            *self.local_storage_request_hashes,
+            *self.non_local_storage_request_hashes,
+            *self.external_write_followup_request_hashes,
+        ):
+            _validate_sha256(request_hash, "lifecycle policy request hash")
+        if self.audit_record is None:
+            raise ValueError("audit_record must be provided")
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -747,6 +798,45 @@ def validate_plugin_execution_request_lifecycle_record(
         if record.get(field_name) != expected:
             raise ValueError(f"lifecycle {field_name} field mismatch")
     return lifecycle
+
+
+def validate_plugin_execution_request_lifecycle_summary(
+    summary: PluginExecutionRequestLifecycleSummary,
+) -> PluginExecutionRequestLifecycleSummary:
+    """Validate a stored lifecycle batch summary."""
+    record = summary.audit_record
+    if record.get("schema") != "scpn_plugin_execution_request_lifecycle_summary_v1":
+        raise ValueError("lifecycle summary schema mismatch")
+    if record.get("version") != "1.0.0":
+        raise ValueError("lifecycle summary version must be 1.0.0")
+    expected_hash = record.get("summary_hash")
+    if not isinstance(expected_hash, str):
+        raise ValueError("lifecycle summary is missing summary_hash")
+    _validate_sha256(expected_hash, "lifecycle summary hash")
+    payload = dict(record)
+    payload.pop("summary_hash", None)
+    if _record_hash(payload) != expected_hash:
+        raise ValueError("lifecycle summary hash mismatch")
+    for field_name, expected in (
+        ("request_count", summary.request_count),
+        ("status_counts", summary.status_counts),
+        ("lifecycle_hashes", list(summary.lifecycle_hashes)),
+        ("approved_request_hashes", list(summary.approved_request_hashes)),
+        ("stored_request_hashes", list(summary.stored_request_hashes)),
+        ("revoked_request_hashes", list(summary.revoked_request_hashes)),
+        (
+            "storage_missing_request_hashes",
+            list(summary.storage_missing_request_hashes),
+        ),
+        (
+            "renewal_required_request_hashes",
+            list(summary.renewal_required_request_hashes),
+        ),
+        ("created_by", summary.created_by),
+    ):
+        if record.get(field_name) != expected:
+            raise ValueError(f"lifecycle summary {field_name} field mismatch")
+    return summary
 
 
 def build_plugin_execution_request_storage_manifest(
@@ -1128,6 +1218,105 @@ def build_plugin_execution_request_lifecycle_summary(
     )
 
 
+def build_plugin_execution_request_lifecycle_policy_report(
+    summary: PluginExecutionRequestLifecycleSummary,
+    *,
+    created_by: str,
+    storage_adapters: tuple[PluginExecutionRequestStorageAdapterManifest, ...] = (),
+) -> PluginExecutionRequestLifecyclePolicyReport:
+    """Build a deterministic operator policy report for lifecycle batches."""
+    validate_plugin_execution_request_lifecycle_summary(summary)
+    _require_identifier(created_by, "lifecycle policy creator")
+    request_hashes = set(summary.approved_request_hashes)
+    request_hashes.update(summary.stored_request_hashes)
+    request_hashes.update(summary.revoked_request_hashes)
+    adapter_by_request: dict[str, PluginExecutionRequestStorageAdapterManifest] = {}
+    for adapter in storage_adapters:
+        validate_plugin_execution_request_storage_adapter_manifest(adapter)
+        if adapter.request_hash not in request_hashes:
+            raise ValueError("storage adapter request hash is not in lifecycle summary")
+        if adapter.request_hash in adapter_by_request:
+            raise ValueError("duplicate storage adapter request hash")
+        adapter_by_request[adapter.request_hash] = adapter
+    storage_relevant = tuple(
+        sorted(
+            (*summary.storage_missing_request_hashes, *summary.stored_request_hashes)
+        )
+    )
+    missing_adapters = tuple(
+        request_hash
+        for request_hash in storage_relevant
+        if request_hash not in adapter_by_request
+    )
+    local_storage = tuple(
+        sorted(
+            request_hash
+            for request_hash, adapter in adapter_by_request.items()
+            if adapter.storage_backend == "local_file"
+        )
+    )
+    non_local_storage = tuple(
+        sorted(
+            request_hash
+            for request_hash, adapter in adapter_by_request.items()
+            if adapter.storage_backend != "local_file"
+        )
+    )
+    external_followup = tuple(
+        sorted(
+            request_hash
+            for request_hash, adapter in adapter_by_request.items()
+            if adapter.storage_backend != "local_file" and not adapter.write_performed
+        )
+    )
+    action_counts = {
+        "confirm_external_write": len(external_followup),
+        "persist_request": len(summary.storage_missing_request_hashes),
+        "register_storage_adapter": len(missing_adapters),
+        "renew_approval": len(summary.renewal_required_request_hashes),
+    }
+    audit_record: dict[str, object] = {
+        "schema": "scpn_plugin_execution_request_lifecycle_policy_v1",
+        "version": "1.0.0",
+        "summary_hash": summary.summary_hash,
+        "request_count": summary.request_count,
+        "status_counts": dict(summary.status_counts),
+        "policy_action_counts": action_counts,
+        "storage_missing_request_hashes": list(summary.storage_missing_request_hashes),
+        "renewal_required_request_hashes": list(
+            summary.renewal_required_request_hashes
+        ),
+        "missing_adapter_request_hashes": list(missing_adapters),
+        "local_storage_request_hashes": list(local_storage),
+        "non_local_storage_request_hashes": list(non_local_storage),
+        "external_write_followup_request_hashes": list(external_followup),
+        "storage_adapter_hashes": sorted(
+            adapter.adapter_hash for adapter in storage_adapters
+        ),
+        "created_by": created_by,
+    }
+    audit_record["policy_hash"] = _record_hash(audit_record)
+    return PluginExecutionRequestLifecyclePolicyReport(
+        schema="scpn_plugin_execution_request_lifecycle_policy_v1",
+        version="1.0.0",
+        summary_hash=summary.summary_hash,
+        request_count=summary.request_count,
+        policy_action_counts=action_counts,
+        storage_missing_request_hashes=summary.storage_missing_request_hashes,
+        renewal_required_request_hashes=summary.renewal_required_request_hashes,
+        missing_adapter_request_hashes=missing_adapters,
+        local_storage_request_hashes=local_storage,
+        non_local_storage_request_hashes=non_local_storage,
+        external_write_followup_request_hashes=external_followup,
+        storage_adapter_hashes=tuple(
+            sorted(adapter.adapter_hash for adapter in storage_adapters)
+        ),
+        created_by=created_by,
+        policy_hash=str(audit_record["policy_hash"]),
+        audit_record=audit_record,
+    )
+
+
 def validate_plugin_execution_request_storage_manifest(
     request: PluginExecutionRequest,
     manifest: PluginExecutionRequestStorageManifest,
@@ -1225,6 +1414,39 @@ def build_plugin_execution_request_storage_adapter_manifest(
         adapter_hash=str(audit_record["adapter_hash"]),
         audit_record=audit_record,
     )
+
+
+def validate_plugin_execution_request_storage_adapter_manifest(
+    adapter: PluginExecutionRequestStorageAdapterManifest,
+) -> PluginExecutionRequestStorageAdapterManifest:
+    """Validate a stored plugin request storage-adapter handoff manifest."""
+    record = adapter.audit_record
+    if record.get("schema") != "scpn_plugin_execution_request_storage_adapter_v1":
+        raise ValueError("storage adapter schema mismatch")
+    if record.get("version") != "1.0.0":
+        raise ValueError("storage adapter version must be 1.0.0")
+    expected_hash = record.get("adapter_hash")
+    if not isinstance(expected_hash, str):
+        raise ValueError("storage adapter is missing adapter_hash")
+    _validate_sha256(expected_hash, "storage adapter hash")
+    payload = dict(record)
+    payload.pop("adapter_hash", None)
+    if _record_hash(payload) != expected_hash:
+        raise ValueError("storage adapter hash mismatch")
+    for field_name, expected in (
+        ("request_hash", adapter.request_hash),
+        ("storage_manifest_hash", adapter.storage_manifest_hash),
+        ("storage_backend", adapter.storage_backend),
+        ("storage_uri", adapter.storage_uri),
+        ("storage_scheme", adapter.storage_scheme),
+        ("adapter_mode", adapter.adapter_mode),
+        ("bundle_hash", adapter.bundle_hash),
+        ("write_performed", adapter.write_performed),
+        ("created_by", adapter.created_by),
+    ):
+        if record.get(field_name) != expected:
+            raise ValueError(f"storage adapter {field_name} field mismatch")
+    return adapter
 
 
 def validate_plugin_execution_request_storage_bundle(

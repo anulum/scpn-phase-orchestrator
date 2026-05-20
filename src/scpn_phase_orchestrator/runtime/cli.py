@@ -65,13 +65,16 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionPlan,
     PluginExecutionRequest,
     PluginExecutionRequestLifecycleRecord,
+    PluginExecutionRequestLifecycleSummary,
     PluginExecutionRequestRevocation,
     PluginExecutionRequestRevocationList,
+    PluginExecutionRequestStorageAdapterManifest,
     PluginExecutionRequestStorageManifest,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     build_plugin_execution_approval,
     build_plugin_execution_plan,
+    build_plugin_execution_request_lifecycle_policy_report,
     build_plugin_execution_request_lifecycle_record,
     build_plugin_execution_request_lifecycle_summary,
     build_plugin_execution_request_revocation,
@@ -1027,6 +1030,142 @@ def _load_lifecycle_from_payload(
     )
 
 
+def _load_lifecycle_summary_from_payload(
+    summary_payload: dict[str, object],
+) -> PluginExecutionRequestLifecycleSummary:
+    if (
+        summary_payload.get("schema")
+        != "scpn_plugin_execution_request_lifecycle_summary_v1"
+    ):
+        raise click.ClickException(
+            "lifecycle summary schema mismatch: expected "
+            "scpn_plugin_execution_request_lifecycle_summary_v1"
+        )
+    summary_hash = _require_sha256(summary_payload.get("summary_hash"), "summary_hash")
+    request_count = summary_payload.get("request_count")
+    status_counts = summary_payload.get("status_counts")
+    lifecycle_hashes = summary_payload.get("lifecycle_hashes")
+    approved_request_hashes = summary_payload.get("approved_request_hashes")
+    stored_request_hashes = summary_payload.get("stored_request_hashes")
+    revoked_request_hashes = summary_payload.get("revoked_request_hashes")
+    storage_missing_request_hashes = summary_payload.get(
+        "storage_missing_request_hashes"
+    )
+    renewal_required_request_hashes = summary_payload.get(
+        "renewal_required_request_hashes"
+    )
+    created_by = summary_payload.get("created_by")
+    version = summary_payload.get("version")
+    if not isinstance(version, str) or not version:
+        raise click.ClickException("lifecycle summary version must be non-empty")
+    if not isinstance(created_by, str) or not created_by:
+        raise click.ClickException("lifecycle summary created_by must be non-empty")
+    if not isinstance(request_count, int) or request_count < 1:
+        raise click.ClickException(
+            "lifecycle summary request_count must be a positive integer"
+        )
+    if not isinstance(status_counts, dict) or not all(
+        isinstance(key, str) and isinstance(value, int)
+        for key, value in status_counts.items()
+    ):
+        raise click.ClickException("lifecycle summary status_counts is malformed")
+
+    def hash_list(value: object, field_name: str) -> tuple[str, ...]:
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) for item in value
+        ):
+            raise click.ClickException(
+                f"lifecycle summary {field_name} must be a string list"
+            )
+        return tuple(_require_sha256(item, field_name) for item in value)
+
+    return PluginExecutionRequestLifecycleSummary(
+        schema="scpn_plugin_execution_request_lifecycle_summary_v1",
+        version=version,
+        request_count=request_count,
+        status_counts=cast(dict[str, int], status_counts),
+        lifecycle_hashes=hash_list(lifecycle_hashes, "lifecycle_hashes"),
+        approved_request_hashes=hash_list(
+            approved_request_hashes, "approved_request_hashes"
+        ),
+        stored_request_hashes=hash_list(
+            stored_request_hashes, "stored_request_hashes"
+        ),
+        revoked_request_hashes=hash_list(
+            revoked_request_hashes, "revoked_request_hashes"
+        ),
+        storage_missing_request_hashes=hash_list(
+            storage_missing_request_hashes,
+            "storage_missing_request_hashes",
+        ),
+        renewal_required_request_hashes=hash_list(
+            renewal_required_request_hashes,
+            "renewal_required_request_hashes",
+        ),
+        created_by=created_by,
+        summary_hash=summary_hash,
+        audit_record=summary_payload,
+    )
+
+
+def _load_storage_adapter_from_payload(
+    adapter_payload: dict[str, object],
+) -> PluginExecutionRequestStorageAdapterManifest:
+    if (
+        adapter_payload.get("schema")
+        != "scpn_plugin_execution_request_storage_adapter_v1"
+    ):
+        raise click.ClickException(
+            "storage adapter schema mismatch: expected "
+            "scpn_plugin_execution_request_storage_adapter_v1"
+        )
+    request_hash = _require_sha256(adapter_payload.get("request_hash"), "request_hash")
+    storage_manifest_hash = _require_sha256(
+        adapter_payload.get("storage_manifest_hash"),
+        "storage_manifest_hash",
+    )
+    bundle_hash = _require_sha256(adapter_payload.get("bundle_hash"), "bundle_hash")
+    adapter_hash = _require_sha256(adapter_payload.get("adapter_hash"), "adapter_hash")
+    storage_backend = adapter_payload.get("storage_backend")
+    storage_uri = adapter_payload.get("storage_uri")
+    storage_scheme = adapter_payload.get("storage_scheme")
+    adapter_mode = adapter_payload.get("adapter_mode")
+    write_performed = adapter_payload.get("write_performed")
+    created_by = adapter_payload.get("created_by")
+    version = adapter_payload.get("version")
+    for field_name, value in (
+        ("storage_backend", storage_backend),
+        ("storage_uri", storage_uri),
+        ("storage_scheme", storage_scheme),
+        ("adapter_mode", adapter_mode),
+        ("created_by", created_by),
+        ("version", version),
+    ):
+        if not isinstance(value, str) or not value:
+            raise click.ClickException(
+                f"storage adapter schema mismatch: {field_name} must be non-empty"
+            )
+    if not isinstance(write_performed, bool):
+        raise click.ClickException(
+            "storage adapter schema mismatch: write_performed must be boolean"
+        )
+    return PluginExecutionRequestStorageAdapterManifest(
+        schema="scpn_plugin_execution_request_storage_adapter_v1",
+        version=str(version),
+        request_hash=request_hash,
+        storage_manifest_hash=storage_manifest_hash,
+        storage_backend=str(storage_backend),
+        storage_uri=str(storage_uri),
+        storage_scheme=str(storage_scheme),
+        adapter_mode=str(adapter_mode),
+        bundle_hash=bundle_hash,
+        write_performed=write_performed,
+        created_by=str(created_by),
+        adapter_hash=adapter_hash,
+        audit_record=adapter_payload,
+    )
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -1536,6 +1675,50 @@ def plugins_lifecycle_summary(
         raise click.ClickException(str(exc)) from exc
 
     click.echo(json.dumps(summary.audit_record, indent=2, sort_keys=True))
+
+
+@plugins_group.command("lifecycle-policy-report")
+@click.argument(
+    "summary_json",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--storage-adapter",
+    "storage_adapter_paths",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Storage-adapter manifest JSON to include in the policy report.",
+)
+@click.option(
+    "--created-by",
+    required=True,
+    help="Operator or deployment component creating the policy report.",
+)
+def plugins_lifecycle_policy_report(
+    summary_json: Path,
+    storage_adapter_paths: tuple[Path, ...],
+    created_by: str,
+) -> None:
+    """Emit a deterministic lifecycle policy report for operator dashboards."""
+    summary = _load_lifecycle_summary_from_payload(
+        _load_json_file(summary_json, artifact="lifecycle summary")
+    )
+    storage_adapters = tuple(
+        _load_storage_adapter_from_payload(
+            _load_json_file(path, artifact="storage adapter")
+        )
+        for path in storage_adapter_paths
+    )
+    try:
+        report = build_plugin_execution_request_lifecycle_policy_report(
+            summary,
+            storage_adapters=storage_adapters,
+            created_by=created_by,
+        )
+    except (TypeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(json.dumps(report.audit_record, indent=2, sort_keys=True))
 
 
 @plugins_group.command("revoke-execution-request")

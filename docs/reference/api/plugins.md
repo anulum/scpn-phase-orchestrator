@@ -308,6 +308,18 @@ spo plugins lifecycle-summary LIFECYCLE_JSON ... \
   --created-by deployment_gate
 ```
 
+Operator dashboard policy is represented by
+`build_plugin_execution_request_lifecycle_policy_report()`. It validates the
+lifecycle summary, binds optional storage-adapter manifests, and emits action
+counts for request persistence, adapter registration, approval renewal, and
+external-write confirmation.
+
+```bash
+spo plugins lifecycle-policy-report SUMMARY_JSON \
+  --storage-adapter ADAPTER_JSON \
+  --created-by deployment_gate
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

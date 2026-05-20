@@ -2595,6 +2595,118 @@ def test_plugins_lifecycle_summary_rejects_duplicate_request_hash(
     assert "duplicate request hashes" in result.output
 
 
+def test_plugins_lifecycle_policy_report_outputs_operator_dashboard(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle_result.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle_result.output, encoding="utf-8")
+    summary_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary_result.exit_code == 0
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(summary_result.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 0
+    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    payload = json.loads(result.output)
+    assert payload["schema"] == "scpn_plugin_execution_request_lifecycle_policy_v1"
+    assert payload["summary_hash"] == summary_payload["summary_hash"]
+    assert payload["policy_action_counts"] == {
+        "confirm_external_write": 0,
+        "persist_request": 1,
+        "register_storage_adapter": 1,
+        "renew_approval": 0,
+    }
+    assert payload["storage_missing_request_hashes"] == summary_payload[
+        "storage_missing_request_hashes"
+    ]
+    assert len(payload["policy_hash"]) == 64
+
+
+def test_plugins_lifecycle_policy_report_rejects_tampered_summary(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    lifecycle_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-status",
+            str(request_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert lifecycle_result.exit_code == 0
+    lifecycle_path = tmp_path / "lifecycle.json"
+    lifecycle_path.write_text(lifecycle_result.output, encoding="utf-8")
+    summary_result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-summary",
+            str(lifecycle_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert summary_result.exit_code == 0
+    summary_payload = json.loads(summary_result.output)
+    summary_payload["request_count"] = 2
+    summary_path = tmp_path / "summary.json"
+    summary_path.write_text(
+        json.dumps(summary_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "lifecycle-policy-report",
+            str(summary_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "lifecycle summary hash mismatch" in result.output
+
+
 def test_plugins_revoke_execution_request_outputs_revocation(
     runner,
     tmp_path: Path,

@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionApproval,
     PluginExecutionPlan,
     PluginExecutionRequest,
+    PluginExecutionRequestLifecyclePolicyReport,
     PluginExecutionRequestLifecycleRecord,
     PluginExecutionRequestLifecycleSummary,
     PluginExecutionRequestRevocation,
@@ -34,6 +35,7 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_approval,
     build_plugin_execution_plan,
     build_plugin_execution_request,
+    build_plugin_execution_request_lifecycle_policy_report,
     build_plugin_execution_request_lifecycle_record,
     build_plugin_execution_request_lifecycle_summary,
     build_plugin_execution_request_revocation,
@@ -51,6 +53,7 @@ from scpn_phase_orchestrator.plugins import (
     load_plugin_capability,
     validate_plugin_execution_request,
     validate_plugin_execution_request_lifecycle_record,
+    validate_plugin_execution_request_lifecycle_summary,
     validate_plugin_execution_request_revocation_list,
     validate_plugin_execution_request_storage_bundle,
     validate_plugin_execution_request_storage_manifest,
@@ -1906,6 +1909,187 @@ class TestPluginRuntimeExecution:
                 (lifecycle, lifecycle),
                 created_by="deployment_gate",
             )
+
+    def test_execution_request_lifecycle_policy_report_builds_operator_actions(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            approved_plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-25",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(approved_plan, approval)
+        lifecycle = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+        )
+        summary = build_plugin_execution_request_lifecycle_summary(
+            (lifecycle,),
+            created_by="deployment_gate",
+        )
+
+        report = build_plugin_execution_request_lifecycle_policy_report(
+            summary,
+            created_by="deployment_gate",
+        )
+        repeated = build_plugin_execution_request_lifecycle_policy_report(
+            summary,
+            created_by="deployment_gate",
+        )
+
+        assert report == repeated
+        assert isinstance(report, PluginExecutionRequestLifecyclePolicyReport)
+        assert report.schema == "scpn_plugin_execution_request_lifecycle_policy_v1"
+        assert report.summary_hash == summary.summary_hash
+        assert report.storage_missing_request_hashes == (
+            request.audit_record["request_hash"],
+        )
+        assert report.renewal_required_request_hashes == ()
+        assert report.missing_adapter_request_hashes == (
+            request.audit_record["request_hash"],
+        )
+        assert report.external_write_followup_request_hashes == ()
+        assert report.policy_action_counts == {
+            "confirm_external_write": 0,
+            "persist_request": 1,
+            "renew_approval": 0,
+            "register_storage_adapter": 1,
+        }
+        assert len(report.policy_hash) == 64
+
+    def test_execution_request_lifecycle_policy_report_tracks_external_handoff(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            approved_plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-26",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(approved_plan, approval)
+        storage_manifest = build_plugin_execution_request_storage_manifest(
+            request,
+            storage_uri="s3://spo-prod/plugin-requests/breaker.json",
+            storage_backend="s3_object",
+            retention_policy="retain_until_revoked",
+            created_by="deployment_gate",
+        )
+        adapter = build_plugin_execution_request_storage_adapter_manifest(
+            request,
+            storage_manifest,
+        )
+        lifecycle = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+            storage_manifest=storage_manifest,
+        )
+        summary = build_plugin_execution_request_lifecycle_summary(
+            (lifecycle,),
+            created_by="deployment_gate",
+        )
+
+        report = build_plugin_execution_request_lifecycle_policy_report(
+            summary,
+            storage_adapters=(adapter,),
+            created_by="deployment_gate",
+        )
+
+        assert report.missing_adapter_request_hashes == ()
+        assert report.non_local_storage_request_hashes == (
+            request.audit_record["request_hash"],
+        )
+        assert report.local_storage_request_hashes == ()
+        assert report.external_write_followup_request_hashes == (
+            request.audit_record["request_hash"],
+        )
+        assert report.policy_action_counts["confirm_external_write"] == 1
+
+    def test_execution_request_lifecycle_summary_validation_rejects_tampering(
+        self,
+    ) -> None:
+        plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        approved_plan = build_plugin_execution_plan(
+            _manifest(),
+            "actuator",
+            "breaker",
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+                require_target_hash_approval=True,
+                approved_target_hashes=(plan.target_hash,),
+            ),
+        )
+        approval = build_plugin_execution_approval(
+            approved_plan,
+            operator_identity="operator_alpha",
+            approval_reference="REQ-2026-05-20-27",
+            approval_reason="operator approved",
+        )
+        request = build_plugin_execution_request(approved_plan, approval)
+        lifecycle = build_plugin_execution_request_lifecycle_record(
+            request,
+            created_by="deployment_gate",
+        )
+        summary = build_plugin_execution_request_lifecycle_summary(
+            (lifecycle,),
+            created_by="deployment_gate",
+        )
+        tampered = replace(
+            summary,
+            audit_record={**summary.audit_record, "request_count": 2},
+        )
+
+        with pytest.raises(ValueError, match="lifecycle summary hash mismatch"):
+            validate_plugin_execution_request_lifecycle_summary(tampered)
 
     def test_execution_request_revocation_is_deterministic(
         self,
