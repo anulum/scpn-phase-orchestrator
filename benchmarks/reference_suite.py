@@ -112,6 +112,17 @@ class ReplayLearnerBenchmarkThresholds(NamedTuple):
     require_non_actuating: bool
 
 
+class ReplayLearnerBenchmarkScenario(NamedTuple):
+    name: str
+    seed_candidate: KnobPolicyCandidate
+    min_coherence: float
+    min_reward: float
+    critical_coupling_estimate: float
+    ppo_seed: int
+    sac_seed: int
+    hybrid_seed: int
+
+
 class BayesianPosteriorFitThresholds(NamedTuple):
     max_residual_rmse: float
     max_omega_mean_abs_error: float
@@ -389,95 +400,183 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
         max_unsafe_acceptances=0,
         require_non_actuating=True,
     )
-    seed_candidate = KnobPolicyCandidate(
-        K=0.2,
-        alpha=0.0,
-        zeta=0.05,
-        Psi=0.0,
-        channel_weights=(0.8, 0.2),
-        cross_channel_gains=(0.05,),
+    scenarios = (
+        ReplayLearnerBenchmarkScenario(
+            name="two_channel_low_coupling",
+            seed_candidate=KnobPolicyCandidate(
+                K=0.2,
+                alpha=0.0,
+                zeta=0.05,
+                Psi=0.0,
+                channel_weights=(0.8, 0.2),
+                cross_channel_gains=(0.05,),
+            ),
+            min_coherence=0.78,
+            min_reward=-0.25,
+            critical_coupling_estimate=0.72,
+            ppo_seed=17,
+            sac_seed=23,
+            hybrid_seed=31,
+        ),
+        ReplayLearnerBenchmarkScenario(
+            name="three_channel_cross_gain",
+            seed_candidate=KnobPolicyCandidate(
+                K=0.18,
+                alpha=0.01,
+                zeta=0.04,
+                Psi=0.02,
+                channel_weights=(0.55, 0.3, 0.15),
+                cross_channel_gains=(0.03, 0.04),
+            ),
+            min_coherence=0.76,
+            min_reward=-0.25,
+            critical_coupling_estimate=0.68,
+            ppo_seed=41,
+            sac_seed=43,
+            hybrid_seed=47,
+        ),
+        ReplayLearnerBenchmarkScenario(
+            name="stability_recovery",
+            seed_candidate=KnobPolicyCandidate(
+                K=0.24,
+                alpha=-0.01,
+                zeta=0.06,
+                Psi=0.01,
+                channel_weights=(0.45, 0.35, 0.2),
+                cross_channel_gains=(0.02, 0.05),
+            ),
+            min_coherence=0.79,
+            min_reward=-0.25,
+            critical_coupling_estimate=0.74,
+            ppo_seed=53,
+            sac_seed=59,
+            hybrid_seed=61,
+        ),
     )
-    proposal_config = PolicyProposalConfig(
-        min_coherence=0.78,
-        min_reward=-0.25,
-        max_alternatives=2,
-    )
-    baseline_observation = _deterministic_replay_observation(seed_candidate)
-    baseline_coherence = baseline_observation.coherence
 
     t0 = time.perf_counter()
-    learner_proposals = (
-        generate_ppo_like_proposal(
-            seed_candidate,
-            _deterministic_replay_observation,
-            seed_value=17,
-            proposal_config=proposal_config,
-        ),
-        generate_sac_like_proposal(
-            seed_candidate,
-            _deterministic_replay_observation,
-            seed_value=23,
-            proposal_config=proposal_config,
-        ),
-        generate_hybrid_physics_proposal(
-            seed_candidate,
-            _deterministic_replay_observation,
-            critical_coupling_estimate=0.72,
-            seed_value=31,
-            proposal_config=proposal_config,
-        ),
-    )
-    elapsed = time.perf_counter() - t0
-
     learner_results: list[dict[str, float | int | str | bool]] = []
+    scenario_results: list[dict[str, float | int | str | bool]] = []
     accepted_count = 0
     unsafe_acceptances = 0
     min_reward_improvement = np.inf
-    for proposal in learner_proposals:
-        policy_proposal = proposal.policy_search.proposal
-        selected = policy_proposal.selected
-        accepted = policy_proposal.accepted and selected is not None
-        accepted_count += int(accepted)
-        non_actuating = proposal.actuation_permitted is False
-        selected_reward = selected.reward if selected is not None else -np.inf
-        selected_coherence = (
-            selected.observation.coherence if selected is not None else 0.0
+    accepted_scenario_count = 0
+    for scenario in scenarios:
+        proposal_config = PolicyProposalConfig(
+            min_coherence=scenario.min_coherence,
+            min_reward=scenario.min_reward,
+            max_alternatives=2,
         )
-        reward_improvement = selected_coherence - baseline_coherence
-        min_reward_improvement = min(min_reward_improvement, reward_improvement)
-        selected_unsafe = bool(selected.observation.unsafe) if selected else False
-        unsafe_acceptances += int(accepted and selected_unsafe)
-        learner_results.append(
-            {
-                "learner_kind": proposal.learner_kind,
-                "accepted": accepted,
-                "non_actuating": non_actuating,
-                "selected_reward": selected_reward,
-                "selected_coherence": selected_coherence,
-                "baseline_coherence": baseline_coherence,
-                "coherence_improvement": reward_improvement,
-                "unsafe_selected": selected_unsafe,
-                "candidate_count": len(proposal.policy_search.candidates),
-            }
+        baseline_observation = _deterministic_replay_observation(
+            scenario.seed_candidate
+        )
+        baseline_coherence = baseline_observation.coherence
+        learner_proposals = (
+            generate_ppo_like_proposal(
+                scenario.seed_candidate,
+                _deterministic_replay_observation,
+                seed_value=scenario.ppo_seed,
+                proposal_config=proposal_config,
+            ),
+            generate_sac_like_proposal(
+                scenario.seed_candidate,
+                _deterministic_replay_observation,
+                seed_value=scenario.sac_seed,
+                proposal_config=proposal_config,
+            ),
+            generate_hybrid_physics_proposal(
+                scenario.seed_candidate,
+                _deterministic_replay_observation,
+                critical_coupling_estimate=scenario.critical_coupling_estimate,
+                seed_value=scenario.hybrid_seed,
+                proposal_config=proposal_config,
+            ),
         )
 
-    acceptance_rate = accepted_count / len(learner_proposals)
+        scenario_accepted_count = 0
+        scenario_unsafe_acceptances = 0
+        scenario_min_reward_improvement = np.inf
+        scenario_non_actuating = True
+        for proposal in learner_proposals:
+            policy_proposal = proposal.policy_search.proposal
+            selected = policy_proposal.selected
+            accepted = policy_proposal.accepted and selected is not None
+            accepted_count += int(accepted)
+            scenario_accepted_count += int(accepted)
+            non_actuating = proposal.actuation_permitted is False
+            scenario_non_actuating = scenario_non_actuating and non_actuating
+            selected_reward = selected.reward if selected is not None else -np.inf
+            selected_coherence = (
+                selected.observation.coherence if selected is not None else 0.0
+            )
+            reward_improvement = selected_coherence - baseline_coherence
+            min_reward_improvement = min(min_reward_improvement, reward_improvement)
+            scenario_min_reward_improvement = min(
+                scenario_min_reward_improvement,
+                reward_improvement,
+            )
+            selected_unsafe = bool(selected.observation.unsafe) if selected else False
+            unsafe_acceptances += int(accepted and selected_unsafe)
+            scenario_unsafe_acceptances += int(accepted and selected_unsafe)
+            learner_results.append(
+                {
+                    "scenario": scenario.name,
+                    "learner_kind": proposal.learner_kind,
+                    "accepted": accepted,
+                    "non_actuating": non_actuating,
+                    "selected_reward": selected_reward,
+                    "selected_coherence": selected_coherence,
+                    "baseline_coherence": baseline_coherence,
+                    "coherence_improvement": reward_improvement,
+                    "unsafe_selected": selected_unsafe,
+                    "candidate_count": len(proposal.policy_search.candidates),
+                }
+            )
+
+        scenario_accepted = (
+            scenario_accepted_count == len(learner_proposals)
+            and scenario_unsafe_acceptances == 0
+            and scenario_non_actuating
+            and scenario_min_reward_improvement >= thresholds.min_reward_improvement
+        )
+        accepted_scenario_count += int(scenario_accepted)
+        scenario_results.append(
+            {
+                "scenario": scenario.name,
+                "learner_count": len(learner_proposals),
+                "accepted_learner_count": scenario_accepted_count,
+                "failed_learner_count": len(learner_proposals)
+                - scenario_accepted_count,
+                "baseline_coherence": baseline_coherence,
+                "min_coherence_improvement": scenario_min_reward_improvement,
+                "unsafe_acceptance_count": scenario_unsafe_acceptances,
+                "non_actuating_proposals": scenario_non_actuating,
+                "accepted": scenario_accepted,
+            }
+        )
+    elapsed = time.perf_counter() - t0
+
+    learner_count = len(learner_results)
+    acceptance_rate = accepted_count / learner_count
     threshold_passed = (
         acceptance_rate >= thresholds.min_acceptance_rate
         and min_reward_improvement >= thresholds.min_reward_improvement
         and unsafe_acceptances <= thresholds.max_unsafe_acceptances
         and all(result["non_actuating"] is True for result in learner_results)
+        and accepted_scenario_count == len(scenarios)
     )
 
     return {
         "suite": "replay_policy_candidate_quality",
-        "learner_count": len(learner_proposals),
+        "scenario_count": len(scenarios),
+        "accepted_scenario_count": accepted_scenario_count,
+        "failed_scenario_count": len(scenarios) - accepted_scenario_count,
+        "learner_count": learner_count,
         "wall_time_s": elapsed,
-        "steps_per_second": len(learner_proposals) / elapsed,
+        "steps_per_second": learner_count / elapsed,
         "accepted_learner_count": accepted_count,
-        "failed_learner_count": len(learner_proposals) - accepted_count,
+        "failed_learner_count": learner_count - accepted_count,
         "acceptance_rate": acceptance_rate,
-        "baseline_coherence": baseline_coherence,
         "min_coherence_improvement": min_reward_improvement,
         "unsafe_acceptance_count": unsafe_acceptances,
         "non_actuating_proposals": int(
@@ -493,6 +592,7 @@ def benchmark_replay_policy_candidate_quality() -> dict[str, float | int | str]:
             },
             sort_keys=True,
         ),
+        "scenario_results_json": json.dumps(scenario_results, sort_keys=True),
         "learner_results_json": json.dumps(learner_results, sort_keys=True),
     }
 

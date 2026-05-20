@@ -177,8 +177,9 @@
   - Replay-only policy search is in place: `search_replay_policy()` binds deterministic candidate generation to a caller-supplied replay/simulation evaluator and returns an audit-ready proposal.
   - Adaptive replay-only refinement is in place: `search_adaptive_replay_policy()` performs bounded multi-round replay search with decayed coordinate steps and the same proposal gates.
   - PPO-like, SAC-like, and hybrid-physics learner proposal generators are in
-    place behind the same non-actuating replay gates; real learner dependencies
-    and benchmarked trained policies remain future work.
+    place behind the same non-actuating replay gates; deterministic
+    multi-scenario replay learner benchmark gates are in place, while real
+    learner dependencies and benchmarked trained policies remain future work.
   - N-channel optimisation surface is in place for replay-only searches:
     candidate generation, reward scoring, proposal records, and adaptive
     search now include channel weights plus cross-channel coupling gains before
@@ -293,10 +294,11 @@ sessions do not treat them as abstract research labels.
     learned proposals with supervisor rules.
   - Benchmark-gated replay learner evidence is in place:
     `benchmarks/reference_suite.py` evaluates PPO-like, SAC-like, and
-    hybrid-physics replay proposals against deterministic simulator-backed
-    coherence gates. The snapshot records acceptance rate, minimum coherence
-    improvement, unsafe accepted candidates, and non-actuating status before
-    any policy can be considered for operator review.
+    hybrid-physics replay proposals across deterministic multi-scenario
+    simulator-backed coherence gates. The snapshot records scenario acceptance,
+    learner acceptance rate, minimum coherence improvement, unsafe accepted
+    candidates, and non-actuating status before any policy can be considered
+    for operator review.
   - Acceptance: PPO-like, gradient-based, or hybrid physics learners produce
     benchmarked, auditable policy candidates that remain non-actuating until
     explicit safety gates pass.
@@ -392,7 +394,7 @@ sessions do not treat them as abstract research labels.
     YAML or audit JSON from local raw sources without writing files or enabling
     actuation. Deeper SINDy/graph-learning inference remains experimental.
 - RL/autotune layer on the JAX `nn` backend: PPO/SAC or hybrid physics-RL policies that learn `K`, `alpha`, `zeta`, and `Psi` from rewards such as coherence minus penalties for `R_bad`, unsafe actuation, and regime churn.
-  - Reward-evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, adaptive replay refinement, and PPO-like/SAC-like/hybrid-physics proposal generators are in place behind non-actuating gates. Real learner dependencies and benchmarked trained policies remain future work.
+  - Reward-evaluation, replay ranking, offline candidate generation, proposal records, replay-only policy search, adaptive replay refinement, PPO-like/SAC-like/hybrid-physics proposal generators, and deterministic multi-scenario replay learner benchmark gates are in place behind non-actuating gates. Real learner dependencies and benchmarked trained policies remain future work.
 - Full N-channel and hierarchical orchestration: channel algebra, nested supervisors, and edge/cloud synchronisation protocol for distributed coherence control.
   - N-channel runtime execution and replay-only optimisation surfaces are in place. Hierarchical reduced-summary parent orchestration, offline edge/cloud sync envelopes, strict non-socket runtime validation, decoded JSONL/REST/frame adapter boundaries, power-grid/cardiac replay demos, and deterministic offline gossip replay are in place; owned live transports and broader multi-domain demos remain open.
 - Formal verification for supervisor: export Petri-net and policy surfaces to PRISM, TLA+, SPIN, or equivalent model-checking workflows for safety properties in critical regimes.
