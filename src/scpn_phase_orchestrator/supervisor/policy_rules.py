@@ -65,7 +65,7 @@ _MAX_ACTIONS_PER_RULE = 32
 
 def _compound_logic(logic: str) -> str:
     if not isinstance(logic, str):
-        _policy_error("rule.logic must be AND or OR")
+        _policy_error("rule.logic must be a string")
     normalised = logic.upper()
     if normalised not in ("AND", "OR"):
         _policy_error("rule.logic must be AND or OR")
