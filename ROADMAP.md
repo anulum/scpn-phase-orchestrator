@@ -651,7 +651,13 @@ Speculative research watchlist:
 
 - Self-modelling embodied digital twin with a `self_model_error` monitor and controlled rebinding/reconfiguration regime.
 - Evolutionary supervisor policy search over policy DSL, Petri nets, and topology mutations, initially offline over `audit.jsonl` with STL and counterfactual safety filters.
-- Information-geometry control layer using Fisher-Rao or Wasserstein metrics as supervisor control primitives.
+- Information-geometry control layer using Fisher-Rao or Wasserstein metrics as
+  supervisor control primitives.
+  - Foundation is in place: dependency-free NumPy/JAX-compatible Fisher-Rao
+    and Wasserstein review primitive emits metric tensors, natural-gradient
+    proposals, curvature/geodesic metrics, deterministic domain scenarios, and
+    reference-suite gates without live actuation.
+  - Remaining scope: optional JAX-native acceleration.
 - Sheaf-cohomology control over N-channel states, with sheaf Laplacian and obstruction metrics.
   - Foundation is in place: sheaf coherence supervisor support exists.
   - Heterogeneous edge-consensus demo is in place:

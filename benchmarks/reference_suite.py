@@ -338,6 +338,16 @@ class ToposSemanticBindingThresholds(NamedTuple):
     require_deterministic_hash: bool
 
 
+class InformationGeometryControlThresholds(NamedTuple):
+    min_scenario_count: int
+    min_finite_metric_count: int
+    min_action_evidence_count: int
+    require_non_actuating: bool
+    require_execution_disabled: bool
+    require_claim_boundary: bool
+    require_deterministic_hash: bool
+
+
 class MultiverseCounterfactualThresholds(NamedTuple):
     min_branch_count: int
     min_domain_scenario_count: int
@@ -3289,6 +3299,384 @@ def benchmark_hybrid_entanglement_order_parameter_gate() -> dict[
     }
 
 
+def benchmark_information_geometry_control_gate() -> dict[str, float | int | str]:
+    """Benchmark deterministic non-actuating information-geometry control proposals."""
+    thresholds = InformationGeometryControlThresholds(
+        min_scenario_count=2,
+        min_finite_metric_count=8,
+        min_action_evidence_count=2,
+        require_non_actuating=True,
+        require_execution_disabled=True,
+        require_claim_boundary=True,
+        require_deterministic_hash=True,
+    )
+
+    from scpn_phase_orchestrator.supervisor.information_geometry import (
+        propose_information_geometry_control,
+    )
+    from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
+        build_information_geometry_control_scenarios,
+    )
+
+    def _coerce_distribution(
+        *,
+        candidate: object,
+        fallback_dimension: int,
+        rotation: int,
+    ) -> np.ndarray:
+        values: np.ndarray | None = None
+        if isinstance(candidate, Mapping):
+            for key in (
+                "current_distribution",
+                "target_distribution",
+                "distribution",
+                "simplex",
+                "probabilities",
+                "p",
+                "source_distribution",
+                "source_probabilities",
+                "state",
+            ):
+                raw = candidate.get(key)
+                if isinstance(raw, Iterable) and not isinstance(raw, (str, bytes)):
+                    values = np.asarray(raw, dtype=np.float64)
+                    break
+        elif isinstance(candidate, Iterable) and not isinstance(
+            candidate, (str, bytes)
+        ):
+            values = np.asarray(candidate, dtype=np.float64)
+
+        if (
+            values is None
+            or values.ndim != 1
+            or len(values) < 2
+            or not np.all(np.isfinite(values))
+            or np.allclose(values, 0.0)
+        ):
+            values = np.arange(1.0, float(fallback_dimension) + 1.0) + 0.13 * rotation
+            values = np.roll(values, rotation % fallback_dimension).astype(np.float64)
+
+        values = np.clip(values, 1e-12, None)
+        if values.ndim != 1 or values.size < 2:
+            raise ValueError(
+                "information geometry simplex must be a 1D array with length >= 2"
+            )
+        return values / float(np.sum(values))
+
+    def _to_record(candidate: object) -> Mapping[str, object]:
+        if isinstance(candidate, Mapping):
+            return candidate
+        if hasattr(candidate, "to_audit_record"):
+            audit_record = candidate.to_audit_record()
+            if isinstance(audit_record, Mapping):
+                return audit_record
+            raise TypeError("proposal audit record is not a mapping")
+        if hasattr(candidate, "__dict__"):
+            return dict(candidate.__dict__)
+        raise TypeError("proposal does not expose an audit record mapping")
+
+    def _metric(
+        candidate: Mapping[str, object],
+        keys: tuple[str, ...],
+        *,
+        state_keys: tuple[str, ...] = (),
+    ) -> float:
+        for key in keys:
+            value = candidate.get(key)
+            if isinstance(value, np.ndarray):
+                if value.shape == ():
+                    value = value.item()
+                else:
+                    continue
+            if isinstance(value, np.bool_):
+                continue
+            if isinstance(value, int | float | np.floating):
+                candidate_value = float(value)
+                if np.isfinite(candidate_value):
+                    return candidate_value
+
+        state = candidate.get("state")
+        if isinstance(state, Mapping):
+            for key in state_keys:
+                value = state.get(key)
+                if isinstance(value, np.ndarray):
+                    if value.shape == ():
+                        value = value.item()
+                    else:
+                        continue
+                if isinstance(value, np.bool_):
+                    continue
+                if isinstance(value, int | float | np.floating):
+                    candidate_value = float(value)
+                    if np.isfinite(candidate_value):
+                        return candidate_value
+
+        raise RuntimeError(f"missing or non-finite metric for aliases: {keys}")
+
+    def _as_int_bool(value: object) -> int:
+        return int(bool(value))
+
+    def _bool_from_candidate(
+        candidate: Mapping[str, object], key: str, default: bool
+    ) -> bool:
+        if key in candidate:
+            return bool(candidate[key])
+        return default
+
+    def _evidence_count(candidate: Mapping[str, object]) -> int:
+        for key in (
+            "actions",
+            "action_evidence",
+            "proposals",
+            "proposed_actions",
+            "control_actions",
+            "plan",
+            "action_proposals",
+        ):
+            value = candidate.get(key)
+            if isinstance(value, Mapping):
+                return int(len(value))
+            if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
+                return len(list(value))
+            if value:
+                return 1
+        return 0
+
+    def _call_proposal(
+        current_distribution: np.ndarray,
+        target_distribution: np.ndarray,
+        fixture: Mapping[str, object],
+    ) -> object:
+        max_step_raw = fixture.get("max_step", 0.05)
+        if not isinstance(max_step_raw, (int, float)) or max_step_raw <= 0.0:
+            max_step = 0.05
+        else:
+            max_step = float(max_step_raw)
+        knob_name = (
+            fixture.get("knob_hints")[0]
+            if isinstance(fixture.get("knob_hints"), list) and fixture.get("knob_hints")
+            else "K"
+        )
+        return propose_information_geometry_control(
+            current_distribution=current_distribution,
+            target_distribution=target_distribution,
+            max_step=max_step,
+            knob=str(knob_name),
+        )
+
+    scenario_fixtures = tuple(build_information_geometry_control_scenarios())
+    if not scenario_fixtures:
+        raise RuntimeError("information geometry scenario fixture is empty")
+    t0 = time.perf_counter()
+    records: list[dict[str, object]] = []
+    finite_metric_total = 0
+    proposal_action_evidence_count = 0
+
+    for idx, scenario in enumerate(scenario_fixtures):
+        fixture: Mapping[str, object] = (
+            scenario if isinstance(scenario, Mapping) else {}
+        )
+        scenario_name = str(
+            fixture.get(
+                "scenario_id",
+                fixture.get("scenario", f"information_geometry_scenario_{idx}"),
+            )
+        )
+        source_dimension = int(
+            float(
+                fixture.get(
+                    "dimension",
+                    fixture.get("size", fixture.get("num_states", 4)),
+                )
+            )
+        )
+        source_dimension = max(2, source_dimension)
+        source_distribution = _coerce_distribution(
+            candidate=(
+                fixture.get("source_distribution")
+                if isinstance(fixture.get("source_distribution"), Iterable)
+                else (
+                    fixture.get("source")
+                    if fixture.get("source") is not None
+                    else fixture
+                )
+            ),
+            fallback_dimension=source_dimension,
+            rotation=idx,
+        )
+        target_distribution = _coerce_distribution(
+            candidate=(
+                fixture.get("target_distribution")
+                if isinstance(fixture.get("target_distribution"), Iterable)
+                else (
+                    fixture.get("target")
+                    if fixture.get("target") is not None
+                    else fixture
+                )
+            ),
+            fallback_dimension=source_dimension,
+            rotation=idx + 1,
+        )
+        proposal = _call_proposal(source_distribution, target_distribution, fixture)
+        repeated = _call_proposal(source_distribution, target_distribution, fixture)
+        proposal_record = _to_record(proposal)
+        repeated_record = _to_record(repeated)
+
+        proposal_hash = str(
+            proposal_record.get(
+                "proposal_hash",
+                _stable_record_hash(proposal_record),
+            )
+        )
+        repeated_hash = str(
+            repeated_record.get(
+                "proposal_hash",
+                _stable_record_hash(repeated_record),
+            )
+        )
+        proposal_repeat_match = int(proposal_hash == repeated_hash)
+        fisher_rao = _metric(
+            proposal_record,
+            (
+                "fisher_rao_distance",
+                "fisher_rao",
+                "fisher_rao_metric",
+            ),
+        )
+        wasserstein = _metric(
+            proposal_record,
+            ("wasserstein_distance", "wasserstein", "earth_movers_distance"),
+        )
+        geodesic = _metric(
+            proposal_record,
+            ("geodesic_distance", "geodesic", "geodesic_metric"),
+            state_keys=("geodesic_length",),
+        )
+        curvature = _metric(
+            proposal_record,
+            (
+                "curvature",
+                "curvature_proxy",
+                "riemannian_curvature",
+                "information_curvature",
+            ),
+            state_keys=("curvature_proxy",),
+        )
+        scenario_evidence = _evidence_count(proposal_record)
+        proposal_action_evidence_count += int(scenario_evidence > 0)
+        finite_metric_total += (
+            _as_int_bool(np.isfinite(fisher_rao))
+            + _as_int_bool(np.isfinite(wasserstein))
+            + _as_int_bool(np.isfinite(geodesic))
+            + _as_int_bool(np.isfinite(curvature))
+        )
+
+        non_actuating = bool(
+            _bool_from_candidate(
+                proposal_record,
+                "non_actuating",
+                default=False,
+            )
+            if proposal_record.get("non_actuating") is not None
+            else bool(proposal_record.get("actuation_permitted") is False)
+        )
+        execution_disabled = bool(
+            _bool_from_candidate(
+                proposal_record,
+                "execution_disabled",
+                default=False,
+            )
+            if proposal_record.get("execution_disabled") is not None
+            else bool(proposal_record.get("actuation_permitted") is False)
+        )
+        claim_boundary = str(
+            proposal_record.get(
+                "claim_boundary",
+                proposal_record.get("claim", ""),
+            )
+        )
+        records.append(
+            {
+                "scenario": scenario_name,
+                "source_distribution": source_distribution.tolist(),
+                "target_distribution": target_distribution.tolist(),
+                "fisher_rao_distance": fisher_rao,
+                "wasserstein_distance": wasserstein,
+                "geodesic_distance": geodesic,
+                "curvature": curvature,
+                "proposal_hash": proposal_hash,
+                "repeat_match": proposal_repeat_match,
+                "proposal_action_count": scenario_evidence,
+                "non_actuating": non_actuating,
+                "execution_disabled": execution_disabled,
+                "claim_boundary": claim_boundary,
+            }
+        )
+
+    elapsed = time.perf_counter() - t0
+    deterministic_hash = int(all(record["repeat_match"] == 1 for record in records))
+    non_actuating = int(all(record["non_actuating"] is True for record in records))
+    execution_disabled = int(
+        all(record["execution_disabled"] is True for record in records)
+    )
+    claim_boundary_value = str(records[0]["claim_boundary"])
+    claim_boundary = int(
+        all(
+            str(record["claim_boundary"]) == claim_boundary_value
+            and claim_boundary_value
+            for record in records
+        )
+    )
+    acceptance_passed = int(
+        len(records) >= thresholds.min_scenario_count
+        and finite_metric_total >= thresholds.min_finite_metric_count
+        and proposal_action_evidence_count >= thresholds.min_action_evidence_count
+        and non_actuating == int(thresholds.require_non_actuating)
+        and execution_disabled == int(thresholds.require_execution_disabled)
+        and claim_boundary == int(thresholds.require_claim_boundary)
+        and deterministic_hash == int(thresholds.require_deterministic_hash)
+    )
+
+    fisher_rao_values = [record["fisher_rao_distance"] for record in records]
+    wasserstein_values = [record["wasserstein_distance"] for record in records]
+    curvature_values = [record["curvature"] for record in records]
+
+    return {
+        "suite": "information_geometry_control_gate",
+        "scenario_count": len(records),
+        "wall_time_s": elapsed,
+        "steps_per_second": len(records) / elapsed if elapsed > 0.0 else 0.0,
+        "non_actuating": non_actuating,
+        "execution_disabled": execution_disabled,
+        "claim_boundary": claim_boundary,
+        "claim_boundary_value": claim_boundary_value,
+        "proposal_action_evidence_count": proposal_action_evidence_count,
+        "finite_metric_count": finite_metric_total,
+        "deterministic_hash": deterministic_hash,
+        "min_fisher_rao_distance": min(fisher_rao_values),
+        "max_fisher_rao_distance": max(fisher_rao_values),
+        "min_wasserstein_distance": min(wasserstein_values),
+        "max_wasserstein_distance": max(wasserstein_values),
+        "min_curvature": min(curvature_values),
+        "max_curvature": max(curvature_values),
+        "information_geometry_sha256": _stable_record_hash(records),
+        "acceptance_passed": acceptance_passed,
+        "acceptance_thresholds_json": json.dumps(
+            {
+                "min_action_evidence_count": thresholds.min_action_evidence_count,
+                "min_finite_metric_count": thresholds.min_finite_metric_count,
+                "min_scenario_count": thresholds.min_scenario_count,
+                "require_claim_boundary": thresholds.require_claim_boundary,
+                "require_deterministic_hash": thresholds.require_deterministic_hash,
+                "require_execution_disabled": thresholds.require_execution_disabled,
+                "require_non_actuating": thresholds.require_non_actuating,
+            },
+            sort_keys=True,
+        ),
+        "information_geometry_records_json": json.dumps(records, sort_keys=True),
+    }
+
+
 def benchmark_plugin_ecosystem_catalog_quality() -> dict[str, float | int | str]:
     """Benchmark plugin marketplace and Rust registry capability contracts."""
     thresholds = PluginEcosystemThresholds(
@@ -4580,6 +4968,9 @@ def run_reference_suite(*, snapshot_date: str | None = None) -> ReferenceSuiteRe
             "multiverse_counterfactual": benchmark_multiverse_counterfactual_gate(),
             "hybrid_entanglement_order": (
                 benchmark_hybrid_entanglement_order_parameter_gate()
+            ),
+            "information_geometry_control": (
+                benchmark_information_geometry_control_gate()
             ),
             "meta_transfer_corpus": benchmark_meta_transfer_audit_corpus_quality(),
             "meta_transfer": benchmark_meta_transfer_package_manifest_quality(),

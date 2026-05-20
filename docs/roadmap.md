@@ -127,7 +127,7 @@ into the active roadmap.
 |-------|-----------------------|
 | Self-modelling embodied digital twin | `self_model_error` monitor plus one hardware-in-the-loop or replay-backed reconfiguration demo |
 | Evolutionary supervisor policy search | offline evolution over `audit.jsonl` histories with STL/counterfactual safety filter before any live hot-patch path |
-| Information-geometry control layer | JAX-native Fisher-Rao or Wasserstein control primitive with audit-visible curvature or geodesic metrics |
+| Information-geometry control layer | dependency-free NumPy/JAX-compatible Fisher-Rao and Wasserstein review primitive now emits audit-visible metric tensors, natural-gradient proposals, curvature/geodesic metrics, deterministic domain scenarios, and reference-suite gates without live actuation; optional JAX-native acceleration remains open |
 | Sheaf-cohomology control | supervisor foundation, edge-consensus, power-grid, and network-security heterogeneous-domain demos, and obstruction-summary triage are implemented; additional heterogeneous demos and deeper obstruction hardening remain open |
 | Federated meta-orchestrator | privacy-preserving policy-gradient aggregation across nodes without raw time-series exchange |
 | Byzantine-fault-tolerant meta-orchestrator | offline three-node BFT consensus manifests now verify signed policy proposals, hash-linked audit parents, quorum winners, rejected nodes, and non-actuating review gates; live distributed transport remains open |

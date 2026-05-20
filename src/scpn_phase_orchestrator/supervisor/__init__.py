@@ -80,6 +80,16 @@ from scpn_phase_orchestrator.supervisor.hierarchy_adapters import (
     handle_hierarchy_rest_payload,
     replay_hierarchy_jsonl,
 )
+from scpn_phase_orchestrator.supervisor.information_geometry import (
+    InformationGeometryControlProposal,
+    InformationGeometryState,
+    propose_information_geometry_control,
+)
+from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
+    DistributionPair,
+    InformationGeometryScenario,
+    build_information_geometry_control_scenarios,
+)
 from scpn_phase_orchestrator.supervisor.lineage import (
     build_autopoietic_lineage_sandbox,
     build_intergenerational_policy_inheritance,
@@ -186,6 +196,7 @@ __all__ = [
     "CompoundCondition",
     "ControlAction",
     "CounterfactualRollout",
+    "DistributionPair",
     "EventBus",
     "DomainScenario",
     "FEPHierarchyAssessment",
@@ -205,6 +216,9 @@ __all__ = [
     "HierarchySyncLedger",
     "HierarchyTransportRuntime",
     "HigherOrderTopologySupervisor",
+    "InformationGeometryControlProposal",
+    "InformationGeometryScenario",
+    "InformationGeometryState",
     "InterventionParameters",
     "Marking",
     "MorphogeneticFieldPolicy",
@@ -264,6 +278,7 @@ __all__ = [
     "build_formal_verification_package",
     "build_hierarchical_orchestration_plan",
     "build_hierarchy_sync_envelope",
+    "build_information_geometry_control_scenarios",
     "build_intergenerational_policy_inheritance",
     "build_morphogenetic_field_snapshot",
     "build_multiverse_domain_scenarios",
@@ -285,6 +300,7 @@ __all__ = [
     "ingest_hierarchy_sync_envelopes",
     "load_hierarchy_sync_envelope",
     "learn_causal_graph",
+    "propose_information_geometry_control",
     "sheaf_coherence",
     "sheaf_laplacian",
     "replay_hierarchy_jsonl",
