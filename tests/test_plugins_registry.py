@@ -19,12 +19,14 @@ from scpn_phase_orchestrator.plugins import (
     PluginCapability,
     PluginCompatibilityReport,
     PluginManifest,
+    PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
     compatibility_report,
     discover_plugin_manifests,
+    execute_plugin_capability,
     load_plugin_capability,
     validate_plugin_manifest,
 )
@@ -989,6 +991,102 @@ class TestPluginRuntimeLoading:
                 "domainpack",
                 "core",
                 policy=PluginRuntimeLoadPolicy(loading_permitted=True),
+            )
+
+
+class TestPluginRuntimeExecution:
+    def test_runtime_execution_is_disabled_by_default_without_importing_target(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError("disabled runtime execution must not import targets")
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        with pytest.raises(PermissionError, match="execution is disabled"):
+            execute_plugin_capability(_manifest(), "monitor", "frequency_drift")
+
+    def test_runtime_execution_invokes_declared_callable_with_audit_metadata(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import types
+
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+        def frequency_drift(value: float, *, scale: float) -> float:
+            calls.append(((value,), {"scale": scale}))
+            return value * scale
+
+        module = types.SimpleNamespace(FrequencyDriftMonitor=frequency_drift)
+
+        def fake_import(module_name: str) -> object:
+            assert module_name == "grid_pack.monitors"
+            return module
+
+        monkeypatch.setattr(registry.importlib, "import_module", fake_import)
+
+        executed = execute_plugin_capability(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(2.0,),
+            kwargs={"scale": 3.5},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+        repeated = execute_plugin_capability(
+            _manifest(),
+            "monitor",
+            "frequency_drift",
+            args=(2.0,),
+            kwargs={"scale": 3.5},
+            policy=PluginRuntimeExecutionPolicy(
+                loading_permitted=True,
+                execution_permitted=True,
+            ),
+        )
+
+        assert executed.result == 7.0
+        assert calls == [((2.0,), {"scale": 3.5}), ((2.0,), {"scale": 3.5})]
+        assert executed.audit_record["schema"] == "scpn_plugin_runtime_execute_v1"
+        assert executed.audit_record["execution_permitted"] is True
+        assert executed.audit_record["argument_count"] == 1
+        assert executed.audit_record["keyword_names"] == ["scale"]
+        assert executed.audit_record["result_type"] == "float"
+        assert len(str(executed.audit_record["execution_hash"])) == 64
+        assert (
+            executed.audit_record["execution_hash"]
+            == repeated.audit_record["execution_hash"]
+        )
+
+    def test_runtime_execution_blocks_when_loading_allowed_but_execution_denied(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import scpn_phase_orchestrator.plugins.registry as registry
+
+        def fail_import(_module: str) -> object:
+            raise AssertionError("execution denial must occur before import")
+
+        monkeypatch.setattr(registry.importlib, "import_module", fail_import)
+
+        with pytest.raises(PermissionError, match="execution is disabled"):
+            execute_plugin_capability(
+                _manifest(),
+                "actuator",
+                "breaker",
+                policy=PluginRuntimeExecutionPolicy(
+                    loading_permitted=True,
+                    execution_permitted=False,
+                ),
             )
 
     def test_discovery_rejects_invalid_entry_point_payload(

@@ -29,8 +29,11 @@ __all__ = [
     "compatibility_report",
     "discover_plugin_manifests",
     "LoadedPluginCapability",
+    "ExecutedPluginCapability",
+    "execute_plugin_capability",
     "load_plugin_capability",
     "validate_plugin_manifest",
+    "PluginRuntimeExecutionPolicy",
     "PluginRuntimeLoadPolicy",
 ]
 
@@ -184,6 +187,42 @@ class LoadedPluginCapability:
     audit_record: dict[str, object]
 
 
+@dataclass(frozen=True)
+class PluginRuntimeExecutionPolicy:
+    """Explicit policy gate for invoking Python-owned plugin runtime targets."""
+
+    loading_permitted: bool = False
+    execution_permitted: bool = False
+    allowed_kinds: tuple[PluginKind, ...] = _DEFAULT_RUNTIME_LOAD_KINDS
+    require_package_target: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.execution_permitted, bool):
+            raise TypeError("execution_permitted must be a boolean")
+        PluginRuntimeLoadPolicy(
+            loading_permitted=self.loading_permitted,
+            allowed_kinds=self.allowed_kinds,
+            require_package_target=self.require_package_target,
+        )
+
+    def to_load_policy(self) -> PluginRuntimeLoadPolicy:
+        """Return the corresponding load policy for target resolution."""
+        return PluginRuntimeLoadPolicy(
+            loading_permitted=self.loading_permitted,
+            allowed_kinds=self.allowed_kinds,
+            require_package_target=self.require_package_target,
+        )
+
+
+@dataclass(frozen=True)
+class ExecutedPluginCapability:
+    """Result of an explicitly approved plugin runtime invocation."""
+
+    loaded: LoadedPluginCapability
+    result: object
+    audit_record: dict[str, object]
+
+
 def validate_plugin_manifest(manifest: PluginManifest) -> PluginManifest:
     """Validate and return a plugin manifest.
 
@@ -298,6 +337,59 @@ def load_plugin_capability(
         manifest=manifest,
         capability=capability,
         target_object=target_object,
+        audit_record=audit_record,
+    )
+
+
+def execute_plugin_capability(
+    manifest: PluginManifest,
+    kind: PluginKind,
+    name: str,
+    *,
+    args: tuple[object, ...] = (),
+    kwargs: dict[str, object] | None = None,
+    policy: PluginRuntimeExecutionPolicy | None = None,
+) -> ExecutedPluginCapability:
+    """Invoke a declared plugin capability under an explicit execution policy.
+
+    Execution is denied before any target import unless both loading and
+    execution are explicitly permitted. Audit metadata records the invocation
+    shape without serialising argument values, so secrets and large payloads are
+    not copied into the audit record.
+    """
+    if policy is None:
+        policy = PluginRuntimeExecutionPolicy()
+    if not policy.execution_permitted:
+        raise PermissionError("plugin runtime execution is disabled by policy")
+    if not isinstance(args, tuple):
+        raise TypeError("args must be a tuple")
+    if kwargs is None:
+        kwargs = {}
+    if not isinstance(kwargs, dict):
+        raise TypeError("kwargs must be a dictionary")
+    for key in kwargs:
+        _require_identifier(key, "plugin execution keyword")
+
+    loaded = load_plugin_capability(
+        manifest,
+        kind,
+        name,
+        policy=policy.to_load_policy(),
+    )
+    target = loaded.target_object
+    if not callable(target):
+        raise TypeError("loaded plugin target must be callable")
+    result = target(*args, **kwargs)
+    audit_record = _runtime_execute_audit_record(
+        loaded=loaded,
+        policy=policy,
+        args=args,
+        kwargs=kwargs,
+        result=result,
+    )
+    return ExecutedPluginCapability(
+        loaded=loaded,
+        result=result,
         audit_record=audit_record,
     )
 
@@ -575,6 +667,35 @@ def _runtime_load_audit_record(
     }
     record["target_hash"] = _record_hash(record)
     record["load_hash"] = _record_hash(record)
+    return record
+
+
+def _runtime_execute_audit_record(
+    *,
+    loaded: LoadedPluginCapability,
+    policy: PluginRuntimeExecutionPolicy,
+    args: tuple[object, ...],
+    kwargs: dict[str, object],
+    result: object,
+) -> dict[str, object]:
+    record = {
+        "schema": "scpn_plugin_runtime_execute_v1",
+        "load_hash": loaded.audit_record["load_hash"],
+        "target_hash": loaded.audit_record["target_hash"],
+        "plugin": loaded.manifest.name,
+        "plugin_version": loaded.manifest.version,
+        "package": loaded.manifest.package,
+        "kind": loaded.capability.kind,
+        "name": loaded.capability.name,
+        "target": loaded.capability.target,
+        "loading_permitted": policy.loading_permitted,
+        "execution_permitted": policy.execution_permitted,
+        "load_policy": "python_owned_explicit",
+        "argument_count": len(args),
+        "keyword_names": sorted(kwargs),
+        "result_type": type(result).__name__,
+    }
+    record["execution_hash"] = _record_hash(record)
     return record
 
 

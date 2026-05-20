@@ -97,7 +97,9 @@ callable:
 
 ```python
 from scpn_phase_orchestrator.plugins import (
+    PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
+    execute_plugin_capability,
     load_plugin_capability,
 )
 
@@ -116,6 +118,31 @@ Runtime loading is intended for approved deployment boundaries after manifest
 review. Do not use it as a generic import helper: incompatible manifests,
 undeclared capabilities, non-callable targets, domainpack metadata records, and
 targets outside the plugin package fail closed.
+
+Approved runtime invocation is a second gate. It is also disabled by default and
+records invocation shape without serialising argument values:
+
+```python
+executed = execute_plugin_capability(
+    manifest,
+    "monitor",
+    "frequency_drift",
+    args=(phase_window,),
+    kwargs={"sample_rate_hz": 100.0},
+    policy=PluginRuntimeExecutionPolicy(
+        loading_permitted=True,
+        execution_permitted=True,
+    ),
+)
+
+result = executed.result
+execution_audit = executed.audit_record
+```
+
+The execution record uses schema `scpn_plugin_runtime_execute_v1`, links back to
+the load hash and target hash, records argument count, keyword names, result
+type, and a deterministic execution hash. Argument payloads are intentionally
+not copied into the audit record.
 
 A runnable metadata-only example is available at
 `examples/plugin_marketplace_catalog.py`. It builds a validated

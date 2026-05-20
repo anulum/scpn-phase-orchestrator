@@ -118,7 +118,9 @@ boundary that owns the risk decision:
 
 ```python
 from scpn_phase_orchestrator.plugins import (
+    PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
+    execute_plugin_capability,
     load_plugin_capability,
 )
 
@@ -139,6 +141,27 @@ requires callable runtime targets, and records `scpn_plugin_runtime_load_v1`
 audit metadata. Domainpack metadata entries remain manifest/catalogue records
 rather than directly runtime-loadable callables unless an explicit future policy
 expands that boundary.
+
+Calling a loaded target requires a second opt-in policy:
+
+```python
+executed = execute_plugin_capability(
+    manifest,
+    "extractor",
+    "my_sensor",
+    args=(signal,),
+    kwargs={"sample_rate": 100.0},
+    policy=PluginRuntimeExecutionPolicy(
+        loading_permitted=True,
+        execution_permitted=True,
+    ),
+)
+```
+
+The execution audit record stores the load hash, target hash, argument count,
+keyword names, result type, and deterministic execution hash. It deliberately
+does not store argument values, because runtime payloads may contain proprietary
+measurements or credentials.
 
 ## References
 

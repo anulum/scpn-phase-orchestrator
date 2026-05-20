@@ -18,16 +18,19 @@ explicit calls into ``plugins.registry``.
 from __future__ import annotations
 
 from scpn_phase_orchestrator.plugins.registry import (
+    ExecutedPluginCapability,
     LoadedPluginCapability,
     PluginCapability,
     PluginCompatibilityReport,
     PluginManifest,
+    PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
     build_plugin_marketplace_catalog,
     build_rust_plugin_registry,
     build_rust_plugin_runtime_handoff,
     compatibility_report,
     discover_plugin_manifests,
+    execute_plugin_capability,
     load_plugin_capability,
     validate_plugin_manifest,
 )
@@ -36,13 +39,16 @@ __all__ = [
     "PluginCapability",
     "PluginCompatibilityReport",
     "PluginManifest",
+    "PluginRuntimeExecutionPolicy",
     "PluginRuntimeLoadPolicy",
+    "ExecutedPluginCapability",
     "build_plugin_marketplace_catalog",
     "build_rust_plugin_runtime_handoff",
     "build_rust_plugin_registry",
     "compatibility_report",
     "discover_plugin_manifests",
     "LoadedPluginCapability",
+    "execute_plugin_capability",
     "load_plugin_capability",
     "validate_plugin_manifest",
 ]
