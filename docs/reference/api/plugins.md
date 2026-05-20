@@ -258,6 +258,15 @@ request validation and request-bound runtime execution.
 spo plugins revocation-list REVOCATION_JSON --created-by deployment_gate
 ```
 
+The same list can be bound into local persistence:
+
+```bash
+spo plugins persist-execution-request REQUEST_JSON bundle.json \
+  --storage-uri file:///var/lib/spo/plugin-requests/bundle.json \
+  --created-by deployment_gate \
+  --revocation-list REVOCATION_LIST_JSON
+```
+
 ### Operator approval binding
 
 Execution approval must be held in an operator-owned artefact that binds:

@@ -65,6 +65,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionPlan,
     PluginExecutionRequest,
     PluginExecutionRequestRevocation,
+    PluginExecutionRequestRevocationList,
     PluginManifest,
     PluginRuntimeExecutionPolicy,
     build_plugin_execution_approval,
@@ -77,6 +78,7 @@ from scpn_phase_orchestrator.plugins import (
     build_rust_plugin_runtime_handoff,
     compatibility_report,
     discover_plugin_manifests,
+    validate_plugin_execution_request_revocation_list,
     write_plugin_execution_request_storage_bundle,
 )
 from scpn_phase_orchestrator.plugins import registry as plugin_registry
@@ -777,6 +779,66 @@ def _load_revocation_from_payload(
     )
 
 
+def _load_revocation_list_from_payload(
+    revocation_list_payload: dict[str, object],
+) -> PluginExecutionRequestRevocationList:
+    if (
+        revocation_list_payload.get("schema")
+        != "scpn_plugin_execution_request_revocation_list_v1"
+    ):
+        raise click.ClickException(
+            "revocation list schema mismatch: expected "
+            "scpn_plugin_execution_request_revocation_list_v1"
+        )
+    request_hashes = revocation_list_payload.get("request_hashes")
+    revocation_hashes = revocation_list_payload.get("revocation_hashes")
+    revocation_count = revocation_list_payload.get("revocation_count")
+    created_by = revocation_list_payload.get("created_by")
+    revocation_list_hash = _require_sha256(
+        revocation_list_payload.get("revocation_list_hash"),
+        "revocation_list_hash",
+    )
+    version = revocation_list_payload.get("version")
+    if not isinstance(version, str) or not version:
+        raise click.ClickException("revocation list version must be non-empty")
+    if not isinstance(created_by, str) or not created_by:
+        raise click.ClickException("revocation list created_by must be non-empty")
+    if not isinstance(revocation_count, int) or revocation_count < 1:
+        raise click.ClickException(
+            "revocation list revocation_count must be a positive integer"
+        )
+    if not isinstance(request_hashes, list) or not all(
+        isinstance(item, str) for item in request_hashes
+    ):
+        raise click.ClickException(
+            "revocation list request_hashes must be a string list"
+        )
+    if not isinstance(revocation_hashes, list) or not all(
+        isinstance(item, str) for item in revocation_hashes
+    ):
+        raise click.ClickException(
+            "revocation list revocation_hashes must be a string list"
+        )
+    normalized_request_hashes = tuple(
+        _require_sha256(item, "revoked request hash") for item in request_hashes
+    )
+    normalized_revocation_hashes = tuple(
+        _require_sha256(item, "revocation hash") for item in revocation_hashes
+    )
+    return validate_plugin_execution_request_revocation_list(
+        PluginExecutionRequestRevocationList(
+            schema="scpn_plugin_execution_request_revocation_list_v1",
+            version=version,
+            request_hashes=normalized_request_hashes,
+            revocation_hashes=normalized_revocation_hashes,
+            revocation_count=revocation_count,
+            created_by=created_by,
+            revocation_list_hash=revocation_list_hash,
+            audit_record=revocation_list_payload,
+        )
+    )
+
+
 def _build_plugin_execution_request(
     plan: PluginExecutionPlan,
     approval: PluginExecutionApproval,
@@ -1050,6 +1112,13 @@ def plugins_request_execution(plan_json: Path, approval_json: Path) -> None:
     help="Revoked request hash to bind into the storage manifest.",
 )
 @click.option(
+    "--revocation-list",
+    "revocation_list_path",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Aggregate revocation-list JSON to bind into the storage manifest.",
+)
+@click.option(
     "--overwrite",
     is_flag=True,
     help="Allow replacing an existing local request bundle.",
@@ -1062,16 +1131,26 @@ def plugins_persist_execution_request(
     retention_policy: str,
     created_by: str,
     revoked_request_hashes: tuple[str, ...],
+    revocation_list_path: Path | None,
     overwrite: bool,
 ) -> None:
     """Persist a validated execution request as a local storage bundle."""
     request_payload = _load_json_file(request_json, artifact="request")
     request = _load_request_from_payload(request_payload)
-    normalized_revocations = _normalize_approved_target_hashes(
+    direct_revocations = _normalize_approved_target_hashes(
         revoked_request_hashes
     )
+    revocation_list_hashes: tuple[str, ...] = ()
 
     try:
+        if revocation_list_path is not None:
+            revocation_list = _load_revocation_list_from_payload(
+                _load_json_file(revocation_list_path, artifact="revocation list")
+            )
+            revocation_list_hashes = revocation_list.as_revoked_request_hashes()
+        normalized_revocations = tuple(
+            dict.fromkeys((*direct_revocations, *revocation_list_hashes))
+        )
         storage_manifest = build_plugin_execution_request_storage_manifest(
             request,
             storage_uri=storage_uri,

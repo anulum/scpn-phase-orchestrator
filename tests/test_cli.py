@@ -2511,6 +2511,91 @@ def test_plugins_revocation_list_rejects_tampered_revocation(
     assert "revocation audit record mismatch" in result.output
 
 
+def test_plugins_persist_execution_request_accepts_revocation_list(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
+    revocation_list = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert revocation_list.exit_code == 0
+    revocation_list_path = tmp_path / "revocation_list.json"
+    revocation_list_path.write_text(revocation_list.output, encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "persist-execution-request",
+            str(request_path),
+            str(tmp_path / "bundle.json"),
+            "--storage-uri",
+            f"file://{tmp_path / 'bundle.json'}",
+            "--created-by",
+            "deployment_gate",
+            "--revocation-list",
+            str(revocation_list_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "revoked" in result.output
+
+
+def test_plugins_persist_execution_request_rejects_tampered_revocation_list(
+    runner,
+    tmp_path: Path,
+):
+    request_path = _write_request_payload_from_cli(runner, tmp_path)
+    revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
+    revocation_list = runner.invoke(
+        main,
+        [
+            "plugins",
+            "revocation-list",
+            str(revocation_path),
+            "--created-by",
+            "deployment_gate",
+        ],
+    )
+    assert revocation_list.exit_code == 0
+    payload = json.loads(revocation_list.output)
+    payload["request_hashes"] = ["0" * 64]
+    revocation_list_path = tmp_path / "revocation_list.json"
+    revocation_list_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plugins",
+            "persist-execution-request",
+            str(request_path),
+            str(tmp_path / "bundle.json"),
+            "--storage-uri",
+            f"file://{tmp_path / 'bundle.json'}",
+            "--created-by",
+            "deployment_gate",
+            "--revocation-list",
+            str(revocation_list_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "revocation list hash mismatch" in result.output
+
+
 def _write_meta_audit_record(
     path: Path,
     *,

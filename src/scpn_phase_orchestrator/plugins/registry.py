@@ -48,6 +48,7 @@ __all__ = [
     "execute_plugin_execution_request",
     "load_plugin_capability",
     "validate_plugin_execution_request",
+    "validate_plugin_execution_request_revocation_list",
     "validate_plugin_execution_request_storage_bundle",
     "validate_plugin_execution_request_storage_manifest",
     "validate_plugin_manifest",
@@ -713,6 +714,58 @@ def build_plugin_execution_request_revocation_list(
         revocation_list_hash=str(audit_record["revocation_list_hash"]),
         audit_record=audit_record,
     )
+
+
+def validate_plugin_execution_request_revocation_list(
+    revocation_list: PluginExecutionRequestRevocationList,
+) -> PluginExecutionRequestRevocationList:
+    """Validate a stored aggregate request-revocation list."""
+    record = revocation_list.audit_record
+    if record.get("schema") != "scpn_plugin_execution_request_revocation_list_v1":
+        raise ValueError("revocation list schema mismatch")
+    if record.get("version") != "1.0.0":
+        raise ValueError("revocation list version must be 1.0.0")
+    expected_hash = record.get("revocation_list_hash")
+    if not isinstance(expected_hash, str):
+        raise ValueError("revocation list is missing revocation_list_hash")
+    _validate_sha256(expected_hash, "revocation list hash")
+    payload = dict(record)
+    payload.pop("revocation_list_hash", None)
+    if _record_hash(payload) != expected_hash:
+        raise ValueError("revocation list hash mismatch")
+    request_hashes = record.get("request_hashes")
+    revocation_hashes = record.get("revocation_hashes")
+    revocations = record.get("revocations")
+    if not isinstance(request_hashes, list) or not all(
+        isinstance(item, str) for item in request_hashes
+    ):
+        raise ValueError("revocation list request_hashes must be a string list")
+    if not isinstance(revocation_hashes, list) or not all(
+        isinstance(item, str) for item in revocation_hashes
+    ):
+        raise ValueError("revocation list revocation_hashes must be a string list")
+    if not isinstance(revocations, list) or not all(
+        isinstance(item, dict) for item in revocations
+    ):
+        raise ValueError("revocation list revocations must be object records")
+    if len(set(request_hashes)) != len(request_hashes):
+        raise ValueError("revocation list contains duplicate request hashes")
+    if revocation_list.request_hashes != tuple(request_hashes):
+        raise ValueError("revocation list request hash field mismatch")
+    if revocation_list.revocation_hashes != tuple(revocation_hashes):
+        raise ValueError("revocation list revocation hash field mismatch")
+    if revocation_list.revocation_count != len(request_hashes):
+        raise ValueError("revocation list count mismatch")
+    for revocation in revocations:
+        revocation_hash = revocation.get("revocation_hash")
+        if not isinstance(revocation_hash, str):
+            raise ValueError("revocation record is missing revocation_hash")
+        _validate_sha256(revocation_hash, "revocation hash")
+        revocation_payload = dict(revocation)
+        revocation_payload.pop("revocation_hash", None)
+        if _record_hash(revocation_payload) != revocation_hash:
+            raise ValueError("revocation audit record mismatch")
+    return revocation_list
 
 
 def validate_plugin_execution_request_storage_manifest(

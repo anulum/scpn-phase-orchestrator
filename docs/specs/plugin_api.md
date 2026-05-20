@@ -295,6 +295,11 @@ exposes `as_revoked_request_hashes()` for direct use with request validation.
 spo plugins revocation-list REVOCATION_JSON --created-by deployment_gate
 ```
 
+`spo plugins persist-execution-request` accepts `--revocation-list` to bind the
+validated aggregate revoked-hash set into the storage manifest. If the request
+being persisted is already present in that list, persistence fails before any
+bundle is written.
+
 ## References
 
 Phase extraction contracts are defined in [phase_contract.md](phase_contract.md). Binding spec validation uses [binding_spec.schema.json](binding_spec.schema.json). Custom geometry constraints must preserve the Knm invariants documented in [knm_semantics.md](knm_semantics.md).
